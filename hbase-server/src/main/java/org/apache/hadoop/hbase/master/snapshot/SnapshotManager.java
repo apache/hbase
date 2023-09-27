@@ -99,7 +99,6 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
-import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.KeeperException;
@@ -592,8 +591,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     try {
       snapshotWorkingParentDirStatus =
         workingDirFS.getAclStatus(workingDir.getParent().getParent());
-    } catch (AclException e) {
-      LOG.warn("Unable to retrieve ACL status for path: {}", workingDir.getParent().getParent(), e);
+    } catch (IOException e) {
+      LOG.warn("Unable to retrieve ACL status for path: {}, current working dir path: {}",
+        workingDir.getParent().getParent(), workingDir, e);
       return;
     }
     List<AclEntry> snapshotWorkingParentDirAclStatusEntries =
