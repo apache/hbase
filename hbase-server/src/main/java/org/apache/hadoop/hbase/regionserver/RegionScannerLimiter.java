@@ -34,22 +34,20 @@ public class RegionScannerLimiter implements ConfigurationObserver {
   public static final String HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY =
     "hbase.server.scanner.max.rows.filtered.per.request";
 
-  private static RegionScannerLimiter INSTANCE;
-
   // Max count of rows filtered per request. If zero, it means no limitation.
   private volatile long maxRowsFilteredPerRequest = 0;
 
-  private RegionScannerLimiter(Configuration conf) {
-    updateLimiterConf(conf, HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY);
+  public RegionScannerLimiter(Configuration conf) {
+    updateLimiterConf(conf);
   }
 
-  private void updateLimiterConf(Configuration conf, String configKey) {
+  private void updateLimiterConf(Configuration conf) {
     try {
-      if (conf.get(configKey) == null) {
+      if (conf.get(HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY) == null) {
         return;
       }
 
-      long targetValue = conf.getLong(configKey, -1);
+      long targetValue = conf.getLong(HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY, -1);
       if (targetValue < 0) {
         LOG.warn("Invalid parameter, should be greater than or equal to zero, target value: {}",
           targetValue);
@@ -59,11 +57,13 @@ public class RegionScannerLimiter implements ConfigurationObserver {
         return;
       }
 
-      LOG.info("Config key={}, old value={}, new value={}", configKey, maxRowsFilteredPerRequest,
+      LOG.info("Config key={}, old value={}, new value={}",
+        HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY, maxRowsFilteredPerRequest,
         targetValue);
       this.maxRowsFilteredPerRequest = targetValue;
     } catch (Exception e) {
-      LOG.error("Failed to update config key: {}", configKey, e);
+      LOG.error("Failed to update config key: {}",
+        HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY, e);
     }
   }
 
@@ -71,19 +71,8 @@ public class RegionScannerLimiter implements ConfigurationObserver {
     return this.maxRowsFilteredPerRequest;
   }
 
-  public static RegionScannerLimiter get() {
-    return INSTANCE;
-  }
-
-  public static synchronized RegionScannerLimiter create(Configuration conf) {
-    if (INSTANCE == null) {
-      INSTANCE = new RegionScannerLimiter(conf);
-    }
-    return INSTANCE;
-  }
-
   @Override
   public void onConfigurationChange(Configuration conf) {
-    updateLimiterConf(conf, HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY);
+    updateLimiterConf(conf);
   }
 }

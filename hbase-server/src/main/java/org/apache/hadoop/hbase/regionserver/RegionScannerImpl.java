@@ -642,13 +642,16 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     }
 
     long countOfRowsFiltered = scannerContext.getMetrics().countOfRowsFiltered.incrementAndGet();
-    long maxRowsFilteredPerRequest = RegionScannerLimiter.get().getMaxRowsFilteredPerRequest();
-    if (maxRowsFilteredPerRequest > 0 && countOfRowsFiltered >= maxRowsFilteredPerRequest) {
-      String errMsg = String.format(
-        "Too many rows filtered, higher than the limit threshold of %s, so kill the scan request!",
-        maxRowsFilteredPerRequest);
-      LOG.warn("ScannerContext={}, errMsg={}", scannerContext, errMsg);
-      throw new DoNotRetryIOException(errMsg);
+    if (region.rsServices instanceof HRegionServer) {
+      long maxRowsFilteredPerRequest = ((HRegionServer) region.rsServices).getRegionScannerLimiter()
+        .getMaxRowsFilteredPerRequest();
+      if (maxRowsFilteredPerRequest > 0 && countOfRowsFiltered >= maxRowsFilteredPerRequest) {
+        String errMsg = String.format(
+          "Too many rows filtered, higher than the limit threshold of %s, so kill the scan request!",
+          maxRowsFilteredPerRequest);
+        LOG.warn("ScannerContext={}, errMsg={}", scannerContext, errMsg);
+        throw new DoNotRetryIOException(errMsg);
+      }
     }
   }
 
