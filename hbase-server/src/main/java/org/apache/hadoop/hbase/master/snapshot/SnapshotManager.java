@@ -587,6 +587,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    */
   private static void updateWorkingDirAclsIfRequired(Path workingDir, FileSystem workingDirFS)
     throws IOException {
+    if (workingDir.getParent() == null || workingDir.getParent().getParent() == null) {
+      return;
+    }
     AclStatus snapshotWorkingParentDirStatus;
     try {
       snapshotWorkingParentDirStatus =
