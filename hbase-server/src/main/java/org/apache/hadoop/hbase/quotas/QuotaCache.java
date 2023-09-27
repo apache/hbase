@@ -183,14 +183,15 @@ public class QuotaCache implements Stoppable {
     }
 
     Optional<RpcCall> rpcCall = RpcServer.getCurrentCall();
-    if (
-      rpcCall.isPresent()
-        && rpcCall.get().getRequestAttributes().containsKey(userOverrideRequestAttributeKey)
-    ) {
-      return Bytes
-        .toString(rpcCall.get().getRequestAttributes().get(userOverrideRequestAttributeKey));
+    if (!rpcCall.isPresent()) {
+      return ugi.getShortUserName();
     }
-    return ugi.getShortUserName();
+
+    byte[] override = rpcCall.get().getRequestAttribute(userOverrideRequestAttributeKey);
+    if (override == null) {
+      return ugi.getShortUserName();
+    }
+    return Bytes.toString(override);
   }
 
   /**
