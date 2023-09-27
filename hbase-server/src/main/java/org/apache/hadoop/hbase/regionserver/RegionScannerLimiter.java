@@ -24,7 +24,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Limit max count of rows filtered per scan request.
+ * Limit max count of rows filtered per scan request. This Limiter applies globally to scan
+ * requests, and the config key is
+ * {@link RegionScannerLimiter#HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY}. When heavily
+ * filtered scan requests frequently cause high load on the RegionServer, you can set the
+ * {@link RegionScannerLimiter#HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY} to a larger
+ * value (for example, 100,000) to kill those scan requests. When you want to revert, just set the
+ * {@link RegionScannerLimiter#HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY} to 0.
  */
 @InterfaceAudience.Private
 public class RegionScannerLimiter implements ConfigurationObserver {
@@ -34,7 +40,8 @@ public class RegionScannerLimiter implements ConfigurationObserver {
   public static final String HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY =
     "hbase.server.scanner.max.rows.filtered.per.request";
 
-  // Max count of rows filtered per request. If zero, it means no limitation.
+  // Max count of rows filtered per scan request. If equals zero, it means no limitation.
+  // Note: No limitation by default.
   private volatile long maxRowsFilteredPerRequest = 0;
 
   public RegionScannerLimiter(Configuration conf) {
