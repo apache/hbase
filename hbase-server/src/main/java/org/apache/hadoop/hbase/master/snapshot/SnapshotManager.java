@@ -577,12 +577,11 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   }
 
   /**
-   * If the parent dir of the snapshot working dir (e.g. /hbase/.hbase-snapshot) has non-empty
-   * ACLs, use them for the current working dir (e.g. /hbase/.hbase-snapshot/.tmp/{snapshot-name})
-   * so that regardless of whether the snapshot commit phase performs atomic rename or non-atomic
-   * copy of the working dir to new snapshot dir, the ACLs are retained.
-   *
-   * @param workingDir working dir to build the snapshot.
+   * If the parent dir of the snapshot working dir (e.g. /hbase/.hbase-snapshot) has non-empty ACLs,
+   * use them for the current working dir (e.g. /hbase/.hbase-snapshot/.tmp/{snapshot-name}) so that
+   * regardless of whether the snapshot commit phase performs atomic rename or non-atomic copy of
+   * the working dir to new snapshot dir, the ACLs are retained.
+   * @param workingDir   working dir to build the snapshot.
    * @param workingDirFS working dir file system.
    * @throws IOException If ACL read/modify operation fails.
    */
@@ -592,10 +591,11 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       workingDirFS.getAclStatus(workingDir.getParent().getParent());
     List<AclEntry> snapshotWorkingParentDirAclStatusEntries =
       snapshotWorkingParentDirStatus.getEntries();
-    if (snapshotWorkingParentDirAclStatusEntries != null
-      && snapshotWorkingParentDirAclStatusEntries.size() > 0) {
-      workingDirFS.modifyAclEntries(workingDir,
-        snapshotWorkingParentDirAclStatusEntries);
+    if (
+      snapshotWorkingParentDirAclStatusEntries != null
+        && snapshotWorkingParentDirAclStatusEntries.size() > 0
+    ) {
+      workingDirFS.modifyAclEntries(workingDir, snapshotWorkingParentDirAclStatusEntries);
     }
   }
 
