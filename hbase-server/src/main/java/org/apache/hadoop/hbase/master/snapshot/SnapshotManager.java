@@ -594,7 +594,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     try {
       snapshotWorkingParentDirStatus =
         workingDirFS.getAclStatus(workingDir.getParent().getParent());
-    } catch (IOException e) {
+    } catch (IOException | UnsupportedOperationException e) {
       LOG.warn("Unable to retrieve ACL status for path: {}, current working dir path: {}",
         workingDir.getParent().getParent(), workingDir, e);
       return;
