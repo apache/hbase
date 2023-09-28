@@ -1398,27 +1398,37 @@ public class AssignmentManager {
         continue;
       }
       final long lag = 1000;
-      regionNode.lock();
       try {
-        long diff = EnvironmentEdgeManager.currentTime() - regionNode.getLastUpdate();
-        if (regionNode.isInState(State.OPENING, State.OPEN)) {
-          // This is possible as a region server has just closed a region but the region server
-          // report is generated before the closing, but arrive after the closing. Make sure there
-          // is some elapsed time so less false alarms.
-          if (!regionNode.getRegionLocation().equals(serverName) && diff > lag) {
-            LOG.warn("Reporting {} server does not match {} (time since last "
-              + "update={}ms); closing...", serverName, regionNode, diff);
-            closeRegionSilently(serverNode.getServerName(), regionName);
+        // It is likely that another thread is currently holding the lock. To avoid deadlock, use
+        // tryLock waiting for a specified period of time
+        if (regionNode.tryLock(10, TimeUnit.SECONDS)) {
+          long diff = EnvironmentEdgeManager.currentTime() - regionNode.getLastUpdate();
+          if (regionNode.isInState(State.OPENING, State.OPEN)) {
+            // This is possible as a region server has just closed a region but the region server
+            // report is generated before the closing, but arrive after the closing. Make sure there
+            // is some elapsed time so less false alarms.
+            if (!regionNode.getRegionLocation().equals(serverName) && diff > lag) {
+              LOG.warn("Reporting {} server does not match {} (time since last "
+                + "update={}ms); closing...", serverName, regionNode, diff);
+              closeRegionSilently(serverNode.getServerName(), regionName);
+            }
+          } else if (!regionNode.isInState(State.CLOSING, State.SPLITTING)) {
+            // So, we can get report that a region is CLOSED or SPLIT because a heartbeat
+            // came in at about same time as a region transition. Make sure there is some
+            // elapsed time so less false alarms.
+            if (diff > lag) {
+              LOG.warn("Reporting {} state does not match {} (time since last update={}ms)",
+                serverName, regionNode, diff);
+            }
           }
-        } else if (!regionNode.isInState(State.CLOSING, State.SPLITTING)) {
-          // So, we can get report that a region is CLOSED or SPLIT because a heartbeat
-          // came in at about same time as a region transition. Make sure there is some
-          // elapsed time so less false alarms.
-          if (diff > lag) {
-            LOG.warn("Reporting {} state does not match {} (time since last update={}ms)",
-              serverName, regionNode, diff);
-          }
+        } else {
+          LOG.warn(
+            "Unable to acquire lock for regionNode {}. It is likely that another thread is currently holding the lock. To avoid deadlock, skip execution for now.",
+            regionNode);
+          continue;
         }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
       } finally {
         regionNode.unlock();
       }
