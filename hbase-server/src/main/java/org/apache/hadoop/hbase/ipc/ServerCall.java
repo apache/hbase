@@ -235,6 +235,19 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   }
 
   @Override
+  public byte[] getRequestAttribute(String key) {
+    if (this.requestAttributes == null) {
+      for (HBaseProtos.NameBytesPair nameBytesPair : header.getAttributeList()) {
+        if (nameBytesPair.getName().equals(key)) {
+          return nameBytesPair.getValue().toByteArray();
+        }
+      }
+      return null;
+    }
+    return this.requestAttributes.get(key);
+  }
+
+  @Override
   public int getPriority() {
     return this.header.getPriority();
   }

@@ -233,6 +233,11 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
       }
 
       @Override
+      public byte[] getRequestAttribute(String key) {
+        return null;
+      }
+
+      @Override
       public int getRemotePort() {
         return 0;
       }
