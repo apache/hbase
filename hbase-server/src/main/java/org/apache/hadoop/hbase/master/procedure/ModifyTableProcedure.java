@@ -97,6 +97,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
           final boolean reopenRegions)
     throws HBaseIOException {
     super(env, latch);
+    this.reopenRegions = reopenRegions;
     initialize(oldTableDescriptor, shouldCheckDescriptor);
     this.modifiedTableDescriptor = newTableDescriptor;
     preflightChecks(env, null/* No table checks; if changing peers, table can be online */);
