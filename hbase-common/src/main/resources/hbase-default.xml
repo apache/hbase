@@ -669,7 +669,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.normalizer.merge.merge_request_max_number_of_regions</name>
-    <value>50</value>
+    <value>100</value>
     <description>The maximum number of region count in a merge request for merge
       normalization.</description>
   </property>
