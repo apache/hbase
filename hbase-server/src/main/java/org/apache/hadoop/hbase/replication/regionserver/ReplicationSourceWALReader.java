@@ -241,9 +241,8 @@ class ReplicationSourceWALReader extends Thread {
 
   private void handleEmptyWALEntryBatch() throws InterruptedException {
     LOG.trace("Didn't read any new entries from WAL");
-    if (logQueue.getQueue(walGroupId).isEmpty()) {
-      // we're done with current queue, either this is a recovered queue, or it is the special group
-      // for a sync replication peer and the peer has been transited to DA or S state.
+    if (logQueue.getQueue(walGroupId).isEmpty() && source.isRecovered()) {
+      // we're done with current queue, which should be a recovered queue
       LOG.debug("Stopping the replication source wal reader");
       setReaderRunning(false);
       // shuts down shipper thread immediately
