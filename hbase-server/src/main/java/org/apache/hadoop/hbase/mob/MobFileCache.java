@@ -38,6 +38,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.hash.Hashing;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -174,7 +175,7 @@ public class MobFileCache {
       IdLock.Entry lockEntry = null;
       try {
         // obtains the lock to close the cached file.
-        lockEntry = keyLock.getLockEntry(fileName.hashCode());
+        lockEntry = keyLock.getLockEntry(hashFileName(fileName));
         CachedMobFile evictedFile = map.remove(fileName);
         if (evictedFile != null) {
           evictedFile.close();
@@ -205,7 +206,7 @@ public class MobFileCache {
     } else {
       String fileName = path.getName();
       CachedMobFile cached = map.get(fileName);
-      IdLock.Entry lockEntry = keyLock.getLockEntry(fileName.hashCode());
+      IdLock.Entry lockEntry = keyLock.getLockEntry(hashFileName(fileName));
       try {
         if (cached == null) {
           cached = map.get(fileName);
@@ -238,7 +239,7 @@ public class MobFileCache {
       if (!isCacheEnabled) {
         file.close();
       } else {
-        lockEntry = keyLock.getLockEntry(file.getFileName().hashCode());
+        lockEntry = keyLock.getLockEntry(hashFileName(file.getFileName()));
         file.close();
       }
     } catch (IOException e) {
@@ -325,4 +326,13 @@ public class MobFileCache {
     lastEvictedFileCount += evicted;
   }
 
+  /**
+   * Use murmurhash to reduce the conflicts of hashed file names. We should notice that the hash
+   * conflicts may bring deadlocks, when opening mob files with evicting some other files, as
+   * described in HBASE-28047.
+   */
+  private long hashFileName(String fileName) {
+    return Hashing.murmur3_128().hashString(fileName, java.nio.charset.StandardCharsets.UTF_8)
+      .asLong();
+  }
 }
