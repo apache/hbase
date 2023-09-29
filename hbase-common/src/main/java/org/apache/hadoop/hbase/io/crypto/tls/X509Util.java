@@ -116,10 +116,7 @@ public final class X509Util {
   public static final int DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS = 5000;
 
   private static String[] getTls13Ciphers() {
-    return new String[] {
-      "TLS_AES_128_GCM_SHA256",
-      "TLS_AES_256_GCM_SHA384"
-    };
+    return new String[] { "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384" };
   }
 
   private static String[] getGCMCiphers() {
@@ -151,9 +148,9 @@ public final class X509Util {
 
   /**
    * Not all of our default ciphers are available in OpenSSL. Takes our default cipher lists and
-   * filters them to only those available in OpenSsl. Prefers TLS 1.3, then GCM, then CBC because GCM tends to
-   * be better and faster, and we don't need to worry about the java8 vs 9 performance issue if
-   * OpenSSL is handling it.
+   * filters them to only those available in OpenSsl. Prefers TLS 1.3, then GCM, then CBC because
+   * GCM tends to be better and faster, and we don't need to worry about the java8 vs 9 performance
+   * issue if OpenSSL is handling it.
    */
   private static String[] getOpenSslFilteredDefaultCiphers() {
     if (!OpenSsl.isAvailable()) {
