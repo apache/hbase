@@ -347,7 +347,7 @@ class NettyRpcConnection extends RpcConnection {
   private void sendRequest0(Call call, HBaseRpcController hrc) throws IOException {
     assert eventLoop.inEventLoop();
     if (reloginInProgress) {
-      throw new IOException("Can not send request because relogin is in progress.");
+      throw new IOException(RpcConnectionConstants.RELOGIN_IS_IN_PROGRESS);
     }
     hrc.notifyOnCancel(new RpcCallback<Object>() {
 
