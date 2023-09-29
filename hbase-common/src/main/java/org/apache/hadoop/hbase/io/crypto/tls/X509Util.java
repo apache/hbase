@@ -115,6 +115,13 @@ public final class X509Util {
     "hbase.client.netty.tls.handshaketimeout";
   public static final int DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS = 5000;
 
+  private static String[] getTls13Ciphers() {
+    return new String[] {
+      "TLS_AES_128_GCM_SHA256",
+      "TLS_AES_256_GCM_SHA384"
+    };
+  }
+
   private static String[] getGCMCiphers() {
     return new String[] { "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
       "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
@@ -136,12 +143,15 @@ public final class X509Util {
   // Note that this performance assumption might not hold true for architectures other than x86_64.
   private static final String[] DEFAULT_CIPHERS_JAVA9 =
     ObjectArrays.concat(getGCMCiphers(), getCBCCiphers(), String.class);
+  private static final String[] DEFAULT_CIPHERS_JAVA11 =
+    ObjectArrays.concat(ObjectArrays.concat(getTls13Ciphers(), getGCMCiphers(), String.class),
+      getCBCCiphers(), String.class);
 
   private static final String[] DEFAULT_CIPHERS_OPENSSL = getOpenSslFilteredDefaultCiphers();
 
   /**
    * Not all of our default ciphers are available in OpenSSL. Takes our default cipher lists and
-   * filters them to only those available in OpenSsl. Does GCM first, then CBC because GCM tends to
+   * filters them to only those available in OpenSsl. Prefers TLS 1.3, then GCM, then CBC because GCM tends to
    * be better and faster, and we don't need to worry about the java8 vs 9 performance issue if
    * OpenSSL is handling it.
    */
@@ -152,16 +162,9 @@ public final class X509Util {
 
     Set<String> openSslSuites = OpenSsl.availableJavaCipherSuites();
     List<String> defaultSuites = new ArrayList<>();
-    for (String cipher : getGCMCiphers()) {
-      if (openSslSuites.contains(cipher)) {
-        defaultSuites.add(cipher);
-      }
-    }
-    for (String cipher : getCBCCiphers()) {
-      if (openSslSuites.contains(cipher)) {
-        defaultSuites.add(cipher);
-      }
-    }
+    Arrays.stream(getTls13Ciphers()).filter(openSslSuites::contains).forEach(defaultSuites::add);
+    Arrays.stream(getGCMCiphers()).filter(openSslSuites::contains).forEach(defaultSuites::add);
+    Arrays.stream(getCBCCiphers()).filter(openSslSuites::contains).forEach(defaultSuites::add);
     return defaultSuites.toArray(new String[0]);
   }
 
@@ -219,17 +222,17 @@ public final class X509Util {
 
   static String[] getDefaultCipherSuitesForJavaVersion(String javaVersion) {
     Objects.requireNonNull(javaVersion);
-    if (javaVersion.matches("\\d+")) {
-      // Must be Java 9 or later
-      LOG.debug("Using Java9+ optimized cipher suites for Java version {}", javaVersion);
-      return DEFAULT_CIPHERS_JAVA9;
-    } else if (javaVersion.startsWith("1.")) {
-      // Must be Java 1.8 or earlier
-      LOG.debug("Using Java8 optimized cipher suites for Java version {}", javaVersion);
-      return DEFAULT_CIPHERS_JAVA8;
-    } else {
-      LOG.debug("Could not parse java version {}, using Java8 optimized cipher suites",
-        javaVersion);
+
+    try {
+      int javaVersionInt = Integer.parseInt(javaVersion);
+      if (javaVersionInt >= 11) {
+        return DEFAULT_CIPHERS_JAVA11;
+      } else if (javaVersionInt >= 9) {
+        return DEFAULT_CIPHERS_JAVA9;
+      } else {
+        return DEFAULT_CIPHERS_JAVA8;
+      }
+    } catch (NumberFormatException ignore) {
       return DEFAULT_CIPHERS_JAVA8;
     }
   }
