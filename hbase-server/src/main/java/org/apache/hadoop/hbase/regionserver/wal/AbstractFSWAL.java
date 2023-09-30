@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
@@ -109,6 +110,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -186,6 +188,10 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * WAL directory, where all WAL files would be placed.
    */
   protected final Path walDir;
+
+  private final FileSystem remoteFs;
+
+  private final Path remoteWALDir;
 
   /**
    * dir path where old logs are kept.
@@ -439,6 +445,10 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   protected boolean shouldShutDownConsumeExecutorWhenClose = true;
 
+  private volatile boolean skipRemoteWAL = false;
+
+  private volatile boolean markerEditOnly = false;
+
   public long getFilenum() {
     return this.filenum.get();
   }
@@ -502,22 +512,18 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     this.shouldShutDownConsumeExecutorWhenClose = true;
   }
 
-  protected AbstractFSWAL(final FileSystem fs, final Path rootDir, final String logDir,
-    final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
-    final boolean failIfWALExists, final String prefix, final String suffix)
-    throws FailedLogCloseException, IOException {
-    this(fs, null, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
-  }
-
   protected AbstractFSWAL(final FileSystem fs, final Abortable abortable, final Path rootDir,
     final String logDir, final String archiveDir, final Configuration conf,
     final List<WALActionsListener> listeners, final boolean failIfWALExists, final String prefix,
-    final String suffix) throws FailedLogCloseException, IOException {
+    final String suffix, FileSystem remoteFs, Path remoteWALDir)
+    throws FailedLogCloseException, IOException {
     this.fs = fs;
     this.walDir = new Path(rootDir, logDir);
     this.walArchiveDir = new Path(rootDir, archiveDir);
     this.conf = conf;
     this.abortable = abortable;
+    this.remoteFs = remoteFs;
+    this.remoteWALDir = remoteWALDir;
 
     if (!fs.exists(walDir) && !fs.mkdirs(walDir)) {
       throw new IOException("Unable to mkdir " + walDir);
@@ -633,6 +639,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   /**
    * Used to initialize the WAL. Usually just call rollWriter to create the first log writer.
    */
+  @Override
   public void init() throws IOException {
     rollWriter();
   }
@@ -1032,6 +1039,37 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return ioe;
   }
 
+  private W createCombinedWriter(W localWriter, Path localPath)
+    throws IOException, CommonFSUtils.StreamLacksCapabilityException {
+    // retry forever if we can not create the remote writer to prevent aborting the RS due to log
+    // rolling error, unless the skipRemoteWal is set to true.
+    // TODO: since for now we only have one thread doing log rolling, this may block the rolling for
+    // other wals
+    Path remoteWAL = new Path(remoteWALDir, localPath.getName());
+    for (int retry = 0;; retry++) {
+      if (skipRemoteWAL) {
+        return localWriter;
+      }
+      W remoteWriter;
+      try {
+        remoteWriter = createWriterInstance(remoteFs, remoteWAL);
+      } catch (IOException e) {
+        LOG.warn("create remote writer {} failed, retry = {}", remoteWAL, retry, e);
+        try {
+          Thread.sleep(ConnectionUtils.getPauseTime(100, retry));
+        } catch (InterruptedException ie) {
+          // restore the interrupt state
+          Thread.currentThread().interrupt();
+          // must close local writer here otherwise no one will close it for us
+          Closeables.close(localWriter, true);
+          throw (IOException) new InterruptedIOException().initCause(ie);
+        }
+        continue;
+      }
+      return createCombinedWriter(localWriter, remoteWriter);
+    }
+  }
+
   private Map<byte[], List<byte[]>> rollWriterInternal(boolean force) throws IOException {
     rollWriterLock.lock();
     try {
@@ -1047,7 +1085,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         Path oldPath = getOldPath();
         Path newPath = getNewPath();
         // Any exception from here on is catastrophic, non-recoverable so we currently abort.
-        W nextWriter = this.createWriterInstance(newPath);
+        W nextWriter = this.createWriterInstance(fs, newPath);
+        if (remoteFs != null) {
+          // create a remote wal if necessary
+          nextWriter = createCombinedWriter(nextWriter, newPath);
+        }
         tellListenersAboutPreLogRoll(oldPath, newPath);
         // NewPath could be equal to oldPath if replaceWriter fails.
         newPath = replaceWriter(oldPath, newPath, nextWriter);
@@ -1771,7 +1813,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     /**
      * This method is used to be compatible with the original logic of {@link AsyncFSWAL}.
      */
-    preAppendAndSync();
+    if (markerEditOnly) {
+      drainNonMarkerEditsAndFailSyncs();
+    }
     try {
       appendAndSync();
     } catch (IOException exception) {
@@ -1817,9 +1861,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     consumeExecutor.execute(consumer);
   }
 
-  protected void preAppendAndSync() {
-  }
-
   private boolean shouldScheduleConsumer() {
     int currentEpochAndState = epochAndState;
     if (writerBroken(currentEpochAndState) || waitingRoll(currentEpochAndState)) {
@@ -1860,17 +1901,15 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    */
   protected long append(RegionInfo hri, WALKeyImpl key, WALEdit edits, boolean inMemstore)
     throws IOException {
-    precheckBeforeAppendWALEdit(hri, key, edits, inMemstore);
+    if (markerEditOnly && !edits.isMetaEdit()) {
+      throw new IOException("WAL is closing, only marker edit is allowed");
+    }
     long txid =
       stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore, waitingConsumePayloads);
     if (shouldScheduleConsumer()) {
       consumeExecutor.execute(consumer);
     }
     return txid;
-  }
-
-  protected void precheckBeforeAppendWALEdit(RegionInfo hri, WALKeyImpl key, WALEdit edits,
-    boolean inMemstore) throws IOException {
   }
 
   protected void doSync(boolean forceSync) throws IOException {
@@ -1909,8 +1948,52 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     blockOnSync(future);
   }
 
-  protected abstract W createWriterInstance(Path path)
+  private void drainNonMarkerEditsAndFailSyncs() {
+    if (toWriteAppends.isEmpty()) {
+      return;
+    }
+    boolean hasNonMarkerEdits = false;
+    Iterator<FSWALEntry> iter = toWriteAppends.descendingIterator();
+    while (iter.hasNext()) {
+      FSWALEntry entry = iter.next();
+      if (!entry.getEdit().isMetaEdit()) {
+        entry.release();
+        hasNonMarkerEdits = true;
+        break;
+      }
+    }
+    if (hasNonMarkerEdits) {
+      for (;;) {
+        iter.remove();
+        if (!iter.hasNext()) {
+          break;
+        }
+        iter.next().release();
+      }
+      for (FSWALEntry entry : unackedAppends) {
+        entry.release();
+      }
+      unackedAppends.clear();
+      // fail the sync futures which are under the txid of the first remaining edit, if none, fail
+      // all the sync futures.
+      long txid = toWriteAppends.isEmpty() ? Long.MAX_VALUE : toWriteAppends.peek().getTxid();
+      IOException error = new IOException("WAL is closing, only marker edit is allowed");
+      for (Iterator<SyncFuture> syncIter = syncFutures.iterator(); syncIter.hasNext();) {
+        SyncFuture future = syncIter.next();
+        if (future.getTxid() < txid) {
+          markFutureDoneAndOffer(future, future.getTxid(), error);
+          syncIter.remove();
+        } else {
+          break;
+        }
+      }
+    }
+  }
+
+  protected abstract W createWriterInstance(FileSystem fs, Path path)
     throws IOException, CommonFSUtils.StreamLacksCapabilityException;
+
+  protected abstract W createCombinedWriter(W localWriter, W remoteWriter);
 
   protected final void waitForSafePoint() {
     consumeLock.lock();
@@ -2123,6 +2206,23 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     } finally {
       rollWriterLock.unlock();
     }
+  }
+
+  // Allow temporarily skipping the creation of remote writer. When failing to write to the remote
+  // dfs cluster, we need to reopen the regions and switch to use the original wal writer. But we
+  // need to write a close marker when closing a region, and if it fails, the whole rs will abort.
+  // So here we need to skip the creation of remote writer and make it possible to write the region
+  // close marker.
+  // Setting markerEdit only to true is for transiting from A to S, where we need to give up writing
+  // any pending wal entries as they will be discarded. The remote cluster will replicated the
+  // correct data back later. We still need to allow writing marker edits such as close region event
+  // to allow closing a region.
+  @Override
+  public void skipRemoteWAL(boolean markerEditOnly) {
+    if (markerEditOnly) {
+      this.markerEditOnly = true;
+    }
+    this.skipRemoteWAL = true;
   }
 
   private static void split(final Configuration conf, final Path p) throws IOException {

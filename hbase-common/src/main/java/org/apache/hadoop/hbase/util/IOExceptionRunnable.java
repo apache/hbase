@@ -15,22 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.replication.regionserver;
+package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import java.io.IOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * Get notification for replication peer events. Mainly used for telling the {@code WALProvider} to
- * close some remote WAL if not used any more.
- */
 @InterfaceAudience.Private
-public interface PeerActionListener {
+@FunctionalInterface
+public interface IOExceptionRunnable {
 
-  static final PeerActionListener DUMMY = new PeerActionListener() {
-  };
-
-  default void peerSyncReplicationStateChange(String peerId, SyncReplicationState from,
-    SyncReplicationState to, int stage) {
-  }
+  void run() throws IOException;
 }

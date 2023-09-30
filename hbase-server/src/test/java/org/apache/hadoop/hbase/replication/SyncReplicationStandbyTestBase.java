@@ -17,18 +17,19 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.either;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -38,20 +39,11 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
-import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
-@Category({ ReplicationTests.class, LargeTests.class })
-public class TestSyncReplicationStandBy extends SyncReplicationTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncReplicationStandBy.class);
+public class SyncReplicationStandbyTestBase extends SyncReplicationTestBase {
 
   @FunctionalInterface
   private interface TableAction {
@@ -60,13 +52,10 @@ public class TestSyncReplicationStandBy extends SyncReplicationTestBase {
   }
 
   private void assertDisallow(Table table, TableAction action) throws IOException {
-    try {
-      action.call(table);
-      fail("Should not allow the action");
-    } catch (DoNotRetryIOException | RetriesExhaustedException e) {
-      // expected
-      assertThat(e.getMessage(), containsString("STANDBY"));
-    }
+    Exception error = assertThrows(Exception.class, () -> action.call(table));
+    assertThat(error, either(instanceOf(DoNotRetryIOException.class))
+      .or(instanceOf(RetriesExhaustedException.class)));
+    assertThat(error.getMessage(), containsString("STANDBY"));
   }
 
   @Test

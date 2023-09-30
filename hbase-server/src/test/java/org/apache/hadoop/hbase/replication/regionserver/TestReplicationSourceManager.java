@@ -182,7 +182,7 @@ public class TestReplicationSourceManager {
 
     replication = new Replication();
     replication.initialize(server, FS, new Path(logDir, sn.toString()), oldLogDir,
-      new WALFactory(CONF, server.getServerName(), null, false));
+      new WALFactory(CONF, server.getServerName(), null));
     manager = replication.getReplicationManager();
   }
 
