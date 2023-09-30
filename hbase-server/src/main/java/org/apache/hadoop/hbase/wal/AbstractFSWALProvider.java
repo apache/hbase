@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
@@ -35,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -64,7 +62,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implements WALProvider {
+public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>>
+  extends AbstractWALProvider {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractFSWALProvider.class);
 
@@ -84,14 +83,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   protected volatile T wal;
-  protected WALFactory factory;
-  protected Configuration conf;
-  protected List<WALActionsListener> listeners = new ArrayList<>();
-  protected String providerId;
-  protected AtomicBoolean initialized = new AtomicBoolean(false);
-  // for default wal provider, logPrefix won't change
-  protected String logPrefix;
-  protected Abortable abortable;
 
   /**
    * We use walCreateLock to prevent wal recreation in different threads, and also prevent getWALs
@@ -106,13 +97,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    *                   null
    */
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
+  protected void doInit(WALFactory factory, Configuration conf, String providerId)
     throws IOException {
-    if (!initialized.compareAndSet(false, true)) {
-      throw new IllegalStateException("WALProvider.init should only be called once.");
-    }
-    this.factory = factory;
-    this.conf = conf;
     this.providerId = providerId;
     // get log prefix
     StringBuilder sb = new StringBuilder().append(factory.factoryId);
@@ -124,12 +110,11 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       }
     }
     logPrefix = sb.toString();
-    this.abortable = abortable;
     doInit(conf);
   }
 
   @Override
-  public List<WAL> getWALs() {
+  protected List<WAL> getWALs0() {
     if (wal != null) {
       return Lists.newArrayList(wal);
     }
@@ -146,7 +131,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   @Override
-  public T getWAL(RegionInfo region) throws IOException {
+  protected T getWAL0(RegionInfo region) throws IOException {
     T walCopy = wal;
     if (walCopy != null) {
       return walCopy;
@@ -158,15 +143,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
         return walCopy;
       }
       walCopy = createWAL();
-      boolean succ = false;
-      try {
-        walCopy.init();
-        succ = true;
-      } finally {
-        if (!succ) {
-          walCopy.close();
-        }
-      }
+      initWAL(walCopy);
       wal = walCopy;
       return walCopy;
     } finally {
@@ -179,7 +156,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   protected abstract void doInit(Configuration conf) throws IOException;
 
   @Override
-  public void shutdown() throws IOException {
+  protected void shutdown0() throws IOException {
     T log = this.wal;
     if (log != null) {
       log.shutdown();
@@ -187,7 +164,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   @Override
-  public void close() throws IOException {
+  protected void close0() throws IOException {
     T log = this.wal;
     if (log != null) {
       log.close();
@@ -199,7 +176,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * number of files (rolled and active). if either of them aren't, count 0 for that provider.
    */
   @Override
-  public long getNumLogFiles() {
+  protected long getNumLogFiles0() {
     T log = this.wal;
     return log == null ? 0 : log.getNumLogFiles();
   }
@@ -209,9 +186,17 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * size of files (only rolled). if either of them aren't, count 0 for that provider.
    */
   @Override
-  public long getLogFileSize() {
+  protected long getLogFileSize0() {
     T log = this.wal;
     return log == null ? 0 : log.getLogFileSize();
+  }
+
+  @Override
+  protected WAL createRemoteWAL(RegionInfo region, FileSystem remoteFs, Path remoteWALDir,
+    String prefix, String suffix) throws IOException {
+    // so we do not need to add this for a lot of test classes, for normal WALProvider, you should
+    // implement this method to support sync replication.
+    throw new UnsupportedOperationException();
   }
 
   /**

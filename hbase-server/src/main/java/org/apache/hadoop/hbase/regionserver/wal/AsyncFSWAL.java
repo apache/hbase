@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -28,12 +27,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
-import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -125,21 +121,13 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private final StreamSlowMonitor streamSlowMonitor;
 
-  public AsyncFSWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
-    Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists, String prefix,
-    String suffix, EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass)
-    throws FailedLogCloseException, IOException {
-    this(fs, null, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix,
-      eventLoopGroup, channelClass, StreamSlowMonitor.create(conf, "monitorForSuffix"));
-  }
-
   public AsyncFSWAL(FileSystem fs, Abortable abortable, Path rootDir, String logDir,
     String archiveDir, Configuration conf, List<WALActionsListener> listeners,
-    boolean failIfWALExists, String prefix, String suffix, EventLoopGroup eventLoopGroup,
-    Class<? extends Channel> channelClass, StreamSlowMonitor monitor)
+    boolean failIfWALExists, String prefix, String suffix, FileSystem remoteFs, Path remoteWALDir,
+    EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass, StreamSlowMonitor monitor)
     throws FailedLogCloseException, IOException {
     super(fs, abortable, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
-      suffix);
+      suffix, remoteFs, remoteWALDir);
     this.eventLoopGroup = eventLoopGroup;
     this.channelClass = channelClass;
     this.streamSlowMonitor = monitor;
@@ -174,76 +162,13 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     return writer.sync(shouldUseHsync);
   }
 
-  private void drainNonMarkerEditsAndFailSyncs() {
-    if (toWriteAppends.isEmpty()) {
-      return;
-    }
-    boolean hasNonMarkerEdits = false;
-    Iterator<FSWALEntry> iter = toWriteAppends.descendingIterator();
-    while (iter.hasNext()) {
-      FSWALEntry entry = iter.next();
-      if (!entry.getEdit().isMetaEdit()) {
-        entry.release();
-        hasNonMarkerEdits = true;
-        break;
-      }
-    }
-    if (hasNonMarkerEdits) {
-      for (;;) {
-        iter.remove();
-        if (!iter.hasNext()) {
-          break;
-        }
-        iter.next().release();
-      }
-      for (FSWALEntry entry : unackedAppends) {
-        entry.release();
-      }
-      unackedAppends.clear();
-      // fail the sync futures which are under the txid of the first remaining edit, if none, fail
-      // all the sync futures.
-      long txid = toWriteAppends.isEmpty() ? Long.MAX_VALUE : toWriteAppends.peek().getTxid();
-      IOException error = new IOException("WAL is closing, only marker edit is allowed");
-      for (Iterator<SyncFuture> syncIter = syncFutures.iterator(); syncIter.hasNext();) {
-        SyncFuture future = syncIter.next();
-        if (future.getTxid() < txid) {
-          markFutureDoneAndOffer(future, future.getTxid(), error);
-          syncIter.remove();
-        } else {
-          break;
-        }
-      }
-    }
-  }
-
-  @Override
-  protected void preAppendAndSync() {
-    if (markerEditOnly()) {
-      drainNonMarkerEditsAndFailSyncs();
-    }
-  }
-
-  // This is used by sync replication, where we are going to close the wal soon after we reopen all
-  // the regions. Will be overridden by sub classes.
-  protected boolean markerEditOnly() {
-    return false;
-  }
-
-  @Override
-  protected void precheckBeforeAppendWALEdit(RegionInfo hri, WALKeyImpl key, WALEdit edits,
-    boolean inMemstore) throws IOException {
-    if (markerEditOnly() && !edits.isMetaEdit()) {
-      throw new IOException("WAL is closing, only marker edit is allowed");
-    }
-  }
-
   protected final AsyncWriter createAsyncWriter(FileSystem fs, Path path) throws IOException {
     return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, false, this.blocksize,
       eventLoopGroup, channelClass, streamSlowMonitor);
   }
 
   @Override
-  protected AsyncWriter createWriterInstance(Path path) throws IOException {
+  protected AsyncWriter createWriterInstance(FileSystem fs, Path path) throws IOException {
     return createAsyncWriter(fs, path);
   }
 
@@ -276,5 +201,11 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     // typically there is no 'low replication' state, only a 'broken' state.
     AsyncFSOutput output = this.fsOut;
     return output != null && output.isBroken();
+  }
+
+  @Override
+  protected AsyncWriter createCombinedWriter(AsyncWriter localWriter, AsyncWriter remoteWriter) {
+    // put remote writer first as usually it will cost more time to finish, so we write to it first
+    return CombinedAsyncWriter.create(remoteWriter, localWriter);
   }
 }

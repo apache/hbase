@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
+import org.apache.hadoop.hbase.wal.AbstractWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -729,7 +729,7 @@ public class ReplicationSourceManager {
       // special format, and also, the peer id in its name should match the peer id for the
       // replication source.
       List<String> remoteWals =
-        wals.stream().filter(w -> SyncReplicationWALProvider.getSyncReplicationPeerIdFromWALName(w)
+        wals.stream().filter(w -> AbstractWALProvider.getSyncReplicationPeerIdFromWALName(w)
           .map(peerId::equals).orElse(false)).collect(Collectors.toList());
       LOG.debug("Removing {} logs from remote dir {} in the list: {}", remoteWals.size(),
         remoteWALDir, remoteWals);

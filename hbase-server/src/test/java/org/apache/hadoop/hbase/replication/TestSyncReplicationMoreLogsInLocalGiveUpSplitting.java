@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.either;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -38,11 +40,11 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.wal.DualAsyncFSWAL;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -62,10 +64,10 @@ public class TestSyncReplicationMoreLogsInLocalGiveUpSplitting extends SyncRepli
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL1.getConfiguration().setClass(SyncReplicationWALProvider.DUAL_WAL_IMPL,
-      DualAsyncFSWALForTest.class, DualAsyncFSWAL.class);
-    UTIL2.getConfiguration().setClass(SyncReplicationWALProvider.DUAL_WAL_IMPL,
-      DualAsyncFSWALForTest.class, DualAsyncFSWAL.class);
+    UTIL1.getConfiguration().setClass(WALFactory.WAL_PROVIDER, BrokenRemoteAsyncFSWALProvider.class,
+      WALProvider.class);
+    UTIL2.getConfiguration().setClass(WALFactory.WAL_PROVIDER, BrokenRemoteAsyncFSWALProvider.class,
+      WALProvider.class);
     SyncReplicationTestBase.setUp();
   }
 
@@ -81,21 +83,18 @@ public class TestSyncReplicationMoreLogsInLocalGiveUpSplitting extends SyncRepli
       table.put(new Put(Bytes.toBytes(0)).addColumn(CF, CQ, Bytes.toBytes(0)));
     }
     HRegionServer rs = UTIL1.getRSForFirstRegionInTable(TABLE_NAME);
-    DualAsyncFSWALForTest wal =
-      (DualAsyncFSWALForTest) rs.getWAL(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
+    BrokenRemoteAsyncFSWALProvider.BrokenRemoteAsyncFSWAL wal =
+      (BrokenRemoteAsyncFSWALProvider.BrokenRemoteAsyncFSWAL) rs.getWalFactory()
+        .getWAL(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
     wal.setRemoteBroken();
     wal.suspendLogRoll();
     try (AsyncConnection conn =
       ConnectionFactory.createAsyncConnection(UTIL1.getConfiguration()).get()) {
       AsyncTable<?> table = conn.getTableBuilder(TABLE_NAME).setMaxAttempts(1)
         .setWriteRpcTimeout(5, TimeUnit.SECONDS).build();
-      try {
-        table.put(new Put(Bytes.toBytes(1)).addColumn(CF, CQ, Bytes.toBytes(1))).get();
-        fail("Should fail since the rs will hang and we will get a rpc timeout");
-      } catch (ExecutionException e) {
-        // expected
-        LOG.info("Expected error:", e);
-      }
+      ExecutionException error = assertThrows(ExecutionException.class,
+        () -> table.put(new Put(Bytes.toBytes(1)).addColumn(CF, CQ, Bytes.toBytes(1))).get());
+      LOG.info("Expected error:", error);
     }
     wal.waitUntilArrive();
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
@@ -111,12 +110,11 @@ public class TestSyncReplicationMoreLogsInLocalGiveUpSplitting extends SyncRepli
     // make sure that the region is online. We can not use waitTableAvailable since the table in
     // stand by state can not be read from client.
     try (Table table = UTIL1.getConnection().getTable(TABLE_NAME)) {
-      try {
-        table.exists(new Get(Bytes.toBytes(0)));
-      } catch (DoNotRetryIOException | RetriesExhaustedException e) {
-        // expected
-        assertThat(e.getMessage(), containsString("STANDBY"));
-      }
+      Exception error =
+        assertThrows(Exception.class, () -> table.exists(new Get(Bytes.toBytes(0))));
+      assertThat(error, either(instanceOf(DoNotRetryIOException.class))
+        .or(instanceOf(RetriesExhaustedException.class)));
+      assertThat(error.getMessage(), containsString("STANDBY"));
     }
     HRegion region = UTIL1.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
     // we give up splitting the whole wal file so this record will also be gone.

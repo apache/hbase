@@ -144,8 +144,8 @@ public class TestFailedAppendAndSync {
     }
 
     @Override
-    protected Writer createWriterInstance(Path path) throws IOException {
-      final Writer w = super.createWriterInstance(path);
+    protected Writer createWriterInstance(FileSystem fs, Path path) throws IOException {
+      final Writer w = super.createWriterInstance(fs, path);
       return new Writer() {
         @Override
         public void close() throws IOException {
