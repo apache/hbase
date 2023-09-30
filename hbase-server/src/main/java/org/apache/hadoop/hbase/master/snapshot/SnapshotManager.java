@@ -36,10 +36,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
@@ -486,12 +489,49 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
           "Couldn't create working directory (" + workingDir + ") for snapshot",
           ProtobufUtil.createSnapshotDesc(snapshot));
       }
+      updateWorkingDirAclsIfRequired(workingDir, workingDirFS);
     } catch (HBaseSnapshotException e) {
       throw e;
     } catch (IOException e) {
       throw new SnapshotCreationException(
         "Exception while checking to see if snapshot could be started.", e,
         ProtobufUtil.createSnapshotDesc(snapshot));
+    }
+  }
+
+  /**
+   * If the parent dir of the snapshot working dir (e.g. /hbase/.hbase-snapshot) has non-empty ACLs,
+   * use them for the current working dir (e.g. /hbase/.hbase-snapshot/.tmp/{snapshot-name}) so that
+   * regardless of whether the snapshot commit phase performs atomic rename or non-atomic copy of
+   * the working dir to new snapshot dir, the ACLs are retained.
+   * @param workingDir   working dir to build the snapshot.
+   * @param workingDirFS working dir file system.
+   * @throws IOException If ACL read/modify operation fails.
+   */
+  private static void updateWorkingDirAclsIfRequired(Path workingDir, FileSystem workingDirFS)
+    throws IOException {
+    if (
+      !workingDirFS.hasPathCapability(workingDir, CommonPathCapabilities.FS_ACLS)
+        || workingDir.getParent() == null || workingDir.getParent().getParent() == null
+    ) {
+      return;
+    }
+    AclStatus snapshotWorkingParentDirStatus;
+    try {
+      snapshotWorkingParentDirStatus =
+        workingDirFS.getAclStatus(workingDir.getParent().getParent());
+    } catch (IOException e) {
+      LOG.warn("Unable to retrieve ACL status for path: {}, current working dir path: {}",
+        workingDir.getParent().getParent(), workingDir, e);
+      return;
+    }
+    List<AclEntry> snapshotWorkingParentDirAclStatusEntries =
+      snapshotWorkingParentDirStatus.getEntries();
+    if (
+      snapshotWorkingParentDirAclStatusEntries != null
+        && snapshotWorkingParentDirAclStatusEntries.size() > 0
+    ) {
+      workingDirFS.modifyAclEntries(workingDir, snapshotWorkingParentDirAclStatusEntries);
     }
   }
 
