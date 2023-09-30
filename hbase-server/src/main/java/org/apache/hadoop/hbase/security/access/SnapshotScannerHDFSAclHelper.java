@@ -155,11 +155,12 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
       long start = System.currentTimeMillis();
       handleGrantOrRevokeAcl(userPermission, HDFSAclOperation.OperationType.MODIFY, skipNamespaces,
         skipTables);
-      LOG.info("Set HDFS acl when grant {}, cost {} ms", userPermission,
-        System.currentTimeMillis() - start);
+      LOG.info("Set HDFS acl when grant {}, skipNamespaces: {}, skipTables: {}, cost {} ms",
+        userPermission, skipNamespaces, skipTables, System.currentTimeMillis() - start);
       return true;
     } catch (Exception e) {
-      LOG.error("Set HDFS acl error when grant: {}", userPermission, e);
+      LOG.error("Set HDFS acl error when grant: {}, skipNamespaces: {}, skipTables: {}",
+        userPermission, skipNamespaces, skipTables, e);
       return false;
     }
   }
@@ -177,11 +178,12 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
       long start = System.currentTimeMillis();
       handleGrantOrRevokeAcl(userPermission, HDFSAclOperation.OperationType.REMOVE, skipNamespaces,
         skipTables);
-      LOG.info("Set HDFS acl when revoke {}, cost {} ms", userPermission,
-        System.currentTimeMillis() - start);
+      LOG.info("Set HDFS acl when revoke {}, skipNamespaces: {}, skipTables: {}, cost {} ms",
+        userPermission, skipNamespaces, skipTables, System.currentTimeMillis() - start);
       return true;
     } catch (Exception e) {
-      LOG.error("Set HDFS acl error when revoke: {}", userPermission, e);
+      LOG.error("Set HDFS acl error when revoke: {}, skipNamespaces: {}, skipTables: {}",
+        userPermission, skipNamespaces, skipTables, e);
       return false;
     }
   }
