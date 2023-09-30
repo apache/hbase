@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -101,8 +102,9 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
   protected AbstractFSWAL<?> newWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
     Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists, String prefix,
     String suffix) throws IOException {
-    AsyncFSWAL wal = new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners,
-      failIfWALExists, prefix, suffix, GROUP, CHANNEL_CLASS);
+    AsyncFSWAL wal = new AsyncFSWAL(fs, null, rootDir, logDir, archiveDir, conf, listeners,
+      failIfWALExists, prefix, suffix, null, null, GROUP, CHANNEL_CLASS,
+      StreamSlowMonitor.create(conf, "monitor"));
     wal.init();
     return wal;
   }
@@ -112,8 +114,9 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
     String archiveDir, Configuration conf, List<WALActionsListener> listeners,
     boolean failIfWALExists, String prefix, String suffix, final Runnable action)
     throws IOException {
-    AsyncFSWAL wal = new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners,
-      failIfWALExists, prefix, suffix, GROUP, CHANNEL_CLASS) {
+    AsyncFSWAL wal = new AsyncFSWAL(fs, null, rootDir, logDir, archiveDir, conf, listeners,
+      failIfWALExists, prefix, suffix, null, null, GROUP, CHANNEL_CLASS,
+      StreamSlowMonitor.create(conf, "monitor")) {
 
       @Override
       protected void atHeadOfRingBufferEventHandlerAppend() {
@@ -141,12 +144,13 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
     String testName = currentTest.getMethodName();
     AtomicInteger failedCount = new AtomicInteger(0);
     try (LogRoller roller = new LogRoller(services);
-      AsyncFSWAL wal = new AsyncFSWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
-        testName, CONF, null, true, null, null, GROUP, CHANNEL_CLASS) {
+      AsyncFSWAL wal = new AsyncFSWAL(FS, null, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
+        testName, CONF, null, true, null, null, null, null, GROUP, CHANNEL_CLASS,
+        StreamSlowMonitor.create(CONF, "monitorForSuffix")) {
 
         @Override
-        protected AsyncWriter createWriterInstance(Path path) throws IOException {
-          AsyncWriter writer = super.createWriterInstance(path);
+        protected AsyncWriter createWriterInstance(FileSystem fs, Path path) throws IOException {
+          AsyncWriter writer = super.createWriterInstance(fs, path);
           return new AsyncWriter() {
 
             @Override

@@ -23,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.wal.DualAsyncFSWAL;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.SyncReplicationTestBase;
@@ -58,8 +58,8 @@ public class TestSyncReplicationShipperQuit extends SyncReplicationTestBase {
 
     writeAndVerifyReplication(UTIL1, UTIL2, 0, 100);
     HRegionServer rs = UTIL1.getRSForFirstRegionInTable(TABLE_NAME);
-    DualAsyncFSWAL wal =
-      (DualAsyncFSWAL) rs.getWAL(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
+    AbstractFSWAL<?> wal =
+      (AbstractFSWAL<?>) rs.getWAL(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
     String walGroupId =
       AbstractFSWALProvider.getWALPrefixFromWALName(wal.getCurrentFileName().getName());
     ReplicationSourceShipper shipper =

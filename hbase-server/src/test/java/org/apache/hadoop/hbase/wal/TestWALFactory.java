@@ -623,16 +623,11 @@ public class TestWALFactory {
   @Test
   public void testWALProviders() throws IOException {
     Configuration conf = new Configuration();
-    // if providers are not set but enable SyncReplicationWALProvider by default for master node
-    // with not only system tables
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
-    assertEquals(SyncReplicationWALProvider.class, walFactory.getWALProvider().getClass());
-    WALProvider wrappedWALProvider =
-      ((SyncReplicationWALProvider) walFactory.getWALProvider()).getWrappedProvider();
-    assertEquals(wrappedWALProvider.getClass(), walFactory.getMetaProvider().getClass());
+    assertEquals(walFactory.getWALProvider().getClass(), walFactory.getMetaProvider().getClass());
 
     // if providers are not set and do not enable SyncReplicationWALProvider
-    walFactory = new WALFactory(conf, this.currentServername, null, false);
+    walFactory = new WALFactory(conf, this.currentServername, null);
     assertEquals(walFactory.getWALProvider().getClass(), walFactory.getMetaProvider().getClass());
   }
 
@@ -641,12 +636,8 @@ public class TestWALFactory {
     Configuration conf = new Configuration();
     conf.set(WAL_PROVIDER, WALFactory.Providers.multiwal.name());
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
-    WALProvider wrappedWALProvider =
-      ((SyncReplicationWALProvider) walFactory.getWALProvider()).getWrappedProvider();
-
-    assertEquals(SyncReplicationWALProvider.class, walFactory.getWALProvider().getClass());
     // class of WALProvider and metaWALProvider are the same when metaWALProvider is not set
-    assertEquals(WALFactory.Providers.multiwal.clazz, wrappedWALProvider.getClass());
+    assertEquals(WALFactory.Providers.multiwal.clazz, walFactory.getWALProvider().getClass());
     assertEquals(WALFactory.Providers.multiwal.clazz, walFactory.getMetaProvider().getClass());
   }
 
@@ -655,11 +646,8 @@ public class TestWALFactory {
     Configuration conf = new Configuration();
     conf.set(META_WAL_PROVIDER, WALFactory.Providers.asyncfs.name());
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
-    WALProvider wrappedWALProvider =
-      ((SyncReplicationWALProvider) walFactory.getWALProvider()).getWrappedProvider();
-
-    assertEquals(SyncReplicationWALProvider.class, walFactory.getWALProvider().getClass());
-    assertEquals(WALFactory.Providers.defaultProvider.clazz, wrappedWALProvider.getClass());
+    assertEquals(WALFactory.Providers.defaultProvider.clazz,
+      walFactory.getWALProvider().getClass());
     assertEquals(WALFactory.Providers.asyncfs.clazz, walFactory.getMetaProvider().getClass());
   }
 
