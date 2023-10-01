@@ -36,7 +36,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -510,17 +509,14 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    */
   private static void updateWorkingDirAclsIfRequired(Path workingDir, FileSystem workingDirFS)
     throws IOException {
-    if (
-      !workingDirFS.hasPathCapability(workingDir, CommonPathCapabilities.FS_ACLS)
-        || workingDir.getParent() == null || workingDir.getParent().getParent() == null
-    ) {
+    if (workingDir.getParent() == null || workingDir.getParent().getParent() == null) {
       return;
     }
     AclStatus snapshotWorkingParentDirStatus;
     try {
       snapshotWorkingParentDirStatus =
         workingDirFS.getAclStatus(workingDir.getParent().getParent());
-    } catch (IOException e) {
+    } catch (IOException | UnsupportedOperationException e) {
       LOG.warn("Unable to retrieve ACL status for path: {}, current working dir path: {}",
         workingDir.getParent().getParent(), workingDir, e);
       return;
