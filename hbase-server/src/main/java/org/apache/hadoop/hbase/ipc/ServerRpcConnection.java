@@ -553,7 +553,7 @@ abstract class ServerRpcConnection implements Closeable {
       // fail at the handler layer, but worse might result in CallQueueTooBigException if the
       // queue is full but server is not properly processing requests. Better to throw an aborted
       // exception here so that the client can properly react.
-      if (rpcServer.server.isAborted()) {
+      if (rpcServer.server != null && rpcServer.server.isAborted()) {
         RegionServerAbortedException serverIsAborted = new RegionServerAbortedException(
           "Server " + rpcServer.server.getServerName() + " aborting");
         this.rpcServer.metrics.exception(serverIsAborted);
