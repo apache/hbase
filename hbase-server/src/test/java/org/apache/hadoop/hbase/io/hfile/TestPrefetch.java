@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY;
+import static org.apache.hadoop.hbase.io.hfile.PrefetchExecutor.*;
 import static org.apache.hadoop.hbase.regionserver.CompactSplit.HBASE_REGION_SERVER_ENABLE_COMPACTION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
@@ -262,6 +263,42 @@ public class TestPrefetch {
       boolean isCached = c != null;
       assertTrue(isCached);
     });
+  }
+
+  @Test
+  public void testOnConfigurationChange() {
+    // change PREFETCH_DELAY_ENABLE_KEY from false to true
+    conf.setInt(PREFETCH_EXECUTE_DELAY, 2000);
+    PrefetchExecutor.loadConfiguration(conf);
+    assertTrue(getPrefetchExecuteDelay() == 2000);
+
+    // restore
+    conf.setInt(PREFETCH_EXECUTE_DELAY, 0);
+    PrefetchExecutor.loadConfiguration(conf);
+    assertTrue(getPrefetchExecuteDelay() == 0);
+  }
+
+  @Test
+  public void testPrefetchWithDelay() throws Exception {
+    conf.setInt(PREFETCH_EXECUTE_DELAY, 2000);
+    PrefetchExecutor.loadConfiguration(conf);
+
+    HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
+      .withBlockSize(DATA_BLOCK_SIZE).build();
+    Path storeFile = writeStoreFile("TestPrefetchWithDelay", context);
+    readStoreFile(storeFile);
+    conf.setInt(PREFETCH_EXECUTE_DELAY, 0);
+  }
+
+  @Test
+  public void testPrefetchWithDefaultDelay() throws Exception {
+    conf.setInt(PREFETCH_EXECUTE_DELAY, 0);
+    PrefetchExecutor.loadConfiguration(conf);
+
+    HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
+      .withBlockSize(DATA_BLOCK_SIZE).build();
+    Path storeFile = writeStoreFile("TestPrefetchWithDelay", context);
+    readStoreFile(storeFile);
   }
 
   private void testPrefetchWhenRefs(boolean compactionEnabled, Consumer<Cacheable> test)
