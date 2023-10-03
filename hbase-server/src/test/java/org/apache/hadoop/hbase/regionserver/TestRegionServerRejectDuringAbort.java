@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -65,9 +66,10 @@ public class TestRegionServerRejectDuringAbort {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerAbortTimeout.class);
+    HBaseClassTestRule.forClass(TestRegionServerRejectDuringAbort.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerAbortTimeout.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestRegionServerRejectDuringAbort.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -154,13 +156,7 @@ public class TestRegionServerRejectDuringAbort {
     // of a request is working.
     serverWithoutMeta.abort("Abort RS for test");
 
-    // Wait for our expected exception to be thrown
-    synchronized (THROWN_EXCEPTION) {
-      while (THROWN_EXCEPTION.get() == null) {
-        THROWN_EXCEPTION.wait();
-      }
-    }
-
+    UTIL.waitFor(60_000, () -> THROWN_EXCEPTION.get() != null);
     assertEquals(THROWN_EXCEPTION.get().getCause().getClass(), RegionServerAbortedException.class);
   }
 
@@ -192,7 +188,10 @@ public class TestRegionServerRejectDuringAbort {
   }
 
   private void submitRequestsToRegion(Table table, RegionInfo regionInfo) throws IOException {
+    // We will block closes of the regions with a CP, so no need to worry about the region getting
+    // reassigned. Just use the same rowkey always.
     byte[] rowKey = getRowKeyWithin(regionInfo);
+
     int i = 0;
     while (true) {
       try {
@@ -210,6 +209,9 @@ public class TestRegionServerRejectDuringAbort {
           throw e;
         }
       }
+
+      // small sleep to relieve pressure
+      Threads.sleep(10);
     }
   }
 
@@ -244,16 +246,8 @@ public class TestRegionServerRejectDuringAbort {
     @Override
     public void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested)
       throws IOException {
-      synchronized (THROWN_EXCEPTION) {
-        while (THROWN_EXCEPTION.get() == null) {
-          try {
-            THROWN_EXCEPTION.wait();
-          } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-          }
-        }
-      }
+      // Wait so that the region can't close until we get the information we need from our test
+      UTIL.waitFor(60_000, () -> THROWN_EXCEPTION.get() != null);
     }
   }
 }
