@@ -496,7 +496,7 @@ public class TestSimpleRegionNormalizer {
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 3);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 0, 0, 0);
     setupMocksForNormalizer(regionSizes, regionInfos);
-    assertEquals(50, normalizer.getMergeRequestMaxNumberOfRegionsCount());
+    assertEquals(100, normalizer.getMergeRequestMaxNumberOfRegionsCount());
     List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(plans, contains(new MergeNormalizationPlan.Builder().addTarget(regionInfos.get(0), 0)
       .addTarget(regionInfos.get(1), 0).addTarget(regionInfos.get(2), 0).build()));
