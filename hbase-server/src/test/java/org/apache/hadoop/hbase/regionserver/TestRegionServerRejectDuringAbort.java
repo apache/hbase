@@ -77,7 +77,7 @@ public class TestRegionServerRejectDuringAbort {
 
   private static final int REGIONS_NUM = 5;
 
-  private static final AtomicReference<IOException> THROWN_EXCEPTION = new AtomicReference<>(null);
+  private static final AtomicReference<Exception> THROWN_EXCEPTION = new AtomicReference<>(null);
 
   private static volatile boolean shouldThrowTooBig = false;
 
@@ -154,8 +154,11 @@ public class TestRegionServerRejectDuringAbort {
     // of a request is working.
     serverWithoutMeta.abort("Abort RS for test");
 
+    // Wait for our expected exception to be thrown
     synchronized (THROWN_EXCEPTION) {
-      THROWN_EXCEPTION.wait();
+      while (THROWN_EXCEPTION.get() == null) {
+        THROWN_EXCEPTION.wait();
+      }
     }
 
     assertEquals(THROWN_EXCEPTION.get().getCause().getClass(), RegionServerAbortedException.class);
@@ -178,10 +181,10 @@ public class TestRegionServerRejectDuringAbort {
           }
           throw new RuntimeException("Failed to find any regions for loadServer " + loadServer);
         }
-      } catch (IOException e) {
+      } catch (Exception e) {
         LOG.warn("Failed to load data", e);
-        THROWN_EXCEPTION.set(e);
         synchronized (THROWN_EXCEPTION) {
+          THROWN_EXCEPTION.set(e);
           THROWN_EXCEPTION.notifyAll();
         }
       }
