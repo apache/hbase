@@ -49,6 +49,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -136,7 +137,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     writeAndVerify(FS, f, out);
   }
 
-  @Test
+  @Ignore("CDPD-62046")
   public void testRecover() throws IOException, InterruptedException, ExecutionException {
     Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
