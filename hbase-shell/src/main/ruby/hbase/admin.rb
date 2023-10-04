@@ -788,7 +788,7 @@ module Hbase
         # 1) Column family spec. Distinguished by having a NAME and no METHOD.
         method = arg.delete(METHOD)
 
-        if !method.nil? && method == 'no_reopen_regions'
+        if !method.nil? && method == 'avoid_reopening_regions'
           reopen_regions = false;
           method = nil
         end
@@ -915,7 +915,7 @@ module Hbase
       if hasTableUpdate
         future = @admin.modifyTableAsync(tdb.build, reopen_regions)
         if reopen_regions == false
-          puts("WARNING: You are using 'no_reopen_regions' to modify a table, which will result in
+          puts("WARNING: You are using 'avoid_reopening_regions' to modify a table, which will result in
           inconsistencies in the configuration of online regions and other risks. If you encounter
           any issues, use the original 'alter' command to make the modification again!")
           future.get

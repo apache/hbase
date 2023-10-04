@@ -597,7 +597,6 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf");
-    UTIL.getAdmin().disableTable(tableName);
 
     // Test 1: Modify table without reopening any regions
     TableDescriptor htd = UTIL.getAdmin().getDescriptor(tableName);
