@@ -631,7 +631,7 @@
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.27.2</spotless.version>
-    <hbase-thirdparty.version>4.1.4</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.5</hbase-thirdparty.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- Coverage properties -->
     <jacoco.version>0.8.8</jacoco.version>
