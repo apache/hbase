@@ -344,12 +344,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
         ReplicationSourceShipper worker = createNewShipper(walGroupId);
         ReplicationSourceWALReader walReader =
           createNewWALReader(walGroupId, worker.getStartPosition());
-        Threads.setDaemonThreadRunning(
-          walReader, Thread.currentThread().getName() + ".replicationSource.wal-reader."
-            + walGroupId + "," + queueId,
-          (t, e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
+        Threads.setDaemonThreadRunning(walReader, Thread.currentThread().getName()
+          + ".replicationSource.wal-reader." + walGroupId + "," + queueId, this::retryRefreshing);
         worker.setWALReader(walReader);
-        worker.startup((t, e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
+        worker.startup(this::retryRefreshing);
         return worker;
       }
     });
@@ -422,24 +420,30 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return walEntryFilter;
   }
 
-  private void uncaughtException(Thread t, Throwable e, ReplicationSourceManager manager,
-    String peerId) {
-    RSRpcServices.exitIfOOME(e);
-    LOG.error("Unexpected exception in {} currentPath={}", t.getName(), getCurrentPath(), e);
+  // log the error, check if the error is OOME, or whether we should abort the server
+  private void checkError(Thread t, Throwable error) {
+    RSRpcServices.exitIfOOME(error);
+    LOG.error("Unexpected exception in {} currentPath={}", t.getName(), getCurrentPath(), error);
     if (abortOnError) {
-      server.abort("Unexpected exception in " + t.getName(), e);
+      server.abort("Unexpected exception in " + t.getName(), error);
     }
-    if (manager != null) {
-      while (true) {
-        try {
-          LOG.info("Refreshing replication sources now due to previous error on thread: {}",
-            t.getName());
-          manager.refreshSources(peerId);
-          break;
-        } catch (IOException e1) {
-          LOG.error("Replication sources refresh failed.", e1);
-          sleepForRetries("Sleeping before try refreshing sources again", maxRetriesMultiplier);
-        }
+  }
+
+  private void retryRefreshing(Thread t, Throwable error) {
+    checkError(t, error);
+    while (true) {
+      if (server.isAborted() || server.isStopped() || server.isStopping()) {
+        LOG.warn("Server is shutting down, give up refreshing source for peer {}", getPeerId());
+        return;
+      }
+      try {
+        LOG.info("Refreshing replication sources now due to previous error on thread: {}",
+          t.getName());
+        manager.refreshSources(getPeerId());
+        break;
+      } catch (Exception e) {
+        LOG.error("Replication sources refresh failed.", e);
+        sleepForRetries("Sleeping before try refreshing sources again", maxRetriesMultiplier);
       }
     }
   }
@@ -613,7 +617,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
         // keep looping in this thread until initialize eventually succeeds,
         // while the server main startup one can go on with its work.
         sourceRunning = false;
-        uncaughtException(t, e, null, null);
+        checkError(t, e);
         retryStartup.set(!this.abortOnError);
         do {
           if (retryStartup.get()) {
@@ -624,7 +628,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
               initialize();
             } catch (Throwable error) {
               setSourceStartupStatus(false);
-              uncaughtException(t, error, null, null);
+              checkError(t, error);
               retryStartup.set(!this.abortOnError);
             }
           }
