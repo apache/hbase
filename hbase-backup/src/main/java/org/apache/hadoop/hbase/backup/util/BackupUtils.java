@@ -65,6 +65,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 
 /**
@@ -366,10 +367,11 @@ public final class BackupUtils {
       return null;
     }
     try {
-      String n = p.getName();
-      int idx = n.lastIndexOf(LOGNAME_SEPARATOR);
-      String s = URLDecoder.decode(n.substring(0, idx), "UTF8");
-      return ServerName.valueOf(s).getAddress().toString();
+      String urlDecodedName = URLDecoder.decode(p.getName(), "UTF8");
+      Iterable<String> nameSplitsOnComma = Splitter.on(",").split(urlDecodedName);
+      String host = Iterables.get(nameSplitsOnComma, 0);
+      String port = Iterables.get(nameSplitsOnComma, 1);
+      return host + ":" + port;
     } catch (Exception e) {
       LOG.warn("Skip log file (can't parse): {}", p);
       return null;
