@@ -1530,8 +1530,8 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     throws ServiceException {
     try {
       long procId = server.modifyTable(ProtobufUtil.toTableName(req.getTableName()),
-              ProtobufUtil.toTableDescriptor(req.getTableSchema()), req.getNonceGroup(),
-              req.getNonce(), req.getReopenRegions());
+        ProtobufUtil.toTableDescriptor(req.getTableSchema()), req.getNonceGroup(), req.getNonce(),
+        req.getReopenRegions());
       return ModifyTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);

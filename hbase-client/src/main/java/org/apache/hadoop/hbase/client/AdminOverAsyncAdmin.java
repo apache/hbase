@@ -496,7 +496,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions) throws IOException {
+  public Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions)
+    throws IOException {
     return admin.modifyTable(td, reopenRegions);
   }
 

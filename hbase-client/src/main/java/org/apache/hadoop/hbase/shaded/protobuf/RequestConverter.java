@@ -1098,7 +1098,7 @@ public final class RequestConverter {
    */
   public static ModifyTableRequest buildModifyTableRequest(final TableName tableName,
     final TableDescriptor tableDesc, final long nonceGroup, final long nonce,
-          final boolean reopenRegions) {
+    final boolean reopenRegions) {
     ModifyTableRequest.Builder builder = ModifyTableRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     builder.setTableSchema(ProtobufUtil.toTableSchema(tableDesc));

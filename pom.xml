@@ -2819,6 +2819,7 @@
             <excludes>
               <exclude>**/generated/*</exclude>
               <exclude>**/package-info.java</exclude>
+              <exclude>**/.idea/**</exclude>
             </excludes>
             <!--
               e.g., remove the following lines:
@@ -2888,6 +2889,7 @@
               <excludes>
                 <exclude>**/target/**</exclude>
                 <exclude>**/dependency-reduced-pom.xml</exclude>
+                <exclude>**/.idea/**</exclude>
               </excludes>
               <!-- define the steps to apply to those files -->
               <trimTrailingWhitespace/>

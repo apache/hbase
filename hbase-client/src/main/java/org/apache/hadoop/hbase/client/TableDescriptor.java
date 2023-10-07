@@ -54,7 +54,7 @@ public interface TableDescriptor {
         return result;
       }
       result = getColumnFamilyComparator(cfComparator).compare(lhs, rhs);
-      if (result != 0){
+      if (result != 0) {
         return result;
       }
       // punt on comparison for ordering, just calculate difference
@@ -66,8 +66,7 @@ public interface TableDescriptor {
    * Check if the ColumnFamilyDescriptors in two tableDescriptors are consistent.
    */
   static Comparator<TableDescriptor>
-  getColumnFamilyComparator(
-          Comparator<ColumnFamilyDescriptor> cfComparator) {
+    getColumnFamilyComparator(Comparator<ColumnFamilyDescriptor> cfComparator) {
     return (TableDescriptor lhs, TableDescriptor rhs) -> {
       Collection<ColumnFamilyDescriptor> lhsFamilies = Arrays.asList(lhs.getColumnFamilies());
       Collection<ColumnFamilyDescriptor> rhsFamilies = Arrays.asList(rhs.getColumnFamilies());

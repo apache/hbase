@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.List;
 import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -600,27 +599,27 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     // Test 1: Modify table without reopening any regions
     TableDescriptor htd = UTIL.getAdmin().getDescriptor(tableName);
-    TableDescriptor modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd).setValue("test" +
-            ".hbase.conf", "test.hbase.conf.value").build();
-    long procId1 = ProcedureTestingUtility.submitAndWait(procExec,
-            new ModifyTableProcedure(procExec.getEnvironment(), modifiedDescriptor, null, htd,
-                    false, reopenRegions));
+    TableDescriptor modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd)
+      .setValue("test" + ".hbase.conf", "test.hbase.conf.value").build();
+    long procId1 = ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
+      procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId1));
     TableDescriptor currentHtd = UTIL.getAdmin().getDescriptor(tableName);
     assertEquals("test.hbase.conf.value", currentHtd.getValue("test.hbase.conf"));
-    List<HRegion> onlineRegions = UTIL.getHBaseCluster().getRegions(tableName);
+
     // Regions should not aware of any changes.
-    for (HRegion r : onlineRegions) {
+    for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
       Assert.assertNull(r.getTableDescriptor().getValue("test.hbase.conf"));
     }
+
     // Force regions to reopen
-    for (HRegion r : onlineRegions) {
+    for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
       getMaster().getAssignmentManager().move(r.getRegionInfo());
     }
+
     // After the regions reopen, ensure that the configuration is updated.
-    for (HRegion r : onlineRegions) {
-      assertEquals("test.hbase.conf.value",
-              r.getTableDescriptor().getValue("test.hbase.conf.value"));
+    for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
+      assertEquals("test.hbase.conf.value", r.getTableDescriptor().getValue("test.hbase.conf"));
     }
 
     // Test 2: Modifying region replication is not allowed
@@ -628,55 +627,61 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     long oldRegionReplication = htd.getRegionReplication();
     modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd).setRegionReplication(3).build();
     try {
-      new ModifyTableProcedure(procExec.getEnvironment(), modifiedDescriptor, null, htd, false,
-              reopenRegions);
+      ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
+        procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
       Assert.fail(
-            "An exception should have been thrown while modifying region replication properties.");
+        "An exception should have been thrown while modifying region replication properties.");
     } catch (HBaseIOException e) {
       assertTrue(e.getMessage().contains("Can not modify"));
     }
     currentHtd = UTIL.getAdmin().getDescriptor(tableName);
-    //Nothing changed
+    // Nothing changed
     assertEquals(oldRegionReplication, currentHtd.getRegionReplication());
 
     // Test 3: Adding CFs is not allowed
     htd = UTIL.getAdmin().getDescriptor(tableName);
-    modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd).setColumnFamily(
-            ColumnFamilyDescriptorBuilder.newBuilder("NewCF".getBytes()).build()).build();
+    modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder("NewCF".getBytes()).build())
+      .build();
     try {
-      new ModifyTableProcedure(procExec.getEnvironment(), modifiedDescriptor, null, htd, false,
-              reopenRegions);
+      ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
+        procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
       Assert.fail("Should have thrown an exception while modifying CF!");
     } catch (HBaseIOException e) {
-      assertTrue(e.getMessage().contains("Cannot modify column families"));
+      assertTrue(e.getMessage().contains("Cannot add or remove column families"));
     }
     currentHtd = UTIL.getAdmin().getDescriptor(tableName);
     Assert.assertNull(currentHtd.getColumnFamily("NewCF".getBytes()));
 
-    // Test 4: Modifying CF property is not allowed
+    // Test 4: Modifying CF property is allowed
     htd = UTIL.getAdmin().getDescriptor(tableName);
-    modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd).modifyColumnFamily(
-            ColumnFamilyDescriptorBuilder.newBuilder("cf".getBytes())
-                    .setCompressionType(Compression.Algorithm.SNAPPY).build()).build();
-    try {
-      new ModifyTableProcedure(procExec.getEnvironment(), modifiedDescriptor, null, htd, false,
-              reopenRegions);
-      Assert.fail("Should have thrown an exception while modifying CF!");
-    } catch (HBaseIOException e) {
-      assertTrue(e.getMessage().contains("Cannot modify column families"));
+    modifiedDescriptor =
+      TableDescriptorBuilder
+        .newBuilder(htd).modifyColumnFamily(ColumnFamilyDescriptorBuilder
+          .newBuilder("cf".getBytes()).setCompressionType(Compression.Algorithm.SNAPPY).build())
+        .build();
+    ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
+      procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
+    for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
+      Assert.assertEquals(Compression.Algorithm.NONE,
+        r.getTableDescriptor().getColumnFamily("cf".getBytes()).getCompressionType());
     }
-    currentHtd = UTIL.getAdmin().getDescriptor(tableName);
-    assertEquals(Compression.Algorithm.NONE,
-            currentHtd.getColumnFamily("cf".getBytes()).getCompressionType());
+    for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
+      getMaster().getAssignmentManager().move(r.getRegionInfo());
+    }
+    for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
+      Assert.assertEquals(Compression.Algorithm.SNAPPY,
+        r.getTableDescriptor().getColumnFamily("cf".getBytes()).getCompressionType());
+    }
 
     // Test 5: Modifying coprocessor is not allowed
     htd = UTIL.getAdmin().getDescriptor(tableName);
-    modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd).setCoprocessor(
-            CoprocessorDescriptorBuilder.newBuilder("any.coprocessor.name").setJarPath("fake/path")
-                                        .build()).build();
+    modifiedDescriptor =
+      TableDescriptorBuilder.newBuilder(htd).setCoprocessor(CoprocessorDescriptorBuilder
+        .newBuilder("any.coprocessor.name").setJarPath("fake/path").build()).build();
     try {
-      new ModifyTableProcedure(procExec.getEnvironment(), modifiedDescriptor, null, htd, false,
-              reopenRegions);
+      ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
+        procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
       Assert.fail("Should have thrown an exception while modifying coprocessor!");
     } catch (HBaseIOException e) {
       assertTrue(e.getMessage().contains("Can not modify Coprocessor"));

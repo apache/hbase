@@ -2761,10 +2761,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   private long modifyTable(final TableName tableName,
-          final TableDescriptorGetter newDescriptorGetter, final long nonceGroup, final long nonce,
-          final boolean shouldCheckDescriptor) throws IOException {
+    final TableDescriptorGetter newDescriptorGetter, final long nonceGroup, final long nonce,
+    final boolean shouldCheckDescriptor) throws IOException {
     return modifyTable(tableName, newDescriptorGetter, nonceGroup, nonce, shouldCheckDescriptor,
-            true);
+      true);
   }
 
   private long modifyTable(final TableName tableName,

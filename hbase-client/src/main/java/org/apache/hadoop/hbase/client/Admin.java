@@ -1044,14 +1044,13 @@ public interface Admin extends Abortable, Closeable {
    * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
    *         operation to complete
    */
-  default Future<Void> modifyTableAsync(TableDescriptor td) throws IOException{
+  default Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
     return modifyTableAsync(td, true);
   }
 
   /**
    * The same as {@link #modifyTableAsync(TableDescriptor td)}, except for the reopenRegions
    * parameter, which controls whether the process of modifying the table should reopen all regions.
-   *
    * @param td            description of the table
    * @param reopenRegions By default, 'modifyTable' reopens all regions, potentially causing a RIT
    *                      (Region In Transition) storm in large tables. If set to 'false', regions
@@ -1059,7 +1058,7 @@ public interface Admin extends Abortable, Closeable {
    *                      reopened. Please note that this may temporarily result in configuration
    *                      inconsistencies among regions.
    * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
-   * operation to complete
+   *         operation to complete
    * @throws IOException if a remote or network exception occurs
    */
   Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions) throws IOException;

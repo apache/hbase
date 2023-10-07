@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -85,17 +84,16 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
   }
 
   public ModifyTableProcedure(final MasterProcedureEnv env,
-          final TableDescriptor newTableDescriptor, final ProcedurePrepareLatch latch,
-          final TableDescriptor oldTableDescriptor, final boolean shouldCheckDescriptor)
-          throws HBaseIOException {
+    final TableDescriptor newTableDescriptor, final ProcedurePrepareLatch latch,
+    final TableDescriptor oldTableDescriptor, final boolean shouldCheckDescriptor)
+    throws HBaseIOException {
     this(env, newTableDescriptor, latch, oldTableDescriptor, shouldCheckDescriptor, true);
   }
 
   public ModifyTableProcedure(final MasterProcedureEnv env,
     final TableDescriptor newTableDescriptor, final ProcedurePrepareLatch latch,
     final TableDescriptor oldTableDescriptor, final boolean shouldCheckDescriptor,
-          final boolean reopenRegions)
-    throws HBaseIOException {
+    final boolean reopenRegions) throws HBaseIOException {
     super(env, latch);
     this.reopenRegions = reopenRegions;
     initialize(oldTableDescriptor, shouldCheckDescriptor);
@@ -122,36 +120,42 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
         throw new HBaseIOException(
           "unmodifiedTableDescriptor cannot be null when this table modification won't reopen regions");
       }
-      if (0 != this.unmodifiedTableDescriptor.getTableName()
-        .compareTo(this.modifiedTableDescriptor.getTableName())) {
-        throw new HBaseIOException("Cannot change the table name when this modification won't " +
-                "reopen regions.");
+      if (
+        0 != this.unmodifiedTableDescriptor.getTableName()
+          .compareTo(this.modifiedTableDescriptor.getTableName())
+      ) {
+        throw new HBaseIOException(
+          "Cannot change the table name when this modification won't " + "reopen regions.");
       }
-      if (0 != TableDescriptor.getColumnFamilyComparator(ColumnFamilyDescriptor.COMPARATOR)
-        .compare(this.unmodifiedTableDescriptor, this.modifiedTableDescriptor)){
-        throw new HBaseIOException("Cannot modify column families when this modification won't " +
-                "reopen regions.");
+      if (
+        this.unmodifiedTableDescriptor.getColumnFamilyCount()
+            != this.modifiedTableDescriptor.getColumnFamilyCount()
+      ) {
+        throw new HBaseIOException(
+          "Cannot add or remove column families when this modification " + "won't reopen regions.");
       }
-      if (this.unmodifiedTableDescriptor.getCoprocessorDescriptors().hashCode()
-        != this.modifiedTableDescriptor.getCoprocessorDescriptors().hashCode()) {
-        throw new HBaseIOException("Can not modify Coprocessor when table modification won't reopen regions");
+      if (
+        this.unmodifiedTableDescriptor.getCoprocessorDescriptors().hashCode()
+            != this.modifiedTableDescriptor.getCoprocessorDescriptors().hashCode()
+      ) {
+        throw new HBaseIOException(
+          "Can not modify Coprocessor when table modification won't reopen regions");
       }
-      final Set<String> s = new HashSet<>(
-        Arrays.asList(
-          TableDescriptorBuilder.REGION_REPLICATION,
-          TableDescriptorBuilder.REGION_MEMSTORE_REPLICATION,
-          RSGroupInfo.TABLE_DESC_PROP_GROUP));
+      final Set<String> s = new HashSet<>(Arrays.asList(TableDescriptorBuilder.REGION_REPLICATION,
+        TableDescriptorBuilder.REGION_MEMSTORE_REPLICATION, RSGroupInfo.TABLE_DESC_PROP_GROUP));
       for (String k : s) {
-        if (isTablePropertyModified(this.unmodifiedTableDescriptor, this.modifiedTableDescriptor, k)) {
+        if (
+          isTablePropertyModified(this.unmodifiedTableDescriptor, this.modifiedTableDescriptor, k)
+        ) {
           throw new HBaseIOException(
-                  "Can not modify " + k + " of a table when modification won't reopen regions");
+            "Can not modify " + k + " of a table when modification won't reopen regions");
         }
       }
     }
   }
 
-  private boolean isTablePropertyModified(TableDescriptor oldDescriptor, TableDescriptor newDescriptor,
-    String key) {
+  private boolean isTablePropertyModified(TableDescriptor oldDescriptor,
+    TableDescriptor newDescriptor, String key) {
     String oldV = oldDescriptor.getValue(key);
     String newV = newDescriptor.getValue(key);
     if (oldV == null && newV == null) {
@@ -181,9 +185,9 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
           break;
         case MODIFY_TABLE_PRE_OPERATION:
           preModify(env, state);
-          if (reopenRegions){
+          if (reopenRegions) {
             setNextState(ModifyTableState.MODIFY_TABLE_CLOSE_EXCESS_REPLICAS);
-          }else {
+          } else {
             setNextState(ModifyTableState.MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR);
           }
           break;
@@ -195,9 +199,9 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
           break;
         case MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR:
           updateTableDescriptor(env);
-          if(reopenRegions){
+          if (reopenRegions) {
             setNextState(ModifyTableState.MODIFY_TABLE_REMOVE_REPLICA_COLUMN);
-          }else {
+          } else {
             setNextState(ModifyTableState.MODIFY_TABLE_POST_OPERATION);
           }
           break;
@@ -207,10 +211,9 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
           break;
         case MODIFY_TABLE_POST_OPERATION:
           postModify(env, state);
-          if (reopenRegions){
+          if (reopenRegions) {
             setNextState(ModifyTableState.MODIFY_TABLE_REOPEN_ALL_REGIONS);
-          }
-          else {
+          } else {
             return Flow.NO_MORE_STATE;
           }
           break;
@@ -307,8 +310,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor))
         .setDeleteColumnFamilyInModify(deleteColumnFamilyInModify)
-        .setShouldCheckDescriptor(shouldCheckDescriptor)
-        .setReopenRegions(reopenRegions);
+        .setShouldCheckDescriptor(shouldCheckDescriptor).setReopenRegions(reopenRegions);
 
     if (unmodifiedTableDescriptor != null) {
       modifyTableMsg
