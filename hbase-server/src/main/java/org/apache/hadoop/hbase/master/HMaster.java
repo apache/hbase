@@ -1226,7 +1226,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     RetryCounter rc = null;
     while (!isStopped()) {
       RegionState rs = this.assignmentManager.getRegionStates().getRegionState(ri);
-      if (rs.isOpened()) {
+      if (rs != null && rs.isOpened()) {
         if (this.getServerManager().isServerOnline(rs.getServerName())) {
           return true;
         }
