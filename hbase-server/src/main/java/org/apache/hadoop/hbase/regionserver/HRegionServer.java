@@ -788,6 +788,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
   }
 
+  @Override
+  public boolean isStopping() {
+    return stopping;
+  }
+
   /**
    * The HRegionServer sticks in this loop until closed.
    */
