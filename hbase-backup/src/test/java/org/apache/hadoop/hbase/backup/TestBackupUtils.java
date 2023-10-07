@@ -87,21 +87,32 @@ public class TestBackupUtils {
 
   @Test
   public void testFilesystemWalHostNameParsing() throws IOException {
-    String host = "localhost";
-    int port = 60030;
-    ServerName serverName = ServerName.valueOf(host, port, 1234);
+    String[] hosts =
+      new String[] { "10.20.30.40", "127.0.0.1", "localhost", "a-region-server.domain.com" };
+
     Path walRootDir = CommonFSUtils.getWALRootDir(conf);
     Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
 
-    Path testWalPath = new Path(oldLogDir,
-      serverName.toString() + BackupUtils.LOGNAME_SEPARATOR + EnvironmentEdgeManager.currentTime());
-    Path testMasterWalPath =
-      new Path(oldLogDir, testWalPath.getName() + MasterRegionFactory.ARCHIVED_WAL_SUFFIX);
+    int port = 60030;
+    for (String host : hosts) {
+      ServerName serverName = ServerName.valueOf(host, port, 1234);
 
-    String parsedHost = BackupUtils.parseHostFromOldLog(testMasterWalPath);
-    Assert.assertNull(parsedHost);
+      Path testOldWalPath = new Path(oldLogDir,
+        serverName + BackupUtils.LOGNAME_SEPARATOR + EnvironmentEdgeManager.currentTime());
+      Assert.assertEquals(host + Addressing.HOSTNAME_PORT_SEPARATOR + port,
+        BackupUtils.parseHostFromOldLog(testOldWalPath));
 
-    parsedHost = BackupUtils.parseHostFromOldLog(testWalPath);
-    Assert.assertEquals(parsedHost, host + Addressing.HOSTNAME_PORT_SEPARATOR + port);
+      Path testMasterWalPath =
+        new Path(oldLogDir, testOldWalPath.getName() + MasterRegionFactory.ARCHIVED_WAL_SUFFIX);
+      Assert.assertNull(BackupUtils.parseHostFromOldLog(testMasterWalPath));
+
+      // org.apache.hadoop.hbase.wal.BoundedGroupingStrategy does this
+      Path testOldWalWithRegionGroupingPath = new Path(oldLogDir,
+        serverName + BackupUtils.LOGNAME_SEPARATOR + serverName + BackupUtils.LOGNAME_SEPARATOR
+          + "regiongroup-0" + BackupUtils.LOGNAME_SEPARATOR + EnvironmentEdgeManager.currentTime());
+      Assert.assertEquals(host + Addressing.HOSTNAME_PORT_SEPARATOR + port,
+        BackupUtils.parseHostFromOldLog(testOldWalWithRegionGroupingPath));
+    }
+
   }
 }
