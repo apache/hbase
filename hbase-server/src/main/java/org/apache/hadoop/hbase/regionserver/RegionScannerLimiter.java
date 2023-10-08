@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -29,7 +33,10 @@ import org.slf4j.LoggerFactory;
  * {@link RegionScannerLimiter#HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY}. When heavily
  * filtered scan requests frequently cause high load on the RegionServer, you can set the
  * {@link RegionScannerLimiter#HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY} to a larger
- * value (for example, 100,000) to kill those scan requests. When you want to revert, just set the
+ * value (e.g. 100,000) to limit those scan requests. If you want to kill the scan request at the
+ * same time, you can set
+ * {@link RegionScannerLimiter#HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_REACHED_REQUEST_KILLED_KEY} to
+ * true. If you want to disable this feature, just set the
  * {@link RegionScannerLimiter#HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY} to 0.
  */
 @InterfaceAudience.Private
@@ -40,37 +47,33 @@ public class RegionScannerLimiter implements ConfigurationObserver {
   public static final String HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY =
     "hbase.server.scanner.max.rows.filtered.per.request";
 
+  public static final String HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_REACHED_REQUEST_KILLED_KEY =
+    "hbase.server.scanner.max.rows.filtered.reached.request.killed";
+
   // Max count of rows filtered per scan request. If equals zero, it means no limitation.
   // Note: No limitation by default.
   private volatile long maxRowsFilteredPerRequest = 0;
+  // Killing scan request when TRUE.
+  private volatile boolean requestKilled = false;
+
+  private final ConcurrentMap<String, Boolean> scanners = new ConcurrentHashMap<>();
 
   public RegionScannerLimiter(Configuration conf) {
-    updateLimiterConf(conf);
+    onConfigurationChange(conf);
   }
 
-  private void updateLimiterConf(Configuration conf) {
+  private <T> void updateLimiterConf(Configuration conf, String configKey, T oldValue,
+    Function<String, T> applyFunc) {
     try {
-      if (conf.get(HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY) == null) {
+      if (conf.get(configKey) == null) {
         return;
       }
-
-      long targetValue = conf.getLong(HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY, -1);
-      if (targetValue < 0) {
-        LOG.warn("Invalid parameter, should be greater than or equal to zero, target value: {}",
-          targetValue);
-        return;
+      T targetValue = applyFunc.apply(configKey);
+      if (targetValue != null) {
+        LOG.info("Config key={}, old value={}, new value={}", configKey, oldValue, targetValue);
       }
-      if (maxRowsFilteredPerRequest == targetValue) {
-        return;
-      }
-
-      LOG.info("Config key={}, old value={}, new value={}",
-        HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY, maxRowsFilteredPerRequest,
-        targetValue);
-      this.maxRowsFilteredPerRequest = targetValue;
     } catch (Exception e) {
-      LOG.error("Failed to update config key: {}",
-        HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY, e);
+      LOG.error("Failed to update config key: {}", configKey, e);
     }
   }
 
@@ -78,8 +81,51 @@ public class RegionScannerLimiter implements ConfigurationObserver {
     return this.maxRowsFilteredPerRequest;
   }
 
+  public boolean isFilterRowsLimitReached(String scannerName) {
+    return scanners.getOrDefault(scannerName, false);
+  }
+
+  public void setFilterRowsLimitReached(String scannerName, boolean limitReached) {
+    scanners.put(scannerName, limitReached);
+  }
+
+  public void removeScanner(String scannerName) {
+    scanners.remove(scannerName);
+  }
+
+  public boolean killRequest() {
+    return requestKilled;
+  }
+
+  @VisibleForTesting
+  public ConcurrentMap<String, Boolean> getScanners() {
+    return scanners;
+  }
+
   @Override
   public void onConfigurationChange(Configuration conf) {
-    updateLimiterConf(conf);
+    updateLimiterConf(conf, HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY,
+      maxRowsFilteredPerRequest, configKey -> {
+        long targetValue = conf.getLong(configKey, -1);
+        if (targetValue < 0) {
+          LOG.warn("Invalid parameter, should be greater than or equal to zero, target value: {}",
+            targetValue);
+          return null;
+        }
+        if (maxRowsFilteredPerRequest == targetValue) {
+          return null;
+        }
+        maxRowsFilteredPerRequest = targetValue;
+        return targetValue;
+      });
+    updateLimiterConf(conf, HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_REACHED_REQUEST_KILLED_KEY,
+      requestKilled, configKey -> {
+        boolean targetValue = conf.getBoolean(configKey, false);
+        if (targetValue == requestKilled) {
+          return null;
+        }
+        requestKilled = targetValue;
+        return targetValue;
+      });
   }
 }

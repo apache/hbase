@@ -467,6 +467,7 @@ public class ScannerContext {
     MORE_VALUES(true, false),
     NO_MORE_VALUES(false, false),
     SIZE_LIMIT_REACHED(true, true),
+    FILTERED_ROWS_LIMIT_REACHED(true, true),
 
     /**
      * Special case of size limit reached to indicate that the size limit was reached in the middle

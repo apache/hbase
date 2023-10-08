@@ -91,6 +91,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   private final ScannerContext defaultScannerContext;
   private final FilterWrapper filter;
   private final String operationId;
+  private String name;
 
   private RegionServerServices rsServices;
 
@@ -488,7 +489,10 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         // Check if rowkey filter wants to exclude this row. If so, loop to next.
         // Technically, if we hit limits before on this row, we don't need this call.
         if (filterRowKey(current)) {
-          incrementCountOfRowsFilteredMetric(scannerContext);
+          if (incrementCountOfRowsFilteredMetric(scannerContext)) {
+            return scannerContext.setScannerState(NextState.FILTERED_ROWS_LIMIT_REACHED)
+              .hasMoreValues();
+          }
           // early check, see HBASE-16296
           if (isFilterDoneInternal()) {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
@@ -553,7 +557,10 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         }
 
         if (isEmptyRow || ret == FilterWrapper.FilterRowRetCode.EXCLUDE || filterRow()) {
-          incrementCountOfRowsFilteredMetric(scannerContext);
+          if (incrementCountOfRowsFilteredMetric(scannerContext)) {
+            return scannerContext.setScannerState(NextState.FILTERED_ROWS_LIMIT_REACHED)
+              .hasMoreValues();
+          }
           results.clear();
           boolean moreRows = nextRow(scannerContext, current);
           if (!moreRows) {
@@ -605,7 +612,10 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       // Double check to prevent empty rows from appearing in result. It could be
       // the case when SingleColumnValueExcludeFilter is used.
       if (results.isEmpty()) {
-        incrementCountOfRowsFilteredMetric(scannerContext);
+        if (incrementCountOfRowsFilteredMetric(scannerContext)) {
+          return scannerContext.setScannerState(NextState.FILTERED_ROWS_LIMIT_REACHED)
+            .hasMoreValues();
+        }
         boolean moreRows = nextRow(scannerContext, current);
         if (!moreRows) {
           return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
@@ -630,7 +640,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     }
   }
 
-  private void incrementCountOfRowsFilteredMetric(ScannerContext scannerContext)
+  private boolean incrementCountOfRowsFilteredMetric(ScannerContext scannerContext)
     throws DoNotRetryIOException {
     region.filteredReadRequestsCount.increment();
     if (region.getMetrics() != null) {
@@ -638,21 +648,29 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     }
 
     if (scannerContext == null || !scannerContext.isTrackingMetrics()) {
-      return;
+      return false;
     }
 
     long countOfRowsFiltered = scannerContext.getMetrics().countOfRowsFiltered.incrementAndGet();
     if (region.rsServices instanceof HRegionServer) {
-      long maxRowsFilteredPerRequest = ((HRegionServer) region.rsServices).getRegionScannerLimiter()
-        .getMaxRowsFilteredPerRequest();
+      RegionScannerLimiter regionScannerLimiter =
+        ((HRegionServer) region.rsServices).getRegionScannerLimiter();
+      long maxRowsFilteredPerRequest = regionScannerLimiter.getMaxRowsFilteredPerRequest();
       if (maxRowsFilteredPerRequest > 0 && countOfRowsFiltered >= maxRowsFilteredPerRequest) {
-        String errMsg =
-          String.format("Too many rows filtered, higher than the limit threshold of %s, "
-            + "so kill the scan request!", maxRowsFilteredPerRequest);
-        LOG.warn("ScannerContext={}, errMsg={}", scannerContext, errMsg);
-        throw new DoNotRetryIOException(errMsg);
+        regionScannerLimiter.setFilterRowsLimitReached(getName(), true);
+        if (regionScannerLimiter.killRequest()) {
+          String errMsg =
+            String.format("Too many rows filtered, higher than the limit threshold of %s, "
+              + "so kill the scan request!", maxRowsFilteredPerRequest);
+          LOG.warn("ScannerContext={}, errMsg={}", scannerContext, errMsg);
+          throw new DoNotRetryIOException(errMsg);
+        } else {
+          return true;
+        }
       }
     }
+
+    return false;
   }
 
   private void incrementCountOfRowsScannedMetric(ScannerContext scannerContext) {
@@ -763,6 +781,9 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
       justification = "this method is only called inside close which is synchronized")
   private void closeInternal() {
+    if (region.rsServices instanceof HRegionServer) {
+      ((HRegionServer) region.rsServices).getRegionScannerLimiter().removeScanner(getName());
+    }
     if (storeHeap != null) {
       storeHeap.close();
       storeHeap = null;
@@ -818,5 +839,15 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     // This is the RPC callback method executed. We do the close in of the scanner in this
     // callback
     this.close();
+  }
+
+  @Override
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  @Override
+  public String getName() {
+    return name;
   }
 }
