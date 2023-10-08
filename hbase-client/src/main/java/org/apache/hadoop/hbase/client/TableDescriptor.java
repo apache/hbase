@@ -53,24 +53,9 @@ public interface TableDescriptor {
       if (result != 0) {
         return result;
       }
-      result = getColumnFamilyComparator(cfComparator).compare(lhs, rhs);
-      if (result != 0) {
-        return result;
-      }
-      // punt on comparison for ordering, just calculate difference
-      return Integer.compare(lhs.getValues().hashCode(), rhs.getValues().hashCode());
-    };
-  }
-
-  /**
-   * Check if the ColumnFamilyDescriptors in two tableDescriptors are consistent.
-   */
-  static Comparator<TableDescriptor>
-    getColumnFamilyComparator(Comparator<ColumnFamilyDescriptor> cfComparator) {
-    return (TableDescriptor lhs, TableDescriptor rhs) -> {
       Collection<ColumnFamilyDescriptor> lhsFamilies = Arrays.asList(lhs.getColumnFamilies());
       Collection<ColumnFamilyDescriptor> rhsFamilies = Arrays.asList(rhs.getColumnFamilies());
-      int result = Integer.compare(lhsFamilies.size(), rhsFamilies.size());
+      result = Integer.compare(lhsFamilies.size(), rhsFamilies.size());
       if (result != 0) {
         return result;
       }
@@ -83,7 +68,7 @@ public interface TableDescriptor {
         }
       }
       // punt on comparison for ordering, just calculate difference
-      return 0;
+      return Integer.compare(lhs.getValues().hashCode(), rhs.getValues().hashCode());
     };
   }
 
