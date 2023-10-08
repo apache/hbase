@@ -115,6 +115,11 @@ public class HttpServer implements FilterContainer {
   // limitation otherwise the UTs will fail
   private static final int DEFAULT_MAX_HEADER_SIZE = Character.MAX_VALUE - 1;
 
+  // Add configuration for jetty idle timeout
+  private static final String HTTP_JETTY_IDLE_TIMEOUT = "hbase.master.ui.connection.idleTimeout";
+  // Default jetty idle timeout
+  private static final long DEFAULT_HTTP_JETTY_IDLE_TIMEOUT = 30000;
+
   static final String FILTER_INITIALIZERS_PROPERTY = "hbase.http.filter.initializers";
   static final String HTTP_MAX_THREADS = "hbase.http.max.threads";
 
@@ -467,6 +472,9 @@ public class HttpServer implements FilterContainer {
 
         // default settings for connector
         listener.setAcceptQueueSize(128);
+        // config idle timeout for jetty
+        listener
+          .setIdleTimeout(conf.getLong(HTTP_JETTY_IDLE_TIMEOUT, DEFAULT_HTTP_JETTY_IDLE_TIMEOUT));
         if (Shell.WINDOWS) {
           // result of setting the SO_REUSEADDR flag is different on Windows
           // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
