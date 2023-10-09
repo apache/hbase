@@ -784,15 +784,17 @@ module Hbase
         # Normalize args to support shortcut delete syntax
         arg = { METHOD => 'delete', NAME => arg['delete'] } if arg['delete']
 
+        if arg.key?(REOPEN_REGIONS)
+          if !['true', 'false'].include?(arg[REOPEN_REGIONS].downcase)
+            raise(ArgumentError, "Invalid 'REOPEN_REGIONS' for non-boolean value.")
+          end
+          reopen_regions = JBoolean.valueOf(arg[REOPEN_REGIONS])
+          arg.delete(REOPEN_REGIONS)
+        end
+
         # There are 3 possible options.
         # 1) Column family spec. Distinguished by having a NAME and no METHOD.
         method = arg.delete(METHOD)
-
-        if !method.nil? && method == 'avoid_reopening_regions'
-          reopen_regions = false;
-          method = nil
-        end
-
         if method.nil? && arg.key?(NAME)
           descriptor = cfd(arg, tdb)
           column_name = descriptor.getNameAsString
@@ -915,9 +917,9 @@ module Hbase
       if hasTableUpdate
         future = @admin.modifyTableAsync(tdb.build, reopen_regions)
         if reopen_regions == false
-          puts("WARNING: You are using 'avoid_reopening_regions' to modify a table, which will result in
-          inconsistencies in the configuration of online regions and other risks. If you encounter
-          any issues, use the original 'alter' command to make the modification again!")
+          puts("WARNING: You are using REOPEN_REGIONS => 'false' to modify a table, which will
+          result in inconsistencies in the configuration of online regions and other risks. If you
+          encounter any issues, use the original 'alter' command to make the modification again!")
           future.get
         elsif wait == true
           puts 'Updating all regions with the new schema...'

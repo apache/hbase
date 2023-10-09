@@ -72,11 +72,11 @@ You can also set configuration settings specific to this table or column family:
   hbase> alter 't1', CONFIGURATION => {'hbase.hregion.scan.loadColumnFamiliesOnDemand' => 'true'}
   hbase> alter 't1', {NAME => 'f2', CONFIGURATION => {'hbase.hstore.blockingStoreFiles' => '10'}}
 
-You can also set configuration setting with 'avoid_reopening_regions' to avoid regions RIT, which let the
-modification take effect after regions was reopened (Be careful, the regions of the table may be
-configured inconsistently If regions are not reopened after the modification)
+You can also set configuration setting with REOPEN_REGIONS=>'false' to avoid regions RIT, which
+let the modification take effect after regions was reopened (Be careful, the regions of the table
+may be configured inconsistently If regions are not reopened after the modification)
 
-  hbase> alter 't1', METHOD => 'avoid_reopening_regions', CONFIGURATION => {'hbase.hregion.scan
+  hbase> alter 't1', REOPEN_REGIONS => 'false', CONFIGURATION => {'hbase.hregion.scan
   .loadColumnFamiliesOnDemand' => 'true'}
 
 You can also unset configuration settings specific to this table:
