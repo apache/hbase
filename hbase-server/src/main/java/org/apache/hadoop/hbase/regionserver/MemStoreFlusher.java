@@ -69,7 +69,7 @@ class MemStoreFlusher implements FlushRequester {
   // These two data members go together. Any entry in the one must have
   // a corresponding entry in the other.
   private final BlockingQueue<FlushQueueEntry> flushQueue = new DelayQueue<>();
-  private final Map<Region, FlushRegionEntry> regionsInQueue = new HashMap<>();
+  protected final Map<Region, FlushRegionEntry> regionsInQueue = new HashMap<>();
   private AtomicBoolean wakeupPending = new AtomicBoolean();
 
   private final long threadWakeFrequency;
@@ -117,19 +117,22 @@ class MemStoreFlusher implements FlushRequester {
     this.threadWakeFrequency = conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime", 90000);
     int handlerCount = conf.getInt("hbase.hstore.flusher.count", 2);
-    if (handlerCount < 1) {
-      LOG.warn("hbase.hstore.flusher.count was configed to {} which is less than 1, corrected to 1",
-        handlerCount);
-      handlerCount = 1;
+    if (server != null) {
+      if (handlerCount < 1) {
+        LOG.warn("hbase.hstore.flusher.count was configed to {} which is less than 1, "
+            + "corrected to 1", handlerCount);
+        handlerCount = 1;
+      }
+      LOG.info("globalMemStoreLimit="
+          + TraditionalBinaryPrefix
+              .long2String(this.server.getRegionServerAccounting().getGlobalMemStoreLimit(), "", 1)
+          + ", globalMemStoreLimitLowMark="
+          + TraditionalBinaryPrefix.long2String(
+            this.server.getRegionServerAccounting().getGlobalMemStoreLimitLowMark(), "", 1)
+          + ", Offheap="
+          + (this.server.getRegionServerAccounting().isOffheap()));
     }
     this.flushHandlers = new FlushHandler[handlerCount];
-    LOG.info("globalMemStoreLimit="
-      + TraditionalBinaryPrefix
-        .long2String(this.server.getRegionServerAccounting().getGlobalMemStoreLimit(), "", 1)
-      + ", globalMemStoreLimitLowMark="
-      + TraditionalBinaryPrefix
-        .long2String(this.server.getRegionServerAccounting().getGlobalMemStoreLimitLowMark(), "", 1)
-      + ", Offheap=" + (this.server.getRegionServerAccounting().isOffheap()));
   }
 
   public LongAdder getUpdatesBlockedMsHighWater() {
@@ -439,18 +442,28 @@ class MemStoreFlusher implements FlushRequester {
   @Override
   public boolean requestFlush(HRegion r, List<byte[]> families, FlushLifeCycleTracker tracker) {
     synchronized (regionsInQueue) {
-      if (!regionsInQueue.containsKey(r)) {
-        // This entry has no delay so it will be added at the top of the flush
-        // queue. It'll come out near immediately.
-        FlushRegionEntry fqe = new FlushRegionEntry(r, families, tracker);
-        this.regionsInQueue.put(r, fqe);
-        this.flushQueue.add(fqe);
-        r.incrementFlushesQueuedCount();
-        return true;
-      } else {
-        tracker.notExecuted("Flush already requested on " + r);
-        return false;
+      FlushRegionEntry existFqe = regionsInQueue.get(r);
+      if (existFqe != null) {
+        // if a delayed one exists and not reach the time to execute, just remove it
+        if (existFqe.isDelay() && existFqe.whenToExpire > EnvironmentEdgeManager.currentTime()) {
+          LOG.info("Remove the existing delayed flush entry for {}, "
+            + "because we need to flush it immediately", r);
+          this.regionsInQueue.remove(r);
+          this.flushQueue.remove(existFqe);
+          r.decrementFlushesQueuedCount();
+        } else {
+          tracker.notExecuted("Flush already requested on " + r);
+          return false;
+        }
       }
+
+      // This entry has no delay so it will be added at the top of the flush
+      // queue. It'll come out near immediately.
+      FlushRegionEntry fqe = new FlushRegionEntry(r, families, tracker);
+      this.regionsInQueue.put(r, fqe);
+      this.flushQueue.add(fqe);
+      r.incrementFlushesQueuedCount();
+      return true;
     }
   }
 
@@ -828,6 +841,13 @@ class MemStoreFlusher implements FlushRequester {
     /** Returns True if we have been delayed > <code>maximumWait</code> milliseconds. */
     public boolean isMaximumWait(final long maximumWait) {
       return (EnvironmentEdgeManager.currentTime() - this.createTime) > maximumWait;
+    }
+
+    /**
+     * @return True if the entry is a delay flush task
+     */
+    protected boolean isDelay() {
+      return this.whenToExpire > this.createTime;
     }
 
     /**

@@ -9028,6 +9028,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return getReadPoint(IsolationLevel.READ_COMMITTED);
   }
 
+  protected void decrementFlushesQueuedCount() {
+    flushesQueued.decrement();
+  }
+
   /**
    * If a handler thread is eligible for interrupt, make it ineligible. Should be paired with
    * {{@link #enableInterrupts()}.
