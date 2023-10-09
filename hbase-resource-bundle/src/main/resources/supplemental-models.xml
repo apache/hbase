@@ -3485,4 +3485,22 @@ Copyright (c) 2007-2017 The JRuby project
       </licenses>
     </project>
   </supplement>
+  <!-- avro does not specify license in pom -->
+  <supplement>
+    <project>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+      <organization>
+        <name>The Apache Software Foundation</name>
+        <url>http://www.apache.org/</url>
+      </organization>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
 </supplementalDataModels>
