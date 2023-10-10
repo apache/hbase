@@ -606,17 +606,14 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId1));
     TableDescriptor currentHtd = UTIL.getAdmin().getDescriptor(tableName);
     assertEquals("test.hbase.conf.value", currentHtd.getValue("test.hbase.conf"));
-
     // Regions should not aware of any changes.
     for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
       Assert.assertNull(r.getTableDescriptor().getValue("test.hbase.conf"));
     }
-
     // Force regions to reopen
     for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
       getMaster().getAssignmentManager().move(r.getRegionInfo());
     }
-
     // After the regions reopen, ensure that the configuration is updated.
     for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
       assertEquals("test.hbase.conf.value", r.getTableDescriptor().getValue("test.hbase.conf"));
