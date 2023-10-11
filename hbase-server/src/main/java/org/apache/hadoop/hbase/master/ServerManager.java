@@ -23,12 +23,12 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -128,7 +128,8 @@ public class ServerManager {
    * Map of admin interfaces per registered regionserver; these interfaces we use to control
    * regionservers out on the cluster
    */
-  private final Map<ServerName, AdminService.BlockingInterface> rsAdmins = new HashMap<>();
+  private final Map<ServerName, AdminService.BlockingInterface> rsAdmins =
+    new ConcurrentHashMap<>();
 
   /** List of region servers that should not get any more new regions. */
   private final ArrayList<ServerName> drainingServers = new ArrayList<>();
