@@ -320,13 +320,15 @@ public class CanaryTool implements Tool, Canary {
     }
 
     private void incFailuresCountDetails(ServerName serverName, RegionInfo region) {
-      perServerFailuresCount.compute(serverName, (server, count) -> {
-        if (count == null) {
-          count = new LongAdder();
-        }
-        count.increment();
-        return count;
-      });
+      if (serverName != null) {
+        perServerFailuresCount.compute(serverName, (server, count) -> {
+          if (count == null) {
+            count = new LongAdder();
+          }
+          count.increment();
+          return count;
+        });
+      }
       perTableFailuresCount.compute(region.getTable().getNameAsString(), (tableName, count) -> {
         if (count == null) {
           count = new LongAdder();
@@ -337,18 +339,18 @@ public class CanaryTool implements Tool, Canary {
     }
 
     public void publishReadFailure(ServerName serverName, RegionInfo region, Exception e) {
-      incReadFailureCount();
-      incFailuresCountDetails(serverName, region);
       LOG.error("Read from {} on serverName={} failed", region.getRegionNameAsString(), serverName,
         e);
+      incReadFailureCount();
+      incFailuresCountDetails(serverName, region);
     }
 
     public void publishReadFailure(ServerName serverName, RegionInfo region,
       ColumnFamilyDescriptor column, Exception e) {
-      incReadFailureCount();
-      incFailuresCountDetails(serverName, region);
       LOG.error("Read from {} on serverName={}, columnFamily={} failed",
         region.getRegionNameAsString(), serverName, column.getNameAsString(), e);
+      incReadFailureCount();
+      incFailuresCountDetails(serverName, region);
     }
 
     public void publishReadTiming(ServerName serverName, RegionInfo region,
@@ -365,17 +367,17 @@ public class CanaryTool implements Tool, Canary {
     }
 
     public void publishWriteFailure(ServerName serverName, RegionInfo region, Exception e) {
+      LOG.error("Write to {} on {} failed", region.getRegionNameAsString(), serverName, e);
       incWriteFailureCount();
       incFailuresCountDetails(serverName, region);
-      LOG.error("Write to {} on {} failed", region.getRegionNameAsString(), serverName, e);
     }
 
     public void publishWriteFailure(ServerName serverName, RegionInfo region,
       ColumnFamilyDescriptor column, Exception e) {
-      incWriteFailureCount();
-      incFailuresCountDetails(serverName, region);
       LOG.error("Write to {} on {} {} failed", region.getRegionNameAsString(), serverName,
         column.getNameAsString(), e);
+      incWriteFailureCount();
+      incFailuresCountDetails(serverName, region);
     }
 
     public void publishWriteTiming(ServerName serverName, RegionInfo region,
