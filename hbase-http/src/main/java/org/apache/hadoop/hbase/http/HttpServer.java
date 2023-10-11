@@ -116,7 +116,7 @@ public class HttpServer implements FilterContainer {
   private static final int DEFAULT_MAX_HEADER_SIZE = Character.MAX_VALUE - 1;
 
   // Add configuration for jetty idle timeout
-  private static final String HTTP_JETTY_IDLE_TIMEOUT = "hbase.master.ui.connection.idleTimeout";
+  private static final String HTTP_JETTY_IDLE_TIMEOUT = "hbase.ui.connection.idleTimeout";
   // Default jetty idle timeout
   private static final long DEFAULT_HTTP_JETTY_IDLE_TIMEOUT = 30000;
 
