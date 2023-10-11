@@ -952,12 +952,12 @@
       clusters/tests.
      -->
     <hbase-surefire.argLine>-enableassertions -Dhbase.build.id=${build.id} -Xmx${surefire.Xmx}
-      -Xms{surefire.Xms} -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
+      -Xms${surefire.Xms} -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true -Djdk.net.URLClassPath.disableClassPathURLCheck=true
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced
       -Dio.netty.eventLoopThreads=3 -Dio.opentelemetry.context.enableStrictContext=true</hbase-surefire.argLine>
     <hbase-surefire.cygwin-argLine>-enableassertions -Xmx${surefire.cygwinXmx}
-      -Xms{surefire.cygwinXms} -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
+      -Xms${surefire.cygwinXms} -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       "-Djava.library.path=${hadoop.library.path};${java.library.path}"
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced
       -Dio.opentelemetry.context.enableStrictContext=true</hbase-surefire.cygwin-argLine>
