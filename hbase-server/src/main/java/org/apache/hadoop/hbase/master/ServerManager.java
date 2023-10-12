@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -128,7 +129,7 @@ public class ServerManager {
    * Map of admin interfaces per registered regionserver; these interfaces we use to control
    * regionservers out on the cluster
    */
-  private final Map<ServerName, AdminService.BlockingInterface> rsAdmins =
+  private final ConcurrentMap<ServerName, AdminService.BlockingInterface> rsAdmins =
     new ConcurrentHashMap<>();
 
   /** List of region servers that should not get any more new regions. */
@@ -719,14 +720,19 @@ public class ServerManager {
   public AdminService.BlockingInterface getRsAdmin(final ServerName sn) throws IOException {
     AdminService.BlockingInterface admin = this.rsAdmins.get(sn);
     if (admin == null) {
-      LOG.debug("New admin connection to " + sn.toString());
-      if (sn.equals(master.getServerName()) && master instanceof HRegionServer) {
-        // A master is also a region server now, see HBASE-10569 for details
-        admin = ((HRegionServer) master).getRSRpcServices();
-      } else {
-        admin = this.connection.getAdmin(sn);
-      }
-      this.rsAdmins.put(sn, admin);
+      return this.rsAdmins.computeIfAbsent(sn, server -> {
+        LOG.debug("New admin connection to " + server.toString());
+        if (server.equals(master.getServerName()) && master instanceof HRegionServer) {
+          // A master is also a region server now, see HBASE-10569 for details
+          return ((HRegionServer) master).getRSRpcServices();
+        } else {
+          try {
+            return this.connection.getAdmin(server);
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      });
     }
     return admin;
   }
