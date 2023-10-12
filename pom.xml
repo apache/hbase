@@ -680,7 +680,10 @@
       This value is managed separately for jdk11. See below.
     -->
     <surefire.Xmx>2200m</surefire.Xmx>
+    <surefire.Xms>1000m</surefire.Xms>
+
     <surefire.cygwinXmx>2200m</surefire.cygwinXmx>
+    <surefire.cygwinXms>1000m</surefire.cygwinXms>
     <!--Mark our test runs with '-Dhbase.build.id' so we can identify a surefire test as ours in a process listing
 
       And for netty eventloops that have no explicit configuration, netty sets
@@ -688,12 +691,12 @@
       clusters/tests.
      -->
     <hbase-surefire.argLine>-enableassertions -Dhbase.build.id=${build.id} -Xmx${surefire.Xmx}
-      -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
+      -Xms${surefire.Xms} -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true -Djdk.net.URLClassPath.disableClassPathURLCheck=true
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced
       -Dio.netty.eventLoopThreads=3</hbase-surefire.argLine>
     <hbase-surefire.cygwin-argLine>-enableassertions -Xmx${surefire.cygwinXmx}
-      -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
+      -Xms${surefire.cygwinXms} -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       "-Djava.library.path=${hadoop.library.path};${java.library.path}"
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced</hbase-surefire.cygwin-argLine>
     <hbase-surefire.jdk11.flags>-Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true
