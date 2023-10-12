@@ -720,19 +720,14 @@ public class ServerManager {
   public AdminService.BlockingInterface getRsAdmin(final ServerName sn) throws IOException {
     AdminService.BlockingInterface admin = this.rsAdmins.get(sn);
     if (admin == null) {
-      return this.rsAdmins.computeIfAbsent(sn, server -> {
-        LOG.debug("New admin connection to " + server.toString());
-        if (server.equals(master.getServerName()) && master instanceof HRegionServer) {
-          // A master is also a region server now, see HBASE-10569 for details
-          return ((HRegionServer) master).getRSRpcServices();
-        } else {
-          try {
-            return this.connection.getAdmin(server);
-          } catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        }
-      });
+      LOG.debug("New admin connection to " + sn.toString());
+      if (sn.equals(master.getServerName()) && master instanceof HRegionServer) {
+        // A master is also a region server now, see HBASE-10569 for details
+        admin = ((HRegionServer) master).getRSRpcServices();
+      } else {
+        admin = this.connection.getAdmin(sn);
+      }
+      this.rsAdmins.put(sn, admin);
     }
     return admin;
   }
