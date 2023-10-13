@@ -24,7 +24,9 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiPredicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -86,6 +88,15 @@ public abstract class AbstractWALProvider implements WALProvider, PeerActionList
   private final ConcurrentMap<String, Optional<WAL>> peerId2WAL = new ConcurrentHashMap<>();
 
   private final KeyLocker<String> createLock = new KeyLocker<>();
+
+  // in getWALs we can not throw any exceptions out, so we use lock and condition here as it
+  // supports awaitUninterruptibly which will not throw a InterruptedException
+  private final Lock numRemoteWALUnderCreationLock = new ReentrantLock();
+  private final Condition noRemoteWALUnderCreationCond =
+    numRemoteWALUnderCreationLock.newCondition();
+  // record the number of remote WALs which are under creation. This is very important to not
+  // missing a WAL instance in getWALs method. See HBASE-28140 and related issues for more details.
+  private int numRemoteWALUnderCreation;
 
   // we need to have this because when getting meta wal, there is no peer info provider yet.
   private SyncReplicationPeerInfoProvider peerInfoProvider = new SyncReplicationPeerInfoProvider() {
@@ -150,11 +161,26 @@ public abstract class AbstractWALProvider implements WALProvider, PeerActionList
       WAL wal = createRemoteWAL(region, ReplicationUtils.getRemoteWALFileSystem(conf, remoteWALDir),
         ReplicationUtils.getPeerRemoteWALDir(remoteWALDir, peerId), getRemoteWALPrefix(peerId),
         ReplicationUtils.SYNC_WAL_SUFFIX);
+      numRemoteWALUnderCreationLock.lock();
+      try {
+        numRemoteWALUnderCreation++;
+      } finally {
+        numRemoteWALUnderCreationLock.unlock();
+      }
       initWAL(wal);
       peerId2WAL.put(peerId, Optional.of(wal));
       return wal;
     } finally {
       lock.unlock();
+      numRemoteWALUnderCreationLock.lock();
+      try {
+        numRemoteWALUnderCreation--;
+        if (numRemoteWALUnderCreation == 0) {
+          noRemoteWALUnderCreationCond.signalAll();
+        }
+      } finally {
+        numRemoteWALUnderCreationLock.unlock();
+      }
     }
   }
 
@@ -179,6 +205,17 @@ public abstract class AbstractWALProvider implements WALProvider, PeerActionList
 
   @Override
   public final List<WAL> getWALs() {
+    List<WAL> wals = new ArrayList<WAL>();
+    numRemoteWALUnderCreationLock.lock();
+    try {
+      while (numRemoteWALUnderCreation > 0) {
+        noRemoteWALUnderCreationCond.awaitUninterruptibly();
+      }
+      peerId2WAL.values().stream().filter(Optional::isPresent).map(Optional::get)
+        .forEach(wals::add);
+    } finally {
+      numRemoteWALUnderCreationLock.unlock();
+    }
     return Streams
       .concat(peerId2WAL.values().stream().filter(Optional::isPresent).map(Optional::get),
         getWALs0().stream())
