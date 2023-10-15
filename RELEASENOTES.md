@@ -16,6 +16,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.5.6 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-28068](https://issues.apache.org/jira/browse/HBASE-28068) | *Minor* | **Add hbase.normalizer.merge.merge\_request\_max\_number\_of\_regions property to limit max number of regions in a merge request for merge normalization**
+
+Added a new property "hbase.normalizer.merge.merge\_request\_max\_number\_of\_regions" to limit the max number of region to be processed for merge request in a single merge normalisation. Defaults to 100
+
+
+---
+
+* [HBASE-27956](https://issues.apache.org/jira/browse/HBASE-27956) | *Major* | **Support wall clock profiling in ProfilerServlet**
+
+You can now do wall clock profiling with async-profiler by specifying ?event=wall query param on the profiler servlet (/prof)
+
+
+---
+
+* [HBASE-27888](https://issues.apache.org/jira/browse/HBASE-27888) | *Minor* | **Record readBlock message in log when it takes too long time**
+
+Add a configuration parameter,which control to record read block slow in logs.
+\<property\>
+  \<name\>hbase.fs.reader.warn.time.ms\</name\>
+  \<value\>-1\</value\>
+\</property\>
+If reading block cost time in milliseconds more than the threshold, a warning will be logged,the default value is -1, it means skipping record the read block slow warning log.
+
+
+
 # HBASE  2.5.5 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
