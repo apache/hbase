@@ -492,49 +492,48 @@ public class StoreFileScanner implements KeyValueScanner {
     try {
       if (previousRow == null || getComparator().compareRows(previousRow, originalKey) > 0) {
         return seekToPreviousRowWithoutHint(originalKey);
-      } else {
-        try {
-          do {
-            if (previousRow == null) {
-              return seekToPreviousRowWithoutHint(originalKey);
-            }
+      }
+      try {
+        do {
+          if (previousRow == null) {
+            return seekToPreviousRowWithoutHint(originalKey);
+          }
 
-            Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(previousRow);
+          Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(previousRow);
 
-            if (seekCount != null) seekCount.increment();
-            if (!hfs.seekBefore(firstKeyOfPreviousRow)) {
-              // Since the above seek failed, we need to position ourselves back at the start of the
-              // block or else our re-seek might fail
-              if (!hfs.seekTo()) {
-                this.cur = null;
-                return false;
-              }
-              this.previousRow = null;
-            } else {
-              this.previousRow = hfs.getCell();
-            }
-
-            if (seekCount != null) seekCount.increment();
-            if (!reseekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
+          if (seekCount != null) seekCount.increment();
+          if (!hfs.seekBefore(firstKeyOfPreviousRow)) {
+            // Since the above seek failed, we need to position ourselves back at the start of the
+            // block or else our re-seek might fail
+            if (!hfs.seekTo()) {
               this.cur = null;
               return false;
             }
-            setCurrentCell(hfs.getCell());
+            this.previousRow = null;
+          } else {
+            this.previousRow = hfs.getCell();
+          }
 
-            this.stopSkippingKVsIfNextRow = true;
-            boolean resultOfSkipKVs;
-            try {
-              resultOfSkipKVs = skipKVsNewerThanReadpoint();
-            } finally {
-              this.stopSkippingKVsIfNextRow = false;
-            }
-            if (resultOfSkipKVs && getComparator().compareRows(cur, firstKeyOfPreviousRow) <= 0) {
-              return true;
-            }
-          } while (true);
-        } finally {
-          realSeekDone = true;
-        }
+          if (seekCount != null) seekCount.increment();
+          if (!reseekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
+            this.cur = null;
+            return false;
+          }
+          setCurrentCell(hfs.getCell());
+
+          this.stopSkippingKVsIfNextRow = true;
+          boolean resultOfSkipKVs;
+          try {
+            resultOfSkipKVs = skipKVsNewerThanReadpoint();
+          } finally {
+            this.stopSkippingKVsIfNextRow = false;
+          }
+          if (resultOfSkipKVs && getComparator().compareRows(cur, firstKeyOfPreviousRow) <= 0) {
+            return true;
+          }
+        } while (true);
+      } finally {
+        realSeekDone = true;
       }
     } catch (FileNotFoundException e) {
       throw e;
