@@ -1398,8 +1398,10 @@ public class AssignmentManager {
         continue;
       }
       final long lag = 1000;
-      // It is likely that another thread is currently holding the lock. To avoid deadlock, use
-      // tryLock waiting for a specified period of time
+      // This is just a fallback check designed to identify unexpected data inconsistencies, so we
+      // use tryLock to attempt to acquire the lock, and if the lock cannot be acquired, we skip the
+      // check. This will not cause any additional problems and also prevents the regionServerReport
+      // call from being stuck for too long which may cause deadlock on region assignment.
       if (regionNode.tryLock()) {
         try {
           long diff = EnvironmentEdgeManager.currentTime() - regionNode.getLastUpdate();
