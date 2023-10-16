@@ -125,7 +125,7 @@ public class RegionStates {
   RegionStateNode createRegionStateNode(RegionInfo regionInfo) {
     synchronized (regionsMapLock) {
       RegionStateNode node = regionsMap.computeIfAbsent(regionInfo.getRegionName(),
-        key -> new RegionStateNode(regionInfo, regionInTransition));
+        key -> new RegionStateNode(this, regionInfo));
 
       if (encodedRegionsMap.get(regionInfo.getEncodedName()) != node) {
         encodedRegionsMap.put(regionInfo.getEncodedName(), node);
@@ -627,7 +627,21 @@ public class RegionStates {
 
   public boolean isRegionInTransition(final RegionInfo regionInfo) {
     final RegionStateNode node = regionInTransition.get(regionInfo);
-    return node != null ? node.isInTransition() : false;
+    return node != null;
+  }
+
+  public void addRegionInTransition(final RegionInfo regionInfo) {
+    if (
+      regionInTransition.putIfAbsent(regionInfo, getOrCreateRegionStateNode(regionInfo)) == null
+    ) {
+      LOG.info("Added RIT " + regionInfo);
+    }
+  }
+
+  public void removeRegionInTransition(final RegionInfo regionInfo) {
+    if (regionInTransition.remove(regionInfo) != null) {
+      LOG.info("Removed RIT " + regionInfo);
+    }
   }
 
   public RegionState getRegionTransitionState(RegionInfo hri) {

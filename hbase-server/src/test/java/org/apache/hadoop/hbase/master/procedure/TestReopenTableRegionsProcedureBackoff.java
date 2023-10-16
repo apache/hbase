@@ -120,6 +120,7 @@ public class TestReopenTableRegionsProcedureBackoff {
       // reset to the correct state
       regionNode.setState(State.OPEN);
       regionNode.setOpenSeqNum(openSeqNum);
+      regionNode.removeInTransition();
       regionNode.unsetProcedure(trsp);
     } finally {
       regionNode.unlock();

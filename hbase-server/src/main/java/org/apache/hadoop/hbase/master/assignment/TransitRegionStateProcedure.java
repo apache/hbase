@@ -287,6 +287,7 @@ public class TransitRegionStateProcedure
       retryCounter = null;
       if (lastState == RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_OPENED) {
         // we are the last state, finish
+        regionNode.removeInTransition();
         regionNode.unsetProcedure(this);
         ServerCrashProcedure.updateProgress(env, getParentProcId());
         return Flow.NO_MORE_STATE;
@@ -309,6 +310,8 @@ public class TransitRegionStateProcedure
       env.getAssignmentManager().regionFailedOpen(regionNode, true);
       setFailure(getClass().getSimpleName(), new RetriesExhaustedException(
         "Max attempts " + env.getAssignmentManager().getAssignMaxAttempts() + " exceeded"));
+      // We failed to open the region so it is not out of transition yet. Do not remove from the
+      // in-transition list.
       regionNode.unsetProcedure(this);
       return Flow.NO_MORE_STATE;
     }
@@ -353,6 +356,7 @@ public class TransitRegionStateProcedure
       retryCounter = null;
       if (lastState == RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED) {
         // we are the last state, finish
+        regionNode.removeInTransition();
         regionNode.unsetProcedure(this);
         return Flow.NO_MORE_STATE;
       }
@@ -378,6 +382,7 @@ public class TransitRegionStateProcedure
       !RegionReplicaUtil.isDefaultReplica(getRegion())
         && lastState == RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED
     ) {
+      // ABNORMALLY_CLOSED is not out of transition yet, do not remove from in-transition list
       regionNode.unsetProcedure(this);
       return Flow.NO_MORE_STATE;
     }
@@ -424,6 +429,8 @@ public class TransitRegionStateProcedure
               LOG.error(
                 "Cannot assign replica region {} because its primary region {} does not exist.",
                 regionNode.getRegionInfo(), defaultRI);
+              // Something bad happened and we cannot assign the replica. Do not remove from the
+              // in-transition list.
               regionNode.unsetProcedure(this);
               return Flow.NO_MORE_STATE;
             }
