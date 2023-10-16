@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.hbase.HConstants;
@@ -324,8 +323,8 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     lock.lock();
   }
 
-  public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
-    return lock.tryLock(time, unit);
+  public boolean tryLock() {
+    return lock.tryLock();
   }
 
   public void unlock() {
