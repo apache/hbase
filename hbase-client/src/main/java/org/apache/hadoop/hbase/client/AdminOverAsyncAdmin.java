@@ -491,6 +491,16 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void truncateRegion(byte[] regionName) throws IOException {
+    get(admin.truncateRegion(regionName));
+  }
+
+  @Override
+  public Future<Void> truncateRegionAsync(byte[] regionName) {
+    return admin.truncateRegion(regionName);
+  }
+
+  @Override
   public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
     return admin.modifyTable(td);
   }

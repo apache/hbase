@@ -726,6 +726,16 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public void truncateRegion(byte[] regionName) throws IOException {
+    throw new NotImplementedException("Truncate Region not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Future<Void> truncateRegionAsync(byte[] regionName) {
+    throw new NotImplementedException("Truncate Region Async not supported in ThriftAdmin");
+  }
+
+  @Override
   public Future<Void> splitRegionAsync(byte[] regionName, byte[] splitPoint) {
     throw new NotImplementedException("splitRegionAsync not supported in ThriftAdmin");
   }

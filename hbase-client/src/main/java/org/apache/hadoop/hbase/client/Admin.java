@@ -1034,6 +1034,20 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
+   * Truncate an individual region.
+   * @param regionName region to truncate
+   * @throws IOException if a remote or network exception occurs
+   */
+  void truncateRegion(byte[] regionName) throws IOException;
+
+  /**
+   * Truncate an individual region. Asynchronous operation.
+   * @param regionName region to truncate
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> truncateRegionAsync(byte[] regionName) throws IOException;
+
+  /**
    * Modify an existing table, more IRB (ruby) friendly version. Asynchronous operation. This means
    * that it may be a while before your schema change is updated across all of the table. You can
    * use Future.get(long, TimeUnit) to wait on the operation to complete. It may throw

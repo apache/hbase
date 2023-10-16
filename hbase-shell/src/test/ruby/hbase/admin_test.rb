@@ -168,6 +168,17 @@ module Hbase
 
     #-------------------------------------------------------------------------------
 
+    define_test "truncate region should work" do
+      @t_name = 'hbase_shell_truncate_region'
+      drop_test_table(@t_name)
+      admin.create(@t_name, 'a', NUMREGIONS => 10, SPLITALGO => 'HexStringSplit')
+      r1 = command(:locate_region, @t_name, '1')
+      region1 = r1.getRegion.getRegionNameAsString
+      command(:truncate_region, region1)
+    end
+
+    #-------------------------------------------------------------------------------
+
     define_test "drop should fail on non-existent tables" do
       assert_raise(ArgumentError) do
         command(:drop, 'NOT.EXISTS')

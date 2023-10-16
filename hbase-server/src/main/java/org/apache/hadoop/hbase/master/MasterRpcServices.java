@@ -959,6 +959,18 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
+  public MasterProtos.TruncateRegionResponse truncateRegion(RpcController controller,
+    final MasterProtos.TruncateRegionRequest request) throws ServiceException {
+    try {
+      long procId = server.truncateRegion(ProtobufUtil.toRegionInfo(request.getRegionInfo()),
+        request.getNonceGroup(), request.getNonce());
+      return MasterProtos.TruncateRegionResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  @Override
   public ClientProtos.CoprocessorServiceResponse execMasterService(final RpcController controller,
     final ClientProtos.CoprocessorServiceRequest request) throws ServiceException {
     rpcPreCheck("execMasterService");
