@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -68,7 +67,7 @@ public class StoreFileScanner implements KeyValueScanner {
   // a row from the beginning of a block (i.e. RIV1). If the data block encoding has a high cost for
   // seeks, then we can use a modified reverse scanning algorithm to reduce seeks from the beginning
   // of the block
-  private final boolean doesDataBlockEncodingSupportFastSeeks;
+  private final boolean isFastSeekingEncoding;
 
   private static LongAdder seekCount;
 
@@ -91,9 +90,13 @@ public class StoreFileScanner implements KeyValueScanner {
    *                                    {@link KeyValueScanner#getScannerOrder()}.
    * @param canOptimizeForNonNullColumn {@code true} if we can make sure there is no null column,
    *                                    otherwise {@code false}. This is a hint for optimization.
+   * @param isFastSeekingEncoding       {@code true} if the data block encoding can seek quickly
+   *                                    from the beginning of a block (i.e. RIV1), otherwise
+   *                                    {@code false}. This is a hint for optimization.
    */
   public StoreFileScanner(StoreFileReader reader, HFileScanner hfs, boolean useMVCC,
-    boolean hasMVCC, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn) {
+    boolean hasMVCC, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn,
+    boolean isFastSeekingEncoding) {
     this.readPt = readPt;
     this.reader = reader;
     this.hfs = hfs;
@@ -101,8 +104,7 @@ public class StoreFileScanner implements KeyValueScanner {
     this.hasMVCCInfo = hasMVCC;
     this.scannerOrder = scannerOrder;
     this.canOptimizeForNonNullColumn = canOptimizeForNonNullColumn;
-    this.doesDataBlockEncodingSupportFastSeeks =
-      hfs.getReader().getDataBlockEncoding() == DataBlockEncoding.ROW_INDEX_V1;
+    this.isFastSeekingEncoding = isFastSeekingEncoding;
     this.reader.incrementRefCount();
   }
 
@@ -497,7 +499,7 @@ public class StoreFileScanner implements KeyValueScanner {
 
   @Override
   public boolean seekToPreviousRow(Cell originalKey) throws IOException {
-    if (doesDataBlockEncodingSupportFastSeeks) {
+    if (isFastSeekingEncoding) {
       return seekToPreviousRowStateless(originalKey);
     } else if (previousRow == null || getComparator().compareRows(previousRow, originalKey) > 0) {
       return seekToPreviousRowWithoutHint(originalKey);
