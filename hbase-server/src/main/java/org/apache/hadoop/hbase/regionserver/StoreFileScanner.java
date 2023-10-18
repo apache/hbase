@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -63,6 +64,11 @@ public class StoreFileScanner implements KeyValueScanner {
   private boolean stopSkippingKVsIfNextRow = false;
   // A Cell that represents the row before the most previously seeked to row in seekToPreviousRow
   private Cell previousRow = null;
+  // Whether the underlying HFile is using a data block encoding that has lower cost for seeking to
+  // a row from the beginning of a block (i.e. RIV1). If the data block encoding has a high cost for
+  // seeks, then we can use a modified reverse scanning algorithm to reduce seeks from the beginning
+  // of the block
+  private final boolean doesDataBlockEncodingSupportFastSeeks;
 
   private static LongAdder seekCount;
 
@@ -95,6 +101,8 @@ public class StoreFileScanner implements KeyValueScanner {
     this.hasMVCCInfo = hasMVCC;
     this.scannerOrder = scannerOrder;
     this.canOptimizeForNonNullColumn = canOptimizeForNonNullColumn;
+    this.doesDataBlockEncodingSupportFastSeeks =
+      hfs.getReader().getDataBlockEncoding() == DataBlockEncoding.ROW_INDEX_V1;
     this.reader.incrementRefCount();
   }
 
@@ -489,10 +497,12 @@ public class StoreFileScanner implements KeyValueScanner {
 
   @Override
   public boolean seekToPreviousRow(Cell originalKey) throws IOException {
+    if (doesDataBlockEncodingSupportFastSeeks) {
+      return seekToPreviousRowStateless(originalKey);
+    } else if (previousRow == null || getComparator().compareRows(previousRow, originalKey) > 0) {
+      return seekToPreviousRowWithoutHint(originalKey);
+    }
     try {
-      if (previousRow == null || getComparator().compareRows(previousRow, originalKey) > 0) {
-        return seekToPreviousRowWithoutHint(originalKey);
-      }
       try {
         do {
           if (previousRow == null) {
@@ -597,6 +607,58 @@ public class StoreFileScanner implements KeyValueScanner {
       return true;
     } finally {
       realSeekDone = true;
+    }
+  }
+
+  /**
+   * This seekToPreviousRow method requires two seeks from the beginning of a block. It should be
+   * used if the cost for seeking to the beginning of a block is low.
+   */
+  private boolean seekToPreviousRowStateless(Cell originalKey) throws IOException {
+    try {
+      try {
+        boolean keepSeeking = false;
+        Cell key = originalKey;
+        do {
+          Cell seekKey = PrivateCellUtil.createFirstOnRow(key);
+          if (seekCount != null) seekCount.increment();
+          if (!hfs.seekBefore(seekKey)) {
+            this.cur = null;
+            return false;
+          }
+          Cell curCell = hfs.getCell();
+          Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(curCell);
+
+          if (seekCount != null) seekCount.increment();
+          if (!seekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
+            this.cur = null;
+            return false;
+          }
+
+          setCurrentCell(hfs.getCell());
+          this.stopSkippingKVsIfNextRow = true;
+          boolean resultOfSkipKVs;
+          try {
+            resultOfSkipKVs = skipKVsNewerThanReadpoint();
+          } finally {
+            this.stopSkippingKVsIfNextRow = false;
+          }
+          if (!resultOfSkipKVs || getComparator().compareRows(cur, firstKeyOfPreviousRow) > 0) {
+            keepSeeking = true;
+            key = firstKeyOfPreviousRow;
+            continue;
+          } else {
+            keepSeeking = false;
+          }
+        } while (keepSeeking);
+        return true;
+      } finally {
+        realSeekDone = true;
+      }
+    } catch (FileNotFoundException e) {
+      throw e;
+    } catch (IOException ioe) {
+      throw new IOException("Could not seekToPreviousRow " + this + " to key " + originalKey, ioe);
     }
   }
 
