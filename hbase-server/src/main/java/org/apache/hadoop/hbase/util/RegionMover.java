@@ -424,6 +424,25 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   }
 
   private boolean unloadRegions(boolean unloadFromRack)
+    throws ExecutionException, InterruptedException, TimeoutException {
+    return unloadRegions(unloadFromRack, null);
+  }
+
+  /**
+   * Isolated regions specified in {@link #isolateRegionIdArray} on {@link #hostname} in ack Mode
+   * and Unload regions from given {@link #hostname} using ack/noAck mode and {@link #maxthreads}.
+   * In noAck mode we do not make sure that region is successfully online on the target region
+   * server,hence it is the best effort. We do not unload regions to hostnames given in
+   * {@link #excludeFile}. If designatedFile is present with some contents, we will unload regions
+   * to hostnames provided in {@link #designatedFile}
+   * @return true if region isolation succeeded, false otherwise
+   */
+  public boolean isolateRegions()
+    throws ExecutionException, InterruptedException, TimeoutException {
+    return unloadRegions(false, isolateRegionIdArray);
+  }
+
+  private boolean unloadRegions(boolean unloadFromRack, List<String> isolateRegionIdArray)
     throws InterruptedException, ExecutionException, TimeoutException {
     deleteFile(this.filename);
     ExecutorService unloadPool = Executors.newFixedThreadPool(1);
@@ -481,7 +500,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         } else {
           LOG.info("Available servers {}", regionServers);
         }
-        unloadRegions(server, regionServers, movedRegions);
+        unloadRegions(server, regionServers, movedRegions, isolateRegionIdArray);
       } catch (Exception e) {
         LOG.error("Error while unloading regions ", e);
         return false;
@@ -512,7 +531,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   }
 
   private void unloadRegions(ServerName server, List<ServerName> regionServers,
-    List<RegionInfo> movedRegions) throws Exception {
+    List<RegionInfo> movedRegions, List<String> isolateRegionIdArray) throws Exception {
     while (true) {
       List<RegionInfo> isolateRegionInfoList = Collections.synchronizedList(new ArrayList<>());
       RegionInfo isolateRegionInfo = null;
@@ -860,12 +879,13 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   @Override
   protected void addOptions() {
     this.addRequiredOptWithArg("r", "regionserverhost", "region server <hostname>|<hostname:port>");
-    this.addRequiredOptWithArg("o", "operation", "Expected: load/unload/unload_from_rack");
+    this.addRequiredOptWithArg("o", "operation",
+      "Expected: load/unload/unload_from_rack/isolate_regions");
     this.addOptWithArg("m", "maxthreads",
       "Define the maximum number of threads to use to unload and reload the regions");
     this.addOptWithArg("isolateRegionIds",
-      "Comma separated list of Region IDs to isolate on the RegionServer and put "
-        + " region server host in draining  mode. This option should only be used with '-o unload'"
+      "Comma separated list of Region IDs hash to isolate on a RegionServer and put "
+        + " region server in draining  mode. This option should only be used with '-o isolate_regions'"
         + " only. By putting region server in decommission/draining mode, master can't assign any"
         + " new region on this server. If one or more regions are not found OR failed to isolate"
         + " successfully, utility will exist without putting RS in draining/decommission mode."
@@ -895,7 +915,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     if (cmd.hasOption('m')) {
       rmbuilder.maxthreads(Integer.parseInt(cmd.getOptionValue('m')));
     }
-    if (cmd.hasOption("isolateRegionIds") && this.loadUnload.equals("unload")) {
+    if (this.loadUnload.equals("isolate_regions") && cmd.hasOption("isolateRegionIds")) {
       rmbuilder
         .isolateRegionIdArray(Arrays.asList(cmd.getOptionValue("isolateRegionIds").split(",")));
     }
@@ -926,6 +946,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         success = rm.unload();
       } else if (loadUnload.equalsIgnoreCase("unload_from_rack")) {
         success = rm.unloadFromRack();
+      } else if (loadUnload.equalsIgnoreCase("isolate_regions")) {
+        success = rm.isolateRegions();
       } else {
         printUsage();
         success = false;

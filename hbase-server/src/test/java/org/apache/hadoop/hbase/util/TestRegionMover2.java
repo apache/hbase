@@ -269,7 +269,7 @@ public class TestRegionMover2 {
     try (RegionMover rm = rmBuilder.build()) {
       LOG.debug("Unloading {} except regions : {}", destinationRS.getServerName(),
         listOfRegionIDsToIsolate);
-      rm.unload();
+      rm.isolateRegions();
       Assert.assertEquals(listOfRegionIDsToIsolate.size(),
         destinationRS.getNumberOfOnlineRegions());
       for (int i = 0; i < listOfRegionIDsToIsolate.size(); i++) {
