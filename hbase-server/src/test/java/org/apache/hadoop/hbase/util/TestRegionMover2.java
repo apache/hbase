@@ -210,4 +210,126 @@ public class TestRegionMover2 {
     }
   }
 
+  public int findRSWith2OrMoreRegionsOfATable(TableName tableName) throws Exception {
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    int numOfRS = cluster.getNumLiveRegionServers();
+    int serverIndex = -1;
+    for (int i=0; i < numOfRS ; i++) {
+      HRegionServer destinationRegionServer = cluster.getRegionServer(i);
+      List<HRegion> hRegions = destinationRegionServer.getRegions().stream()
+        .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(tableName))
+        .collect(Collectors.toList());
+      if (hRegions.size() >= 2) {
+        serverIndex = i;
+        break;
+      }
+    }
+    if (serverIndex == -1) {
+      throw new Exception("This shouln't happen, No RS found with more than 2 regions of table : "
+        + tableName);
+    }
+    return serverIndex;
+  }
+
+  public int findDestinationRS(int sourceRSIndex) throws Exception {
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    int destinationRSIndex = -1;
+    int numOfRS = cluster.getNumLiveRegionServers();
+    for (int i = 0 ; i < numOfRS ; i++) {
+      if (i != sourceRSIndex) {
+        destinationRSIndex = i;
+        break;
+      }
+    }
+    if (destinationRSIndex == -1) {
+      throw new Exception("This shouldn't happen, No RS found which is different than source RS");
+    }
+    return destinationRSIndex;
+  }
+
+  public void regionIsolationOperation(int sourceRSIndex, int destinationRSIndex,
+    int numRegionsToIsolate) throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    Admin admin = TEST_UTIL.getAdmin();
+    HRegionServer sourceRS = cluster.getRegionServer(sourceRSIndex);
+    List<HRegion> hRegions = sourceRS.getRegions().stream()
+      .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(tableName))
+      .collect(Collectors.toList());
+    List<String> listOfRegionIDsToIsolate = new ArrayList<>();
+    for (int i = 0 ; i < numRegionsToIsolate; i++) {
+      listOfRegionIDsToIsolate.add(hRegions.get(i).getRegionInfo().getEncodedName());
+    }
+
+    HRegionServer destinationRS = cluster.getRegionServer(destinationRSIndex);
+    String destinationRSName = destinationRS.getServerName().getAddress().toString();
+    RegionMover.RegionMoverBuilder rmBuilder =
+      new RegionMover.RegionMoverBuilder(destinationRSName, TEST_UTIL.getConfiguration()).ack(true)
+        .maxthreads(8).isolateRegionIdArray(listOfRegionIDsToIsolate);
+    try (RegionMover rm = rmBuilder.build()) {
+      LOG.debug("Unloading {} except regions : {}", destinationRS.getServerName(),
+        listOfRegionIDsToIsolate);
+      rm.unload();
+      Assert.assertEquals(listOfRegionIDsToIsolate.size(),
+        destinationRS.getNumberOfOnlineRegions());
+      for (int i = 0; i < listOfRegionIDsToIsolate.size(); i++) {
+        Assert.assertEquals(listOfRegionIDsToIsolate.get(i),
+          destinationRS.getRegions().get(i).getRegionInfo().getEncodedName());
+      }
+      LOG.debug("Successfully Isolated " + listOfRegionIDsToIsolate.size() + " regions : "
+        + listOfRegionIDsToIsolate + " on " + destinationRS.getServerName());
+    } finally {
+      admin.recommissionRegionServer(destinationRS.getServerName(), null);
+    }
+  }
+
+  public void loadDummyDataInTable(TableName tableName) throws Exception {
+    Admin admin = TEST_UTIL.getAdmin();
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
+    List<Put> puts = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      puts.add(new Put(Bytes.toBytes("rowkey_" + i)).addColumn(Bytes.toBytes("fam1"),
+        Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)));
+    }
+    table.put(puts);
+    admin.flush(tableName);
+  }
+
+  @Test
+  public void testIsolateSingleRegionOnTheSameServer() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    loadDummyDataInTable(tableName);
+    int sourceRSIndex = findRSWith2OrMoreRegionsOfATable(tableName);
+    // Isolating 1 region on the same region server.
+    regionIsolationOperation(sourceRSIndex, sourceRSIndex, 1);
+  }
+
+  @Test
+  public void testIsolateSingleRegionOnTheDifferentServer() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    loadDummyDataInTable(tableName);
+    int sourceRSIndex = findRSWith2OrMoreRegionsOfATable(tableName);
+    int destinationRSIndex = findDestinationRS(sourceRSIndex);
+    // Isolating 1 region on the different region server.
+    regionIsolationOperation(sourceRSIndex, destinationRSIndex, 1);
+  }
+
+  @Test
+  public void testIsolateMultipleRegionsOnTheSameServer() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    loadDummyDataInTable(tableName);
+    int sourceRSIndex = findRSWith2OrMoreRegionsOfATable(tableName);
+    // Isolating 2 regions on the same region server.
+    regionIsolationOperation(sourceRSIndex, sourceRSIndex, 2);
+  }
+
+  @Test
+  public void testIsolateMultipleRegionsOnTheDifferentServer() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    loadDummyDataInTable(tableName);
+    int sourceRSIndex = findRSWith2OrMoreRegionsOfATable(tableName);
+    int destinationRSIndex = findDestinationRS(sourceRSIndex);
+    // Isolating 2 regions on the different region server.
+    regionIsolationOperation(sourceRSIndex, destinationRSIndex, 2);
+  }
 }
