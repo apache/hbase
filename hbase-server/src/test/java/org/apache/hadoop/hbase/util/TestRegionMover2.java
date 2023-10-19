@@ -214,7 +214,7 @@ public class TestRegionMover2 {
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     int numOfRS = cluster.getNumLiveRegionServers();
     int serverIndex = -1;
-    for (int i=0; i < numOfRS ; i++) {
+    for (int i = 0; i < numOfRS; i++) {
       HRegionServer destinationRegionServer = cluster.getRegionServer(i);
       List<HRegion> hRegions = destinationRegionServer.getRegions().stream()
         .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(tableName))
@@ -225,8 +225,8 @@ public class TestRegionMover2 {
       }
     }
     if (serverIndex == -1) {
-      throw new Exception("This shouln't happen, No RS found with more than 2 regions of table : "
-        + tableName);
+      throw new Exception(
+        "This shouln't happen, No RS found with more than 2 regions of table : " + tableName);
     }
     return serverIndex;
   }
@@ -235,7 +235,7 @@ public class TestRegionMover2 {
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     int destinationRSIndex = -1;
     int numOfRS = cluster.getNumLiveRegionServers();
-    for (int i = 0 ; i < numOfRS ; i++) {
+    for (int i = 0; i < numOfRS; i++) {
       if (i != sourceRSIndex) {
         destinationRSIndex = i;
         break;
@@ -257,7 +257,7 @@ public class TestRegionMover2 {
       .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(tableName))
       .collect(Collectors.toList());
     List<String> listOfRegionIDsToIsolate = new ArrayList<>();
-    for (int i = 0 ; i < numRegionsToIsolate; i++) {
+    for (int i = 0; i < numRegionsToIsolate; i++) {
       listOfRegionIDsToIsolate.add(hRegions.get(i).getRegionInfo().getEncodedName());
     }
 

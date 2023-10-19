@@ -522,11 +522,10 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         List<Future<Boolean>> isolateRegionTaskList = new ArrayList<>();
         List<RegionInfo> recentlyIsolatedRegion = Collections.synchronizedList(new ArrayList<>());
         boolean allRegionOpsSuccessful = true;
-        for(String isolateRegionId : isolateRegionIdArray) {
-          Result result = MetaTableAccessor.scanByRegionEncodedName(conn,
-            isolateRegionId);
-          HRegionLocation hRegionLocation = MetaTableAccessor.getRegionLocation(conn,
-            result.getRow());
+        for (String isolateRegionId : isolateRegionIdArray) {
+          Result result = MetaTableAccessor.scanByRegionEncodedName(conn, isolateRegionId);
+          HRegionLocation hRegionLocation =
+            MetaTableAccessor.getRegionLocation(conn, result.getRow());
           if (hRegionLocation != null) {
             isolateRegionInfo = hRegionLocation.getRegion();
             isolateRegionInfoList.add(isolateRegionInfo);
@@ -538,12 +537,11 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
             break;
           }
           if (hRegionLocation.getServerName() == server) {
-            LOG.info("Region " + isolateRegionId + " already exists on server : "
-              + server.getHostname());
+            LOG.info(
+              "Region " + isolateRegionId + " already exists on server : " + server.getHostname());
           } else {
-            Future<Boolean> isolateRegionTask = isolateRegionPool.submit(
-              new MoveWithAck(conn, isolateRegionInfo, hRegionLocation.getServerName(), server,
-                recentlyIsolatedRegion));
+            Future<Boolean> isolateRegionTask = isolateRegionPool.submit(new MoveWithAck(conn,
+              isolateRegionInfo, hRegionLocation.getServerName(), server, recentlyIsolatedRegion));
             isolateRegionTaskList.add(isolateRegionTask);
           }
         }
@@ -559,11 +557,10 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
 
           // Get New Location for all the regions in isolateRegionIdArray and
           // check that all of them are on the target RS else exit.
-          for(String isolateRegionId : isolateRegionIdArray) {
-            Result result = MetaTableAccessor.scanByRegionEncodedName(conn,
-              isolateRegionId);
-            HRegionLocation hRegionLocation = MetaTableAccessor.getRegionLocation(conn,
-              result.getRow());
+          for (String isolateRegionId : isolateRegionIdArray) {
+            Result result = MetaTableAccessor.scanByRegionEncodedName(conn, isolateRegionId);
+            HRegionLocation hRegionLocation =
+              MetaTableAccessor.getRegionLocation(conn, result.getRow());
             if (!(hRegionLocation != null && hRegionLocation.getServerName().equals(server))) {
               LOG.error("One of the Region " + isolateRegionId + " move failed OR stuck in"
                 + " transition...Quitting now");
@@ -575,13 +572,12 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
           LOG.info("All regions already exists on server : " + server.getHostname());
         }
 
-
         if (!allRegionOpsSuccessful) {
           // If all the regions are not online on the target server,
           // we don't put RS in decommission mode and exit from here.
           break;
         } else {
-          // Once region has been moved to target RS, Let's put the target RS into decommission mode,
+          // Once region has been moved to target RS, put the target RS into decommission mode,
           // so master doesn't assign new region to the target RS while we unload the target RS.
           // Also pass 'offload' flag as false since we don't want master to offload the target RS.
           List<ServerName> listOfServer = new ArrayList<>();
@@ -900,8 +896,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       rmbuilder.maxthreads(Integer.parseInt(cmd.getOptionValue('m')));
     }
     if (cmd.hasOption("isolateRegionIds") && this.loadUnload.equals("unload")) {
-      rmbuilder.isolateRegionIdArray(Arrays.asList(
-        cmd.getOptionValue("isolateRegionIds").split(",")));
+      rmbuilder
+        .isolateRegionIdArray(Arrays.asList(cmd.getOptionValue("isolateRegionIds").split(",")));
     }
     if (cmd.hasOption('n')) {
       rmbuilder.ack(false);
