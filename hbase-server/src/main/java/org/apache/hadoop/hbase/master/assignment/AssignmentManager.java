@@ -1330,29 +1330,39 @@ public class AssignmentManager {
         continue;
       }
       final long lag = 1000;
-      regionNode.lock();
-      try {
-        long diff = EnvironmentEdgeManager.currentTime() - regionNode.getLastUpdate();
-        if (regionNode.isInState(State.OPENING, State.OPEN)) {
-          // This is possible as a region server has just closed a region but the region server
-          // report is generated before the closing, but arrive after the closing. Make sure there
-          // is some elapsed time so less false alarms.
-          if (!regionNode.getRegionLocation().equals(serverName) && diff > lag) {
-            LOG.warn("Reporting {} server does not match {} (time since last "
-              + "update={}ms); closing...", serverName, regionNode, diff);
-            closeRegionSilently(serverNode.getServerName(), regionName);
+      // This is just a fallback check designed to identify unexpected data inconsistencies, so we
+      // use tryLock to attempt to acquire the lock, and if the lock cannot be acquired, we skip the
+      // check. This will not cause any additional problems and also prevents the regionServerReport
+      // call from being stuck for too long which may cause deadlock on region assignment.
+      if (regionNode.tryLock()) {
+        try {
+          long diff = EnvironmentEdgeManager.currentTime() - regionNode.getLastUpdate();
+          if (regionNode.isInState(State.OPENING, State.OPEN)) {
+            // This is possible as a region server has just closed a region but the region server
+            // report is generated before the closing, but arrive after the closing. Make sure
+            // there
+            // is some elapsed time so less false alarms.
+            if (!regionNode.getRegionLocation().equals(serverName) && diff > lag) {
+              LOG.warn("Reporting {} server does not match {} (time since last "
+                + "update={}ms); closing...", serverName, regionNode, diff);
+              closeRegionSilently(serverNode.getServerName(), regionName);
+            }
+          } else if (!regionNode.isInState(State.CLOSING, State.SPLITTING)) {
+            // So, we can get report that a region is CLOSED or SPLIT because a heartbeat
+            // came in at about same time as a region transition. Make sure there is some
+            // elapsed time so less false alarms.
+            if (diff > lag) {
+              LOG.warn("Reporting {} state does not match {} (time since last update={}ms)",
+                serverName, regionNode, diff);
+            }
           }
-        } else if (!regionNode.isInState(State.CLOSING, State.SPLITTING)) {
-          // So, we can get report that a region is CLOSED or SPLIT because a heartbeat
-          // came in at about same time as a region transition. Make sure there is some
-          // elapsed time so less false alarms.
-          if (diff > lag) {
-            LOG.warn("Reporting {} state does not match {} (time since last update={}ms)",
-              serverName, regionNode, diff);
-          }
+        } finally {
+          regionNode.unlock();
         }
-      } finally {
-        regionNode.unlock();
+      } else {
+        LOG.warn(
+          "Unable to acquire lock for regionNode {}. It is likely that another thread is currently holding the lock. To avoid deadlock, skip execution for now.",
+          regionNode);
       }
     }
   }

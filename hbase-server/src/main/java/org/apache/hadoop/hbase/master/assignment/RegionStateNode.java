@@ -311,6 +311,10 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     lock.lock();
   }
 
+  public boolean tryLock() {
+    return lock.tryLock();
+  }
+
   public void unlock() {
     lock.unlock();
   }
