@@ -58,13 +58,12 @@ public final class RecoverLeaseFSUtils {
     }
     // lease recovery not needed for local file system case.
     if (!(fs instanceof LeaseRecoverable)) {
-      LOG.warn("{} is not an instance of {}, skip recovering from file lease",
-        fs, LeaseRecoverable.class);
+      LOG.warn("{} is not an instance of {}, skip recovering from file lease", fs,
+        LeaseRecoverable.class);
       return;
     }
     if (!(fs instanceof SafeMode)) {
-      LOG.warn("{} is not an instance of {}, skip recovering from file lease",
-        fs, SafeMode.class);
+      LOG.warn("{} is not an instance of {}, skip recovering from file lease", fs, SafeMode.class);
       return;
     }
     recoverDFSFileLease(fs, p, conf, reporter);
@@ -176,8 +175,8 @@ public final class RecoverLeaseFSUtils {
    * Try to recover the lease.
    * @return True if dfs#recoverLease came by true.
    */
-  private static boolean recoverLease(final LeaseRecoverable dfs, final int nbAttempt,
-    final Path p, final long startWaiting) throws FileNotFoundException {
+  private static boolean recoverLease(final LeaseRecoverable dfs, final int nbAttempt, final Path p,
+    final long startWaiting) throws FileNotFoundException {
     boolean recovered = false;
     try {
       recovered = dfs.recoverLease(p);
@@ -206,8 +205,7 @@ public final class RecoverLeaseFSUtils {
    * Call HDFS-4525 isFileClosed if it is available.
    * @return True if file is closed.
    */
-  private static boolean isFileClosed(final SafeMode dfs, final Method m,
-    final Path p) {
+  private static boolean isFileClosed(final SafeMode dfs, final Method m, final Path p) {
     try {
       return (Boolean) m.invoke(dfs, p);
     } catch (SecurityException e) {

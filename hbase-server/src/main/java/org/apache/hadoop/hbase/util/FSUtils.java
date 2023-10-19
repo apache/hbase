@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
-import static org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.SAFEMODE_GET;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import java.io.ByteArrayInputStream;
