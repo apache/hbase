@@ -360,6 +360,19 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
   }
 
+  protected final ReplicationSourceShipper createNewShipper(String walGroupId) {
+    ReplicationSourceWALReader walReader =
+      createNewWALReader(walGroupId, getStartOffset(walGroupId));
+    ReplicationSourceShipper worker = createNewShipper(walGroupId, walReader);
+    Threads.setDaemonThreadRunning(walReader, Thread.currentThread().getName()
+      + ".replicationSource.wal-reader." + walGroupId + "," + queueId, this::retryRefreshing);
+    return worker;
+  }
+
+  protected final void startShipper(ReplicationSourceShipper worker) {
+    worker.startup(this::retryRefreshing);
+  }
+
   private void tryStartNewShipper(String walGroupId) {
     workerThreads.compute(walGroupId, (key, value) -> {
       if (value != null) {
@@ -367,12 +380,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
         return value;
       } else {
         LOG.debug("{} starting shipping worker for walGroupId={}", logPeerId(), walGroupId);
-        ReplicationSourceWALReader walReader =
-          createNewWALReader(walGroupId, getStartOffset(walGroupId));
-        ReplicationSourceShipper worker = createNewShipper(walGroupId, walReader);
-        Threads.setDaemonThreadRunning(walReader, Thread.currentThread().getName()
-          + ".replicationSource.wal-reader." + walGroupId + "," + queueId, this::retryRefreshing);
-        worker.startup(this::retryRefreshing);
+        ReplicationSourceShipper worker = createNewShipper(walGroupId);
+        startShipper(worker);
         return worker;
       }
     });
@@ -522,7 +531,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
    * @param sleepMultiplier by how many times the default sleeping time is augmented
    * @return True if <code>sleepMultiplier</code> is &lt; <code>maxRetriesMultiplier</code>
    */
-  protected boolean sleepForRetries(String msg, int sleepMultiplier) {
+  private boolean sleepForRetries(String msg, int sleepMultiplier) {
     try {
       if (LOG.isTraceEnabled()) {
         LOG.trace("{} {}, sleeping {} times {}", logPeerId(), msg, sleepForRetries,
@@ -605,10 +614,14 @@ public class ReplicationSource implements ReplicationSourceInterface {
       queueId, logQueue.getNumQueues(), clusterId, peerClusterId);
     initializeWALEntryFilter(peerClusterId);
     // Start workers
+    startShippers();
+    setSourceStartupStatus(false);
+  }
+
+  protected void startShippers() {
     for (String walGroupId : logQueue.getQueues().keySet()) {
       tryStartNewShipper(walGroupId);
     }
-    setSourceStartupStatus(false);
   }
 
   private synchronized void setSourceStartupStatus(boolean initializing) {
