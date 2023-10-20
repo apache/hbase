@@ -25,7 +25,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -51,9 +50,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
@@ -391,8 +388,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
   void startBucketCachePersisterThread() {
     LOG.info("Starting BucketCachePersisterThread");
-    cachePersister =
-      new BucketCachePersister(this, bucketcachePersistInterval);
+    cachePersister = new BucketCachePersister(this, bucketcachePersistInterval);
     cachePersister.setDaemon(true);
     cachePersister.start();
   }
@@ -1276,8 +1272,9 @@ public class BucketCache implements BlockCache, HeapSize {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "OBL_UNSATISFIED_OBLIGATION",
       justification = "false positive, try-with-resources ensures close is called.")
   void persistToFile() throws IOException {
-    LOG.debug("Thread {} started persisting bucket cache to file", Thread.currentThread().getName());
-    if(!isCachePersistent()) {
+    LOG.debug("Thread {} started persisting bucket cache to file",
+      Thread.currentThread().getName());
+    if (!isCachePersistent()) {
       throw new IOException("Attempt to persist non-persistent cache mappings!");
     }
     File tempPersistencePath = new File(persistencePath + EnvironmentEdgeManager.currentTime());
@@ -1307,13 +1304,8 @@ public class BucketCache implements BlockCache, HeapSize {
     LOG.info("Started retrieving bucket cache from file");
     File persistenceFile = new File(persistencePath);
     if (!persistenceFile.exists()) {
-      File persistenceDir = new File(persistencePath.substring(0, persistencePath.lastIndexOf("/")));
-      StringBuilder b = new StringBuilder();
-      for(String file : persistenceDir.list()){
-        b.append(file).append("\n");
-      }
       LOG.warn("Persistence file missing! "
-        + "It's ok if it's first run after enabling persistent cache. List of files: {}", b);
+        + "It's ok if it's first run after enabling persistent cache.");
       bucketAllocator = new BucketAllocator(cacheCapacity, bucketSizes, backingMap, realCacheSize);
       blockNumber.add(backingMap.size());
       return;
@@ -1415,7 +1407,7 @@ public class BucketCache implements BlockCache, HeapSize {
           + "We need to validate each cache key in the backing map. "
           + "This may take some time, so we'll do it in a background thread,");
         Runnable cacheValidator = () -> {
-          while(bucketAllocator==null){
+          while (bucketAllocator == null) {
             try {
               Thread.sleep(50);
             } catch (InterruptedException ex) {
@@ -1434,7 +1426,8 @@ public class BucketCache implements BlockCache, HeapSize {
             }
           }
           LOG.info("Finished validating {} keys in the backing map. Recovered: {}. This took {}ms.",
-            totalKeysOriginally, backingMap.size(), (EnvironmentEdgeManager.currentTime() - startTime));
+            totalKeysOriginally, backingMap.size(),
+            (EnvironmentEdgeManager.currentTime() - startTime));
         };
         Thread t = new Thread(cacheValidator);
         t.setDaemon(true);

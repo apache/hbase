@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.experimental.theories.Theories;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -205,12 +204,11 @@ public class TestVerifyBucketCacheFile {
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
 
     Configuration conf = HBaseConfiguration.create();
-    //Disables the persister thread by setting its interval to MAX_VALUE
+    // Disables the persister thread by setting its interval to MAX_VALUE
     conf.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, Long.MAX_VALUE);
-    BucketCache bucketCache =
-      new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
-        constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
+      testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
     long usedSize = bucketCache.getAllocator().getUsedSize();
     assertEquals(0, usedSize);
 

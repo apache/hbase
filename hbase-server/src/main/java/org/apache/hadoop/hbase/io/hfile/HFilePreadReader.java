@@ -22,8 +22,8 @@ import java.util.Optional;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketEntry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -111,7 +111,6 @@ public class HFilePreadReader extends HFileReaderImpl {
                 block.release();
               }
             }
-            final long fileSize = offset;
             bucketCacheOptional.ifPresent(bc -> bc.fileCacheCompleted(path.getName()));
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)

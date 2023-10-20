@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -29,10 +34,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
-import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 
 /**
  * Basic test for check file's integrity before start BucketCache in fileIOEngine
@@ -53,29 +54,26 @@ public class TestRecoveryPersistentBucketCache {
     Path testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
     Configuration conf = HBaseConfiguration.create();
-    //Disables the persister thread by setting its interval to MAX_VALUE
+    // Disables the persister thread by setting its interval to MAX_VALUE
     conf.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, Long.MAX_VALUE);
-    int[] bucketSizes = new int[] {8 * 1024 + 1024};
-    BucketCache bucketCache =
-      new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, 8192,
-        bucketSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    int[] bucketSizes = new int[] { 8 * 1024 + 1024 };
+    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
+      DEFAULT_ERROR_TOLERATION_DURATION, conf);
 
-    CacheTestUtils.HFileBlockPair[] blocks =
-      CacheTestUtils.generateHFileBlocks(8192, 4);
+    CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 4);
 
-    CacheTestUtils.HFileBlockPair[] smallerBlocks =
-      CacheTestUtils.generateHFileBlocks(4096, 1);
+    CacheTestUtils.HFileBlockPair[] smallerBlocks = CacheTestUtils.generateHFileBlocks(4096, 1);
     // Add three blocks
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[0].getBlockName(), blocks[0].getBlock());
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[1].getBlockName(), blocks[1].getBlock());
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[2].getBlockName(), blocks[2].getBlock());
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[3].getBlockName(), blocks[3].getBlock());
-    //saves the current state of the cache
+    // saves the current state of the cache
     bucketCache.persistToFile();
-    //evicts the 4th block
+    // evicts the 4th block
     bucketCache.evictBlock(blocks[3].getBlockName());
-    //now adds a 5th block to bucket cache. This block is half the size of the previous
+    // now adds a 5th block to bucket cache. This block is half the size of the previous
     // blocks, and it will be added in the same offset of the previous evicted block.
     // This overwrites part of the 4th block. Because we persisted only up to the
     // 4th block addition, recovery would try to read the whole 4th block, but the cached time
@@ -83,7 +81,7 @@ public class TestRecoveryPersistentBucketCache {
     cacheAndWaitUntilFlushedToBucket(bucketCache, smallerBlocks[0].getBlockName(),
       smallerBlocks[0].getBlock());
 
-    //Creates new bucket cache instance without persisting to file after evicting 4th block
+    // Creates new bucket cache instance without persisting to file after evicting 4th block
     // and caching 5th block. Here the cache file has the first three blocks, followed by the
     // 5th block and the second half of 4th block (we evicted 4th block, freeing up its
     // offset in the cache, then added 5th block which is half the size of other blocks, so it's
@@ -94,17 +92,19 @@ public class TestRecoveryPersistentBucketCache {
     // in the cache as the first 8 bytes of a block, so the 4th block had its first 8 blocks
     // now overridden by the 5th block, causing this check to fail and removal of
     // the 4th block from the backing map.
-    BucketCache newBucketCache =
-      new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, 8192,
-        bucketSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
+      DEFAULT_ERROR_TOLERATION_DURATION, conf);
     Thread.sleep(100);
     assertEquals(3, newBucketCache.backingMap.size());
     assertNull(newBucketCache.getBlock(blocks[3].getBlockName(), false, false, false));
     assertNull(newBucketCache.getBlock(smallerBlocks[0].getBlockName(), false, false, false));
-    assertEquals(blocks[0].getBlock(), newBucketCache.getBlock(blocks[0].getBlockName(), false, false, false));
-    assertEquals(blocks[1].getBlock(), newBucketCache.getBlock(blocks[1].getBlockName(), false, false, false));
-    assertEquals(blocks[2].getBlock(), newBucketCache.getBlock(blocks[2].getBlockName(), false, false, false));
+    assertEquals(blocks[0].getBlock(),
+      newBucketCache.getBlock(blocks[0].getBlockName(), false, false, false));
+    assertEquals(blocks[1].getBlock(),
+      newBucketCache.getBlock(blocks[1].getBlockName(), false, false, false));
+    assertEquals(blocks[2].getBlock(),
+      newBucketCache.getBlock(blocks[2].getBlockName(), false, false, false));
     TEST_UTIL.cleanupTestDir();
   }
 
