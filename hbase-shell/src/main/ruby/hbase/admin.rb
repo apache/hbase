@@ -707,6 +707,7 @@ module Hbase
       # Get table descriptor
       htd = org.apache.hadoop.hbase.HTableDescriptor.new(@admin.getTableDescriptor(table_name))
       hasTableUpdate = false
+      reopen_regions = true
 
       # Process all args
       args.each do |arg|
@@ -719,6 +720,12 @@ module Hbase
         # There are 3 possible options.
         # 1) Column family spec. Distinguished by having a NAME and no METHOD.
         method = arg.delete(METHOD)
+
+        if !method.nil? && method == 'no_reopen_regions'
+          reopen_regions = false
+          method = nil
+        end
+
         if method.nil? && arg.key?(NAME)
           descriptor = hcd(arg, htd)
           column_name = descriptor.getNameAsString
@@ -831,7 +838,10 @@ module Hbase
 
       # Bulk apply all table modifications.
       if hasTableUpdate
-        @admin.modifyTable(table_name, htd)
+        # TODO : The current itself is not correct, it doesnt
+        # respect the wait=false, correctly. i.e the lazy_mode=true
+        # use-case.
+        @admin.modifyTable(table_name, htd, reopen_regions)
 
         if wait == true
           puts 'Updating all regions with the new schema...'

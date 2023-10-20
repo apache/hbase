@@ -1530,12 +1530,38 @@ public interface Admin extends Abortable, Closeable {
    *             {@link #modifyTable(TableDescriptor)}
    */
   @Deprecated
+  default void modifyTable(TableName tableName, TableDescriptor td, boolean reopenRegions) throws IOException {
+    if (!tableName.equals(td.getTableName())) {
+      throw new IllegalArgumentException("the specified table name '" + tableName
+        + "' doesn't match with the HTD one: " + td.getTableName());
+    }
+    modifyTable(td, reopenRegions);
+  }
+
+  /**
+   * Modify an existing table, more IRB friendly version.
+   * @param tableName name of table.
+   * @param td        modified description of the table
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.0 version and will be removed in 3.0 version. use
+   *             {@link #modifyTable(TableDescriptor)}
+   */
+  @Deprecated
   default void modifyTable(TableName tableName, TableDescriptor td) throws IOException {
     if (!tableName.equals(td.getTableName())) {
       throw new IllegalArgumentException("the specified table name '" + tableName
         + "' doesn't match with the HTD one: " + td.getTableName());
     }
-    modifyTable(td);
+    modifyTable(td, true);
+  }
+
+  /**
+   * Modify an existing table, more IRB friendly version.
+   * @param td modified description of the table
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void modifyTable(TableDescriptor td, boolean reopenRegions) throws IOException {
+    get(modifyTableAsync(td, reopenRegions), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -1544,9 +1570,8 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   default void modifyTable(TableDescriptor td) throws IOException {
-    get(modifyTableAsync(td), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+    get(modifyTableAsync(td, true), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
   }
-
   /**
    * Modify an existing table, more IRB friendly version. Asynchronous operation. This means that it
    * may be a while before your schema change is updated across all of the table. You can use
@@ -1559,7 +1584,7 @@ public interface Admin extends Abortable, Closeable {
    * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
    *         operation to complete
    * @deprecated since 2.0 version and will be removed in 3.0 version. use
-   *             {@link #modifyTableAsync(TableDescriptor)}
+   *             {@link #modifyTableAsync(TableDescriptor, boolean)}
    */
   @Deprecated
   default Future<Void> modifyTableAsync(TableName tableName, TableDescriptor td)
@@ -1568,7 +1593,7 @@ public interface Admin extends Abortable, Closeable {
       throw new IllegalArgumentException("the specified table name '" + tableName
         + "' doesn't match with the HTD one: " + td.getTableName());
     }
-    return modifyTableAsync(td);
+    return modifyTableAsync(td, true);
   }
 
   /**
@@ -1582,7 +1607,7 @@ public interface Admin extends Abortable, Closeable {
    * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
    *         operation to complete
    */
-  Future<Void> modifyTableAsync(TableDescriptor td) throws IOException;
+  Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions) throws IOException;
 
   /**
    * Change the store file tracker of the given table.

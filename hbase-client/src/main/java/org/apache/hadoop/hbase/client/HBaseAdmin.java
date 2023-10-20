@@ -392,7 +392,7 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
+  public Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions) throws IOException {
     ModifyTableResponse response = executeCallable(
       new MasterCallable<ModifyTableResponse>(getConnection(), getRpcControllerFactory()) {
         long nonceGroup = ng.getNonceGroup();
@@ -402,7 +402,8 @@ public class HBaseAdmin implements Admin {
         protected ModifyTableResponse rpcCall() throws Exception {
           setPriority(td.getTableName());
           ModifyTableRequest request =
-            RequestConverter.buildModifyTableRequest(td.getTableName(), td, nonceGroup, nonce);
+            RequestConverter.buildModifyTableRequest(td.getTableName(), td, nonceGroup,
+              nonce, reopenRegions);
           return master.modifyTable(getRpcController(), request);
         }
       });
