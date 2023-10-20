@@ -707,7 +707,7 @@ public class ServerManager {
    * @throws RetriesExhaustedException wrapping a ConnectException if failed
    */
   public AdminService.BlockingInterface getRsAdmin(final ServerName sn) throws IOException {
-    LOG.debug("New admin connection to " + sn.toString());
+    LOG.debug("New admin connection to {}", sn);
     if (sn.equals(master.getServerName()) && master instanceof HRegionServer) {
       // A master is also a region server now, see HBASE-10569 for details
       return ((HRegionServer) master).getRSRpcServices();
