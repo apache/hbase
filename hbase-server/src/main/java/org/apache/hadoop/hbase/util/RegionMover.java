@@ -545,34 +545,15 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         final ExecutorService isolateRegionPool = Executors.newFixedThreadPool(maxthreads);
         List<Future<Boolean>> isolateRegionTaskList = new ArrayList<>();
         List<RegionInfo> recentlyIsolatedRegion = Collections.synchronizedList(new ArrayList<>());
+        List<RegionInfo> isolatedMetaRegion = Collections.synchronizedList(new ArrayList<>());
         boolean allRegionOpsSuccessful = true;
         boolean isMetaIsolated = false;
+        RegionInfo metaRegionInfo = RegionInfoBuilder.FIRST_META_REGIONINFO;
+        List<HRegionLocation> hRegionLocationRegionIsolation =
+          Collections.synchronizedList(new ArrayList<>());
         for (String isolateRegionId : isolateRegionIdArray) {
-          if (
-            isolateRegionId
-              .equalsIgnoreCase(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName())
-          ) {
-            ZKWatcher zkWatcher = new ZKWatcher(conf, null, null);
-            List<HRegionLocation> result = new ArrayList<>();
-            for (String znode : zkWatcher.getMetaReplicaNodes()) {
-              String path = ZNodePaths.joinZNode(zkWatcher.getZNodePaths().baseZNode, znode);
-              int replicaId = zkWatcher.getZNodePaths().getMetaReplicaIdFromPath(path);
-              RegionState state = MetaTableLocator.getMetaRegionState(zkWatcher, replicaId);
-              result.add(new HRegionLocation(state.getRegion(), state.getServerName()));
-            }
-            RegionInfo metaRegionInfo = RegionInfoBuilder.FIRST_META_REGIONINFO;
-            ServerName metaSeverName = result.get(0).getServerName();
-            // For isolating hbase:meta, it should move explicitly in Ack mode,
-            // hence the forceMoveRegionByAck = true.
-            if (!metaSeverName.equals(server)) {
-              LOG.info("Region of hbase:meta " + isolateRegionId + " is on server " + metaSeverName
-                + " moving to " + server);
-              submitRegionMovesWhileUnloading(metaSeverName, Collections.singletonList(server),
-                movedRegions, Collections.singletonList(metaRegionInfo), true);
-            } else {
-              LOG.info("Region of hbase:meta " + isolateRegionId + " already exists on server : "
-                + server);
-            }
+          if (isolateRegionId.equalsIgnoreCase(metaRegionInfo.getEncodedName())) {
+            isolatedMetaRegion.add(metaRegionInfo);
             isMetaIsolated = true;
             continue;
           }
@@ -580,35 +561,61 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
           HRegionLocation hRegionLocation =
             MetaTableAccessor.getRegionLocation(conn, result.getRow());
           if (hRegionLocation != null) {
-            isolateRegionInfo = hRegionLocation.getRegion();
-            isolateRegionInfoList.add(isolateRegionInfo);
+            hRegionLocationRegionIsolation.add(hRegionLocation);
           } else {
-            LOG.error("One of the Region " + isolateRegionId + " doesn't exists/can't fetch from"
+            LOG.error("Region " + isolateRegionId + " doesn't exists/can't fetch from"
               + " meta...Quitting now");
             // We only move the regions if all the regions were found.
             allRegionOpsSuccessful = false;
             break;
           }
-          if (hRegionLocation.getServerName() == server) {
-            LOG.info(
-              "Region " + isolateRegionId + " already exists on server : " + server.getHostname());
-          } else {
-            Future<Boolean> isolateRegionTask = isolateRegionPool.submit(new MoveWithAck(conn,
-              isolateRegionInfo, hRegionLocation.getServerName(), server, recentlyIsolatedRegion));
-            isolateRegionTaskList.add(isolateRegionTask);
-          }
-        }
-
-        // If hbase:meta region was isolated, then it needs to be part of isolateRegionInfoList.
-        if (isMetaIsolated) {
-          isolateRegionInfoList.add(RegionInfoBuilder.FIRST_META_REGIONINFO);
         }
 
         if (!allRegionOpsSuccessful) {
-          // Failed to fetch one of the region's RegionInfo, so we exit from here.
           break;
-        } else if (!isolateRegionTaskList.isEmpty()) {
+        }
+        // If hbase:meta region was isolated, then it needs to be part of isolateRegionInfoList.
+        if (isMetaIsolated) {
+          ZKWatcher zkWatcher = new ZKWatcher(conf, null, null);
+          List<HRegionLocation> result = new ArrayList<>();
+          for (String znode : zkWatcher.getMetaReplicaNodes()) {
+            String path = ZNodePaths.joinZNode(zkWatcher.getZNodePaths().baseZNode, znode);
+            int replicaId = zkWatcher.getZNodePaths().getMetaReplicaIdFromPath(path);
+            RegionState state = MetaTableLocator.getMetaRegionState(zkWatcher, replicaId);
+            result.add(new HRegionLocation(state.getRegion(), state.getServerName()));
+          }
+          ServerName metaSeverName = result.get(0).getServerName();
+          // For isolating hbase:meta, it should move explicitly in Ack mode,
+          // hence the forceMoveRegionByAck = true.
+          if (!metaSeverName.equals(server)) {
+            LOG.info("Region of hbase:meta " + metaRegionInfo.getEncodedName() + " is on server "
+              + metaSeverName + " moving to " + server);
+            submitRegionMovesWhileUnloading(metaSeverName, Collections.singletonList(server),
+              movedRegions, Collections.singletonList(metaRegionInfo), true);
+          } else {
+            LOG.info("Region of hbase:meta " + metaRegionInfo.getEncodedName() + " already exists"
+              + " on server : " + server);
+          }
+          isolateRegionInfoList.add(RegionInfoBuilder.FIRST_META_REGIONINFO);
+        }
 
+        if (!hRegionLocationRegionIsolation.isEmpty()) {
+          for (HRegionLocation hRegionLocation : hRegionLocationRegionIsolation) {
+            isolateRegionInfo = hRegionLocation.getRegion();
+            isolateRegionInfoList.add(isolateRegionInfo);
+            if (hRegionLocation.getServerName() == server) {
+              LOG.info("Region " + hRegionLocation.getRegion().getEncodedName() + " already exists"
+                + " on server : " + server.getHostname());
+            } else {
+              Future<Boolean> isolateRegionTask =
+                isolateRegionPool.submit(new MoveWithAck(conn, isolateRegionInfo,
+                  hRegionLocation.getServerName(), server, recentlyIsolatedRegion));
+              isolateRegionTaskList.add(isolateRegionTask);
+            }
+          }
+        }
+
+        if (!isolateRegionTaskList.isEmpty()) {
           // Now that we have fetched all the region's regionInfo, we can move them.
           waitMoveTasksToFinish(isolateRegionPool, isolateRegionTaskList,
             admin.getConfiguration().getLong(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX));
@@ -617,7 +624,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
           if (!currentRegionsOnTheServer.containsAll(isolateRegionInfoList)) {
             // If all the regions are not online on the target server,
             // we don't put RS in decommission mode and exit from here.
-            LOG.error("One of the Region move failed OR stuck in" + " transition...Quitting now");
+            LOG.error("One of the Region move failed OR stuck in transition...Quitting now");
             break;
           }
         } else {
