@@ -149,7 +149,14 @@ public class TruncateRegionProcedure
 
   @Override
   protected boolean isRollbackSupported(final TruncateRegionState state) {
-    return state == TruncateRegionState.TRUNCATE_REGION_PRE_OPERATION;
+    switch (state) {
+      case TRUNCATE_REGION_PRE_OPERATION:
+        return true;
+      case TRUNCATE_REGION_MAKE_OFFLINE:
+        return true;
+      default:
+        return false;
+    }
   }
 
   @Override
