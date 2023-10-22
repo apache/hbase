@@ -922,13 +922,13 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       "Expected: load/unload/unload_from_rack/isolate_regions");
     this.addOptWithArg("m", "maxthreads",
       "Define the maximum number of threads to use to unload and reload the regions");
-    this.addOptWithArg("isolateRegionIds",
+    this.addOptWithArg("i", "isolateRegionIds",
       "Comma separated list of Region IDs hash to isolate on a RegionServer and put region server"
         + " in draining mode. This option should only be used with '-o isolate_regions'."
         + " By putting region server in decommission/draining mode, master can't assign any"
         + " new region on this server. If one or more regions are not found OR failed to isolate"
         + " successfully, utility will exist without putting RS in draining/decommission mode."
-        + " Ex. -isolateRegionIds id1,id2,id3");
+        + " Ex. --isolateRegionIds id1,id2,id3 OR -i id1,id2,id3");
     this.addOptWithArg("x", "excludefile",
       "File with <hostname:port> per line to exclude as unload targets; default excludes only "
         + "target host; useful for rack decommisioning.");
@@ -986,7 +986,14 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       } else if (loadUnload.equalsIgnoreCase("unload_from_rack")) {
         success = rm.unloadFromRack();
       } else if (loadUnload.equalsIgnoreCase("isolate_regions")) {
-        success = rm.isolateRegions();
+        if(rm.isolateRegionIdArray != null && !rm.isolateRegionIdArray.isEmpty()) {
+          success = rm.isolateRegions();
+        } else {
+          LOG.error("Missing -i/--isolate_regions option with '-o isolate_regions' option");
+          LOG.error("Use -h or --help for usage instructions");
+          printUsage();
+          success = false;
+        }
       } else {
         printUsage();
         success = false;
