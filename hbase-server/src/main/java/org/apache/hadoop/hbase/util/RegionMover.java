@@ -927,7 +927,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         + " By putting region server in decommission/draining mode, master can't assign any"
         + " new region on this server. If one or more regions are not found OR failed to isolate"
         + " successfully, utility will exist without putting RS in draining/decommission mode."
-        + " Ex. --isolateRegionIds id1,id2,id3");
+        + " Ex. -isolateRegionIds id1,id2,id3");
     this.addOptWithArg("x", "excludefile",
       "File with <hostname:port> per line to exclude as unload targets; default excludes only "
         + "target host; useful for rack decommisioning.");
