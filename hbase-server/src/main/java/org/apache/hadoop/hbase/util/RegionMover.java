@@ -616,6 +616,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         }
 
         if (!isolateRegionTaskList.isEmpty()) {
+          isolateRegionPool.shutdown();
           // Now that we have fetched all the region's regionInfo, we can move them.
           waitMoveTasksToFinish(isolateRegionPool, isolateRegionTaskList,
             admin.getConfiguration().getLong(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX));
