@@ -986,7 +986,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       } else if (loadUnload.equalsIgnoreCase("unload_from_rack")) {
         success = rm.unloadFromRack();
       } else if (loadUnload.equalsIgnoreCase("isolate_regions")) {
-        if(rm.isolateRegionIdArray != null && !rm.isolateRegionIdArray.isEmpty()) {
+        if (rm.isolateRegionIdArray != null && !rm.isolateRegionIdArray.isEmpty()) {
           success = rm.isolateRegions();
         } else {
           LOG.error("Missing -i/--isolate_regions option with '-o isolate_regions' option");
