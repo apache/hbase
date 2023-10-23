@@ -78,7 +78,7 @@ public class HFilePreadReader extends HFileReaderImpl {
               // to the next block without actually going read all the way to the cache.
               if (bucketCacheOptional.isPresent()) {
                 BucketCache cache = bucketCacheOptional.get();
-                if(cache.getBackingMapValidated().get()) {
+                if (cache.getBackingMapValidated().get()) {
                   BlockCacheKey cacheKey = new BlockCacheKey(name, offset);
                   BucketEntry entry = cache.getBackingMap().get(cacheKey);
                   if (entry != null) {
