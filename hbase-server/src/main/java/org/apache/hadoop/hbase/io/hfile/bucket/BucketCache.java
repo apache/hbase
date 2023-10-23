@@ -149,6 +149,8 @@ public class BucketCache implements BlockCache, HeapSize {
   // In this map, store the block's meta data like offset, length
   transient Map<BlockCacheKey, BucketEntry> backingMap;
 
+  private AtomicBoolean backingMapValidated = new AtomicBoolean(false);
+
   /** Set of files for which prefetch is completed */
   final Map<String, Boolean> fullyCachedFiles = new ConcurrentHashMap<>();
 
@@ -331,6 +333,7 @@ public class BucketCache implements BlockCache, HeapSize {
         LOG.error("Can't restore from file[{}] because of ", persistencePath, ioex);
         backingMap.clear();
         fullyCachedFiles.clear();
+        backingMapValidated.set(true);
         bucketAllocator = new BucketAllocator(capacity, bucketSizes);
       }
     } else {
@@ -1308,6 +1311,7 @@ public class BucketCache implements BlockCache, HeapSize {
         + "It's ok if it's first run after enabling persistent cache.");
       bucketAllocator = new BucketAllocator(cacheCapacity, bucketSizes, backingMap, realCacheSize);
       blockNumber.add(backingMap.size());
+      backingMapValidated.set(true);
       return;
     }
     assert !cacheEnabled;
@@ -1402,6 +1406,7 @@ public class BucketCache implements BlockCache, HeapSize {
       try {
         ((PersistentIOEngine) ioEngine).verifyFileIntegrity(proto.getChecksum().toByteArray(),
           algorithm);
+        backingMapValidated.set(true);
       } catch (IOException e) {
         LOG.warn("Checksum for cache file failed. "
           + "We need to validate each cache key in the backing map. "
@@ -1425,6 +1430,7 @@ public class BucketCache implements BlockCache, HeapSize {
               fullyCachedFiles.remove(keyEntry.getKey().getHfileName());
             }
           }
+          backingMapValidated.set(true);
           LOG.info("Finished validating {} keys in the backing map. Recovered: {}. This took {}ms.",
             totalKeysOriginally, backingMap.size(),
             (EnvironmentEdgeManager.currentTime() - startTime));
@@ -1436,6 +1442,7 @@ public class BucketCache implements BlockCache, HeapSize {
     } else {
       // if has not checksum, it means the persistence file is old format
       LOG.info("Persistent file is old format, it does not support verifying file integrity!");
+      backingMapValidated.set(true);
     }
     verifyCapacityAndClasses(proto.getCacheCapacity(), proto.getIoClass(), proto.getMapClass());
   }
@@ -1952,6 +1959,10 @@ public class BucketCache implements BlockCache, HeapSize {
 
   public Map<BlockCacheKey, BucketEntry> getBackingMap() {
     return backingMap;
+  }
+
+  public AtomicBoolean getBackingMapValidated() {
+    return backingMapValidated;
   }
 
   public Map<String, Boolean> getFullyCachedFiles() {
