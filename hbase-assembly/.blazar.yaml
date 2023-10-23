@@ -1,5 +1,6 @@
 buildpack:
   name: Blazar-Buildpack-Java
+  branch: revert-20-days
 
 provides:
   - name: hbase-rpm
