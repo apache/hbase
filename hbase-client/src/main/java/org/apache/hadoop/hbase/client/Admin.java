@@ -1548,28 +1548,18 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
-   * Modify an existing table, more IRB friendly version. Asynchronous operation. This means that it
-   * may be a while before your schema change is updated across all of the table. You can use
-   * Future.get(long, TimeUnit) to wait on the operation to complete. It may throw
-   * ExecutionException if there was an error while executing the operation or TimeoutException in
-   * case the wait timeout was not long enough to allow the operation to complete.
-   * @param tableName name of table.
-   * @param td        modified description of the table
+   * Truncate an individual region.
+   * @param regionName region to truncate
    * @throws IOException if a remote or network exception occurs
-   * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
-   *         operation to complete
-   * @deprecated since 2.0 version and will be removed in 3.0 version. use
-   *             {@link #modifyTableAsync(TableDescriptor)}
    */
-  @Deprecated
-  default Future<Void> modifyTableAsync(TableName tableName, TableDescriptor td)
-    throws IOException {
-    if (!tableName.equals(td.getTableName())) {
-      throw new IllegalArgumentException("the specified table name '" + tableName
-        + "' doesn't match with the HTD one: " + td.getTableName());
-    }
-    return modifyTableAsync(td);
-  }
+  void truncateRegion(byte[] regionName) throws IOException;
+
+  /**
+   * Truncate an individual region. Asynchronous operation.
+   * @param regionName region to truncate
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> truncateRegionAsync(byte[] regionName) throws IOException;
 
   /**
    * Modify an existing table, more IRB (ruby) friendly version. Asynchronous operation. This means

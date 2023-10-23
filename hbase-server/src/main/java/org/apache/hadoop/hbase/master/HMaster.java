@@ -163,6 +163,7 @@ import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.master.procedure.TruncateRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
@@ -2489,6 +2490,36 @@ public class HMaster extends HRegionServer implements MasterServices {
         @Override
         protected String getDescription() {
           return "TruncateTableProcedure";
+        }
+      });
+  }
+
+  @Override
+  public long truncateRegion(final RegionInfo regionInfo, final long nonceGroup, final long nonce)
+    throws IOException {
+    checkInitialized();
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          getMaster().getMasterCoprocessorHost().preTruncateRegion(regionInfo);
+
+          LOG.info(
+            getClientIdAuditPrefix() + " truncate region " + regionInfo.getRegionNameAsString());
+
+          // Execute the operation asynchronously
+          ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
+          submitProcedure(
+            new TruncateRegionProcedure(procedureExecutor.getEnvironment(), regionInfo, latch));
+          latch.await();
+
+          getMaster().getMasterCoprocessorHost().postTruncateRegion(regionInfo);
+        }
+
+        @Override
+        protected String getDescription() {
+          return "TruncateRegionProcedure";
         }
       });
   }

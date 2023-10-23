@@ -1604,6 +1604,60 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> truncateRegion(byte[] regionName) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    addListener(getRegionLocation(regionName), (location, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      RegionInfo regionInfo = location.getRegion();
+      if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
+        future.completeExceptionally(new IllegalArgumentException(
+          "Can't truncate replicas directly.Replicas are auto-truncated "
+            + "when their primary is truncated."));
+        return;
+      }
+      ServerName serverName = location.getServerName();
+      if (serverName == null) {
+        future
+          .completeExceptionally(new NoServerForRegionException(Bytes.toStringBinary(regionName)));
+        return;
+      }
+      addListener(truncateRegion(regionInfo), (ret, err2) -> {
+        if (err2 != null) {
+          future.completeExceptionally(err2);
+        } else {
+          future.complete(ret);
+        }
+      });
+    });
+    return future;
+  }
+
+  private CompletableFuture<Void> truncateRegion(final RegionInfo hri) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    TableName tableName = hri.getTable();
+    final MasterProtos.TruncateRegionRequest request;
+    try {
+      request = RequestConverter.buildTruncateRegionRequest(hri, ng.getNonceGroup(), ng.newNonce());
+    } catch (DeserializationException e) {
+      future.completeExceptionally(e);
+      return future;
+    }
+    addListener(this.procedureCall(tableName, request, MasterService.Interface::truncateRegion,
+      MasterProtos.TruncateRegionResponse::getProcId,
+      new TruncateRegionProcedureBiConsumer(tableName)), (ret, err2) -> {
+        if (err2 != null) {
+          future.completeExceptionally(err2);
+        } else {
+          future.complete(ret);
+        }
+      });
+    return future;
+  }
+
+  @Override
   public CompletableFuture<Void> assign(byte[] regionName) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(getRegionInfo(regionName), (regionInfo, err) -> {
@@ -2847,6 +2901,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     @Override
     String getOperationType() {
       return "SPLIT_REGION";
+    }
+  }
+
+  private static class TruncateRegionProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    TruncateRegionProcedureBiConsumer(TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "TRUNCATE_REGION";
     }
   }
 

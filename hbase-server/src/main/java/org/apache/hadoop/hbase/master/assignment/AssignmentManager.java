@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.master.procedure.TruncateRegionProcedure;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
@@ -1073,6 +1074,11 @@ public class AssignmentManager {
   public SplitTableRegionProcedure createSplitProcedure(final RegionInfo regionToSplit,
     final byte[] splitKey) throws IOException {
     return new SplitTableRegionProcedure(getProcedureEnvironment(), regionToSplit, splitKey);
+  }
+
+  public TruncateRegionProcedure createTruncateRegionProcedure(final RegionInfo regionToTruncate)
+    throws IOException {
+    return new TruncateRegionProcedure(getProcedureEnvironment(), regionToTruncate);
   }
 
   public MergeTableRegionsProcedure createMergeProcedure(RegionInfo... ris) throws IOException {
