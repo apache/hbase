@@ -1,12 +1,12 @@
 buildpack:
   name: Blazar-Buildpack-Java
 
-
 provides:
   - name: hbase-rpm
 
 env:
-  RPMS_OUTPUT_DIR: "$WORKSPACE/generated_rpms"
+  RPM_BUILD_COMMAND: "./rpm-build/build.sh"
+  RPM_REPOS: "8_hs-hbase${GIT_NON_DEFAULT_BRANCH:+-develop} aarch64_8_hs-hbase${GIT_NON_DEFAULT_BRANCH:+-develop}"
   MAVEN_PHASE: package assembly:single
 
 before:
@@ -14,22 +14,6 @@ before:
     commands:
       - $WORKSPACE/build-scripts/prepare_environment.sh
 
-after:
-  onSuccess:
-    - description: "Ensure $RPMS_OUTPUT_DIR exists"
-      commands:
-        - mkdir -p $RPMS_OUTPUT_DIR
-
-    - description: "Create RPM Package"
-      commands:
-        - ./rpm-build/build.sh
-
-    - description: "List RPMs in $RPMS_OUTPUT_DIR"
-      commands:
-        - echo "The following Rpms are ready for upload"
-        - ls -lah $RPMS_OUTPUT_DIR
-
-    - description: "Publish RPM"
-      container: host
-      commands:
-        - ./rpm-build/upload-rpm.sh
+stepActivation:
+  uploadRpms:
+    branchRegexes: [".*"]
