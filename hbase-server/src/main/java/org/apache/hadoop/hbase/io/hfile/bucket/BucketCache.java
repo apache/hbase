@@ -1500,7 +1500,7 @@ public class BucketCache implements BlockCache, HeapSize {
         join();
         if (cachePersister != null) {
           LOG.info("Shutting down cache persister thread.");
-          cachePersister.interrupt();
+          cachePersister.shutdown();
           while (cachePersister.isAlive()) {
             Thread.sleep(10);
           }
