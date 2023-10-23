@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -123,12 +122,6 @@ public class ServerManager {
   /** Map of registered servers to their current load */
   private final ConcurrentNavigableMap<ServerName, ServerMetrics> onlineServers =
     new ConcurrentSkipListMap<>();
-
-  /**
-   * Map of admin interfaces per registered regionserver; these interfaces we use to control
-   * regionservers out on the cluster
-   */
-  private final Map<ServerName, AdminService.BlockingInterface> rsAdmins = new HashMap<>();
 
   /** List of region servers that should not get any more new regions. */
   private final ArrayList<ServerName> drainingServers = new ArrayList<>();
@@ -402,7 +395,6 @@ public class ServerManager {
   void recordNewServerWithLock(final ServerName serverName, final ServerMetrics sl) {
     LOG.info("Registering regionserver=" + serverName);
     this.onlineServers.put(serverName, sl);
-    this.rsAdmins.remove(serverName);
   }
 
   public RegionStoreSequenceIds getLastFlushedSequenceId(byte[] encodedRegionName) {
@@ -604,7 +596,6 @@ public class ServerManager {
         LOG.trace("Expiration of {} but server not online", sn);
       }
     }
-    this.rsAdmins.remove(sn);
   }
 
   /*
@@ -716,18 +707,13 @@ public class ServerManager {
    * @throws RetriesExhaustedException wrapping a ConnectException if failed
    */
   public AdminService.BlockingInterface getRsAdmin(final ServerName sn) throws IOException {
-    AdminService.BlockingInterface admin = this.rsAdmins.get(sn);
-    if (admin == null) {
-      LOG.debug("New admin connection to " + sn.toString());
-      if (sn.equals(master.getServerName()) && master instanceof HRegionServer) {
-        // A master is also a region server now, see HBASE-10569 for details
-        admin = ((HRegionServer) master).getRSRpcServices();
-      } else {
-        admin = this.connection.getAdmin(sn);
-      }
-      this.rsAdmins.put(sn, admin);
+    LOG.debug("New admin connection to {}", sn);
+    if (sn.equals(master.getServerName()) && master instanceof HRegionServer) {
+      // A master is also a region server now, see HBASE-10569 for details
+      return ((HRegionServer) master).getRSRpcServices();
+    } else {
+      return this.connection.getAdmin(sn);
     }
-    return admin;
   }
 
   /**
