@@ -545,7 +545,6 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         final ExecutorService isolateRegionPool = Executors.newFixedThreadPool(maxthreads);
         List<Future<Boolean>> isolateRegionTaskList = new ArrayList<>();
         List<RegionInfo> recentlyIsolatedRegion = Collections.synchronizedList(new ArrayList<>());
-        List<RegionInfo> isolatedMetaRegion = Collections.synchronizedList(new ArrayList<>());
         boolean allRegionOpsSuccessful = true;
         boolean isMetaIsolated = false;
         RegionInfo metaRegionInfo = RegionInfoBuilder.FIRST_META_REGIONINFO;
@@ -553,7 +552,6 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
           Collections.synchronizedList(new ArrayList<>());
         for (String isolateRegionId : isolateRegionIdArray) {
           if (isolateRegionId.equalsIgnoreCase(metaRegionInfo.getEncodedName())) {
-            isolatedMetaRegion.add(metaRegionInfo);
             isMetaIsolated = true;
             continue;
           }
