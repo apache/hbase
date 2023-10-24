@@ -30,6 +30,7 @@ import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -52,6 +53,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -59,8 +62,14 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RackManager;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,6 +102,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   private boolean ack = true;
   private int maxthreads = 1;
   private int timeout;
+  private List<String> isolateRegionIdArray;
   private String loadUnload;
   private String hostname;
   private String filename;
@@ -109,6 +119,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     this.excludeFile = builder.excludeFile;
     this.designatedFile = builder.designatedFile;
     this.maxthreads = builder.maxthreads;
+    this.isolateRegionIdArray = builder.isolateRegionIdArray;
     this.ack = builder.ack;
     this.port = builder.port;
     this.timeout = builder.timeout;
@@ -153,6 +164,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     private boolean ack = true;
     private int maxthreads = 1;
     private int timeout = Integer.MAX_VALUE;
+    private List<String> isolateRegionIdArray = new ArrayList<>();
     private String hostname;
     private String filename;
     private String excludeFile = null;
@@ -210,6 +222,14 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
      */
     public RegionMoverBuilder maxthreads(int threads) {
       this.maxthreads = threads;
+      return this;
+    }
+
+    /**
+     * Set the region ID to isolate on the region server.
+     */
+    public RegionMoverBuilder isolateRegionIdArray(List<String> isolateRegionIdArray) {
+      this.isolateRegionIdArray = isolateRegionIdArray;
       return this;
     }
 
@@ -406,6 +426,25 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   }
 
   private boolean unloadRegions(boolean unloadFromRack)
+    throws ExecutionException, InterruptedException, TimeoutException {
+    return unloadRegions(unloadFromRack, null);
+  }
+
+  /**
+   * Isolated regions specified in {@link #isolateRegionIdArray} on {@link #hostname} in ack Mode
+   * and Unload regions from given {@link #hostname} using ack/noAck mode and {@link #maxthreads}.
+   * In noAck mode we do not make sure that region is successfully online on the target region
+   * server,hence it is the best effort. We do not unload regions to hostnames given in
+   * {@link #excludeFile}. If designatedFile is present with some contents, we will unload regions
+   * to hostnames provided in {@link #designatedFile}
+   * @return true if region isolation succeeded, false otherwise
+   */
+  public boolean isolateRegions()
+    throws ExecutionException, InterruptedException, TimeoutException {
+    return unloadRegions(false, isolateRegionIdArray);
+  }
+
+  private boolean unloadRegions(boolean unloadFromRack, List<String> isolateRegionIdArray)
     throws InterruptedException, ExecutionException, TimeoutException {
     deleteFile(this.filename);
     ExecutorService unloadPool = Executors.newFixedThreadPool(1);
@@ -459,7 +498,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
           LOG.warn("No Regions were moved - no servers available");
           return false;
         }
-        unloadRegions(server, regionServers, movedRegions);
+        unloadRegions(server, regionServers, movedRegions, isolateRegionIdArray);
       } catch (Exception e) {
         LOG.error("Error while unloading regions ", e);
         return false;
@@ -474,9 +513,111 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   }
 
   private void unloadRegions(ServerName server, List<ServerName> regionServers,
-    List<RegionInfo> movedRegions) throws Exception {
+    List<RegionInfo> movedRegions, List<String> isolateRegionIdArray) throws Exception {
     while (true) {
+      List<RegionInfo> isolateRegionInfoList = Collections.synchronizedList(new ArrayList<>());
+      RegionInfo isolateRegionInfo = null;
+      if (isolateRegionIdArray != null && !isolateRegionIdArray.isEmpty()) {
+        // Region will be moved to target region server with Ack mode.
+        final ExecutorService isolateRegionPool = Executors.newFixedThreadPool(maxthreads);
+        List<Future<Boolean>> isolateRegionTaskList = new ArrayList<>();
+        List<RegionInfo> recentlyIsolatedRegion = Collections.synchronizedList(new ArrayList<>());
+        boolean allRegionOpsSuccessful = true;
+        boolean isMetaIsolated = false;
+        RegionInfo metaRegionInfo = RegionInfoBuilder.FIRST_META_REGIONINFO;
+        List<HRegionLocation> hRegionLocationRegionIsolation =
+          Collections.synchronizedList(new ArrayList<>());
+        for (String isolateRegionId : isolateRegionIdArray) {
+          if (isolateRegionId.equalsIgnoreCase(metaRegionInfo.getEncodedName())) {
+            isMetaIsolated = true;
+            continue;
+          }
+          Result result = MetaTableAccessor.scanByRegionEncodedName(conn, isolateRegionId);
+          HRegionLocation hRegionLocation =
+            MetaTableAccessor.getRegionLocation(conn, result.getRow());
+          if (hRegionLocation != null) {
+            hRegionLocationRegionIsolation.add(hRegionLocation);
+          } else {
+            LOG.error("Region " + isolateRegionId + " doesn't exists/can't fetch from"
+              + " meta...Quitting now");
+            // We only move the regions if all the regions were found.
+            allRegionOpsSuccessful = false;
+            break;
+          }
+        }
+
+        if (!allRegionOpsSuccessful) {
+          break;
+        }
+        // If hbase:meta region was isolated, then it needs to be part of isolateRegionInfoList.
+        if (isMetaIsolated) {
+          ZKWatcher zkWatcher = new ZKWatcher(conf, null, null);
+          List<HRegionLocation> result = new ArrayList<>();
+          for (String znode : zkWatcher.getMetaReplicaNodes()) {
+            String path = ZNodePaths.joinZNode(zkWatcher.getZNodePaths().baseZNode, znode);
+            int replicaId = zkWatcher.getZNodePaths().getMetaReplicaIdFromPath(path);
+            RegionState state = MetaTableLocator.getMetaRegionState(zkWatcher, replicaId);
+            result.add(new HRegionLocation(state.getRegion(), state.getServerName()));
+          }
+          ServerName metaSeverName = result.get(0).getServerName();
+          // For isolating hbase:meta, it should move explicitly in Ack mode,
+          // hence the forceMoveRegionByAck = true.
+          if (!metaSeverName.equals(server)) {
+            LOG.info("Region of hbase:meta " + metaRegionInfo.getEncodedName() + " is on server "
+              + metaSeverName + " moving to " + server);
+            submitRegionMovesWhileUnloading(metaSeverName, Collections.singletonList(server),
+              movedRegions, Collections.singletonList(metaRegionInfo), true);
+          } else {
+            LOG.info("Region of hbase:meta " + metaRegionInfo.getEncodedName() + " already exists"
+              + " on server : " + server);
+          }
+          isolateRegionInfoList.add(RegionInfoBuilder.FIRST_META_REGIONINFO);
+        }
+
+        if (!hRegionLocationRegionIsolation.isEmpty()) {
+          for (HRegionLocation hRegionLocation : hRegionLocationRegionIsolation) {
+            isolateRegionInfo = hRegionLocation.getRegion();
+            isolateRegionInfoList.add(isolateRegionInfo);
+            if (hRegionLocation.getServerName() == server) {
+              LOG.info("Region " + hRegionLocation.getRegion().getEncodedName() + " already exists"
+                + " on server : " + server.getHostname());
+            } else {
+              Future<Boolean> isolateRegionTask =
+                isolateRegionPool.submit(new MoveWithAck(conn, isolateRegionInfo,
+                  hRegionLocation.getServerName(), server, recentlyIsolatedRegion));
+              isolateRegionTaskList.add(isolateRegionTask);
+            }
+          }
+        }
+
+        if (!isolateRegionTaskList.isEmpty()) {
+          isolateRegionPool.shutdown();
+          // Now that we have fetched all the region's regionInfo, we can move them.
+          waitMoveTasksToFinish(isolateRegionPool, isolateRegionTaskList,
+            admin.getConfiguration().getLong(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX));
+
+          Set<RegionInfo> currentRegionsOnTheServer = new HashSet<>(admin.getRegions(server));
+          if (!currentRegionsOnTheServer.containsAll(isolateRegionInfoList)) {
+            // If all the regions are not online on the target server,
+            // we don't put RS in decommission mode and exit from here.
+            LOG.error("One of the Region move failed OR stuck in transition...Quitting now");
+            break;
+          }
+        } else {
+          LOG.info("All regions already exists on server : " + server.getHostname());
+        }
+        // Once region has been moved to target RS, put the target RS into decommission mode,
+        // so master doesn't assign new region to the target RS while we unload the target RS.
+        // Also pass 'offload' flag as false since we don't want master to offload the target RS.
+        List<ServerName> listOfServer = new ArrayList<>();
+        listOfServer.add(server);
+        LOG.info("Putting server : " + server.getHostname() + " in decommission/draining mode");
+        admin.decommissionRegionServers(listOfServer, false);
+      }
       List<RegionInfo> regionsToMove = admin.getRegions(server);
+      // Remove all the regions from the online Region list, that we just isolated.
+      // This will also include hbase:meta if it was isolated.
+      regionsToMove.removeAll(isolateRegionInfoList);
       regionsToMove.removeAll(movedRegions);
       if (regionsToMove.isEmpty()) {
         LOG.info("No Regions to move....Quitting now");
@@ -488,21 +629,24 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       Optional<RegionInfo> metaRegion = getMetaRegionInfoIfToBeMoved(regionsToMove);
       if (metaRegion.isPresent()) {
         RegionInfo meta = metaRegion.get();
+        // hbase:meta should move explicitly in Ack mode.
         submitRegionMovesWhileUnloading(server, regionServers, movedRegions,
-          Collections.singletonList(meta));
+          Collections.singletonList(meta), true);
         regionsToMove.remove(meta);
       }
-      submitRegionMovesWhileUnloading(server, regionServers, movedRegions, regionsToMove);
+      submitRegionMovesWhileUnloading(server, regionServers, movedRegions, regionsToMove, false);
     }
   }
 
   private void submitRegionMovesWhileUnloading(ServerName server, List<ServerName> regionServers,
-    List<RegionInfo> movedRegions, List<RegionInfo> regionsToMove) throws Exception {
+    List<RegionInfo> movedRegions, List<RegionInfo> regionsToMove,boolean forceMoveRegionByAck) throws Exception {
     final ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
     List<Future<Boolean>> taskList = new ArrayList<>();
     int serverIndex = 0;
     for (RegionInfo regionToMove : regionsToMove) {
-      if (ack) {
+      // To move/isolate hbase:meta on a server, it should happen explicitly by Ack mode, hence the
+      // forceMoveRegionByAck = true.
+      if (ack || forceMoveRegionByAck) {
         Future<Boolean> task = moveRegionsPool.submit(new MoveWithAck(conn, regionToMove, server,
           regionServers.get(serverIndex), movedRegions));
         taskList.add(task);
@@ -748,9 +892,17 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   @Override
   protected void addOptions() {
     this.addRequiredOptWithArg("r", "regionserverhost", "region server <hostname>|<hostname:port>");
-    this.addRequiredOptWithArg("o", "operation", "Expected: load/unload/unload_from_rack");
+    this.addRequiredOptWithArg("o", "operation",
+      "Expected: load/unload/unload_from_rack/isolate_regions");
     this.addOptWithArg("m", "maxthreads",
       "Define the maximum number of threads to use to unload and reload the regions");
+    this.addOptWithArg("i", "isolateRegionIds",
+      "Comma separated list of Region IDs hash to isolate on a RegionServer and put region server"
+        + " in draining mode. This option should only be used with '-o isolate_regions'."
+        + " By putting region server in decommission/draining mode, master can't assign any"
+        + " new region on this server. If one or more regions are not found OR failed to isolate"
+        + " successfully, utility will exist without putting RS in draining/decommission mode."
+        + " Ex. --isolateRegionIds id1,id2,id3 OR -i id1,id2,id3");
     this.addOptWithArg("x", "excludefile",
       "File with <hostname:port> per line to exclude as unload targets; default excludes only "
         + "target host; useful for rack decommisioning.");
@@ -772,8 +924,13 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   protected void processOptions(CommandLine cmd) {
     String hostname = cmd.getOptionValue("r");
     rmbuilder = new RegionMoverBuilder(hostname);
+    this.loadUnload = cmd.getOptionValue("o").toLowerCase(Locale.ROOT);
     if (cmd.hasOption('m')) {
       rmbuilder.maxthreads(Integer.parseInt(cmd.getOptionValue('m')));
+    }
+    if (this.loadUnload.equals("isolate_regions") && cmd.hasOption("isolateRegionIds")) {
+      rmbuilder
+        .isolateRegionIdArray(Arrays.asList(cmd.getOptionValue("isolateRegionIds").split(",")));
     }
     if (cmd.hasOption('n')) {
       rmbuilder.ack(false);
@@ -803,6 +960,15 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         success = rm.unload();
       } else if (loadUnload.equalsIgnoreCase("unload_from_rack")) {
         success = rm.unloadFromRack();
+      } else if (loadUnload.equalsIgnoreCase("isolate_regions")) {
+        if (rm.isolateRegionIdArray != null && !rm.isolateRegionIdArray.isEmpty()) {
+          success = rm.isolateRegions();
+        } else {
+          LOG.error("Missing -i/--isolate_regions option with '-o isolate_regions' option");
+          LOG.error("Use -h or --help for usage instructions");
+          printUsage();
+          success = false;
+        }
       } else {
         printUsage();
         success = false;
