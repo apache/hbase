@@ -1,6 +1,5 @@
 buildpack:
   name: Blazar-Buildpack-Java
-  branch: revert-20-days
 
 # Note: this blazar yaml has been copied to all of the maven submodules (EXCEPT hbase-assembly) so
 # that they can be properly configured. If you make changes to this, you will need to make sure all
