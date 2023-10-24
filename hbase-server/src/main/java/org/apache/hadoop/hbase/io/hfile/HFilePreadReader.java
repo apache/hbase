@@ -40,7 +40,9 @@ public class HFilePreadReader extends HFileReaderImpl {
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
     final MutableBoolean fileAlreadyCached = new MutableBoolean(false);
-    BucketCache.getBucketCacheFromCacheConfig(cacheConf).ifPresent(bc -> fileAlreadyCached
+    Optional<BucketCache> bucketCacheOptional =
+      BucketCache.getBucketCacheFromCacheConfig(cacheConf);
+    bucketCacheOptional.ifPresent(bc -> fileAlreadyCached
       .setValue(bc.getFullyCachedFiles().get(path.getName()) == null ? false : true));
     // Prefetch file blocks upon open if requested
     if (
@@ -65,8 +67,6 @@ public class HFilePreadReader extends HFileReaderImpl {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Prefetch start " + getPathOffsetEndStr(path, offset, end));
             }
-            Optional<BucketCache> bucketCacheOptional =
-              BucketCache.getBucketCacheFromCacheConfig(cacheConf);
             // Don't use BlockIterator here, because it's designed to read load-on-open section.
             long onDiskSizeOfNextBlock = -1;
             while (offset < end) {
@@ -78,21 +78,24 @@ public class HFilePreadReader extends HFileReaderImpl {
               // to the next block without actually going read all the way to the cache.
               if (bucketCacheOptional.isPresent()) {
                 BucketCache cache = bucketCacheOptional.get();
-                BlockCacheKey cacheKey = new BlockCacheKey(name, offset);
-                BucketEntry entry = cache.getBackingMap().get(cacheKey);
-                if (entry != null) {
-                  cacheKey = new BlockCacheKey(name, offset);
-                  entry = cache.getBackingMap().get(cacheKey);
-                  if (entry == null) {
-                    LOG.debug("No cache key {}, we'll read and cache it", cacheKey);
+                if (cache.getBackingMapValidated().get()) {
+                  BlockCacheKey cacheKey = new BlockCacheKey(name, offset);
+                  BucketEntry entry = cache.getBackingMap().get(cacheKey);
+                  if (entry != null) {
+                    cacheKey = new BlockCacheKey(name, offset);
+                    entry = cache.getBackingMap().get(cacheKey);
+                    if (entry == null) {
+                      LOG.debug("No cache key {}, we'll read and cache it", cacheKey);
+                    } else {
+                      offset += entry.getOnDiskSizeWithHeader();
+                      LOG.debug(
+                        "Found cache key {}. Skipping prefetch, the block is already cached.",
+                        cacheKey);
+                      continue;
+                    }
                   } else {
-                    offset += entry.getOnDiskSizeWithHeader();
-                    LOG.debug("Found cache key {}. Skipping prefetch, the block is already cached.",
-                      cacheKey);
-                    continue;
+                    LOG.debug("No entry in the backing map for cache key {}", cacheKey);
                   }
-                } else {
-                  LOG.debug("No entry in the backing map for cache key {}", cacheKey);
                 }
               }
               // Perhaps we got our block from cache? Unlikely as this may be, if it happens, then
@@ -112,9 +115,7 @@ public class HFilePreadReader extends HFileReaderImpl {
               }
             }
             final long fileSize = offset;
-            BucketCache.getBucketCacheFromCacheConfig(cacheConf)
-              .ifPresent(bc -> bc.fileCacheCompleted(path, fileSize));
-
+            bucketCacheOptional.ifPresent(bc -> bc.fileCacheCompleted(path, fileSize));
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
             if (LOG.isTraceEnabled()) {
@@ -136,15 +137,6 @@ public class HFilePreadReader extends HFileReaderImpl {
         }
       });
     }
-  }
-
-  /*
-   * Get the region name for the given file path. A HFile is always kept under the <region>/<column
-   * family>/<hfile>. To find the region for a given hFile, just find the name of the grandparent
-   * directory.
-   */
-  private static String getRegionName(Path path) {
-    return path.getParent().getParent().getName();
   }
 
   private static String getPathOffsetEndStr(final Path path, final long offset, final long end) {
