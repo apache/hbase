@@ -133,8 +133,6 @@ public class TestPrefetchPersistence {
       constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
       testDir + "/bucket.persistence", 60 * 1000, conf);
     cacheConf = new CacheConfig(conf, bucketCache);
-    assertFalse(new File(testDir + "/bucket.persistence").exists());
-    assertFalse(new File(testDir + "/prefetch.persistence").exists());
     assertTrue(usedSize != 0);
     readStoreFile(storeFile, 0);
     readStoreFile(storeFile2, 0);

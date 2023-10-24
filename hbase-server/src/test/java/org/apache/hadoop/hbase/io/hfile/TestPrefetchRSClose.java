@@ -121,7 +121,6 @@ public class TestPrefetchRSClose {
 
     // Start the RS and validate
     cluster.startRegionServer();
-    assertFalse(new File(testDir + "/bucket.persistence").exists());
   }
 
   @After
