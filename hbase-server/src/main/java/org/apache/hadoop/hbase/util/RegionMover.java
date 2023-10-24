@@ -639,7 +639,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   }
 
   private void submitRegionMovesWhileUnloading(ServerName server, List<ServerName> regionServers,
-    List<RegionInfo> movedRegions, List<RegionInfo> regionsToMove,boolean forceMoveRegionByAck) throws Exception {
+    List<RegionInfo> movedRegions, List<RegionInfo> regionsToMove, boolean forceMoveRegionByAck)
+    throws Exception {
     final ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
     List<Future<Boolean>> taskList = new ArrayList<>();
     int serverIndex = 0;
