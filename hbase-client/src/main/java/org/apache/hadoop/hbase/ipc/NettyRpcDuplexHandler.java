@@ -110,6 +110,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
       } else {
         ctx.write(buf, promise);
       }
+      call.callStats.setRequestSizeBytes(totalSize);
     }
   }
 
@@ -193,6 +194,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
       }
       return;
     }
+    call.callStats.setResponseSizeBytes(totalSize);
     if (remoteExc != null) {
       call.setException(remoteExc);
       return;
