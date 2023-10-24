@@ -620,6 +620,7 @@ Shell.load_command_group(
     remove_rsgroup
     balance_rsgroup
     move_servers_rsgroup
+    move_all_servers_rsgroup
     move_tables_rsgroup
     move_namespaces_rsgroup
     move_servers_tables_rsgroup

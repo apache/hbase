@@ -1243,6 +1243,26 @@ public interface MasterObserver {
   }
 
   /**
+   * Called before all servers are moved to target region server group
+   * @param ctx         the environment to interact with the framework and master
+   * @param sourceGroup source group name
+   * @param targetGroup destination group name
+   */
+  default void preMoveAllServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String sourceGroup, String targetGroup) throws IOException {
+  }
+
+  /**
+   * Called after all servers are moved to target region server group
+   * @param ctx         the environment to interact with the framework and master
+   * @param sourceGroup source group name
+   * @param targetGroup destination group name
+   */
+  default void postMoveAllServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String sourceGroup, String targetGroup) throws IOException {
+  }
+
+  /**
    * Called before tables are moved to target region server group
    * @param ctx         the environment to interact with the framework and master
    * @param tables      set of tables to move

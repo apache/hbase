@@ -2569,6 +2569,15 @@ public interface Admin extends Abortable, Closeable {
   void moveServersToRSGroup(Set<Address> servers, String targetGroup) throws IOException;
 
   /**
+   * Move all servers from specified RegionServer group to the specified target RegionServer group
+   * @param sourceGroup the group to move servers from
+   * @param targetGroup the group to move servers to
+   * @throws IOException if a remote or network exception occurs
+   */
+  void moveAllServersFromOneRSGroupToOther(String sourceGroup, String targetGroup)
+    throws IOException;
+
+  /**
    * Set the RegionServer group for tables
    * @param tables    tables to set group for
    * @param groupName group name for tables

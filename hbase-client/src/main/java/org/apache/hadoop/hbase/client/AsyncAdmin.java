@@ -1788,6 +1788,15 @@ public interface AsyncAdmin {
   CompletableFuture<Void> moveServersToRSGroup(Set<Address> servers, String groupName);
 
   /**
+   * Move all servers from specified source RegionServer group to the specified target RegionServer
+   * group
+   * @param sourceGroup the group to move servers from
+   * @param targetGroup the group to move servers to
+   */
+  CompletableFuture<Void> moveAllServersFromOneRSGroupToOther(String sourceGroup,
+    String targetGroup);
+
+  /**
    * Set the RegionServer group for tables
    * @param tables    tables to set group for
    * @param groupName group name for tables

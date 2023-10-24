@@ -1228,6 +1228,9 @@ service MasterService {
   rpc MoveServers(MoveServersRequest)
     returns (MoveServersResponse);
 
+  rpc MoveAllServers(MoveAllServersRequest)
+    returns (MoveAllServersResponse);
+
   rpc AddRSGroup(AddRSGroupRequest)
     returns (AddRSGroupResponse);
 

@@ -316,6 +316,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.List
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListTablesInRSGroupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListTablesInRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveAllServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveAllServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
@@ -4233,6 +4235,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .action((controller, stub) -> this.<MoveServersRequest, MoveServersResponse, Void> call(
         controller, stub, RequestConverter.buildMoveServersRequest(servers, groupName),
         (s, c, req, done) -> s.moveServers(c, req, done), resp -> null))
+      .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> moveAllServersFromOneRSGroupToOther(String sourceGroup,
+    String groupName) {
+    return this.<Void> newMasterCaller()
+      .action((controller, stub) -> this.<MoveAllServersRequest, MoveAllServersResponse, Void> call(
+        controller, stub, RequestConverter.buildMoveAllServersRequest(sourceGroup, groupName),
+        (s, c, req, done) -> s.moveAllServers(c, req, done), resp -> null))
       .call();
   }
 

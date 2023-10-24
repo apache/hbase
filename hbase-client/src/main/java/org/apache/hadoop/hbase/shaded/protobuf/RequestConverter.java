@@ -154,6 +154,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveAllServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -1716,6 +1717,12 @@ public final class RequestConverter {
     }
     return MoveServersRequest.newBuilder().setTargetGroup(targetGroup).addAllServers(hostPorts)
       .build();
+  }
+
+  public static MoveAllServersRequest buildMoveAllServersRequest(String sourceGroup,
+    String targetGroup) {
+    return MoveAllServersRequest.newBuilder().setTargetGroup(targetGroup)
+      .setSourceGroup(sourceGroup).build();
   }
 
   public static RemoveServersRequest buildRemoveServersRequest(Set<Address> servers) {

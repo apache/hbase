@@ -383,6 +383,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.List
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListTablesInRSGroupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListTablesInRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveAllServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveAllServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
@@ -3127,6 +3129,29 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       server.getRSGroupInfoManager().moveServers(hostPorts, request.getTargetGroup());
       if (server.getMasterCoprocessorHost() != null) {
         server.getMasterCoprocessorHost().postMoveServers(hostPorts, request.getTargetGroup());
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public MoveAllServersResponse moveAllServers(RpcController controller,
+    MoveAllServersRequest request) throws ServiceException {
+    MoveAllServersResponse.Builder builder = MoveAllServersResponse.newBuilder();
+    LOG.info(" move all servers from " + request.getSourceGroup() + " to rsgroup "
+      + request.getTargetGroup());
+    try {
+      if (server.getMasterCoprocessorHost() != null) {
+        server.getMasterCoprocessorHost().preMoveAllServers(request.getSourceGroup(),
+          request.getTargetGroup());
+      }
+      server.getRSGroupInfoManager().moveAllServers(request.getSourceGroup(),
+        request.getTargetGroup());
+      if (server.getMasterCoprocessorHost() != null) {
+        server.getMasterCoprocessorHost().postMoveAllServers(request.getSourceGroup(),
+          request.getTargetGroup());
       }
     } catch (IOException e) {
       throw new ServiceException(e);

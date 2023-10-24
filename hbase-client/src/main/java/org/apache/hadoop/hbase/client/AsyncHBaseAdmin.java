@@ -923,6 +923,12 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> moveAllServersFromOneRSGroupToOther(String sourceGroup,
+    String targetGroup) {
+    return wrap(rawAdmin.moveAllServersFromOneRSGroupToOther(sourceGroup, targetGroup));
+  }
+
+  @Override
   public CompletableFuture<Void> addRSGroup(String groupName) {
     return wrap(rawAdmin.addRSGroup(groupName));
   }

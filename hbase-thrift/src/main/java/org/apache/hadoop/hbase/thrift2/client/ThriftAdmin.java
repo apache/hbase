@@ -1254,6 +1254,12 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public void moveAllServersFromOneRSGroupToOther(String sourceGroup, String targetGroup) {
+    throw new NotImplementedException(
+      "moveAllServersFromOneRSGroupToOther not supported in ThriftAdmin");
+  }
+
+  @Override
   public void addRSGroup(String groupName) {
     throw new NotImplementedException("addRSGroup not supported in ThriftAdmin");
   }

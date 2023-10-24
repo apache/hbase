@@ -244,6 +244,16 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   }
 
   @Test
+  public void testMoveAllServers() throws Exception {
+    AccessTestAction action = () -> {
+      checkPermission("moveAllServers");
+      return null;
+    };
+
+    validateAdminPermissions(action);
+  }
+
+  @Test
   public void testMoveTables() throws Exception {
     AccessTestAction action = () -> {
       checkPermission("moveTables");
