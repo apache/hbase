@@ -646,7 +646,9 @@ public final class FSUtils {
    */
   public static void waitOnSafeMode(final Configuration conf, final long wait) throws IOException {
     FileSystem fs = FileSystem.get(conf);
-    if (!(fs instanceof SafeMode)) return;
+    if (!(fs instanceof SafeMode)) {
+      return;
+    }
     SafeMode dfs = (SafeMode) fs;
     // Make sure dfs is not in safe mode
     while (isInSafeMode(dfs)) {
