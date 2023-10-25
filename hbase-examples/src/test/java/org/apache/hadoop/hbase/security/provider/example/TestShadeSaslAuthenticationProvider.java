@@ -17,17 +17,23 @@
  */
 package org.apache.hadoop.hbase.security.provider.example;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.hadoop.conf.Configuration;
@@ -60,8 +66,11 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -70,9 +79,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 @Category({ MediumTests.class, SecurityTests.class })
 public class TestShadeSaslAuthenticationProvider {
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestShadeSaslAuthenticationProvider.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -112,8 +127,8 @@ public class TestShadeSaslAuthenticationProvider {
     if (fs.exists(p)) {
       fs.delete(p, true);
     }
-    try (FSDataOutputStream out = fs.create(p);
-      BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out))) {
+    try (FSDataOutputStream out = fs.create(p); BufferedWriter writer =
+      new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
       for (Entry<String, char[]> e : userDatabase.entrySet()) {
         writer.write(e.getKey());
         writer.write(ShadeSaslServerAuthenticationProvider.SEPARATOR);
@@ -218,28 +233,79 @@ public class TestShadeSaslAuthenticationProvider {
 
   @Test
   public void testNegativeAuthentication() throws Exception {
-    // Validate that we can read that record back out as the user with our custom auth'n
-    final Configuration clientConf = new Configuration(CONF);
-    clientConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
-    try (Connection conn = ConnectionFactory.createConnection(clientConf)) {
-      UserGroupInformation user1 =
-        UserGroupInformation.createUserForTesting("user1", new String[0]);
-      user1.addToken(
-        ShadeClientTokenUtil.obtainToken(conn, "user1", "not a real password".toCharArray()));
-      // Server will close the connection directly once auth failed, so at client side, we do not
-      // know what is the real problem so we will keep retrying, until reached the max retry times
-      // limitation
-      assertThrows("Should not successfully authenticate with HBase",
-        RetriesExhaustedException.class, () -> user1.doAs(new PrivilegedExceptionAction<Void>() {
+    List<Pair<String, Class<? extends Exception>>> params = new ArrayList<>();
+    // ZK based connection will fail on the master RPC
+    params.add(new Pair<String, Class<? extends Exception>>(
+      // ZKConnectionRegistry is package-private
+      HConstants.ZK_CONNECTION_REGISTRY_CLASS, RetriesExhaustedException.class));
+
+    params.forEach((pair) -> {
+      LOG.info("Running negative authentication test for client registry {}, expecting {}",
+        pair.getFirst(), pair.getSecond().getName());
+      // Validate that we can read that record back out as the user with our custom auth'n
+      final Configuration clientConf = new Configuration(CONF);
+      clientConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
+      clientConf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, pair.getFirst());
+      try (Connection conn = ConnectionFactory.createConnection(clientConf)) {
+        UserGroupInformation user1 =
+          UserGroupInformation.createUserForTesting("user1", new String[0]);
+        user1.addToken(
+          ShadeClientTokenUtil.obtainToken(conn, "user1", "not a real password".toCharArray()));
+
+        LOG.info("Executing request to HBase Master which should fail");
+        user1.doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            try (Connection conn = ConnectionFactory.createConnection(clientConf);) {
+              conn.getAdmin().listTableDescriptors();
+              fail("Should not successfully authenticate with HBase");
+            } catch (Exception e) {
+              LOG.info("Caught exception in negative Master connectivity test", e);
+              assertEquals("Found unexpected exception", pair.getSecond(), e.getClass());
+              validateRootCause(Throwables.getRootCause(e));
+            }
+            return null;
+          }
+        });
+
+        LOG.info("Executing request to HBase RegionServer which should fail");
+        user1.doAs(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
             try (Connection conn = ConnectionFactory.createConnection(clientConf);
               Table t = conn.getTable(tableName)) {
               t.get(new Get(Bytes.toBytes("r1")));
-              return null;
+              fail("Should not successfully authenticate with HBase");
+            } catch (Exception e) {
+              LOG.info("Caught exception in negative RegionServer connectivity test", e);
+              assertEquals("Found unexpected exception", pair.getSecond(), e.getClass());
+              validateRootCause(Throwables.getRootCause(e));
             }
+            return null;
           }
-        }));
+        });
+      } catch (InterruptedException e) {
+        LOG.error("Caught interrupted exception", e);
+        Thread.currentThread().interrupt();
+        return;
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
+  }
+
+  void validateRootCause(Throwable rootCause) {
+    LOG.info("Root cause was", rootCause);
+    if (rootCause instanceof RemoteException) {
+      RemoteException re = (RemoteException) rootCause;
+      IOException actualException = re.unwrapRemoteException();
+      assertEquals(InvalidToken.class, actualException.getClass());
+    } else {
+      StringWriter writer = new StringWriter();
+      rootCause.printStackTrace(new PrintWriter(writer));
+      String text = writer.toString();
+      assertTrue("Message did not contain expected text",
+        text.contains("Connection reset by peer"));
     }
   }
 }
