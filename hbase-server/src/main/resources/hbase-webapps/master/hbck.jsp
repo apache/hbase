@@ -355,9 +355,13 @@
  * If a live server reference, make it a link.
  * If dead, make it italic.
  * If unknown, make it plain.
+ * If null, make it "null".
  */
 private static String formatServerName(HMaster master,
    ServerManager serverManager, ServerName serverName) {
+  if (serverName == null) {
+    return "null";
+  }
   String sn = serverName.toString();
   if (serverManager.isServerOnline(serverName)) {
     int infoPort = master.getRegionServerInfoPort(serverName);
