@@ -138,7 +138,6 @@ public class ShadeSaslServerAuthenticationProvider extends ShadeSaslAuthenticati
 
     @Override
     public void handle(Callback[] callbacks) throws InvalidToken, UnsupportedCallbackException {
-      LOG.info("SaslServerCallbackHandler called", new Exception());
       NameCallback nc = null;
       PasswordCallback pc = null;
       AuthorizeCallback ac = null;
