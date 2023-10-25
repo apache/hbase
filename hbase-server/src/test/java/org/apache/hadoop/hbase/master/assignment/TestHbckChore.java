@@ -154,6 +154,13 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     hbckChore.choreForTesting();
     inconsistentRegions = hbckChore.getLastReport().getInconsistentRegions();
     assertFalse(inconsistentRegions.containsKey(regionName));
+
+    // Test for case4: No region location for a previously reported region. Probably due to
+    // TRSP bug or bypass.
+    am.offlineRegion(hri);
+    hbckChore.choreForTesting();
+    inconsistentRegions = hbckChore.getLastReport().getInconsistentRegions();
+    assertTrue(inconsistentRegions.containsKey(regionName));
   }
 
   @Test
