@@ -1182,7 +1182,7 @@ module Hbase
         if org.apache.hadoop.hbase.regionserver.BloomType.constants.include?(bloomtype)
           cfdb.setBloomFilterType(org.apache.hadoop.hbase.regionserver.BloomType.valueOf(bloomtype))
         else
-          raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + org.apache.hadoop.hbase.regionserver.StoreFile::BloomType.constants.join(' '))
+          raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + org.apache.hadoop.hbase.regionserver.BloomType.constants.join(' '))
         end
       end
       if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION)
