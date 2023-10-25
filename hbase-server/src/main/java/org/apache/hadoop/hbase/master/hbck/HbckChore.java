@@ -229,10 +229,7 @@ public class HbckChore extends ScheduledChore {
 
     for (Map.Entry<String, HbckRegionInfo> entry : report.getRegionInfoMap().entrySet()) {
       HbckRegionInfo hri = entry.getValue();
-      ServerName locationInMeta = hri.getMetaEntry().getRegionServer();
-      if (locationInMeta == null) {
-        continue;
-      }
+      ServerName locationInMeta = hri.getMetaEntry().getRegionServer(); // can be null
       if (hri.getDeployedOn().size() == 0) {
         // skip the offline region which belong to disabled table.
         if (report.getDisabledTableRegions().contains(hri.getRegionNameAsString())) {
