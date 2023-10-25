@@ -229,7 +229,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
         this.rpcServer.metrics.authenticationFailure();
         String clientIP = this.toString();
         // attempting user could be null
-        RpcServer.AUDITLOG.warn("{}{}: {}", RpcServer.AUTH_FAILED_FOR, clientIP,
+        RpcServer.AUDITLOG.warn("{} {}: {}", RpcServer.AUTH_FAILED_FOR, clientIP,
           saslServer.getAttemptingUser());
         throw e;
       } finally {
