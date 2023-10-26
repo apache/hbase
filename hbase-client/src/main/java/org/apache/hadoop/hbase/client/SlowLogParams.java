@@ -82,7 +82,7 @@ public class SlowLogParams {
     }
     SlowLogParams that = (SlowLogParams) o;
     return new EqualsBuilder().append(regionName, that.regionName).append(params, that.params)
-      .append("scan", scan).isEquals();
+      .append(scan, that.scan).isEquals();
   }
 
   @Override
