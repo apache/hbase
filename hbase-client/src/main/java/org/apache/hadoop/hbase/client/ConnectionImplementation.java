@@ -1560,6 +1560,12 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public MasterProtos.TruncateRegionResponse truncateRegion(RpcController controller,
+        MasterProtos.TruncateRegionRequest request) throws ServiceException {
+        return stub.truncateRegion(controller, request);
+      }
+
+      @Override
       public MasterProtos.DeleteTableResponse deleteTable(RpcController controller,
         MasterProtos.DeleteTableRequest request) throws ServiceException {
         return stub.deleteTable(controller, request);

@@ -731,6 +731,12 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   }
 
   @Override
+  public MasterProtos.TruncateRegionResponse truncateRegion(RpcController controller,
+    MasterProtos.TruncateRegionRequest request) throws ServiceException {
+    return stub.truncateRegion(controller, request);
+  }
+
+  @Override
   public SwitchRpcThrottleResponse switchRpcThrottle(RpcController controller,
     SwitchRpcThrottleRequest request) throws ServiceException {
     return stub.switchRpcThrottle(controller, request);

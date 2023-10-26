@@ -888,7 +888,7 @@ public class MasterRpcServices extends RSRpcServices
   public MasterProtos.TruncateRegionResponse truncateRegion(RpcController controller,
     final MasterProtos.TruncateRegionRequest request) throws ServiceException {
     try {
-      long procId = server.truncateRegion(ProtobufUtil.toRegionInfo(request.getRegionInfo()),
+      long procId = master.truncateRegion(ProtobufUtil.toRegionInfo(request.getRegionInfo()),
         request.getNonceGroup(), request.getNonce());
       return MasterProtos.TruncateRegionResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ie) {
