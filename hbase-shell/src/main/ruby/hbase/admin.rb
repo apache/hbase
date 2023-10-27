@@ -717,14 +717,17 @@ module Hbase
         # Normalize args to support shortcut delete syntax
         arg = { METHOD => 'delete', NAME => arg['delete'] } if arg['delete']
 
+        if arg.key?(REOPEN_REGIONS)
+          if !['true', 'false'].include?(arg[REOPEN_REGIONS].downcase)
+            raise(ArgumentError, "Invalid 'REOPEN_REGIONS' for non-boolean value.")
+          end
+          reopen_regions = JBoolean.valueOf(arg[REOPEN_REGIONS])
+          arg.delete(REOPEN_REGIONS)
+        end
+
         # There are 3 possible options.
         # 1) Column family spec. Distinguished by having a NAME and no METHOD.
         method = arg.delete(METHOD)
-
-        if !method.nil? && method == 'no_reopen_regions'
-          reopen_regions = false
-          method = nil
-        end
 
         if method.nil? && arg.key?(NAME)
           descriptor = hcd(arg, htd)
@@ -838,14 +841,20 @@ module Hbase
 
       # Bulk apply all table modifications.
       if hasTableUpdate
-        # TODO : The current itself is not correct, it doesnt
-        # respect the wait=false, correctly. i.e the lazy_mode=true
-        # use-case.
-        @admin.modifyTable(table_name, htd, reopen_regions)
+        future = @admin.modifyTableAsync(htd, reopen_regions)
+        if reopen_regions == false
+          puts("WARNING: You are using REOPEN_REGIONS => 'false' to modify a table, which will
+          result in inconsistencies in the configuration of online regions and other risks. If you
+          encounter any issues, use the original 'alter' command to make the modification again!")
+        end
 
         if wait == true
-          puts 'Updating all regions with the new schema...'
-          alter_status(table_name_str)
+          # If the changes(reopen_regions=false) are not getting applied immediately -
+          # showing the below can be confusing, hence we only show it when reopen_regions is true.
+          if reopen_regions == true
+            puts 'Updating all regions with the new schema...'
+          end
+          future.get
         end
       end
     end

@@ -108,6 +108,18 @@ There could be more than one alteration in one command:
   hbase> alter 't1', { NAME => 'f1', VERSIONS => 3 },
    { MAX_FILESIZE => '134217728' }, { METHOD => 'delete', NAME => 'f2' },
    OWNER => 'johndoe', METADATA => { 'mykey' => 'myvalue' }
+
+You can also use the REOPEN_REGIONS=>'false' to avoid regions RIT, which let the
+modification take effect after regions was reopened (Be careful, the regions of
+the table may be configured inconsistently If regions are not reopened after the
+modification). This can be used for changing CONFIGURATIONS, changing other table
+level properties. Few of the actions like changing region replicas, modifying
+coprocessors, adding or removing Column Families are not allowed for safety.
+
+  hbase> alter 't1', REOPEN_REGIONS => 'false', CONFIGURATION => {'hbase.hregion.scan
+  .loadColumnFamiliesOnDemand' => 'true'}
+  hbase> alter 't1', NAME => 'f1', REOPEN_REGIONS => 'false', TTL => '12000'
+
 EOF
       end
 
