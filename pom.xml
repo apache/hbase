@@ -846,7 +846,7 @@
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.14.1</thrift.version>
-    <zookeeper.version>3.5.7</zookeeper.version>
+    <zookeeper.version>3.8.1</zookeeper.version>
     <jline.version>2.11</jline.version>
     <slf4j.version>1.7.30</slf4j.version>
     <clover.version>4.0.3</clover.version>
@@ -860,7 +860,7 @@
     <skyscreamer.version>1.5.1</skyscreamer.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
-    <curator.version>4.2.0</curator.version>
+    <curator.version>5.4.0</curator.version>
     <!-- Plugin Dependencies -->
     <asciidoctor.plugin.version>2.2.2</asciidoctor.plugin.version>
     <asciidoctorj.pdf.version>2.0.6</asciidoctorj.pdf.version>
@@ -1430,6 +1430,14 @@
         <artifactId>zookeeper</artifactId>
         <version>${zookeeper.version}</version>
         <exclusions>
+          <exclusion>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+          </exclusion>
           <exclusion>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
