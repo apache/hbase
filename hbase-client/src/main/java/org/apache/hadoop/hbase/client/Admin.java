@@ -1530,7 +1530,8 @@ public interface Admin extends Abortable, Closeable {
    *             {@link #modifyTable(TableDescriptor)}
    */
   @Deprecated
-  default void modifyTable(TableName tableName, TableDescriptor td, boolean reopenRegions) throws IOException {
+  default void modifyTable(TableName tableName, TableDescriptor td, boolean reopenRegions)
+    throws IOException {
     if (!tableName.equals(td.getTableName())) {
       throw new IllegalArgumentException("the specified table name '" + tableName
         + "' doesn't match with the HTD one: " + td.getTableName());
@@ -1572,6 +1573,7 @@ public interface Admin extends Abortable, Closeable {
   default void modifyTable(TableDescriptor td) throws IOException {
     get(modifyTableAsync(td, true), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
   }
+
   /**
    * Modify an existing table, more IRB friendly version. Asynchronous operation. This means that it
    * may be a while before your schema change is updated across all of the table. You can use

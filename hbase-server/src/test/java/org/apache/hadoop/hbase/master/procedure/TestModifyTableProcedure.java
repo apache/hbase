@@ -659,11 +659,10 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     // Test 5: Modifying TTL as part of CF property is allowed
     int newTTL = 60000;
     htd = UTIL.getAdmin().getDescriptor(tableName);
-    modifiedDescriptor =
-      TableDescriptorBuilder
-        .newBuilder(htd).modifyColumnFamily(ColumnFamilyDescriptorBuilder
-          .newBuilder("cf".getBytes()).setTimeToLive(newTTL).build())
-        .build();
+    modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd)
+      .modifyColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder("cf".getBytes()).setTimeToLive(newTTL).build())
+      .build();
     ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
       procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
     // The default TTL should be set before the change is applied.

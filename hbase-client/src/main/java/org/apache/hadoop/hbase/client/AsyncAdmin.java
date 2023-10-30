@@ -193,13 +193,12 @@ public interface AsyncAdmin {
    * Modify an existing table, more IRB friendly version.
    * @param desc modified description of the table
    */
-  default CompletableFuture<Void> modifyTable(TableDescriptor desc){
+  default CompletableFuture<Void> modifyTable(TableDescriptor desc) {
     return modifyTable(desc, true);
   }
 
   /**
    * Modify an existing table, more IRB friendly version.
-   *
    * @param desc          description of the table
    * @param reopenRegions By default, 'modifyTable' reopens all regions, potentially causing a RIT
    *                      (Region In Transition) storm in large tables. If set to 'false', regions

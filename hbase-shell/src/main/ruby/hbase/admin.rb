@@ -855,6 +855,9 @@ module Hbase
             puts 'Updating all regions with the new schema...'
           end
           future.get
+          if reopen_regions == true
+            alter_status(table_name_str)
+          end
         end
       end
     end

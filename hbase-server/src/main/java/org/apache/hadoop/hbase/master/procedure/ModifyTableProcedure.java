@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -95,8 +94,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
   public ModifyTableProcedure(final MasterProcedureEnv env,
     final TableDescriptor newTableDescriptor, final ProcedurePrepareLatch latch,
     final TableDescriptor oldTableDescriptor, final boolean shouldCheckDescriptor,
-    final boolean reopenRegions)
-    throws HBaseIOException {
+    final boolean reopenRegions) throws HBaseIOException {
     super(env, latch);
     this.reopenRegions = reopenRegions;
     initialize(oldTableDescriptor, shouldCheckDescriptor);
@@ -132,14 +130,14 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
       }
       if (
         this.unmodifiedTableDescriptor.getColumnFamilyCount()
-          != this.modifiedTableDescriptor.getColumnFamilyCount()
+            != this.modifiedTableDescriptor.getColumnFamilyCount()
       ) {
         throw new HBaseIOException(
           "Cannot add or remove column families when this modification " + "won't reopen regions.");
       }
       if (
         this.unmodifiedTableDescriptor.getCoprocessorDescriptors().hashCode()
-          != this.modifiedTableDescriptor.getCoprocessorDescriptors().hashCode()
+            != this.modifiedTableDescriptor.getCoprocessorDescriptors().hashCode()
       ) {
         throw new HBaseIOException(
           "Can not modify Coprocessor when table modification won't reopen regions");
@@ -157,8 +155,8 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
     }
   }
 
-  private boolean isTablePropertyModified(TableDescriptor oldDescriptor, TableDescriptor newDescriptor,
-    String key) {
+  private boolean isTablePropertyModified(TableDescriptor oldDescriptor,
+    TableDescriptor newDescriptor, String key) {
     String oldV = oldDescriptor.getValue(key);
     String newV = newDescriptor.getValue(key);
     if (oldV == null && newV == null) {
@@ -312,8 +310,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor))
         .setDeleteColumnFamilyInModify(deleteColumnFamilyInModify)
-        .setShouldCheckDescriptor(shouldCheckDescriptor)
-        .setReopenRegions(reopenRegions);
+        .setShouldCheckDescriptor(shouldCheckDescriptor).setReopenRegions(reopenRegions);
 
     if (unmodifiedTableDescriptor != null) {
       modifyTableMsg
