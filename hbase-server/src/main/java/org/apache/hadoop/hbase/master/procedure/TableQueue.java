@@ -69,6 +69,7 @@ class TableQueue extends Queue<TableName> {
       case REGION_GC:
       case MERGED_REGIONS_GC:
       case REGION_SNAPSHOT:
+      case REGION_TRUNCATE:
         return false;
       default:
         break;

@@ -863,6 +863,60 @@ public class MasterCoprocessorHost
   }
 
   /**
+   * Invoked just before calling the truncate region procedure
+   * @param regionInfo region being truncated
+   */
+  public void preTruncateRegion(RegionInfo regionInfo) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) {
+        observer.preTruncateRegion(this, regionInfo);
+      }
+    });
+  }
+
+  /**
+   * Invoked after calling the truncate region procedure
+   * @param regionInfo region being truncated
+   */
+  public void postTruncateRegion(RegionInfo regionInfo) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) {
+        observer.postTruncateRegion(this, regionInfo);
+      }
+    });
+  }
+
+  /**
+   * Invoked just before calling the truncate region procedure
+   * @param region Region to be truncated
+   * @param user   The user
+   */
+  public void preTruncateRegionAction(final RegionInfo region, User user) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preTruncateRegionAction(this, region);
+      }
+    });
+  }
+
+  /**
+   * Invoked after calling the truncate region procedure
+   * @param region Region which was truncated
+   * @param user   The user
+   */
+  public void postTruncateRegionAction(final RegionInfo region, User user) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postTruncateRegionAction(this, region);
+      }
+    });
+  }
+
+  /**
    * This will be called before update META step as part of split table region procedure.
    * @param user the user
    */

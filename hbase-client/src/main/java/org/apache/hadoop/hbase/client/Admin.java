@@ -3303,4 +3303,18 @@ public interface Admin extends Abortable, Closeable {
    * Flush master local region
    */
   void flushMasterStore() throws IOException;
+
+  /**
+   * Truncate an individual region.
+   * @param regionName region to truncate
+   * @throws IOException if a remote or network exception occurs
+   */
+  void truncateRegion(byte[] regionName) throws IOException;
+
+  /**
+   * Truncate an individual region. Asynchronous operation.
+   * @param regionName region to truncate
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> truncateRegionAsync(byte[] regionName) throws IOException;
 }

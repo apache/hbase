@@ -448,4 +448,13 @@ public interface MasterServices extends Server {
    */
   long flushTable(final TableName tableName, final List<byte[]> columnFamilies,
     final long nonceGroup, final long nonce) throws IOException;
+
+  /**
+   * Truncate region
+   * @param regionInfo region to be truncated
+   * @param nonceGroup the nonce group
+   * @param nonce      the nonce
+   * @return procedure Id
+   */
+  long truncateRegion(RegionInfo regionInfo, long nonceGroup, long nonce) throws IOException;
 }
