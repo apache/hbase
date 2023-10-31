@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -46,11 +46,11 @@ public class ReflectedFunctionCache<I, R> {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReflectedFunctionCache.class);
 
-  private final Map<String, Function<I, ? extends R>> lambdasByClass = new ConcurrentHashMap<>();
-  private final ClassLoader classLoader;
-  private final Class<R> baseClass;
-  private final Class<I> argClass;
-  private final String methodName;
+  private final Map<String, Function<I, ? extends R>> lambdasByClass;
+
+  private ReflectedFunctionCache(Map<String, Function<I, ? extends R>> lambdasByClass) {
+    this.lambdasByClass = lambdasByClass;
+  }
 
   /**
    * Create a cache of reflected functions using the provided classloader and baseClass. Will find
@@ -59,13 +59,9 @@ public class ReflectedFunctionCache<I, R> {
    * returns a value whose class extends the baseClass. This was primarily designed for use by our
    * Filter and Comparator parseFrom methods.
    */
-  public ReflectedFunctionCache(ClassLoader classLoader, Class<R> baseClass, Class<I> argClass,
-    String methodName) {
-    this.classLoader = classLoader;
-    this.baseClass = baseClass;
-    this.argClass = argClass;
-    this.methodName = methodName;
-
+  public static <I, R> ReflectedFunctionCache<I, R> create(ClassLoader classLoader,
+    Class<R> baseClass, Class<I> argClass, String methodName) {
+    Map<String, Function<I, ? extends R>> lambdasByClass = new HashMap<>();
     Set<? extends Class<? extends R>> classes = getSubclassesInPackage(classLoader, baseClass);
     for (Class<? extends R> clazz : classes) {
       Function<I, ? extends R> func = createFunction(clazz, methodName, argClass, clazz);
@@ -73,6 +69,7 @@ public class ReflectedFunctionCache<I, R> {
         lambdasByClass.put(clazz.getName(), func);
       }
     }
+    return new ReflectedFunctionCache<>(lambdasByClass);
   }
 
   /**

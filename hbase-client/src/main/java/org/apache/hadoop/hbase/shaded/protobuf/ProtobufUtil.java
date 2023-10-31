@@ -1552,11 +1552,10 @@ public final class ProtobufUtil {
   }
 
   private static final String PARSE_FROM = "parseFrom";
-  private static final ReflectedFunctionCache<byte[], Filter> FILTERS =
-    new ReflectedFunctionCache<>(ClassLoaderHolder.CLASS_LOADER, Filter.class, byte[].class,
-      PARSE_FROM);
+  private static final ReflectedFunctionCache<byte[], Filter> FILTERS = ReflectedFunctionCache
+    .create(ClassLoaderHolder.CLASS_LOADER, Filter.class, byte[].class, PARSE_FROM);
   private static final ReflectedFunctionCache<byte[], ByteArrayComparable> COMPARATORS =
-    new ReflectedFunctionCache<>(ClassLoaderHolder.CLASS_LOADER, ByteArrayComparable.class,
+    ReflectedFunctionCache.create(ClassLoaderHolder.CLASS_LOADER, ByteArrayComparable.class,
       byte[].class, PARSE_FROM);
 
   /**
