@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -27,11 +26,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -72,6 +69,7 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ThreadUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -740,37 +738,18 @@ public class SplitTableRegionProcedure
     // hbase.regionserver.fileSplitTimeout. If set, use its value.
     long fileSplitTimeout = conf.getLong("hbase.master.fileSplitTimeout",
       conf.getLong("hbase.regionserver.fileSplitTimeout", 600000));
-    try {
-      boolean stillRunning = !threadPool.awaitTermination(fileSplitTimeout, TimeUnit.MILLISECONDS);
-      if (stillRunning) {
-        threadPool.shutdownNow();
-        // wait for the thread to shutdown completely.
-        while (!threadPool.isTerminated()) {
-          Thread.sleep(50);
-        }
-        throw new IOException(
-          "Took too long to split the" + " files and create the references, aborting split");
-      }
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-    }
-
+    ThreadUtil.waitOnShutdown(threadPool, fileSplitTimeout,
+      "Took too long to split the files and create the references, aborting split");
     List<Path> daughterA = new ArrayList<>();
     List<Path> daughterB = new ArrayList<>();
     // Look for any exception
-    for (Future<Pair<Path, Path>> future : futures) {
-      try {
-        Pair<Path, Path> p = future.get();
-        if (p.getFirst() != null) {
-          daughterA.add(p.getFirst());
-        }
-        if (p.getSecond() != null) {
-          daughterB.add(p.getSecond());
-        }
-      } catch (InterruptedException e) {
-        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-      } catch (ExecutionException e) {
-        throw new IOException(e);
+    List<Pair<Path, Path>> paths = ThreadUtil.getAllResults(futures);
+    for (Pair<Path, Path> p : paths) {
+      if (p.getFirst() != null) {
+        daughterA.add(p.getFirst());
+      }
+      if (p.getSecond() != null) {
+        daughterB.add(p.getSecond());
       }
     }
 
