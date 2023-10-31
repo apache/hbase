@@ -1530,24 +1530,6 @@ public interface Admin extends Abortable, Closeable {
    *             {@link #modifyTable(TableDescriptor)}
    */
   @Deprecated
-  default void modifyTable(TableName tableName, TableDescriptor td, boolean reopenRegions)
-    throws IOException {
-    if (!tableName.equals(td.getTableName())) {
-      throw new IllegalArgumentException("the specified table name '" + tableName
-        + "' doesn't match with the HTD one: " + td.getTableName());
-    }
-    modifyTable(td, reopenRegions);
-  }
-
-  /**
-   * Modify an existing table, more IRB friendly version.
-   * @param tableName name of table.
-   * @param td        modified description of the table
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated since 2.0 version and will be removed in 3.0 version. use
-   *             {@link #modifyTable(TableDescriptor)}
-   */
-  @Deprecated
   default void modifyTable(TableName tableName, TableDescriptor td) throws IOException {
     if (!tableName.equals(td.getTableName())) {
       throw new IllegalArgumentException("the specified table name '" + tableName
