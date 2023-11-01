@@ -42,7 +42,7 @@ import org.apache.hbase.thirdparty.com.google.common.reflect.ClassPath;
  * @param <R> the return type for the resolved functions
  */
 @InterfaceAudience.Private
-public class ReflectedFunctionCache<I, R> {
+final public class ReflectedFunctionCache<I, R> {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReflectedFunctionCache.class);
 
