@@ -685,5 +685,18 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     }
     currentHtd = UTIL.getAdmin().getDescriptor(tableName);
     assertEquals(0, currentHtd.getCoprocessorDescriptors().size());
+
+    // Test 6: Modifying  is not allowed
+    htd = UTIL.getAdmin().getDescriptor(tableName);
+    modifiedDescriptor =
+            TableDescriptorBuilder.newBuilder(htd).setRegionReplication(3).build();
+    try {
+      ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
+              procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
+      Assert.fail("Should have thrown an exception while modifying coprocessor!");
+    } catch (HBaseIOException e) {
+      System.out.println(e.getMessage());
+      assertTrue(e.getMessage().contains("Can not modify REGION_REPLICATION"));
+    }
   }
 }

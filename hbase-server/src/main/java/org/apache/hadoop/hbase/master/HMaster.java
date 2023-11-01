@@ -1163,7 +1163,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           procedureExecutor.submitProcedure(new ModifyTableProcedure(
             procedureExecutor.getEnvironment(), TableDescriptorBuilder.newBuilder(metaDesc)
               .setRegionReplication(replicasNumInConf).build(),
-            null, metaDesc, false));
+            null, metaDesc, false, true));
         }
       }
     }

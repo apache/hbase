@@ -85,13 +85,6 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
 
   public ModifyTableProcedure(final MasterProcedureEnv env,
     final TableDescriptor newTableDescriptor, final ProcedurePrepareLatch latch,
-    final TableDescriptor oldTableDescriptor, final boolean shouldCheckDescriptor)
-    throws HBaseIOException {
-    this(env, newTableDescriptor, latch, oldTableDescriptor, shouldCheckDescriptor, true);
-  }
-
-  public ModifyTableProcedure(final MasterProcedureEnv env,
-    final TableDescriptor newTableDescriptor, final ProcedurePrepareLatch latch,
     final TableDescriptor oldTableDescriptor, final boolean shouldCheckDescriptor,
     final boolean reopenRegions) throws HBaseIOException {
     super(env, latch);
@@ -120,10 +113,8 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
         throw new HBaseIOException(
           "unmodifiedTableDescriptor cannot be null when this table modification won't reopen regions");
       }
-      if (
-        0 != this.unmodifiedTableDescriptor.getTableName()
-          .compareTo(this.modifiedTableDescriptor.getTableName())
-      ) {
+      if (!this.unmodifiedTableDescriptor.getTableName()
+              .equals(this.modifiedTableDescriptor.getTableName())) {
         throw new HBaseIOException(
           "Cannot change the table name when this modification won't " + "reopen regions.");
       }
@@ -185,6 +176,8 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
           break;
         case MODIFY_TABLE_PRE_OPERATION:
           preModify(env, state);
+          // We cannot allow changes to region replicas when 'reopenRegions==false',
+          // as this mode bypasses the state management required for modifying region replicas.
           if (reopenRegions) {
             setNextState(ModifyTableState.MODIFY_TABLE_CLOSE_EXCESS_REPLICAS);
           } else {

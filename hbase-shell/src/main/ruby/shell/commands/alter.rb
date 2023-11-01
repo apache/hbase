@@ -76,8 +76,22 @@ You can also set configuration setting with REOPEN_REGIONS=>'false' to avoid reg
 let the modification take effect after regions was reopened (Be careful, the regions of the table
 may be configured inconsistently If regions are not reopened after the modification)
 
+  hbase> alter 't1', REOPEN_REGIONS => 'false', MAX_FILESIZE => '134217728'
   hbase> alter 't1', REOPEN_REGIONS => 'false', CONFIGURATION => {'hbase.hregion.scan
-  .loadColumnFamiliesOnDemand' => 'true'}
+    .loadColumnFamiliesOnDemand' => 'true'}
+
+However, be aware that:
+1. Inconsistency Risks: If the regions are not reopened after the modification, the table's regions
+may become inconsistently configured. Ensure that you manually reopen the regions as soon as
+possible to apply the changes consistently across the entire table.
+2. If changes are made to the table without reopening the regions, we currently only allow
+lightweight operations. The following types of changes, which may lead to unknown situations,
+will throw an exception:
+    a. Adding or removing CFs, coprocessors.
+    b. Modifying the table name.
+    c. Changing region replica related configurations such as 'REGION_REPLICATION'
+       and 'REGION_MEMSTORE_REPLICATION'.
+    d. Changing the rsgroup.
 
 You can also unset configuration settings specific to this table:
 
