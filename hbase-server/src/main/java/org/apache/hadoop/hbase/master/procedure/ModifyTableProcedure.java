@@ -113,8 +113,10 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
         throw new HBaseIOException(
           "unmodifiedTableDescriptor cannot be null when this table modification won't reopen regions");
       }
-      if (!this.unmodifiedTableDescriptor.getTableName()
-              .equals(this.modifiedTableDescriptor.getTableName())) {
+      if (
+        !this.unmodifiedTableDescriptor.getTableName()
+          .equals(this.modifiedTableDescriptor.getTableName())
+      ) {
         throw new HBaseIOException(
           "Cannot change the table name when this modification won't " + "reopen regions.");
       }
