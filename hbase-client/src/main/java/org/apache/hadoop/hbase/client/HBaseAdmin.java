@@ -2078,12 +2078,21 @@ public class HBaseAdmin implements Admin {
       throw new IllegalArgumentException("Invalid region: " + Bytes.toStringBinary(regionName));
     }
 
-    TableName tableName = hri.getTable();
+    TableName tableName = (hri != null) ? hri.getTable() : null;
 
     MasterProtos.TruncateRegionResponse response =
       executeCallable(getTruncateRegionCallable(tableName, hri));
 
     return new TruncateRegionFuture(this, tableName, response);
+  }
+
+  /**
+   * Get the list of cached files
+   */
+  @Override
+  public List<String> getCachedFilesList(ServerName serverName) throws IOException {
+    return ProtobufUtil.getCachedFilesList(rpcControllerFactory.newController(),
+      this.connection.getAdmin(serverName));
   }
 
   private MasterCallable<MasterProtos.TruncateRegionResponse>

@@ -152,6 +152,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Rev
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -3063,6 +3065,12 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(e);
     }
     throw new ServiceException("Invalid request params");
+  }
+
+  @Override
+  public GetCachedFilesListResponse getCachedFilesList(RpcController controller,
+    GetCachedFilesListRequest request) throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
   }
 
   private MasterProtos.BalancerDecisionsResponse
