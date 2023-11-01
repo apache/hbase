@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Optional;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -160,5 +162,12 @@ public interface BlockCache extends Iterable<CachedBlock> {
    */
   default boolean isMetaBlock(BlockType blockType) {
     return blockType != null && blockType.getCategory() != BlockType.BlockCategory.DATA;
+  }
+
+  /**
+   * Returns the list of fully cached files
+   */
+  default Optional<Map<String, Boolean>> getFullyCachedFiles() {
+    return Optional.empty();
   }
 }
