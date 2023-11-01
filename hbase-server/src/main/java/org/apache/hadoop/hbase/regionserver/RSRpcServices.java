@@ -169,6 +169,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProc
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -3932,5 +3934,16 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   public void onConfigurationChange(Configuration conf) {
     super.onConfigurationChange(conf);
     setReloadableGuardrails(conf);
+  }
+
+  @Override
+  public GetCachedFilesListResponse getCachedFilesList(RpcController controller,
+    GetCachedFilesListRequest request) throws ServiceException {
+    GetCachedFilesListResponse.Builder responseBuilder = GetCachedFilesListResponse.newBuilder();
+    List<String> fullyCachedFiles = new ArrayList<>();
+    server.getBlockCache().flatMap(BlockCache::getFullyCachedFiles).ifPresent(fcf -> {
+      fullyCachedFiles.addAll(fcf.keySet());
+    });
+    return responseBuilder.addAllCachedFiles(fullyCachedFiles).build();
   }
 }

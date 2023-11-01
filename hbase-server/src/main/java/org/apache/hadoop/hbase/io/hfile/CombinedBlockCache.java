@@ -18,8 +18,11 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Optional;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -380,6 +383,14 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   @Override
   public BlockCache[] getBlockCaches() {
     return new BlockCache[] { this.l1Cache, this.l2Cache };
+  }
+
+  /**
+   * Returns the list of fully cached files
+   */
+  @Override
+  public Optional<Map<String, Pair<String, Long>>> getFullyCachedFiles() {
+    return this.l2Cache.getFullyCachedFiles();
   }
 
   @Override

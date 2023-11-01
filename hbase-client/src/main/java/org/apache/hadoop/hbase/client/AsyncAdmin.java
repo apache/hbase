@@ -1843,4 +1843,9 @@ public interface AsyncAdmin {
    * Flush master local region
    */
   CompletableFuture<Void> flushMasterStore();
+
+  /**
+   * Get the list of cached files
+   */
+  CompletableFuture<List<String>> getCachedFilesList(ServerName serverName);
 }

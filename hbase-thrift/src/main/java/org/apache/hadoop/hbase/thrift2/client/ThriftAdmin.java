@@ -1346,6 +1346,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public List<String> getCachedFilesList(ServerName serverName) throws IOException {
+    throw new NotImplementedException("getCachedFilesList not supported in ThriftAdmin");
+  }
+
+  @Override
   public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
     throws IOException {
     throw new NotImplementedException(
