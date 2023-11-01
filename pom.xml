@@ -802,9 +802,18 @@
     -->
     <hadoop.version>${hadoop-three.version}</hadoop.version>
     <assembly.file>src/main/assembly/hadoop-three-compat.xml</assembly.file>
-    <!--This property is for hadoops netty. HBase netty
-         comes in via hbase-thirdparty hbase-shaded-netty-->
-    <netty.hadoop.version>3.10.5.Final</netty.hadoop.version>
+    <!--
+      These property is for transitive netty dependencies from thirdparty dependencies, like
+      hadoop and zookeeper. HBase netty comes in via hbase-thirdparty hbase-shaded-netty
+      In the old time, netty-all includes all the classes but maven does not know it so it is
+      possible that we have netty-all and netty-handler both on the classpath but they have
+      different version and cause conflicts. Newer version of netty-all solved the this problem
+      by depending all other netty modules, but we'd better still specify the version by our own
+      in the dependencyManagement section as it could still lead to different versions of netty
+      modules and cause trouble if we only rely on transitive dependencies.
+    -->
+    <netty3.version>3.10.6.Final</netty3.version>
+    <netty4.version>4.1.100.Final</netty4.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.13.0</audience-annotations.version>
     <!--
@@ -819,6 +828,7 @@
     <commons-io.version>2.11.0</commons-io.version>
     <commons-lang3.version>3.9</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
+    <commons-cli.version>1.5.0</commons-cli.version>
     <disruptor.version>3.4.4</disruptor.version>
     <httpclient.version>4.5.13</httpclient.version>
     <httpcore.version>4.4.13</httpcore.version>
@@ -840,7 +850,7 @@
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.14.1</thrift.version>
-    <zookeeper.version>3.5.7</zookeeper.version>
+    <zookeeper.version>3.8.3</zookeeper.version>
     <jline.version>2.11</jline.version>
     <slf4j.version>1.7.30</slf4j.version>
     <clover.version>4.0.3</clover.version>
@@ -1412,6 +1422,11 @@
         <version>${commons-math.version}</version>
       </dependency>
       <dependency>
+        <groupId>commons-cli</groupId>
+        <artifactId>commons-cli</artifactId>
+        <version>${commons-cli.version}</version>
+      </dependency>
+      <dependency>
         <!-- commons-logging is only used by hbase-http's HttpRequestLog and hbase-server's
              HBaseTestingUtil.
           -->
@@ -1425,44 +1440,12 @@
         <version>${zookeeper.version}</version>
         <exclusions>
           <exclusion>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>com.github.spotbugs</groupId>
-            <artifactId>spotbugs-annotations</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>jline</groupId>
-            <artifactId>jline</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.sun.jmx</groupId>
-            <artifactId>jmxri</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.sun.jdmk</groupId>
-            <artifactId>jmxtools</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>javax.jms</groupId>
-            <artifactId>jms</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1784,6 +1767,18 @@
             <artifactId>javax.activation-api</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty</artifactId>
+        <version>${netty3.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty4.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -3555,14 +3550,6 @@
                 <artifactId>*</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
-              </exclusion>
-              <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
               </exclusion>
@@ -3654,14 +3641,6 @@
                 <artifactId>jersey-core</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
-              </exclusion>
-              <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
               </exclusion>
@@ -3689,14 +3668,6 @@
               <exclusion>
                 <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-core</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
@@ -3897,17 +3868,6 @@
                 <artifactId>stax-api</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-              </exclusion>
-              <!-- MiniMRCluster needs the hadoop netty-all transitive include... a
-               netty-all 4.0.52 version.... so we have to let it through.
-             <exclusion>
-               <groupId>io.netty</groupId>
-               <artifactId>netty-all</artifactId>
-             </exclusion>
-             -->
-              <exclusion>
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
               </exclusion>
@@ -3934,14 +3894,6 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3984,13 +3936,6 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
-              <!--
-              Needed in test context when hadoop-3.3 runs.
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
-              </exclusion>
-              -->
               <exclusion>
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>*</artifactId>
@@ -4055,14 +4000,6 @@
               <exclusion>
                 <groupId>stax</groupId>
                 <artifactId>stax-api</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>com.google.code.findbugs</groupId>
