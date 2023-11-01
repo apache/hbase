@@ -2629,9 +2629,4 @@ public interface Admin extends Abortable, Closeable {
    * Flush master local region
    */
   void flushMasterStore() throws IOException;
-
-  /**
-   * Get the list of cached files
-   */
-  List<String> getCachedFilesList(ServerName serverName) throws IOException;
 }

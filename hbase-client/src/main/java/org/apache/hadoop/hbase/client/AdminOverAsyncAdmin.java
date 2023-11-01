@@ -1125,9 +1125,4 @@ class AdminOverAsyncAdmin implements Admin {
   public void flushMasterStore() throws IOException {
     get(admin.flushMasterStore());
   }
-
-  @Override
-  public List<String> getCachedFilesList(ServerName serverName) throws IOException {
-    return get(admin.getCachedFilesList(serverName));
-  }
 }

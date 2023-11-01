@@ -42,9 +42,8 @@ public class HFilePreadReader extends HFileReaderImpl {
     final MutableBoolean fileAlreadyCached = new MutableBoolean(false);
     Optional<BucketCache> bucketCacheOptional =
       BucketCache.getBucketCacheFromCacheConfig(cacheConf);
-    bucketCacheOptional.flatMap(BucketCache::getFullyCachedFiles).ifPresent(fcf -> {
-      fileAlreadyCached.setValue(fcf.get(path.getName()) == null ? false : true);
-    });
+    bucketCacheOptional.ifPresent(bc -> fileAlreadyCached
+      .setValue(bc.getFullyCachedFiles().get(path.getName()) == null ? false : true));
     // Prefetch file blocks upon open if requested
     if (
       cacheConf.shouldPrefetchOnOpen() && cacheIfCompactionsOff()
