@@ -995,9 +995,4 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<Void> flushMasterStore() {
     return wrap(rawAdmin.flushMasterStore());
   }
-
-  @Override
-  public CompletableFuture<List<String>> getCachedFilesList(ServerName serverName) {
-    return wrap(rawAdmin.getCachedFilesList(serverName));
-  }
 }

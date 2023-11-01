@@ -1965,9 +1965,8 @@ public class BucketCache implements BlockCache, HeapSize {
     return backingMapValidated;
   }
 
-  @Override
-  public Optional<Map<String, Boolean>> getFullyCachedFiles() {
-    return Optional.of(fullyCachedFiles);
+  public Map<String, Boolean> getFullyCachedFiles() {
+    return fullyCachedFiles;
   }
 
   public static Optional<BucketCache> getBucketCacheFromCacheConfig(CacheConfig cacheConf) {
