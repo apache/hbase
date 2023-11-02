@@ -1130,6 +1130,48 @@ For a RegionServer hosting data that can comfortably fit into cache, or if your 
 
 The compressed BlockCache is disabled by default. To enable it, set `hbase.block.data.cachecompressed` to `true` in _hbase-site.xml_ on all RegionServers.
 
+==== Cache Aware Load Balancer
+
+HBase uses ephemeral cache to cache the blocks by reading them from the slow storages and storing them to the bucket cache. This cache is warmed up every time a region server is started. Depending on the data size and the configured cache size, the cache warm up can take anywhere from a few minutes to a few hours. Doing this everytime the region server starts can be a very expensive process. To eliminate this, link:https://issues.apache.org/jira/browse/HBASE-27313[HBASE-27313] implemented the cache persistence feature where the region servers periodically persist the blocks cached in the bucket cache. This persisted information is then used to resurrect the cache in the event of a region server restart because of normal restart or crash.
+
+link:https://issues.apache.org/jira/browse/HBASE-27999[HBASE-27999] implements the prefetch aware load balancer which is aimed at enhancing the capability of HBase to enable the balancer to consider the cache allocation of each region on region servers when calculating a new assignment plan and use the region/region server cache allocation information reported by region servers to calculate the percentage of HFiles cached for each region on the hosting server, and then use that as another factor when deciding on an optimal, new assignment plan.
+
+The master node captures the prefetch information from all the region servers and uses this information to decide the region assignments while ensuring a minimal impact on the warmed up cache. A region is assigned to the region server where it has a better cache ratio as compared to the region server where it is currently hosted.
+
+The CacheAwareLoadBalancer uses two cost elements for deciding the region allocation. These are described below:
+
+. Cache Cost
++
+
+The cache cost is calculated as the percentage of data for a region cached on the region server where it is either currently hosted or was previously hosted. A region may have multiple HFiles, each of different sizes. A HFile is considered to be fully prefetched when all the data blocks in this file are in the cache. The region server hosting this region calculates the ratio of number of HFiles cached in the bucket cache to the total number of HFiles in the region. This ratio will vary from 0 (region hosted on this server, but none of its HFiles are cached into the bucket cache) to 1 (region hosted on this server and all the HFiles for this region are cached into the bucket cache).
++
+Every region server maintains this information for all the regions currently hosted there. In addition to that, this cache ratio is also maintained for the regions which were previously hosted on this region server giving historical information about the regions.
+
+. Skewness Cost
++
+The skewness cost is calculated as the number of regions hosted on each region server in the cluster. The skewness cost varies from 0 (regions are equally distributed across the region servers) to 1 (regions are not equally distributed across the region servers).
+
+The balancer considers these two costs and calculates the resulting cost of maintaining the balance in the cluster. The balancer will attempt to rebalance the cluster under following conditions:
+
+. There is an idle server in the cluster. This can happen when an existing server is restarted or a new server is added to the cluster.
+
+. When the cost of maintaining the balance in the cluster is greater than the minimum threshold defined by the configuration _hbase.master.balancer.stochastic.minCostNeedBalance_.
+
+The cluster can be made to use the CacheAwareLoadBalancer by setting the following configuration properties:
+
+[source,xml]
+----
+<property>
+  <name>hbase.master.loadbalancer.class</name>
+  <value>org.apache.hadoop.hbase.master.balancer.CacheAwareLoadBalancer</value>
+</property>
+<property>
+  <name>hbase.bucketcache.persistent.path</name>
+  <value>/path/to/bucketcache_persistent_file</value>
+</property>
+----
+
+
 [[regionserver_splitting_implementation]]
 === RegionServer Splitting Implementation
 
