@@ -756,11 +756,14 @@ public class AssignmentManager {
    * @param override If false, check RegionState is appropriate for assign; if not throw exception.
    */
   private TransitRegionStateProcedure createAssignProcedure(RegionInfo regionInfo, ServerName sn,
-    boolean override) throws IOException {
+    boolean override, boolean forceOverride) throws IOException {
     RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
     regionNode.lock();
     try {
       if (override) {
+        if (!forceOverride) {
+          preTransitCheck(regionNode, STATES_EXPECTED_ON_ASSIGN);
+        }
         if (regionNode.getProcedure() != null) {
           regionNode.unsetProcedure(regionNode.getProcedure());
         }
@@ -778,7 +781,7 @@ public class AssignmentManager {
   /**
    * Create an assign TransitRegionStateProcedure. Does NO checking of RegionState. Presumes
    * appriopriate state ripe for assign.
-   * @see #createAssignProcedure(RegionInfo, ServerName, boolean)
+   * @see #createAssignProcedure(RegionInfo, ServerName, boolean, boolean)
    */
   private TransitRegionStateProcedure createAssignProcedure(RegionStateNode regionNode,
     ServerName targetServer) {
@@ -792,7 +795,7 @@ public class AssignmentManager {
   }
 
   public long assign(RegionInfo regionInfo, ServerName sn) throws IOException {
-    TransitRegionStateProcedure proc = createAssignProcedure(regionInfo, sn, false);
+    TransitRegionStateProcedure proc = createAssignProcedure(regionInfo, sn, false, false);
     ProcedureSyncWait.submitAndWaitProcedure(master.getMasterProcedureExecutor(), proc);
     return proc.getProcId();
   }
@@ -808,7 +811,7 @@ public class AssignmentManager {
    */
   public Future<byte[]> assignAsync(RegionInfo regionInfo, ServerName sn) throws IOException {
     return ProcedureSyncWait.submitProcedure(master.getMasterProcedureExecutor(),
-      createAssignProcedure(regionInfo, sn, false));
+      createAssignProcedure(regionInfo, sn, false, false));
   }
 
   /**
@@ -952,10 +955,10 @@ public class AssignmentManager {
    * method is called from HBCK2.
    * @return an assign or null
    */
-  public TransitRegionStateProcedure createOneAssignProcedure(RegionInfo ri, boolean override) {
+  public TransitRegionStateProcedure createOneAssignProcedure(RegionInfo ri, boolean override, boolean forceOverride) {
     TransitRegionStateProcedure trsp = null;
     try {
-      trsp = createAssignProcedure(ri, null, override);
+      trsp = createAssignProcedure(ri, null, override, forceOverride);
     } catch (IOException ioe) {
       LOG.info(
         "Failed {} assign, override={}"
@@ -969,12 +972,15 @@ public class AssignmentManager {
    * Create one TransitRegionStateProcedure to unassign a region. This method is called from HBCK2.
    * @return an unassign or null
    */
-  public TransitRegionStateProcedure createOneUnassignProcedure(RegionInfo ri, boolean override) {
+  public TransitRegionStateProcedure createOneUnassignProcedure(RegionInfo ri, boolean override, boolean forceOverride) {
     RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(ri);
     TransitRegionStateProcedure trsp = null;
     regionNode.lock();
     try {
       if (override) {
+        if (!forceOverride) {
+          preTransitCheck(regionNode, STATES_EXPECTED_ON_UNASSIGN_OR_MOVE);
+        }
         if (regionNode.getProcedure() != null) {
           regionNode.unsetProcedure(regionNode.getProcedure());
         }

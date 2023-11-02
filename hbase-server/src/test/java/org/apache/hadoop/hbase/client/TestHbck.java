@@ -254,7 +254,7 @@ public class TestHbck {
       // unassigned.... makes for a mess but operator might want to do this at an extreme when
       // doing fixup of broke cluster.
       pids = hbck.unassigns(
-        regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()), true);
+        regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()), true, true);
       waitOnPids(pids);
       for (long pid : pids) {
         assertNotEquals(Procedure.NO_PROC_ID, pid);

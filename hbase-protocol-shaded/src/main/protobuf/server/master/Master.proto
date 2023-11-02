@@ -1285,6 +1285,7 @@ message SetRegionStateInMetaResponse {
 message AssignsRequest {
   repeated RegionSpecifier region = 1;
   optional bool override = 2 [default = false];
+  optional bool forceOverride = 3 [default = false];
 }
 
 /** Like Admin's AssignRegionResponse except it can
@@ -1300,6 +1301,7 @@ message AssignsResponse {
 message UnassignsRequest {
   repeated RegionSpecifier region = 1;
   optional bool override = 2 [default = false];
+  optional bool forceOverride = 3 [default = false];
 }
 
 /** Like Admin's UnassignRegionResponse except it can
