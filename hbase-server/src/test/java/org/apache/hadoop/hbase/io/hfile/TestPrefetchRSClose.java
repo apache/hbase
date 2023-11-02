@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -30,11 +31,14 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -111,7 +115,17 @@ public class TestPrefetchRSClose {
 
     // Default interval for cache persistence is 1000ms. So after 1000ms, both the persistence files
     // should exist.
-    assertTrue(new File(testDir + "/bucket.persistence").exists());
+
+    HRegionServer regionServingRS = cluster.getRegionServer(1).getRegions(tableName).size() == 1
+      ? cluster.getRegionServer(1)
+      : cluster.getRegionServer(0);
+
+    Admin admin = TEST_UTIL.getAdmin();
+    List<String> cachedFilesList = admin.getCachedFilesList(regionServingRS.getServerName());
+    assertEquals(1, cachedFilesList.size());
+    for (HStoreFile h : regionServingRS.getRegions().get(0).getStores().get(0).getStorefiles()) {
+      assertTrue(cachedFilesList.contains(h.getPath().getName()));
+    }
 
     // Stop the RS
     cluster.stopRegionServer(0);

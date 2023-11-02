@@ -898,6 +898,14 @@ public class ThriftAdmin implements Admin {
     throw new NotImplementedException("Truncate Region Async not supported in ThriftAdmin");
   }
 
+  /**
+   * Get the list of cached files
+   */
+  @Override
+  public List<String> getCachedFilesList(ServerName serverName) {
+    throw new NotImplementedException("getCachedFilesList not supported in ThriftAdmin");
+  }
+
   @Override
   public void splitRegion(byte[] regionName, byte[] splitPoint) {
     throw new NotImplementedException("splitRegion not supported in ThriftAdmin");

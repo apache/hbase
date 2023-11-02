@@ -283,6 +283,13 @@ message ExecuteProceduresRequest {
 message ExecuteProceduresResponse {
 }
 
+message GetCachedFilesListRequest {
+}
+
+message GetCachedFilesListResponse {
+  repeated string cached_files = 1;
+}
+
 /**
  * Slow/Large log (LogRequest) use-case specific RPC request. This request payload will be
  * converted in bytes and sent to generic RPC API: GetLogEntries
@@ -405,5 +412,8 @@ service AdminService {
 
   rpc GetLogEntries(LogRequest)
     returns(LogEntry);
+
+  rpc GetCachedFilesList(GetCachedFilesListRequest)
+    returns(GetCachedFilesListResponse);
 
 }

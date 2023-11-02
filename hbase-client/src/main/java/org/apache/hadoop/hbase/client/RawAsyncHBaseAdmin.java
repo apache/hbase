@@ -129,6 +129,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionS
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -4263,5 +4265,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         Void> call(controller, stub, request.build(),
           (s, c, req, done) -> s.flushMasterStore(c, req, done), resp -> null))
       .call();
+  }
+
+  @Override
+  public CompletableFuture<List<String>> getCachedFilesList(ServerName serverName) {
+    GetCachedFilesListRequest.Builder request = GetCachedFilesListRequest.newBuilder();
+    return this.<List<String>> newAdminCaller()
+      .action((controller, stub) -> this.<GetCachedFilesListRequest, GetCachedFilesListResponse,
+        List<String>> adminCall(controller, stub, request.build(),
+          (s, c, req, done) -> s.getCachedFilesList(c, req, done),
+          resp -> resp.getCachedFilesList()))
+      .serverName(serverName).call();
   }
 }
