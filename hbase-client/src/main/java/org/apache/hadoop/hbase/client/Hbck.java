@@ -72,7 +72,8 @@ public interface Hbck extends Abortable, Closeable {
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example
    *                           of what a random user-space encoded Region name looks like.
    */
-  List<Long> assigns(List<String> encodedRegionNames, boolean override, boolean forceOverride) throws IOException;
+  List<Long> assigns(List<String> encodedRegionNames, boolean override, boolean forceOverride)
+    throws IOException;
 
   default List<Long> assigns(List<String> encodedRegionNames) throws IOException {
     return assigns(encodedRegionNames, false, false);
@@ -93,7 +94,8 @@ public interface Hbck extends Abortable, Closeable {
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example
    *                           of what a random user-space encoded Region name looks like.
    */
-  List<Long> unassigns(List<String> encodedRegionNames, boolean override, boolean forceOverride) throws IOException;
+  List<Long> unassigns(List<String> encodedRegionNames, boolean override, boolean forceOverride)
+    throws IOException;
 
   default List<Long> unassigns(List<String> encodedRegionNames) throws IOException {
     return unassigns(encodedRegionNames, false, false);

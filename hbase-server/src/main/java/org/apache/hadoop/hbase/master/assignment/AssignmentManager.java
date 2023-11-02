@@ -956,7 +956,8 @@ public class AssignmentManager {
    * method is called from HBCK2.
    * @return an assign or null
    */
-  public TransitRegionStateProcedure createOneAssignProcedure(RegionInfo ri, boolean override, boolean forceOverride) {
+  public TransitRegionStateProcedure createOneAssignProcedure(RegionInfo ri, boolean override,
+    boolean forceOverride) {
     TransitRegionStateProcedure trsp = null;
     try {
       trsp = createAssignProcedure(ri, null, override, forceOverride);
@@ -973,7 +974,8 @@ public class AssignmentManager {
    * Create one TransitRegionStateProcedure to unassign a region. This method is called from HBCK2.
    * @return an unassign or null
    */
-  public TransitRegionStateProcedure createOneUnassignProcedure(RegionInfo ri, boolean override, boolean forceOverride) {
+  public TransitRegionStateProcedure createOneUnassignProcedure(RegionInfo ri, boolean override,
+    boolean forceOverride) {
     RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(ri);
     TransitRegionStateProcedure trsp = null;
     regionNode.lock();
