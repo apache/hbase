@@ -26,12 +26,15 @@ import org.slf4j.LoggerFactory;
 public class BucketCachePersister extends Thread {
   private final BucketCache cache;
   private final long intervalMillis;
+  private final long txsThreshold;
+
   private static final Logger LOG = LoggerFactory.getLogger(BucketCachePersister.class);
 
-  public BucketCachePersister(BucketCache cache, long intervalMillis) {
+  public BucketCachePersister(BucketCache cache, long intervalMillis, long txsThreshold) {
     super("bucket-cache-persister");
     this.cache = cache;
     this.intervalMillis = intervalMillis;
+    this.txsThreshold = txsThreshold;
     LOG.info("BucketCachePersister started with interval: " + intervalMillis);
   }
 
@@ -39,9 +42,11 @@ public class BucketCachePersister extends Thread {
     while (true) {
       try {
         Thread.sleep(intervalMillis);
-        if (cache.isCacheInconsistent()) {
-          LOG.debug("Cache is inconsistent, persisting to disk");
+        if (cache.isCacheInconsistent() || cache.getTXsCount() >= txsThreshold) {
+          LOG.info("Cache is inconsistent or current txs {} is higher than threshold of {}",
+            cache.getTXsCount(), txsThreshold);
           cache.persistToFile();
+          cache.cleanOldTransactions();
           cache.setCacheInconsistent(false);
         }
       } catch (IOException e) {

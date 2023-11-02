@@ -481,9 +481,12 @@ public final class BucketAllocator {
     int bucketNo = (int) (offset / bucketCapacity);
     assert bucketNo >= 0 && bucketNo < buckets.length;
     Bucket targetBucket = buckets[bucketNo];
-    bucketSizeInfos[targetBucket.sizeIndex()].freeBlock(targetBucket, offset, length);
-    usedSize -= targetBucket.getItemAllocationSize();
-    return targetBucket.getItemAllocationSize();
+    if (targetBucket.usedCount() > 0) {
+      bucketSizeInfos[targetBucket.sizeIndex()].freeBlock(targetBucket, offset, length);
+      usedSize -= targetBucket.getItemAllocationSize();
+      return targetBucket.getItemAllocationSize();
+    }
+    return 0;
   }
 
   public int sizeIndexOfAllocation(long offset) {

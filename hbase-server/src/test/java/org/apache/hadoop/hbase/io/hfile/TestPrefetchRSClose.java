@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -97,32 +96,21 @@ public class TestPrefetchRSClose {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
     Table table = TEST_UTIL.createTable(td, null);
-    try {
-      // put data
-      Put put0 = new Put(row0);
-      put0.addColumn(family, qf1, 1, value1);
-      table.put(put0);
-      Put put1 = new Put(row1);
-      put1.addColumn(family, qf2, 1, value2);
-      table.put(put1);
-      TEST_UTIL.flush(tableName);
-    } finally {
-      Thread.sleep(2000);
-    }
 
-    // Default interval for cache persistence is 1000ms. So after 1000ms, both the persistence files
-    // should exist.
-    assertTrue(new File(testDir + "/bucket.persistence").exists());
+    // put data
+    Put put0 = new Put(row0);
+    put0.addColumn(family, qf1, 1, value1);
+    table.put(put0);
+    Put put1 = new Put(row1);
+    put1.addColumn(family, qf2, 1, value2);
+    table.put(put1);
+    TEST_UTIL.flush(tableName);
 
     // Stop the RS
     cluster.stopRegionServer(0);
     LOG.info("Stopped Region Server 0.");
     Thread.sleep(1000);
     assertTrue(new File(testDir + "/bucket.persistence").exists());
-
-    // Start the RS and validate
-    cluster.startRegionServer();
-    assertFalse(new File(testDir + "/bucket.persistence").exists());
   }
 
   @After

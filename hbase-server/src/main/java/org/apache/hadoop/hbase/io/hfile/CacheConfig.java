@@ -99,6 +99,9 @@ public class CacheConfig {
   public static final String BUCKETCACHE_PERSIST_INTERVAL_KEY =
     "hbase.bucketcache.persist.intervalinmillis";
 
+  public static final String BUCKETCACHE_PERSIST_TX_THRESHOLD =
+    "hbase.bucketcache.persist.transactions.threshold";
+
   // Defaults
   public static final boolean DEFAULT_CACHE_DATA_ON_READ = true;
   public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = false;

@@ -81,16 +81,10 @@ public class HFilePreadReader extends HFileReaderImpl {
                 BlockCacheKey cacheKey = new BlockCacheKey(name, offset);
                 BucketEntry entry = cache.getBackingMap().get(cacheKey);
                 if (entry != null) {
-                  cacheKey = new BlockCacheKey(name, offset);
-                  entry = cache.getBackingMap().get(cacheKey);
-                  if (entry == null) {
-                    LOG.debug("No cache key {}, we'll read and cache it", cacheKey);
-                  } else {
-                    offset += entry.getOnDiskSizeWithHeader();
-                    LOG.debug("Found cache key {}. Skipping prefetch, the block is already cached.",
-                      cacheKey);
-                    continue;
-                  }
+                  offset += entry.getOnDiskSizeWithHeader();
+                  LOG.debug("Found cache key {}. Skipping reading the block, it's already cached.",
+                    cacheKey);
+                  continue;
                 } else {
                   LOG.debug("No entry in the backing map for cache key {}", cacheKey);
                 }

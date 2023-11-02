@@ -82,8 +82,20 @@ enum BlockPriority {
   memory = 2;
 }
 
+enum TransactionType {
+  addition = 0;
+  eviction = 1;
+}
 
 message RegionFileSizeMap {
   required string region_name = 1;
   required uint64 region_cached_size = 2;
 }
+
+message BucketCacheTransaction {
+  required BlockCacheKey key = 1;
+  required BucketEntry entry = 2;
+  required TransactionType type = 3;
+}
+
+
