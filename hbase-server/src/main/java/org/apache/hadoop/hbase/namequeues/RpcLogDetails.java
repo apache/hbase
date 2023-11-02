@@ -27,8 +27,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-
 /**
  * RpcCall details that would be passed on to ring buffer of slow log responses
  */
@@ -71,29 +69,7 @@ public class RpcLogDetails extends NamedQueuePayload {
     // overwritten before this slow log is consumed. Such overwriting could
     // cause the slow log payload to be corrupt
     try {
-      if (param instanceof ClientProtos.ScanRequest) {
-        ClientProtos.ScanRequest scanRequest = (ClientProtos.ScanRequest) param;
-        this.param = ClientProtos.ScanRequest.parseFrom(scanRequest.toByteArray());
-      } else if (param instanceof ClientProtos.MutationProto) {
-        ClientProtos.MutationProto mutationProto = (ClientProtos.MutationProto) param;
-        this.param = ClientProtos.MutationProto.parseFrom(mutationProto.toByteArray());
-      } else if (param instanceof ClientProtos.GetRequest) {
-        ClientProtos.GetRequest getRequest = (ClientProtos.GetRequest) param;
-        this.param = ClientProtos.GetRequest.parseFrom(getRequest.toByteArray());
-      } else if (param instanceof ClientProtos.MultiRequest) {
-        ClientProtos.MultiRequest multiRequest = (ClientProtos.MultiRequest) param;
-        this.param = ClientProtos.MultiRequest.parseFrom(multiRequest.toByteArray());
-      } else if (param instanceof ClientProtos.MutateRequest) {
-        ClientProtos.MutateRequest mutateRequest = (ClientProtos.MutateRequest) param;
-        this.param = ClientProtos.MutateRequest.parseFrom(mutateRequest.toByteArray());
-      } else if (param instanceof ClientProtos.CoprocessorServiceRequest) {
-        ClientProtos.CoprocessorServiceRequest coprocessorServiceRequest =
-          (ClientProtos.CoprocessorServiceRequest) param;
-        this.param =
-          ClientProtos.CoprocessorServiceRequest.parseFrom(coprocessorServiceRequest.toByteArray());
-      } else {
-        this.param = param;
-      }
+      this.param = param.newBuilderForType().mergeFrom(param.toByteArray()).build();
     } catch (InvalidProtocolBufferException e) {
       LOG.error("Failed to parse protobuf for message {}", param, e);
       if (this.param == null) {
