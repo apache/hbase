@@ -250,7 +250,7 @@ public class TestHbck {
       for (long pid : pids) {
         assertEquals(Procedure.NO_PROC_ID, pid);
       }
-      // If we pass override, then we should be able to unassign EVEN THOUGH Regions already
+      // If we pass force override, then we should be able to unassign EVEN THOUGH Regions already
       // unassigned.... makes for a mess but operator might want to do this at an extreme when
       // doing fixup of broke cluster.
       pids = hbck.unassigns(

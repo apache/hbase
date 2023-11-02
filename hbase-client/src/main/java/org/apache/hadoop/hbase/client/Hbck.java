@@ -67,6 +67,7 @@ public interface Hbck extends Abortable, Closeable {
    *                           have completed but no other Procedure will be able to make progress
    *                           on the target entity (intentionally). This override flag will
    *                           override this fencing mechanism.
+   * @param forceOverride      Skips preTransitCheck only when selected along with override option
    * @param encodedRegionNames Region encoded names; e.g. 1588230740 is the hard-coded encoding for
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example
    *                           of what a random user-space encoded Region name looks like.
@@ -87,6 +88,7 @@ public interface Hbck extends Abortable, Closeable {
    *                           have completed but no other Procedure will be able to make progress
    *                           on the target entity (intentionally). This override flag will
    *                           override this fencing mechanism.
+   * @param forceOverride      Skips preTransitCheck only when selected along with override option
    * @param encodedRegionNames Region encoded names; e.g. 1588230740 is the hard-coded encoding for
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example
    *                           of what a random user-space encoded Region name looks like.
