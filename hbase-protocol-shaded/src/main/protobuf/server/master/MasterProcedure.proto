@@ -102,6 +102,14 @@ message TruncateTableStateData {
   repeated RegionInfo region_info = 5;
 }
 
+enum TruncateRegionState {
+  TRUNCATE_REGION_PRE_OPERATION = 1;
+  TRUNCATE_REGION_MAKE_OFFLINE = 2;
+  TRUNCATE_REGION_REMOVE = 3;
+  TRUNCATE_REGION_MAKE_ONLINE = 4;
+  TRUNCATE_REGION_POST_OPERATION = 5;
+}
+
 enum DeleteTableState {
   DELETE_TABLE_PRE_OPERATION = 1;
   DELETE_TABLE_REMOVE_FROM_META = 2;

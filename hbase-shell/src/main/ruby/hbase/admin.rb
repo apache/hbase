@@ -197,6 +197,16 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Requests a region truncate
+    def truncate_region(region_name)
+      begin
+        org.apache.hadoop.hbase.util.FutureUtils.get(@admin.truncateRegionAsync(region_name.to_java_bytes))
+      rescue java.lang.IllegalArgumentException, org.apache.hadoop.hbase.UnknownRegionException
+        @admin.truncate_region(region_name.to_java_bytes)
+      end
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Enable/disable one split or merge switch
     # Returns previous switch setting.
     def splitormerge_switch(type, enabled)
@@ -1172,7 +1182,7 @@ module Hbase
         if org.apache.hadoop.hbase.regionserver.BloomType.constants.include?(bloomtype)
           cfdb.setBloomFilterType(org.apache.hadoop.hbase.regionserver.BloomType.valueOf(bloomtype))
         else
-          raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + org.apache.hadoop.hbase.regionserver.StoreFile::BloomType.constants.join(' '))
+          raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + org.apache.hadoop.hbase.regionserver.BloomType.constants.join(' '))
         end
       end
       if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION)

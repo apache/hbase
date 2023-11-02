@@ -153,6 +153,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -1778,6 +1780,21 @@ public final class ProtobufUtil {
       throw getRemoteException(se);
     }
     return getRegionInfos(response);
+  }
+
+  /**
+   * Get the list of cached files
+   */
+  public static List<String> getCachedFilesList(final RpcController controller,
+    final AdminService.BlockingInterface admin) throws IOException {
+    GetCachedFilesListRequest request = GetCachedFilesListRequest.newBuilder().build();
+    GetCachedFilesListResponse response = null;
+    try {
+      response = admin.getCachedFilesList(controller, request);
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+    return new ArrayList<>(response.getCachedFilesList());
   }
 
   /**

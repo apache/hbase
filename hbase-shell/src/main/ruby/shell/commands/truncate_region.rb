@@ -1,4 +1,5 @@
 #
+#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,25 +16,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-blessed==1.17.0
-certifi==2023.7.22
-cffi==1.13.2
-chardet==3.0.4
-cryptography==41.0.4
-defusedxml==0.6.0
-enlighten==1.4.0
-gitdb2==2.0.6
-GitPython==3.1.37
-idna==2.8
-jira==2.0.0
-oauthlib==3.1.0
-pbr==5.4.4
-pycparser==2.19
-PyJWT==2.4.0
-requests==2.31.0
-requests-oauthlib==1.3.0
-requests-toolbelt==0.9.1
-six==1.14.0
-smmap2==2.0.5
-urllib3==1.26.18
-wcwidth==0.1.8
+
+module Shell
+  module Commands
+    class TruncateRegion < Command
+      def help
+        <<-EOF
+Truncate individual region.
+Examples:
+    truncate_region 'REGIONNAME'
+    truncate_region 'ENCODED_REGIONNAME'
+EOF
+      end
+      def command(region_name)
+        admin.truncate_region(region_name)
+      end
+    end
+  end
+end

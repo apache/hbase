@@ -164,6 +164,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProc
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -953,6 +955,18 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         request.hasSplitRow() ? request.getSplitRow().toByteArray() : null, request.getNonceGroup(),
         request.getNonce());
       return SplitTableRegionResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  @Override
+  public MasterProtos.TruncateRegionResponse truncateRegion(RpcController controller,
+    final MasterProtos.TruncateRegionRequest request) throws ServiceException {
+    try {
+      long procId = server.truncateRegion(ProtobufUtil.toRegionInfo(request.getRegionInfo()),
+        request.getNonceGroup(), request.getNonce());
+      return MasterProtos.TruncateRegionResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
@@ -3562,6 +3576,12 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public ExecuteProceduresResponse executeProcedures(RpcController controller,
     ExecuteProceduresRequest request) throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
+  public GetCachedFilesListResponse getCachedFilesList(RpcController controller,
+    GetCachedFilesListRequest request) throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
   }
 

@@ -387,6 +387,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> truncateRegion(byte[] regionName) {
+    return wrap(rawAdmin.truncateRegion(regionName));
+  }
+
+  @Override
   public CompletableFuture<Void> assign(byte[] regionName) {
     return wrap(rawAdmin.assign(regionName));
   }
@@ -989,5 +994,10 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> flushMasterStore() {
     return wrap(rawAdmin.flushMasterStore());
+  }
+
+  @Override
+  public CompletableFuture<List<String>> getCachedFilesList(ServerName serverName) {
+    return wrap(rawAdmin.getCachedFilesList(serverName));
   }
 }

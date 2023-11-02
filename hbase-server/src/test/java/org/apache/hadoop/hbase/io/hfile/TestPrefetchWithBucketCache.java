@@ -106,7 +106,7 @@ public class TestPrefetchWithBucketCache {
     // Prefetches the file blocks
     LOG.debug("First read should prefetch the blocks.");
     readStoreFile(storeFile);
-    BucketCache bc = BucketCache.getBuckedCacheFromCacheConfig(cacheConf).get();
+    BucketCache bc = BucketCache.getBucketCacheFromCacheConfig(cacheConf).get();
     // Our file should have 6 DATA blocks. We should wait for all of them to be cached
     Waiter.waitFor(conf, 300, () -> bc.getBackingMap().size() == 6);
     Map<BlockCacheKey, BucketEntry> snapshot = ImmutableMap.copyOf(bc.getBackingMap());
@@ -123,7 +123,7 @@ public class TestPrefetchWithBucketCache {
     BlockCacheKey key = snapshot.keySet().stream().findFirst().get();
     LOG.debug("removing block {}", key);
     bc.getBackingMap().remove(key);
-    bc.getFullyCachedFiles().remove(storeFile.getName());
+    bc.getFullyCachedFiles().ifPresent(fcf -> fcf.remove(storeFile.getName()));
     assertTrue(snapshot.size() > bc.getBackingMap().size());
     LOG.debug("Third read should prefetch again, as we removed one block for the file.");
     readStoreFile(storeFile);

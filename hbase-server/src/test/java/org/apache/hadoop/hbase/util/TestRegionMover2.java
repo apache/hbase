@@ -23,18 +23,25 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -210,4 +217,174 @@ public class TestRegionMover2 {
     }
   }
 
+  public void loadDummyDataInTable(TableName tableName) throws Exception {
+    Admin admin = TEST_UTIL.getAdmin();
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
+    List<Put> puts = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      puts.add(new Put(Bytes.toBytes("rowkey_" + i)).addColumn(Bytes.toBytes("fam1"),
+        Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)));
+    }
+    table.put(puts);
+    admin.flush(tableName);
+  }
+
+  @Test
+  public void testIsolateSingleRegionOnTheSameServer() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    loadDummyDataInTable(tableName);
+    ServerName sourceServerName = findSourceServerName(tableName);
+    // Isolating 1 region on the same region server.
+    regionIsolationOperation(sourceServerName, sourceServerName, 1, false);
+  }
+
+  @Test
+  public void testIsolateSingleRegionOnTheDifferentServer() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    loadDummyDataInTable(tableName);
+    ServerName sourceServerName = findSourceServerName(tableName);
+    ServerName destinationServerName = findDestinationServerName(sourceServerName);
+    // Isolating 1 region on the different region server.
+    regionIsolationOperation(sourceServerName, destinationServerName, 1, false);
+  }
+
+  @Test
+  public void testIsolateMultipleRegionsOnTheSameServer() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    loadDummyDataInTable(tableName);
+    ServerName sourceServerName = findSourceServerName(tableName);
+    // Isolating 2 regions on the same region server.
+    regionIsolationOperation(sourceServerName, sourceServerName, 2, false);
+  }
+
+  @Test
+  public void testIsolateMultipleRegionsOnTheDifferentServer() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    loadDummyDataInTable(tableName);
+    // Isolating 2 regions on the different region server.
+    ServerName sourceServerName = findSourceServerName(tableName);
+    ServerName destinationServerName = findDestinationServerName(sourceServerName);
+    regionIsolationOperation(sourceServerName, destinationServerName, 2, false);
+  }
+
+  @Test
+  public void testIsolateMetaOnTheSameSever() throws Exception {
+    ServerName metaServerSource = findMetaRSLocation();
+    regionIsolationOperation(metaServerSource, metaServerSource, 1, true);
+  }
+
+  @Test
+  public void testIsolateMetaOnTheDifferentServer() throws Exception {
+    ServerName metaServerSource = findMetaRSLocation();
+    ServerName metaServerDestination = findDestinationServerName(metaServerSource);
+    regionIsolationOperation(metaServerSource, metaServerDestination, 1, true);
+  }
+
+  @Test
+  public void testIsolateMetaAndRandomRegionOnTheMetaServer() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    loadDummyDataInTable(tableName);
+    ServerName metaServerSource = findMetaRSLocation();
+    ServerName randomSeverRegion = findSourceServerName(tableName);
+    regionIsolationOperation(randomSeverRegion, metaServerSource, 2, true);
+  }
+
+  @Test
+  public void testIsolateMetaAndRandomRegionOnTheRandomServer() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    loadDummyDataInTable(tableName);
+    ServerName randomSeverRegion = findSourceServerName(tableName);
+    regionIsolationOperation(randomSeverRegion, randomSeverRegion, 2, true);
+  }
+
+  public ServerName findMetaRSLocation() throws Exception {
+    ZKWatcher zkWatcher = new ZKWatcher(TEST_UTIL.getConfiguration(), null, null);
+    List<HRegionLocation> result = new ArrayList<>();
+    for (String znode : zkWatcher.getMetaReplicaNodes()) {
+      String path = ZNodePaths.joinZNode(zkWatcher.getZNodePaths().baseZNode, znode);
+      int replicaId = zkWatcher.getZNodePaths().getMetaReplicaIdFromPath(path);
+      RegionState state = MetaTableLocator.getMetaRegionState(zkWatcher, replicaId);
+      result.add(new HRegionLocation(state.getRegion(), state.getServerName()));
+    }
+    return result.get(0).getServerName();
+  }
+
+  public ServerName findSourceServerName(TableName tableName) throws Exception {
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    int numOfRS = cluster.getNumLiveRegionServers();
+    ServerName sourceServer = null;
+    for (int i = 0; i < numOfRS; i++) {
+      HRegionServer regionServer = cluster.getRegionServer(i);
+      List<HRegion> hRegions = regionServer.getRegions().stream()
+        .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(tableName))
+        .collect(Collectors.toList());
+      if (hRegions.size() >= 2) {
+        sourceServer = regionServer.getServerName();
+        break;
+      }
+    }
+    if (sourceServer == null) {
+      throw new Exception(
+        "This shouln't happen, No RS found with more than 2 regions of table : " + tableName);
+    }
+    return sourceServer;
+  }
+
+  public ServerName findDestinationServerName(ServerName sourceServerName) throws Exception {
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    ServerName destinationServerName = null;
+    int numOfRS = cluster.getNumLiveRegionServers();
+    for (int i = 0; i < numOfRS; i++) {
+      destinationServerName = cluster.getRegionServer(i).getServerName();
+      if (!destinationServerName.equals(sourceServerName)) {
+        break;
+      }
+    }
+    if (destinationServerName == null) {
+      throw new Exception("This shouldn't happen, No RS found which is different than source RS");
+    }
+    return destinationServerName;
+  }
+
+  public void regionIsolationOperation(ServerName sourceServerName,
+    ServerName destinationServerName, int numRegionsToIsolate, boolean isolateMetaAlso)
+    throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    Admin admin = TEST_UTIL.getAdmin();
+    HRegionServer sourceRS = cluster.getRegionServer(sourceServerName);
+    List<HRegion> hRegions = sourceRS.getRegions().stream()
+      .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(tableName))
+      .collect(Collectors.toList());
+    List<String> listOfRegionIDsToIsolate = new ArrayList<>();
+    for (int i = 0; i < numRegionsToIsolate; i++) {
+      listOfRegionIDsToIsolate.add(hRegions.get(i).getRegionInfo().getEncodedName());
+    }
+
+    if (isolateMetaAlso) {
+      listOfRegionIDsToIsolate.remove(0);
+      listOfRegionIDsToIsolate.add(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
+    }
+
+    HRegionServer destinationRS = cluster.getRegionServer(destinationServerName);
+    String destinationRSName = destinationRS.getServerName().getAddress().toString();
+    RegionMover.RegionMoverBuilder rmBuilder =
+      new RegionMover.RegionMoverBuilder(destinationRSName, TEST_UTIL.getConfiguration()).ack(true)
+        .maxthreads(8).isolateRegionIdArray(listOfRegionIDsToIsolate);
+    try (RegionMover rm = rmBuilder.build()) {
+      LOG.debug("Unloading {} except regions : {}", destinationRS.getServerName(),
+        listOfRegionIDsToIsolate);
+      rm.isolateRegions();
+      Assert.assertEquals(numRegionsToIsolate, destinationRS.getNumberOfOnlineRegions());
+      List<HRegion> onlineRegions = destinationRS.getRegions();
+      for (int i = 0; i < numRegionsToIsolate; i++) {
+        Assert.assertTrue(
+          listOfRegionIDsToIsolate.contains(onlineRegions.get(i).getRegionInfo().getEncodedName()));
+      }
+      LOG.debug("Successfully Isolated " + listOfRegionIDsToIsolate.size() + " regions : "
+        + listOfRegionIDsToIsolate + " on " + destinationRS.getServerName());
+    } finally {
+      admin.recommissionRegionServer(destinationRS.getServerName(), null);
+    }
+  }
 }

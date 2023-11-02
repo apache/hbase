@@ -80,6 +80,12 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
+  public long truncateRegion(RegionInfo regionInfo, long nonceGroup, long nonce)
+    throws IOException {
+    return 0;
+  }
+
+  @Override
   public long createTable(final TableDescriptor desc, final byte[][] splitKeys,
     final long nonceGroup, final long nonce) throws IOException {
     // no-op
