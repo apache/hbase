@@ -210,10 +210,10 @@ public class TruncateRegionProcedure
 
   private TransitRegionStateProcedure createUnAssignProcedures(MasterProcedureEnv env)
     throws IOException {
-    return env.getAssignmentManager().createOneUnassignProcedure(getRegion(), true);
+    return env.getAssignmentManager().createOneUnassignProcedure(getRegion(), true, false);
   }
 
   private TransitRegionStateProcedure createAssignProcedures(MasterProcedureEnv env) {
-    return env.getAssignmentManager().createOneAssignProcedure(getRegion(), true);
+    return env.getAssignmentManager().createOneAssignProcedure(getRegion(), true, false);
   }
 }
