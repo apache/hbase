@@ -95,6 +95,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProc
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -691,6 +693,12 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   @Override
   public HBaseProtos.LogEntry getLogEntries(RpcController controller,
     HBaseProtos.LogRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public GetCachedFilesListResponse getCachedFilesList(RpcController controller,
+    GetCachedFilesListRequest request) throws ServiceException {
     return null;
   }
 

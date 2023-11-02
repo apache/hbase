@@ -187,6 +187,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProc
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -3987,6 +3989,17 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
       throw new ServiceException(e);
     }
     throw new ServiceException("Invalid request params");
+  }
+
+  @Override
+  public GetCachedFilesListResponse getCachedFilesList(RpcController controller,
+    GetCachedFilesListRequest request) throws ServiceException {
+    GetCachedFilesListResponse.Builder responseBuilder = GetCachedFilesListResponse.newBuilder();
+    List<String> fullyCachedFiles = new ArrayList<>();
+    regionServer.getBlockCache().flatMap(BlockCache::getFullyCachedFiles).ifPresent(fcf -> {
+      fullyCachedFiles.addAll(fcf.keySet());
+    });
+    return responseBuilder.addAllCachedFiles(fullyCachedFiles).build();
   }
 
   public RpcScheduler getRpcScheduler() {

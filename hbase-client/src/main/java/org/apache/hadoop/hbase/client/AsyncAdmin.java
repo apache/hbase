@@ -1611,4 +1611,9 @@ public interface AsyncAdmin {
    */
   CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames, String logType,
     ServerType serverType, int limit, Map<String, Object> filterParams);
+
+  /**
+   * Get the list of cached files
+   */
+  CompletableFuture<List<String>> getCachedFilesList(ServerName serverName);
 }

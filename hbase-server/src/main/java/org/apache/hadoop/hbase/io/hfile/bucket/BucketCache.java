@@ -658,8 +658,9 @@ public class BucketCache implements BlockCache, HeapSize {
     fullyCachedFiles.remove(hfileName);
   }
 
-  public Map<String, Pair<String, Long>> getFullyCachedFiles() {
-    return fullyCachedFiles;
+  @Override
+  public Optional<Map<String, Pair<String, Long>>> getFullyCachedFiles() {
+    return Optional.of(fullyCachedFiles);
   }
 
   public static Optional<BucketCache> getBucketCacheFromCacheConfig(CacheConfig cacheConf) {

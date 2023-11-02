@@ -3203,4 +3203,9 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   Future<Void> truncateRegionAsync(byte[] regionName) throws IOException;
+
+  /**
+   * Get the list of cached files
+   */
+  List<String> getCachedFilesList(ServerName serverName) throws IOException;
 }

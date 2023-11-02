@@ -4532,4 +4532,13 @@ public class HBaseAdmin implements Admin {
       }
     });
   }
+
+  /**
+   * Get the list of cached files
+   */
+  @Override
+  public List<String> getCachedFilesList(ServerName serverName) throws IOException {
+    return ProtobufUtil.getCachedFilesList(rpcControllerFactory.newController(),
+      this.connection.getAdmin(serverName));
+  }
 }
