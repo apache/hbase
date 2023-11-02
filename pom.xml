@@ -593,7 +593,7 @@
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.14.1</thrift.version>
     <zookeeper.version>3.8.1.7.2.18.0-SNAPSHOT</zookeeper.version>
-    <jline.version>2.12</jline.version>
+    <jline.version>2.14.6</jline.version>
     <slf4j-reload4j.version>1.7.36</slf4j-reload4j.version>
     <clover.version>4.0.3</clover.version>
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
