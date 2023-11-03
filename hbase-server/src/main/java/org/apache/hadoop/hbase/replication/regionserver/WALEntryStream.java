@@ -474,7 +474,7 @@ class WALEntryStream implements Closeable {
     if (logQueue.getQueueSize(walGroupId) == 1) {
       // Get the size of log file only if there is 1 log file in the queue. If there are
       // more than 1 log file in the queue, then the head will never be the current WAL file.
-      walFileLengthProvider.getLogFileSizeIfBeingWritten(currentPath);
+      fileLength = walFileLengthProvider.getLogFileSizeIfBeingWritten(currentPath);
     }
     WALTailingReader.Result readResult = reader.next(fileLength.orElse(-1));
     long readerPos = readResult.getEntryEndPos();
