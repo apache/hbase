@@ -305,7 +305,7 @@ public class TestShadeSaslAuthenticationProvider {
       rootCause.printStackTrace(new PrintWriter(writer));
       String text = writer.toString();
       assertTrue("Message did not contain expected text",
-        text.contains("Connection reset by peer"));
+        text.contains(InvalidToken.class.getName()));
     }
   }
 }
