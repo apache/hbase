@@ -47,6 +47,10 @@ public class RowSpec {
   private int maxValues = Integer.MAX_VALUE;
 
   public RowSpec(String path) throws IllegalArgumentException {
+    this(path, null);
+  }
+
+  public RowSpec(String path, String keyEncoding) throws IllegalArgumentException {
     int i = 0;
     while (path.charAt(i) == '/') {
       i++;
@@ -55,6 +59,19 @@ public class RowSpec {
     i = parseColumns(path, i);
     i = parseTimestamp(path, i);
     i = parseQueryParams(path, i);
+
+    if(keyEncoding == "b64") {
+      Base64.Decoder decoder = Base64.getDecoder();
+      this.row = decoder.decode(this.row);
+      if(this.endRow) {
+        this.endRow = decoder.decode(this.endRow);
+      }
+      TreeSet<byte[]> decodedColumns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+      for(byte[] encodedColumn : this.columns) {
+        decodedColumns.add(decoder.decode(encodedColumn));
+      }
+      this.columns = decodedColumns;
+    }
   }
 
   private int parseRowKeys(final String path, int i) throws IllegalArgumentException {
