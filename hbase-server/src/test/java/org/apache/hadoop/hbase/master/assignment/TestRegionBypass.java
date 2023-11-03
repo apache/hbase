@@ -112,7 +112,7 @@ public class TestRegionBypass {
     for (Procedure<MasterProcedureEnv> p : ps) {
       if (p instanceof StallingAssignProcedure) {
         List<Boolean> bs =
-          TEST_UTIL.getHbck().bypassProcedure(Arrays.asList(p.getProcId()), 1000, true, true);
+          TEST_UTIL.getHbck().bypassProcedure(Arrays.asList(p.getProcId()), 1000, true, false);
         for (Boolean b : bs) {
           LOG.info("BYPASSED {} {}", p.getProcId(), b);
         }
@@ -135,7 +135,7 @@ public class TestRegionBypass {
     }
     // Now assign with the override flag.
     for (RegionInfo ri : regions) {
-      TEST_UTIL.getHbck().assigns(Arrays.<String> asList(ri.getEncodedName()), true, false);
+      TEST_UTIL.getHbck().assigns(Arrays.<String> asList(ri.getEncodedName()), true, true);
     }
     while (
       !TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().getActiveProcIds()
