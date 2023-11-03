@@ -112,7 +112,7 @@ public class TestRegionBypass {
     for (Procedure<MasterProcedureEnv> p : ps) {
       if (p instanceof StallingAssignProcedure) {
         List<Boolean> bs =
-          TEST_UTIL.getHbck().bypassProcedure(Arrays.asList(p.getProcId()), 1000, true, false);
+          TEST_UTIL.getHbck().bypassProcedure(Arrays.asList(p.getProcId()), 1000, true, true);
         for (Boolean b : bs) {
           LOG.info("BYPASSED {} {}", p.getProcId(), b);
         }
