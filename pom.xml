@@ -748,7 +748,6 @@
     <!-- Still need this to ignore some errors when building javadoc-->
     <doclint>none</doclint>
     <javax.activation.version>1.2.0</javax.activation.version>
-    <!-- Dummy change, TODO, remove before commit -->
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
