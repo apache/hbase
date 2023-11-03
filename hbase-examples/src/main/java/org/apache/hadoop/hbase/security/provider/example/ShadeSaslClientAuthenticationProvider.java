@@ -60,6 +60,12 @@ public class ShadeSaslClientAuthenticationProvider extends ShadeSaslAuthenticati
     return userInfoPB.build();
   }
 
+  @Override
+  public boolean canRetry() {
+    // A static username/password either works or it doesn't. No kind of relogin/retry necessary.
+    return false;
+  }
+
   static class ShadeSaslClientCallbackHandler implements CallbackHandler {
     private final String username;
     private final char[] password;
