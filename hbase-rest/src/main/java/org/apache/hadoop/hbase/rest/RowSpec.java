@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.rest;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -63,7 +64,7 @@ public class RowSpec {
     if(keyEncoding == "b64") {
       Base64.Decoder decoder = Base64.getDecoder();
       this.row = decoder.decode(this.row);
-      if(this.endRow) {
+      if(this.endRow != null) {
         this.endRow = decoder.decode(this.endRow);
       }
       TreeSet<byte[]> decodedColumns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
