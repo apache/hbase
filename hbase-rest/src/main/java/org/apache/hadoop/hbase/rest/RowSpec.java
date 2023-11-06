@@ -61,8 +61,23 @@ public class RowSpec {
     i = parseTimestamp(path, i);
     i = parseQueryParams(path, i);
 
-    if(keyEncoding == "b64") {
-      Base64.Decoder decoder = Base64.getDecoder();
+    if(keyEncoding != null) {
+      // See https://en.wikipedia.org/wiki/Base64#Variants_summary_table
+      Base64.Decoder decoder;
+      switch(keyEncoding) {
+        case "b64":
+        case "base64":
+        case "b64url":
+        case "base64url":
+          decoder = Base64.getUrlDecoder();
+          break;
+        case "b64basic":
+        case "base64basic":
+          decoder = Base64.getDecoder();
+          break;
+        default:
+          throw new IllegalArgumentException("unknown key encoding '" + keyEncoding + "'");
+      }
       this.row = decoder.decode(this.row);
       if(this.endRow != null) {
         this.endRow = decoder.decode(this.endRow);
