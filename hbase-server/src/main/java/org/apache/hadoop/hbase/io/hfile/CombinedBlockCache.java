@@ -77,16 +77,20 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
     boolean updateCacheMetrics) {
-    // We are not in a position to exactly look at LRU cache or BC as BlockType may not be getting
-    // passed always.
-    boolean existInL1 = l1Cache.containsBlock(cacheKey);
-    if (!existInL1 && updateCacheMetrics && !repeat) {
-      // If the block does not exist in L1, the containsBlock should be counted as one miss.
-      l1Cache.getStats().miss(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
+    if (cacheKey.getBlockType() != null) {
+      // We know the block type, so we can check which cache to look
+      return getBlockWithType(cacheKey, caching, repeat, updateCacheMetrics);
     }
-    return existInL1
-      ? l1Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics)
-      : l2Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+    // We don't know the block type. We should try to get it on one of the caches only,
+    // but not both otherwise we'll over compute on misses. Here we check if the key is on L1,
+    // if so, call getBlock on L1 and that will compute the hit. Otherwise, we'll try to get it from
+    // L2 and whatever happens, we'll update the stats there.
+    boolean existInL1 = l1Cache.containsBlock(cacheKey);
+    // if we know it's in L1, just delegate call to l1 and return it
+    if (existInL1) {
+      return l1Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+    }
+    return l2Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
   }
 
   @Override
@@ -95,7 +99,13 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     if (blockType == null) {
       return getBlock(cacheKey, caching, repeat, updateCacheMetrics);
     }
-    boolean metaBlock = isMetaBlock(blockType);
+    cacheKey.setBlockType(blockType);
+    return getBlockWithType(cacheKey, caching, repeat, updateCacheMetrics);
+  }
+
+  private Cacheable getBlockWithType(BlockCacheKey cacheKey, boolean caching, boolean repeat,
+    boolean updateCacheMetrics) {
+    boolean metaBlock = isMetaBlock(cacheKey.getBlockType());
     if (metaBlock) {
       return l1Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
     } else {
