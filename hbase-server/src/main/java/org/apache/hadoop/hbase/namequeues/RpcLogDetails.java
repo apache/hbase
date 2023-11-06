@@ -72,9 +72,7 @@ public class RpcLogDetails extends NamedQueuePayload {
       this.param = param.newBuilderForType().mergeFrom(param.toByteArray()).build();
     } catch (InvalidProtocolBufferException e) {
       LOG.error("Failed to parse protobuf for message {}", param, e);
-      if (this.param == null) {
-        this.param = param;
-      }
+      this.param = param;
     }
   }
 
