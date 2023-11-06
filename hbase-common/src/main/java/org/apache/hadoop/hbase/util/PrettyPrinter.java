@@ -184,7 +184,11 @@ public final class PrettyPrinter {
       hours = matcher.group(6);
       minutes = matcher.group(8);
       seconds = matcher.group(10);
+    } else {
+      LOG.warn("Given interval value '{}' is not a number and does not match human readable format,"
+        + " value will be set to 0.", humanReadableInterval);
     }
+
     ttl = 0;
     ttl += days != null ? Long.parseLong(days) * HConstants.DAY_IN_SECONDS : 0;
     ttl += hours != null ? Long.parseLong(hours) * HConstants.HOUR_IN_SECONDS : 0;
