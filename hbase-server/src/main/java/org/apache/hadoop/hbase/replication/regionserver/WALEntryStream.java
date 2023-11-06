@@ -466,16 +466,6 @@ class WALEntryStream implements Closeable {
    * Returns whether the file is opened for writing.
    */
   private Pair<WALTailingReader.State, Boolean> readNextEntryAndRecordReaderPosition() {
-    // we must call this before actually reading from the reader, as this method will acquire the
-    // rollWriteLock. This is very important, as we will enqueue the new WAL file in postLogRoll,
-    // and before this happens, we could have already finished closing the previous WAL file. If we
-    // do not acquire the rollWriteLock and return whether the current file is being written to, we
-    // may finish reading the previous WAL file and start to read the next one, before it is
-    // enqueued into the logQueue, thus lead to an empty logQueue and make the shipper think the
-    // queue is already ended and quit. See HBASE-28114 and related issues for more details.
-    // in the future, if we want to optimize the logic here, for example, do not call this method
-    // every time, or do not acquire rollWriteLock in the implementation of this method, we need to
-    // carefully review the optimized implementation
     OptionalLong fileLength;
     if (logQueue.getQueueSize(walGroupId) > 1) {
       // if there are more than one files in queue, although it is possible that we are
