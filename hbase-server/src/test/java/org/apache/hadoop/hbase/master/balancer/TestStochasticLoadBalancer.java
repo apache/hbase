@@ -129,6 +129,8 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       when(rl.getWriteRequestCount()).thenReturn(0L);
       when(rl.getMemStoreSize()).thenReturn(Size.ZERO);
       when(rl.getStoreFileSize()).thenReturn(new Size(i, Size.Unit.MEGABYTE));
+      when(rl.getRegionSizeMB()).thenReturn(Size.ZERO);
+      when(rl.getCurrentRegionPrefetchRatio()).thenReturn(0.0f);
 
       Map<byte[], RegionMetrics> regionLoadMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       regionLoadMap.put(Bytes.toBytes(REGION_KEY), rl);

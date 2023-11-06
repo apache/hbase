@@ -96,7 +96,7 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
-    while(!newBucketCache.getBackingMapValidated().get()) {
+    while(!newBucketCache.getBackingMapValidated().get()){
       Thread.sleep(10);
     }
     assertEquals(3, newBucketCache.backingMap.size());

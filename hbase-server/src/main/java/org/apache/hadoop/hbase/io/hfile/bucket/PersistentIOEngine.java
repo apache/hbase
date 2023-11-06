@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Shell;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -70,6 +71,7 @@ public abstract class PersistentIOEngine implements IOEngine {
         sb.append(getFileSize(filePath));
         sb.append(file.lastModified());
       }
+      LOG.debug("Checksum for persistence cache: {}", sb);
       MessageDigest messageDigest = MessageDigest.getInstance(algorithm);
       messageDigest.update(Bytes.toBytes(sb.toString()));
       return messageDigest.digest();
@@ -91,7 +93,8 @@ public abstract class PersistentIOEngine implements IOEngine {
   private static long getFileSize(String filePath) throws IOException {
     DU.setExecCommand(filePath);
     DU.execute();
-    return Long.parseLong(DU.getOutput().split("\t")[0]);
+    String size = DU.getOutput().split("\t")[0];
+    return StringUtils.isEmpty(size.trim()) ? 0 : Long.parseLong(size);
   }
 
   private static class DuFileCommand extends Shell.ShellCommandExecutor {

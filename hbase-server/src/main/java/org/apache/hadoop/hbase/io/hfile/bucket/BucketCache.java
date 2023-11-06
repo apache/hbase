@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -52,6 +53,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
@@ -78,6 +80,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
 import org.apache.hadoop.hbase.util.IdReadWriteLock.ReferenceType;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -146,10 +149,17 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private AtomicBoolean backingMapValidated = new AtomicBoolean(false);
 
-  /** Set of files for which prefetch is completed */
-  final Map<String, Boolean> fullyCachedFiles = new ConcurrentHashMap<>();
-
   private BucketCachePersister cachePersister;
+  /**
+   * Map of hFile -> Region -> File size. This map is used to track all files completed prefetch,
+   * together with the region those belong to and the total cached size for the region.TestBlockEvictionOnRegionMovement
+   */
+  final Map<String,Pair<String, Long>> fullyCachedFiles = new ConcurrentHashMap<>();
+  /**
+   * Map of region -> total size of the region prefetched on this region server. This is the total
+   * size of hFiles for this region prefetched on this region server
+   */
+  final Map<String,Long> regionPrefetchedSizeMap = new ConcurrentHashMap<>();
 
   /**
    * Flag if the cache is enabled or not... We shut it off if there are IO errors for some time, so
@@ -592,7 +602,7 @@ public class BucketCache implements BlockCache, HeapSize {
           return cachedBlock;
         }
       } catch (HBaseIOException hioex) {
-        // When using file io engine persistent cache,
+        //When using file io engine persistent cache,
         // the cache map state might differ from the actual cache. If we reach this block,
         // we should remove the cache key entry from the backing map
         backingMap.remove(key);
@@ -625,13 +635,56 @@ public class BucketCache implements BlockCache, HeapSize {
       cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
     }
     if (ioEngine.isPersistent()) {
-      fullyCachedFiles.remove(cacheKey.getHfileName());
+      removeFileFromPrefetch(cacheKey.getHfileName());
       setCacheInconsistent(true);
     }
   }
 
-  public void fileCacheCompleted(String fileName) {
-    fullyCachedFiles.put(fileName, true);
+  private void removeFileFromPrefetch(String hfileName) {
+    // Update the regionPrefetchedSizeMap before removing the file from prefetchCompleted
+    if (fullyCachedFiles.containsKey(hfileName)) {
+      Pair<String, Long> regionEntry = fullyCachedFiles.get(hfileName);
+      String regionEncodedName = regionEntry.getFirst();
+      long filePrefetchSize = regionEntry.getSecond();
+      LOG.debug("Removing file {} for region {}", hfileName, regionEncodedName);
+      regionPrefetchedSizeMap.computeIfPresent(regionEncodedName,
+        (rn, pf) -> pf - filePrefetchSize);
+      // If all the blocks for a region are evicted from the cache, remove the entry for that region
+      if (regionPrefetchedSizeMap.containsKey(regionEncodedName) &&
+        regionPrefetchedSizeMap.get(regionEncodedName) == 0) {
+        regionPrefetchedSizeMap.remove(regionEncodedName);
+      }
+    }
+    fullyCachedFiles.remove(hfileName);
+  }
+
+  public Map<String, Pair<String, Long>> getFullyCachedFiles() {
+    return fullyCachedFiles;
+  }
+
+  public static Optional<BucketCache> getBucketCacheFromCacheConfig(CacheConfig cacheConf) {
+    if (cacheConf.getBlockCache().isPresent()) {
+      BlockCache bc = cacheConf.getBlockCache().get();
+      if (bc instanceof CombinedBlockCache) {
+        BlockCache l2 = ((CombinedBlockCache) bc).getSecondLevelCache();
+        if (l2 instanceof BucketCache) {
+          return Optional.of((BucketCache) l2);
+        }
+      } else if (bc instanceof BucketCache) {
+        return Optional.of((BucketCache) bc);
+      }
+    }
+    return Optional.empty();
+  }
+
+  public void fileCacheCompleted(Path filePath, long size) {
+    Pair<String,Long> pair = new Pair<>();
+    //sets the region name
+    String regionName = filePath.getParent().getParent().getName();
+    pair.setFirst(regionName);
+    pair.setSecond(size);
+    fullyCachedFiles.put(filePath.getName(), pair);
+    regionPrefetchedSizeMap.merge(regionName, size, (oldpf, fileSize) -> oldpf + fileSize);
   }
 
   /**
@@ -1012,6 +1065,7 @@ public class BucketCache implements BlockCache, HeapSize {
   class WriterThread extends Thread {
     private final BlockingQueue<RAMQueueEntry> inputQueue;
     private volatile boolean writerEnabled = true;
+
     WriterThread(BlockingQueue<RAMQueueEntry> queue) {
       super("BucketCacheWriterThread");
       this.inputQueue = queue;
@@ -1072,8 +1126,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
   /**
    * Prepare and return a warning message for Bucket Allocator Exception
-   * @param fle The exception
-   * @param re  The RAMQueueEntry for which the exception was thrown.
+   * @param re The RAMQueueEntry for which the exception was thrown.
    * @return A warning message created from the input RAMQueueEntry object.
    */
   private static String getAllocationFailWarningMessage(final BucketAllocatorException fle,
@@ -1265,7 +1318,6 @@ public class BucketCache implements BlockCache, HeapSize {
     try (FileOutputStream fos = new FileOutputStream(tempPersistencePath, false)) {
       fos.write(ProtobufMagic.PB_MAGIC);
       BucketProtoUtils.toPB(this).writeDelimitedTo(fos);
-      fos.flush();
     } catch (IOException e) {
       LOG.error("Failed to persist bucket cache to file", e);
       throw e;
@@ -1280,6 +1332,11 @@ public class BucketCache implements BlockCache, HeapSize {
 
   public boolean isCachePersistent() {
     return ioEngine.isPersistent() && persistencePath != null;
+  }
+
+
+  public Map<String, Long> getRegionPrefetchInfo() {
+    return Collections.unmodifiableMap(regionPrefetchedSizeMap);
   }
 
   /**
@@ -1312,6 +1369,29 @@ public class BucketCache implements BlockCache, HeapSize {
       bucketAllocator = new BucketAllocator(cacheCapacity, bucketSizes, backingMap, realCacheSize);
       blockNumber.add(backingMap.size());
       LOG.info("Bucket cache retrieved from file successfully");
+    }
+  }
+
+  private void updateRegionSizeMapWhileRetrievingFromFile() {
+    // Update the regionPrefetchedSizeMap with the region size while restarting the region server
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Updating region size map after retrieving prefetch file list");
+      dumpPrefetchList();
+    }
+    regionPrefetchedSizeMap.clear();
+    fullyCachedFiles.forEach((hFileName, hFileSize) -> {
+      // Get the region name for each file
+      String regionEncodedName = hFileSize.getFirst();
+      long filePrefetchSize = hFileSize.getSecond();
+      regionPrefetchedSizeMap.merge(regionEncodedName, filePrefetchSize,
+        (oldpf, fileSize) -> oldpf + fileSize);
+    });
+  }
+
+  private void dumpPrefetchList() {
+    for (Map.Entry<String, Pair<String, Long>> outerEntry : fullyCachedFiles.entrySet()) {
+      LOG.debug("PrefetchEntry:<{},<{},{}>>", outerEntry.getKey(),
+        outerEntry.getValue().getFirst(), outerEntry.getValue().getSecond());
     }
   }
 
@@ -1379,7 +1459,7 @@ public class BucketCache implements BlockCache, HeapSize {
     backingMap = BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap(),
       this::createRecycler);
     fullyCachedFiles.clear();
-    fullyCachedFiles.putAll(proto.getPrefetchedFilesMap());
+    fullyCachedFiles.putAll(BucketProtoUtils.fromPB(proto.getFullyCachedFilesMap()));
     if (proto.hasChecksum()) {
       try {
         ((PersistentIOEngine) ioEngine).verifyFileIntegrity(proto.getChecksum().toByteArray(),
@@ -1422,6 +1502,7 @@ public class BucketCache implements BlockCache, HeapSize {
       LOG.info("Persistent file is old format, it does not support verifying file integrity!");
       backingMapValidated.set(true);
     }
+    updateRegionSizeMapWhileRetrievingFromFile();
     verifyCapacityAndClasses(proto.getCacheCapacity(), proto.getIoClass(), proto.getMapClass());
   }
 
@@ -1559,7 +1640,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public int evictBlocksByHfileName(String hfileName) {
-    this.fullyCachedFiles.remove(hfileName);
+    this.removeFileFromPrefetch(hfileName);
     Set<BlockCacheKey> keySet = blocksByHFile.subSet(new BlockCacheKey(hfileName, Long.MIN_VALUE),
       true, new BlockCacheKey(hfileName, Long.MAX_VALUE), true);
 
@@ -1633,7 +1714,7 @@ public class BucketCache implements BlockCache, HeapSize {
     private boolean isCachePersistent;
 
     RAMQueueEntry(BlockCacheKey bck, Cacheable data, long accessCounter, boolean inMemory,
-      boolean isCachePersistent) {
+        boolean isCachePersistent) {
       this.key = bck;
       this.data = data;
       this.accessCounter = accessCounter;
@@ -1942,24 +2023,4 @@ public class BucketCache implements BlockCache, HeapSize {
   public AtomicBoolean getBackingMapValidated() {
     return backingMapValidated;
   }
-
-  public Map<String, Boolean> getFullyCachedFiles() {
-    return fullyCachedFiles;
-  }
-
-  public static Optional<BucketCache> getBucketCacheFromCacheConfig(CacheConfig cacheConf) {
-    if (cacheConf.getBlockCache().isPresent()) {
-      BlockCache bc = cacheConf.getBlockCache().get();
-      if (bc instanceof CombinedBlockCache) {
-        BlockCache l2 = ((CombinedBlockCache) bc).getSecondLevelCache();
-        if (l2 instanceof BucketCache) {
-          return Optional.of((BucketCache) l2);
-        }
-      } else if (bc instanceof BucketCache) {
-        return Optional.of((BucketCache) bc);
-      }
-    }
-    return Optional.empty();
-  }
-
 }

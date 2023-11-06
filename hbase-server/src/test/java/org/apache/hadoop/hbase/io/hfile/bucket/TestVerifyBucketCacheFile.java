@@ -25,7 +25,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.file.FileSystems;
@@ -36,20 +35,19 @@ import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import javax.security.auth.login.ConfigurationSpi;
 
 /**
  * Basic test for check file's integrity before start BucketCache in fileIOEngine
@@ -162,10 +160,10 @@ public class TestVerifyBucketCacheFile {
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY, 300);
-    String mapFileName = testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime();
-    BucketCache bucketCache =
-      new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
-        constructedBlockSizes, writeThreads, writerQLen, mapFileName, 60 * 1000, conf);
+
+    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
+      testDir + "/bucket.persistence", 60 * 1000, conf);
 
     long usedSize = bucketCache.getAllocator().getUsedSize();
     assertEquals(0, usedSize);
@@ -180,13 +178,14 @@ public class TestVerifyBucketCacheFile {
     // Shutdown BucketCache
     bucketCache.shutdown();
     // Delete the persistence file
-    File mapFile = new File(mapFileName);
-    assertTrue(mapFile.delete());
+    final java.nio.file.Path mapFile =
+      FileSystems.getDefault().getPath(testDir.toString(), "bucket.persistence");
+    assertTrue(Files.deleteIfExists(mapFile));
     Thread.sleep(350);
     // Create BucketCache
-    bucketCache =
-      new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
-        constructedBlockSizes, writeThreads, writerQLen, mapFileName, 60 * 1000, conf);
+    bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
+      testDir + "/bucket.persistence", 60 * 1000, conf);
     assertEquals(0, bucketCache.getAllocator().getUsedSize());
     assertEquals(0, bucketCache.backingMap.size());
   }
@@ -244,15 +243,17 @@ public class TestVerifyBucketCacheFile {
   /**
    * Test whether BucketCache is started normally after modifying the cache file's last modified
    * time. First Start BucketCache and add some blocks, then shutdown BucketCache and persist cache
-   * to file. Then Restart BucketCache after modify cache file's last modified time. HBASE-XXXX has
-   * modified persistence cache such that now we store extra 8 bytes at the end of each block in the
-   * cache, representing the nanosecond time the block has been cached. So in the event the cache
-   * file has failed checksum verification during loading time, we go through all the cached blocks
-   * in the cache map and validate the cached time long between what is in the map and the cache
-   * file. If that check fails, we pull the cache key entry out of the map. Since in this test we
-   * are only modifying the access time to induce a checksum error, the cache file content is still
-   * valid and the extra verification should validate that all cache keys in the map are still
-   * recoverable from the cache.
+   * to file. Then Restart BucketCache after modify cache file's last modified time.
+   * HBASE-XXXX has modified persistence cache such that now we store extra 8 bytes
+   * at the end of each block in the cache, representing the nanosecond time the block has been
+   * cached. So in the event the cache file has failed checksum verification during loading time,
+   * we go through all the cached blocks in the cache map and validate the cached time long between
+   * what is in the map and the cache file. If that check fails, we pull the cache key entry out of
+   * the map.
+   * Since in this test we are only modifying the access time to induce a checksum error, the cache
+   * file content is still valid and the extra verification should validate that all cache keys in
+   * the map are still recoverable from the cache.
+   *
    * @throws Exception the exception
    */
   @Test
@@ -266,8 +267,6 @@ public class TestVerifyBucketCacheFile {
         constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
     long usedSize = bucketCache.getAllocator().getUsedSize();
     assertEquals(0, usedSize);
-
-    Pair<String, Long> myPair = new Pair<>();
 
     CacheTestUtils.HFileBlockPair[] blocks =
       CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
@@ -293,15 +292,16 @@ public class TestVerifyBucketCacheFile {
     assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
     assertEquals(blockCount, bucketCache.backingMap.size());
 
+
     TEST_UTIL.cleanupTestDir();
   }
 
   /**
-   * When using persistent bucket cache, there may be crashes between persisting the backing map and
-   * syncing new blocks to the cache file itself, leading to an inconsistent state between the cache
-   * keys and the cached data. This is to make sure the cache keys are updated accordingly, and the
-   * keys that are still valid do succeed in retrieve related block data from the cache without any
-   * corruption.
+   * When using persistent bucket cache, there may be crashes between persisting the backing map
+   * and syncing new blocks to the cache file itself, leading to an inconsistent state between
+   * the cache keys and the cached data. This is to make sure the cache keys are updated
+   * accordingly, and the keys that are still valid do succeed in retrieve related block data from
+   * the cache without any corruption.
    * @throws Exception the exception
    */
   @Test
@@ -310,12 +310,12 @@ public class TestVerifyBucketCacheFile {
     Path testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
     Configuration conf = HBaseConfiguration.create();
-    // Disables the persister thread by setting its interval to MAX_VALUE
+    //Disables the persister thread by setting its interval to MAX_VALUE
     conf.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, Long.MAX_VALUE);
-    String mapFileName = testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime();
-    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-      constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
-      DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    BucketCache bucketCache =
+      new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen,
+        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
 
     CacheTestUtils.HFileBlockPair[] blocks =
       CacheTestUtils.generateHFileBlocks(constructedBlockSize, 4);
@@ -323,29 +323,28 @@ public class TestVerifyBucketCacheFile {
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[0].getBlockName(), blocks[0].getBlock());
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[1].getBlockName(), blocks[1].getBlock());
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[2].getBlockName(), blocks[2].getBlock());
-    // saves the current state
+    //saves the current state
     bucketCache.persistToFile();
-    // evicts first block
+    //evicts first block
     bucketCache.evictBlock(blocks[0].getBlockName());
 
-    // now adds a fourth block to bucket cache
+    //now adds a fourth block to bucket cache
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[3].getBlockName(), blocks[3].getBlock());
-    // Creates new bucket cache instance without persisting to file after evicting first block
+    //Creates new bucket cache instance without persisting to file after evicting first block
     // and caching fourth block. So the bucket cache file has only the last three blocks,
     // but backing map (containing cache keys) was persisted when first three blocks
     // were in the cache. So the state on this recovery is:
     // - Backing map: [block0, block1, block2]
     // - Cache: [block1, block2, block3]
     // Therefore, this bucket cache would be able to recover only block1 and block2.
-    BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-      constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
-      DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    BucketCache newBucketCache =
+      new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen,
+        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
 
     assertNull(newBucketCache.getBlock(blocks[0].getBlockName(), false, false, false));
-    assertEquals(blocks[1].getBlock(),
-      newBucketCache.getBlock(blocks[1].getBlockName(), false, false, false));
-    assertEquals(blocks[2].getBlock(),
-      newBucketCache.getBlock(blocks[2].getBlockName(), false, false, false));
+    assertEquals(blocks[1].getBlock(), newBucketCache.getBlock(blocks[1].getBlockName(), false, false, false));
+    assertEquals(blocks[2].getBlock(), newBucketCache.getBlock(blocks[2].getBlockName(), false, false, false));
     assertNull(newBucketCache.getBlock(blocks[3].getBlockName(), false, false, false));
     assertEquals(2, newBucketCache.backingMap.size());
     TEST_UTIL.cleanupTestDir();
@@ -354,6 +353,13 @@ public class TestVerifyBucketCacheFile {
   private void waitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey)
     throws InterruptedException {
     while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
+      Thread.sleep(100);
+    }
+  }
+
+  private void waitUntilEvictedFromBucket(BucketCache cache, BlockCacheKey cacheKey)
+    throws InterruptedException {
+    while (cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
       Thread.sleep(100);
     }
   }

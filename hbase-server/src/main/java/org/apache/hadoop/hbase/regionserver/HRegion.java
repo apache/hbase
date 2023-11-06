@@ -1576,7 +1576,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             if (blockCache instanceof CombinedBlockCache) {
               BlockCache l2 = ((CombinedBlockCache) blockCache).getSecondLevelCache();
               if (l2 instanceof BucketCache) {
-                if (((BucketCache) l2).isCachePersistenceEnabled()) {
+                if (((BucketCache) l2).isCachePersistent()) {
                   LOG.info(
                     "Closing region {} during a graceful stop, and cache persistence is on, "
                       + "so setting evict on close to false. ",

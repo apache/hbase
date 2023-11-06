@@ -32,7 +32,12 @@ message BucketCacheEntry {
   map<int32, string> deserializers = 4;
   required BackingMap backing_map = 5;
   optional bytes checksum = 6;
-  map<string, bool> prefetched_files = 7;
+  map<string, RegionFileSizeMap> fully_cached_files = 7;
+}
+
+message RegionFileSizeMap {
+  required string region_name = 1;
+  required uint64 region_prefetch_size = 2;
 }
 
 message BackingMap {

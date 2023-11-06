@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
+import static org.apache.hadoop.hbase.io.hfile.BlockCacheFactory.BUCKET_CACHE_PERSISTENT_PATH_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -77,7 +78,7 @@ public class TestBlockEvictionOnRegionMovement {
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     conf.set(BUCKET_CACHE_IOENGINE_KEY, "file:" + testDir + "/bucket.cache");
     conf.setInt("hbase.bucketcache.size", 400);
-    conf.set("hbase.bucketcache.persistent.path", testDir + "/bucket.persistence");
+    conf.set(BUCKET_CACHE_PERSISTENT_PATH_KEY, testDir + "/bucket.persistence");
     conf.setLong(CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY, 100);
     conf.setBoolean(CacheConfig.EVICT_BLOCKS_ON_CLOSE_KEY, true);
     zkCluster = TEST_UTIL.startMiniZKCluster();

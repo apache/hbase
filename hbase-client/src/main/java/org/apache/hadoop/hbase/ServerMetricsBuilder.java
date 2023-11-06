@@ -84,6 +84,7 @@ public final class ServerMetricsBuilder {
       .setReplicationLoadSink(serverLoadPB.hasReplLoadSink()
         ? ProtobufUtil.toReplicationLoadSink(serverLoadPB.getReplLoadSink())
         : null)
+      .setRegionPrefetchInfo(serverLoadPB.getRegionPrefetchInfoMap())
       .setReportTimestamp(serverLoadPB.getReportEndTime())
       .setLastReportTimestamp(serverLoadPB.getReportStartTime()).setVersionNumber(versionNumber)
       .setVersion(version).build();
@@ -108,6 +109,7 @@ public final class ServerMetricsBuilder {
         .map(UserMetricsBuilder::toUserMetrics).collect(Collectors.toList()))
       .addAllReplLoadSource(metrics.getReplicationLoadSourceList().stream()
         .map(ProtobufUtil::toReplicationLoadSource).collect(Collectors.toList()))
+      .putAllRegionPrefetchInfo(metrics.getRegionPrefetchInfo())
       .setReportStartTime(metrics.getLastReportTimestamp())
       .setReportEndTime(metrics.getReportTimestamp());
     if (metrics.getReplicationLoadSink() != null) {
@@ -137,6 +139,7 @@ public final class ServerMetricsBuilder {
   private final Set<String> coprocessorNames = new TreeSet<>();
   private long reportTimestamp = System.currentTimeMillis();
   private long lastReportTimestamp = 0;
+  private Map<String, Integer> regionPrefetchInfo = new HashMap<>();
 
   private ServerMetricsBuilder(ServerName serverName) {
     this.serverName = serverName;
@@ -202,6 +205,11 @@ public final class ServerMetricsBuilder {
     return this;
   }
 
+  public ServerMetricsBuilder setRegionPrefetchInfo(Map<String, Integer> value) {
+    this.regionPrefetchInfo = value;
+    return this;
+  }
+
   public ServerMetricsBuilder setReportTimestamp(long value) {
     this.reportTimestamp = value;
     return this;
@@ -215,7 +223,7 @@ public final class ServerMetricsBuilder {
   public ServerMetrics build() {
     return new ServerMetricsImpl(serverName, versionNumber, version, requestCountPerSecond,
       requestCount, usedHeapSize, maxHeapSize, infoServerPort, sources, sink, regionStatus,
-      coprocessorNames, reportTimestamp, lastReportTimestamp, userMetrics);
+      coprocessorNames, reportTimestamp, lastReportTimestamp, userMetrics, regionPrefetchInfo);
   }
 
   private static class ServerMetricsImpl implements ServerMetrics {
@@ -235,12 +243,13 @@ public final class ServerMetricsBuilder {
     private final long reportTimestamp;
     private final long lastReportTimestamp;
     private final Map<byte[], UserMetrics> userMetrics;
+    private final Map<String, Integer> regionPrefetchInfo;
 
     ServerMetricsImpl(ServerName serverName, int versionNumber, String version,
       long requestCountPerSecond, long requestCount, Size usedHeapSize, Size maxHeapSize,
       int infoServerPort, List<ReplicationLoadSource> sources, ReplicationLoadSink sink,
       Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames, long reportTimestamp,
-      long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics) {
+      long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics, Map<String, Integer> regionPrefetchInfo) {
       this.serverName = Preconditions.checkNotNull(serverName);
       this.versionNumber = versionNumber;
       this.version = version;
@@ -253,6 +262,7 @@ public final class ServerMetricsBuilder {
       this.sink = sink;
       this.regionStatus = Preconditions.checkNotNull(regionStatus);
       this.userMetrics = Preconditions.checkNotNull(userMetrics);
+      this.regionPrefetchInfo = Preconditions.checkNotNull(regionPrefetchInfo);
       this.coprocessorNames = Preconditions.checkNotNull(coprocessorNames);
       this.reportTimestamp = reportTimestamp;
       this.lastReportTimestamp = lastReportTimestamp;
@@ -325,6 +335,12 @@ public final class ServerMetricsBuilder {
     @Override
     public Map<byte[], UserMetrics> getUserMetrics() {
       return Collections.unmodifiableMap(userMetrics);
+    }
+
+    @Override
+    public Map<String, Integer> getRegionPrefetchInfo() {
+      return Collections.unmodifiableMap(regionPrefetchInfo);
+
     }
 
     @Override

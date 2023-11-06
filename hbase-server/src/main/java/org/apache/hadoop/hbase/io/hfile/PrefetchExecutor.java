@@ -31,11 +31,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 @InterfaceAudience.Private
 public final class PrefetchExecutor {
 
@@ -61,7 +59,7 @@ public final class PrefetchExecutor {
     prefetchExecutorPool = new ScheduledThreadPoolExecutor(prefetchThreads, new ThreadFactory() {
       @Override
       public Thread newThread(Runnable r) {
-        String name = "hfile-prefetch-" + EnvironmentEdgeManager.currentTime();
+        String name = "hfile-prefetch-" + System.currentTimeMillis();
         Thread t = new Thread(r, name);
         t.setDaemon(true);
         return t;
@@ -103,7 +101,7 @@ public final class PrefetchExecutor {
   public static void complete(Path path) {
     prefetchFutures.remove(path);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Prefetch completed for {}", path.getName());
+      LOG.debug("Prefetch completed for " + path);
     }
   }
 
@@ -113,7 +111,9 @@ public final class PrefetchExecutor {
       // ok to race with other cancellation attempts
       future.cancel(true);
       prefetchFutures.remove(path);
-      LOG.debug("Prefetch cancelled for {}", path);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Prefetch cancelled for " + path);
+      }
     }
   }
 
@@ -124,7 +124,6 @@ public final class PrefetchExecutor {
     }
     return true;
   }
-
   private PrefetchExecutor() {
   }
 }

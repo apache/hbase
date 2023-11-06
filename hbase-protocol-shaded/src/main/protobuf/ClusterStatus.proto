@@ -177,6 +177,12 @@ message RegionLoad {
     MAJOR = 2;
     MAJOR_AND_MINOR = 3;
   }
+
+  /** Total region size in MB */
+  optional uint32 region_size_MB = 28;
+
+  /** Current region prefetch ratio on this server */
+  optional float current_region_prefetch_ratio = 29;
 }
 
 message UserLoad {
@@ -285,6 +291,11 @@ message ServerLoad {
    * The metrics for each user on this region server
    */
   repeated UserLoad userLoads = 12;
+
+  /**
+   * The metrics for region prefetched on this region server
+   */
+  map<string, uint32> regionPrefetchInfo = 13;
 }
 
 message LiveServerInfo {

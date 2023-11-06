@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.namequeues.BalancerRejectionDetails;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -148,6 +149,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private float minCostNeedBalance = 0.025f;
   private boolean isBalancerDecisionRecording = false;
   private boolean isBalancerRejectionRecording = false;
+  Map<String, Pair<ServerName, Float>> oldRegionPrefetchMap = new HashMap<>();
 
   protected List<CandidateGenerator> candidateGenerators;
 
@@ -159,7 +161,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   private double[] weightsOfGenerators;
-  private List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
+  protected List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
   private float sumMultiplier;
   // to save and report costs to JMX
   private double curOverallCost = 0d;
@@ -205,8 +207,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if (localityCandidateGenerator == null) {
       localityCandidateGenerator = new LocalityBasedCandidateGenerator();
     }
-    localityCost = new ServerLocalityCostFunction(conf);
-    rackLocalityCost = new RackLocalityCostFunction(conf);
 
     if (this.candidateGenerators == null) {
       candidateGenerators = Lists.newArrayList();
@@ -216,21 +216,25 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       candidateGenerators.add(GeneratorType.RACK.ordinal(),
         new RegionReplicaRackCandidateGenerator());
     }
-    regionReplicaHostCostFunction = new RegionReplicaHostCostFunction(conf);
-    regionReplicaRackCostFunction = new RegionReplicaRackCostFunction(conf);
-    costFunctions = new ArrayList<>();
-    addCostFunction(new RegionCountSkewCostFunction(conf));
-    addCostFunction(new PrimaryRegionCountSkewCostFunction(conf));
-    addCostFunction(new MoveCostFunction(conf));
-    addCostFunction(localityCost);
-    addCostFunction(rackLocalityCost);
-    addCostFunction(new TableSkewCostFunction(conf));
-    addCostFunction(regionReplicaHostCostFunction);
-    addCostFunction(regionReplicaRackCostFunction);
-    addCostFunction(new ReadRequestCostFunction(conf));
-    addCostFunction(new WriteRequestCostFunction(conf));
-    addCostFunction(new MemStoreSizeCostFunction(conf));
-    addCostFunction(new StoreFileCostFunction(conf));
+    if (this.costFunctions == null) {
+      localityCost = new ServerLocalityCostFunction(conf);
+      rackLocalityCost = new RackLocalityCostFunction(conf);
+      regionReplicaHostCostFunction = new RegionReplicaHostCostFunction(conf);
+      regionReplicaRackCostFunction = new RegionReplicaRackCostFunction(conf);
+      costFunctions = new ArrayList<>();
+      addCostFunction(new RegionCountSkewCostFunction(conf));
+      addCostFunction(new PrimaryRegionCountSkewCostFunction(conf));
+      addCostFunction(new MoveCostFunction(conf));
+      addCostFunction(localityCost);
+      addCostFunction(rackLocalityCost);
+      addCostFunction(new TableSkewCostFunction(conf));
+      addCostFunction(regionReplicaHostCostFunction);
+      addCostFunction(regionReplicaRackCostFunction);
+      addCostFunction(new ReadRequestCostFunction(conf));
+      addCostFunction(new WriteRequestCostFunction(conf));
+      addCostFunction(new MemStoreSizeCostFunction(conf));
+      addCostFunction(new StoreFileCostFunction(conf));
+    }
     loadCustomCostFunctions(conf);
 
     curFunctionCosts = new double[costFunctions.size()];
@@ -324,6 +328,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   @Override
   protected synchronized boolean areSomeRegionReplicasColocated(Cluster c) {
+    if (regionReplicaHostCostFunction == null) {
+      return false;
+    }
     regionReplicaHostCostFunction.init(c);
     if (Math.abs(regionReplicaHostCostFunction.cost()) > CostFunction.COST_EPSILON) {
       return true;
@@ -458,7 +465,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // The clusterState that is given to this method contains the state
     // of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
-    Cluster cluster = new Cluster(loadOfOneTable, loads, finder, rackManager);
+    Cluster cluster = new Cluster(loadOfOneTable, loads, finder, rackManager, oldRegionPrefetchMap);
 
     long startTime = EnvironmentEdgeManager.currentTime();
 
@@ -568,7 +575,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return null;
   }
 
-  private void sendRejectionReasonToRingBuffer(String reason, List<CostFunction> costFunctions) {
+  protected void sendRejectionReasonToRingBuffer(String reason, List<CostFunction> costFunctions) {
     if (this.isBalancerRejectionRecording) {
       BalancerRejection.Builder builder = new BalancerRejection.Builder().setReason(reason);
       if (costFunctions != null) {
@@ -634,7 +641,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
-  private String functionCost() {
+  protected String functionCost() {
     StringBuilder builder = new StringBuilder();
     for (CostFunction c : costFunctions) {
       builder.append(c.getClass().getSimpleName());
@@ -753,6 +760,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         c.updateWeight(weightsOfGenerators);
       }
     }
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
+  List<CostFunction> getCostFunctions() {
+    return costFunctions;
   }
 
   /**

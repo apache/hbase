@@ -388,6 +388,12 @@ public class RegionLoad implements RegionMetrics {
     return metrics.getCompactionState();
   }
 
+  @Override
+  public Size getRegionSizeMB() { return metrics.getRegionSizeMB(); }
+
+  @Override
+  public float getCurrentRegionPrefetchRatio() { return metrics.getCurrentRegionPrefetchRatio(); }
+
   /**
    * @see java.lang.Object#toString()
    */
@@ -420,6 +426,8 @@ public class RegionLoad implements RegionMetrics {
     Strings.appendKeyValue(sb, "compactionProgressPct", compactionProgressPct);
     Strings.appendKeyValue(sb, "completeSequenceId", this.getCompleteSequenceId());
     Strings.appendKeyValue(sb, "dataLocality", this.getDataLocality());
+    Strings.appendKeyValue(sb, "regionSizeMB", this.getRegionSizeMB());
+    Strings.appendKeyValue(sb, "currentRegionPrefetchRatio", this.getCurrentRegionPrefetchRatio());
     return sb.toString();
   }
 }

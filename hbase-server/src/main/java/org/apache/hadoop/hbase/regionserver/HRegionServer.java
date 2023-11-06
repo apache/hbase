@@ -56,12 +56,16 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javax.management.MalformedObjectNameException;
 import javax.servlet.http.HttpServlet;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
+import org.apache.commons.lang3.mutable.MutableDouble;
+import org.apache.commons.lang3.mutable.MutableFloat;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -84,6 +88,7 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -111,7 +116,10 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
+import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.NettyRpcClientConfigHelper;
@@ -246,6 +254,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 public class HRegionServer extends Thread
   implements RegionServerServices, LastSequenceId, ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(HRegionServer.class);
+
+  private static final int unitMB = 1024 * 1024;
+  private static final int unitKB = 1024;
 
   /**
    * For testing only! Set to true to skip notifying region assignment to master .
@@ -1407,6 +1418,11 @@ public class HRegionServer extends Thread
         serverLoad.addCoprocessors(coprocessorBuilder.setName(coprocessor).build());
       }
     }
+    computeIfPersistentBucketCache(bc -> {
+      bc.getRegionPrefetchInfo().forEach((regionName, prefetchSize) -> {
+        serverLoad.putRegionPrefetchInfo(regionName, roundSize(prefetchSize, unitMB));
+      });
+    });
     serverLoad.setReportStartTime(reportStartTime);
     serverLoad.setReportEndTime(reportEndTime);
     if (this.infoServer != null) {
@@ -1711,6 +1727,16 @@ public class HRegionServer extends Thread
     }
   }
 
+  private void computeIfPersistentBucketCache(Consumer<BucketCache> computation) {
+    if (blockCache instanceof CombinedBlockCache) {
+      BlockCache l2 = ((CombinedBlockCache) blockCache).getSecondLevelCache();
+      if (l2 instanceof BucketCache && ((BucketCache) l2).isCachePersistent()) {
+        computation.accept((BucketCache) l2);
+      }
+    }
+  }
+
+
   /**
    * @param r               Region to get RegionLoad for.
    * @param regionLoadBldr  the RegionLoad.Builder, can be null
@@ -1720,6 +1746,7 @@ public class HRegionServer extends Thread
   RegionLoad createRegionLoad(final HRegion r, RegionLoad.Builder regionLoadBldr,
     RegionSpecifier.Builder regionSpecifier) throws IOException {
     byte[] name = r.getRegionInfo().getRegionName();
+    String regionEncodedName = r.getRegionInfo().getEncodedName();
     int stores = 0;
     int storefiles = 0;
     int storeRefCount = 0;
@@ -1732,6 +1759,8 @@ public class HRegionServer extends Thread
     long totalStaticBloomSize = 0L;
     long totalCompactingKVs = 0L;
     long currentCompactedKVs = 0L;
+    long totalRegionSize = 0L;
+
     List<HStore> storeList = r.getStores();
     stores += storeList.size();
     for (HStore store : storeList) {
@@ -1743,6 +1772,7 @@ public class HRegionServer extends Thread
         Math.max(maxCompactedStoreFileRefCount, currentMaxCompactedStoreFileRefCount);
       storeUncompressedSize += store.getStoreSizeUncompressed();
       storefileSize += store.getStorefilesSize();
+      totalRegionSize += store.getHFilesSize();
       // TODO: storefileIndexSizeKB is same with rootLevelIndexSizeKB?
       storefileIndexSize += store.getStorefilesRootLevelIndexSize();
       CompactionProgress progress = store.getCompactionProgress();
@@ -1755,9 +1785,6 @@ public class HRegionServer extends Thread
       totalStaticBloomSize += store.getTotalStaticBloomSize();
     }
 
-    int unitMB = 1024 * 1024;
-    int unitKB = 1024;
-
     int memstoreSizeMB = roundSize(r.getMemStoreDataSize(), unitMB);
     int storeUncompressedSizeMB = roundSize(storeUncompressedSize, unitMB);
     int storefileSizeMB = roundSize(storefileSize, unitMB);
@@ -1765,6 +1792,15 @@ public class HRegionServer extends Thread
     int rootLevelIndexSizeKB = roundSize(rootLevelIndexSize, unitKB);
     int totalStaticIndexSizeKB = roundSize(totalStaticIndexSize, unitKB);
     int totalStaticBloomSizeKB = roundSize(totalStaticBloomSize, unitKB);
+    int regionSizeMB = roundSize(totalRegionSize, unitMB);
+    final MutableFloat currentRegionPrefetchRatio = new MutableFloat(0.0f);
+    computeIfPersistentBucketCache( bc -> {
+      if (bc.getRegionPrefetchInfo().containsKey(regionEncodedName)) {
+        currentRegionPrefetchRatio.setValue(regionSizeMB == 0 ? 0.0f :
+          (float) roundSize(bc.getRegionPrefetchInfo().
+            get(regionEncodedName), unitMB) / regionSizeMB);
+      }
+    });
 
     HDFSBlocksDistribution hdfsBd = r.getHDFSBlocksDistribution();
     float dataLocality = hdfsBd.getBlockLocalityIndex(serverName.getHostname());
@@ -1795,7 +1831,8 @@ public class HRegionServer extends Thread
       .setDataLocalityForSsd(dataLocalityForSsd).setBlocksLocalWeight(blocksLocalWeight)
       .setBlocksLocalWithSsdWeight(blocksLocalWithSsdWeight).setBlocksTotalWeight(blocksTotalWeight)
       .setCompactionState(ProtobufUtil.createCompactionStateForRegionLoad(r.getCompactionState()))
-      .setLastMajorCompactionTs(r.getOldestHfileTs(true));
+      .setLastMajorCompactionTs(r.getOldestHfileTs(true))
+      .setRegionSizeMB(regionSizeMB).setCurrentRegionPrefetchRatio(currentRegionPrefetchRatio.floatValue());
     r.setCompleteSequenceId(regionLoadBldr);
     return regionLoadBldr.build();
   }

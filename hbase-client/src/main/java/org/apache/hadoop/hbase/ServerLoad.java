@@ -424,6 +424,11 @@ public class ServerLoad implements ServerMetrics {
     return metrics.getLastReportTimestamp();
   }
 
+  @Override
+  public Map<String, Integer> getRegionPrefetchInfo() {
+    return metrics.getRegionPrefetchInfo();
+  }
+
   /**
    * Originally, this method factored in the effect of requests going to the server as well.
    * However, this does not interact very well with the current region rebalancing code, which only
