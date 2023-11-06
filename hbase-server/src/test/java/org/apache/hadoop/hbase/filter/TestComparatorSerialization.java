@@ -157,13 +157,14 @@ public class TestComparatorSerialization {
 
     // Write a jar to be loaded into the classloader
     String code = StringSubstitutor.replace(
-      IOUtils.toString(getClass().getResourceAsStream("/CustomLoadedComparator.java"),
+      IOUtils.toString(getClass().getResourceAsStream("/CustomLoadedComparator.java.template"),
         Charset.defaultCharset()),
       Collections.singletonMap("suffix", allowFastReflectionFallthrough));
     ClassLoaderTestHelper.buildJar(dataTestDir, className, code,
       ClassLoaderTestHelper.localDirPath(conf));
 
-    // Disallow fallthrough at first, we expect below to fail
+    // Disallow fallthrough at first. We expect below to fail because the custom comparator is not
+    // available at initialization so not in the cache.
     ProtobufUtil.setAllowFastReflectionFallthrough(false);
     try {
       ProtobufUtil.toComparator(proto);
@@ -171,8 +172,10 @@ public class TestComparatorSerialization {
     } catch (IOException e) {
       // do nothing, this is expected
     }
+
+    // Now the deserialization should pass with fallthrough enabled. This proves that custom
+    // comparators can work despite not being supported by cache.
     ProtobufUtil.setAllowFastReflectionFallthrough(true);
-    // Now the deserialization should pass
     ProtobufUtil.toComparator(proto);
   }
 

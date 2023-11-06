@@ -380,13 +380,14 @@ public class TestFilterSerialization {
 
     // Write a jar to be loaded into the classloader
     String code = StringSubstitutor.replace(
-      IOUtils.toString(getClass().getResourceAsStream("/CustomLoadedFilter.java"),
+      IOUtils.toString(getClass().getResourceAsStream("/CustomLoadedFilter.java.template"),
         Charset.defaultCharset()),
       Collections.singletonMap("suffix", allowFastReflectionFallthrough));
     ClassLoaderTestHelper.buildJar(dataTestDir, className, code,
       ClassLoaderTestHelper.localDirPath(conf));
 
-    // Disallow fallthrough at first, we expect below to fail
+    // Disallow fallthrough at first. We expect below to fail because the custom filter is not
+    // available at initialization so not in the cache.
     ProtobufUtil.setAllowFastReflectionFallthrough(false);
     try {
       ProtobufUtil.toFilter(filterProto);
@@ -394,8 +395,10 @@ public class TestFilterSerialization {
     } catch (DoNotRetryIOException e) {
       // do nothing, this is expected
     }
+
+    // Now the deserialization should pass with fallthrough enabled. This proves that custom
+    // filters can work despite not being supported by cache.
     ProtobufUtil.setAllowFastReflectionFallthrough(true);
-    // Now the deserialization should pass
     ProtobufUtil.toFilter(filterProto);
 
   }
