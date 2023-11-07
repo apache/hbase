@@ -662,46 +662,6 @@ public interface MasterObserver {
   }
 
   /**
-   * Called before the region is truncated.
-   * @param c          The environment to interact with the framework and master
-   * @param regionInfo The Region being truncated
-   */
-  @SuppressWarnings("unused")
-  default void preTruncateRegionAction(final ObserverContext<MasterCoprocessorEnvironment> c,
-    final RegionInfo regionInfo) {
-  }
-
-  /**
-   * Called before the truncate region procedure is called.
-   * @param c          The environment to interact with the framework and master
-   * @param regionInfo The Region being truncated
-   */
-  @SuppressWarnings("unused")
-  default void preTruncateRegion(final ObserverContext<MasterCoprocessorEnvironment> c,
-    RegionInfo regionInfo) {
-  }
-
-  /**
-   * Called after the truncate region procedure is called.
-   * @param c          The environment to interact with the framework and master
-   * @param regionInfo The Region being truncated
-   */
-  @SuppressWarnings("unused")
-  default void postTruncateRegion(final ObserverContext<MasterCoprocessorEnvironment> c,
-    RegionInfo regionInfo) {
-  }
-
-  /**
-   * Called post the region is truncated.
-   * @param c          The environment to interact with the framework and master
-   * @param regionInfo The Region To be truncated
-   */
-  @SuppressWarnings("unused")
-  default void postTruncateRegionAction(final ObserverContext<MasterCoprocessorEnvironment> c,
-    final RegionInfo regionInfo) {
-  }
-
-  /**
    * Called after the region is split.
    * @param c           the environment to interact with the framework and master
    * @param regionInfoA the left daughter region

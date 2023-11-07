@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -40,7 +39,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -85,7 +83,7 @@ public class TestAdmin1 extends TestAdminBase {
       Region metaRegion = null;
       for (int i = 0; i < NB_SERVERS; i++) {
         HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i);
-        List<HRegion> onlineRegions = rs.getRegions(META_TABLE_NAME);
+        List<HRegion> onlineRegions = rs.getRegions(TableName.META_TABLE_NAME);
         if (!onlineRegions.isEmpty()) {
           metaRegion = onlineRegions.get(0);
           break;
@@ -683,95 +681,5 @@ public class TestAdmin1 extends TestAdminBase {
     List<RegionInfo> allRegions =
       MetaTableAccessor.getTableRegions(ADMIN.getConnection(), tableName, true);
     assertEquals(1, allRegions.size());
-  }
-
-  @Test
-  public void testTruncateRegions() throws Exception {
-    // Arrange - Create table, insert data, identify region to truncate.
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    final byte[][] splitKeys =
-      new byte[][] { Bytes.toBytes("30"), Bytes.toBytes("60"), Bytes.toBytes("90") };
-    String family1 = "f1";
-    String family2 = "f2";
-    final byte[][] bFamilies = new byte[][] { Bytes.toBytes(family1), Bytes.toBytes(family2) };
-    final String[] sFamilies = new String[] { family1, family2 };
-    int replicaCount = 2;
-    try {
-      TEST_UTIL.createTable(tableName, bFamilies, splitKeys, replicaCount);
-      TEST_UTIL.waitTableAvailable(tableName);
-
-      AssignmentTestingUtil.insertData(TEST_UTIL, tableName, 2, 21, sFamilies);
-      AssignmentTestingUtil.insertData(TEST_UTIL, tableName, 2, 31, sFamilies);
-      AssignmentTestingUtil.insertData(TEST_UTIL, tableName, 2, 61, sFamilies);
-      AssignmentTestingUtil.insertData(TEST_UTIL, tableName, 2, 91, sFamilies);
-
-      List<RegionInfo> tableRegions = ADMIN.getRegions(tableName);
-
-      RegionInfo regionToBeTruncated = tableRegions.get(0);
-      int countBeforeTruncate = TEST_UTIL.countRows(tableName);
-
-      // Act - Truncate the first region
-      ADMIN.truncateRegion(regionToBeTruncated.getRegionName());
-
-      int countAfterTruncate = TEST_UTIL.countRows(tableName);
-
-      // Assert - Assert that before truncate count was 8 and after truncate its 6
-      assertEquals(8, countBeforeTruncate);
-      assertEquals(6, countAfterTruncate);
-    } finally {
-      ADMIN.disableTable(tableName);
-      ADMIN.deleteTable(tableName);
-    }
-  }
-
-  @Test
-  public void testTruncateReplicaRegionNotAllowed() throws Exception {
-    // Arrange - Create table, insert data, identify region to truncate.
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    final byte[][] splitKeys =
-      new byte[][] { Bytes.toBytes("30"), Bytes.toBytes("60"), Bytes.toBytes("90") };
-    String family1 = "f1";
-    String family2 = "f2";
-    final byte[][] bFamilies = new byte[][] { Bytes.toBytes(family1), Bytes.toBytes(family2) };
-    int replicaCount = 2;
-    try {
-      TEST_UTIL.createTable(tableName, bFamilies, splitKeys, replicaCount);
-      TEST_UTIL.waitTableAvailable(tableName);
-
-      List<RegionInfo> tableRegions = ADMIN.getRegions(tableName);
-
-      RegionInfo firstRegion = tableRegions.get(0);
-      RegionInfo regionToBeTruncated = RegionReplicaUtil.getRegionInfoForReplica(firstRegion, 1);
-
-      // Act - Truncate the first region replica
-      try {
-        ADMIN.truncateRegion(regionToBeTruncated.getRegionName());
-      } catch (Exception e) {
-        // Assert
-        assertEquals("Expected message is different",
-          "Can't truncate replicas directly.Replicas are auto-truncated "
-            + "when their primary is truncated.",
-          e.getMessage());
-      }
-    } finally {
-      ADMIN.disableTable(tableName);
-      ADMIN.deleteTable(tableName);
-    }
-  }
-
-  @Test
-  public void testTruncateRegionMetaTableRegionsNotAllowed() throws Exception {
-    // Arrange - Get the region of META table
-    List<RegionInfo> regions = ADMIN.getRegions(META_TABLE_NAME);
-    RegionInfo regionToBeTruncated = regions.get(0);
-
-    // Act
-    try {
-      ADMIN.truncateRegion(regionToBeTruncated.getRegionName());
-    } catch (Exception e) {
-      String expectedErrorMessage =
-        "Invalid region: " + Bytes.toStringBinary(regionToBeTruncated.getRegionName());
-      assertEquals(expectedErrorMessage, e.getMessage());
-    }
   }
 }

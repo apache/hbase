@@ -1943,65 +1943,6 @@ public class HBaseAdmin implements Admin {
     splitRegionAsync(regionServerPair.getFirst(), splitPoint);
   }
 
-  @Override
-  public void truncateRegion(byte[] regionName) throws IOException {
-    get(truncateRegionAsync(regionName), syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
-  public Future<Void> truncateRegionAsync(byte[] regionName) throws IOException {
-    Pair<RegionInfo, ServerName> pair = getRegion(regionName);
-    RegionInfo hri;
-
-    if (pair != null) {
-      hri = pair.getFirst();
-      if (hri != null && hri.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
-        throw new IllegalArgumentException(
-          "Can't truncate replicas directly.Replicas are auto-truncated "
-            + "when their primary is truncated.");
-      }
-    } else {
-      throw new IllegalArgumentException("Invalid region: " + Bytes.toStringBinary(regionName));
-    }
-
-    TableName tableName = hri.getTable();
-
-    MasterProtos.TruncateRegionResponse response =
-      executeCallable(getTruncateRegionCallable(tableName, hri));
-
-    return new TruncateRegionFuture(this, tableName, response);
-  }
-
-  private MasterCallable<MasterProtos.TruncateRegionResponse>
-    getTruncateRegionCallable(TableName tableName, RegionInfo hri) {
-    return new MasterCallable<MasterProtos.TruncateRegionResponse>(getConnection(),
-      getRpcControllerFactory()) {
-      Long nonceGroup = ng.getNonceGroup();
-      Long nonce = ng.newNonce();
-
-      @Override
-      protected MasterProtos.TruncateRegionResponse rpcCall() throws Exception {
-        setPriority(tableName);
-        MasterProtos.TruncateRegionRequest request =
-          RequestConverter.buildTruncateRegionRequest(hri, nonceGroup, nonce);
-        return master.truncateRegion(getRpcController(), request);
-      }
-    };
-  }
-
-  private static class TruncateRegionFuture extends TableFuture<Void> {
-    public TruncateRegionFuture(final HBaseAdmin admin, final TableName tableName,
-      final MasterProtos.TruncateRegionResponse response) {
-      super(admin, tableName,
-        (response != null && response.hasProcId()) ? response.getProcId() : null);
-    }
-
-    @Override
-    public String getOperationType() {
-      return "TRUNCATE_REGION";
-    }
-  }
-
   private static class ModifyTableFuture extends TableFuture<Void> {
     public ModifyTableFuture(final HBaseAdmin admin, final TableName tableName,
       final ModifyTableResponse response) {

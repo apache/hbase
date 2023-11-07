@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -690,12 +689,6 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   public SplitTableRegionResponse splitRegion(RpcController controller,
     SplitTableRegionRequest request) throws ServiceException {
     return stub.splitRegion(controller, request);
-  }
-
-  @Override
-  public MasterProtos.TruncateRegionResponse truncateRegion(RpcController controller,
-    MasterProtos.TruncateRegionRequest request) throws ServiceException {
-    return stub.truncateRegion(controller, request);
   }
 
   @Override

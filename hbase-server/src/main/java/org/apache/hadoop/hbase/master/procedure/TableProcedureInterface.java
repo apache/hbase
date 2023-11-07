@@ -39,9 +39,8 @@ public interface TableProcedureInterface {
     REGION_ASSIGN,
     REGION_UNASSIGN,
     REGION_GC,
-    MERGED_REGIONS_GC/* region operations */,
-    REGION_TRUNCATE
-  }
+    MERGED_REGIONS_GC/* region operations */
+  };
 
   /** Returns the name of the table the procedure is operating on */
   TableName getTableName();

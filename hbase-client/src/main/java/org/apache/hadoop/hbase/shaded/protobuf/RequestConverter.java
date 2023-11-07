@@ -1186,17 +1186,6 @@ public final class RequestConverter {
     return builder.build();
   }
 
-  public static MasterProtos.TruncateRegionRequest
-    buildTruncateRegionRequest(final RegionInfo regionInfo, final long nonceGroup, final long nonce)
-      throws DeserializationException {
-    MasterProtos.TruncateRegionRequest.Builder builder =
-      MasterProtos.TruncateRegionRequest.newBuilder();
-    builder.setRegionInfo(ProtobufUtil.toRegionInfo(regionInfo));
-    builder.setNonceGroup(nonceGroup);
-    builder.setNonce(nonce);
-    return builder.build();
-  }
-
   /**
    * Create a protocol buffer AssignRegionRequest
    * @return an AssignRegionRequest

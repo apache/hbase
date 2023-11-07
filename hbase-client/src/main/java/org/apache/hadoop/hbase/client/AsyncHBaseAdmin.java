@@ -372,11 +372,6 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> truncateRegion(byte[] regionName) {
-    return wrap(rawAdmin.truncateRegion(regionName));
-  }
-
-  @Override
   public CompletableFuture<Void> assign(byte[] regionName) {
     return wrap(rawAdmin.assign(regionName));
   }
