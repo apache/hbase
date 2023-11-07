@@ -23,6 +23,8 @@ import java.util.Optional;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * CombinedBlockCache is an abstraction layer that combines {@link FirstLevelBlockCache} and
@@ -37,6 +39,8 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   protected final FirstLevelBlockCache l1Cache;
   protected final BlockCache l2Cache;
   protected final CombinedCacheStats combinedCacheStats;
+
+  private static final Logger LOG = LoggerFactory.getLogger(CombinedBlockCache.class);
 
   public CombinedBlockCache(FirstLevelBlockCache l1Cache, BlockCache l2Cache) {
     this.l1Cache = l1Cache;
@@ -77,10 +81,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
     boolean updateCacheMetrics) {
-    if (cacheKey.getBlockType() != null) {
-      // We know the block type, so we can check which cache to look
-      return getBlockWithType(cacheKey, caching, repeat, updateCacheMetrics);
-    }
+    Cacheable block = null;
     // We don't know the block type. We should try to get it on one of the caches only,
     // but not both otherwise we'll over compute on misses. Here we check if the key is on L1,
     // if so, call getBlock on L1 and that will compute the hit. Otherwise, we'll try to get it from
@@ -88,9 +89,41 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     boolean existInL1 = l1Cache.containsBlock(cacheKey);
     // if we know it's in L1, just delegate call to l1 and return it
     if (existInL1) {
-      return l1Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+      block = l1Cache.getBlock(cacheKey, caching, repeat, false);
+    } else {
+      block = l2Cache.getBlock(cacheKey, caching, repeat, false);
     }
-    return l2Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+    if (updateCacheMetrics) {
+      boolean metaBlock = isMetaBlock(cacheKey.getBlockType());
+      if (metaBlock) {
+        if (!existInL1 && block != null) {
+          LOG.warn("Cache key {} had block type {}, but was found in L2 cache.", cacheKey,
+            cacheKey.getBlockType());
+          updateBlockMetrics(block, cacheKey, l2Cache, caching);
+        } else {
+          updateBlockMetrics(block, cacheKey, l1Cache, caching);
+        }
+      } else {
+        if (existInL1) {
+          LOG.warn("Cache key {} had block type {}, but was found in L1 cache.", cacheKey,
+            cacheKey.getBlockType());
+          updateBlockMetrics(block, cacheKey, l1Cache, caching);
+        } else {
+          updateBlockMetrics(block, cacheKey, l2Cache, caching);
+        }
+      }
+    }
+    return block;
+  }
+
+  private void updateBlockMetrics(Cacheable block, BlockCacheKey key, BlockCache cache,
+    boolean caching) {
+    if (block == null) {
+      cache.getStats().miss(caching, key.isPrimary(), key.getBlockType());
+    } else {
+      cache.getStats().hit(caching, key.isPrimary(), key.getBlockType());
+
+    }
   }
 
   @Override
