@@ -61,10 +61,10 @@ public class RowSpec {
     i = parseTimestamp(path, i);
     i = parseQueryParams(path, i);
 
-    if(keyEncoding != null) {
+    if (keyEncoding != null) {
       // See https://en.wikipedia.org/wiki/Base64#Variants_summary_table
       Base64.Decoder decoder;
-      switch(keyEncoding) {
+      switch (keyEncoding) {
         case "b64":
         case "base64":
         case "b64url":
@@ -79,11 +79,11 @@ public class RowSpec {
           throw new IllegalArgumentException("unknown key encoding '" + keyEncoding + "'");
       }
       this.row = decoder.decode(this.row);
-      if(this.endRow != null) {
+      if (this.endRow != null) {
         this.endRow = decoder.decode(this.endRow);
       }
       TreeSet<byte[]> decodedColumns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
-      for(byte[] encodedColumn : this.columns) {
+      for (byte[] encodedColumn : this.columns) {
         decodedColumns.add(decoder.decode(encodedColumn));
       }
       this.columns = decodedColumns;
