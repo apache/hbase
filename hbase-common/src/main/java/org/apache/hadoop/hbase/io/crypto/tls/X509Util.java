@@ -220,16 +220,22 @@ public final class X509Util {
   static String[] getDefaultCipherSuitesForJavaVersion(String javaVersion) {
     Objects.requireNonNull(javaVersion);
 
-    try {
+    if (javaVersion.matches("\\d+")) {
+      // Must be Java 9 or later
       int javaVersionInt = Integer.parseInt(javaVersion);
       if (javaVersionInt >= 11) {
         return DEFAULT_CIPHERS_JAVA11;
-      } else if (javaVersionInt >= 9) {
-        return DEFAULT_CIPHERS_JAVA9;
       } else {
-        return DEFAULT_CIPHERS_JAVA8;
+        LOG.debug("Using Java9+ optimized cipher suites for Java version {}", javaVersion);
+        return DEFAULT_CIPHERS_JAVA9;
       }
-    } catch (NumberFormatException ignore) {
+    } else if (javaVersion.startsWith("1.")) {
+      // Must be Java 1.8 or earlier
+      LOG.debug("Using Java8 optimized cipher suites for Java version {}", javaVersion);
+      return DEFAULT_CIPHERS_JAVA8;
+    } else {
+      LOG.debug("Could not parse java version {}, using Java8 optimized cipher suites",
+        javaVersion);
       return DEFAULT_CIPHERS_JAVA8;
     }
   }
