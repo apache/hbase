@@ -92,10 +92,6 @@ public class MobFileCleanerChore extends ScheduledChore {
     }
   }
 
-  public MobFileCleanerChore() {
-    this.master = null;
-  }
-
   @Override
   protected void chore() {
     TableDescriptors htds = master.getTableDescriptors();

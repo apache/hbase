@@ -92,7 +92,7 @@ public class TestMobFileCleanerChore {
 
     HTU.startMiniCluster();
     admin = HTU.getAdmin();
-    chore = new MobFileCleanerChore();
+    chore = new MobFileCleanerChore(HTU.getMiniHBaseCluster().getMaster());
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)
       .setMobThreshold(mobLen).setMaxVersions(1).build();
     tableDescriptor = HTU.createModifyableTableDescriptor("testMobCompactTable")
