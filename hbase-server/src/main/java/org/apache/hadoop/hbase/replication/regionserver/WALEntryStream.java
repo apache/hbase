@@ -258,7 +258,13 @@ class WALEntryStream implements Closeable {
   private boolean readNextEntryAndRecordReaderPosition() throws IOException {
     Entry readEntry = reader.next();
     long readerPos = reader.getPosition();
-    OptionalLong fileLength = walFileLengthProvider.getLogFileSizeIfBeingWritten(currentPath);
+    OptionalLong fileLength;
+    if (logQueue.getQueueSize(walGroupId) > 1) {
+      fileLength = OptionalLong.empty();
+    } else {
+      // if there is only one file in queue, check whether it is still being written to
+      fileLength = walFileLengthProvider.getLogFileSizeIfBeingWritten(currentPath);
+    }
     if (fileLength.isPresent() && readerPos > fileLength.getAsLong()) {
       // See HBASE-14004, for AsyncFSWAL which uses fan-out, it is possible that we read uncommitted
       // data, so we need to make sure that we do not read beyond the committed file length.
