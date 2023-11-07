@@ -36,8 +36,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -148,8 +146,7 @@ public class MobFileCleanerChore extends ScheduledChore {
     // So, if MOB file creation time is greater than this maxTimeToArchive,
     // this will be skipped and won't be archived.
     long maxCreationTimeToArchive = EnvironmentEdgeManager.currentTime() - minAgeToArchive;
-    try (final Connection conn = ConnectionFactory.createConnection(conf);
-      final Admin admin = conn.getAdmin();) {
+    try (final Admin admin = master.getConnection().getAdmin()) {
       TableDescriptor htd = admin.getDescriptor(table);
       List<ColumnFamilyDescriptor> list = MobUtils.getMobColumnFamilies(htd);
       if (list.size() == 0) {
