@@ -516,6 +516,15 @@ public class StoreFileScanner implements KeyValueScanner {
     }
   }
 
+  /**
+   * This variant of the {@link StoreFileScanner#seekToPreviousRow(Cell)} method requires one seek
+   * and one reseek. This method maintains state in {@link StoreFileScanner#previousRow} which only
+   * makes sense in the context of a sequential row-by-row reverse scan.
+   * {@link StoreFileScanner#previousRow} should be reset if that is not the case. The reasoning for
+   * why this method is faster than {@link StoreFileScanner#seekToPreviousRowStateless(Cell)} is
+   * that seeks are slower as they need to start from the beginning of the file, while reseeks go
+   * forward from the current position.
+   */
   private boolean seekToPreviousRowWithHint(Cell originalKey) throws IOException {
     do {
       if (previousRow == null) {
@@ -531,17 +540,19 @@ public class StoreFileScanner implements KeyValueScanner {
         return false;
       }
 
-      if (
-        setReadpointAndSkipNewerKvs()
-          && getComparator().compareRows(cur, firstKeyOfPreviousRow) <= 0
-      ) {
+      if (isStillAtSeekTargetAfterSkippingNewerKvs(firstKeyOfPreviousRow)) {
         return true;
       }
     } while (true);
   }
 
+  /**
+   * This variant of the {@link StoreFileScanner#seekToPreviousRow(Cell)} method requires two seeks
+   * and one reseek. The extra expense/seek is with the intent of speeding up subsequent calls by
+   * using the {@link StoreFileScanner#seekToPreviousRowWithHint(Cell)} which this method seeds the
+   * state for by setting {@link StoreFileScanner#previousRow}
+   */
   private boolean seekToPreviousRowWithoutHint(Cell originalKey) throws IOException {
-    boolean keepSeeking;
     Cell key = originalKey;
     do {
       // Rewind to the cell before the beginning of this row
@@ -561,25 +572,19 @@ public class StoreFileScanner implements KeyValueScanner {
         return false;
       }
 
-      if (
-        !setReadpointAndSkipNewerKvs()
-          || getComparator().compareRows(cur, firstKeyOfPreviousRow) > 0
-      ) {
-        keepSeeking = true;
-        key = firstKeyOfPreviousRow;
-      } else {
-        keepSeeking = false;
+      if (isStillAtSeekTargetAfterSkippingNewerKvs(firstKeyOfPreviousRow)) {
+        return true;
       }
-    } while (keepSeeking);
-    return true;
+      key = firstKeyOfPreviousRow;
+    } while (true);
   }
 
   /**
-   * This seekToPreviousRow method requires two seeks from the beginning of a block. It should be
-   * used if the cost for seeking to the beginning of a block is low.
+   * This variant of the {@link StoreFileScanner#seekToPreviousRow(Cell)} method requires two seeks.
+   * It should be used if the cost for seeking is lower i.e. when using a fast seeking data block
+   * encoding like RIV1.
    */
   private boolean seekToPreviousRowStateless(Cell originalKey) throws IOException {
-    boolean keepSeeking;
     Cell key = originalKey;
     do {
       Cell keyAtBeginningOfRow = PrivateCellUtil.createFirstOnRow(key);
@@ -592,17 +597,11 @@ public class StoreFileScanner implements KeyValueScanner {
         return false;
       }
 
-      if (
-        !setReadpointAndSkipNewerKvs()
-          || getComparator().compareRows(cur, firstKeyOfPreviousRow) > 0
-      ) {
-        keepSeeking = true;
-        key = firstKeyOfPreviousRow;
-      } else {
-        keepSeeking = false;
+      if (isStillAtSeekTargetAfterSkippingNewerKvs(firstKeyOfPreviousRow)) {
+        return true;
       }
-    } while (keepSeeking);
-    return true;
+      key = firstKeyOfPreviousRow;
+    } while (true);
   }
 
   private boolean seekBefore(Cell seekKey) throws IOException {
@@ -619,11 +618,9 @@ public class StoreFileScanner implements KeyValueScanner {
     if (seekCount != null) seekCount.increment();
     if (!hfs.seekBefore(seekKey)) {
       // Since the above seek failed, we need to position ourselves back at the start of the
-      // block or else our reseek might fail
-      if (!hfs.seekTo()) {
-        this.cur = null;
-        return false;
-      }
+      // block or else our reseek might fail. seekTo() cannot return false here as at least
+      // one seekBefore will have returned true by the time we get here
+      hfs.seekTo();
       this.previousRow = null;
     } else {
       this.previousRow = hfs.getCell();
@@ -652,8 +649,13 @@ public class StoreFileScanner implements KeyValueScanner {
     return true;
   }
 
-  private boolean setReadpointAndSkipNewerKvs() throws IOException {
+  private boolean isStillAtSeekTargetAfterSkippingNewerKvs(Cell seekKey) throws IOException {
     setCurrentCell(hfs.getCell());
+    return skipNewerKvsNewerThanReadpointReversed()
+      && getComparator().compareRows(cur, seekKey) <= 0;
+  }
+
+  private boolean skipNewerKvsNewerThanReadpointReversed() throws IOException {
     this.stopSkippingKVsIfNextRow = true;
     boolean resultOfSkipKVs;
     try {
