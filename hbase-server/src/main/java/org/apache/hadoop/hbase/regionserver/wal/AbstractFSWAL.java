@@ -2245,6 +2245,14 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     WALSplitter.split(baseDir, p, archiveDir, fs, conf, WALFactory.getInstance(conf));
   }
 
+  W getWriter() {
+    return this.writer;
+  }
+
+  void setWriter(W writer) {
+    this.writer = writer;
+  }
+
   private static void usage() {
     System.err.println("Usage: AbstractFSWAL <ARGS>");
     System.err.println("Arguments:");
