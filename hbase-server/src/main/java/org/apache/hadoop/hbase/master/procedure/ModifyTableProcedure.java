@@ -147,6 +147,13 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
     }
   }
 
+  /**
+   * Comparing the value associated with a given key across two TableDescriptor instances' properties.
+   * @param oldDescriptor
+   * @param newDescriptor
+   * @param key
+   * @return True if the table property <code>key</code> is the same in both.
+   * */
   private boolean isTablePropertyModified(TableDescriptor oldDescriptor,
     TableDescriptor newDescriptor, String key) {
     String oldV = oldDescriptor.getValue(key);
