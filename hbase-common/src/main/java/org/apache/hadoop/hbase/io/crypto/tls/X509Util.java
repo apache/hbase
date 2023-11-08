@@ -224,6 +224,9 @@ public final class X509Util {
       // Must be Java 9 or later
       int javaVersionInt = Integer.parseInt(javaVersion);
       if (javaVersionInt >= 11) {
+        LOG.debug(
+          "Using Java11+ optimized cipher suites for Java version {}, including TLSv1.3 support",
+          javaVersion);
         return DEFAULT_CIPHERS_JAVA11;
       } else {
         LOG.debug("Using Java9+ optimized cipher suites for Java version {}", javaVersion);
