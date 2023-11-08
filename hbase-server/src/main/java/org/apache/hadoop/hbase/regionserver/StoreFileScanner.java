@@ -527,22 +527,28 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   private boolean seekToPreviousRowWithHint() throws IOException {
     do {
+      // Using our existing seek hint, set our next seek hint
       Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(previousRow);
-      if (!seekBeforeAndSaveKeyToPreviousRow(firstKeyOfPreviousRow)) {
-        return false;
-      }
+      seekBeforeAndSaveKeyToPreviousRow(firstKeyOfPreviousRow);
 
+      // Reseek back to our initial seek hint (i.e. what we think is the start of the
+      // previous row)
       if (!reseekAtOrAfter(firstKeyOfPreviousRow)) {
         return false;
       }
 
+      // If after skipping newer Kvs, we're still in our seek hint row, then we're finished
       if (isStillAtSeekTargetAfterSkippingNewerKvs(firstKeyOfPreviousRow)) {
         return true;
       }
 
+      // If the previousRow seek hint is missing, that means that we're at row after the first row
+      // in the storefile. Use the without-hint seek path to process the final row
       if (previousRow == null) {
         return seekToPreviousRowWithoutHint(firstKeyOfPreviousRow);
       }
+
+      // Otherwise, use the previousRow seek hint to continue traversing backwards
     } while (true);
   }
 
@@ -553,34 +559,38 @@ public class StoreFileScanner implements KeyValueScanner {
    * for by setting {@link StoreFileScanner#previousRow}
    */
   private boolean seekToPreviousRowWithoutHint(Cell originalKey) throws IOException {
-    Cell key = originalKey;
-    do {
-      // Rewind to the cell before the beginning of this row
-      Cell keyAtBeginningOfRow = PrivateCellUtil.createFirstOnRow(key);
-      if (!seekBefore(keyAtBeginningOfRow)) {
-        return false;
-      }
+    // Rewind to the cell before the beginning of this row
+    Cell keyAtBeginningOfRow = PrivateCellUtil.createFirstOnRow(originalKey);
+    if (!seekBefore(keyAtBeginningOfRow)) {
+      return false;
+    }
 
-      // Rewind before this row and save what we find as a seek hint
-      Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getCell());
-      if (!seekBeforeAndSaveKeyToPreviousRow(firstKeyOfPreviousRow)) {
-        return false;
-      }
+    // Rewind before this row and save what we find as a seek hint
+    Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getCell());
+    seekBeforeAndSaveKeyToPreviousRow(firstKeyOfPreviousRow);
 
-      // Seek back to the start of the previous row
-      if (!reseekAtOrAfter(firstKeyOfPreviousRow)) {
-        return false;
-      }
+    // Seek back to the start of the previous row
+    if (!reseekAtOrAfter(firstKeyOfPreviousRow)) {
+      return false;
+    }
 
-      if (isStillAtSeekTargetAfterSkippingNewerKvs(firstKeyOfPreviousRow)) {
-        return true;
-      }
+    // If after skipping newer Kvs, we're still in what we thought was the previous
+    // row, then we can exit
+    if (isStillAtSeekTargetAfterSkippingNewerKvs(firstKeyOfPreviousRow)) {
+      return true;
+    }
 
-      if (previousRow != null) {
-        return seekToPreviousRowWithHint();
-      }
-      key = firstKeyOfPreviousRow;
-    } while (true);
+    // Skipping newer kvs resulted in skipping the entire row that we thought was the
+    // previous row. If we've set a seek hint, then we can use that to go backwards
+    // further
+    if (previousRow != null) {
+      return seekToPreviousRowWithHint();
+    }
+
+    // If we've made it here, then we weren't able to set a seek hint. This can happen
+    // only if we're at the beginning of the storefile i.e. there is no row before this
+    // one
+    return false;
   }
 
   /**
@@ -620,7 +630,15 @@ public class StoreFileScanner implements KeyValueScanner {
     return true;
   }
 
-  private boolean seekBeforeAndSaveKeyToPreviousRow(Cell seekKey) throws IOException {
+  /**
+   * Seeks before the seek target cell and saves the location to {@link #previousRow}. If there
+   * doesn't exist a KV in this file before the seek target cell, reposition the scanner at the
+   * beginning of the storefile (in preparation to a reseek at or after the seek key) and set the
+   * {@link #previousRow} to null. If {@link #previousRow} is ever non-null and then transitions to
+   * being null again via this method, that's because there doesn't exist a row before the seek
+   * target in the storefile (i.e. we're at the beginning of the storefile)
+   */
+  private void seekBeforeAndSaveKeyToPreviousRow(Cell seekKey) throws IOException {
     if (seekCount != null) {
       seekCount.increment();
     }
@@ -633,8 +651,6 @@ public class StoreFileScanner implements KeyValueScanner {
     } else {
       this.previousRow = hfs.getCell();
     }
-
-    return true;
   }
 
   private boolean seekAtOrAfter(Cell seekKey) throws IOException {
