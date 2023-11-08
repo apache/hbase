@@ -138,7 +138,8 @@ public class TestComparatorSerialization {
   public void testCustomComparator() throws Exception {
     ByteArrayComparable baseFilter = new BinaryComparator("foo".getBytes());
     ComparatorProtos.Comparator proto = ProtobufUtil.toComparator(baseFilter);
-    String className = "CustomLoadedComparator" + allowFastReflectionFallthrough;
+    String suffix = "" + System.currentTimeMillis() + allowFastReflectionFallthrough;
+    String className = "CustomLoadedComparator" + suffix;
     proto = proto.toBuilder().setName(className).build();
 
     Configuration conf = HBaseConfiguration.create();
@@ -159,7 +160,7 @@ public class TestComparatorSerialization {
     String code = StringSubstitutor.replace(
       IOUtils.toString(getClass().getResourceAsStream("/CustomLoadedComparator.java.template"),
         Charset.defaultCharset()),
-      Collections.singletonMap("suffix", allowFastReflectionFallthrough));
+      Collections.singletonMap("suffix", suffix));
     ClassLoaderTestHelper.buildJar(dataTestDir, className, code,
       ClassLoaderTestHelper.localDirPath(conf));
 

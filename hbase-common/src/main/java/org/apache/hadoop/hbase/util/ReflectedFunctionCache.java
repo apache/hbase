@@ -17,19 +17,14 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.io.IOException;
-import java.lang.reflect.Modifier;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.reflect.ClassPath;
 
 /**
  * Cache to hold resolved Functions generated through reflection. These can be costly to create, but
@@ -46,30 +41,22 @@ public final class ReflectedFunctionCache<I, R> {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReflectedFunctionCache.class);
 
-  private final Map<String, Function<I, ? extends R>> lambdasByClass;
+  // In order to use computeIfAbsent, we can't store nulls in our cache. So we store a lambda
+  // which resolves to null. The contract is that getAndCallByName returns null in this case.
+  private final Function<I, ? extends R> NOT_FOUND = t -> null;
 
-  private ReflectedFunctionCache(Map<String, Function<I, ? extends R>> lambdasByClass) {
-    this.lambdasByClass = lambdasByClass;
-  }
+  private final ConcurrentMap<String, Function<I, ? extends R>> lambdasByClass =
+    new ConcurrentHashMap<>();
+  private final Class<R> baseClass;
+  private final Class<I> argClass;
+  private final String methodName;
+  private final ClassLoader classLoader;
 
-  /**
-   * Create a cache of reflected functions using the provided classloader and baseClass. Will find
-   * all subclasses of the provided baseClass (in the same package), and then foreach look for a
-   * static one-arg method with the methodName and argClass. The expectation is that the method
-   * returns a value whose class extends the baseClass. This was primarily designed for use by our
-   * Filter and Comparator parseFrom methods.
-   */
-  public static <I, R> ReflectedFunctionCache<I, R> create(ClassLoader classLoader,
-    Class<R> baseClass, Class<I> argClass, String methodName) {
-    Map<String, Function<I, ? extends R>> lambdasByClass = new HashMap<>();
-    Set<? extends Class<? extends R>> classes = getSubclassesInPackage(classLoader, baseClass);
-    for (Class<? extends R> clazz : classes) {
-      Function<I, ? extends R> func = createFunction(clazz, methodName, argClass, clazz);
-      if (func != null) {
-        lambdasByClass.put(clazz.getName(), func);
-      }
-    }
-    return new ReflectedFunctionCache<>(lambdasByClass);
+  public ReflectedFunctionCache(Class<R> baseClass, Class<I> argClass, String methodName) {
+    this.classLoader = getClass().getClassLoader();
+    this.baseClass = baseClass;
+    this.argClass = argClass;
+    this.methodName = methodName;
   }
 
   /**
@@ -79,35 +66,37 @@ public final class ReflectedFunctionCache<I, R> {
    * @param argument  the argument to pass to the function, if found.
    * @return null if a function is not found for classname, otherwise the result of the function.
    */
+  @Nullable
   public R getAndCallByName(String className, I argument) {
-    Function<I, ? extends R> lambda = lambdasByClass.get(className);
-
     // todo: if we ever make java9+ our lowest supported jdk version, we can
     // handle generating these for newly loaded classes from our DynamicClassLoader using
     // MethodHandles.privateLookupIn(). For now this is not possible, because we can't easily
-    // create a privileged lookup in a non-default ClassLoader.
-    if (lambda == null) {
-      return null;
-    }
+    // create a privileged lookup in a non-default ClassLoader. So while this cache loads
+    // over time, it will never load a custom filter from "hbase.dynamic.jars.dir".
+    Function<I, ? extends R> lambda =
+      ConcurrentMapUtils.computeIfAbsent(lambdasByClass, className, () -> {
+        long startTime = System.nanoTime();
+        try {
+          Class<?> clazz = Class.forName(className, false, classLoader);
+          if (!baseClass.isAssignableFrom(clazz)) {
+            LOG.debug("Requested class {} is not assignable to {}, skipping creation of function",
+              className, baseClass.getName());
+            return NOT_FOUND;
+          }
+          return createFunction(clazz, methodName, argClass, (Class<? extends R>) clazz);
+        } catch (Throwable t) {
+          LOG.debug("Failed to create function for {}", className, t);
+          return NOT_FOUND;
+        } finally {
+          LOG.debug("Populated cache for {} in {}ms", className,
+            TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime));
+        }
+      });
 
     return lambda.apply(argument);
   }
 
-  private static <R> Set<Class<? extends R>> getSubclassesInPackage(ClassLoader classLoader,
-    Class<R> baseClass) {
-    try {
-      return ClassPath.from(classLoader).getAllClasses().stream()
-        .filter(clazz -> clazz.getPackageName().equalsIgnoreCase(baseClass.getPackage().getName()))
-        .map(ClassPath.ClassInfo::load).filter(clazz -> !Modifier.isAbstract(clazz.getModifiers()))
-        .filter(baseClass::isAssignableFrom).map(clazz -> (Class<? extends R>) clazz)
-        .collect(Collectors.toSet());
-    } catch (IOException e) {
-      LOG.debug("Failed to resolve subclasses of {}", baseClass, e);
-      return Collections.emptySet();
-    }
-  }
-
-  private static <I, O> Function<I, O> createFunction(Class<?> clazz, String methodName,
+  private static <I, O> Function<I, ? extends O> createFunction(Class<?> clazz, String methodName,
     Class<I> argumentClazz, Class<O> returnValueClass) {
     try {
       return ReflectionUtils.getOneArgStaticMethodAsFunction(clazz, methodName, argumentClazz,

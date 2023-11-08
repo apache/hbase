@@ -361,7 +361,8 @@ public class TestFilterSerialization {
   public void testCustomFilter() throws Exception {
     Filter baseFilter = new PrefixFilter("foo".getBytes());
     FilterProtos.Filter filterProto = ProtobufUtil.toFilter(baseFilter);
-    String className = "CustomLoadedFilter" + allowFastReflectionFallthrough;
+    String suffix = "" + System.currentTimeMillis() + allowFastReflectionFallthrough;
+    String className = "CustomLoadedFilter" + suffix;
     filterProto = filterProto.toBuilder().setName(className).build();
 
     Configuration conf = HBaseConfiguration.create();
@@ -372,17 +373,16 @@ public class TestFilterSerialization {
     // Below toComparator call is expected to fail because the comparator is not loaded now
     ClassLoaderTestHelper.deleteClass(className, dataTestDir, conf);
     try {
-      ProtobufUtil.toFilter(filterProto);
+      Filter filter = ProtobufUtil.toFilter(filterProto);
       fail("expected to fail");
     } catch (DoNotRetryIOException e) {
       // do nothing, this is expected
     }
 
     // Write a jar to be loaded into the classloader
-    String code = StringSubstitutor.replace(
-      IOUtils.toString(getClass().getResourceAsStream("/CustomLoadedFilter.java.template"),
-        Charset.defaultCharset()),
-      Collections.singletonMap("suffix", allowFastReflectionFallthrough));
+    String code = StringSubstitutor
+      .replace(IOUtils.toString(getClass().getResourceAsStream("/CustomLoadedFilter.java.template"),
+        Charset.defaultCharset()), Collections.singletonMap("suffix", suffix));
     ClassLoaderTestHelper.buildJar(dataTestDir, className, code,
       ClassLoaderTestHelper.localDirPath(conf));
 

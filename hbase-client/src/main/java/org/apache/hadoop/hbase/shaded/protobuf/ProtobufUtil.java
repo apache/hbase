@@ -310,11 +310,10 @@ public final class ProtobufUtil {
   // We don't bother using the dynamic CLASS_LOADER above, because currently we can't support
   // optimizing dynamically loaded classes. We can do it once we build for java9+, see the todo
   // in ReflectedFunctionCache
-  private static final ReflectedFunctionCache<byte[], Filter> FILTERS = ReflectedFunctionCache
-    .create(ProtobufUtil.class.getClassLoader(), Filter.class, byte[].class, PARSE_FROM);
+  private static final ReflectedFunctionCache<byte[], Filter> FILTERS =
+    new ReflectedFunctionCache<>(Filter.class, byte[].class, PARSE_FROM);
   private static final ReflectedFunctionCache<byte[], ByteArrayComparable> COMPARATORS =
-    ReflectedFunctionCache.create(ProtobufUtil.class.getClassLoader(), ByteArrayComparable.class,
-      byte[].class, PARSE_FROM);
+    new ReflectedFunctionCache<>(ByteArrayComparable.class, byte[].class, PARSE_FROM);
 
   private static volatile boolean ALLOW_FAST_REFLECTION_FALLTHROUGH = true;
 
