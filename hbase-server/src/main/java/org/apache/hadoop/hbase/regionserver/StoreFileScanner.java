@@ -553,30 +553,29 @@ public class StoreFileScanner implements KeyValueScanner {
    * state for by setting {@link StoreFileScanner#previousRow}
    */
   private boolean seekToPreviousRowWithoutHint(Cell originalKey) throws IOException {
-    Cell key = originalKey;
-    do {
-      // Rewind to the cell before the beginning of this row
-      Cell keyAtBeginningOfRow = PrivateCellUtil.createFirstOnRow(key);
-      if (!seekBefore(keyAtBeginningOfRow)) {
-        return false;
-      }
+    // Rewind to the cell before the beginning of this row
+    Cell keyAtBeginningOfRow = PrivateCellUtil.createFirstOnRow(originalKey);
+    if (!seekBefore(keyAtBeginningOfRow)) {
+      return false;
+    }
 
-      // Rewind before this row and save what we find as a seek hint
-      Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getCell());
-      if (!seekBeforeAndSaveKeyToPreviousRow(firstKeyOfPreviousRow)) {
-        return false;
-      }
+    // Rewind before this row and save what we find as a seek hint
+    Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getCell());
+    if (!seekBeforeAndSaveKeyToPreviousRow(firstKeyOfPreviousRow)) {
+      return false;
+    }
 
-      // Seek back to the start of the previous row
-      if (!reseekAtOrAfter(firstKeyOfPreviousRow)) {
-        return false;
-      }
+    // Seek back to the start of the previous row
+    if (!reseekAtOrAfter(firstKeyOfPreviousRow)) {
+      return false;
+    }
 
-      if (isStillAtSeekTargetAfterSkippingNewerKvs(firstKeyOfPreviousRow)) {
-        return true;
-      }
-      key = firstKeyOfPreviousRow;
-    } while (true);
+    if (isStillAtSeekTargetAfterSkippingNewerKvs(firstKeyOfPreviousRow)) {
+      return true;
+    }
+
+    // If we need to continue to seek, let's attempt to use the hint
+    return seekToPreviousRowWithHint(firstKeyOfPreviousRow);
   }
 
   /**
@@ -605,7 +604,9 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   private boolean seekBefore(Cell seekKey) throws IOException {
-    if (seekCount != null) seekCount.increment();
+    if (seekCount != null) {
+      seekCount.increment();
+    }
     if (!hfs.seekBefore(seekKey)) {
       this.cur = null;
       return false;
@@ -615,7 +616,9 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   private boolean seekBeforeAndSaveKeyToPreviousRow(Cell seekKey) throws IOException {
-    if (seekCount != null) seekCount.increment();
+    if (seekCount != null) {
+      seekCount.increment();
+    }
     if (!hfs.seekBefore(seekKey)) {
       // Since the above seek failed, we need to position ourselves back at the start of the
       // block or else our reseek might fail. seekTo() cannot return false here as at least
@@ -630,7 +633,9 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   private boolean seekAtOrAfter(Cell seekKey) throws IOException {
-    if (seekCount != null) seekCount.increment();
+    if (seekCount != null) {
+      seekCount.increment();
+    }
     if (!seekAtOrAfter(hfs, seekKey)) {
       this.cur = null;
       return false;
@@ -640,7 +645,9 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   private boolean reseekAtOrAfter(Cell seekKey) throws IOException {
-    if (seekCount != null) seekCount.increment();
+    if (seekCount != null) {
+      seekCount.increment();
+    }
     if (!reseekAtOrAfter(hfs, seekKey)) {
       this.cur = null;
       return false;
