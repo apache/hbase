@@ -505,7 +505,7 @@ public class StoreFileScanner implements KeyValueScanner {
       } else if (previousRow == null || getComparator().compareRows(previousRow, originalKey) > 0) {
         return seekToPreviousRowWithoutHint(originalKey);
       } else {
-        return seekToPreviousRowWithHint(originalKey);
+        return seekToPreviousRowWithHint();
       }
     } catch (FileNotFoundException e) {
       throw e;
@@ -525,12 +525,8 @@ public class StoreFileScanner implements KeyValueScanner {
    * that seeks are slower as they need to start from the beginning of the file, while reseeks go
    * forward from the current position.
    */
-  private boolean seekToPreviousRowWithHint(Cell originalKey) throws IOException {
+  private boolean seekToPreviousRowWithHint() throws IOException {
     do {
-      if (previousRow == null) {
-        return seekToPreviousRowWithoutHint(originalKey);
-      }
-
       Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(previousRow);
       if (!seekBeforeAndSaveKeyToPreviousRow(firstKeyOfPreviousRow)) {
         return false;
@@ -543,14 +539,18 @@ public class StoreFileScanner implements KeyValueScanner {
       if (isStillAtSeekTargetAfterSkippingNewerKvs(firstKeyOfPreviousRow)) {
         return true;
       }
+
+      if (previousRow == null) {
+        return seekToPreviousRowWithoutHint(firstKeyOfPreviousRow);
+      }
     } while (true);
   }
 
   /**
    * This variant of the {@link StoreFileScanner#seekToPreviousRow(Cell)} method requires two seeks
    * and one reseek. The extra expense/seek is with the intent of speeding up subsequent calls by
-   * using the {@link StoreFileScanner#seekToPreviousRowWithHint(Cell)} which this method seeds the
-   * state for by setting {@link StoreFileScanner#previousRow}
+   * using the {@link StoreFileScanner#seekToPreviousRowWithHint} which this method seeds the state
+   * for by setting {@link StoreFileScanner#previousRow}
    */
   private boolean seekToPreviousRowWithoutHint(Cell originalKey) throws IOException {
     Cell key = originalKey;
@@ -576,6 +576,9 @@ public class StoreFileScanner implements KeyValueScanner {
         return true;
       }
 
+      if (previousRow != null) {
+        return seekToPreviousRowWithHint();
+      }
       key = firstKeyOfPreviousRow;
     } while (true);
   }
