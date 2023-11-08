@@ -651,11 +651,10 @@ public class StoreFileScanner implements KeyValueScanner {
 
   private boolean isStillAtSeekTargetAfterSkippingNewerKvs(Cell seekKey) throws IOException {
     setCurrentCell(hfs.getCell());
-    return skipNewerKvsNewerThanReadpointReversed()
-      && getComparator().compareRows(cur, seekKey) <= 0;
+    return skipKvsNewerThanReadpointReversed() && getComparator().compareRows(cur, seekKey) <= 0;
   }
 
-  private boolean skipNewerKvsNewerThanReadpointReversed() throws IOException {
+  private boolean skipKvsNewerThanReadpointReversed() throws IOException {
     this.stopSkippingKVsIfNextRow = true;
     boolean resultOfSkipKVs;
     try {
