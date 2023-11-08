@@ -428,4 +428,13 @@ public interface MasterServices extends Server {
    * We need to get this in MTP to tell the syncer the new meta replica count.
    */
   MetaLocationSyncer getMetaLocationSyncer();
+
+  /**
+   * Truncate region
+   * @param regionInfo region to be truncated
+   * @param nonceGroup the nonce group
+   * @param nonce      the nonce
+   * @return procedure Id
+   */
+  long truncateRegion(RegionInfo regionInfo, long nonceGroup, long nonce) throws IOException;
 }

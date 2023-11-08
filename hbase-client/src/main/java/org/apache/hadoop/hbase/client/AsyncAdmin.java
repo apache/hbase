@@ -598,6 +598,12 @@ public interface AsyncAdmin {
   CompletableFuture<Void> splitRegion(byte[] regionName, byte[] splitPoint);
 
   /**
+   * Truncate an individual region.
+   * @param regionName region to truncate
+   */
+  CompletableFuture<Void> truncateRegion(byte[] regionName);
+
+  /**
    * @param regionName Encoded or full name of region to assign.
    */
   CompletableFuture<Void> assign(byte[] regionName);

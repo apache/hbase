@@ -22,10 +22,12 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -282,5 +285,85 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
       }
     }
     assertEquals(2, count);
+  }
+
+  @Test
+  public void testTruncateRegion() throws Exception {
+    // Arrange - Create table, insert data, identify region to truncate.
+    final byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("30"), Bytes.toBytes("60"), Bytes.toBytes("90") };
+    String family1 = "f1";
+    String family2 = "f2";
+
+    final String[] sFamilies = new String[] { family1, family2 };
+    final byte[][] bFamilies = new byte[][] { Bytes.toBytes(family1), Bytes.toBytes(family2) };
+    createTableWithDefaultConf(tableName, splitKeys, bFamilies);
+
+    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
+    List<HRegionLocation> regionLocations =
+      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
+    RegionInfo regionToBeTruncated = regionLocations.get(0).getRegion();
+
+    assertEquals(4, regionLocations.size());
+
+    AssignmentTestingUtil.insertData(TEST_UTIL, tableName, 2, 21, sFamilies);
+    AssignmentTestingUtil.insertData(TEST_UTIL, tableName, 2, 31, sFamilies);
+    AssignmentTestingUtil.insertData(TEST_UTIL, tableName, 2, 61, sFamilies);
+    AssignmentTestingUtil.insertData(TEST_UTIL, tableName, 2, 91, sFamilies);
+    int rowCountBeforeTruncate = TEST_UTIL.countRows(tableName);
+
+    // Act - Truncate the first region
+    admin.truncateRegion(regionToBeTruncated.getRegionName()).get();
+
+    // Assert
+    int rowCountAfterTruncate = TEST_UTIL.countRows(tableName);
+    assertNotEquals(rowCountBeforeTruncate, rowCountAfterTruncate);
+    int expectedRowCount = rowCountBeforeTruncate - 2;// Since region with 2 rows was truncated.
+    assertEquals(expectedRowCount, rowCountAfterTruncate);
+  }
+
+  @Test
+  public void testTruncateReplicaRegionNotAllowed() throws Exception {
+    // Arrange - Create table, insert data, identify region to truncate.
+    final byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("30"), Bytes.toBytes("60"), Bytes.toBytes("90") };
+    String family1 = "f1";
+    String family2 = "f2";
+
+    final byte[][] bFamilies = new byte[][] { Bytes.toBytes(family1), Bytes.toBytes(family2) };
+    createTableWithDefaultConf(tableName, 2, splitKeys, bFamilies);
+
+    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
+    List<HRegionLocation> regionLocations =
+      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
+    RegionInfo primaryRegion = regionLocations.get(0).getRegion();
+
+    RegionInfo firstReplica = RegionReplicaUtil.getRegionInfoForReplica(primaryRegion, 1);
+
+    // Act - Truncate the first region
+    try {
+      admin.truncateRegion(firstReplica.getRegionName()).get();
+    } catch (Exception e) {
+      // Assert
+      assertEquals("Expected message is different",
+        "Can't truncate replicas directly.Replicas are auto-truncated "
+          + "when their primary is truncated.",
+        e.getCause().getMessage());
+    }
+  }
+
+  @Test
+  public void testTruncateRegionsMetaTableRegionsNotAllowed() throws Exception {
+    AsyncTableRegionLocator locator = ASYNC_CONN.getRegionLocator(META_TABLE_NAME);
+    List<HRegionLocation> regionLocations = locator.getAllRegionLocations().get();
+    HRegionLocation regionToBeTruncated = regionLocations.get(0);
+    try {
+      admin.truncateRegion(regionToBeTruncated.getRegion().getRegionName()).get();
+      fail();
+    } catch (ExecutionException e) {
+      // expected
+      assertThat(e.getCause(), instanceOf(IOException.class));
+      assertEquals("Can't truncate region in catalog tables", e.getCause().getMessage());
+    }
   }
 }
