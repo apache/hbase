@@ -70,7 +70,7 @@ public class MobStressToolRunner {
   private long count = 500000;
   private double failureProb = 0.1;
   private Table table = null;
-  private MobFileCleanerChore chore = new MobFileCleanerChore();
+  private MobFileCleanerChore chore;
 
   private static volatile boolean run = true;
 
@@ -84,6 +84,7 @@ public class MobStressToolRunner {
     printConf();
     Connection conn = ConnectionFactory.createConnection(this.conf);
     this.admin = conn.getAdmin();
+    this.chore = new MobFileCleanerChore(admin);
     this.familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)
       .setMobThreshold(mobLen).setMaxVersions(1).build();
     this.tableDescriptor =

@@ -251,7 +251,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
         try {
           LOG.info("MOB cleanup chore started ...");
           if (chore == null) {
-            chore = new MobFileCleanerChore();
+            chore = new MobFileCleanerChore(admin);
           }
           chore.cleanupObsoleteMobFiles(conf, table.getName());
           LOG.info("MOB cleanup chore finished");
