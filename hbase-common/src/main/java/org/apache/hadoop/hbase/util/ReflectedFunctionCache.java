@@ -27,12 +27,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Cache to hold resolved Functions generated through reflection. These can be costly to create, but
- * then are much faster than typical Method.invoke calls when executing. Upon construction, finds
- * all subclasses in the same package of the passed baseClass. For each found class, creates a
- * lambda using
- * {@link ReflectionUtils#getOneArgStaticMethodAsFunction(Class, String, Class, Class)}. These are
- * added to a hashmap for fast lookup by name later.
+ * Cache to hold resolved Functions of a specific signature, generated through reflection. These can
+ * be (relatively) costly to create, but then are much faster than typical Method.invoke calls when
+ * executing. The cache is built-up on demand as calls are made to new classes. The functions are
+ * cached for the lifetime of the process. If a function cannot be created (security reasons, method
+ * not found, etc), a fallback function is cached which always returns null. Callers to
+ * {@link #getAndCallByName(String, Object)} should have handling for null return values.
+ * <p>
+ * An instance is created for a specified baseClass (i.e. Filter), argClass (i.e. byte[]), and
+ * static methodName to call. These are used to resolve a Function which delegates to that static
+ * method, if it is found.
  * @param <I> the input argument type for the resolved functions
  * @param <R> the return type for the resolved functions
  */
@@ -48,11 +52,11 @@ public final class ReflectedFunctionCache<I, R> {
   private final String methodName;
   private final ClassLoader classLoader;
 
-  public ReflectedFunctionCache(Class<R> baseClass, Class<I> argClass, String methodName) {
+  public ReflectedFunctionCache(Class<R> baseClass, Class<I> argClass, String staticMethodName) {
     this.classLoader = getClass().getClassLoader();
     this.baseClass = baseClass;
     this.argClass = argClass;
-    this.methodName = methodName;
+    this.methodName = staticMethodName;
   }
 
   /**
