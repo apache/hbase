@@ -182,6 +182,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     addCommandDescriptor(MetaWriteTest.class, "metaWrite",
       "Populate meta table;used with 1 thread; to be cleaned up by cleanMeta");
     addCommandDescriptor(ScanTest.class, "scan", "Run scan test (read every row)");
+    addCommandDescriptor(ReverseScanTest.class, "reverseScan",
+      "Run reverse scan test (read every row)");
     addCommandDescriptor(FilteredScanTest.class, "filterScan",
       "Run scan test using a filter to find a specific row based on it's value "
         + "(make sure to use --rows=20)");
@@ -2074,6 +2076,49 @@ public class PerformanceEvaluation extends Configured implements Tool {
         Scan scan = new Scan().withStartRow(format(opts.startRow)).setCaching(opts.caching)
           .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
           .setReadType(opts.scanReadType).setScanMetricsEnabled(true);
+        for (int family = 0; family < opts.families; family++) {
+          byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+          if (opts.addColumns) {
+            for (int column = 0; column < opts.columns; column++) {
+              byte[] qualifier = column == 0 ? COLUMN_ZERO : Bytes.toBytes("" + column);
+              scan.addColumn(familyName, qualifier);
+            }
+          } else {
+            scan.addFamily(familyName);
+          }
+        }
+        if (opts.filterAll) {
+          scan.setFilter(new FilterAllFilter());
+        }
+        this.testScanner = table.getScanner(scan);
+      }
+      Result r = testScanner.next();
+      updateValueSize(r);
+      return true;
+    }
+  }
+
+  static class ReverseScanTest extends TableTest {
+    private ResultScanner testScanner;
+
+    ReverseScanTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+    }
+
+    @Override
+    void testTakedown() throws IOException {
+      if (this.testScanner != null) {
+        this.testScanner.close();
+      }
+      super.testTakedown();
+    }
+
+    @Override
+    boolean testRow(final int i, final long startTime) throws IOException {
+      if (this.testScanner == null) {
+        Scan scan = new Scan().setCaching(opts.caching).setCacheBlocks(opts.cacheBlocks)
+          .setAsyncPrefetch(opts.asyncPrefetch).setReadType(opts.scanReadType)
+          .setScanMetricsEnabled(true).setReversed(true);
         for (int family = 0; family < opts.families; family++) {
           byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
           if (opts.addColumns) {
