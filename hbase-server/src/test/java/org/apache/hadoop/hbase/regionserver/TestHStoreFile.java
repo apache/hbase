@@ -255,7 +255,7 @@ public class TestHStoreFile {
     StoreFileReader r = file.getReader();
     assertNotNull(r);
     StoreFileScanner scanner =
-      new StoreFileScanner(r, mock(HFileScanner.class), false, false, 0, 0, false);
+      new StoreFileScanner(r, mock(HFileScanner.class), false, false, 0, 0, false, false);
 
     // Verify after instantiating scanner refCount is increased
     assertTrue("Verify file is being referenced", file.isReferencedInReads());
@@ -272,7 +272,7 @@ public class TestHStoreFile {
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.of(cf);
     when(store.getColumnFamilyDescriptor()).thenReturn(cfd);
     try (StoreFileScanner scanner =
-      new StoreFileScanner(reader, mock(HFileScanner.class), false, false, 0, 0, true)) {
+      new StoreFileScanner(reader, mock(HFileScanner.class), false, false, 0, 0, true, false)) {
       Scan scan = new Scan();
       scan.setColumnFamilyTimeRange(cf, 0, 1);
       assertFalse(scanner.shouldUseScanner(scan, store, 0));
