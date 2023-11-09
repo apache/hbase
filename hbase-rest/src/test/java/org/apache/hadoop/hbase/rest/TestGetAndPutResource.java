@@ -347,9 +347,11 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(200, response.getCode());
   }
 
-  private void checkValue1(Response response) throws JAXBException {
+  private void checkValue1(Response getResponse) throws JAXBException {
+    assertEquals(Constants.MIMETYPE_XML, getResponse.getHeader("content-type"));
+
     CellSetModel cellSet =
-      (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+      (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(getResponse.getBody()));
     assertEquals(1, cellSet.getRows().size());
     RowModel rowModel = cellSet.getRows().get(0);
     assertEquals(ROW_1, new String(rowModel.getKey()));
