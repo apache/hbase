@@ -20,7 +20,10 @@ package org.apache.hadoop.hbase.namequeues;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
@@ -31,8 +34,10 @@ public class RpcLogDetails extends NamedQueuePayload {
 
   public static final int SLOW_LOG_EVENT = 0;
 
+  private static final Logger LOG = LoggerFactory.getLogger(RpcLogDetails.class.getName());
+
   private final RpcCall rpcCall;
-  private final Message param;
+  private Message param;
   private final String clientAddress;
   private final long responseSize;
   private final String className;
@@ -43,12 +48,21 @@ public class RpcLogDetails extends NamedQueuePayload {
     String className, boolean isSlowLog, boolean isLargeLog) {
     super(SLOW_LOG_EVENT);
     this.rpcCall = rpcCall;
-    this.param = param;
     this.clientAddress = clientAddress;
     this.responseSize = responseSize;
     this.className = className;
     this.isSlowLog = isSlowLog;
     this.isLargeLog = isLargeLog;
+
+    // We need to deep copy the message because the CodedInputStream may be
+    // overwritten before this slow log is consumed. Such overwriting could
+    // cause the slow log payload to be corrupt
+    try {
+      this.param = param.newBuilderForType().mergeFrom(param.toByteArray()).build();
+    } catch (InvalidProtocolBufferException e) {
+      LOG.error("Failed to parse protobuf for message {}", param, e);
+      this.param = param;
+    }
   }
 
   public RpcCall getRpcCall() {
