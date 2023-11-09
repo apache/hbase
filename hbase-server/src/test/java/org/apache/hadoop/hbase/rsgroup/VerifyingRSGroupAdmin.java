@@ -423,7 +423,12 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
-    return admin.modifyTableAsync(td);
+    return modifyTableAsync(td, true);
+  }
+
+  public Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions)
+    throws IOException {
+    return admin.modifyTableAsync(td, reopenRegions);
   }
 
   public void shutdown() throws IOException {
