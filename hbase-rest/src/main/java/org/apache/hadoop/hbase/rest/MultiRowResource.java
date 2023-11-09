@@ -65,7 +65,7 @@ public class MultiRowResource extends ResourceBase implements Constants {
   @GET
   @Produces({ MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF, MIMETYPE_PROTOBUF_IETF })
   public Response get(final @Context UriInfo uriInfo,
-    final @HeaderParam("Key-Encoding") String keyEncodingHeader) {
+    final @HeaderParam("Encoding") String keyEncodingHeader) {
     MultivaluedMap<String, String> params = uriInfo.getQueryParameters();
     String keyEncoding = (keyEncodingHeader != null)
       ? keyEncodingHeader

@@ -100,4 +100,38 @@ public class TestDeleteRow extends RowResourceBase {
     assertEquals(404, response.getCode());
   }
 
+  private void testDeleteB64XML(boolean useQueryString) throws IOException, JAXBException {
+    Response response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(200, response.getCode());
+    response = putValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
+    assertEquals(200, response.getCode());
+    checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
+
+    response = deleteValueB64(TABLE, ROW_1, COLUMN_1, useQueryString);
+    assertEquals(200, response.getCode());
+    response = getValueXML(TABLE, ROW_1, COLUMN_1);
+    assertEquals(404, response.getCode());
+    checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
+
+    response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(200, response.getCode());
+    response = checkAndDeletePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(200, response.getCode());
+    response = getValueXML(TABLE, ROW_1, COLUMN_1);
+    assertEquals(404, response.getCode());
+
+    response = deleteRowB64(TABLE, ROW_1, useQueryString);
+    assertEquals(200, response.getCode());
+    response = getValueXML(TABLE, ROW_1, COLUMN_1);
+    assertEquals(404, response.getCode());
+    response = getValueXML(TABLE, ROW_1, COLUMN_2);
+    assertEquals(404, response.getCode());
+  }
+
+  @Test
+  public void testDeleteB64XML() throws IOException, JAXBException {
+    testDeleteB64XML(/* useQueryString: */false);
+    testDeleteB64XML(/* useQueryString: */true);
+  }
 }

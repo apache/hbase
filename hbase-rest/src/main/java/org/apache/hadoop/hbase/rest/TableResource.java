@@ -96,7 +96,7 @@ public class TableResource extends ResourceBase {
     // the RowSpec constructor has a chance to parse
     final @PathParam("rowspec") @Encoded String rowspec, final @QueryParam("v") String versions,
     final @QueryParam("check") String check, final @QueryParam("rr") String returnResult,
-    final @HeaderParam("Key-Encoding") String keyEncodingHeader,
+    final @HeaderParam("Encoding") String keyEncodingHeader,
     final @QueryParam(Constants.KEY_ENCODING_QUERY_PARAM_NAME) String keyEncodingQuery)
     throws IOException {
     String keyEncoding = (keyEncodingHeader != null) ? keyEncodingHeader : keyEncodingQuery;
@@ -110,7 +110,7 @@ public class TableResource extends ResourceBase {
     final @PathParam("suffixglobbingspec") @Encoded String suffixglobbingspec,
     final @QueryParam("v") String versions, final @QueryParam("check") String check,
     final @QueryParam("rr") String returnResult,
-    final @HeaderParam("Key-Encoding") String keyEncodingHeader,
+    final @HeaderParam("Encoding") String keyEncodingHeader,
     final @QueryParam(Constants.KEY_ENCODING_QUERY_PARAM_NAME) String keyEncodingQuery)
     throws IOException {
     String keyEncoding = (keyEncodingHeader != null) ? keyEncodingHeader : keyEncodingQuery;
