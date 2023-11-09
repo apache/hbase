@@ -517,12 +517,13 @@
       final RegionInfo regionInfo = regionReplicaInfo.getRegionInfo();
       final ServerName serverName = regionReplicaInfo.getServerName();
       final RegionState.State regionState = regionReplicaInfo.getRegionState();
-      final int rsPort = master.getRegionServerInfoPort(serverName);
 
       final long seqNum = regionReplicaInfo.getSeqNum();
 
       final String regionSpanFormat = "<span title=" + HConstants.CATALOG_FAMILY_STR + ":%s>%s</span>";
-      final String targetServerName = regionReplicaInfo.getTargetServerName().toString();
+      final String targetServerName = regionReplicaInfo.getTargetServerName() != null
+        ? regionReplicaInfo.getTargetServerName().toString()
+        : "";
       final Map<String, RegionInfo> mergeRegions = regionReplicaInfo.getMergeRegionInfo();
       final String mergeRegionNames = (mergeRegions == null) ? "" :
         mergeRegions.entrySet().stream()
@@ -540,7 +541,7 @@
           <td title="endKey"><%= endKeyDisplay %></td>
           <td title="replicaId"><%= replicaIdDisplay %></td>
           <td title="regionState"><%= regionStateDisplay %></td>
-          <td title="<%= serverColumnName + "," + startCodeColumnName %>"><%= buildRegionServerLink(serverName, rsPort, regionInfo, regionState) %></td>
+          <td title="<%= serverColumnName + "," + startCodeColumnName %>"><%= serverName != null ? buildRegionServerLink(serverName, master.getRegionServerInfoPort(serverName), regionInfo, regionState) : "" %></td>
           <td title="<%= seqNumColumnName %>"><%= seqNum %></td>
           <td title="<%= serverNameColumnName %>"><%= targetServerName %></td>
           <td><%= mergeRegionNames %></td>
