@@ -1399,23 +1399,46 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    * Check hbase:meta is up and ready for reading. For use during Master startup only.
    * @return True if meta is UP and online and startup can progress. Otherwise, meta is not online
    *         and we will hold here until operator intervention.
+   * @throws IOException If the master restart is required.
    */
   @InterfaceAudience.Private
-  public boolean waitForMetaOnline() {
+  public boolean waitForMetaOnline() throws IOException {
     return isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
   }
 
   /**
+   * Wait until the region is reported online on a live regionserver.
+   * @param ri Region info.
    * @return True if region is online and scannable else false if an error or shutdown (Otherwise we
    *         just block in here holding up all forward-progess).
+   * @throws IOException If the master restart is required.
    */
-  private boolean isRegionOnline(RegionInfo ri) {
+  private boolean isRegionOnline(RegionInfo ri) throws IOException {
     RetryCounter rc = null;
     while (!isStopped()) {
       RegionState rs = this.assignmentManager.getRegionStates().getRegionState(ri);
       if (rs != null && rs.isOpened()) {
         if (this.getServerManager().isServerOnline(rs.getServerName())) {
           return true;
+        } else {
+          LOG.info("{} has state {} but the server {} is not online, scheduling recovery.",
+            ri.getRegionNameAsString(), rs, rs.getServerName());
+          this.getServerManager().expireServer(rs.getServerName(), true);
+          // If already many SCPs are scheduled, but they are not progressing because of
+          // meta's unavailability, the best action item is to throw PleaseRestartMasterException
+          // and let new active master init take care of on-lining meta and process all other
+          // pending SCPs. It's worth waiting for ~20s before arriving at the conclusion, rather
+          // than looping through procedures to figure out how/when/why they are able to or not
+          // able to make any progress and eventually abort master initialization anyway.
+          Threads.sleep(20000);
+          rs = this.assignmentManager.getRegionStates().getRegionState(ri);
+          if (rs != null && rs.isOpened()) {
+            if (this.getServerManager().isServerOnline(rs.getServerName())) {
+              return true;
+            } else {
+              throw new PleaseRestartMasterException("meta is still not online on live server yet");
+            }
+          }
         }
       }
       // Region is not OPEN.
