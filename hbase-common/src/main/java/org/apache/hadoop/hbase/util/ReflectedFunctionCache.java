@@ -70,26 +70,29 @@ public final class ReflectedFunctionCache<I, R> {
     // create a privileged lookup in a non-default ClassLoader. So while this cache loads
     // over time, it will never load a custom filter from "hbase.dynamic.jars.dir".
     Function<I, ? extends R> lambda =
-      ConcurrentMapUtils.computeIfAbsent(lambdasByClass, className, () -> {
-        long startTime = System.nanoTime();
-        try {
-          Class<?> clazz = Class.forName(className, false, classLoader);
-          if (!baseClass.isAssignableFrom(clazz)) {
-            LOG.debug("Requested class {} is not assignable to {}, skipping creation of function",
-              className, baseClass.getName());
-            return this::notFound;
-          }
-          return createFunction(clazz, methodName, argClass, (Class<? extends R>) clazz);
-        } catch (Throwable t) {
-          LOG.debug("Failed to create function for {}", className, t);
-          return this::notFound;
-        } finally {
-          LOG.debug("Populated cache for {} in {}ms", className,
-            TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime));
-        }
-      });
+      ConcurrentMapUtils.computeIfAbsent(lambdasByClass, className, () -> loadFunction(className));
 
     return lambda.apply(argument);
+  }
+
+  private Function<I, ? extends R> loadFunction(String className) {
+    long startTime = System.nanoTime();
+    try {
+      Class<?> clazz = Class.forName(className, false, classLoader);
+      if (!baseClass.isAssignableFrom(clazz)) {
+        LOG.debug("Requested class {} is not assignable to {}, skipping creation of function",
+          className, baseClass.getName());
+        return this::notFound;
+      }
+      return ReflectionUtils.getOneArgStaticMethodAsFunction(clazz, methodName, argClass,
+        (Class<? extends R>) clazz);
+    } catch (Throwable t) {
+      LOG.debug("Failed to create function for {}", className, t);
+      return this::notFound;
+    } finally {
+      LOG.debug("Populated cache for {} in {}ms", className,
+        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime));
+    }
   }
 
   /**
@@ -100,15 +103,4 @@ public final class ReflectedFunctionCache<I, R> {
     return null;
   }
 
-  private static <I, O> Function<I, ? extends O> createFunction(Class<?> clazz, String methodName,
-    Class<I> argumentClazz, Class<O> returnValueClass) {
-    try {
-      return ReflectionUtils.getOneArgStaticMethodAsFunction(clazz, methodName, argumentClazz,
-        returnValueClass);
-    } catch (Throwable e) {
-      LOG.debug("Failed to create function for class={}", clazz, e);
-      return null;
-    }
-
-  }
 }
