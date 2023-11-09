@@ -607,7 +607,7 @@
     <kerby.version>2.0.3</kerby.version>
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>5.4.0.7.2.18.0-SNAPSHOT</curator.version>
-    <netty-for-minihdfs.version>4.1.86.Final</netty-for-minihdfs.version>
+    <netty-for-minihdfs.version>4.1.100.Final</netty-for-minihdfs.version>
     <!-- Plugin Dependencies -->
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
