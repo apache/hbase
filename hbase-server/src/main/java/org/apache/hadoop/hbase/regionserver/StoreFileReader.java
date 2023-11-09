@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -146,7 +147,8 @@ public class StoreFileReader {
   public StoreFileScanner getStoreFileScanner(boolean cacheBlocks, boolean pread,
     boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn) {
     return new StoreFileScanner(this, getScanner(cacheBlocks, pread, isCompaction), !isCompaction,
-      reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn);
+      reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn,
+      reader.getDataBlockEncoding() == DataBlockEncoding.ROW_INDEX_V1);
   }
 
   /**
