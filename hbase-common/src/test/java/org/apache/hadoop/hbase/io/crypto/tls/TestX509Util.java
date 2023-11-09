@@ -379,21 +379,21 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   public void testGetDefaultCipherSuitesJava9() {
     String[] cipherSuites = X509Util.getDefaultCipherSuitesForJavaVersion("9");
     // Java 9+ default should have the GCM suites first
-    assertThat(cipherSuites[0], containsString("GCM"));
+    assertEquals(cipherSuites[0], "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
   }
 
   @Test
   public void testGetDefaultCipherSuitesJava10() {
     String[] cipherSuites = X509Util.getDefaultCipherSuitesForJavaVersion("10");
     // Java 9+ default should have the GCM suites first
-    assertThat(cipherSuites[0], containsString("GCM"));
+    assertEquals(cipherSuites[0], "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
   }
 
   @Test
   public void testGetDefaultCipherSuitesJava11() {
     String[] cipherSuites = X509Util.getDefaultCipherSuitesForJavaVersion("11");
-    // Java 9+ default should have the GCM suites first
-    assertThat(cipherSuites[0], containsString("GCM"));
+    // Java 11+ default should have the TLSv1.3 suites first
+    assertThat(cipherSuites[0], containsString("TLS_AES_128_GCM"));
   }
 
   @Test
