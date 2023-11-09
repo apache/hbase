@@ -41,10 +41,6 @@ public final class ReflectedFunctionCache<I, R> {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReflectedFunctionCache.class);
 
-  // In order to use computeIfAbsent, we can't store nulls in our cache. So we store a lambda
-  // which resolves to null. The contract is that getAndCallByName returns null in this case.
-  private final Function<I, ? extends R> NOT_FOUND = t -> null;
-
   private final ConcurrentMap<String, Function<I, ? extends R>> lambdasByClass =
     new ConcurrentHashMap<>();
   private final Class<R> baseClass;
@@ -81,12 +77,12 @@ public final class ReflectedFunctionCache<I, R> {
           if (!baseClass.isAssignableFrom(clazz)) {
             LOG.debug("Requested class {} is not assignable to {}, skipping creation of function",
               className, baseClass.getName());
-            return NOT_FOUND;
+            return this::notFound;
           }
           return createFunction(clazz, methodName, argClass, (Class<? extends R>) clazz);
         } catch (Throwable t) {
           LOG.debug("Failed to create function for {}", className, t);
-          return NOT_FOUND;
+          return this::notFound;
         } finally {
           LOG.debug("Populated cache for {} in {}ms", className,
             TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime));
@@ -94,6 +90,14 @@ public final class ReflectedFunctionCache<I, R> {
       });
 
     return lambda.apply(argument);
+  }
+
+  /**
+   * In order to use computeIfAbsent, we can't store nulls in our cache. So we store a lambda which
+   * resolves to null. The contract is that getAndCallByName returns null in this case.
+   */
+  private R notFound(I argument) {
+    return null;
   }
 
   private static <I, O> Function<I, ? extends O> createFunction(Class<?> clazz, String methodName,
