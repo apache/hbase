@@ -127,6 +127,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
+import org.apache.hadoop.hbase.util.ReflectedFunctionCache;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -304,6 +305,23 @@ public final class ProtobufUtil {
 
   public static boolean isClassLoaderLoaded() {
     return classLoaderLoaded;
+  }
+
+  private static final String PARSE_FROM = "parseFrom";
+
+  // We don't bother using the dynamic CLASS_LOADER above, because currently we can't support
+  // optimizing dynamically loaded classes. We can do it once we build for java9+, see the todo
+  // in ReflectedFunctionCache
+  private static final ReflectedFunctionCache<byte[], Filter> FILTERS =
+    new ReflectedFunctionCache<>(Filter.class, byte[].class, PARSE_FROM);
+  private static final ReflectedFunctionCache<byte[], ByteArrayComparable> COMPARATORS =
+    new ReflectedFunctionCache<>(ByteArrayComparable.class, byte[].class, PARSE_FROM);
+
+  private static volatile boolean ALLOW_FAST_REFLECTION_FALLTHROUGH = true;
+
+  // Visible for tests
+  public static void setAllowFastReflectionFallthrough(boolean val) {
+    ALLOW_FAST_REFLECTION_FALLTHROUGH = val;
   }
 
   /**
@@ -1554,13 +1572,23 @@ public final class ProtobufUtil {
   public static ByteArrayComparable toComparator(ComparatorProtos.Comparator proto)
     throws IOException {
     String type = proto.getName();
-    String funcName = "parseFrom";
     byte[] value = proto.getSerializedComparator().toByteArray();
+
     try {
+      ByteArrayComparable result = COMPARATORS.getAndCallByName(type, value);
+      if (result != null) {
+        return result;
+      }
+
+      if (!ALLOW_FAST_REFLECTION_FALLTHROUGH) {
+        throw new IllegalStateException("Failed to deserialize comparator " + type
+          + " because fast reflection returned null and fallthrough is disabled");
+      }
+
       Class<?> c = Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
-      Method parseFrom = c.getMethod(funcName, byte[].class);
+      Method parseFrom = c.getMethod(PARSE_FROM, byte[].class);
       if (parseFrom == null) {
-        throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
+        throw new IOException("Unable to locate function: " + PARSE_FROM + " in type: " + type);
       }
       return (ByteArrayComparable) parseFrom.invoke(null, value);
     } catch (Exception e) {
@@ -1577,12 +1605,22 @@ public final class ProtobufUtil {
   public static Filter toFilter(FilterProtos.Filter proto) throws IOException {
     String type = proto.getName();
     final byte[] value = proto.getSerializedFilter().toByteArray();
-    String funcName = "parseFrom";
+
     try {
+      Filter result = FILTERS.getAndCallByName(type, value);
+      if (result != null) {
+        return result;
+      }
+
+      if (!ALLOW_FAST_REFLECTION_FALLTHROUGH) {
+        throw new IllegalStateException("Failed to deserialize comparator " + type
+          + " because fast reflection returned null and fallthrough is disabled");
+      }
+
       Class<?> c = Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
-      Method parseFrom = c.getMethod(funcName, byte[].class);
+      Method parseFrom = c.getMethod(PARSE_FROM, byte[].class);
       if (parseFrom == null) {
-        throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
+        throw new IOException("Unable to locate function: " + PARSE_FROM + " in type: " + type);
       }
       return (Filter) parseFrom.invoke(c, value);
     } catch (Exception e) {

@@ -21,6 +21,11 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.invoke.CallSite;
+import java.lang.invoke.LambdaMetafactory;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
@@ -29,6 +34,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
+import java.util.function.Function;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 
@@ -206,6 +212,30 @@ public class ReflectionUtils {
       return Long.toString(id);
     }
     return id + " (" + name + ")";
+  }
+
+  /**
+   * Creates a Function which can be called to performantly execute a reflected static method. The
+   * creation of the Function itself may not be fast, but executing that method thereafter should be
+   * much faster than {@link #invokeMethod(Object, String, Object...)}.
+   * @param lookupClazz      the class to find the static method in
+   * @param methodName       the method name
+   * @param argumentClazz    the type of the argument
+   * @param returnValueClass the type of the return value
+   * @return a function which when called executes the requested static method.
+   * @throws Throwable exception types from the underlying reflection
+   */
+  public static <I, R> Function<I, R> getOneArgStaticMethodAsFunction(Class<?> lookupClazz,
+    String methodName, Class<I> argumentClazz, Class<R> returnValueClass) throws Throwable {
+    MethodHandles.Lookup lookup = MethodHandles.lookup();
+    MethodHandle methodHandle = lookup.findStatic(lookupClazz, methodName,
+      MethodType.methodType(returnValueClass, argumentClazz));
+    CallSite site =
+      LambdaMetafactory.metafactory(lookup, "apply", MethodType.methodType(Function.class),
+        methodHandle.type().generic(), methodHandle, methodHandle.type());
+
+    return (Function<I, R>) site.getTarget().invokeExact();
+
   }
 
   /**
