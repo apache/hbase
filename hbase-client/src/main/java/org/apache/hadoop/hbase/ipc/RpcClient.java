@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.Closeable;
-import java.io.IOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -62,10 +61,8 @@ public interface RpcClient extends Closeable {
    * @param user       which is to use the connection
    * @param rpcTimeout default rpc operation timeout
    * @return A blocking rpc channel that goes via this rpc client instance.
-   * @throws IOException when channel could not be created
    */
-  BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User user, int rpcTimeout)
-    throws IOException;
+  BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User user, int rpcTimeout);
 
   /**
    * Creates a "channel" that can be used by a protobuf service. Useful setting up protobuf stubs.
@@ -74,8 +71,7 @@ public interface RpcClient extends Closeable {
    * @param rpcTimeout default rpc operation timeout
    * @return A rpc channel that goes via this rpc client instance.
    */
-  RpcChannel createRpcChannel(final ServerName sn, final User user, int rpcTimeout)
-    throws IOException;
+  RpcChannel createRpcChannel(final ServerName sn, final User user, int rpcTimeout);
 
   /**
    * Interrupt the connections to the given server. This should be called if the server is known as

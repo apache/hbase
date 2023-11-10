@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.net.InetSocketAddress;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -27,7 +28,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
 public class ServerTooBusyException extends DoNotRetryIOException {
+
+  public ServerTooBusyException(Address address, long count) {
+    super("Busy Server! " + count + " concurrent RPCs against " + address);
+  }
+
+  @Deprecated
   public ServerTooBusyException(InetSocketAddress address, long count) {
     super("Busy Server! " + count + " concurrent RPCs against " + address);
   }
+
 }
