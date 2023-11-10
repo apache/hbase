@@ -471,7 +471,7 @@ public class RowResourceBase {
     Header[] fullHeaders = new Header[headers.length + 1];
     for (int i = 0; i < headers.length; i++)
       fullHeaders[i] = headers[i];
-    fullHeaders[headers.length] = new BasicHeader("Content-Type", Constants.MIMETYPE_XML);
+    fullHeaders[headers.length] = new BasicHeader("Accept", Constants.MIMETYPE_XML);
     Response response = client.get(url, fullHeaders);
     return response;
   }
