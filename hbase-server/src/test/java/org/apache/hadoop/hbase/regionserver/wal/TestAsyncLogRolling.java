@@ -18,22 +18,13 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
@@ -49,7 +40,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ VerySlowRegionServerTests.class, LargeTests.class })
-public class TestAsyncLogRolling extends AbstractTestLogRolling {
+public class TestAsyncLogRolling extends AbstractTestLogRolling<WALProvider.AsyncWriter> {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -61,122 +52,42 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling {
     conf.setInt(FanOutOneBlockAsyncDFSOutputHelper.ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES, 100);
     conf.set(WALFactory.WAL_PROVIDER, "asyncfs");
     AbstractTestLogRolling.setUpBeforeClass();
-
-    // For slow sync threshold test: roll once after a sync above this threshold
-    TEST_UTIL.getConfiguration().setInt(FSHLog.ROLL_ON_SYNC_TIME_MS, 5000);
   }
 
-  @Test
-  public void testSlowSyncLogRolling() throws Exception {
-    // Create the test table
-    TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
-    admin.createTable(desc);
-    Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
-    int row = 1;
-    try {
-      // Get a reference to the AsyncFSWAL
-      server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
-      RegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
-      final AsyncFSWAL log = (AsyncFSWAL) server.getWAL(region);
-
-      // Register a WALActionsListener to observe if a SLOW_SYNC roll is requested
-
-      final AtomicBoolean slowSyncHookCalled = new AtomicBoolean();
-      log.registerWALActionsListener(new WALActionsListener() {
-        @Override
-        public void logRollRequested(WALActionsListener.RollRequestReason reason) {
-          switch (reason) {
-            case SLOW_SYNC:
-              slowSyncHookCalled.lazySet(true);
-              break;
-            default:
-              break;
-          }
-        }
-      });
-
-      // Write some data
-
-      for (int i = 0; i < 10; i++) {
-        writeData(table, row++);
+  @Override
+  protected WALProvider.AsyncWriter createNewWriter(WALProvider.AsyncWriter oldWriter,
+    int sleepTimeMillis) {
+    return new WALProvider.AsyncWriter() {
+      @Override
+      public void close() throws IOException {
+        oldWriter.close();
       }
 
-      assertFalse("Should not have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
-
-      // Set up for test
-      slowSyncHookCalled.set(false);
-
-      // Wrap the current writer with the anonymous class below that adds 5000 ms of
-      // latency to any sync on the hlog.
-      // This will trip the other threshold.
-      final WALProvider.AsyncWriter oldWriter2 = log.getWriter();
-      final WALProvider.AsyncWriter newWriter2 = new WALProvider.AsyncWriter() {
-        @Override
-        public void close() throws IOException {
-          oldWriter2.close();
+      @Override
+      public CompletableFuture<Long> sync(boolean forceSync) {
+        try {
+          Thread.sleep(sleepTimeMillis);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
         }
-
-        @Override
-        public CompletableFuture<Long> sync(boolean forceSync) {
-          try {
-            Thread.sleep(5000);
-          } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-          }
-          return oldWriter2.sync(forceSync);
-        }
-
-        @Override
-        public void append(WAL.Entry entry) {
-          oldWriter2.append(entry);
-        }
-
-        @Override
-        public long getLength() {
-          return oldWriter2.getLength();
-        }
-
-        @Override
-        public long getSyncedLength() {
-          return oldWriter2.getSyncedLength();
-        }
-      };
-      log.setWriter(newWriter2);
-
-      // Write some data. Should only take one sync.
-
-      writeData(table, row++);
-
-      // Wait for our wait injecting writer to get rolled out, as needed.
-
-      TEST_UTIL.waitFor(10000, 100, new Waiter.ExplainingPredicate<Exception>() {
-        @Override
-        public boolean evaluate() throws Exception {
-          return log.getWriter() != newWriter2;
-        }
-
-        @Override
-        public String explainFailure() throws Exception {
-          return "Waited too long for our test writer to get rolled out";
-        }
-      });
-
-      assertTrue("Should have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
-
-      // Set up for test
-      slowSyncHookCalled.set(false);
-
-      // Write some data
-      for (int i = 0; i < 10; i++) {
-        writeData(table, row++);
+        return oldWriter.sync(forceSync);
       }
 
-      assertFalse("Should not have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
+      @Override
+      public void append(WAL.Entry entry) {
+        oldWriter.append(entry);
+      }
 
-    } finally {
-      table.close();
-    }
+      @Override
+      public long getLength() {
+        return oldWriter.getLength();
+      }
+
+      @Override
+      public long getSyncedLength() {
+        return oldWriter.getSyncedLength();
+      }
+    };
   }
 
   @Test
