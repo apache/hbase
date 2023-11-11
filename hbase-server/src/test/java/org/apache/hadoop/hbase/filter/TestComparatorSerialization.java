@@ -24,10 +24,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
-import java.util.Collections;
 import java.util.regex.Pattern;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.text.StringSubstitutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -157,10 +155,9 @@ public class TestComparatorSerialization {
     }
 
     // Write a jar to be loaded into the classloader
-    String code = StringSubstitutor.replace(
+    String code =
       IOUtils.toString(getClass().getResourceAsStream("/CustomLoadedComparator.java.template"),
-        Charset.defaultCharset()),
-      Collections.singletonMap("suffix", suffix));
+        Charset.defaultCharset()).replaceAll("\\$\\{suffix\\}", suffix);
     ClassLoaderTestHelper.buildJar(dataTestDir, className, code,
       ClassLoaderTestHelper.localDirPath(conf));
 
