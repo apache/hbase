@@ -1491,7 +1491,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, updatedCoprocs);
   }
 
-  private void initMobCleaner() throws IOException {
+  private void initMobCleaner() {
     this.mobFileCleanerChore = new MobFileCleanerChore(this);
     getChoreService().scheduleChore(mobFileCleanerChore);
     this.mobFileCompactionChore = new MobFileCompactionChore(this);

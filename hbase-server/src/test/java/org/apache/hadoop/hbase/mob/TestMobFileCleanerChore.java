@@ -92,7 +92,7 @@ public class TestMobFileCleanerChore {
 
     HTU.startMiniCluster();
     admin = HTU.getAdmin();
-    chore = new MobFileCleanerChore(admin);
+    chore = new MobFileCleanerChore(HTU.getHBaseCluster().getMaster());
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)
       .setMobThreshold(mobLen).setMaxVersions(1).build();
     tableDescriptor = HTU.createModifyableTableDescriptor("testMobCompactTable")
@@ -168,7 +168,7 @@ public class TestMobFileCleanerChore {
     Thread.sleep(minAgeToArchive + 1000);
     LOG.info("Cleaning up MOB files");
     // Cleanup
-    chore.cleanupObsoleteMobFiles(conf, table.getName());
+    MobFileCleanupUtil.cleanupObsoleteMobFiles(conf, table.getName(), admin);
 
     // verify that nothing have happened
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
@@ -187,7 +187,7 @@ public class TestMobFileCleanerChore {
 
     Thread.sleep(minAgeToArchive + 1000);
     LOG.info("Cleaning up MOB files");
-    chore.cleanupObsoleteMobFiles(conf, table.getName());
+    MobFileCleanupUtil.cleanupObsoleteMobFiles(conf, table.getName(), admin);
 
     // check that the extra file got deleted
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
