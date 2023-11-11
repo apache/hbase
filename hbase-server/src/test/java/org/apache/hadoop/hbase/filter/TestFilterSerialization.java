@@ -22,12 +22,10 @@ import static org.junit.Assert.fail;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeSet;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.text.StringSubstitutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -399,9 +397,9 @@ public class TestFilterSerialization {
     }
 
     // Write a jar to be loaded into the classloader
-    String code = StringSubstitutor
-      .replace(IOUtils.toString(getClass().getResourceAsStream("/CustomLoadedFilter.java.template"),
-        Charset.defaultCharset()), Collections.singletonMap("suffix", suffix));
+    String code =
+      IOUtils.toString(getClass().getResourceAsStream("/CustomLoadedFilter.java.template"),
+        Charset.defaultCharset()).replaceAll("\\$\\{suffix\\}", suffix);
     ClassLoaderTestHelper.buildJar(dataTestDir, className, code,
       ClassLoaderTestHelper.localDirPath(conf));
 
