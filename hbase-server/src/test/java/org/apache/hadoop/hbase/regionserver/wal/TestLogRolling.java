@@ -55,10 +55,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -70,7 +69,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ VerySlowRegionServerTests.class, LargeTests.class })
-public class TestLogRolling extends AbstractTestLogRolling<WALProvider.Writer> {
+public class TestLogRolling extends AbstractTestLogRolling {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -99,41 +98,28 @@ public class TestLogRolling extends AbstractTestLogRolling<WALProvider.Writer> {
     AbstractTestLogRolling.setUpBeforeClass();
   }
 
+  public static class SlowSyncLogWriter extends ProtobufLogWriter {
+    @Override
+    public void sync(boolean forceSync) throws IOException {
+      try {
+        Thread.sleep(getSyncLatencyMillis());
+      } catch (InterruptedException e) {
+        InterruptedIOException ex = new InterruptedIOException();
+        ex.initCause(e);
+        throw ex;
+      }
+      super.sync(forceSync);
+    }
+  }
+
   @Override
-  protected WALProvider.Writer createNewWriter(WALProvider.Writer oldWriter, int sleepTimeMillis) {
-    return new WALProvider.Writer() {
-      @Override
-      public void close() throws IOException {
-        oldWriter.close();
-      }
+  protected void setSlowLogWriter(Configuration conf) {
+    conf.set(FSHLogProvider.WRITER_IMPL, SlowSyncLogWriter.class.getName());
+  }
 
-      @Override
-      public void sync(boolean forceSync) throws IOException {
-        try {
-          Thread.sleep(sleepTimeMillis);
-        } catch (InterruptedException e) {
-          InterruptedIOException ex = new InterruptedIOException();
-          ex.initCause(e);
-          throw ex;
-        }
-        oldWriter.sync(forceSync);
-      }
-
-      @Override
-      public void append(Entry entry) throws IOException {
-        oldWriter.append(entry);
-      }
-
-      @Override
-      public long getLength() {
-        return oldWriter.getLength();
-      }
-
-      @Override
-      public long getSyncedLength() {
-        return oldWriter.getSyncedLength();
-      }
-    };
+  @Override
+  protected void setDefaultLogWriter(Configuration conf) {
+    conf.set(FSHLogProvider.WRITER_IMPL, ProtobufLogWriter.class.getName());
   }
 
   void batchWriteAndWait(Table table, final FSHLog log, int start, boolean expect, int timeout)

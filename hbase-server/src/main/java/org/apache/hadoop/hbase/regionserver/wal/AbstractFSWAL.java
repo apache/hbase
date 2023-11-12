@@ -2249,11 +2249,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return this.writer;
   }
 
-  // Only for test.
-  void setWriter(W writer) {
-    this.writer = writer;
-  }
-
   private static void usage() {
     System.err.println("Usage: AbstractFSWAL <ARGS>");
     System.err.println("Arguments:");

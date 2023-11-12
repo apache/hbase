@@ -29,9 +29,7 @@ import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.junit.BeforeClass;
@@ -39,8 +37,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
+
 @Category({ VerySlowRegionServerTests.class, LargeTests.class })
-public class TestAsyncLogRolling extends AbstractTestLogRolling<WALProvider.AsyncWriter> {
+public class TestAsyncLogRolling extends AbstractTestLogRolling {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -54,40 +55,31 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling<WALProvider.Asyn
     AbstractTestLogRolling.setUpBeforeClass();
   }
 
+  public static class SlowSyncLogWriter extends AsyncProtobufLogWriter {
+
+    public SlowSyncLogWriter(EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass) {
+      super(eventLoopGroup, channelClass);
+    }
+
+    @Override
+    public CompletableFuture<Long> sync(boolean forceSync) {
+      try {
+        Thread.sleep(getSyncLatencyMillis());
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      return super.sync(forceSync);
+    }
+  }
+
   @Override
-  protected WALProvider.AsyncWriter createNewWriter(WALProvider.AsyncWriter oldWriter,
-    int sleepTimeMillis) {
-    return new WALProvider.AsyncWriter() {
-      @Override
-      public void close() throws IOException {
-        oldWriter.close();
-      }
+  protected void setSlowLogWriter(Configuration conf) {
+    conf.set(AsyncFSWALProvider.WRITER_IMPL, SlowSyncLogWriter.class.getName());
+  }
 
-      @Override
-      public CompletableFuture<Long> sync(boolean forceSync) {
-        try {
-          Thread.sleep(sleepTimeMillis);
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
-        }
-        return oldWriter.sync(forceSync);
-      }
-
-      @Override
-      public void append(WAL.Entry entry) {
-        oldWriter.append(entry);
-      }
-
-      @Override
-      public long getLength() {
-        return oldWriter.getLength();
-      }
-
-      @Override
-      public long getSyncedLength() {
-        return oldWriter.getSyncedLength();
-      }
-    };
+  @Override
+  protected void setDefaultLogWriter(Configuration conf) {
+    conf.set(AsyncFSWALProvider.WRITER_IMPL, AsyncProtobufLogWriter.class.getName());
   }
 
   @Test

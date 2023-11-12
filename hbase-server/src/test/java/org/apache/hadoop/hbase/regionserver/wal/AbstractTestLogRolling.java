@@ -66,7 +66,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test log deletion as logs are rolled.
  */
-public abstract class AbstractTestLogRolling<W extends WALProvider.WriterBase> {
+public abstract class AbstractTestLogRolling {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractTestLogRolling.class);
   protected HRegionServer server;
   protected String tableName;
@@ -78,6 +78,7 @@ public abstract class AbstractTestLogRolling<W extends WALProvider.WriterBase> {
   protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   @Rule
   public final TestName name = new TestName();
+  private static int syncLatencyMillis;
 
   public AbstractTestLogRolling() {
     this.server = null;
@@ -168,6 +169,14 @@ public abstract class AbstractTestLogRolling<W extends WALProvider.WriterBase> {
     }
   }
 
+  public static void setSyncLatencyMillis(int latency) {
+    syncLatencyMillis = latency;
+  }
+
+  public static int getSyncLatencyMillis() {
+    return syncLatencyMillis;
+  }
+
   @Test
   public void testSlowSyncLogRolling() throws Exception {
     // Create the test table
@@ -177,14 +186,13 @@ public abstract class AbstractTestLogRolling<W extends WALProvider.WriterBase> {
     Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
     int row = 1;
     try {
-      // Get a reference to the FSHLog
       server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
       RegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
-      final AbstractFSWAL<W> log = (AbstractFSWAL<W>) server.getWAL(region);
-
-      // Register a WALActionsListener to observe if a SLOW_SYNC roll is requested
+      // Get a reference to the wal.
+      final AbstractFSWAL log = (AbstractFSWAL) server.getWAL(region);
 
       final AtomicBoolean slowSyncHookCalled = new AtomicBoolean();
+      // Register a WALActionsListener to observe if a SLOW_SYNC roll is requested
       log.registerWALActionsListener(new WALActionsListener() {
         @Override
         public void logRollRequested(WALActionsListener.RollRequestReason reason) {
@@ -199,7 +207,6 @@ public abstract class AbstractTestLogRolling<W extends WALProvider.WriterBase> {
       });
 
       // Write some data
-
       for (int i = 0; i < 10; i++) {
         writeData(table, row++);
       }
@@ -208,15 +215,17 @@ public abstract class AbstractTestLogRolling<W extends WALProvider.WriterBase> {
 
       // Only test for FSHLog.
       if ("filesystem".equals(TEST_UTIL.getConfiguration().get(WALFactory.WAL_PROVIDER))) {
+
+        // Adds 200 ms of latency to any sync on the hlog. This should be more than sufficient to
+        // trigger slow sync warnings.
+        setSyncLatencyMillis(200);
+        setSlowLogWriter(log.conf);
+        log.rollWriter(true);
+
         // Set up for test
         slowSyncHookCalled.set(false);
 
-        // Wrap the current writer with the anonymous class below that adds 200 ms of
-        // latency to any sync on the hlog. This should be more than sufficient to trigger
-        // slow sync warnings.
-        final W oldWriter1 = log.getWriter();
-        final W newWriter1 = createNewWriter(oldWriter1, 200);
-        log.setWriter(newWriter1);
+        final WALProvider.WriterBase oldWriter1 = log.getWriter();
 
         // Write some data.
         // We need to write at least 5 times, but double it. We should only request
@@ -226,11 +235,10 @@ public abstract class AbstractTestLogRolling<W extends WALProvider.WriterBase> {
         }
 
         // Wait for our wait injecting writer to get rolled out, as needed.
-
         TEST_UTIL.waitFor(10000, 100, new Waiter.ExplainingPredicate<Exception>() {
           @Override
           public boolean evaluate() throws Exception {
-            return log.getWriter() != newWriter1;
+            return log.getWriter() != oldWriter1;
           }
 
           @Override
@@ -242,26 +250,24 @@ public abstract class AbstractTestLogRolling<W extends WALProvider.WriterBase> {
         assertTrue("Should have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
       }
 
+      // Adds 5000 ms of latency to any sync on the hlog. This will trip the other threshold.
+      setSyncLatencyMillis(5000);
+      setSlowLogWriter(log.conf);
+      log.rollWriter(true);
+
       // Set up for test
       slowSyncHookCalled.set(false);
 
-      // Wrap the current writer with the anonymous class below that adds 5000 ms of
-      // latency to any sync on the hlog.
-      // This will trip the other threshold.
-      final W oldWriter2 = log.getWriter();
-      final W newWriter2 = createNewWriter(oldWriter2, 5000);
-      log.setWriter(newWriter2);
+      final WALProvider.WriterBase oldWriter2 = log.getWriter();
 
       // Write some data. Should only take one sync.
-
       writeData(table, row++);
 
       // Wait for our wait injecting writer to get rolled out, as needed.
-
       TEST_UTIL.waitFor(10000, 100, new Waiter.ExplainingPredicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return log.getWriter() != newWriter2;
+          return log.getWriter() != oldWriter2;
         }
 
         @Override
@@ -271,6 +277,10 @@ public abstract class AbstractTestLogRolling<W extends WALProvider.WriterBase> {
       });
 
       assertTrue("Should have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
+
+      // Set default log writer, no additional latency to any sync on the hlog.
+      setDefaultLogWriter(log.conf);
+      log.rollWriter(true);
 
       // Set up for test
       slowSyncHookCalled.set(false);
@@ -287,7 +297,9 @@ public abstract class AbstractTestLogRolling<W extends WALProvider.WriterBase> {
     }
   }
 
-  protected abstract W createNewWriter(W oldWriter, int sleepTimeMillis);
+  protected abstract void setSlowLogWriter(Configuration conf);
+
+  protected abstract void setDefaultLogWriter(Configuration conf);
 
   /**
    * Tests that log rolling doesn't hang when no data is written.
