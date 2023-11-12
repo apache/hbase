@@ -47,9 +47,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.SetMultimap;
 
 @InterfaceAudience.Private
-public class MobFileCleanupUtil {
+public final class MobFileCleanupUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(MobFileCleanupUtil.class);
+
+  private MobFileCleanupUtil() {
+  }
 
   /**
    * Performs housekeeping file cleaning (called by MOB Cleaner chore)
@@ -179,37 +182,43 @@ public class MobFileCleanupUtil {
 
     // Now scan MOB directories and find MOB files with no references to them
     for (ColumnFamilyDescriptor hcd : list) {
-      List<Path> toArchive = new ArrayList<Path>();
-      String family = hcd.getNameAsString();
-      Path dir = MobUtils.getMobFamilyPath(conf, table, family);
-      RemoteIterator<LocatedFileStatus> rit = fs.listLocatedStatus(dir);
-      while (rit.hasNext()) {
-        LocatedFileStatus lfs = rit.next();
-        Path p = lfs.getPath();
-        String[] mobParts = p.getName().split("_");
-        String regionName = mobParts[mobParts.length - 1];
-
-        if (!regionNames.contains(regionName)) {
-          // MOB belonged to a region no longer hosted
-          long creationTime = fs.getFileStatus(p).getModificationTime();
-          if (creationTime < maxCreationTimeToArchive) {
-            LOG.trace("Archiving MOB file {} creation time={}", p,
-              (fs.getFileStatus(p).getModificationTime()));
-            toArchive.add(p);
-          } else {
-            LOG.trace("Skipping fresh file: {}. Creation time={}", p,
-              fs.getFileStatus(p).getModificationTime());
-          }
-        } else {
-          LOG.trace("Keeping MOB file with existing region: {}", p);
-        }
-      }
-      LOG.info(" MOB Cleaner found {} files to archive for table={} family={}", toArchive.size(),
-        table, family);
-      archiveMobFiles(conf, table, admin, family.getBytes(), toArchive);
-      LOG.info(" MOB Cleaner archived {} files, table={} family={}", toArchive.size(), table,
-        family);
+      checkColumnFamilyDescriptor(conf, table, fs, admin, hcd, regionNames,
+        maxCreationTimeToArchive);
     }
+  }
+
+  private static void checkColumnFamilyDescriptor(Configuration conf, TableName table,
+    FileSystem fs, Admin admin, ColumnFamilyDescriptor hcd, Set<String> regionNames,
+    long maxCreationTimeToArchive) throws IOException {
+    List<Path> toArchive = new ArrayList<Path>();
+    String family = hcd.getNameAsString();
+    Path dir = MobUtils.getMobFamilyPath(conf, table, family);
+    RemoteIterator<LocatedFileStatus> rit = fs.listLocatedStatus(dir);
+    while (rit.hasNext()) {
+      LocatedFileStatus lfs = rit.next();
+      Path p = lfs.getPath();
+      String[] mobParts = p.getName().split("_");
+      String regionName = mobParts[mobParts.length - 1];
+
+      if (!regionNames.contains(regionName)) {
+        // MOB belonged to a region no longer hosted
+        long creationTime = fs.getFileStatus(p).getModificationTime();
+        if (creationTime < maxCreationTimeToArchive) {
+          LOG.trace("Archiving MOB file {} creation time={}", p,
+            (fs.getFileStatus(p).getModificationTime()));
+          toArchive.add(p);
+        } else {
+          LOG.trace("Skipping fresh file: {}. Creation time={}", p,
+            fs.getFileStatus(p).getModificationTime());
+        }
+      } else {
+        LOG.trace("Keeping MOB file with existing region: {}", p);
+      }
+    }
+    LOG.info(" MOB Cleaner found {} files to archive for table={} family={}", toArchive.size(),
+      table, family);
+    archiveMobFiles(conf, table, admin, family.getBytes(), toArchive);
+    LOG.info(" MOB Cleaner archived {} files, table={} family={}", toArchive.size(), table, family);
   }
 
   /**
