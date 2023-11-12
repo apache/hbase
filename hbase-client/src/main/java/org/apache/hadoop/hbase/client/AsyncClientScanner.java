@@ -27,7 +27,6 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.incRegionCountMetri
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isRemote;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.timelineConsistentRead;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
-
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
@@ -40,12 +39,11 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.trace.TableOperationSpanBuilder;
+import org.apache.hadoop.hbase.filter.ScanRangeOptimizer;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.io.netty.util.Timer;
-
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService.Interface;
@@ -105,6 +103,7 @@ class AsyncClientScanner {
     if (scan.getStopRow() == null) {
       scan.withStopRow(EMPTY_END_ROW, scan.includeStopRow());
     }
+    ScanRangeOptimizer.optimize(scan);
     this.scan = scan;
     this.consumer = consumer;
     this.tableName = tableName;
