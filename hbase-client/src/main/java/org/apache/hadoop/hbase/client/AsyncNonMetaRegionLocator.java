@@ -219,9 +219,13 @@ class AsyncNonMetaRegionLocator {
     this.locatePrefetchLimit =
       conn.getConfiguration().getInt(LOCATE_PREFETCH_LIMIT, DEFAULT_LOCATE_PREFETCH_LIMIT);
 
+    boolean useMetaReplicas =
+      conn.getConfiguration().getBoolean(USE_META_REPLICAS, DEFAULT_USE_META_REPLICAS);
     // Get the region locator's meta replica mode.
-    this.metaReplicaMode = CatalogReplicaMode.fromString(
-      conn.getConfiguration().get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
+    this.metaReplicaMode = useMetaReplicas ?
+      CatalogReplicaMode.fromString(conn.getConfiguration()
+        .get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString())) :
+      CatalogReplicaMode.NONE;
 
     switch (this.metaReplicaMode) {
       case LOAD_BALANCE:
@@ -244,8 +248,6 @@ class AsyncNonMetaRegionLocator {
         break;
       case NONE:
         // If user does not configure LOCATOR_META_REPLICAS_MODE, let's check the legacy config.
-        boolean useMetaReplicas =
-          conn.getConfiguration().getBoolean(USE_META_REPLICAS, DEFAULT_USE_META_REPLICAS);
         if (useMetaReplicas) {
           this.metaReplicaMode = CatalogReplicaMode.HEDGED_READ;
         }
