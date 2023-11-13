@@ -797,7 +797,7 @@ public class ReplicationPeerManager implements ConfigurationObserver {
   /**
    * Submit the migration tasks to the given {@code executor}.
    */
-  CompletableFuture<?> migrateQueuesFromZk(ZKWatcher zookeeper, ExecutorService executor) {
+  CompletableFuture<Void> migrateQueuesFromZk(ZKWatcher zookeeper, ExecutorService executor) {
     // the replication queue table creation is asynchronous and will be triggered by addPeer, so
     // here we need to manually initialize it since we will not call addPeer.
     try {
