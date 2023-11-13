@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.mob.FaultyMobStoreCompactor;
 import org.apache.hadoop.hbase.mob.MobConstants;
-import org.apache.hadoop.hbase.mob.MobFileCleanerChore;
+import org.apache.hadoop.hbase.mob.MobFileCleanupUtil;
 import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
@@ -97,7 +97,6 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
   private static HColumnDescriptor hcd;
   private static Admin admin;
   private static Table table = null;
-  private static MobFileCleanerChore chore;
 
   private static volatile boolean run = true;
 
@@ -248,12 +247,9 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
     public void run() {
       while (run) {
         try {
-          LOG.info("MOB cleanup chore started ...");
-          if (chore == null) {
-            chore = new MobFileCleanerChore();
-          }
-          chore.cleanupObsoleteMobFiles(conf, table.getName());
-          LOG.info("MOB cleanup chore finished");
+          LOG.info("MOB cleanup started ...");
+          MobFileCleanupUtil.cleanupObsoleteMobFiles(conf, table.getName(), admin);
+          LOG.info("MOB cleanup finished");
 
           Thread.sleep(130000);
         } catch (Exception e) {
@@ -328,7 +324,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
       LOG.info("Waiting for write thread to finish ...");
       writeData.join();
       // Cleanup again
-      chore.cleanupObsoleteMobFiles(conf, table.getName());
+      MobFileCleanupUtil.cleanupObsoleteMobFiles(conf, table.getName(), admin);
 
       if (util != null) {
         LOG.info("Archive cleaner started ...");
