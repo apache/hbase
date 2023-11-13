@@ -70,7 +70,6 @@ public class MobStressToolRunner {
   private long count = 500000;
   private double failureProb = 0.1;
   private Table table = null;
-  private MobFileCleanerChore chore = new MobFileCleanerChore();
 
   private static volatile boolean run = true;
 
@@ -156,9 +155,9 @@ public class MobStressToolRunner {
     public void run() {
       while (run) {
         try {
-          LOG.info("MOB cleanup chore started ...");
-          chore.cleanupObsoleteMobFiles(conf, table.getName());
-          LOG.info("MOB cleanup chore finished");
+          LOG.info("MOB cleanup started ...");
+          MobFileCleanupUtil.cleanupObsoleteMobFiles(conf, table.getName(), admin);
+          LOG.info("MOB cleanup finished");
 
           Thread.sleep(130000);
         } catch (Exception e) {
@@ -227,7 +226,7 @@ public class MobStressToolRunner {
       LOG.info("Waiting for write thread to finish ...");
       writeData.join();
       // Cleanup again
-      chore.cleanupObsoleteMobFiles(conf, table.getName());
+      MobFileCleanupUtil.cleanupObsoleteMobFiles(conf, table.getName(), admin);
       getNumberOfMobFiles(conf, table.getName(), new String(fam));
 
       if (HTU != null) {

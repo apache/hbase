@@ -57,11 +57,11 @@ import org.slf4j.LoggerFactory;
  * cleaner chore 7 Verifies that number of MOB files in a mob directory is 1.
  */
 @Category(MediumTests.class)
-public class TestMobFileCleanerChore {
-  private static final Logger LOG = LoggerFactory.getLogger(TestMobFileCleanerChore.class);
+public class TestMobFileCleanupUtil {
+  private static final Logger LOG = LoggerFactory.getLogger(TestMobFileCleanupUtil.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobFileCleanerChore.class);
+    HBaseClassTestRule.forClass(TestMobFileCleanupUtil.class);
 
   private HBaseTestingUtil HTU;
 
@@ -77,10 +77,9 @@ public class TestMobFileCleanerChore {
   private ColumnFamilyDescriptor familyDescriptor;
   private Admin admin;
   private Table table = null;
-  private MobFileCleanerChore chore;
   private long minAgeToArchive = 10000;
 
-  public TestMobFileCleanerChore() {
+  public TestMobFileCleanupUtil() {
   }
 
   @Before
@@ -92,7 +91,6 @@ public class TestMobFileCleanerChore {
 
     HTU.startMiniCluster();
     admin = HTU.getAdmin();
-    chore = new MobFileCleanerChore();
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)
       .setMobThreshold(mobLen).setMaxVersions(1).build();
     tableDescriptor = HTU.createModifyableTableDescriptor("testMobCompactTable")
@@ -168,7 +166,7 @@ public class TestMobFileCleanerChore {
     Thread.sleep(minAgeToArchive + 1000);
     LOG.info("Cleaning up MOB files");
     // Cleanup
-    chore.cleanupObsoleteMobFiles(conf, table.getName());
+    MobFileCleanupUtil.cleanupObsoleteMobFiles(conf, table.getName(), admin);
 
     // verify that nothing have happened
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
@@ -187,7 +185,7 @@ public class TestMobFileCleanerChore {
 
     Thread.sleep(minAgeToArchive + 1000);
     LOG.info("Cleaning up MOB files");
-    chore.cleanupObsoleteMobFiles(conf, table.getName());
+    MobFileCleanupUtil.cleanupObsoleteMobFiles(conf, table.getName(), admin);
 
     // check that the extra file got deleted
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
