@@ -64,7 +64,7 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling {
     @Override
     public CompletableFuture<Long> sync(boolean forceSync) {
       try {
-        Thread.sleep(getSyncLatencyMillis());
+        Thread.sleep(syncLatencyMillis);
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }

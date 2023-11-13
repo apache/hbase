@@ -78,7 +78,7 @@ public abstract class AbstractTestLogRolling {
   protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   @Rule
   public final TestName name = new TestName();
-  private static int syncLatencyMillis;
+  protected static int syncLatencyMillis;
 
   public AbstractTestLogRolling() {
     this.server = null;
@@ -169,12 +169,8 @@ public abstract class AbstractTestLogRolling {
     }
   }
 
-  public static void setSyncLatencyMillis(int latency) {
+  private static void setSyncLatencyMillis(int latency) {
     syncLatencyMillis = latency;
-  }
-
-  public static int getSyncLatencyMillis() {
-    return syncLatencyMillis;
   }
 
   @Test
@@ -183,9 +179,8 @@ public abstract class AbstractTestLogRolling {
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     admin.createTable(desc);
-    Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
     int row = 1;
-    try {
+    try (Table table = TEST_UTIL.getConnection().getTable(desc.getTableName())) {
       server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
       RegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
       // Get a reference to the wal.
@@ -291,9 +286,6 @@ public abstract class AbstractTestLogRolling {
       }
 
       assertFalse("Should not have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
-
-    } finally {
-      table.close();
     }
   }
 

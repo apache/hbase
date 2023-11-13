@@ -102,7 +102,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
     @Override
     public void sync(boolean forceSync) throws IOException {
       try {
-        Thread.sleep(getSyncLatencyMillis());
+        Thread.sleep(syncLatencyMillis);
       } catch (InterruptedException e) {
         InterruptedIOException ex = new InterruptedIOException();
         ex.initCause(e);
