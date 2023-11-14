@@ -75,6 +75,10 @@ public interface Hbck extends Abortable, Closeable {
   List<Long> assigns(List<String> encodedRegionNames, boolean override, boolean forceOverride)
     throws IOException;
 
+  List<Long> assigns(List<String> encodedRegionNames, boolean override) {
+    return assigns(encodedRegionNames, override, false);
+  }
+
   default List<Long> assigns(List<String> encodedRegionNames) throws IOException {
     return assigns(encodedRegionNames, false, false);
   }
@@ -96,6 +100,10 @@ public interface Hbck extends Abortable, Closeable {
    */
   List<Long> unassigns(List<String> encodedRegionNames, boolean override, boolean forceOverride)
     throws IOException;
+
+  List<Long> unassigns(List<String> encodedRegionNames, boolean override) {
+    return unassigns(encodedRegionNames, override, false);
+  }
 
   default List<Long> unassigns(List<String> encodedRegionNames) throws IOException {
     return unassigns(encodedRegionNames, false, false);
