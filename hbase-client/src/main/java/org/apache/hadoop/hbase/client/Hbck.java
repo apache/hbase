@@ -62,12 +62,13 @@ public interface Hbck extends Abortable, Closeable {
    * good if many Regions to online -- and it will schedule the assigns even in the case where
    * Master is initializing (as long as the ProcedureExecutor is up). Does NOT call Coprocessor
    * hooks.
-   * @param override           You need to add the override for case where a region has previously
+   * @param override           You need to add override for unset of the procedure from
+   *                           RegionStateNode without byPassing preTransitCheck
+   * @param forceOverride      You need to add forceOverride for case where a region has previously
    *                           been bypassed. When a Procedure has been bypassed, a Procedure will
    *                           have completed but no other Procedure will be able to make progress
-   *                           on the target entity (intentionally). This override flag will
-   *                           override this fencing mechanism.
-   * @param forceOverride      Skips preTransitCheck only when selected along with override option
+   *                           on the target entity (intentionally).
+   *                           Skips preTransitCheck only when selected along with override option
    * @param encodedRegionNames Region encoded names; e.g. 1588230740 is the hard-coded encoding for
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example
    *                           of what a random user-space encoded Region name looks like.
@@ -75,7 +76,7 @@ public interface Hbck extends Abortable, Closeable {
   List<Long> assigns(List<String> encodedRegionNames, boolean override, boolean forceOverride)
     throws IOException;
 
-  List<Long> assigns(List<String> encodedRegionNames, boolean override) {
+  default List<Long> assigns(List<String> encodedRegionNames, boolean override) throws IOException {
     return assigns(encodedRegionNames, override, false);
   }
 
@@ -88,12 +89,13 @@ public interface Hbck extends Abortable, Closeable {
    * at a time -- good if many Regions to offline -- and it will schedule the assigns even in the
    * case where Master is initializing (as long as the ProcedureExecutor is up). Does NOT call
    * Coprocessor hooks.
-   * @param override           You need to add the override for case where a region has previously
+   * @param override           You need to add override for unset of the procedure from
+   *                           RegionStateNode without byPassing preTransitCheck
+   * @param forceOverride      You need to add forceOverride for case where a region has previously
    *                           been bypassed. When a Procedure has been bypassed, a Procedure will
    *                           have completed but no other Procedure will be able to make progress
-   *                           on the target entity (intentionally). This override flag will
-   *                           override this fencing mechanism.
-   * @param forceOverride      Skips preTransitCheck only when selected along with override option
+   *                           on the target entity (intentionally).
+   *                           Skips preTransitCheck only when selected along with override option
    * @param encodedRegionNames Region encoded names; e.g. 1588230740 is the hard-coded encoding for
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example
    *                           of what a random user-space encoded Region name looks like.
@@ -101,7 +103,7 @@ public interface Hbck extends Abortable, Closeable {
   List<Long> unassigns(List<String> encodedRegionNames, boolean override, boolean forceOverride)
     throws IOException;
 
-  List<Long> unassigns(List<String> encodedRegionNames, boolean override) {
+  default List<Long> unassigns(List<String> encodedRegionNames, boolean override) throws IOException {
     return unassigns(encodedRegionNames, override, false);
   }
 

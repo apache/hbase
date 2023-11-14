@@ -134,6 +134,7 @@ public class HBaseHbck implements Hbck {
     }
   }
 
+
   @Override
   public List<Long> assigns(List<String> encodedRegionNames, boolean override,
     boolean forceOverride) throws IOException {
