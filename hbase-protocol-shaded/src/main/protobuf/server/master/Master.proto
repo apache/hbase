@@ -204,6 +204,7 @@ message ModifyTableRequest {
   required TableSchema table_schema = 2;
   optional uint64 nonce_group = 3 [default = 0];
   optional uint64 nonce = 4 [default = 0];
+  optional bool reopen_regions = 5 [default = true];
 }
 
 message ModifyTableResponse {
