@@ -67,8 +67,8 @@ public interface Hbck extends Abortable, Closeable {
    * @param forceOverride      You need to add forceOverride for case where a region has previously
    *                           been bypassed. When a Procedure has been bypassed, a Procedure will
    *                           have completed but no other Procedure will be able to make progress
-   *                           on the target entity (intentionally).
-   *                           Skips preTransitCheck only when selected along with override option
+   *                           on the target entity (intentionally). Skips preTransitCheck only when
+   *                           selected along with override option
    * @param encodedRegionNames Region encoded names; e.g. 1588230740 is the hard-coded encoding for
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example
    *                           of what a random user-space encoded Region name looks like.
@@ -94,8 +94,8 @@ public interface Hbck extends Abortable, Closeable {
    * @param forceOverride      You need to add forceOverride for case where a region has previously
    *                           been bypassed. When a Procedure has been bypassed, a Procedure will
    *                           have completed but no other Procedure will be able to make progress
-   *                           on the target entity (intentionally).
-   *                           Skips preTransitCheck only when selected along with override option
+   *                           on the target entity (intentionally). Skips preTransitCheck only when
+   *                           selected along with override option
    * @param encodedRegionNames Region encoded names; e.g. 1588230740 is the hard-coded encoding for
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example
    *                           of what a random user-space encoded Region name looks like.
@@ -103,7 +103,8 @@ public interface Hbck extends Abortable, Closeable {
   List<Long> unassigns(List<String> encodedRegionNames, boolean override, boolean forceOverride)
     throws IOException;
 
-  default List<Long> unassigns(List<String> encodedRegionNames, boolean override) throws IOException {
+  default List<Long> unassigns(List<String> encodedRegionNames, boolean override)
+    throws IOException {
     return unassigns(encodedRegionNames, override, false);
   }
 
