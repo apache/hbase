@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -25,7 +27,6 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Base64;
@@ -34,7 +35,6 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
@@ -47,6 +47,8 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -226,9 +228,9 @@ public class TestGet {
       ProtobufUtil.toGet(getProto2);
       fail("Should not be able to load the filter class");
     } catch (IOException ioe) {
-      assertTrue(ioe.getCause() instanceof InvocationTargetException);
-      InvocationTargetException ite = (InvocationTargetException) ioe.getCause();
-      assertTrue(ite.getTargetException() instanceof DeserializationException);
+      // This test is deserializing a FilterList, and one of the sub-filters is not found.
+      // So the actual caused by is buried a few levels deep.
+      assertThat(Throwables.getRootCause(ioe), instanceOf(ClassNotFoundException.class));
     }
     FileOutputStream fos = new FileOutputStream(jarFile);
     fos.write(Base64.getDecoder().decode(MOCK_FILTER_JAR));
