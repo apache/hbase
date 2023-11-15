@@ -507,38 +507,38 @@ public class CanaryTool implements Tool, Canary {
 
     private Void readColumnFamily(Table table, ColumnFamilyDescriptor column) {
       byte[] startKey = null;
-      Get get = null;
-      Scan scan = null;
+      Scan scan = new Scan();
       ResultScanner rs = null;
       StopWatch stopWatch = new StopWatch();
       startKey = region.getStartKey();
       // Can't do a get on empty start row so do a Scan of first element if any instead.
       if (startKey.length > 0) {
-        get = new Get(startKey);
-        get.setCacheBlocks(false);
-        get.setFilter(new FirstKeyOnlyFilter());
-        get.addFamily(column.getName());
-      } else {
-        scan = new Scan();
-        LOG.debug("rawScan {} for {}", rawScanEnabled, region.getTable());
-        scan.setRaw(rawScanEnabled);
-        scan.setCaching(1);
-        scan.setCacheBlocks(false);
-        scan.setFilter(new FirstKeyOnlyFilter());
-        scan.addFamily(column.getName());
-        scan.setMaxResultSize(1L);
-        scan.setOneRowLimit();
+        // There are 4 types of region for any table.
+        // 1. Start and End key are empty. (Table with Single region)
+        // 2. Start key is empty. (First region of the table)
+        // 3. End key is empty. (Last region of the table)
+        // 4. Region with Start & End key. (All the regions between first & last region of the
+        // table.)
+        //
+        // Since Scan only takes Start and/or End Row and doesn't accept the region ID,
+        // we set the start row when Regions are of type 3 OR 4 as mentioned above.
+        // For type 1 and 2, We don't need to set this option.
+        scan.withStartRow(startKey);
       }
+      LOG.debug("rawScan {} for {}", rawScanEnabled, region.getTable());
+      scan.setRaw(rawScanEnabled);
+      scan.setCaching(1);
+      scan.setCacheBlocks(false);
+      scan.setFilter(new FirstKeyOnlyFilter());
+      scan.addFamily(column.getName());
+      scan.setMaxResultSize(1L);
+      scan.setOneRowLimit();
       LOG.debug("Reading from {} {} {} {}", region.getTable(), region.getRegionNameAsString(),
         column.getNameAsString(), Bytes.toStringBinary(startKey));
       try {
         stopWatch.start();
-        if (startKey.length > 0) {
-          table.get(get);
-        } else {
-          rs = table.getScanner(scan);
-          rs.next();
-        }
+        rs = table.getScanner(scan);
+        rs.next();
         stopWatch.stop();
         this.readWriteLatency.add(stopWatch.getTime());
         sink.publishReadTiming(serverName, region, column, stopWatch.getTime());
