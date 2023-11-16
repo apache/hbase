@@ -749,6 +749,7 @@
     <!-- Still need this to ignore some errors when building javadoc-->
     <doclint>none</doclint>
     <javax.activation.version>1.2.0</javax.activation.version>
+    <protoc.arch>${os.detected.classifier}</protoc.arch>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -1837,7 +1838,7 @@
           <artifactId>protobuf-maven-plugin</artifactId>
           <version>${protobuf.plugin.version}</version>
           <configuration>
-            <protocArtifact>${external.protobuf.groupid}:protoc:${external.protoc.version}:exe:${os.detected.classifier}</protocArtifact>
+            <protocArtifact>${external.protobuf.groupid}:protoc:${external.protoc.version}:exe:${protoc.arch}</protocArtifact>
             <protoSourceRoot>${basedir}/src/main/protobuf/</protoSourceRoot>
             <clearOutputDirectory>false</clearOutputDirectory>
             <checkStaleness>true</checkStaleness>
@@ -4979,6 +4980,19 @@
       <properties>
         <external.protobuf.groupid>org.openlabtesting.protobuf</external.protobuf.groupid>
         <external.protoc.version>2.5.0.2</external.protoc.version>
+      </properties>
+    </profile>
+    <profile>
+      <!-- HBASE-28208 Use x86_64 protoc 2.5.0 on Aarch64 Mac -->
+      <id>osx-aarch64</id>
+      <activation>
+        <os>
+          <family>mac</family>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
+      <properties>
+        <protoc.arch>osx-x86_64</protoc.arch>
       </properties>
     </profile>
   </profiles>
