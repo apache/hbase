@@ -1115,4 +1115,9 @@ class AdminOverAsyncAdmin implements Admin {
   public void flushMasterStore() throws IOException {
     get(admin.flushMasterStore());
   }
+
+  @Override
+  public Map<String, Integer> uncacheStaleBlocks(ServerName serverName) throws IOException {
+    return get(admin.uncacheStaleBlocks(serverName));
+  }
 }

@@ -990,4 +990,9 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<Void> flushMasterStore() {
     return wrap(rawAdmin.flushMasterStore());
   }
+
+  @Override
+  public CompletableFuture<Map<String, Integer>> uncacheStaleBlocks(ServerName serverName) {
+    return wrap(rawAdmin.uncacheStaleBlocks(serverName));
+  }
 }

@@ -115,6 +115,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWrit
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UncacheStaleBlocksRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UncacheStaleBlocksResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
@@ -746,6 +748,12 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   @Override
   public ReplicateWALEntryResponse replicateToReplica(RpcController controller,
     ReplicateWALEntryRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public UncacheStaleBlocksResponse uncacheStaleBlocks(RpcController controller,
+    UncacheStaleBlocksRequest request) throws ServiceException {
     return null;
   }
 }

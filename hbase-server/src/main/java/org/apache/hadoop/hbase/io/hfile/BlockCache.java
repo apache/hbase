@@ -18,6 +18,9 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Optional;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -160,5 +163,15 @@ public interface BlockCache extends Iterable<CachedBlock> {
    */
   default boolean isMetaBlock(BlockType blockType) {
     return blockType != null && blockType.getCategory() != BlockType.BlockCategory.DATA;
+  }
+
+  /**
+   * Clean Cache by evicting the blocks of files belonging to regions that are no longer served by
+   * the RegionServer.
+   * @param server HRegionServer
+   * @return A map of filename and number of blocks evicted.
+   */
+  default Optional<Map<String, Integer>> uncacheStaleBlocks(HRegionServer server) {
+    return Optional.empty();
   }
 }

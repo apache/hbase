@@ -329,6 +329,13 @@ message ClearSlowLogResponses {
   required bool is_cleaned = 1;
 }
 
+message UncacheStaleBlocksRequest {
+}
+
+message UncacheStaleBlocksResponse {
+  map<string, int32> uncached_files = 1;
+}
+
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -404,5 +411,8 @@ service AdminService {
 
   rpc GetLogEntries(LogRequest)
     returns(LogEntry);
+
+  rpc UncacheStaleBlocks(UncacheStaleBlocksRequest)
+    returns(UncacheStaleBlocksResponse);
 
 }

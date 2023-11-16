@@ -163,6 +163,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFil
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UncacheStaleBlocksRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UncacheStaleBlocksResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -3766,5 +3768,21 @@ public final class ProtobufUtil {
       ByteStreams.readFully(in, bytes);
       return parser.parseFrom(bytes);
     }
+  }
+
+  /**
+   * Clean Cache by evicting the blocks of files belonging to regions that are no longer served by
+   * the RegionServer.
+   */
+  public static Map<String, Integer> uncacheStaleBlocks(final RpcController controller,
+    final AdminService.BlockingInterface admin) throws IOException {
+    UncacheStaleBlocksRequest request = UncacheStaleBlocksRequest.newBuilder().build();
+    UncacheStaleBlocksResponse response = null;
+    try {
+      response = admin.uncacheStaleBlocks(controller, request);
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+    return response.getUncachedFilesMap();
   }
 }

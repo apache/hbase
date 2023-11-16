@@ -2615,4 +2615,13 @@ public interface Admin extends Abortable, Closeable {
    * Flush master local region
    */
   void flushMasterStore() throws IOException;
+
+  /**
+   * Clean Cache by evicting the blocks of files belonging to regions that are no longer served by
+   * the RegionServer.
+   * @param serverName ServerName
+   * @return A map of filename and number of blocks evicted.
+   * @throws IOException if a remote or network exception occurs
+   */
+  Map<String, Integer> uncacheStaleBlocks(ServerName serverName) throws IOException;
 }

@@ -960,6 +960,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
+  public Map<String, Integer> uncacheStaleBlocks(ServerName serverName) throws IOException {
+    return admin.uncacheStaleBlocks(serverName);
+  }
+
+  @Override
   public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
     throws IOException {
     return admin.replicationPeerModificationSwitch(on, drainProcedures);

@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -55,6 +56,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -75,6 +77,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
@@ -2002,4 +2005,27 @@ public class BucketCache implements BlockCache, HeapSize {
     regionCachedSizeMap.merge(regionName, size, (oldpf, fileSize) -> oldpf + fileSize);
   }
 
+  @Override
+  public Optional<Map<String, Integer>> uncacheStaleBlocks(HRegionServer server) {
+    Map<String, Integer> evictedFilesWithStaleBlocks = new HashMap<>();
+
+    fullyCachedFiles.forEach((fileName, value) -> {
+      int blocksEvicted;
+      try {
+        if (!server.getRegionByEncodedName(value.getFirst()).isAvailable()) {
+          blocksEvicted = evictBlocksByHfileName(fileName);
+        } else {
+          blocksEvicted = 0;
+        }
+      } catch (NotServingRegionException nsre) {
+        LOG.debug(
+          "Evicting blocks for file {} as the region {} is not served by the Region Server {} anymore.",
+          fileName, fullyCachedFiles.get(fileName).getFirst(),
+          server.getServerName().getServerName());
+        blocksEvicted = evictBlocksByHfileName(fileName);
+      }
+      evictedFilesWithStaleBlocks.put(fileName, blocksEvicted);
+    });
+    return Optional.of(evictedFilesWithStaleBlocks);
+  }
 }

@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Optional;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -399,5 +403,14 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
 
   public BlockCache getSecondLevelCache() {
     return l2Cache;
+  }
+
+  @Override
+  public Optional<Map<String, Integer>> uncacheStaleBlocks(HRegionServer server) {
+    Map<String, Integer> uncachedStaleBlocksMap =
+      l1Cache.uncacheStaleBlocks(server).orElseGet(HashMap::new);
+    l2Cache.uncacheStaleBlocks(server).ifPresent(
+      map2 -> map2.forEach((key, value) -> uncachedStaleBlocksMap.merge(key, value, Integer::sum)));
+    return Optional.of(uncachedStaleBlocksMap);
   }
 }
