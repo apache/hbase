@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.Collection;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
@@ -147,6 +148,76 @@ public class TestMultiRowResource {
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
+
+    client.delete(row_5_url, extraHdr);
+    client.delete(row_6_url, extraHdr);
+  }
+
+  private void checkMultiCellGetJSON(Response response) throws IOException {
+    assertEquals(200, response.getCode());
+    assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
+
+    ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class,
+      MediaType.APPLICATION_JSON_TYPE);
+    CellSetModel cellSet = mapper.readValue(response.getBody(), CellSetModel.class);
+
+    RowModel rowModel = cellSet.getRows().get(0);
+    assertEquals(ROW_1, new String(rowModel.getKey()));
+    assertEquals(1, rowModel.getCells().size());
+    CellModel cell = rowModel.getCells().get(0);
+    assertEquals(COLUMN_1, new String(cell.getColumn()));
+    assertEquals(VALUE_1, new String(cell.getValue()));
+
+    rowModel = cellSet.getRows().get(1);
+    assertEquals(ROW_2, new String(rowModel.getKey()));
+    assertEquals(1, rowModel.getCells().size());
+    cell = rowModel.getCells().get(0);
+    assertEquals(COLUMN_2, new String(cell.getColumn()));
+    assertEquals(VALUE_2, new String(cell.getValue()));
+  }
+
+  // See https://issues.apache.org/jira/browse/HBASE-28174
+  @Test
+  public void testMultiCellGetJSONB64() throws IOException {
+    String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
+    String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
+
+    if (csrfEnabled) {
+      Response response = client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1));
+      assertEquals(400, response.getCode());
+    }
+
+    client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1), extraHdr);
+    client.post(row_6_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_2), extraHdr);
+
+    StringBuilder path = new StringBuilder();
+    Base64.Encoder encoder = Base64.getUrlEncoder();
+    path.append("/");
+    path.append(TABLE);
+    path.append("/multiget/?row=");
+    path.append(encoder.encodeToString(ROW_1.getBytes("UTF-8")));
+    path.append("&row=");
+    path.append(encoder.encodeToString(ROW_2.getBytes("UTF-8")));
+    path.append("&e=b64"); // Specify encoding via query string
+
+    Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
+
+    checkMultiCellGetJSON(response);
+
+    path = new StringBuilder();
+    path.append("/");
+    path.append(TABLE);
+    path.append("/multiget/?row=");
+    path.append(encoder.encodeToString(ROW_1.getBytes("UTF-8")));
+    path.append("&row=");
+    path.append(encoder.encodeToString(ROW_2.getBytes("UTF-8")));
+
+    Header[] headers = new Header[] { new BasicHeader("Accept", Constants.MIMETYPE_JSON),
+      new BasicHeader("Encoding", "b64") // Specify encoding via header
+    };
+    response = client.get(path.toString(), headers);
+
+    checkMultiCellGetJSON(response);
 
     client.delete(row_5_url, extraHdr);
     client.delete(row_6_url, extraHdr);
