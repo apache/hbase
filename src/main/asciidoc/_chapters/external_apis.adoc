@@ -250,12 +250,87 @@ curl -vi -X GET \
   -H "Accept: text/xml" \
    "http://example.com:8000/users/row1/cf:a/"
 
+|/_table_/_row_/_column:qualifier_?e=b64
+|GET
+|Get the value of a single column using a binary rowkey and column name, encoded in https://datatracker.ietf.org/doc/html/rfc4648#section-5[URL-safe base64]. Returned values are Base-64 encoded.
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/users/cm93MQ/Y2Y6YQ?e=b64"
+
+curl -vi -X GET \
+  -H "Accept: text/xml" \
+  -H "Encoding: base64" \
+   "http://example.com:8000/users/cm93MQ/Y2Y6YQ/"
+
+|/_table_/multiget?row=_row_&row=_row_/_column:qualifier_&row=...
+|GET
+|Multi-Get a combination of rows/columns. Values are Base-64 encoded.
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/users/multiget?row=row1&row=row2/cf:a"
+
+|/_table_/multiget?e=b64&row=_row_&row=_row_/_column:qualifier_&row=...
+|GET
+|Multi-Get a combination of rows/columns using binary rowkeys and column names, encoded in https://datatracker.ietf.org/doc/html/rfc4648#section-5[URL-safe base64]. Returned values are Base-64 encoded.
+|curl -vi -X GET \
+  -H "Accept: text/xml" \
+  "http://example.com:8000/users/multiget?e=b64&row=cm93MQ&row=cm93Mg%2FY2Y6YQ"
+
 |/_table_/_row_/_column:qualifier_/?v=_number_of_versions_
 |GET
 |Multi-Get a specified number of versions of a given cell. Values are Base-64 encoded.
 |curl -vi -X GET \
   -H "Accept: text/xml" \
   "http://example.com:8000/users/row1/cf:a?v=2"
+
+|===
+
+
+.Endpoints for `Delete` Operations
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
+
+|/_table_/_row_
+|DELETE
+|Delete all columns of a single row.
+|curl -vi -X DELETE \
+  "http://example.com:8000/users/row1"
+
+|/_table_/_row_/_column_family_:
+|DELETE
+|Delete all columns of a single row and column family.
+|curl -vi -X DELETE \
+  "http://example.com:8000/users/row1/cf"
+
+|/_table_/_row_/_column:qualifier_/_timestamp_
+|DELETE
+|Delete a single column.
+|curl -vi -X DELETE \
+  "http://example.com:8000/users/row1/cf:a/1458586888395"
+
+|/_table_/_row_/_column:qualifier_
+|DELETE
+|Delete a single column.
+|curl -vi -X DELETE \
+  "http://example.com:8000/users/row1/cf:a"
+
+curl -vi -X DELETE \
+  -H "Accept: text/xml" \
+   "http://example.com:8000/users/row1/cf:a/"
+
+|/_table_/_row_/_column:qualifier_?e=b64
+|DELETE
+|Delete a single column using a binary rowkey and column name, encoded in https://datatracker.ietf.org/doc/html/rfc4648#section-5[URL-safe base64].
+|curl -vi -X DELETE \
+  "http://example.com:8000/users/cm93MQ/Y2Y6YQ?e=b64"
+
+curl -vi -X DELETE \
+  -H "Encoding: base64" \
+   "http://example.com:8000/users/cm93MQ/Y2Y6YQ/"
 
 |===
 

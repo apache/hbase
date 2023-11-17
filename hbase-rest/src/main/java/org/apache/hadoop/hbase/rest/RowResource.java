@@ -72,10 +72,10 @@ public class RowResource extends ResourceBase {
    * Constructor
    */
   public RowResource(TableResource tableResource, String rowspec, String versions, String check,
-    String returnResult) throws IOException {
+    String returnResult, String keyEncoding) throws IOException {
     super();
     this.tableResource = tableResource;
-    this.rowspec = new RowSpec(rowspec);
+    this.rowspec = new RowSpec(rowspec, keyEncoding);
     if (versions != null) {
       this.rowspec.setMaxVersions(Integer.parseInt(versions));
     }

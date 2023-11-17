@@ -85,6 +85,7 @@ public interface Constants {
   String CUSTOM_FILTERS = "hbase.rest.custom.filters";
 
   String ROW_KEYS_PARAM_NAME = "row";
+  String KEY_ENCODING_QUERY_PARAM_NAME = "e";
   /**
    * If this query parameter is present when processing row or scanner resources, it disables server
    * side block caching
