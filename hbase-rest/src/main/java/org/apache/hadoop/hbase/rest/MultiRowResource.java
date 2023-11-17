@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.javax.ws.rs.GET;
+import org.apache.hbase.thirdparty.javax.ws.rs.HeaderParam;
 import org.apache.hbase.thirdparty.javax.ws.rs.Produces;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.Context;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MultivaluedMap;
@@ -63,14 +64,18 @@ public class MultiRowResource extends ResourceBase implements Constants {
 
   @GET
   @Produces({ MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF, MIMETYPE_PROTOBUF_IETF })
-  public Response get(final @Context UriInfo uriInfo) {
+  public Response get(final @Context UriInfo uriInfo,
+    final @HeaderParam("Encoding") String keyEncodingHeader) {
     MultivaluedMap<String, String> params = uriInfo.getQueryParameters();
+    String keyEncoding = (keyEncodingHeader != null)
+      ? keyEncodingHeader
+      : params.getFirst(KEY_ENCODING_QUERY_PARAM_NAME);
 
     servlet.getMetrics().incrementRequests(1);
     try {
       CellSetModel model = new CellSetModel();
       for (String rk : params.get(ROW_KEYS_PARAM_NAME)) {
-        RowSpec rowSpec = new RowSpec(rk);
+        RowSpec rowSpec = new RowSpec(rk, keyEncoding);
 
         if (this.versions != null) {
           rowSpec.setMaxVersions(this.versions);

@@ -24,6 +24,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URLEncoder;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import javax.xml.bind.JAXBException;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.http.Header;
+import org.apache.http.message.BasicHeader;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -331,6 +333,72 @@ public class TestGetAndPutResource extends RowResourceBase {
     response = putValueXML(path.toString(), TABLE, urlKey, COLUMN_1, VALUE_1);
     assertEquals(200, response.getCode());
     checkValueXML(path.toString(), TABLE, urlKey, COLUMN_1, VALUE_1);
+  }
+
+  private void setupValue1() throws IOException, JAXBException {
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(TABLE);
+    path.append('/');
+    path.append(ROW_1);
+    path.append('/');
+    path.append(COLUMN_1);
+    Response response = putValueXML(path.toString(), TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(200, response.getCode());
+  }
+
+  private void checkValue1(Response getResponse) throws JAXBException {
+    assertEquals(Constants.MIMETYPE_XML, getResponse.getHeader("content-type"));
+
+    CellSetModel cellSet =
+      (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(getResponse.getBody()));
+    assertEquals(1, cellSet.getRows().size());
+    RowModel rowModel = cellSet.getRows().get(0);
+    assertEquals(ROW_1, new String(rowModel.getKey()));
+    assertEquals(1, rowModel.getCells().size());
+    CellModel cell = rowModel.getCells().get(0);
+    assertEquals(COLUMN_1, new String(cell.getColumn()));
+    assertEquals(VALUE_1, new String(cell.getValue()));
+  }
+
+  // See https://issues.apache.org/jira/browse/HBASE-28174
+  @Test
+  public void testUrlB64EncodedKeyQueryParam() throws IOException, JAXBException {
+    setupValue1();
+
+    StringBuilder path = new StringBuilder();
+    Base64.Encoder encoder = Base64.getUrlEncoder();
+    path.append('/');
+    path.append(TABLE);
+    path.append('/');
+    path.append(encoder.encodeToString(ROW_1.getBytes("UTF-8")));
+    path.append('/');
+    path.append(encoder.encodeToString(COLUMN_1.getBytes("UTF-8")));
+    path.append("?e=b64");
+    Response response = getValueXML(path.toString());
+    assertEquals(200, response.getCode());
+
+    checkValue1(response);
+  }
+
+  // See https://issues.apache.org/jira/browse/HBASE-28174
+  @Test
+  public void testUrlB64EncodedKeyHeader() throws IOException, JAXBException {
+    setupValue1();
+
+    StringBuilder path = new StringBuilder();
+    Base64.Encoder encoder = Base64.getUrlEncoder();
+    path.append('/');
+    path.append(TABLE);
+    path.append('/');
+    path.append(encoder.encodeToString(ROW_1.getBytes("UTF-8")));
+    path.append('/');
+    path.append(encoder.encodeToString(COLUMN_1.getBytes("UTF-8")));
+    Response response =
+      getValueXML(path.toString(), new Header[] { new BasicHeader("Encoding", "b64") });
+    assertEquals(200, response.getCode());
+
+    checkValue1(response);
   }
 
   @Test
