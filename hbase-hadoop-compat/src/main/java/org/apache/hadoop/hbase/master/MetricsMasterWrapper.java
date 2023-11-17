@@ -153,4 +153,9 @@ public interface MetricsMasterWrapper {
    * @return pair of count for online regions and offline regions
    */
   PairOfSameType<Integer> getRegionCounts();
+
+  /**
+   * Get the size of old WALs directory in bytes.
+   */
+  long getOldWALsDirSize();
 }

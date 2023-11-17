@@ -33,7 +33,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -89,6 +91,12 @@ public class MasterWalManager {
   // create the split log lock
   private final Lock splitLogLock = new ReentrantLock();
 
+  // old WALs directory size in bytes
+  private long oldWALsDirSize;
+
+  // old WALs directory size calculation interval
+  private final int OLD_WAL_DIR_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 mins
+
   /**
    * Superceded by {@link SplitWALManager}; i.e. procedure-based WAL splitting rather than 'classic'
    * zk-coordinated WAL splitting.
@@ -114,6 +122,7 @@ public class MasterWalManager {
     this.services = services;
     this.splitLogManager = new SplitLogManager(services, conf);
     this.oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    this.oldWALsDirSize = 0;
   }
 
   public void stop() {
@@ -132,6 +141,13 @@ public class MasterWalManager {
    */
   Path getOldLogDir() {
     return this.oldLogDir;
+  }
+
+  public void updateOldWALsDirSize() throws IOException {
+    this.oldWALsDirSize = fs.getContentSummary(this.oldLogDir).getLength();
+  }
+  public long getOldWALsDirSize() {
+    return this.oldWALsDirSize;
   }
 
   public FileSystem getFileSystem() {
@@ -397,5 +413,34 @@ public class MasterWalManager {
     } catch (IOException ie) {
       LOG.warn("Failed archiving meta log for server " + serverName, ie);
     }
+  }
+
+  private static Stoppable createDummyStoppable() {
+    return new Stoppable() {
+      private volatile boolean isStopped = false;
+
+      @Override
+      public void stop(String why) {
+        isStopped = true;
+      }
+
+      @Override
+      public boolean isStopped() {
+        return isStopped;
+      }
+    };
+  }
+
+  public ScheduledChore getOldWALsDirSizeUpdaterChore() {
+    return new ScheduledChore("UpdateOldWALsDirSize", createDummyStoppable(), OLD_WAL_DIR_UPDATE_INTERVAL) {
+      @Override
+      protected void chore() {
+        try {
+          MasterWalManager.this.updateOldWALsDirSize();
+        } catch (IOException e) {
+          LOG.error("Got exception while trying to update the old WALs Directory size counter: " + e.getMessage(), e);
+        }
+      }
+    };
   }
 }
