@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.javax.ws.rs.DefaultValue;
 import org.apache.hbase.thirdparty.javax.ws.rs.Encoded;
+import org.apache.hbase.thirdparty.javax.ws.rs.HeaderParam;
 import org.apache.hbase.thirdparty.javax.ws.rs.Path;
 import org.apache.hbase.thirdparty.javax.ws.rs.PathParam;
 import org.apache.hbase.thirdparty.javax.ws.rs.QueryParam;
@@ -94,9 +95,12 @@ public class TableResource extends ResourceBase {
     // We need the @Encoded decorator so Jersey won't urldecode before
     // the RowSpec constructor has a chance to parse
     final @PathParam("rowspec") @Encoded String rowspec, final @QueryParam("v") String versions,
-    final @QueryParam("check") String check, final @QueryParam("rr") String returnResult)
+    final @QueryParam("check") String check, final @QueryParam("rr") String returnResult,
+    final @HeaderParam("Encoding") String keyEncodingHeader,
+    final @QueryParam(Constants.KEY_ENCODING_QUERY_PARAM_NAME) String keyEncodingQuery)
     throws IOException {
-    return new RowResource(this, rowspec, versions, check, returnResult);
+    String keyEncoding = (keyEncodingHeader != null) ? keyEncodingHeader : keyEncodingQuery;
+    return new RowResource(this, rowspec, versions, check, returnResult, keyEncoding);
   }
 
   @Path("{suffixglobbingspec: .*\\*/.+}")
@@ -105,8 +109,12 @@ public class TableResource extends ResourceBase {
     // the RowSpec constructor has a chance to parse
     final @PathParam("suffixglobbingspec") @Encoded String suffixglobbingspec,
     final @QueryParam("v") String versions, final @QueryParam("check") String check,
-    final @QueryParam("rr") String returnResult) throws IOException {
-    return new RowResource(this, suffixglobbingspec, versions, check, returnResult);
+    final @QueryParam("rr") String returnResult,
+    final @HeaderParam("Encoding") String keyEncodingHeader,
+    final @QueryParam(Constants.KEY_ENCODING_QUERY_PARAM_NAME) String keyEncodingQuery)
+    throws IOException {
+    String keyEncoding = (keyEncodingHeader != null) ? keyEncodingHeader : keyEncodingQuery;
+    return new RowResource(this, suffixglobbingspec, versions, check, returnResult, keyEncoding);
   }
 
   @Path("{scanspec: .*[*]$}")
