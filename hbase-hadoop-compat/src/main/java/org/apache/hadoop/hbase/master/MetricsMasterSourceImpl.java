@@ -130,8 +130,8 @@ public class MetricsMasterSourceImpl extends BaseSourceImpl implements MetricsMa
         .tag(Interns.info(CLUSTER_ID_NAME, CLUSTER_ID_DESC), masterWrapper.getClusterId())
         .tag(Interns.info(IS_ACTIVE_MASTER_NAME, IS_ACTIVE_MASTER_DESC),
           String.valueOf(masterWrapper.getIsActiveMaster()))
-        .addGauge(Interns.info(OLD_WAL_DIR_SIZE_NAME,
-          OLD_WAL_DIR_SIZE_DESC), masterWrapper.getOldWALsDirSize());
+        .addGauge(Interns.info(OLD_WAL_DIR_SIZE_NAME, OLD_WAL_DIR_SIZE_DESC),
+          masterWrapper.getOldWALsDirSize());
     }
 
     metricsRegistry.snapshot(metricsRecordBuilder, all);

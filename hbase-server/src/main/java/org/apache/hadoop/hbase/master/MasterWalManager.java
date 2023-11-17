@@ -146,6 +146,7 @@ public class MasterWalManager {
   public void updateOldWALsDirSize() throws IOException {
     this.oldWALsDirSize = fs.getContentSummary(this.oldLogDir).getLength();
   }
+
   public long getOldWALsDirSize() {
     return this.oldWALsDirSize;
   }
@@ -432,13 +433,15 @@ public class MasterWalManager {
   }
 
   public ScheduledChore getOldWALsDirSizeUpdaterChore() {
-    return new ScheduledChore("UpdateOldWALsDirSize", createDummyStoppable(), OLD_WAL_DIR_UPDATE_INTERVAL) {
+    return new ScheduledChore("UpdateOldWALsDirSize", createDummyStoppable(),
+      OLD_WAL_DIR_UPDATE_INTERVAL) {
       @Override
       protected void chore() {
         try {
           MasterWalManager.this.updateOldWALsDirSize();
         } catch (IOException e) {
-          LOG.error("Got exception while trying to update the old WALs Directory size counter: " + e.getMessage(), e);
+          LOG.error("Got exception while trying to update the old WALs Directory size counter: "
+            + e.getMessage(), e);
         }
       }
     };

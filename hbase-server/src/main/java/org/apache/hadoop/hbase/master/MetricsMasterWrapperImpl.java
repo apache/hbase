@@ -241,7 +241,7 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override
   public long getOldWALsDirSize() {
-    if(master == null || !master.isInitialized()) {
+    if (master == null || !master.isInitialized()) {
       return 0;
     }
     return master.getMasterWalManager().getOldWALsDirSize();
