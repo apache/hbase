@@ -149,6 +149,36 @@ public class TestLogRolling extends AbstractTestLogRolling {
     }
   }
 
+  @Test
+  public void testSlowSyncLogRolling() throws Exception {
+    // Create the test table
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+    admin.createTable(desc);
+    try (Table table = TEST_UTIL.getConnection().getTable(desc.getTableName())) {
+      server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
+      RegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
+      final AbstractFSWAL<?> log = getWALAndRegisterSlowSyncHook(region);
+
+      // Set default log writer, no additional latency to any sync on the hlog.
+      checkSlowSync(log, table, -1, 10, false);
+
+      // Adds 200 ms of latency to any sync on the hlog. This should be more than sufficient to
+      // trigger slow sync warnings.
+      // Write some data.
+      // We need to write at least 5 times, but double it. We should only request
+      // a SLOW_SYNC roll once in the current interval.
+      checkSlowSync(log, table, 200, 10, true);
+
+      // Adds 5000 ms of latency to any sync on the hlog. This will trip the other threshold.
+      // Write some data. Should only take one sync.
+      checkSlowSync(log, table, 5000, 1, true);
+
+      // Set default log writer, no additional latency to any sync on the hlog.
+      checkSlowSync(log, table, -1, 10, false);
+    }
+  }
+
   /**
    * Tests that logs are rolled upon detecting datanode death Requires an HDFS jar with HDFS-826 &
    * syncFs() support (HDFS-200)

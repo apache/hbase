@@ -23,8 +23,13 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
@@ -80,6 +85,29 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling {
   @Override
   protected void setDefaultLogWriter(Configuration conf) {
     conf.set(AsyncFSWALProvider.WRITER_IMPL, AsyncProtobufLogWriter.class.getName());
+  }
+
+  @Test
+  public void testSlowSyncLogRolling() throws Exception {
+    // Create the test table
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+    admin.createTable(desc);
+    try (Table table = TEST_UTIL.getConnection().getTable(desc.getTableName())) {
+      server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
+      RegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
+      final AbstractFSWAL<?> log = getWALAndRegisterSlowSyncHook(region);
+
+      // Set default log writer, no additional latency to any sync on the hlog.
+      checkSlowSync(log, table, -1, 10, false);
+
+      // Adds 5000 ms of latency to any sync on the hlog. This will trip the other threshold.
+      // Write some data. Should only take one sync.
+      checkSlowSync(log, table, 5000, 1, true);
+
+      // Set default log writer, no additional latency to any sync on the hlog.
+      checkSlowSync(log, table, -1, 10, false);
+    }
   }
 
   @Test
