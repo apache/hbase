@@ -216,7 +216,7 @@ public abstract class AbstractTestLogRolling {
       writeData(table, rowNum++);
     }
 
-    if (slowSyncLatency > 0) {
+    if (slowSync) {
       TEST_UTIL.waitFor(10000, 100, new Waiter.ExplainingPredicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
@@ -228,9 +228,7 @@ public abstract class AbstractTestLogRolling {
           return "Waited too long for our test writer to get rolled out";
         }
       });
-    }
 
-    if (slowSync) {
       assertTrue("Should have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
     } else {
       assertFalse("Should not have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
