@@ -221,7 +221,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   transient final IdReadWriteLock<Long> offsetLock;
 
-  private final NavigableSet<BlockCacheKey> blocksByHFile = new ConcurrentSkipListSet<>((a, b) -> {
+  final NavigableSet<BlockCacheKey> blocksByHFile = new ConcurrentSkipListSet<>((a, b) -> {
     int nameComparison = a.getHfileName().compareTo(b.getHfileName());
     if (nameComparison != 0) {
       return nameComparison;
@@ -643,12 +643,14 @@ public class BucketCache implements BlockCache, HeapSize {
     blocksByHFile.remove(cacheKey);
     if (decrementBlockNumber) {
       this.blockNumber.decrement();
+      if (ioEngine.isPersistent()) {
+        removeFileFromPrefetch(cacheKey.getHfileName());
+      }
     }
     if (evictedByEvictionProcess) {
       cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
     }
     if (ioEngine.isPersistent()) {
-      removeFileFromPrefetch(cacheKey.getHfileName());
       setCacheInconsistent(true);
     }
   }
@@ -1083,6 +1085,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   protected void putIntoBackingMap(BlockCacheKey key, BucketEntry bucketEntry) {
     BucketEntry previousEntry = backingMap.put(key, bucketEntry);
+    blocksByHFile.add(key);
     if (previousEntry != null && previousEntry != bucketEntry) {
       previousEntry.withWriteLock(offsetLock, () -> {
         blockEvicted(key, previousEntry, false, false);
@@ -1162,10 +1165,6 @@ public class BucketCache implements BlockCache, HeapSize {
           LOG.warn("Couldn't get entry or changed on us; who else is messing with it?");
           index++;
           continue;
-        }
-        BlockCacheKey cacheKey = re.getKey();
-        if (ramCache.containsKey(cacheKey)) {
-          blocksByHFile.add(cacheKey);
         }
         // Reset the position for reuse.
         // It should be guaranteed that the data in the metaBuff has been transferred to the
@@ -1517,6 +1516,7 @@ public class BucketCache implements BlockCache, HeapSize {
     if (!ioEngine.isPersistent() || persistencePath == null) {
       // If persistent ioengine and a path, we will serialize out the backingMap.
       this.backingMap.clear();
+      this.blocksByHFile.clear();
       this.fullyCachedFiles.clear();
       this.regionCachedSizeMap.clear();
     }
