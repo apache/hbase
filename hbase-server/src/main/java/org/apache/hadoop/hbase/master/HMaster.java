@@ -458,7 +458,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private SpaceQuotaSnapshotNotifier spaceQuotaSnapshotNotifier;
   private QuotaObserverChore quotaObserverChore;
   private SnapshotQuotaObserverChore snapshotQuotaChore;
-  private ScheduledChore oldWALsDirSizeUpdaterChore;
+  private OldWALsDirSizeUpdaterChore oldWALsDirSizeUpdaterChore;
 
   private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
   private ProcedureStore procedureStore;
@@ -1364,7 +1364,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.rollingUpgradeChore = new RollingUpgradeChore(this);
     getChoreService().scheduleChore(rollingUpgradeChore);
 
-    this.oldWALsDirSizeUpdaterChore = this.walManager.getOldWALsDirSizeUpdaterChore();
+    this.oldWALsDirSizeUpdaterChore = new OldWALsDirSizeUpdaterChore(this);
     getChoreService().scheduleChore(this.oldWALsDirSizeUpdaterChore);
 
     status.markComplete("Progress after master initialized complete");

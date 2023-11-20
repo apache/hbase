@@ -33,9 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -414,36 +412,5 @@ public class MasterWalManager {
     } catch (IOException ie) {
       LOG.warn("Failed archiving meta log for server " + serverName, ie);
     }
-  }
-
-  private static Stoppable createDummyStoppable() {
-    return new Stoppable() {
-      private volatile boolean isStopped = false;
-
-      @Override
-      public void stop(String why) {
-        isStopped = true;
-      }
-
-      @Override
-      public boolean isStopped() {
-        return isStopped;
-      }
-    };
-  }
-
-  public ScheduledChore getOldWALsDirSizeUpdaterChore() {
-    return new ScheduledChore("UpdateOldWALsDirSize", createDummyStoppable(),
-      OLD_WAL_DIR_UPDATE_INTERVAL) {
-      @Override
-      protected void chore() {
-        try {
-          MasterWalManager.this.updateOldWALsDirSize();
-        } catch (IOException e) {
-          LOG.error("Got exception while trying to update the old WALs Directory size counter: "
-            + e.getMessage(), e);
-        }
-      }
-    };
   }
 }
