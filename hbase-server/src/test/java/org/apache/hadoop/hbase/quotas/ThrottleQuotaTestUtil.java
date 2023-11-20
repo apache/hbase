@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Objects;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -42,7 +43,9 @@ public final class ThrottleQuotaTestUtil {
   private final static int REFRESH_TIME = 30 * 60000;
   static {
     envEdge.setValue(EnvironmentEdgeManager.currentTime());
-    EnvironmentEdgeManagerTestHelper.injectEdge(envEdge);
+    // only active the envEdge for quotas package
+    EnvironmentEdgeManagerTestHelper.injectEdgeForPackage(envEdge,
+      ThrottleQuotaTestUtil.class.getPackage().getName());
   }
 
   private ThrottleQuotaTestUtil() {
@@ -135,51 +138,79 @@ public final class ThrottleQuotaTestUtil {
       RegionServerRpcQuotaManager quotaManager =
         rst.getRegionServer().getRegionServerRpcQuotaManager();
       QuotaCache quotaCache = quotaManager.getQuotaCache();
-
       quotaCache.triggerCacheRefresh();
-      // sleep for cache update
       Thread.sleep(250);
+      testUtil.waitFor(60000, 250, new ExplainingPredicate<Exception>() {
 
-      for (TableName table : tables) {
-        quotaCache.getTableLimiter(table);
-      }
+        @Override
+        public boolean evaluate() throws Exception {
+          boolean isUpdated = true;
+          for (TableName table : tables) {
+            if (userLimiter) {
+              boolean isUserBypass =
+                quotaCache.getUserLimiter(User.getCurrent().getUGI(), table).isBypass();
+              if (isUserBypass != bypass) {
+                LOG.info(
+                  "User limiter for user={}, table={} not refreshed, bypass expected {}, actual {}",
+                  User.getCurrent(), table, bypass, isUserBypass);
+                envEdge.incValue(100);
+                isUpdated = false;
+                break;
+              }
+            }
+            if (tableLimiter) {
+              boolean isTableBypass = quotaCache.getTableLimiter(table).isBypass();
+              if (isTableBypass != bypass) {
+                LOG.info("Table limiter for table={} not refreshed, bypass expected {}, actual {}",
+                  table, bypass, isTableBypass);
+                envEdge.incValue(100);
+                isUpdated = false;
+                break;
+              }
+            }
+            if (nsLimiter) {
+              boolean isNsBypass =
+                quotaCache.getNamespaceLimiter(table.getNamespaceAsString()).isBypass();
+              if (isNsBypass != bypass) {
+                LOG.info(
+                  "Namespace limiter for namespace={} not refreshed, bypass expected {}, actual {}",
+                  table.getNamespaceAsString(), bypass, isNsBypass);
+                envEdge.incValue(100);
+                isUpdated = false;
+                break;
+              }
+            }
+          }
+          if (rsLimiter) {
+            boolean rsIsBypass = quotaCache
+              .getRegionServerQuotaLimiter(QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY).isBypass();
+            if (rsIsBypass != bypass) {
+              LOG.info("RegionServer limiter not refreshed, bypass expected {}, actual {}", bypass,
+                rsIsBypass);
+              envEdge.incValue(100);
+              isUpdated = false;
+            }
+          }
+          if (exceedThrottleQuota) {
+            if (quotaCache.isExceedThrottleQuotaEnabled() != bypass) {
+              LOG.info("ExceedThrottleQuotaEnabled not refreshed, bypass expected {}, actual {}",
+                bypass, quotaCache.isExceedThrottleQuotaEnabled());
+              envEdge.incValue(100);
+              isUpdated = false;
+            }
+          }
+          if (isUpdated) {
+            return true;
+          }
+          quotaCache.triggerCacheRefresh();
+          return false;
+        }
 
-      boolean isUpdated = false;
-      while (!isUpdated) {
-        quotaCache.triggerCacheRefresh();
-        isUpdated = true;
-        for (TableName table : tables) {
-          boolean isBypass = true;
-          if (userLimiter) {
-            isBypass = quotaCache.getUserLimiter(User.getCurrent().getUGI(), table).isBypass();
-          }
-          if (tableLimiter) {
-            isBypass &= quotaCache.getTableLimiter(table).isBypass();
-          }
-          if (nsLimiter) {
-            isBypass &= quotaCache.getNamespaceLimiter(table.getNamespaceAsString()).isBypass();
-          }
-          if (isBypass != bypass) {
-            envEdge.incValue(100);
-            isUpdated = false;
-            break;
-          }
+        @Override
+        public String explainFailure() throws Exception {
+          return "Quota cache is still not refreshed";
         }
-        if (rsLimiter) {
-          boolean rsIsBypass = quotaCache
-            .getRegionServerQuotaLimiter(QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY).isBypass();
-          if (rsIsBypass != bypass) {
-            envEdge.incValue(100);
-            isUpdated = false;
-          }
-        }
-        if (exceedThrottleQuota) {
-          if (quotaCache.isExceedThrottleQuotaEnabled() != bypass) {
-            envEdge.incValue(100);
-            isUpdated = false;
-          }
-        }
-      }
+      });
 
       LOG.debug("QuotaCache");
       LOG.debug(Objects.toString(quotaCache.getNamespaceQuotaCache()));
