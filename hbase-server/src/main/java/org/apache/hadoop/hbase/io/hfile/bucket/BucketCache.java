@@ -337,6 +337,7 @@ public class BucketCache implements BlockCache, HeapSize {
         fullyCachedFiles.clear();
         backingMapValidated.set(true);
         bucketAllocator = new BucketAllocator(capacity, bucketSizes);
+        regionCachedSizeMap.clear();
       }
     } else {
       bucketAllocator = new BucketAllocator(capacity, bucketSizes);
@@ -1503,6 +1504,7 @@ public class BucketCache implements BlockCache, HeapSize {
       this.backingMap.clear();
       this.blocksByHFile.clear();
       this.fullyCachedFiles.clear();
+      this.regionCachedSizeMap.clear();
     }
   }
 
@@ -2024,9 +2026,9 @@ public class BucketCache implements BlockCache, HeapSize {
       final MutableInt count = new MutableInt();
       LOG.debug("iterating over {} entries in the backing map", backingMap.size());
       backingMap.entrySet().stream().forEach(entry -> {
-        if (entry.getKey().getHfileName().equals(fileName)) {
+        if (entry.getKey().getHfileName().equals(fileName.getName())) {
           LOG.debug("found block for file {} in the backing map. Acquiring read lock for offset {}",
-            fileName, entry.getKey().getOffset());
+            fileName.getName(), entry.getKey().getOffset());
           ReentrantReadWriteLock lock = offsetLock.getLock(entry.getKey().getOffset());
           lock.readLock().lock();
           locks.add(lock);
@@ -2037,23 +2039,23 @@ public class BucketCache implements BlockCache, HeapSize {
       });
       // We may either place only data blocks on the BucketCache or all type of blocks
       if (dataBlockCount == count.getValue() || totalBlockCount == count.getValue()) {
-        LOG.debug("File {} has now been fully cached.", fileName);
+        LOG.debug("File {} has now been fully cached.", fileName.getName());
         fileCacheCompleted(fileName, size);
       } else {
         LOG.debug(
           "Prefetch executor completed for {}, but only {} blocks were cached. "
             + "Total blocks for file: {}. Checking for blocks pending cache in cache writer queue.",
-          fileName, count.getValue(), dataBlockCount);
+          fileName.getName(), count.getValue(), dataBlockCount);
         if (ramCache.hasBlocksForFile(fileName.getName())) {
           LOG.debug("There are still blocks pending caching for file {}. Will sleep 100ms "
-            + "and try the verification again.", fileName);
+            + "and try the verification again.", fileName.getName());
           Thread.sleep(100);
           notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
         } else {
           LOG.info(
             "We found only {} blocks cached from a total of {} for file {}, "
               + "but no blocks pending caching. Maybe cache is full?",
-            count, dataBlockCount, fileName);
+            count, dataBlockCount, fileName.getName());
         }
       }
     } catch (InterruptedException e) {
