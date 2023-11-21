@@ -94,17 +94,11 @@ FULL_BUILD_VERSION="${HBASE_VERSION}-${RELEASE}"
 # could accurately reflect the full build version in the UI and elsewhere.
 MAVEN_ARGS="$MAVEN_ARGS -Dhubspot.build.version=$HBASE_VERSION"
 
-#
-# Dump generated env vars into rc file
-#
-
-cat >> "$BUILD_COMMAND_RC_FILE" <<EOF
-export MAVEN_ARGS='$MAVEN_ARGS'
-export SET_VERSION='$MAVEN_VERSION'
-export HBASE_VERSION='$HBASE_VERSION'
-export PKG_RELEASE='$RELEASE'
-export FULL_BUILD_VERSION='$FULL_BUILD_VERSION'
-EOF
+write-build-env-var MAVEN_ARGS "$MAVEN_ARGS"
+write-build-env-var SET_VERSION "$MAVEN_VERSION"
+write-build-env-var HBASE_VERSION "$HBASE_VERSION"
+write-build-env-var PKG_RELEASE "$RELEASE"
+write-build-env-var FULL_BUILD_VERSION "$FULL_BUILD_VERSION"
 
 echo "Building HBase version $HBASE_VERSION"
 echo "Will use maven version $MAVEN_VERSION"
