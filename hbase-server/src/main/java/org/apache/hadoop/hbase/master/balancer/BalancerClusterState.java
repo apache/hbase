@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,6 +115,12 @@ class BalancerClusterState {
   private float[][] rackLocalities;
   // Maps localityType -> region -> [server|rack]Index with highest locality
   private int[][] regionsToMostLocalEntities;
+  // Maps region -> serverIndex -> regionCacheRatio of a region on a server
+  private Map<Pair<Integer, Integer>, Float> regionIndexServerIndexRegionCachedRatio;
+  // Maps regionIndex -> serverIndex with best region cache ratio
+  private int[] regionServerIndexWithBestRegionCachedRatio;
+  // Maps regionName -> oldServerName -> cache ratio of the region on the old server
+  Map<String, Pair<ServerName, Float>> regionCacheRatioOnOldServerMap;
 
   static class DefaultRackManager extends RackManager {
     @Override
@@ -125,13 +132,20 @@ class BalancerClusterState {
   BalancerClusterState(Map<ServerName, List<RegionInfo>> clusterState,
     Map<String, Deque<BalancerRegionLoad>> loads, RegionLocationFinder regionFinder,
     RackManager rackManager) {
-    this(null, clusterState, loads, regionFinder, rackManager);
+    this(null, clusterState, loads, regionFinder, rackManager, null);
+  }
+
+  protected BalancerClusterState(Map<ServerName, List<RegionInfo>> clusterState,
+    Map<String, Deque<BalancerRegionLoad>> loads, RegionLocationFinder regionFinder,
+    RackManager rackManager, Map<String, Pair<ServerName, Float>> oldRegionServerRegionCacheRatio) {
+    this(null, clusterState, loads, regionFinder, rackManager, oldRegionServerRegionCacheRatio);
   }
 
   @SuppressWarnings("unchecked")
   BalancerClusterState(Collection<RegionInfo> unassignedRegions,
     Map<ServerName, List<RegionInfo>> clusterState, Map<String, Deque<BalancerRegionLoad>> loads,
-    RegionLocationFinder regionFinder, RackManager rackManager) {
+    RegionLocationFinder regionFinder, RackManager rackManager,
+    Map<String, Pair<ServerName, Float>> oldRegionServerRegionCacheRatio) {
     if (unassignedRegions == null) {
       unassignedRegions = Collections.emptyList();
     }
@@ -144,6 +158,8 @@ class BalancerClusterState {
     // TODO: We should get the list of tables from master
     tables = new ArrayList<>();
     this.rackManager = rackManager != null ? rackManager : new DefaultRackManager();
+
+    this.regionCacheRatioOnOldServerMap = oldRegionServerRegionCacheRatio;
 
     numRegions = 0;
 
@@ -525,6 +541,142 @@ class BalancerClusterState {
       regionsToMostLocalEntities[LocalityType.RACK.ordinal()][region] = rackWithBestLocality;
     }
 
+  }
+
+  /**
+   * Returns the size of hFiles from the most recent RegionLoad for region
+   */
+  public int getTotalRegionHFileSizeMB(int region) {
+    Deque<BalancerRegionLoad> load = regionLoads[region];
+    if (load == null) {
+      // This means, that the region has no actual data on disk
+      return 0;
+    }
+    return regionLoads[region].getLast().getRegionSizeMB();
+  }
+
+  /**
+   * Returns the weighted cache ratio of a region on the given region server
+   */
+  public float getOrComputeWeightedRegionCacheRatio(int region, int server) {
+    return getTotalRegionHFileSizeMB(region) * getOrComputeRegionCacheRatio(region, server);
+  }
+
+  /**
+   * Returns the amount by which a region is cached on a given region server. If the region is not
+   * currently hosted on the given region server, then find out if it was previously hosted there
+   * and return the old cache ratio.
+   */
+  protected float getRegionCacheRatioOnRegionServer(int region, int regionServerIndex) {
+    float regionCacheRatio = 0.0f;
+
+    // Get the current region cache ratio if the region is hosted on the server regionServerIndex
+    for (int regionIndex : regionsPerServer[regionServerIndex]) {
+      if (region != regionIndex) {
+        continue;
+      }
+
+      Deque<BalancerRegionLoad> regionLoadList = regionLoads[regionIndex];
+
+      // The region is currently hosted on this region server. Get the region cache ratio for this
+      // region on this server
+      regionCacheRatio =
+        regionLoadList == null ? 0.0f : regionLoadList.getLast().getCurrentRegionCacheRatio();
+
+      return regionCacheRatio;
+    }
+
+    // Region is not currently hosted on this server. Check if the region was cached on this
+    // server earlier. This can happen when the server was shutdown and the cache was persisted.
+    // Search using the region name and server name and not the index id and server id as these ids
+    // may change when a server is marked as dead or a new server is added.
+    String regionEncodedName = regions[region].getEncodedName();
+    ServerName serverName = servers[regionServerIndex];
+    if (
+      regionCacheRatioOnOldServerMap != null
+        && regionCacheRatioOnOldServerMap.containsKey(regionEncodedName)
+    ) {
+      Pair<ServerName, Float> cacheRatioOfRegionOnServer =
+        regionCacheRatioOnOldServerMap.get(regionEncodedName);
+      if (ServerName.isSameAddress(cacheRatioOfRegionOnServer.getFirst(), serverName)) {
+        regionCacheRatio = cacheRatioOfRegionOnServer.getSecond();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Old cache ratio found for region {} on server {}: {}", regionEncodedName,
+            serverName, regionCacheRatio);
+        }
+      }
+    }
+    return regionCacheRatio;
+  }
+
+  /**
+   * Populate the maps containing information about how much a region is cached on a region server.
+   */
+  private void computeRegionServerRegionCacheRatio() {
+    regionIndexServerIndexRegionCachedRatio = new HashMap<>();
+    regionServerIndexWithBestRegionCachedRatio = new int[numRegions];
+
+    for (int region = 0; region < numRegions; region++) {
+      float bestRegionCacheRatio = 0.0f;
+      int serverWithBestRegionCacheRatio = 0;
+      for (int server = 0; server < numServers; server++) {
+        float regionCacheRatio = getRegionCacheRatioOnRegionServer(region, server);
+        if (regionCacheRatio > 0.0f || server == regionIndexToServerIndex[region]) {
+          // A region with cache ratio 0 on a server means nothing. Hence, just make a note of
+          // cache ratio only if the cache ratio is greater than 0.
+          Pair<Integer, Integer> regionServerPair = new Pair<>(region, server);
+          regionIndexServerIndexRegionCachedRatio.put(regionServerPair, regionCacheRatio);
+        }
+        if (regionCacheRatio > bestRegionCacheRatio) {
+          serverWithBestRegionCacheRatio = server;
+          // If the server currently hosting the region has equal cache ratio to a historical
+          // server, consider the current server to keep hosting the region
+          bestRegionCacheRatio = regionCacheRatio;
+        } else if (
+          regionCacheRatio == bestRegionCacheRatio && server == regionIndexToServerIndex[region]
+        ) {
+          // If two servers have same region cache ratio, then the server currently hosting the
+          // region
+          // should retain the region
+          serverWithBestRegionCacheRatio = server;
+        }
+      }
+      regionServerIndexWithBestRegionCachedRatio[region] = serverWithBestRegionCacheRatio;
+      Pair<Integer, Integer> regionServerPair =
+        new Pair<>(region, regionIndexToServerIndex[region]);
+      float tempRegionCacheRatio = regionIndexServerIndexRegionCachedRatio.get(regionServerPair);
+      if (tempRegionCacheRatio > bestRegionCacheRatio) {
+        LOG.warn(
+          "INVALID CONDITION: region {} on server {} cache ratio {} is greater than the "
+            + "best region cache ratio {} on server {}",
+          regions[region].getEncodedName(), servers[regionIndexToServerIndex[region]],
+          tempRegionCacheRatio, bestRegionCacheRatio, servers[serverWithBestRegionCacheRatio]);
+      }
+    }
+  }
+
+  protected float getOrComputeRegionCacheRatio(int region, int server) {
+    if (
+      regionServerIndexWithBestRegionCachedRatio == null
+        || regionIndexServerIndexRegionCachedRatio.isEmpty()
+    ) {
+      computeRegionServerRegionCacheRatio();
+    }
+
+    Pair<Integer, Integer> regionServerPair = new Pair<>(region, server);
+    return regionIndexServerIndexRegionCachedRatio.containsKey(regionServerPair)
+      ? regionIndexServerIndexRegionCachedRatio.get(regionServerPair)
+      : 0.0f;
+  }
+
+  public int[] getOrComputeServerWithBestRegionCachedRatio() {
+    if (
+      regionServerIndexWithBestRegionCachedRatio == null
+        || regionIndexServerIndexRegionCachedRatio.isEmpty()
+    ) {
+      computeRegionServerRegionCacheRatio();
+    }
+    return regionServerIndexWithBestRegionCachedRatio;
   }
 
   /**
