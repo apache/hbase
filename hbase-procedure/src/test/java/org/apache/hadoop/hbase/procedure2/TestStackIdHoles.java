@@ -135,7 +135,7 @@ public class TestStackIdHoles {
         int lastStackId = proc.getStackIndexes()[proc.getStackIndexes().length - 1];
         try {
           // sleep more times if the stack id is smaller
-          Thread.sleep(100 * (10 - lastStackId));
+          Thread.sleep(100L * (10 - lastStackId));
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           return;
