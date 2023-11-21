@@ -1695,9 +1695,6 @@ public class ProcedureExecutor<TEnvironment> {
         }
       }
 
-      // Add the procedure to the stack
-      procStack.addRollbackStep(procedure);
-
       // allows to kill the executor before something is stored to the wal.
       // useful to test the procedure recovery.
       if (
@@ -1715,7 +1712,12 @@ public class ProcedureExecutor<TEnvironment> {
       // Commit the transaction even if a suspend (state may have changed). Note this append
       // can take a bunch of time to complete.
       if (procedure.needPersistence()) {
-        updateStoreOnExec(procStack, procedure, subprocs);
+        // Add the procedure to the stack
+        // See HBASE-28210 on why we need synchronized here
+        synchronized (procStack) {
+          procStack.addRollbackStep(procedure);
+          updateStoreOnExec(procStack, procedure, subprocs);
+        }
       }
 
       // if the store is not running we are aborting
