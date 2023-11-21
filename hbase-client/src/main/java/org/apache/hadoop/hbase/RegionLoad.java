@@ -389,10 +389,14 @@ public class RegionLoad implements RegionMetrics {
   }
 
   @Override
-  public Size getRegionSizeMB() { return metrics.getRegionSizeMB(); }
+  public Size getRegionSizeMB() {
+    return metrics.getRegionSizeMB();
+  }
 
   @Override
-  public float getCurrentRegionCachedRatio() { return metrics.getCurrentRegionCachedRatio(); }
+  public float getCurrentRegionCachedRatio() {
+    return metrics.getCurrentRegionCachedRatio();
+  }
 
   /**
    * @see java.lang.Object#toString()

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.apache.hadoop.hbase.io.hfile.BlockCacheFactory.BUCKET_CACHE_PERSISTENT_PATH_KEY;
+import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;

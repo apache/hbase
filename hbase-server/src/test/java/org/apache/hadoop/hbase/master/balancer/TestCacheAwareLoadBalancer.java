@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.apache.hadoop.hbase.io.hfile.BlockCacheFactory.BUCKET_CACHE_PERSISTENT_PATH_KEY;
+import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -114,9 +114,9 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     return services;
   }
 
-  private ServerMetrics mockServerMetricsWithRegionPrefetchInfo(ServerName server,
-    List<RegionInfo> regionsOnServer, float currentPrefetchRatio,
-    List<RegionInfo> oldPrefechedRegions, int oldPrefetchSize, int regionSize) {
+  private ServerMetrics mockServerMetricsWithRegionCacheInfo(ServerName server,
+    List<RegionInfo> regionsOnServer, float currentCacheRatio,
+    List<RegionInfo> oldRegionCacheInfo, int oldRegionCachedSize, int regionSize) {
     ServerMetrics serverMetrics = mock(ServerMetrics.class);
     Map<byte[], RegionMetrics> regionLoadMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (RegionInfo info : regionsOnServer) {
@@ -125,16 +125,16 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
       when(rl.getWriteRequestCount()).thenReturn(0L);
       when(rl.getMemStoreSize()).thenReturn(Size.ZERO);
       when(rl.getStoreFileSize()).thenReturn(Size.ZERO);
-      when(rl.getCurrentRegionCachedRatio()).thenReturn(currentPrefetchRatio);
+      when(rl.getCurrentRegionCachedRatio()).thenReturn(currentCacheRatio);
       when(rl.getRegionSizeMB()).thenReturn(new Size(regionSize, Size.Unit.MEGABYTE));
       regionLoadMap.put(info.getRegionName(), rl);
     }
     when(serverMetrics.getRegionMetrics()).thenReturn(regionLoadMap);
-    Map<String, Integer> oldPrefetchInfoMap = new HashMap<>();
-    for (RegionInfo info : oldPrefechedRegions) {
-      oldPrefetchInfoMap.put(info.getEncodedName(), oldPrefetchSize);
+    Map<String, Integer> oldCacheRatioMap = new HashMap<>();
+    for (RegionInfo info : oldRegionCacheInfo) {
+      oldCacheRatioMap.put(info.getEncodedName(), oldRegionCachedSize);
     }
-    when(serverMetrics.getRegionCachedInfo()).thenReturn(oldPrefetchInfoMap);
+    when(serverMetrics.getRegionCachedInfo()).thenReturn(oldCacheRatioMap);
     return serverMetrics;
   }
 
@@ -143,7 +143,7 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     servers = generateServers(3);
     tableDescs = constructTableDesc(false);
     Configuration conf = HBaseConfiguration.create();
-    conf.set(BUCKET_CACHE_PERSISTENT_PATH_KEY, "prefetch_list");
+    conf.set(BUCKET_CACHE_PERSISTENT_PATH_KEY, "prefetch_file_list");
     loadBalancer = new CacheAwareLoadBalancer();
     loadBalancer.setMasterServices(getMockedMaster());
     loadBalancer.setConf(conf);
@@ -151,7 +151,7 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
   }
 
   @Test
-  public void testRegionsNotPrefetchedOnOldServerAndCurrentServer() throws Exception {
+  public void testRegionsNotCachedOnOldServerAndCurrentServer() throws Exception {
     // The regions are not prefetched on old server as well as the current server. This causes
     // skewness in the region allocation which should be fixed by the balancer
 
@@ -171,11 +171,11 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
 
     // Mock cluster metrics
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionPrefetchInfo(server0, regionsOnServer0,
+    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
       0.0f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionPrefetchInfo(server1, regionsOnServer1,
+    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
       0.0f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionPrefetchInfo(server2, regionsOnServer2,
+    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
       0.0f, new ArrayList<>(), 0, 10));
     ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
     when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
@@ -201,8 +201,8 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
   }
 
   @Test
-  public void testRegionsPartiallyPrefetchedOnOldServerAndNotPrefetchedOnCurrentServer() throws Exception {
-    //The regions are partially prefetched on old server but not prefetched on the current server
+  public void testRegionsPartiallyCachedOnOldServerAndNotCachedOnCurrentServer() throws Exception {
+    // The regions are partially cached on old server but not cached on the current server
 
     Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
     ServerName server0 = servers.get(0);
@@ -221,14 +221,14 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     // Mock cluster metrics
 
     // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldPrefetchedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
+    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionPrefetchInfo(server0, regionsOnServer0,
+    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
       0.0f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionPrefetchInfo(server1, regionsOnServer1,
-      0.0f, oldPrefetchedRegions, 6, 10));
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionPrefetchInfo(server2, regionsOnServer2,
+    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
+      0.0f, oldCachedRegions, 6, 10));
+    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
       0.0f, new ArrayList<>(), 0, 10));
     ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
     when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
@@ -251,12 +251,12 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     // should move 5 regions from server0 to server1
     assertEquals(5, regionsMovedFromServer0.size());
     assertEquals(5, targetServers.get(server1).size());
-    assertTrue(targetServers.get(server1).containsAll(oldPrefetchedRegions));
+    assertTrue(targetServers.get(server1).containsAll(oldCachedRegions));
   }
 
   @Test
-  public void testRegionsFullyPrefetchedOnOldServerAndNoPrefetchedOnCurrentServers() throws Exception {
-    //The regions are fully prefetched on old server
+  public void testRegionsFullyCachedOnOldServerAndNotCachedOnCurrentServers() throws Exception {
+    // The regions are fully cached on old server
 
     Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
     ServerName server0 = servers.get(0);
@@ -275,14 +275,14 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     // Mock cluster metrics
 
     // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldPrefetchedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
+    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionPrefetchInfo(server0, regionsOnServer0,
+    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
       0.0f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionPrefetchInfo(server1, regionsOnServer1,
-      0.0f, oldPrefetchedRegions, 10, 10));
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionPrefetchInfo(server2, regionsOnServer2,
+    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
+      0.0f, oldCachedRegions, 10, 10));
+    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
       0.0f, new ArrayList<>(), 0, 10));
     ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
     when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
@@ -305,12 +305,12 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     // should move 5 regions from server0 to server1
     assertEquals(5, regionsMovedFromServer0.size());
     assertEquals(5, targetServers.get(server1).size());
-    assertTrue(targetServers.get(server1).containsAll(oldPrefetchedRegions));
+    assertTrue(targetServers.get(server1).containsAll(oldCachedRegions));
   }
 
   @Test
-  public void testRegionsFullyPrefetchedOnOldAndCurrentServers() throws Exception {
-    //The regions are fully prefetched on old server
+  public void testRegionsFullyCachedOnOldAndCurrentServers() throws Exception {
+    // The regions are fully cached on old server
 
     Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
     ServerName server0 = servers.get(0);
@@ -329,14 +329,14 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     // Mock cluster metrics
 
     // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldPrefetchedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
+    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionPrefetchInfo(server0, regionsOnServer0,
+    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
       1.0f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionPrefetchInfo(server1, regionsOnServer1,
-      1.0f, oldPrefetchedRegions, 10, 10));
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionPrefetchInfo(server2, regionsOnServer2,
+    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
+      1.0f, oldCachedRegions, 10, 10));
+    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
       1.0f, new ArrayList<>(), 0, 10));
     ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
     when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
@@ -359,12 +359,12 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     // should move 5 regions from server0 to server1
     assertEquals(5, regionsMovedFromServer0.size());
     assertEquals(5, targetServers.get(server1).size());
-    assertTrue(targetServers.get(server1).containsAll(oldPrefetchedRegions));
+    assertTrue(targetServers.get(server1).containsAll(oldCachedRegions));
   }
 
   @Test
-  public void testRegionsPartiallyPrefetchedOnOldServerAndCurrentServer() throws Exception {
-    //The regions are partially prefetched on old server
+  public void testRegionsPartiallyCachedOnOldServerAndCurrentServer() throws Exception {
+    // The regions are partially cached on old server
 
     Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
     ServerName server0 = servers.get(0);
@@ -383,18 +383,15 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     // Mock cluster metrics
 
     // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldPrefetchedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
+    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0,
-      mockServerMetricsWithRegionPrefetchInfo(server0, regionsOnServer0, 0.2f, new ArrayList<>(), 0,
-        10));
-    serverMetricsMap.put(server1,
-      mockServerMetricsWithRegionPrefetchInfo(server1, regionsOnServer1, 0.0f, oldPrefetchedRegions,
-        6, 10));
-    serverMetricsMap.put(server2,
-      mockServerMetricsWithRegionPrefetchInfo(server2, regionsOnServer2, 1.0f, new ArrayList<>(), 0,
-        10));
+    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
+      0.2f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
+      0.0f, oldCachedRegions, 6, 10));
+    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
+      1.0f, new ArrayList<>(), 0, 10));
     ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
     when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
     loadBalancer.setClusterMetrics(clusterMetrics);
@@ -415,6 +412,6 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     }
     assertEquals(5, regionsMovedFromServer0.size());
     assertEquals(5, targetServers.get(server1).size());
-    assertTrue(targetServers.get(server1).containsAll(oldPrefetchedRegions));
+    assertTrue(targetServers.get(server1).containsAll(oldCachedRegions));
   }
 }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,7 +39,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.apache.hadoop.hbase.io.hfile.BlockCacheFactory.BUCKET_CACHE_PERSISTENT_PATH_KEY;
 
 /**
  * An implementation of the {@link org.apache.hadoop.hbase.master.LoadBalancer} that assigns regions
@@ -58,7 +58,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
 
   public enum GeneratorFunctionType {
     LOAD,
-    PREFETCH
+    CACHE_RATIO
   }
 
   @Override
@@ -72,8 +72,8 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   public synchronized void setConf(Configuration conf) {
     this.conf = conf;
     this.costFunctions = new ArrayList<>();
-    addCostFunction(new PrefetchAwareRegionSkewnessCostFunction(conf));
-    addCostFunction(new PrefetchCacheCostFunction(conf));
+    addCostFunction(new CacheAwareRegionSkewnessCostFunction(conf));
+    addCostFunction(new CacheAwareCostFunction(conf));
     configureGenerators();
   }
 
@@ -85,8 +85,8 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
 
   protected void configureGenerators() {
     List<CandidateGenerator> candidateGenerators = new ArrayList<>();
-    candidateGenerators.add(GeneratorFunctionType.LOAD.ordinal(), new PrefetchBasedSkewnessCandidateGenerator());
-    candidateGenerators.add(GeneratorFunctionType.PREFETCH.ordinal(), new PrefetchCandidateGenerator());
+    candidateGenerators.add(GeneratorFunctionType.LOAD.ordinal(), new CacheAwareSkewnessCandidateGenerator());
+    candidateGenerators.add(GeneratorFunctionType.CACHE_RATIO.ordinal(), new CacheAwareCandidateGenerator());
     setCandidateGenerators(candidateGenerators);
   }
 
@@ -102,57 +102,60 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   }
 
   /**
-   * Collect the prefetch information for all the regions from all the active region servers.
+   * Collect the amount of region cached for all the regions from all the active region servers.
    */
   private synchronized void updateRegionLoad() {
     loads = new HashMap<>();
-    oldRegionPrefetchMap = new HashMap<>();
-    Map<String, Pair<ServerName, Integer>> currentPrefetchMap = new HashMap<>();
+    regionCacheRatioOnOldServerMap = new HashMap<>();
+    Map<String, Pair<ServerName, Integer>> regionCacheRatioOnCurrentServerMap = new HashMap<>();
 
-    // Build current region prefetch statistics
+    // Build current region cache statistics
     clusterStatus.getLiveServerMetrics().forEach((ServerName sn, ServerMetrics sm) -> {
-      // Create a map of region and the server where it is currently being hosted
+      // Create a map of region and the server where it is currently hosted
       sm.getRegionMetrics().forEach((byte[] regionName, RegionMetrics rm) -> {
         String regionEncodedName = RegionInfo.encodeRegionName(regionName);
+
         Deque<BalancerRegionLoad> rload = new ArrayDeque<>();
 
         // Get the total size of the hFiles in this region
         int regionSizeMB = (int) rm.getRegionSizeMB().get(Size.Unit.MEGABYTE);
 
         rload.add(new BalancerRegionLoad(rm));
-
-        // Maintain a map of region and it's total size. This is needed to calculate the prefetch
+        // Maintain a map of region and it's total size. This is needed to calculate the cache
         // ratios for the regions cached on old region servers
-        currentPrefetchMap.put(regionEncodedName, new Pair<>(sn, regionSizeMB));
+        regionCacheRatioOnCurrentServerMap.put(regionEncodedName, new Pair<>(sn, regionSizeMB));
         loads.put(regionEncodedName, rload);
       });
     });
 
-    // Build old region prefetch statistics
+    // Build cache statistics for the regions hosted previously on old region servers
     clusterStatus.getLiveServerMetrics().forEach((ServerName sn, ServerMetrics sm) -> {
       // Find if a region was previously hosted on a server other than the one it is currently
       // hosted on.
-      sm.getRegionCachedInfo().forEach((String regionEncodedName, Integer prefetchSize) -> {
-        // If the region is found in currentPrefetchMap, it is currently hosted on this server
-        if (currentPrefetchMap.containsKey(regionEncodedName)) {
-          ServerName currentServer = currentPrefetchMap.get(regionEncodedName).getFirst();
+      sm.getRegionCachedInfo().forEach((String regionEncodedName, Integer regionSizeInCache) -> {
+        // If the region is found in regionCacheRatioOnCurrentServerMap, it is currently hosted on
+        // this server
+        if (regionCacheRatioOnCurrentServerMap.containsKey(regionEncodedName)) {
+          ServerName currentServer =
+            regionCacheRatioOnCurrentServerMap.get(regionEncodedName).getFirst();
           if (!ServerName.isSameAddress(currentServer, sn)) {
-            int regionSizeMB = currentPrefetchMap.get(regionEncodedName).getSecond();
-            float regionPrefetchRatio = regionSizeMB == 0 ? 0.0f : (float) prefetchSize / regionSizeMB;
-            oldRegionPrefetchMap.put(regionEncodedName, new Pair<>(sn, regionPrefetchRatio));
+            int regionSizeMB =
+              regionCacheRatioOnCurrentServerMap.get(regionEncodedName).getSecond();
+            float regionCacheRatioOnOldServer =
+              regionSizeMB == 0 ? 0.0f : (float) regionSizeInCache / regionSizeMB;
+            regionCacheRatioOnOldServerMap.put(regionEncodedName,
+              new Pair<>(sn, regionCacheRatioOnOldServer));
           }
-        } else {
-          LOG.warn("Region {} not currently hosted on any server", regionEncodedName);
         }
       });
     });
   }
 
-  private RegionInfo getRegionInfoByEncodedName(Cluster cluster, String regionEncodedName) {
-    Optional<RegionInfo> regionInfoOptional = Arrays.stream(cluster.regions).filter((RegionInfo ri)
-      -> {
-      return regionEncodedName.equals(ri.getEncodedName());
-    }).findFirst();
+  private RegionInfo getRegionInfoByEncodedName(Cluster cluster, String regionName) {
+    Optional<RegionInfo> regionInfoOptional =
+      Arrays.stream(cluster.regions).filter((RegionInfo ri) -> {
+        return regionName.equals(ri.getEncodedName());
+      }).findFirst();
 
     if (regionInfoOptional.isPresent()) {
       return regionInfoOptional.get();
@@ -161,134 +164,140 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     return null;
   }
 
-  private class PrefetchCandidateGenerator extends CandidateGenerator {
+  private class CacheAwareCandidateGenerator extends CandidateGenerator {
     @Override
     protected Cluster.Action generate(Cluster cluster) {
       // Move the regions to the servers they were previously hosted on
       // after moving all the regions to their old hosts, move the regions based on the
       // amount of regions cached on them.
 
-      if (!oldRegionPrefetchMap.isEmpty() && oldRegionPrefetchMap.entrySet().iterator().hasNext()) {
-        Map.Entry<String, Pair<ServerName, Float>> regionPrefetchEntry =
-          oldRegionPrefetchMap.entrySet().iterator().next();
+      if (!regionCacheRatioOnOldServerMap.isEmpty()
+        && regionCacheRatioOnOldServerMap.entrySet().iterator().hasNext()) {
+        Map.Entry<String, Pair<ServerName, Float>> regionCacheRatioServerMap =
+          regionCacheRatioOnOldServerMap.entrySet().iterator().next();
         // Get the server where this region was previously hosted
-        String regionEncodedName = regionPrefetchEntry.getKey();
+        String regionEncodedName = regionCacheRatioServerMap.getKey();
         RegionInfo regionInfo = getRegionInfoByEncodedName(cluster, regionEncodedName);
         if (regionInfo == null) {
           LOG.warn("Region {} not found", regionEncodedName);
-          oldRegionPrefetchMap.remove(regionEncodedName);
+          regionCacheRatioOnOldServerMap.remove(regionEncodedName);
           return Cluster.NullAction;
         }
         if (regionInfo.isMetaRegion() || regionInfo.getTable().isSystemTable()) {
-          oldRegionPrefetchMap.remove(regionEncodedName);
+          regionCacheRatioOnOldServerMap.remove(regionEncodedName);
           return Cluster.NullAction;
         }
         int regionIndex = cluster.regionsToIndex.get(regionInfo);
         int oldServerIndex = cluster.serversToIndex.get(
-          oldRegionPrefetchMap.get(regionEncodedName).getFirst().getAddress());
+          regionCacheRatioOnOldServerMap.get(regionEncodedName).getFirst().getAddress());
         if (oldServerIndex < 0) {
           LOG.warn("Server previously hosting region {} not found", regionEncodedName);
-          oldRegionPrefetchMap.remove(regionEncodedName);
+          regionCacheRatioOnOldServerMap.remove(regionEncodedName);
           return Cluster.NullAction;
         }
-        float oldPrefetchRatio = cluster.getOrComputeRegionPrefetchRatio(regionIndex, oldServerIndex);
+        float oldRegionCacheRatio = cluster.getOrComputeRegionCacheRatio(regionIndex, oldServerIndex);
 
         int currentServerIndex = cluster.regionIndexToServerIndex[regionIndex];
-        float currentPrefetchRatio =
-          cluster.getOrComputeRegionPrefetchRatio(regionIndex, currentServerIndex);
+        float currentRegionCacheRatio =
+          cluster.getOrComputeRegionCacheRatio(regionIndex, currentServerIndex);
 
         Cluster.Action action = generatePlan(cluster, regionIndex, currentServerIndex,
-          currentPrefetchRatio, oldServerIndex, oldPrefetchRatio);
-        oldRegionPrefetchMap.remove(regionEncodedName);
+          currentRegionCacheRatio, oldServerIndex, oldRegionCacheRatio);
+        regionCacheRatioOnOldServerMap.remove(regionEncodedName);
         return action;
       }
       return Cluster.NullAction;
     }
 
     private Cluster.Action generatePlan(Cluster cluster, int regionIndex, int currentServerIndex,
-      float currentServerPrefetchRatio, int oldServerIndex, float oldServerPrefetchRatio) {
-      return moveRegionToOldServer(cluster, regionIndex, currentServerIndex, currentServerPrefetchRatio,
-        oldServerIndex, oldServerPrefetchRatio) ?
+      float cacheRatioOnCurrentServer, int oldServerIndex, float cacheRatioOnOldServer) {
+      return moveRegionToOldServer(cluster, regionIndex, currentServerIndex,
+        cacheRatioOnCurrentServer, oldServerIndex, cacheRatioOnOldServer) ?
         getAction(currentServerIndex, regionIndex, oldServerIndex, -1) :
         Cluster.NullAction;
     }
 
     private boolean moveRegionToOldServer(Cluster cluster, int regionIndex, int currentServerIndex,
-      float currentServerPrefetchRatio, int oldServerIndex, float oldServerPrefetchRatio) {
+      float cacheRatioOnCurrentServer, int oldServerIndex, float cacheRatioOnOldServer) {
 
       // Find if the region has already moved by comparing the current serverindex with the
       // currentServerIndex. This can happen when other candidate generator has moved the region
       if (currentServerIndex < 0 || oldServerIndex < 0) { return false; }
 
-      float prefetchDiffThreshold = 0.6f;
+      float cacheRatioDiffThreshold = 0.6f;
 
       // Conditions for moving the region
 
       // If the region is fully prefetched on the old server, move the region back
-      if (oldServerPrefetchRatio == 1.0f) {
+      if (cacheRatioOnOldServer == 1.0f) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("PrefetchCandidateGenerator: Region {} moved to the old server {} as it is "
+          LOG.debug("Region {} moved to the old server {} as it is "
             + "fully prefetched there", cluster.regions[regionIndex].getEncodedName(),
             cluster.servers[oldServerIndex].getHostname());
         }
         return true;
       }
 
-      if (currentServerPrefetchRatio == oldServerPrefetchRatio) {
-        // Move the region if it is fully prefetched on both the servers
+      // Move the region back to the old server if it is cached equally on both the servers
+      if (cacheRatioOnCurrentServer == cacheRatioOnOldServer) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("PrefetchCandidateGenerator: Region {} moved from {} to {} as the prefetch is same {}",
-            cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex].getHostname(),
-            cluster.servers[oldServerIndex].getHostname(), currentServerPrefetchRatio);
+          LOG.debug(
+            "Region {} moved from {} to {} as the region is cached {} equally on both servers",
+            cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex],
+            cluster.servers[oldServerIndex], cacheRatioOnCurrentServer);
         }
         return true;
       }
 
-      // If the region is not fully prefetched on either the current server or the old server,
-      // move the region back to the old server if the current server prefetch is still much less
-      // than the old server
-      if (oldServerPrefetchRatio > 0.0f &&
-        currentServerPrefetchRatio/oldServerPrefetchRatio < prefetchDiffThreshold) {
+      // If the region is not fully cached on either of the servers, move the region back to the
+      // old server if the region cache ratio on the current server is still much less than the old
+      // server
+      if (
+        cacheRatioOnOldServer > 0.0f
+          && cacheRatioOnCurrentServer / cacheRatioOnOldServer < cacheRatioDiffThreshold
+      ) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("PrefetchCandidateGenerator: Region {} moved from {} to {} old prefetch {} "
-            + "is better than current prefetch {}", cluster.regions[regionIndex].getEncodedName(),
-            cluster.servers[currentServerIndex].getHostname(), cluster.servers[oldServerIndex].getHostname(),
-            oldServerPrefetchRatio, currentServerPrefetchRatio);
+          LOG.debug(
+            "Region {} moved from {} to {} as region cache ratio {} is better than the current "
+              + "cache ratio {}",
+            cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex],
+            cluster.servers[oldServerIndex], cacheRatioOnCurrentServer, cacheRatioOnOldServer);
         }
         return true;
       }
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug("PrefetchCandidateGenerator: Region {} not moved from {} to {} with current "
-            + "prefetch {} and old prefetch {}", cluster.regions[regionIndex].getEncodedName(),
-          cluster.servers[currentServerIndex].getHostname(), cluster.servers[oldServerIndex].getHostname(),
-          currentServerPrefetchRatio, oldServerPrefetchRatio);
+        LOG.debug(
+          "Region {} not moved from {} to {} with current cache ratio {} and old cache ratio {}",
+          cluster.regions[regionIndex], cluster.servers[currentServerIndex],
+          cluster.servers[oldServerIndex], cacheRatioOnCurrentServer, cacheRatioOnOldServer);
       }
       return false;
     }
   }
 
-  private class PrefetchBasedSkewnessCandidateGenerator extends LoadCandidateGenerator {
+  private class CacheAwareSkewnessCandidateGenerator extends LoadCandidateGenerator {
     @Override
     BaseLoadBalancer.Cluster.Action pickRandomRegions(BaseLoadBalancer.Cluster cluster,
       int thisServer, int otherServer) {
 
       // First move all the regions which were hosted previously on some other servers back to
       // their historical servers
-      if (!oldRegionPrefetchMap.isEmpty() && oldRegionPrefetchMap.entrySet().iterator().hasNext()) {
+      if (!regionCacheRatioOnOldServerMap.isEmpty()
+        && regionCacheRatioOnOldServerMap.entrySet().iterator().hasNext()) {
         // Get the first region index in the historical prefetch list
         Map.Entry<String, Pair<ServerName, Float>> regionEntry =
-          oldRegionPrefetchMap.entrySet().iterator().next();
+          regionCacheRatioOnOldServerMap.entrySet().iterator().next();
         String regionEncodedName = regionEntry.getKey();
 
         RegionInfo regionInfo = getRegionInfoByEncodedName(cluster, regionEncodedName);
         if (regionInfo == null) {
           LOG.warn("Region {} does not exist", regionEncodedName);
-          oldRegionPrefetchMap.remove(regionEncodedName);
+          regionCacheRatioOnOldServerMap.remove(regionEncodedName);
           return Cluster.NullAction;
         }
         if (regionInfo.isMetaRegion() || regionInfo.getTable().isSystemTable()) {
-          oldRegionPrefetchMap.remove(regionEncodedName);
+          regionCacheRatioOnOldServerMap.remove(regionEncodedName);
           return Cluster.NullAction;
         }
 
@@ -300,23 +309,26 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         // Get the old server index
         otherServer = cluster.serversToIndex.get(regionEntry.getValue().getFirst().getAddress());
 
-        oldRegionPrefetchMap.remove(regionEncodedName);
+        regionCacheRatioOnOldServerMap.remove(regionEncodedName);
 
         if (otherServer < 0) {
           // The old server has been moved to other host and hence, the region cannot be moved back
           // to the old server
           if (LOG.isDebugEnabled()) {
-            LOG.debug("PrefetchBasedSkewnessCandidateGenerator: Region {} not moved to the old "
-                + "server {} as the server does not exist", regionEncodedName,
-              regionEntry.getValue().getFirst().getHostname());
+            LOG.debug(
+              "CacheAwareSkewnessCandidateGenerator: Region {} not moved to the old "
+                + "server {} as the server does not exist",
+              regionEncodedName, regionEntry.getValue().getFirst().getHostname());
           }
           return Cluster.NullAction;
         }
 
         if (LOG.isDebugEnabled()) {
-          LOG.debug("PrefetchBasedSkewnessCandidateGenerator: Region {} moved from {} to {} as it "
-              + "was hosted their earlier", regionEncodedName,
-            cluster.servers[thisServer].getHostname(), cluster.servers[otherServer].getHostname());
+          LOG.debug(
+            "CacheAwareSkewnessCandidateGenerator: Region {} moved from {} to {} as it "
+              + "was hosted their earlier",
+            regionEncodedName, cluster.servers[thisServer].getHostname(),
+            cluster.servers[otherServer].getHostname());
         }
 
         return getAction(thisServer, regionIndex, otherServer, -1);
@@ -326,45 +338,47 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         return Cluster.NullAction;
       }
 
-      int regionIndexToMove = pickLeastPrefetchedRegion(cluster, thisServer);
+      int regionIndexToMove = pickLeastCachedRegion(cluster, thisServer);
       if (regionIndexToMove < 0) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("PrefetchBasedSkewnessCandidateGenerator: No region found for movement");
+          LOG.debug("CacheAwareSkewnessCandidateGenerator: No region found for movement");
         }
         return Cluster.NullAction;
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("PrefetchBasedSkewnessCandidateGenerator: Region {} moved from {} to {} as it is "
-          + "least prefetched on current server", cluster.regions[regionIndexToMove].getEncodedName(),
+        LOG.debug(
+          "CacheAwareSkewnessCandidateGenerator: Region {} moved from {} to {} as it is "
+            + "least cached on current server",
+          cluster.regions[regionIndexToMove].getEncodedName(),
           cluster.servers[thisServer].getHostname(), cluster.servers[otherServer].getHostname());
       }
       return getAction(thisServer, regionIndexToMove, otherServer, -1);
     }
 
-    private int pickLeastPrefetchedRegion(Cluster cluster, int thisServer) {
-      float minPrefetchRatio = Float.MAX_VALUE;
-      int regionWithMinPrefetch = -1;
+    private int pickLeastCachedRegion(Cluster cluster, int thisServer) {
+      float minCacheRatio = Float.MAX_VALUE;
+      int leastCachedRegion = -1;
       for (int i = 0; i < cluster.regionsPerServer[thisServer].length; i++) {
         int regionIndex = cluster.regionsPerServer[thisServer][i];
 
-        float currentPrefetchRatio = cluster.getOrComputeRegionPrefetchRatio(regionIndex, thisServer);
-        if (currentPrefetchRatio < minPrefetchRatio) {
-          minPrefetchRatio = currentPrefetchRatio;
-          regionWithMinPrefetch = regionIndex;
+        float cacheRatioOnCurrentServer =
+          cluster.getOrComputeRegionCacheRatio(regionIndex, thisServer);
+        if (cacheRatioOnCurrentServer < minCacheRatio) {
+          minCacheRatio = cacheRatioOnCurrentServer;
+          leastCachedRegion = regionIndex;
         }
       }
-      return regionWithMinPrefetch;
+      return leastCachedRegion;
     }
   }
 
-  static class PrefetchAwareRegionSkewnessCostFunction extends CostFunction {
+  static class CacheAwareRegionSkewnessCostFunction extends CostFunction {
     static final String REGION_COUNT_SKEW_COST_KEY =
       "hbase.master.balancer.stochastic.regionCountCost";
     static final float DEFAULT_REGION_COUNT_SKEW_COST = 20;
-
     private final DoubleArrayCost cost = new DoubleArrayCost();
 
-    PrefetchAwareRegionSkewnessCostFunction(Configuration conf) {
+    CacheAwareRegionSkewnessCostFunction(Configuration conf) {
       super(conf);
       // Load multiplier should be the greatest as it is the most general way to balance data.
       this.setMultiplier(conf.getFloat(REGION_COUNT_SKEW_COST_KEY, DEFAULT_REGION_COUNT_SKEW_COST));
@@ -399,72 +413,74 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     }
   }
 
-  static class PrefetchCacheCostFunction extends CostFunction {
-    private static final String PREFETCH_CACHE_COST_KEY =
-      "hbase.master.balancer.stochastic.prefetchCacheCost";
-    private double prefetchRatio;
-    private double bestPrefetchRatio;
+  static class CacheAwareCostFunction extends CostFunction {
+    private static final String CACHE_COST_KEY =
+      "hbase.master.balancer.stochastic.cacheCost";
+    private double cacheRatio;
+    private double bestCacheRatio;
 
-    private static final float DEFAULT_PREFETCH_COST = 20;
+    private static final float DEFAULT_CACHE_COST = 20;
 
-    PrefetchCacheCostFunction(Configuration conf) {
+    CacheAwareCostFunction(Configuration conf) {
       super(conf);
       boolean isPersistentCache = conf.get(BUCKET_CACHE_PERSISTENT_PATH_KEY) != null;
       // Disable the prefetchCacheCostFunction if the prefetch file list persistence is not enabled
       this.setMultiplier( !isPersistentCache ? 0.0f :
-        conf.getFloat(PREFETCH_CACHE_COST_KEY, DEFAULT_PREFETCH_COST));
-      bestPrefetchRatio = 0.0;
-      prefetchRatio = 0.0;
+        conf.getFloat(CACHE_COST_KEY, DEFAULT_CACHE_COST));
+      bestCacheRatio = 0.0;
+      cacheRatio = 0.0;
     }
 
     @Override
     void init(Cluster cluster) {
       super.init(cluster);
-      prefetchRatio = 0.0;
-      bestPrefetchRatio = 0.0;
+      cacheRatio = 0.0;
+      bestCacheRatio = 0.0;
 
       for (int region = 0; region < cluster.numRegions; region++) {
-        prefetchRatio += cluster.getOrComputeWeightedPrefetchRatio(region,
+        cacheRatio += cluster.getOrComputeWeightedRegionCacheRatio(region,
           cluster.regionIndexToServerIndex[region]);
-        bestPrefetchRatio += cluster.getOrComputeWeightedPrefetchRatio(region,
-          getServerWithBestPrefetchRatioForRegion(region));
+        bestCacheRatio += cluster.getOrComputeWeightedRegionCacheRatio(region,
+          getServerWithBestCacheRatioForRegion(region));
       }
 
-      prefetchRatio = bestPrefetchRatio == 0 ? 1.0 : prefetchRatio/bestPrefetchRatio;
-      if (LOG.isDebugEnabled() /*&& (prefetchRatio < 0.0 || prefetchRatio > 1.0)*/) {
-        LOG.debug("PrefetchCacheCostFunction: Cost: {}", 1 - prefetchRatio);
+      cacheRatio = bestCacheRatio == 0 ? 1.0 : cacheRatio/bestCacheRatio;
+      if (LOG.isDebugEnabled() /*&& (cacheRatio < 0.0 || cacheRatio > 1.0)*/) {
+        LOG.debug("CacheAwareCostFunction: Cost: {}", 1 - cacheRatio);
       }
     }
 
     @Override
     protected double cost() {
-      return scale(0, 1, 1 - prefetchRatio);
+      return scale(0, 1, 1 - cacheRatio);
     }
 
     @Override
     protected void regionMoved(int region, int oldServer, int newServer) {
-      double oldServerPrefetch = cluster.getOrComputeWeightedPrefetchRatio(region, oldServer);
-      double newServerPrefetch = cluster.getOrComputeWeightedPrefetchRatio(region, newServer);
-      double prefetchDelta = newServerPrefetch - oldServerPrefetch;
-      double normalizedDelta = bestPrefetchRatio == 0.0 ? 0.0 : prefetchDelta / bestPrefetchRatio;
-      prefetchRatio += normalizedDelta;
-      if (LOG.isDebugEnabled() && (prefetchRatio < 0.0 || prefetchRatio > 1.0)) {
+      double regionCacheRatioOnOldServer =
+        cluster.getOrComputeWeightedRegionCacheRatio(region, oldServer);
+      double regionCacheRatioOnNewServer =
+        cluster.getOrComputeWeightedRegionCacheRatio(region, newServer);
+      double cacheRatioDiff = regionCacheRatioOnNewServer - regionCacheRatioOnOldServer;
+      double normalizedDelta = bestCacheRatio == 0.0 ? 0.0 : cacheRatioDiff / bestCacheRatio;
+      cacheRatio += normalizedDelta;
+      if (LOG.isDebugEnabled() && (cacheRatio < 0.0 || cacheRatio > 1.0)) {
         LOG.debug(
-          "PrefetchCacheCostFunction:regionMoved:region:{}:from:{}:to:{}:oldServerPrefetch:{}:"
-            + "newServerPrefetch:{}:bestPrefetchRatio:{}:prefetchRatio:{}",
+          "CacheAwareCostFunction:regionMoved:region:{}:from:{}:to:{}:regionCacheRatioOnOldServer:{}:"
+            + "regionCacheRatioOnNewServer:{}:bestRegionCacheRatio:{}:cacheRatio:{}",
           cluster.regions[region].getEncodedName(), cluster.servers[oldServer].getHostname(),
-          cluster.servers[newServer].getHostname(), oldServerPrefetch, newServerPrefetch, bestPrefetchRatio,
-          prefetchRatio);
+          cluster.servers[newServer].getHostname(), regionCacheRatioOnOldServer,
+          regionCacheRatioOnNewServer, bestCacheRatio, cacheRatio);
       }
     }
 
-    private int getServerWithBestPrefetchRatioForRegion(int region) {
-      return cluster.getOrComputeServerWithBestPrefetchRatio()[region];
+    private int getServerWithBestCacheRatioForRegion(int region) {
+      return cluster.getOrComputeServerWithBestRegionCachedRatio()[region];
     }
 
     @Override
     public final void updateWeight(double[] weights) {
-      weights[GeneratorFunctionType.PREFETCH.ordinal()] += cost();
+      weights[GeneratorFunctionType.CACHE_RATIO.ordinal()] += cost();
     }
   }
 }

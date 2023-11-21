@@ -149,9 +149,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private float minCostNeedBalance = 0.025f;
   private boolean isBalancerDecisionRecording = false;
   private boolean isBalancerRejectionRecording = false;
-  Map<String, Pair<ServerName, Float>> oldRegionPrefetchMap = new HashMap<>();
 
   protected List<CandidateGenerator> candidateGenerators;
+  Map<String, Pair<ServerName, Float>> regionCacheRatioOnOldServerMap = new HashMap<>();
 
   public enum GeneratorType {
     RANDOM,
@@ -465,7 +465,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // The clusterState that is given to this method contains the state
     // of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
-    Cluster cluster = new Cluster(loadOfOneTable, loads, finder, rackManager, oldRegionPrefetchMap);
+    Cluster cluster = new Cluster(loadOfOneTable, loads, finder, rackManager,
+      regionCacheRatioOnOldServerMap);
 
     long startTime = EnvironmentEdgeManager.currentTime();
 

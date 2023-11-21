@@ -197,11 +197,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     // Maps localityType -> region -> [server|rack]Index with highest locality
     private int[][] regionsToMostLocalEntities;
     // Maps region -> serverIndex -> prefetchRatio of a region on a server
-    private Map<Pair<Integer, Integer>, Float> regionIndexServerIndexPrefetchRatio;
+    private Map<Pair<Integer, Integer>, Float> regionIndexServerIndexRegionCachedRatio;
     // Maps regionIndex -> serverIndex with best prefetch ratio
-    private int[] regionServerIndexWithBestPrefetchRatio;
+    private int[] regionServerIndexWithBestRegionCachedRatio;
     // Maps regionName -> oldServerName -> oldPrefetchRatio
-    Map<String, Pair<ServerName, Float>> oldRegionServerPrefetchRatio;
+    Map<String, Pair<ServerName, Float>> regionCacheRatioOnOldServerMap;
 
     protected Cluster(Map<ServerName, List<RegionInfo>> clusterState,
       Map<String, Deque<BalancerRegionLoad>> loads, RegionLocationFinder regionFinder,
@@ -211,15 +211,15 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
     protected Cluster(Map<ServerName, List<RegionInfo>> clusterState,
       Map<String, Deque<BalancerRegionLoad>> loads, RegionLocationFinder regionFinder,
-      RackManager rackManager, Map<String, Pair<ServerName, Float>> oldRegionServerPrefetchRatio) {
-      this(null, clusterState, loads, regionFinder, rackManager, oldRegionServerPrefetchRatio);
+      RackManager rackManager, Map<String, Pair<ServerName, Float>> regionCacheRatioOnOldServerMap) {
+      this(null, clusterState, loads, regionFinder, rackManager, regionCacheRatioOnOldServerMap);
     }
 
     @SuppressWarnings("unchecked")
     protected Cluster(Collection<RegionInfo> unassignedRegions,
       Map<ServerName, List<RegionInfo>> clusterState, Map<String, Deque<BalancerRegionLoad>> loads,
       RegionLocationFinder regionFinder, RackManager rackManager,
-      Map<String, Pair<ServerName, Float>> oldRegionServerPrefetchRatio) {
+      Map<String, Pair<ServerName, Float>> regionCacheRatioOnOldServerMap) {
 
       if (unassignedRegions == null) {
         unassignedRegions = EMPTY_REGION_LIST;
@@ -234,7 +234,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       tables = new ArrayList<>();
       this.rackManager = rackManager != null ? rackManager : new DefaultRackManager();
 
-      this.oldRegionServerPrefetchRatio = oldRegionServerPrefetchRatio;
+      this.regionCacheRatioOnOldServerMap = regionCacheRatioOnOldServerMap;
 
       numRegions = 0;
 
@@ -603,22 +603,22 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
 
     /**
-     * Returns the weighted prefetch ratio of a region on the given region server
+     * Returns the weighted cache ratio of a region on the given region server
      */
-    public float getOrComputeWeightedPrefetchRatio(int region, int server) {
-      return getTotalRegionHFileSizeMB(region) * getOrComputeRegionPrefetchRatio(region, server);
+    public float getOrComputeWeightedRegionCacheRatio(int region, int server) {
+      return getTotalRegionHFileSizeMB(region) * getOrComputeRegionCacheRatio(region, server);
     }
 
     /**
-     * Returns the amount by which a region is prefetched on a given region server.
+     * Returns the amount by which a region is cached on a given region server.
      * If the region is not currently hosted on the given region server, then find out if it was
-     * previously hosted there and return the old prefetch ratio
+     * previously hosted there and return the old cache ratio
      */
-    protected float getRegionServerPrefetchRatio(int region, int regionServerIndex) {
+    protected float getRegionCacheRatioOnRegionServer(int region, int regionServerIndex) {
       // Cost this server has from region load
-      float prefetchRatio = 0.0f;
+      float regionCacheRatio = 0.0f;
 
-      // Get the current prefetch ratio if the region is hosted on the server regionServerIndex
+      // Get the current cache ratio if the region is hosted on the server regionServerIndex
       for (int regionIndex : regionsPerServer[regionServerIndex]) {
         if (region != regionIndex) {
           continue;
@@ -628,102 +628,102 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
         // The region is currently hosted on this region server. Get the prefetch ratio for this
         // region on this server
-        prefetchRatio = regionLoadList == null ? 0.0f :
-          regionLoadList.getLast().getCurrentRegionPrefetchRatio();
+        regionCacheRatio = regionLoadList == null ? 0.0f :
+          regionLoadList.getLast().getCurrentRegionCacheRatio();
 
-        if (LOG.isDebugEnabled() && (prefetchRatio < 0.0f || prefetchRatio > 1.0f)) {
-          LOG.debug("INVALID CONDITION: Invalid prefetch ratio {} for region {} on server {}",
-            prefetchRatio, regions[regionIndex].getEncodedName(), servers[regionServerIndex].getHostname());
+        if (LOG.isDebugEnabled() && (regionCacheRatio < 0.0f || regionCacheRatio > 1.0f)) {
+          LOG.debug("INVALID CONDITION: Invalid cache ratio {} for region {} on server {}",
+            regionCacheRatio, regions[regionIndex].getEncodedName(), servers[regionServerIndex].getHostname());
         }
 
-        return prefetchRatio;
+        return regionCacheRatio;
       }
 
-      // Region is not currently hosted on this server. Check if the region was prefetched on this
+      // Region is not currently hosted on this server. Check if the region was cached on this
       // server earlier. This can happen when the server was shutdown and the cache was persisted.
       // Search using the region name and server name and not the index id and server id as these
       // ids may change when a server is marked as dead or a new server is added.
       String regionEncodedName = regions[region].getEncodedName();
       ServerName serverName = servers[regionServerIndex];
-      if (oldRegionServerPrefetchRatio != null &&
-        oldRegionServerPrefetchRatio.containsKey(regionEncodedName)) {
-        Pair<ServerName, Float> serverPrefetchRatio =
-          oldRegionServerPrefetchRatio.get(regionEncodedName);
-        if (ServerName.isSameAddress(serverPrefetchRatio.getFirst(), serverName)) {
-          prefetchRatio = serverPrefetchRatio.getSecond();
+      if (regionCacheRatioOnOldServerMap != null &&
+        regionCacheRatioOnOldServerMap.containsKey(regionEncodedName)) {
+        Pair<ServerName, Float> cacheRatioOfRegionOnServer =
+          regionCacheRatioOnOldServerMap.get(regionEncodedName);
+        if (ServerName.isSameAddress(cacheRatioOfRegionOnServer.getFirst(), serverName)) {
+          regionCacheRatio = cacheRatioOfRegionOnServer.getSecond();
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Historical prefetch ratio found for region {} on server {}: {}",
-              regionEncodedName, serverName.getHostname(), prefetchRatio);
+            LOG.debug("Historical cache ratio found for region {} on server {}: {}",
+              regionEncodedName, serverName.getHostname(), regionCacheRatio);
           }
         }
       }
-      if (LOG.isDebugEnabled() && (prefetchRatio < 0.0f || prefetchRatio > 1.0f)) {
-        LOG.debug("INVALID CONDITION: region {} server {} historicalPrefetchRatio is invalid",
+      if (LOG.isDebugEnabled() && (regionCacheRatio < 0.0f || regionCacheRatio > 1.0f)) {
+        LOG.debug("INVALID CONDITION: region {} server {} historical cache ratio is invalid",
           regionEncodedName, serverName.getHostname());
       }
-      return prefetchRatio;
+      return regionCacheRatio;
     }
 
     /**
-     * Populates the maps containing information about how much a region is prefetched on a region
+     * Populates the maps containing information about how much a region is cached on a region
      * server.
      */
-    private void computeRegionServerPrefetchRatio() {
-      regionIndexServerIndexPrefetchRatio = new HashMap<>();
-      regionServerIndexWithBestPrefetchRatio = new int[numRegions];
+    private void computeRegionServerRegionCacheRatio() {
+      regionIndexServerIndexRegionCachedRatio = new HashMap<>();
+      regionServerIndexWithBestRegionCachedRatio = new int[numRegions];
 
       for (int region = 0; region < numRegions; region++) {
-        float bestPrefetchRatio = 0.0f;
-        int serverWithBestPrefetchRatio = 0;
+        float bestRegionCacheRatio = 0.0f;
+        int serverWithBestRegionCacheRatio = 0;
         for (int server = 0; server < numServers; server++) {
-          float prefetchRatio = getRegionServerPrefetchRatio(region, server);
-          if (prefetchRatio > 0.0f || server == regionIndexToServerIndex[region]) {
-            // A region with prefetch ratio of 0 on a server means nothing. Hence, just make a note
-            // of prefetch only if the prefetch ratio is greater than 0.
+          float regionCacheRatio = getRegionCacheRatioOnRegionServer(region, server);
+          if (regionCacheRatio > 0.0f || server == regionIndexToServerIndex[region]) {
+            // A region with cache ratio of 0 on a server means nothing. Hence, just make a note
+            // of cache only if the cache ratio is greater than 0.
             Pair<Integer, Integer> regionServerPair = new Pair<>(region, server);
-            regionIndexServerIndexPrefetchRatio.put(regionServerPair, prefetchRatio);
+            regionIndexServerIndexRegionCachedRatio.put(regionServerPair, regionCacheRatio);
           }
-          if (prefetchRatio > bestPrefetchRatio) {
-            serverWithBestPrefetchRatio = server;
+          if (regionCacheRatio > bestRegionCacheRatio) {
+            serverWithBestRegionCacheRatio = server;
             // If the server currently hosting the region has equal prefetch ratio to a historical
             // server, consider the current server to keep hosting the region
-            bestPrefetchRatio = prefetchRatio;
-          } else if (prefetchRatio == bestPrefetchRatio &&
+            bestRegionCacheRatio = regionCacheRatio;
+          } else if (regionCacheRatio == bestRegionCacheRatio &&
             server == regionIndexToServerIndex[region]) {
             // If two servers have same prefetch ratio, then the server currently hosting the region
             // should retain the region
-            serverWithBestPrefetchRatio = server;
+            serverWithBestRegionCacheRatio = server;
           }
         }
-        regionServerIndexWithBestPrefetchRatio[region] = serverWithBestPrefetchRatio;
+        regionServerIndexWithBestRegionCachedRatio[region] = serverWithBestRegionCacheRatio;
         Pair<Integer, Integer> tempMap = new Pair<>(region, regionIndexToServerIndex[region]);
-        float tempPrefetchRatio = regionIndexServerIndexPrefetchRatio.get(tempMap);
-        if (tempPrefetchRatio > bestPrefetchRatio) {
-          LOG.warn("INVALID CONDITION:region {} on server {} prefetchRatio {} is greater than the "
-              + "bestPrefetchRatio {} on server {}", regions[region].getEncodedName(),
-            regionIndexToServerIndex[region], tempPrefetchRatio, bestPrefetchRatio,
-            serverWithBestPrefetchRatio);
+        float tempRegionCacheRatio = regionIndexServerIndexRegionCachedRatio.get(tempMap);
+        if (tempRegionCacheRatio > bestRegionCacheRatio) {
+          LOG.warn("INVALID CONDITION:region {} on server {} cache ratio {} is greater than the "
+              + "best cache ratio {} on server {}", regions[region].getEncodedName(),
+            regionIndexToServerIndex[region], tempRegionCacheRatio, bestRegionCacheRatio,
+            serverWithBestRegionCacheRatio);
         }
       }
     }
 
-    protected float getOrComputeRegionPrefetchRatio(int region, int server) {
-      if (regionServerIndexWithBestPrefetchRatio == null ||
-        regionIndexServerIndexPrefetchRatio.isEmpty()) {
-        computeRegionServerPrefetchRatio();
+    protected float getOrComputeRegionCacheRatio(int region, int server) {
+      if (regionServerIndexWithBestRegionCachedRatio == null ||
+        regionIndexServerIndexRegionCachedRatio.isEmpty()) {
+        computeRegionServerRegionCacheRatio();
       }
 
       Pair<Integer, Integer> regionServerPair = new Pair<>(region, server);
-      return regionIndexServerIndexPrefetchRatio.containsKey(regionServerPair) ?
-        regionIndexServerIndexPrefetchRatio.get(regionServerPair) : 0.0f;
+      return regionIndexServerIndexRegionCachedRatio.containsKey(regionServerPair) ?
+        regionIndexServerIndexRegionCachedRatio.get(regionServerPair) : 0.0f;
     }
 
-    public int[] getOrComputeServerWithBestPrefetchRatio() {
-      if (regionIndexServerIndexPrefetchRatio.isEmpty() ||
-        regionServerIndexWithBestPrefetchRatio == null) {
-        computeRegionServerPrefetchRatio();
+    public int[] getOrComputeServerWithBestRegionCachedRatio() {
+      if (regionIndexServerIndexRegionCachedRatio.isEmpty() ||
+        regionServerIndexWithBestRegionCachedRatio == null) {
+        computeRegionServerRegionCacheRatio();
       }
-      return regionServerIndexWithBestPrefetchRatio;
+      return regionServerIndexWithBestRegionCachedRatio;
     }
 
     /**
