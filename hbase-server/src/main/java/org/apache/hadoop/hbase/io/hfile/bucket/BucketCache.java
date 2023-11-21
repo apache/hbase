@@ -337,6 +337,7 @@ public class BucketCache implements BlockCache, HeapSize {
         fullyCachedFiles.clear();
         backingMapValidated.set(true);
         bucketAllocator = new BucketAllocator(capacity, bucketSizes);
+        regionCachedSizeMap.clear();
       }
     } else {
       bucketAllocator = new BucketAllocator(capacity, bucketSizes);
@@ -1503,6 +1504,7 @@ public class BucketCache implements BlockCache, HeapSize {
       // If persistent ioengine and a path, we will serialize out the backingMap.
       this.backingMap.clear();
       this.fullyCachedFiles.clear();
+      this.regionCachedSizeMap.clear();
     }
   }
 
