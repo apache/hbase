@@ -149,7 +149,7 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     regions = randomRegions(1);
     map.put(s2, regions);
     assertTrue(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
-      new BalancerClusterState(map, null, null, null)));
+      new BalancerClusterState(map, null, null, null), false));
     // check for the case where there are two hosts on the same rack and there are two racks
     // and both the replicas are on the same rack
     map.clear();
@@ -161,7 +161,7 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     // add another server so that the cluster has some host on another rack
     map.put(ServerName.valueOf("host2", 1000, 11111), randomRegions(1));
     assertFalse(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
-      new BalancerClusterState(map, null, null, new ForTestRackManagerOne())));
+      new BalancerClusterState(map, null, null, new ForTestRackManagerOne()), false));
   }
 
   @Test
