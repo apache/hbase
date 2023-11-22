@@ -229,24 +229,6 @@
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-aws</artifactId>
-          <exclusions>
-            <exclusion>
-              <groupId>com.amazonaws</groupId>
-              <artifactId>aws-java-sdk-bundle</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>software.amazon.awssdk</groupId>
-              <artifactId>bundle</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.wildfly.openssl</groupId>
-              <artifactId>wildfly-openssl</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-auth</artifactId>
         </dependency>
         <dependency>
@@ -319,24 +301,6 @@
         </property>
       </activation>
       <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-aws</artifactId>
-          <exclusions>
-            <exclusion>
-              <groupId>com.amazonaws</groupId>
-              <artifactId>aws-java-sdk-bundle</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>software.amazon.awssdk</groupId>
-              <artifactId>bundle</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.wildfly.openssl</groupId>
-              <artifactId>wildfly-openssl</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-auth</artifactId>
