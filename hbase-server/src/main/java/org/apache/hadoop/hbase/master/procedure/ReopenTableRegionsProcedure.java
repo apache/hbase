@@ -182,19 +182,19 @@ public class ReopenTableRegionsProcedure
           if (regions.isEmpty()) {
             return Flow.NO_MORE_STATE;
           } else {
-            if (reopenBatchBackoffMillis > 0) {
-              Thread.sleep(reopenBatchBackoffMillis);
-            }
             setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
+            if (reopenBatchBackoffMillis > 0) {
+              backoff(reopenBatchBackoffMillis);
+            }
             return Flow.HAS_MORE_STATE;
           }
         }
         if (currentRegionBatch.stream().anyMatch(loc -> canSchedule(env, loc))) {
           retryCounter = null;
-          if (reopenBatchBackoffMillis > 0) {
-            Thread.sleep(reopenBatchBackoffMillis);
-          }
           setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
+          if (reopenBatchBackoffMillis > 0) {
+            backoff(reopenBatchBackoffMillis);
+          }
           return Flow.HAS_MORE_STATE;
         }
         // We can not schedule TRSP for all the regions need to reopen, wait for a while and retry
@@ -202,18 +202,23 @@ public class ReopenTableRegionsProcedure
         if (retryCounter == null) {
           retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
         }
-        long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
+        long backoffMillis = retryCounter.getBackoffTimeAndIncrementAttempts();
         LOG.info(
           "There are still {} region(s) which need to be reopened for table {}. {} are in "
             + "OPENING state, suspend {}secs and try again later",
-          regions.size(), tableName, currentRegionBatch.size(), backoff / 1000);
-        setTimeout(Math.toIntExact(backoff));
-        setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
-        skipPersistence();
+          regions.size(), tableName, currentRegionBatch.size(), backoffMillis / 1000);
+        backoff(backoffMillis);
         throw new ProcedureSuspendedException();
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
     }
+  }
+
+  private void backoff(long millis) throws ProcedureSuspendedException {
+    setTimeout(Math.toIntExact(millis));
+    setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+    skipPersistence();
+    throw new ProcedureSuspendedException();
   }
 
   private List<HRegionLocation>
