@@ -605,7 +605,7 @@ function hadoopcheck_rebuild
   else
     yetus_info "Setting Hadoop 3 versions to test based on branch-2.5+/master/feature branch rules"
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.2.4 3.3.6"
+      hbase_hadoop3_versions="3.3.6"
     else
       hbase_hadoop3_versions="3.2.3 3.2.4 3.3.2 3.3.3 3.3.4 3.3.5 3.3.6"
     fi
