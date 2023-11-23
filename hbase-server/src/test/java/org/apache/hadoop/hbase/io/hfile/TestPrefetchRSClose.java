@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -66,7 +65,7 @@ public class TestPrefetchRSClose {
   Path testDir;
   MiniZooKeeperCluster zkCluster;
   MiniHBaseCluster cluster;
-  StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(2).build();
+  StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(1).build();
 
   @Before
   public void setup() throws Exception {
@@ -80,7 +79,6 @@ public class TestPrefetchRSClose {
     conf.set("hbase.bucketcache.persistent.path", testDir + "/bucket.persistence");
     zkCluster = TEST_UTIL.startMiniZKCluster();
     cluster = TEST_UTIL.startMiniHBaseCluster(option);
-    assertEquals(2, cluster.getRegionServerThreads().size());
     cluster.setConf(conf);
   }
 
@@ -115,9 +113,8 @@ public class TestPrefetchRSClose {
 
     // Default interval for cache persistence is 1000ms. So after 1000ms, both the persistence files
     // should exist.
-    HRegionServer regionServingRS = cluster.getRegionServer(1).getRegions(tableName).size() == 1
-      ? cluster.getRegionServer(1)
-      : cluster.getRegionServer(0);
+
+    HRegionServer regionServingRS = cluster.getRegionServer(0);
 
     Admin admin = TEST_UTIL.getAdmin();
     List<String> cachedFilesList = admin.getCachedFilesList(regionServingRS.getServerName());

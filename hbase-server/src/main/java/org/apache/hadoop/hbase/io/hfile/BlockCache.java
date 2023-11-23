@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -151,7 +152,80 @@ public interface BlockCache extends Iterable<CachedBlock> {
   }
 
   /**
-   * Returns the list of fully cached files
+   * Notifies the cache implementation that the given file has been fully cached (all its blocks
+   * made into the cache).
+   * @param fileName the file that has been completely cached.
+   */
+  default void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
+    long size) {
+    // noop
+  }
+
+  /**
+   * Notifies the cache implementation that the given file had a block evicted
+   * @param fileName the file had a block evicted.
+   */
+  default void notifyFileBlockEvicted(String fileName) {
+    // noop
+  }
+
+  /**
+   * Checks whether there's enough space left in the cache to accommodate the passed block. This
+   * method may not be overridden by all implementing classes. In such cases, the returned Optional
+   * will be empty. For subclasses implementing this logic, the returned Optional would contain the
+   * boolean value reflecting if the passed block fits into the remaining cache space available.
+   * @param block the block we want to check if fits into the cache.
+   * @return empty optional if this method is not supported, otherwise the returned optional
+   *         contains the boolean value informing if the block fits into the cache available space.
+   */
+  default Optional<Boolean> blockFitsIntoTheCache(HFileBlock block) {
+    return Optional.empty();
+  }
+
+  /**
+   * Checks whether blocks for the passed file should be cached or not. This method may not be
+   * overridden by all implementing classes. In such cases, the returned Optional will be empty. For
+   * subclasses implementing this logic, the returned Optional would contain the boolean value
+   * reflecting if the passed file should indeed be cached.
+   * @param fileName to check if it should be cached.
+   * @return empty optional if this method is not supported, otherwise the returned optional
+   *         contains the boolean value informing if the file should be cached.
+   */
+  default Optional<Boolean> shouldCacheFile(String fileName) {
+    return Optional.empty();
+  }
+
+  /**
+   * Checks whether the block for the passed key is already cached. This method may not be
+   * overridden by all implementing classes. In such cases, the returned Optional will be empty. For
+   * subclasses implementing this logic, the returned Optional would contain the boolean value
+   * reflecting if the block for the passed key is already cached or not.
+   * @param key for the block we want to check if it's already in the cache.
+   * @return empty optional if this method is not supported, otherwise the returned optional
+   *         contains the boolean value informing if the block is already cached.
+   */
+  default Optional<Boolean> isAlreadyCached(BlockCacheKey key) {
+    return Optional.empty();
+  }
+
+  /**
+   * Returns an Optional containing the size of the block related to the passed key. If the block is
+   * not in the cache, returned optional will be empty. Also, this method may not be overridden by
+   * all implementing classes. In such cases, the returned Optional will be empty.
+   * @param key for the block we want to check if it's already in the cache.
+   * @return empty optional if this method is not supported, otherwise the returned optional
+   *         contains the boolean value informing if the block is already cached.
+   */
+  default Optional<Integer> getBlockSize(BlockCacheKey key) {
+    return Optional.empty();
+  }
+
+  /**
+   * Returns an Optional containing the map of files that have been fully cached (all its blocks are
+   * present in the cache. This method may not be overridden by all implementing classes. In such
+   * cases, the returned Optional will be empty.
+   * @return empty optional if this method is not supported, otherwise the returned optional
+   *         contains a map of all files that have been fully cached.
    */
   default Optional<Map<String, Pair<String, Long>>> getFullyCachedFiles() {
     return Optional.empty();

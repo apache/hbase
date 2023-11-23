@@ -112,7 +112,6 @@ public class TestPrefetchPersistence {
 
   @Test
   public void testPrefetchPersistence() throws Exception {
-
     bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
       testDir + "/bucket.persistence", 60 * 1000, conf);
@@ -146,11 +145,11 @@ public class TestPrefetchPersistence {
   public void closeStoreFile(Path path) throws Exception {
     HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf);
     assertTrue(bucketCache.fullyCachedFiles.containsKey(path.getName()));
-    int initialRegionPrefetchInfoSize = bucketCache.getRegionPrefetchInfo().size();
+    int initialRegionPrefetchInfoSize = bucketCache.getRegionCachedInfo().size();
     assertTrue(initialRegionPrefetchInfoSize > 0);
     reader.close(true);
     assertFalse(bucketCache.fullyCachedFiles.containsKey(path.getName()));
-    int newRegionPrefetchInfoSize = bucketCache.getRegionPrefetchInfo().size();
+    int newRegionPrefetchInfoSize = bucketCache.getRegionCachedInfo().size();
     assertTrue(initialRegionPrefetchInfoSize - newRegionPrefetchInfoSize == 1);
   }
 

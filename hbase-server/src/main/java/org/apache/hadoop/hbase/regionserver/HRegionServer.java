@@ -1419,7 +1419,7 @@ public class HRegionServer extends Thread
       }
     }
     computeIfPersistentBucketCache(bc -> {
-      bc.getRegionPrefetchInfo().forEach((regionName, prefetchSize) -> {
+      bc.getRegionCachedInfo().forEach((regionName, prefetchSize) -> {
         serverLoad.putRegionPrefetchInfo(regionName, roundSize(prefetchSize, unitMB));
       });
     });
@@ -1795,9 +1795,9 @@ public class HRegionServer extends Thread
     int regionSizeMB = roundSize(totalRegionSize, unitMB);
     final MutableFloat currentRegionPrefetchRatio = new MutableFloat(0.0f);
     computeIfPersistentBucketCache( bc -> {
-      if (bc.getRegionPrefetchInfo().containsKey(regionEncodedName)) {
+      if (bc.getRegionCachedInfo().containsKey(regionEncodedName)) {
         currentRegionPrefetchRatio.setValue(regionSizeMB == 0 ? 0.0f :
-          (float) roundSize(bc.getRegionPrefetchInfo().
+          (float) roundSize(bc.getRegionCachedInfo().
             get(regionEncodedName), unitMB) / regionSizeMB);
       }
     });
