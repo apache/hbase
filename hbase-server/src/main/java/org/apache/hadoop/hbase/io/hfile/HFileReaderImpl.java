@@ -1360,9 +1360,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
         // Don't need the unpacked block back and we're storing the block in the cache compressed
         if (cacheOnly && cacheCompressed && cacheOnRead) {
-          LOG.debug("Skipping decompression of block {} in prefetch", cacheKey);
-          // Cache the block if necessary
           cacheConf.getBlockCache().ifPresent(cache -> {
+            LOG.debug("Skipping decompression of block {} in prefetch", cacheKey);
+            // Cache the block if necessary
             if (cacheable && cacheConf.shouldCacheBlockOnRead(category)) {
               cache.cacheBlock(cacheKey, hfileBlock, cacheConf.isInMemory(), cacheOnly);
             }

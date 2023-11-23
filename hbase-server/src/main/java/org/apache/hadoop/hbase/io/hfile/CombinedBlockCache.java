@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import org.apache.commons.lang3.mutable.Mutable;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -443,4 +445,51 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   public BlockCache getSecondLevelCache() {
     return l2Cache;
   }
+
+  @Override
+  public void notifyFileCachingCompleted(String fileName, int totalBlockCount, int dataBlockCount) {
+    l1Cache.getBlockCount();
+    l1Cache.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount);
+    l2Cache.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount);
+
+  }
+
+  @Override
+  public void notifyFileBlockEvicted(String fileName) {
+    l1Cache.notifyFileBlockEvicted(fileName);
+    l1Cache.notifyFileBlockEvicted(fileName);
+  }
+
+  @Override
+  public Optional<Boolean> blockFitsIntoTheCache(HFileBlock block) {
+    if (isMetaBlock(block.getBlockType())) {
+      return l1Cache.blockFitsIntoTheCache(block);
+    } else {
+      return l2Cache.blockFitsIntoTheCache(block);
+    }
+  }
+
+  @Override
+  public Optional<Boolean> shouldCacheFile(String fileName) {
+    Optional<Boolean> l1Result = l1Cache.shouldCacheFile(fileName);
+    Optional<Boolean> l2Result = l2Cache.shouldCacheFile(fileName);
+    final Mutable<Boolean> combinedResult = new MutableBoolean(true);
+    l1Result.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
+    l2Result.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
+    return Optional.of(combinedResult.getValue());
+  }
+
+  @Override
+  public Optional<Boolean> isAlreadyCached(BlockCacheKey key) {
+    boolean result =
+      l1Cache.isAlreadyCached(key).orElseGet(() -> l2Cache.isAlreadyCached(key).orElse(false));
+    return Optional.of(result);
+  }
+
+  @Override
+  public Optional<Integer> getBlockSize(BlockCacheKey key) {
+    Optional<Integer> l1Result = l1Cache.getBlockSize(key);
+    return l1Result.isPresent() ? l1Result : l2Cache.getBlockSize(key);
+  }
+
 }
