@@ -192,6 +192,14 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     if (this.getConf() == null) {
       return files;
     }
+    try {
+      if (!rpm.getQueueStorage().hasData()) {
+        return files;
+      }
+    } catch (ReplicationException e) {
+      LOG.error("Error occurred while executing queueStorage.hasData()", e);
+      return files;
+    }
     if (!canFilter) {
       // We can not delete anything if there are AddPeerProcedure running at the same time
       // See HBASE-27214 for more details.
