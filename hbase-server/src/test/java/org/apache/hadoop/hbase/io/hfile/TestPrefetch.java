@@ -237,7 +237,6 @@ public class TestPrefetch {
     Path storeFile = writeStoreFile("TestPrefetchCompressed", context);
     readStoreFileCacheOnly(storeFile);
     conf.setBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, false);
-
   }
 
   @Test

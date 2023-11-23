@@ -51,6 +51,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -1328,7 +1329,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     assert !cacheEnabled;
 
-    try (FileInputStream in = deleteFileOnClose(persistenceFile)) {
+    try (FileInputStream in = new FileInputStream(persistenceFile)) {
       int pblen = ProtobufMagic.lengthOfPBMagic();
       byte[] pbuf = new byte[pblen];
       int read = in.read(pbuf);
@@ -1992,6 +1993,11 @@ public class BucketCache implements BlockCache, HeapSize {
         re.getData().release();
       }
     }
+
+    public boolean hasBlocksForFile(String fileName) {
+      return delegate.keySet().stream().filter(key -> key.getHfileName().equals(fileName))
+        .findFirst().isPresent();
+    }
   }
 
   public Map<BlockCacheKey, BucketEntry> getBackingMap() {
@@ -2051,4 +2057,91 @@ public class BucketCache implements BlockCache, HeapSize {
     regionCachedSizeMap.merge(regionName, size, (oldpf, fileSize) -> oldpf + fileSize);
   }
 
+  @Override
+  public void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
+    long size) {
+    // block eviction may be happening in the background as prefetch runs,
+    // so we need to count all blocks for this file in the backing map under
+    // a read lock for the block offset
+    final List<ReentrantReadWriteLock> locks = new ArrayList<>();
+    LOG.debug("Notifying caching completed for file {}, with total blocks {}", fileName,
+      dataBlockCount);
+    try {
+      final MutableInt count = new MutableInt();
+      LOG.debug("iterating over {} entries in the backing map", backingMap.size());
+      backingMap.entrySet().stream().forEach(entry -> {
+        if (entry.getKey().getHfileName().equals(fileName.getName())) {
+          LOG.debug("found block for file {} in the backing map. Acquiring read lock for offset {}",
+            fileName, entry.getKey().getOffset());
+          ReentrantReadWriteLock lock = offsetLock.getLock(entry.getKey().getOffset());
+          lock.readLock().lock();
+          locks.add(lock);
+          if (backingMap.containsKey(entry.getKey())) {
+            count.increment();
+          }
+        }
+      });
+      // We may either place only data blocks on the BucketCache or all type of blocks
+      if (dataBlockCount == count.getValue() || totalBlockCount == count.getValue()) {
+        LOG.debug("File {} has now been fully cached.", fileName);
+        fileCacheCompleted(fileName, size);
+      } else {
+        LOG.debug(
+          "Prefetch executor completed for {}, but only {} blocks were cached. "
+            + "Total blocks for file: {}. Checking for blocks pending cache in cache writer queue.",
+          fileName, count.getValue(), dataBlockCount);
+        if (ramCache.hasBlocksForFile(fileName.getName())) {
+          LOG.debug("There are still blocks pending caching for file {}. Will sleep 100ms "
+            + "and try the verification again.", fileName);
+          Thread.sleep(100);
+          notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
+        } else {
+          LOG.info(
+            "We found only {} blocks cached from a total of {} for file {}, "
+              + "but no blocks pending caching. Maybe cache is full?",
+            count, dataBlockCount, fileName);
+        }
+      }
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    } finally {
+      for (ReentrantReadWriteLock lock : locks) {
+        lock.readLock().unlock();
+      }
+    }
+  }
+
+  @Override
+  public void notifyFileBlockEvicted(String fileName) {
+    fullyCachedFiles.remove(fileName);
+  }
+
+  @Override
+  public Optional<Boolean> blockFitsIntoTheCache(HFileBlock block) {
+    long currentUsed = bucketAllocator.getUsedSize();
+    boolean result = (currentUsed + block.getOnDiskSizeWithHeader()) < acceptableSize();
+    return Optional.of(result);
+  }
+
+  @Override
+  public Optional<Boolean> shouldCacheFile(String fileName) {
+    // if we don't have the file in fullyCachedFiles, we should cache it
+    return Optional.of(!fullyCachedFiles.containsKey(fileName));
+  }
+
+  @Override
+  public Optional<Boolean> isAlreadyCached(BlockCacheKey key) {
+    return Optional.of(getBackingMap().containsKey(key));
+  }
+
+  @Override
+  public Optional<Integer> getBlockSize(BlockCacheKey key) {
+    BucketEntry entry = backingMap.get(key);
+    if (entry == null) {
+      return Optional.empty();
+    } else {
+      return Optional.of(entry.getOnDiskSizeWithHeader());
+    }
+
+  }
 }

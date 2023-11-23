@@ -22,6 +22,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +40,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -131,18 +134,50 @@ public class TestBucketCachePersister {
   @Test
   public void testPrefetchListUponBlockEviction() throws Exception {
     Configuration conf = setupBucketCacheConfig(200);
-    BucketCache bucketCache1 = setupBucketCache(conf);
-    CacheConfig cacheConf = new CacheConfig(conf, bucketCache1);
+    BucketCache bucketCache = setupBucketCache(conf);
+    CacheConfig cacheConf = new CacheConfig(conf, bucketCache);
     FileSystem fs = HFileSystem.get(conf);
     // Load Blocks in cache
     Path storeFile = writeStoreFile("TestPrefetch3", conf, cacheConf, fs);
-    readStoreFile(storeFile, 0, fs, cacheConf, conf, bucketCache1);
-    Thread.sleep(500);
+    readStoreFile(storeFile, 0, fs, cacheConf, conf, bucketCache);
+    int retries = 0;
+    while (!bucketCache.fullyCachedFiles.containsKey(storeFile.getName()) && retries < 5) {
+      Thread.sleep(500);
+      retries++;
+    }
+    assertTrue(retries < 5);
+    BlockCacheKey bucketCacheKey = bucketCache.backingMap.entrySet().iterator().next().getKey();
     // Evict Blocks from cache
-    assertTrue(bucketCache1.fullyCachedFiles.containsKey(storeFile.getName()));
-    BlockCacheKey bucketCacheKey = bucketCache1.backingMap.entrySet().iterator().next().getKey();
-    bucketCache1.evictBlock(bucketCacheKey);
-    assertFalse(bucketCache1.fullyCachedFiles.containsKey(storeFile.getName()));
+    bucketCache.evictBlock(bucketCacheKey);
+    assertFalse(bucketCache.fullyCachedFiles.containsKey(storeFile.getName()));
+    cleanupBucketCache(bucketCache);
+  }
+
+  @Test
+  public void testPrefetchBlockEvictionWhilePrefetchRunning() throws Exception {
+    Configuration conf = setupBucketCacheConfig(200);
+    BucketCache bucketCache = setupBucketCache(conf);
+    CacheConfig cacheConf = new CacheConfig(conf, bucketCache);
+    FileSystem fs = HFileSystem.get(conf);
+    // Load Blocks in cache
+    Path storeFile = writeStoreFile("TestPrefetch3", conf, cacheConf, fs);
+    HFile.createReader(fs, storeFile, cacheConf, true, conf);
+    while (bucketCache.backingMap.size() == 0) {
+      Thread.sleep(10);
+    }
+    Iterator<Map.Entry<BlockCacheKey, BucketEntry>> it =
+      bucketCache.backingMap.entrySet().iterator();
+    // Evict Blocks from cache
+    bucketCache.evictBlock(it.next().getKey());
+    bucketCache.evictBlock(it.next().getKey());
+    int retries = 0;
+    while (!PrefetchExecutor.isCompleted(storeFile) && retries < 5) {
+      Thread.sleep(500);
+      retries++;
+    }
+    assertTrue(retries < 5);
+    assertFalse(bucketCache.fullyCachedFiles.containsKey(storeFile.getName()));
+    cleanupBucketCache(bucketCache);
   }
 
   public void readStoreFile(Path storeFilePath, long offset, FileSystem fs, CacheConfig cacheConf,
