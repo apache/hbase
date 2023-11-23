@@ -133,6 +133,9 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   private RemoteProcedureException exception = null;
   private int[] stackIndexes = null;
   private int childrenLatch = 0;
+  // since we do not always maintain stackIndexes if the root procedure does not support rollback,
+  // we need a separated flag to indicate whether a procedure was executed
+  private boolean wasExecuted;
 
   private volatile int timeout = NO_TIMEOUT;
   private volatile long lastUpdate;
@@ -870,6 +873,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
       stackIndexes = Arrays.copyOf(stackIndexes, count + 1);
       stackIndexes[count] = index;
     }
+    wasExecuted = true;
   }
 
   protected synchronized boolean removeStackIndex() {
@@ -890,14 +894,30 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     for (int i = 0; i < this.stackIndexes.length; ++i) {
       this.stackIndexes[i] = stackIndexes.get(i);
     }
+    // for backward compatible, where a procedure is serialized before we added the executed flag,
+    // the flag will be false so we need to set the wasExecuted flag here
+    this.wasExecuted = true;
+  }
+
+  protected synchronized void setExecuted() {
+    this.wasExecuted = true;
   }
 
   protected synchronized boolean wasExecuted() {
-    return stackIndexes != null;
+    return wasExecuted;
   }
 
   protected synchronized int[] getStackIndexes() {
     return stackIndexes;
+  }
+
+  /**
+   * Return whether the procedure supports rollback. If the procedure does not support rollback, we
+   * can skip the rollback state management which could increase the performance. See HBASE-28210
+   * and HBASE-28212.
+   */
+  protected boolean isRollbackSupported() {
+    return true;
   }
 
   // ==========================================================================
