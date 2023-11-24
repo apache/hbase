@@ -32,7 +32,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.ipc.BufferCallBeforeInitHandler.BufferCallEvent;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
-import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.NettyHBaseRpcConnectionHeaderHandler;
 import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
@@ -210,18 +209,9 @@ class NettyRpcConnection extends RpcConnection {
     Promise<Boolean> saslPromise = ch.eventLoop().newPromise();
     final NettyHBaseSaslRpcClientHandler saslHandler;
     try {
-      if (this.metrics != null) {
-        this.metrics.incrNsLookups();
-      }
-      InetSocketAddress serverAddr = Address.toSocketAddress(remoteId.getAddress());
-      if (serverAddr.isUnresolved()) {
-        if (this.metrics != null) {
-          this.metrics.incrNsLookupsFailed();
-        }
-        throw new UnknownHostException(remoteId.getAddress() + " could not be resolved");
-      }
       saslHandler = new NettyHBaseSaslRpcClientHandler(saslPromise, ticket, provider, token,
-        serverAddr.getAddress(), securityInfo, rpcClient.fallbackAllowed, this.rpcClient.conf);
+        ((InetSocketAddress) ch.remoteAddress()).getAddress(), securityInfo,
+        rpcClient.fallbackAllowed, this.rpcClient.conf);
     } catch (IOException e) {
       failInit(ch, e);
       return;
@@ -285,16 +275,7 @@ class NettyRpcConnection extends RpcConnection {
   private void connect() throws UnknownHostException {
     assert eventLoop.inEventLoop();
     LOG.trace("Connecting to {}", remoteId.getAddress());
-    if (this.rpcClient.metrics != null) {
-      this.rpcClient.metrics.incrNsLookups();
-    }
-    InetSocketAddress remoteAddr = Address.toSocketAddress(remoteId.getAddress());
-    if (remoteAddr.isUnresolved()) {
-      if (this.rpcClient.metrics != null) {
-        this.rpcClient.metrics.incrNsLookupsFailed();
-      }
-      throw new UnknownHostException(remoteId.getAddress() + " could not be resolved");
-    }
+    InetSocketAddress remoteAddr = getRemoteInetAddress(rpcClient.metrics);
     this.channel = new Bootstrap().group(eventLoop).channel(rpcClient.channelClass)
       .option(ChannelOption.TCP_NODELAY, rpcClient.isTcpNoDelay())
       .option(ChannelOption.SO_KEEPALIVE, rpcClient.tcpKeepAlive)
