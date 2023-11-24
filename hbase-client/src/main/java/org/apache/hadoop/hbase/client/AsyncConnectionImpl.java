@@ -77,8 +77,6 @@ class AsyncConnectionImpl implements AsyncConnection {
       .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
     10, TimeUnit.MILLISECONDS);
 
-  private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
-
   private final Configuration conf;
 
   final AsyncConnectionConfiguration connConf;
@@ -92,8 +90,6 @@ class AsyncConnectionImpl implements AsyncConnection {
   private final RpcClient rpcClient;
 
   final RpcControllerFactory rpcControllerFactory;
-
-  private final boolean hostnameCanChange;
 
   private final AsyncRegionLocator locator;
 
@@ -137,7 +133,6 @@ class AsyncConnectionImpl implements AsyncConnection {
     }
     this.rpcClient = RpcClientFactory.createClient(conf, clusterId, metrics.orElse(null));
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
-    this.hostnameCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
     this.rpcTimeout =
       (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));
     this.locator = new AsyncRegionLocator(this, RETRY_TIMER);
@@ -258,7 +253,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   ClientService.Interface getRegionServerStub(ServerName serverName) throws IOException {
     return ConcurrentMapUtils.computeIfAbsentEx(rsStubs,
-      getStubKey(ClientService.getDescriptor().getName(), serverName, hostnameCanChange),
+      getStubKey(ClientService.getDescriptor().getName(), serverName),
       () -> createRegionServerStub(serverName));
   }
 
@@ -272,7 +267,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   AdminService.Interface getAdminStub(ServerName serverName) throws IOException {
     return ConcurrentMapUtils.computeIfAbsentEx(adminSubs,
-      getStubKey(AdminService.getDescriptor().getName(), serverName, hostnameCanChange),
+      getStubKey(AdminService.getDescriptor().getName(), serverName),
       () -> createAdminServerStub(serverName));
   }
 

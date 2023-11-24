@@ -18,11 +18,10 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
@@ -59,8 +58,6 @@ abstract class RpcConnection {
 
   protected final Token<? extends TokenIdentifier> token;
 
-  protected final InetAddress serverAddress;
-
   protected final SecurityInfo securityInfo;
 
   protected final int reloginMaxBackoff; // max pause before relogin on sasl failure
@@ -68,6 +65,8 @@ abstract class RpcConnection {
   protected final Codec codec;
 
   protected final CompressionCodec compressor;
+
+  protected final MetricsConnection metrics;
 
   protected final HashedWheelTimer timeoutTimer;
 
@@ -83,17 +82,13 @@ abstract class RpcConnection {
   protected SaslClientAuthenticationProvider provider;
 
   protected RpcConnection(Configuration conf, HashedWheelTimer timeoutTimer, ConnectionId remoteId,
-    String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor)
-    throws IOException {
-    if (remoteId.getAddress().isUnresolved()) {
-      throw new UnknownHostException("unknown host: " + remoteId.getAddress().getHostName());
-    }
-    this.serverAddress = remoteId.getAddress().getAddress();
+    String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor,
+    MetricsConnection metrics) throws IOException {
     this.timeoutTimer = timeoutTimer;
     this.codec = codec;
     this.compressor = compressor;
     this.conf = conf;
-
+    this.metrics = metrics;
     User ticket = remoteId.getTicket();
     this.securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
     this.useSasl = isSecurityEnabled;

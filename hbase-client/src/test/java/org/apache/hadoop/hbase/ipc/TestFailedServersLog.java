@@ -21,9 +21,9 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 
-import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.log4j.Appender;
@@ -51,7 +51,7 @@ public class TestFailedServersLog {
     HBaseClassTestRule.forClass(TestFailedServersLog.class);
 
   static final int TEST_PORT = 9999;
-  private InetSocketAddress addr;
+  private Address addr;
 
   @Mock
   private Appender mockAppender;
@@ -74,7 +74,7 @@ public class TestFailedServersLog {
     Throwable nullException = new NullPointerException();
 
     FailedServers fs = new FailedServers(new Configuration());
-    addr = new InetSocketAddress(TEST_PORT);
+    addr = Address.fromParts("localhost", TEST_PORT);
 
     fs.addToFailedServers(addr, nullException);
 

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.net.InetSocketAddress;
 import java.util.Objects;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -31,9 +31,9 @@ class ConnectionId {
   private static final int PRIME = 16777619;
   final User ticket;
   final String serviceName;
-  final InetSocketAddress address;
+  final Address address;
 
-  public ConnectionId(User ticket, String serviceName, InetSocketAddress address) {
+  public ConnectionId(User ticket, String serviceName, Address address) {
     this.address = address;
     this.ticket = ticket;
     this.serviceName = serviceName;
@@ -43,7 +43,7 @@ class ConnectionId {
     return this.serviceName;
   }
 
-  public InetSocketAddress getAddress() {
+  public Address getAddress() {
     return address;
   }
 
@@ -72,7 +72,7 @@ class ConnectionId {
     return hashCode(ticket, serviceName, address);
   }
 
-  public static int hashCode(User ticket, String serviceName, InetSocketAddress address) {
+  public static int hashCode(User ticket, String serviceName, Address address) {
     return (address.hashCode()
       + PRIME * (PRIME * serviceName.hashCode() ^ (ticket == null ? 0 : ticket.hashCode())));
   }

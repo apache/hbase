@@ -90,14 +90,12 @@ public class TestMasterRegistryHedgedReads {
     }
 
     @Override
-    public BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User user, int rpcTimeout)
-      throws IOException {
+    public BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User user, int rpcTimeout) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public RpcChannel createRpcChannel(ServerName sn, User user, int rpcTimeout)
-      throws IOException {
+    public RpcChannel createRpcChannel(ServerName sn, User user, int rpcTimeout) {
       return new RpcChannelImpl();
     }
 
