@@ -35,7 +35,6 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayDeque;
 import java.util.Locale;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
-import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
@@ -265,16 +263,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         if (this.rpcClient.localAddr != null) {
           this.socket.bind(this.rpcClient.localAddr);
         }
-        if (this.rpcClient.metrics != null) {
-          this.rpcClient.metrics.incrNsLookups();
-        }
-        InetSocketAddress remoteAddr = Address.toSocketAddress(remoteId.getAddress());
-        if (remoteAddr.isUnresolved()) {
-          if (this.rpcClient.metrics != null) {
-            this.rpcClient.metrics.incrNsLookupsFailed();
-          }
-          throw new UnknownHostException(remoteId.getAddress() + " could not be resolved");
-        }
+        InetSocketAddress remoteAddr = getRemoteInetAddress(rpcClient.metrics);
         NetUtils.connect(this.socket, remoteAddr, this.rpcClient.connectTO);
         this.socket.setSoTimeout(this.rpcClient.readTO);
         return;
@@ -423,15 +412,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     if (this.metrics != null) {
       this.metrics.incrNsLookups();
     }
-    InetSocketAddress serverAddr = Address.toSocketAddress(remoteId.getAddress());
-    if (serverAddr.isUnresolved()) {
-      if (this.metrics != null) {
-        this.metrics.incrNsLookupsFailed();
-      }
-      throw new UnknownHostException(remoteId.getAddress() + " could not be resolved");
-    }
     saslRpcClient = new HBaseSaslRpcClient(this.rpcClient.conf, provider, token,
-      serverAddr.getAddress(), securityInfo, this.rpcClient.fallbackAllowed,
+      socket.getInetAddress(), securityInfo, this.rpcClient.fallbackAllowed,
       this.rpcClient.conf.get("hbase.rpc.protection",
         QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)),
       this.rpcClient.conf.getBoolean(CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT));
