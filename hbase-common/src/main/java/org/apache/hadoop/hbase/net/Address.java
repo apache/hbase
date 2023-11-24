@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.net;
 
+import java.net.InetSocketAddress;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -33,7 +34,7 @@ import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
  */
 @InterfaceAudience.Public
 public class Address implements Comparable<Address> {
-  private HostAndPort hostAndPort;
+  private final HostAndPort hostAndPort;
 
   private Address(HostAndPort hostAndPort) {
     this.hostAndPort = hostAndPort;
@@ -47,6 +48,33 @@ public class Address implements Comparable<Address> {
     return new Address(HostAndPort.fromString(hostnameAndPort));
   }
 
+  public static Address fromSocketAddress(InetSocketAddress addr) {
+    return Address.fromParts(addr.getHostString(), addr.getPort());
+  }
+
+  public static InetSocketAddress toSocketAddress(Address addr) {
+    return new InetSocketAddress(addr.getHostName(), addr.getPort());
+  }
+
+  public static InetSocketAddress[] toSocketAddress(Address[] addrs) {
+    if (addrs == null) {
+      return null;
+    }
+    InetSocketAddress[] result = new InetSocketAddress[addrs.length];
+    for (int i = 0; i < addrs.length; i++) {
+      result[i] = toSocketAddress(addrs[i]);
+    }
+    return result;
+  }
+
+  public String getHostName() {
+    return this.hostAndPort.getHost();
+  }
+
+  /**
+   * @deprecated Use {@link #getHostName()} instead
+   */
+  @Deprecated
   public String getHostname() {
     return this.hostAndPort.getHost();
   }
@@ -66,7 +94,7 @@ public class Address implements Comparable<Address> {
    *         otherwise returns same as {@link #toString()}}
    */
   public String toStringWithoutDomain() {
-    String hostname = getHostname();
+    String hostname = getHostName();
     String[] parts = hostname.split("\\.");
     if (parts.length > 1) {
       for (String part : parts) {
@@ -87,19 +115,19 @@ public class Address implements Comparable<Address> {
     }
     if (other instanceof Address) {
       Address that = (Address) other;
-      return this.getHostname().equals(that.getHostname()) && this.getPort() == that.getPort();
+      return this.getHostName().equals(that.getHostName()) && this.getPort() == that.getPort();
     }
     return false;
   }
 
   @Override
   public int hashCode() {
-    return this.getHostname().hashCode() ^ getPort();
+    return this.getHostName().hashCode() ^ getPort();
   }
 
   @Override
   public int compareTo(Address that) {
-    int compare = this.getHostname().compareTo(that.getHostname());
+    int compare = this.getHostName().compareTo(that.getHostName());
     if (compare != 0) {
       return compare;
     }

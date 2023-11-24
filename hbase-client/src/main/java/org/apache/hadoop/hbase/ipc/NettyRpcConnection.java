@@ -24,6 +24,8 @@ import static org.apache.hadoop.hbase.ipc.IPCUtil.setCancelled;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -31,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.ipc.BufferCallBeforeInitHandler.BufferCallEvent;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.NettyHBaseRpcConnectionHeaderHandler;
 import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
@@ -101,7 +104,8 @@ class NettyRpcConnection extends RpcConnection {
 
   NettyRpcConnection(NettyRpcClient rpcClient, ConnectionId remoteId) throws IOException {
     super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
-      rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor);
+      rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor,
+      rpcClient.metrics);
     this.rpcClient = rpcClient;
     this.eventLoop = rpcClient.group.next();
     byte[] connectionHeaderPreamble = getConnectionHeaderPreamble();
@@ -210,8 +214,18 @@ class NettyRpcConnection extends RpcConnection {
     Promise<Boolean> saslPromise = ch.eventLoop().newPromise();
     final NettyHBaseSaslRpcClientHandler saslHandler;
     try {
+      if (this.metrics != null) {
+        this.metrics.incrNsLookups();
+      }
+      InetSocketAddress serverAddr = Address.toSocketAddress(remoteId.getAddress());
+      if (serverAddr.isUnresolved()) {
+        if (this.metrics != null) {
+          this.metrics.incrNsLookupsFailed();
+        }
+        throw new UnknownHostException(remoteId.getAddress() + " could not be resolved");
+      }
       saslHandler = new NettyHBaseSaslRpcClientHandler(saslPromise, ticket, provider, token,
-        serverAddress, securityInfo, rpcClient.fallbackAllowed, this.rpcClient.conf);
+        serverAddr.getAddress(), securityInfo, rpcClient.fallbackAllowed, this.rpcClient.conf);
     } catch (IOException e) {
       failInit(ch, e);
       return;
@@ -270,15 +284,25 @@ class NettyRpcConnection extends RpcConnection {
     });
   }
 
-  private void connect() {
+  private void connect() throws UnknownHostException {
     assert eventLoop.inEventLoop();
-    LOG.trace("Connecting to {}", remoteId.address);
-
+    LOG.trace("Connecting to {}", remoteId.getAddress());
+    if (this.rpcClient.metrics != null) {
+      this.rpcClient.metrics.incrNsLookups();
+    }
+    InetSocketAddress remoteAddr = Address.toSocketAddress(remoteId.getAddress());
+    if (remoteAddr.isUnresolved()) {
+      if (this.rpcClient.metrics != null) {
+        this.rpcClient.metrics.incrNsLookupsFailed();
+      }
+      throw new UnknownHostException(remoteId.getAddress() + " could not be resolved");
+    }
     this.channel = new Bootstrap().group(eventLoop).channel(rpcClient.channelClass)
       .option(ChannelOption.TCP_NODELAY, rpcClient.isTcpNoDelay())
       .option(ChannelOption.SO_KEEPALIVE, rpcClient.tcpKeepAlive)
       .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, rpcClient.connectTO)
       .handler(new ChannelInitializer<Channel>() {
+
         @Override
         protected void initChannel(Channel ch) throws Exception {
           if (conf.getBoolean(X509Util.HBASE_CLIENT_NETTY_TLS_ENABLED, false)) {
@@ -295,7 +319,7 @@ class NettyRpcConnection extends RpcConnection {
           ch.pipeline().addLast(BufferCallBeforeInitHandler.NAME,
             new BufferCallBeforeInitHandler());
         }
-      }).localAddress(rpcClient.localAddr).remoteAddress(remoteId.address).connect()
+      }).localAddress(rpcClient.localAddr).remoteAddress(remoteAddr).connect()
       .addListener(new ChannelFutureListener() {
 
         private void succeed(Channel ch) throws IOException {

@@ -95,6 +95,9 @@ public class MemcachedBlockCache implements BlockCache {
     // case.
     String serverListString = c.get(MEMCACHED_CONFIG_KEY, "localhost:11211");
     String[] servers = serverListString.split(",");
+    // MemcachedClient requires InetSocketAddresses, we have to create them now. Implies any
+    // resolved identities cannot have their address mappings changed while the MemcachedClient
+    // instance is alive. We won't get a chance to trigger re-resolution.
     List<InetSocketAddress> serverAddresses = new ArrayList<>(servers.length);
     for (String s : servers) {
       serverAddresses.add(Addressing.createInetSocketAddressFromHostAndPortStr(s));

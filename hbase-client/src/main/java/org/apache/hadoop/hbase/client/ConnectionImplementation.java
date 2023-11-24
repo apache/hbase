@@ -169,9 +169,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     "hbase.client.master.state.cache.timeout.sec";
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionImplementation.class);
 
-  private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
-
-  private final boolean hostnamesCanChange;
   private final long pause;
   private final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
   // The mode tells if HedgedRead, LoadBalance mode is supported.
@@ -312,7 +309,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
     boolean shouldListen =
       conf.getBoolean(HConstants.STATUS_PUBLISHED, HConstants.STATUS_PUBLISHED_DEFAULT);
-    this.hostnamesCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
     Class<? extends ClusterStatusListener.Listener> listenerClass =
       conf.getClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
         ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS, ClusterStatusListener.Listener.class);
@@ -515,8 +511,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (isDeadServer(masterServer)) {
       throw new RegionServerStoppedException(masterServer + " is dead.");
     }
-    String key = getStubKey(MasterProtos.HbckService.BlockingInterface.class.getName(),
-      masterServer, this.hostnamesCanChange);
+    String key =
+      getStubKey(MasterProtos.HbckService.BlockingInterface.class.getName(), masterServer);
 
     return new HBaseHbck(
       (MasterProtos.HbckService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
@@ -1310,8 +1306,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         throw new MasterNotRunningException(sn + " is dead.");
       }
       // Use the security info interface name as our stub key
-      String key =
-        getStubKey(MasterProtos.MasterService.getDescriptor().getName(), sn, hostnamesCanChange);
+      String key = getStubKey(MasterProtos.MasterService.getDescriptor().getName(), sn);
       MasterProtos.MasterService.BlockingInterface stub =
         (MasterProtos.MasterService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
           BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn, user, rpcTimeout);
@@ -1359,8 +1354,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (isDeadServer(serverName)) {
       throw new RegionServerStoppedException(serverName + " is dead.");
     }
-    String key = getStubKey(AdminProtos.AdminService.BlockingInterface.class.getName(), serverName,
-      this.hostnamesCanChange);
+    String key = getStubKey(AdminProtos.AdminService.BlockingInterface.class.getName(), serverName);
     return (AdminProtos.AdminService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
       BlockingRpcChannel channel =
         this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);
@@ -1374,8 +1368,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (isDeadServer(serverName)) {
       throw new RegionServerStoppedException(serverName + " is dead.");
     }
-    String key = getStubKey(ClientProtos.ClientService.BlockingInterface.class.getName(),
-      serverName, this.hostnamesCanChange);
+    String key =
+      getStubKey(ClientProtos.ClientService.BlockingInterface.class.getName(), serverName);
     return (ClientProtos.ClientService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
       BlockingRpcChannel channel =
         this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);

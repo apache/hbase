@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.ConnectException;
-import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.TimeoutException;
@@ -34,6 +33,7 @@ import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
@@ -157,7 +157,7 @@ class IPCUtil {
     }
   }
 
-  private static String getCallTarget(InetSocketAddress addr, RegionInfo regionInfo) {
+  private static String getCallTarget(Address addr, RegionInfo regionInfo) {
     return "address=" + addr
       + (regionInfo != null ? ", region=" + regionInfo.getRegionNameAsString() : "");
   }
@@ -179,7 +179,7 @@ class IPCUtil {
    * @return an exception to throw
    * @see ClientExceptionsUtil#isConnectionException(Throwable)
    */
-  static IOException wrapException(InetSocketAddress addr, RegionInfo regionInfo, Throwable error) {
+  static IOException wrapException(Address addr, RegionInfo regionInfo, Throwable error) {
     if (error instanceof ConnectException) {
       // connection refused; include the host:port in the error
       return (IOException) new ConnectException(

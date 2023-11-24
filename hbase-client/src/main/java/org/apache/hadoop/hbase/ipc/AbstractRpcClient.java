@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -133,11 +134,11 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
 
   private int maxConcurrentCallsPerServer;
 
-  private static final LoadingCache<InetSocketAddress, AtomicInteger> concurrentCounterCache =
+  private static final LoadingCache<Address, AtomicInteger> concurrentCounterCache =
     CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.HOURS)
-      .build(new CacheLoader<InetSocketAddress, AtomicInteger>() {
+      .build(new CacheLoader<Address, AtomicInteger>() {
         @Override
-        public AtomicInteger load(InetSocketAddress key) throws Exception {
+        public AtomicInteger load(Address key) throws Exception {
           return new AtomicInteger(0);
         }
       });
@@ -206,7 +207,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
         // The connection itself will disconnect if there is no pending call for maxIdleTime.
         if (conn.getLastTouched() < closeBeforeTime && !conn.isActive()) {
           if (LOG.isTraceEnabled()) {
-            LOG.trace("Cleanup idle connection to {}", conn.remoteId().address);
+            LOG.trace("Cleanup idle connection to {}", conn.remoteId().getAddress());
           }
           connections.remove(conn.remoteId(), conn);
           conn.cleanupConnection();
@@ -344,11 +345,11 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   private T getConnection(ConnectionId remoteId) throws IOException {
     if (failedServers.isFailedServer(remoteId.getAddress())) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Not trying to connect to " + remoteId.address
+        LOG.debug("Not trying to connect to " + remoteId.getAddress()
           + " this server is in the failed servers list");
       }
       throw new FailedServerException(
-        "This server is in the failed servers list: " + remoteId.address);
+        "This server is in the failed servers list: " + remoteId.getAddress());
     }
     T conn;
     synchronized (connections) {
@@ -366,7 +367,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
    */
   protected abstract T createConnection(ConnectionId remoteId) throws IOException;
 
-  private void onCallFinished(Call call, HBaseRpcController hrc, InetSocketAddress addr,
+  private void onCallFinished(Call call, HBaseRpcController hrc, Address addr,
     RpcCallback<Message> callback) {
     call.callStats.setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.getStartTime());
     if (metrics != null) {
@@ -392,7 +393,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   }
 
   Call callMethod(final Descriptors.MethodDescriptor md, final HBaseRpcController hrc,
-    final Message param, Message returnType, final User ticket, final InetSocketAddress addr,
+    final Message param, Message returnType, final User ticket, final InetSocketAddress inetAddr,
     final RpcCallback<Message> callback) {
     final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
     cs.setStartTime(EnvironmentEdgeManager.currentTime());
@@ -407,6 +408,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       cs.setNumActionsPerServer(numActions);
     }
 
+    final Address addr = Address.fromSocketAddress(inetAddr);
     final AtomicInteger counter = concurrentCounterCache.getUnchecked(addr);
     Call call = new Call(nextCallId(), md, param, hrc.cellScanner(), returnType,
       hrc.getCallTimeout(), hrc.getPriority(), new RpcCallback<Call>() {
@@ -431,12 +433,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     return call;
   }
 
-  InetSocketAddress createAddr(ServerName sn) throws UnknownHostException {
-    InetSocketAddress addr = new InetSocketAddress(sn.getHostname(), sn.getPort());
-    if (addr.isUnresolved()) {
-      throw new UnknownHostException("can not resolve " + sn.getServerName());
-    }
-    return addr;
+  private static Address createAddr(ServerName sn) {
+    return Address.fromParts(sn.getHostname(), sn.getPort());
   }
 
   /**
@@ -452,8 +450,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       for (T connection : connections.values()) {
         ConnectionId remoteId = connection.remoteId();
         if (
-          remoteId.address.getPort() == sn.getPort()
-            && remoteId.address.getHostName().equals(sn.getHostname())
+          remoteId.getAddress().getPort() == sn.getPort()
+            && remoteId.getAddress().getHostname().equals(sn.getHostname())
         ) {
           LOG.info("The server on " + sn.toString() + " is dead - stopping the connection "
             + connection.remoteId);
@@ -514,19 +512,25 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
 
   @Override
   public BlockingRpcChannel createBlockingRpcChannel(final ServerName sn, final User ticket,
-    int rpcTimeout) throws UnknownHostException {
+    int rpcTimeout) {
     return new BlockingRpcChannelImplementation(this, createAddr(sn), ticket, rpcTimeout);
   }
 
   @Override
-  public RpcChannel createRpcChannel(ServerName sn, User user, int rpcTimeout)
-    throws UnknownHostException {
+  public RpcChannel createRpcChannel(ServerName sn, User user, int rpcTimeout) {
     return new RpcChannelImplementation(this, createAddr(sn), user, rpcTimeout);
   }
 
   private static class AbstractRpcChannel {
 
-    protected final InetSocketAddress addr;
+    protected final Address addr;
+
+    // We cache the resolved InetSocketAddress for the channel so we do not do a DNS lookup
+    // per method call on the channel. If the remote target is removed or reprovisioned and
+    // its identity changes a new channel with a newly resolved InetSocketAddress will be
+    // created as part of retry, so caching here is fine.
+    // Normally, caching an InetSocketAddress is an anti-pattern.
+    protected InetSocketAddress isa;
 
     protected final AbstractRpcClient<?> rpcClient;
 
@@ -534,8 +538,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
 
     protected final int rpcTimeout;
 
-    protected AbstractRpcChannel(AbstractRpcClient<?> rpcClient, InetSocketAddress addr,
-      User ticket, int rpcTimeout) {
+    protected AbstractRpcChannel(AbstractRpcClient<?> rpcClient, Address addr, User ticket,
+      int rpcTimeout) {
       this.addr = addr;
       this.rpcClient = rpcClient;
       this.ticket = ticket;
@@ -570,16 +574,30 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   public static class BlockingRpcChannelImplementation extends AbstractRpcChannel
     implements BlockingRpcChannel {
 
-    protected BlockingRpcChannelImplementation(AbstractRpcClient<?> rpcClient,
-      InetSocketAddress addr, User ticket, int rpcTimeout) {
+    protected BlockingRpcChannelImplementation(AbstractRpcClient<?> rpcClient, Address addr,
+      User ticket, int rpcTimeout) {
       super(rpcClient, addr, ticket, rpcTimeout);
     }
 
     @Override
     public Message callBlockingMethod(Descriptors.MethodDescriptor md, RpcController controller,
       Message param, Message returnType) throws ServiceException {
+      // Look up remote address upon first call
+      if (isa == null) {
+        if (this.rpcClient.metrics != null) {
+          this.rpcClient.metrics.incrNsLookups();
+        }
+        isa = Address.toSocketAddress(addr);
+        if (isa.isUnresolved()) {
+          if (this.rpcClient.metrics != null) {
+            this.rpcClient.metrics.incrNsLookupsFailed();
+          }
+          isa = null;
+          throw new ServiceException(new UnknownHostException(addr + " could not be resolved"));
+        }
+      }
       return rpcClient.callBlockingMethod(md, configureRpcController(controller), param, returnType,
-        ticket, addr);
+        ticket, isa);
     }
   }
 
@@ -588,20 +606,34 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
    */
   public static class RpcChannelImplementation extends AbstractRpcChannel implements RpcChannel {
 
-    protected RpcChannelImplementation(AbstractRpcClient<?> rpcClient, InetSocketAddress addr,
-      User ticket, int rpcTimeout) throws UnknownHostException {
+    protected RpcChannelImplementation(AbstractRpcClient<?> rpcClient, Address addr, User ticket,
+      int rpcTimeout) {
       super(rpcClient, addr, ticket, rpcTimeout);
     }
 
     @Override
     public void callMethod(Descriptors.MethodDescriptor md, RpcController controller, Message param,
       Message returnType, RpcCallback<Message> done) {
+      HBaseRpcController configuredController = configureRpcController(
+        Preconditions.checkNotNull(controller, "RpcController can not be null for async rpc call"));
+      // Look up remote address upon first call
+      if (isa == null || isa.isUnresolved()) {
+        if (this.rpcClient.metrics != null) {
+          this.rpcClient.metrics.incrNsLookups();
+        }
+        isa = Address.toSocketAddress(addr);
+        if (isa.isUnresolved()) {
+          if (this.rpcClient.metrics != null) {
+            this.rpcClient.metrics.incrNsLookupsFailed();
+          }
+          isa = null;
+          controller.setFailed(addr + " could not be resolved");
+          return;
+        }
+      }
       // This method does not throw any exceptions, so the caller must provide a
       // HBaseRpcController which is used to pass the exceptions.
-      this.rpcClient.callMethod(md,
-        configureRpcController(Preconditions.checkNotNull(controller,
-          "RpcController can not be null for async rpc call")),
-        param, returnType, ticket, addr, done);
+      this.rpcClient.callMethod(md, configuredController, param, returnType, ticket, isa, done);
     }
   }
 }

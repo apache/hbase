@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -34,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -101,7 +101,7 @@ public class TestIPCUtil {
     for (Class<? extends Throwable> clazz : ClientExceptionsUtil.getConnectionExceptionTypes()) {
       exceptions.add(create(clazz));
     }
-    InetSocketAddress addr = InetSocketAddress.createUnresolved("127.0.0.1", 12345);
+    Address addr = Address.fromParts("127.0.0.1", 12345);
     for (Throwable exception : exceptions) {
       if (exception instanceof TimeoutException) {
         assertThat(IPCUtil.wrapException(addr, null, exception),

@@ -25,6 +25,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1633,10 +1634,12 @@ public final class ZKUtil {
     String host = sp[0];
     int port = sp.length > 1 ? Integer.parseInt(sp[1]) : HConstants.DEFAULT_ZOOKEEPER_CLIENT_PORT;
 
-    InetSocketAddress sockAddr = new InetSocketAddress(host, port);
     try (Socket socket = new Socket()) {
+      InetSocketAddress sockAddr = new InetSocketAddress(host, port);
+      if (sockAddr.isUnresolved()) {
+        throw new UnknownHostException(host + " cannot be resolved");
+      }
       socket.connect(sockAddr, timeout);
-
       socket.setSoTimeout(timeout);
       try (
         PrintWriter out = new PrintWriter(new BufferedWriter(
