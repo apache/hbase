@@ -684,6 +684,15 @@ public class TestNamedQueueRecorder {
       @Override
       public void incrementResponseExceptionSize(long exceptionSize) {
       }
+
+      @Override
+      public CallQueueType getQueueType() {
+        return CallQueueType.DEFAULT;
+      }
+
+      @Override
+      public void setQueueType(CallQueueType type) {
+      }
     };
     return rpcCall;
   }
