@@ -247,7 +247,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // Pass columns to try to filter out unnecessary StoreFiles.
       scanners = selectScannersFrom(store,
         store.getScanners(cacheBlocks, scanUsePread, false, matcher, scan.getStartRow(),
-          scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(), this.readPt));
+          scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(), this.readPt,
+          !scan.isRaw() && scan.getMaxVersions() == 1));
 
       // Seek all scanners to the start of the Row (or if the exact matching row
       // key does not exist, then to the start of the next matching Row).
@@ -996,7 +997,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // store files. In case of stream scanners this eager creation does not induce performance
       // penalty because in scans (that uses stream scanners) the next() call is bound to happen.
       List<KeyValueScanner> scanners = store.getScanners(sfs, cacheBlocks, get, usePread,
-        isCompaction, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt, false);
+        isCompaction, matcher, scan.getStartRow(), scan.getStopRow(),
+        this.readPt, false, !scan.isRaw() && scan.getMaxVersions() == 1);
       flushedstoreFileScanners.addAll(scanners);
       if (!CollectionUtils.isEmpty(memStoreScanners)) {
         clearAndClose(memStoreScannersAfterFlush);

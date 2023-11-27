@@ -1805,10 +1805,10 @@ public class TestHStore {
     public List<KeyValueScanner> getScanners(List<HStoreFile> files, boolean cacheBlocks,
       boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
       boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
-      boolean includeMemstoreScanner) throws IOException {
+      boolean includeMemstoreScanner, boolean onlyLatestVersion) throws IOException {
       hook.getScanners(this);
       return super.getScanners(files, cacheBlocks, usePread, isCompaction, matcher, startRow, true,
-        stopRow, false, readPt, includeMemstoreScanner);
+        stopRow, false, readPt, includeMemstoreScanner, onlyLatestVersion);
     }
 
     @Override

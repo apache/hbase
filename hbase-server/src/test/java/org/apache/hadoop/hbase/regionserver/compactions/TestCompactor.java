@@ -189,6 +189,18 @@ public class TestCompactor {
       }
     }
 
+    public void verifyKvs(KeyValue[][] kvss) {
+      assertEquals(kvss.length, writers.size());
+      for (int i = 0; i < kvss.length; ++i) {
+        KeyValue[] kvs = kvss[i];
+        Writer w = writers.get(i);
+        assertEquals(kvs.length, w.kvs.size());
+        for (int j = 0; j < kvs.length; ++j) {
+          assertEquals(kvs[j], w.kvs.get(j));
+        }
+      }
+    }
+
     public List<Writer> getWriters() {
       return writers;
     }

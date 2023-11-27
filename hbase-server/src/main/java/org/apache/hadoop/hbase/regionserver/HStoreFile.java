@@ -125,6 +125,8 @@ public class HStoreFile implements StoreFile {
    */
   public static final byte[] SKIP_RESET_SEQ_ID = Bytes.toBytes("SKIP_RESET_SEQ_ID");
 
+  public static final byte[] HAS_LATEST_VERSION_KEY = Bytes.toBytes("HAS_LATEST_VERSION");
+
   private final StoreFileInfo fileInfo;
 
   // StoreFile.Reader
@@ -137,6 +139,12 @@ public class HStoreFile implements StoreFile {
 
   // Indicates if the file got compacted
   private volatile boolean compactedAway = false;
+
+  // Indicate if the file contains only latest (i.e., single) cell version for a given column
+  // in a row. MemStore flushes generate files with multiple cell versions. However,
+  // compactions can generate two files, one with the latest version cells and the other
+  // with the remaining (non-latest) cell versions.
+  private volatile boolean hasLatestVersion = true;
 
   // Keys for metadata stored in backing HFile.
   // Set when we obtain a Reader.
@@ -337,6 +345,10 @@ public class HStoreFile implements StoreFile {
     return compactedAway;
   }
 
+  public boolean hasLatestVersion() {
+    return hasLatestVersion;
+  }
+
   public int getRefCount() {
     return fileInfo.getRefCount();
   }
@@ -455,6 +467,10 @@ public class HStoreFile implements StoreFile {
     b = metadataMap.get(EXCLUDE_FROM_MINOR_COMPACTION_KEY);
     this.excludeFromMinorCompaction = (b != null && Bytes.toBoolean(b));
 
+    b = metadataMap.get(HAS_LATEST_VERSION_KEY);
+    if (b != null) {
+      hasLatestVersion = Bytes.toBoolean(b);
+    }
     BloomType hfileBloomType = initialReader.getBloomFilterType();
     if (cfBloomType != BloomType.NONE) {
       initialReader.loadBloomfilter(BlockType.GENERAL_BLOOM_META, metrics);
@@ -583,6 +599,9 @@ public class HStoreFile implements StoreFile {
     this.compactedAway = true;
   }
 
+  public void setHasLatestVersion(boolean hasLatestVersion) {
+    this.hasLatestVersion = hasLatestVersion;
+  }
   @Override
   public String toString() {
     return this.fileInfo.toString();
