@@ -149,9 +149,9 @@ public class TestPrefetch {
         block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
           || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
       ) {
-          assertFalse(isCached);
-        }
-      }, cacheConfig);
+        assertFalse(isCached);
+      }
+    }, cacheConfig);
     assertEquals(totalCompletedBefore + queueBefore,
       poolExecutor.getCompletedTaskCount() + poolExecutor.getQueue().size());
   }
@@ -212,11 +212,11 @@ public class TestPrefetch {
       }
       return block;
     }, (key, block) -> {
-        boolean isCached = blockCache.getBlock(key, true, false, true) != null;
-        if (
+      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      if (
         block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
-            || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
-        ) {
+          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
+      ) {
         assertTrue(isCached);
       }
     });
