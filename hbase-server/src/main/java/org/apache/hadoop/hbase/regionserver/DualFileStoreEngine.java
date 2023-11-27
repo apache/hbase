@@ -22,9 +22,8 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
+import org.apache.hadoop.hbase.regionserver.compactions.DualFileCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -33,30 +32,34 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Default StoreEngine creates the default compactor, policy, and store file manager, or their
- * derivatives.
+ * HBASE-25972 This store engine allows us to store data in two files,
+ * one for the latest put cells and the other for the rest of the cells (i.e.,
+ * older put cells and delete markers).
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBasedCompactionPolicy,
-  DefaultCompactor, DefaultStoreFileManager> {
+@InterfaceAudience.Private
+public class DualFileStoreEngine extends StoreEngine<DefaultStoreFlusher,
+  RatioBasedCompactionPolicy, DualFileCompactor, DefaultStoreFileManager> {
+  public static final String DUAL_FILE_STORE_FLUSHER_CLASS_KEY =
+    "hbase.hstore.dualfileengine.storeflusher.class";
+  public static final String DUAL_FILE_COMPACTOR_CLASS_KEY =
+    "hbase.hstore.dualfileengine.compactor.class";
+  public static final String DUAL_FILE_COMPACTION_POLICY_CLASS_KEY =
+    "hbase.hstore.dualfileengine.compactionpolicy.class";
 
-  public static final String DEFAULT_STORE_FLUSHER_CLASS_KEY =
-    "hbase.hstore.defaultengine.storeflusher.class";
-  public static final String DEFAULT_COMPACTOR_CLASS_KEY =
-    "hbase.hstore.defaultengine.compactor.class";
-  public static final String DEFAULT_COMPACTION_POLICY_CLASS_KEY =
-    "hbase.hstore.defaultengine.compactionpolicy.class";
-
-  public static final Class<? extends DefaultStoreFlusher> DEFAULT_STORE_FLUSHER_CLASS =
+  public static final Class<? extends DefaultStoreFlusher> DUAL_FILE_STORE_FLUSHER_CLASS =
     DefaultStoreFlusher.class;
-  public static final Class<? extends DefaultCompactor> DEFAULT_COMPACTOR_CLASS =
-    DefaultCompactor.class;
-  public static final Class<? extends RatioBasedCompactionPolicy> DEFAULT_COMPACTION_POLICY_CLASS =
-    ExploringCompactionPolicy.class;
-
+  public static final Class<? extends DualFileCompactor> DUAL_FILE_COMPACTOR_CLASS =
+    DualFileCompactor.class;
+  public static final Class<? extends RatioBasedCompactionPolicy>
+    DUAL_FILE_COMPACTION_POLICY_CLASS = ExploringCompactionPolicy.class;
   @Override
   public boolean needsCompaction(List<HStoreFile> filesCompacting) {
-    return compactionPolicy.needsCompaction(this.storeFileManager.getStorefiles(), filesCompacting);
+    return compactionPolicy.needsCompaction(storeFileManager.getStorefiles(), filesCompacting);
+  }
+
+  @Override
+  public CompactionContext createCompaction() throws IOException {
+    return new DualFileCompactionContext();
   }
 
   @Override
@@ -65,12 +68,12 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
     createCompactor(conf, store);
     createCompactionPolicy(conf, store);
     createStoreFlusher(conf, store);
-    storeFileManager = new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
-      compactionPolicy.getConf());
+    this.storeFileManager = new DefaultStoreFileManager(kvComparator,
+      StoreFileComparators.SEQ_ID_MAX_TIMESTAMP, conf, compactionPolicy.getConf());
   }
 
   protected void createCompactor(Configuration conf, HStore store) throws IOException {
-    String className = conf.get(DEFAULT_COMPACTOR_CLASS_KEY, DEFAULT_COMPACTOR_CLASS.getName());
+    String className = conf.get(DUAL_FILE_COMPACTOR_CLASS_KEY, DUAL_FILE_COMPACTOR_CLASS.getName());
     try {
       compactor = ReflectionUtils.instantiateWithCustomCtor(className,
         new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
@@ -78,10 +81,9 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
       throw new IOException("Unable to load configured compactor '" + className + "'", e);
     }
   }
-
-  protected void createCompactionPolicy(Configuration conf, HStore store) throws IOException {
+  private void createCompactionPolicy(Configuration conf, HStore store) throws IOException {
     String className =
-      conf.get(DEFAULT_COMPACTION_POLICY_CLASS_KEY, DEFAULT_COMPACTION_POLICY_CLASS.getName());
+      conf.get(DUAL_FILE_COMPACTION_POLICY_CLASS_KEY, DUAL_FILE_COMPACTION_POLICY_CLASS.getName());
     try {
       compactionPolicy = ReflectionUtils.instantiateWithCustomCtor(className,
         new Class[] { Configuration.class, StoreConfigInformation.class },
@@ -91,9 +93,9 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
     }
   }
 
-  protected void createStoreFlusher(Configuration conf, HStore store) throws IOException {
+  private void createStoreFlusher(Configuration conf, HStore store) throws IOException {
     String className =
-      conf.get(DEFAULT_STORE_FLUSHER_CLASS_KEY, DEFAULT_STORE_FLUSHER_CLASS.getName());
+      conf.get(DUAL_FILE_STORE_FLUSHER_CLASS_KEY, DUAL_FILE_STORE_FLUSHER_CLASS.getName());
     try {
       storeFlusher = ReflectionUtils.instantiateWithCustomCtor(className,
         new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
@@ -101,13 +103,7 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
       throw new IOException("Unable to load configured store flusher '" + className + "'", e);
     }
   }
-
-  @Override
-  public CompactionContext createCompaction() {
-    return new DefaultCompactionContext();
-  }
-
-  private class DefaultCompactionContext extends CompactionContext {
+  private class DualFileCompactionContext extends CompactionContext {
     @Override
     public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
       boolean mayUseOffPeak, boolean forceMajor) throws IOException {
@@ -128,5 +124,4 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
         filesCompacting);
     }
   }
-
 }

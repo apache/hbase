@@ -955,10 +955,11 @@ public class HStore
    * @return all scanners for this store
    */
   public List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean isGet, boolean usePread,
-    boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, byte[] stopRow, long readPt)
+    boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, byte[] stopRow, long readPt,
+    boolean onlyLatestVersion)
     throws IOException {
     return getScanners(cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow, false,
-      readPt);
+      readPt, onlyLatestVersion);
   }
 
   /**
@@ -976,7 +977,8 @@ public class HStore
    */
   public List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean usePread,
     boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, boolean includeStartRow,
-    byte[] stopRow, boolean includeStopRow, long readPt) throws IOException {
+    byte[] stopRow, boolean includeStopRow, long readPt, boolean onlyLatestVersion)
+    throws IOException {
     Collection<HStoreFile> storeFilesToScan;
     List<KeyValueScanner> memStoreScanners;
     this.storeEngine.readLock();
@@ -1001,7 +1003,8 @@ public class HStore
       // but now we get them in ascending order, which I think is
       // actually more correct, since memstore get put at the end.
       List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(
-        storeFilesToScan, cacheBlocks, usePread, isCompaction, false, matcher, readPt);
+        storeFilesToScan, cacheBlocks, usePread, isCompaction, false, matcher, readPt,
+        onlyLatestVersion);
       List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
       scanners.addAll(sfScanners);
       // Then the memstore scanners
@@ -1041,10 +1044,11 @@ public class HStore
    */
   public List<KeyValueScanner> getScanners(List<HStoreFile> files, boolean cacheBlocks,
     boolean isGet, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
-    byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner)
+    byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner,
+    boolean onlyLatestVersion)
     throws IOException {
     return getScanners(files, cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow,
-      false, readPt, includeMemstoreScanner);
+      false, readPt, includeMemstoreScanner, onlyLatestVersion);
   }
 
   /**
@@ -1059,6 +1063,7 @@ public class HStore
    * @param includeStartRow        true to include start row, false if not
    * @param stopRow                the stop row
    * @param includeStopRow         true to include stop row, false if not
+   * @param maxVersions            the max number of versions to fetch
    * @param readPt                 the read point of the current scan
    * @param includeMemstoreScanner true if memstore has to be included
    * @return scanners on the given files and on the memstore if specified
@@ -1066,7 +1071,7 @@ public class HStore
   public List<KeyValueScanner> getScanners(List<HStoreFile> files, boolean cacheBlocks,
     boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
     boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
-    boolean includeMemstoreScanner) throws IOException {
+    boolean includeMemstoreScanner, boolean onlyLatestVersion) throws IOException {
     List<KeyValueScanner> memStoreScanners = null;
     if (includeMemstoreScanner) {
       this.storeEngine.readLock();
@@ -1078,7 +1083,7 @@ public class HStore
     }
     try {
       List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(files,
-        cacheBlocks, usePread, isCompaction, false, matcher, readPt);
+        cacheBlocks, usePread, isCompaction, false, matcher, readPt, onlyLatestVersion);
       List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
       scanners.addAll(sfScanners);
       // Then the memstore scanners
@@ -1761,7 +1766,7 @@ public class HStore
         return null;
       }
       return getScanners(filesToReopen, cacheBlocks, false, false, matcher, startRow,
-        includeStartRow, stopRow, includeStopRow, readPt, false);
+        includeStartRow, stopRow, includeStopRow, readPt, false, false);
     } finally {
       this.storeEngine.readUnlock();
     }

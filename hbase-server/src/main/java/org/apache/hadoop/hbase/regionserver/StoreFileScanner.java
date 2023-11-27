@@ -112,10 +112,11 @@ public class StoreFileScanner implements KeyValueScanner {
    * Return an array of scanners corresponding to the given set of store files.
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(Collection<HStoreFile> files,
-    boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean useDropBehind, long readPt)
+    boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean useDropBehind, long readPt,
+    boolean onlyLatestVersion)
     throws IOException {
     return getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction, useDropBehind, null,
-      readPt);
+      readPt, onlyLatestVersion);
   }
 
   /**
@@ -124,7 +125,7 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(Collection<HStoreFile> files,
     boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean canUseDrop,
-    ScanQueryMatcher matcher, long readPt) throws IOException {
+    ScanQueryMatcher matcher, long readPt, boolean onlyLatestVersion) throws IOException {
     if (files.isEmpty()) {
       return Collections.emptyList();
     }
@@ -135,11 +136,17 @@ public class StoreFileScanner implements KeyValueScanner {
     for (HStoreFile file : files) {
       // The sort function needs metadata so we need to open reader first before sorting the list.
       file.initReader();
-      sortedFiles.add(file);
+      if (onlyLatestVersion) {
+        if (file.hasLatestVersion()) {
+          sortedFiles.add(file);
+        }
+      } else {
+        sortedFiles.add(file);
+      }
     }
     boolean succ = false;
     try {
-      for (int i = 0, n = files.size(); i < n; i++) {
+      for (int i = 0, n = files.size(); i < n && !sortedFiles.isEmpty(); i++) {
         HStoreFile sf = sortedFiles.remove();
         StoreFileScanner scanner;
         if (usePread) {
