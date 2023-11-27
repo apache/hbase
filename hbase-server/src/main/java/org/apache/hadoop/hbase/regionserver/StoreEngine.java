@@ -360,7 +360,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
    * replicas to keep up to date with the primary region files.
    */
   private void refreshStoreFilesInternal(Collection<StoreFileInfo> newFiles) throws IOException {
-    Collection<HStoreFile> currentFiles = storeFileManager.getStorefiles();
+    Collection<HStoreFile> currentFiles = storeFileManager.getStoreFiles();
     Collection<HStoreFile> compactedFiles = storeFileManager.getCompactedfiles();
     if (currentFiles == null) {
       currentFiles = Collections.emptySet();

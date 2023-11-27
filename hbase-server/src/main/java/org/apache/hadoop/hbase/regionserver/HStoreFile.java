@@ -125,6 +125,8 @@ public class HStoreFile implements StoreFile {
    */
   public static final byte[] SKIP_RESET_SEQ_ID = Bytes.toBytes("SKIP_RESET_SEQ_ID");
 
+  public static final byte[] HISTORICAL_KEY = Bytes.toBytes("HISTORICAL");
+
   private final StoreFileInfo fileInfo;
 
   // StoreFile.Reader
@@ -137,6 +139,16 @@ public class HStoreFile implements StoreFile {
 
   // Indicates if the file got compacted
   private volatile boolean compactedAway = false;
+
+  // Indicates if the file contains historical cell versions. This is used when
+  // hbase.enable.historical.compaction.files is set to true. In that case, compactions
+  // can generate two files, one with the live cell versions and the other with the remaining
+  // (historical) cell versions. If isHistorical is true then the hfile is historical.
+  // Historical files are skipped for regular (not raw) scans for latest row versions.
+  // When hbase.enable.historical.compaction.files is false, isHistorical will be false
+  // for all files. This means all files will be treated as live files. Historical files are
+  // generated only when hbase.enable.historical.compaction.files is true.
+  private volatile boolean isHistorical = false;
 
   // Keys for metadata stored in backing HFile.
   // Set when we obtain a Reader.
@@ -337,6 +349,10 @@ public class HStoreFile implements StoreFile {
     return compactedAway;
   }
 
+  public boolean isHistorical() {
+    return isHistorical;
+  }
+
   public int getRefCount() {
     return fileInfo.getRefCount();
   }
@@ -455,6 +471,10 @@ public class HStoreFile implements StoreFile {
     b = metadataMap.get(EXCLUDE_FROM_MINOR_COMPACTION_KEY);
     this.excludeFromMinorCompaction = (b != null && Bytes.toBoolean(b));
 
+    b = metadataMap.get(HISTORICAL_KEY);
+    if (b != null) {
+      isHistorical = Bytes.toBoolean(b);
+    }
     BloomType hfileBloomType = initialReader.getBloomFilterType();
     if (cfBloomType != BloomType.NONE) {
       initialReader.loadBloomfilter(BlockType.GENERAL_BLOOM_META, metrics);

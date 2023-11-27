@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.StoreFileWriter.shouldEnableHistoricalCompactionFiles;
+
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -48,17 +52,35 @@ class DefaultStoreFileManager implements StoreFileManager {
   private final CompactionConfiguration comConf;
   private final int blockingFileCount;
   private final Comparator<HStoreFile> storeFileComparator;
-  /**
-   * List of store files inside this store. This is an immutable list that is atomically replaced
-   * when its contents change.
-   */
-  private volatile ImmutableList<HStoreFile> storefiles = ImmutableList.of();
+
+  static class StoreFileList {
+    /**
+     * List of store files inside this store. This is an immutable list that is atomically replaced
+     * when its contents change.
+     */
+    final ImmutableList<HStoreFile> all;
+    /**
+     * List of store files that include the latest cells inside this store. This is an immutable
+     * list that is atomically replaced when its contents change.
+     */
+    @Nullable
+    final ImmutableList<HStoreFile> live;
+
+    StoreFileList(ImmutableList<HStoreFile> storeFiles, ImmutableList<HStoreFile> liveStoreFiles) {
+      this.all = storeFiles;
+      this.live = liveStoreFiles;
+    }
+  }
+
+  private volatile StoreFileList storeFiles;
+
   /**
    * List of compacted files inside this store that needs to be excluded in reads because further
    * new reads will be using only the newly created files out of compaction. These compacted files
    * will be deleted/cleared once all the existing readers on these compacted files are done.
    */
   private volatile ImmutableList<HStoreFile> compactedfiles = ImmutableList.of();
+  private final boolean enableLiveFileTracking;
 
   public DefaultStoreFileManager(CellComparator cellComparator,
     Comparator<HStoreFile> storeFileComparator, Configuration conf,
@@ -66,18 +88,35 @@ class DefaultStoreFileManager implements StoreFileManager {
     this.cellComparator = cellComparator;
     this.storeFileComparator = storeFileComparator;
     this.comConf = comConf;
-    this.blockingFileCount =
+    blockingFileCount =
       conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
+    enableLiveFileTracking = shouldEnableHistoricalCompactionFiles(conf);
+    storeFiles =
+      new StoreFileList(ImmutableList.of(), enableLiveFileTracking ? ImmutableList.of() : null);
+  }
+
+  private List<HStoreFile> getLiveFiles(Collection<HStoreFile> storeFiles) throws IOException {
+    List<HStoreFile> liveFiles = new ArrayList<>(storeFiles.size());
+    for (HStoreFile file : storeFiles) {
+      file.initReader();
+      if (!file.isHistorical()) {
+        liveFiles.add(file);
+      }
+    }
+    return liveFiles;
   }
 
   @Override
-  public void loadFiles(List<HStoreFile> storeFiles) {
-    this.storefiles = ImmutableList.sortedCopyOf(storeFileComparator, storeFiles);
+  public void loadFiles(List<HStoreFile> storeFiles) throws IOException {
+    this.storeFiles = new StoreFileList(ImmutableList.sortedCopyOf(storeFileComparator, storeFiles),
+      enableLiveFileTracking
+        ? ImmutableList.sortedCopyOf(storeFileComparator, getLiveFiles(storeFiles))
+        : null);
   }
 
   @Override
-  public final Collection<HStoreFile> getStorefiles() {
-    return storefiles;
+  public final Collection<HStoreFile> getStoreFiles() {
+    return storeFiles.all;
   }
 
   @Override
@@ -86,15 +125,20 @@ class DefaultStoreFileManager implements StoreFileManager {
   }
 
   @Override
-  public void insertNewFiles(Collection<HStoreFile> sfs) {
-    this.storefiles =
-      ImmutableList.sortedCopyOf(storeFileComparator, Iterables.concat(this.storefiles, sfs));
+  public void insertNewFiles(Collection<HStoreFile> sfs) throws IOException {
+    storeFiles = new StoreFileList(
+      ImmutableList.sortedCopyOf(storeFileComparator, Iterables.concat(storeFiles.all, sfs)),
+      enableLiveFileTracking
+        ? ImmutableList.sortedCopyOf(storeFileComparator,
+          Iterables.concat(storeFiles.live, getLiveFiles(sfs)))
+        : null);
   }
 
   @Override
   public ImmutableCollection<HStoreFile> clearFiles() {
-    ImmutableList<HStoreFile> result = storefiles;
-    storefiles = ImmutableList.of();
+    ImmutableList<HStoreFile> result = storeFiles.all;
+    storeFiles =
+      new StoreFileList(ImmutableList.of(), enableLiveFileTracking ? ImmutableList.of() : null);
     return result;
   }
 
@@ -107,7 +151,7 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public final int getStorefileCount() {
-    return storefiles.size();
+    return storeFiles.all.size();
   }
 
   @Override
@@ -117,28 +161,38 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public void addCompactionResults(Collection<HStoreFile> newCompactedfiles,
-    Collection<HStoreFile> results) {
-    this.storefiles = ImmutableList.sortedCopyOf(storeFileComparator, Iterables
-      .concat(Iterables.filter(storefiles, sf -> !newCompactedfiles.contains(sf)), results));
+    Collection<HStoreFile> results) throws IOException {
+    ImmutableList<HStoreFile> liveStoreFiles = null;
+    if (enableLiveFileTracking) {
+      liveStoreFiles = ImmutableList.sortedCopyOf(storeFileComparator,
+        Iterables.concat(Iterables.filter(storeFiles.live, sf -> !newCompactedfiles.contains(sf)),
+          getLiveFiles(results)));
+    }
+    storeFiles =
+      new StoreFileList(
+        ImmutableList
+          .sortedCopyOf(storeFileComparator,
+            Iterables.concat(
+              Iterables.filter(storeFiles.all, sf -> !newCompactedfiles.contains(sf)), results)),
+        liveStoreFiles);
     // Mark the files as compactedAway once the storefiles and compactedfiles list is finalized
     // Let a background thread close the actual reader on these compacted files and also
     // ensure to evict the blocks from block cache so that they are no longer in
     // cache
     newCompactedfiles.forEach(HStoreFile::markCompactedAway);
-    this.compactedfiles = ImmutableList.sortedCopyOf(storeFileComparator,
-      Iterables.concat(this.compactedfiles, newCompactedfiles));
+    compactedfiles = ImmutableList.sortedCopyOf(storeFileComparator,
+      Iterables.concat(compactedfiles, newCompactedfiles));
   }
 
   @Override
   public void removeCompactedFiles(Collection<HStoreFile> removedCompactedfiles) {
-    this.compactedfiles =
-      this.compactedfiles.stream().filter(sf -> !removedCompactedfiles.contains(sf))
-        .sorted(storeFileComparator).collect(ImmutableList.toImmutableList());
+    compactedfiles = compactedfiles.stream().filter(sf -> !removedCompactedfiles.contains(sf))
+      .sorted(storeFileComparator).collect(ImmutableList.toImmutableList());
   }
 
   @Override
   public final Iterator<HStoreFile> getCandidateFilesForRowKeyBefore(KeyValue targetKey) {
-    return this.storefiles.reverse().iterator();
+    return storeFiles.all.reverse().iterator();
   }
 
   @Override
@@ -153,25 +207,28 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public final Optional<byte[]> getSplitPoint() throws IOException {
-    return StoreUtils.getSplitPoint(storefiles, cellComparator);
+    return StoreUtils.getSplitPoint(storeFiles.all, cellComparator);
   }
 
   @Override
-  public final Collection<HStoreFile> getFilesForScan(byte[] startRow, boolean includeStartRow,
-    byte[] stopRow, boolean includeStopRow) {
+  public Collection<HStoreFile> getFilesForScan(byte[] startRow, boolean includeStartRow,
+    byte[] stopRow, boolean includeStopRow, boolean onlyLatestVersion) {
+    if (onlyLatestVersion && enableLiveFileTracking) {
+      return storeFiles.live;
+    }
     // We cannot provide any useful input and already have the files sorted by seqNum.
-    return getStorefiles();
+    return getStoreFiles();
   }
 
   @Override
   public int getStoreCompactionPriority() {
-    int priority = blockingFileCount - storefiles.size();
+    int priority = blockingFileCount - storeFiles.all.size();
     return (priority == HStore.PRIORITY_USER) ? priority + 1 : priority;
   }
 
   @Override
   public Collection<HStoreFile> getUnneededFiles(long maxTs, List<HStoreFile> filesCompacting) {
-    ImmutableList<HStoreFile> files = storefiles;
+    ImmutableList<HStoreFile> files = storeFiles.all;
     // 1) We can never get rid of the last file which has the maximum seqid.
     // 2) Files that are not the latest can't become one due to (1), so the rest are fair game.
     return files.stream().limit(Math.max(0, files.size() - 1)).filter(sf -> {
