@@ -1765,7 +1765,7 @@ public class TestHStore {
           Arrays.asList(mockStoreFile(currentTime - 10), mockStoreFile(currentTime - 100),
             mockStoreFile(currentTime - 1000), mockStoreFile(currentTime - 10000));
         StoreFileManager sfm = mock(StoreFileManager.class);
-        when(sfm.getStorefiles()).thenReturn(storefiles);
+        when(sfm.getStoreFiles()).thenReturn(storefiles);
         StoreEngine<?, ?, ?, ?> storeEngine = mock(StoreEngine.class);
         when(storeEngine.getStoreFileManager()).thenReturn(sfm);
         return storeEngine;
@@ -1806,10 +1806,10 @@ public class TestHStore {
     public List<KeyValueScanner> getScanners(List<HStoreFile> files, boolean cacheBlocks,
       boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
       boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
-      boolean includeMemstoreScanner) throws IOException {
+      boolean includeMemstoreScanner, boolean onlyLatestVersion) throws IOException {
       hook.getScanners(this);
       return super.getScanners(files, cacheBlocks, usePread, isCompaction, matcher, startRow, true,
-        stopRow, false, readPt, includeMemstoreScanner);
+        stopRow, false, readPt, includeMemstoreScanner, onlyLatestVersion);
     }
 
     @Override
@@ -1972,7 +1972,7 @@ public class TestHStore {
       .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(10000L)
         .compression(Compression.Algorithm.NONE).isCompaction(true).includeMVCCReadpoint(true)
         .includesTag(false).shouldDropBehind(true));
-    HFileContext hFileContext = writer.getHFileWriter().getFileContext();
+    HFileContext hFileContext = writer.getLiveFileWriter().getFileContext();
     assertArrayEquals(family, hFileContext.getColumnFamily());
     assertArrayEquals(table, hFileContext.getTableName());
   }

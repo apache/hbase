@@ -463,7 +463,6 @@ public abstract class Compactor<T extends CellSink> {
             lastCleanCell = null;
             lastCleanCellSeqId = 0;
           }
-          writer.append(c);
           int len = c.getSerializedSize();
           ++progress.currentCompactedKVs;
           progress.totalCompactedSize += len;
@@ -477,6 +476,7 @@ public abstract class Compactor<T extends CellSink> {
             return false;
           }
         }
+        writer.appendAll(cells);
         if (shipper != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
           if (lastCleanCell != null) {
             // HBASE-16931, set back sequence id to avoid affecting scan order unexpectedly.
