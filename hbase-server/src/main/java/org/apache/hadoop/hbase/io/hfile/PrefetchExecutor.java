@@ -127,4 +127,9 @@ public final class PrefetchExecutor {
 
   private PrefetchExecutor() {
   }
+
+  /* Visible for testing only */
+  static ScheduledExecutorService getExecutorPool() {
+    return prefetchExecutorPool;
+  }
 }

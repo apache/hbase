@@ -337,7 +337,7 @@ public class CacheConfig {
 
   /** Returns true if blocks should be prefetched into the cache on open, false if not */
   public boolean shouldPrefetchOnOpen() {
-    return this.prefetchOnOpen;
+    return this.prefetchOnOpen && this.cacheDataOnRead;
   }
 
   /** Returns true if blocks should be cached while writing during compaction, false if not */
