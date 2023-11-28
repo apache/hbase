@@ -73,8 +73,8 @@ public class ReopenTableRegionsProcedure
 
   private RetryCounter retryCounter;
 
-  private final long reopenBatchBackoffMillis;
-  private final int reopenBatchSize;
+  private long reopenBatchBackoffMillis;
+  private int reopenBatchSize;
 
   public ReopenTableRegionsProcedure() {
     this(null);
