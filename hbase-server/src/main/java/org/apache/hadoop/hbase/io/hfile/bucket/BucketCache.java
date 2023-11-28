@@ -2100,6 +2100,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
   }
+
   private void removeFileFromPrefetch(String hfileName) {
     // Update the regionPrefetchedSizeMap before removing the file from prefetchCompleted
     if (fullyCachedFiles.containsKey(hfileName)) {

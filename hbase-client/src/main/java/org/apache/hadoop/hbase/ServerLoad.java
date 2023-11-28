@@ -431,7 +431,9 @@ public class ServerLoad implements ServerMetrics {
   }
 
   @Override
-  public Map<String, Integer> getRegionCachedInfo() { return metrics.getRegionCachedInfo(); }
+  public Map<String, Integer> getRegionCachedInfo() {
+    return metrics.getRegionCachedInfo();
+  }
 
   /**
    * Originally, this method factored in the effect of requests going to the server as well.

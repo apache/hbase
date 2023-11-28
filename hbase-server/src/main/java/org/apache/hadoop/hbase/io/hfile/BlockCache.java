@@ -156,8 +156,8 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * made into the cache).
    * @param fileName the file that has been completely cached.
    */
-  default void notifyFileCachingCompleted(Path fileName, int totalBlockCount,
-    int dataBlockCount, long size) {
+  default void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
+    long size) {
     // noop
   }
 
