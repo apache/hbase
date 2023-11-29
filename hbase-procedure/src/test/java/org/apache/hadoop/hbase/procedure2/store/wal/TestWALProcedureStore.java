@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -73,7 +74,7 @@ public class TestWALProcedureStore {
 
   private WALProcedureStore procStore;
 
-  private HBaseCommonTestingUtility htu;
+  private final HBaseCommonTestingUtility htu = new HBaseCommonTestingUtility();
   private FileSystem fs;
   private Path testDir;
   private Path logDir;
@@ -84,13 +85,13 @@ public class TestWALProcedureStore {
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
     testDir = htu.getDataTestDir();
     htu.getConfiguration().set(HConstants.HBASE_DIR, testDir.toString());
     fs = testDir.getFileSystem(htu.getConfiguration());
     htu.getConfiguration().set(HConstants.HBASE_DIR, testDir.toString());
     assertTrue(testDir.depth() > 1);
 
+    TestSequentialProcedure.seqId.set(0);
     setupConfig(htu.getConfiguration());
     logDir = new Path(testDir, "proc-logs");
     procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), logDir);
@@ -835,10 +836,11 @@ public class TestWALProcedureStore {
   }
 
   public static class TestSequentialProcedure extends SequentialProcedure<Void> {
-    private static long seqid = 0;
+
+    private static final AtomicLong seqId = new AtomicLong(0);
 
     public TestSequentialProcedure() {
-      setProcId(++seqid);
+      setProcId(seqId.incrementAndGet());
     }
 
     @Override

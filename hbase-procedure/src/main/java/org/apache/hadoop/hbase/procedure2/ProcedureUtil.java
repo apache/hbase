@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  */
 @InterfaceAudience.Private
 public final class ProcedureUtil {
+
   private ProcedureUtil() {
   }
 
@@ -188,6 +189,7 @@ public final class ProcedureUtil {
         builder.addStackId(stackIds[i]);
       }
     }
+    builder.setExecuted(proc.wasExecuted());
 
     if (proc.hasException()) {
       RemoteProcedureException exception = proc.getException();
@@ -252,6 +254,9 @@ public final class ProcedureUtil {
 
     if (proto.getStackIdCount() > 0) {
       proc.setStackIndexes(proto.getStackIdList());
+    }
+    if (proto.getExecuted()) {
+      proc.setExecuted();
     }
 
     if (proto.hasException()) {
