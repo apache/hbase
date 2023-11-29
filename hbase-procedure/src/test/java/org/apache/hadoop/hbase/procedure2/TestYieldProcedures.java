@@ -239,6 +239,11 @@ public class TestYieldProcedures {
     }
 
     @Override
+    protected boolean isRollbackSupported(State state) {
+      return true;
+    }
+
+    @Override
     protected StateMachineProcedure.Flow executeFromState(TestProcEnv env, State state)
       throws InterruptedException {
       final long ts = env.nextTimestamp();

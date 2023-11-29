@@ -171,6 +171,7 @@ public class TestStateMachineProcedure {
   public void testChildOnLastStepWithRollbackDoubleExecution() throws Exception {
     procExecutor.getEnvironment().triggerChildRollback = true;
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExecutor, true);
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdateInRollback(procExecutor, true);
     long procId = procExecutor.submitProcedure(new TestSMProcedure());
     ProcedureTestingUtility.testRecoveryAndDoubleExecution(procExecutor, procId, true);
     assertEquals(6, procExecutor.getEnvironment().execCount.get());
@@ -247,6 +248,11 @@ public class TestStateMachineProcedure {
           return Flow.NO_MORE_STATE;
       }
       return Flow.HAS_MORE_STATE;
+    }
+
+    @Override
+    protected boolean isRollbackSupported(TestSMProcedureState state) {
+      return true;
     }
 
     @Override
