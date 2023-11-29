@@ -120,6 +120,8 @@ public class TestBucketWriterThread {
     Mockito.when(tooBigCacheable.getSerializedLength()).thenReturn(Integer.MAX_VALUE);
     this.bc.cacheBlock(this.plainKey, tooBigCacheable);
     doDrainOfOneEntry(this.bc, this.wt, this.q);
+    assertTrue(bc.blocksByHFile.isEmpty());
+    assertTrue(bc.getBackingMap().isEmpty());
   }
 
   /**
@@ -136,6 +138,8 @@ public class TestBucketWriterThread {
       Mockito.any(), Mockito.any(), Mockito.any());
     this.q.add(spiedRqe);
     doDrainOfOneEntry(bc, wt, q);
+    assertTrue(bc.blocksByHFile.isEmpty());
+    assertTrue(bc.getBackingMap().isEmpty());
     // Cache disabled when ioes w/o ever healing.
     assertTrue(!bc.isCacheEnabled());
   }
