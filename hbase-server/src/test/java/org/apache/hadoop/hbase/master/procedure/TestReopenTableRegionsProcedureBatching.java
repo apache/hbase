@@ -27,7 +27,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionState.State;
@@ -60,7 +59,7 @@ public class TestReopenTableRegionsProcedureBatching {
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final int BACKOFF_MILLIS_PER_RS = 0;
-  private static final int REOPEN_BATCH_SIZE = 1;
+  private static final int REOPEN_BATCH_SIZE_MAX = 1;
 
   private static TableName TABLE_NAME = TableName.valueOf("Batching");
 
@@ -80,7 +79,7 @@ public class TestReopenTableRegionsProcedureBatching {
   }
 
   @Test
-  public void testRegionBatching() throws IOException {
+  public void testSmallMaxBatchSize() throws IOException {
     AssignmentManager am = UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     ProcedureExecutor<MasterProcedureEnv> procExec =
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
@@ -89,15 +88,23 @@ public class TestReopenTableRegionsProcedureBatching {
     Set<StuckRegion> stuckRegions =
       regions.stream().map(r -> stickRegion(am, procExec, r)).collect(Collectors.toSet());
     ReopenTableRegionsProcedure proc =
-      new ReopenTableRegionsProcedure(TABLE_NAME, BACKOFF_MILLIS_PER_RS, REOPEN_BATCH_SIZE);
+      new ReopenTableRegionsProcedure(TABLE_NAME, BACKOFF_MILLIS_PER_RS, REOPEN_BATCH_SIZE_MAX);
     procExec.submitProcedure(proc);
     UTIL.waitFor(10000, () -> proc.getState() == ProcedureState.WAITING_TIMEOUT);
-    confirmBatchSize(REOPEN_BATCH_SIZE, stuckRegions, proc);
+
+    // the first batch should be small
+    confirmBatchSize(1, stuckRegions, proc);
     ProcedureSyncWait.waitForProcedureToComplete(procExec, proc, 60_000);
+
+    // other batches should also be small
+    assertTrue(proc.getBatchesProcessed() >= regions.size());
+
+    // all regions should only be opened once
+    assertEquals(proc.getRegionsReopened(), regions.size());
   }
 
   @Test
-  public void testNoRegionBatching() throws IOException {
+  public void testDefaultMaxBatchSize() throws IOException {
     AssignmentManager am = UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     ProcedureExecutor<MasterProcedureEnv> procExec =
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
@@ -108,19 +115,51 @@ public class TestReopenTableRegionsProcedureBatching {
     ReopenTableRegionsProcedure proc = new ReopenTableRegionsProcedure(TABLE_NAME);
     procExec.submitProcedure(proc);
     UTIL.waitFor(10000, () -> proc.getState() == ProcedureState.WAITING_TIMEOUT);
-    confirmBatchSize(regions.size(), stuckRegions, proc);
+
+    // the first batch should be small
+    confirmBatchSize(1, stuckRegions, proc);
     ProcedureSyncWait.waitForProcedureToComplete(procExec, proc, 60_000);
+
+    // other batches should get larger
+    assertTrue(proc.getBatchesProcessed() < regions.size());
+
+    // all regions should only be opened once
+    assertEquals(proc.getRegionsReopened(), regions.size());
+  }
+
+  @Test
+  public void testNegativeBatchSizeDoesNotBreak() throws IOException {
+    AssignmentManager am = UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
+    ProcedureExecutor<MasterProcedureEnv> procExec =
+      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+    List<RegionInfo> regions = UTIL.getAdmin().getRegions(TABLE_NAME);
+    assertTrue(2 <= regions.size());
+    Set<StuckRegion> stuckRegions =
+      regions.stream().map(r -> stickRegion(am, procExec, r)).collect(Collectors.toSet());
+    ReopenTableRegionsProcedure proc =
+      new ReopenTableRegionsProcedure(TABLE_NAME, BACKOFF_MILLIS_PER_RS, -1);
+    procExec.submitProcedure(proc);
+    UTIL.waitFor(10000, () -> proc.getState() == ProcedureState.WAITING_TIMEOUT);
+
+    // the first batch should be small
+    confirmBatchSize(1, stuckRegions, proc);
+    ProcedureSyncWait.waitForProcedureToComplete(procExec, proc, 60_000);
+
+    // other batches should also be small
+    assertTrue(proc.getBatchesProcessed() >= regions.size());
+
+    // all regions should only be opened once
+    assertEquals(proc.getRegionsReopened(), regions.size());
   }
 
   private void confirmBatchSize(int expectedBatchSize, Set<StuckRegion> stuckRegions,
     ReopenTableRegionsProcedure proc) {
     while (true) {
-      List<HRegionLocation> currentRegionBatch = proc.getCurrentRegionBatch();
-      if (currentRegionBatch.isEmpty()) {
+      if (proc.getBatchesProcessed() == 0) {
         continue;
       }
       stuckRegions.forEach(this::unstickRegion);
-      assertEquals(expectedBatchSize, currentRegionBatch.size());
+      UTIL.waitFor(5000, () -> expectedBatchSize == proc.getRegionsReopened());
       break;
     }
   }
