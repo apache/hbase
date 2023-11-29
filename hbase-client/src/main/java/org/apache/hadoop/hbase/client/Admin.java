@@ -1553,7 +1553,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   default void modifyTable(TableDescriptor td) throws IOException {
-    get(modifyTableAsync(td, true), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+    get(modifyTableAsync(td), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -1577,6 +1577,21 @@ public interface Admin extends Abortable, Closeable {
       throw new IllegalArgumentException("the specified table name '" + tableName
         + "' doesn't match with the HTD one: " + td.getTableName());
     }
+    return modifyTableAsync(td);
+  }
+
+  /**
+   * Modify an existing table, more IRB (ruby) friendly version. Asynchronous operation. This means
+   * that it may be a while before your schema change is updated across all of the table. You can
+   * use Future.get(long, TimeUnit) to wait on the operation to complete. It may throw
+   * ExecutionException if there was an error while executing the operation or TimeoutException in
+   * case the wait timeout was not long enough to allow the operation to complete.
+   * @param td description of the table
+   * @throws IOException if a remote or network exception occurs
+   * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete
+   */
+  default Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
     return modifyTableAsync(td, true);
   }
 
