@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -28,21 +32,18 @@ import org.apache.hadoop.hbase.procedure2.*;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.regionserver.FlushRegionCallable;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.FlushRegionParameter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.FlushRegionProcedureStateData;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.util.RetryCounter;
-import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
-import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.FlushRegionParameter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.FlushRegionProcedureStateData;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 @InterfaceAudience.Private
 public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
@@ -80,8 +81,10 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
 
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
     RegionStateNode regionNode = regionStates.getRegionStateNode(region);
-    if(regionNode == null){
-      LOG.warn("Region {} is not in region states, it is very likely that it has been cleared by other procedures such as merge or split, so skip {}...", region, this);
+    if (regionNode == null) {
+      LOG.warn(
+        "Region {} is not in region states, it is very likely that it has been cleared by other procedures such as merge or split, so skip {}...",
+        region, this);
       return null;
     }
     regionNode.lock();
