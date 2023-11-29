@@ -129,6 +129,7 @@ public class TestProcedureRecovery {
       env.waitOnLatch();
       LOG.debug("execute procedure " + this + " step=" + step);
       ProcedureTestingUtility.toggleKillBeforeStoreUpdate(procExecutor);
+      ProcedureTestingUtility.toggleKillBeforeStoreUpdateInRollback(procExecutor);
       step++;
       Threads.sleepWithoutInterrupt(procSleepInterval);
       if (isAborted()) {
@@ -143,6 +144,7 @@ public class TestProcedureRecovery {
     protected void rollback(TestProcEnv env) {
       LOG.debug("rollback procedure " + this + " step=" + step);
       ProcedureTestingUtility.toggleKillBeforeStoreUpdate(procExecutor);
+      ProcedureTestingUtility.toggleKillBeforeStoreUpdateInRollback(procExecutor);
       step++;
     }
 
@@ -360,6 +362,11 @@ public class TestProcedureRecovery {
     }
 
     @Override
+    protected boolean isRollbackSupported(State state) {
+      return true;
+    }
+
+    @Override
     protected void rollbackState(TestProcEnv env, final State state) {
       switch (state) {
         case STATE_1:
@@ -425,8 +432,8 @@ public class TestProcedureRecovery {
 
   @Test
   public void testStateMachineRecovery() throws Exception {
-    ProcedureTestingUtility.setToggleKillBeforeStoreUpdate(procExecutor, true);
-    ProcedureTestingUtility.setKillBeforeStoreUpdate(procExecutor, true);
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExecutor, true);
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdateInRollback(procExecutor, true);
 
     // Step 1 - kill
     Procedure proc = new TestStateMachineProcedure();
@@ -463,8 +470,8 @@ public class TestProcedureRecovery {
 
   @Test
   public void testStateMachineRollbackRecovery() throws Exception {
-    ProcedureTestingUtility.setToggleKillBeforeStoreUpdate(procExecutor, true);
-    ProcedureTestingUtility.setKillBeforeStoreUpdate(procExecutor, true);
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExecutor, true);
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdateInRollback(procExecutor, true);
 
     // Step 1 - kill
     Procedure proc = new TestStateMachineProcedure();
