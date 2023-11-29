@@ -194,6 +194,15 @@ public final class ProcedureTestingUtility {
     assertSingleExecutorForKillTests(procExecutor);
   }
 
+  public static <TEnv> void setKillBeforeStoreUpdateInRollback(ProcedureExecutor<TEnv> procExecutor,
+    boolean value) {
+    createExecutorTesting(procExecutor);
+    procExecutor.testing.killBeforeStoreUpdateInRollback = value;
+    LOG.warn("Set Kill before store update in rollback to: "
+      + procExecutor.testing.killBeforeStoreUpdateInRollback);
+    assertSingleExecutorForKillTests(procExecutor);
+  }
+
   public static <TEnv> void setToggleKillBeforeStoreUpdate(ProcedureExecutor<TEnv> procExecutor,
     boolean value) {
     createExecutorTesting(procExecutor);
@@ -201,10 +210,27 @@ public final class ProcedureTestingUtility {
     assertSingleExecutorForKillTests(procExecutor);
   }
 
+  public static <TEnv> void
+    setToggleKillBeforeStoreUpdateInRollback(ProcedureExecutor<TEnv> procExecutor, boolean value) {
+    createExecutorTesting(procExecutor);
+    procExecutor.testing.toggleKillBeforeStoreUpdateInRollback = value;
+    assertSingleExecutorForKillTests(procExecutor);
+  }
+
   public static <TEnv> void toggleKillBeforeStoreUpdate(ProcedureExecutor<TEnv> procExecutor) {
     createExecutorTesting(procExecutor);
     procExecutor.testing.killBeforeStoreUpdate = !procExecutor.testing.killBeforeStoreUpdate;
     LOG.warn("Set Kill before store update to: " + procExecutor.testing.killBeforeStoreUpdate);
+    assertSingleExecutorForKillTests(procExecutor);
+  }
+
+  public static <TEnv> void
+    toggleKillBeforeStoreUpdateInRollback(ProcedureExecutor<TEnv> procExecutor) {
+    createExecutorTesting(procExecutor);
+    procExecutor.testing.killBeforeStoreUpdateInRollback =
+      !procExecutor.testing.killBeforeStoreUpdateInRollback;
+    LOG.warn("Set Kill before store update to in rollback: "
+      + procExecutor.testing.killBeforeStoreUpdateInRollback);
     assertSingleExecutorForKillTests(procExecutor);
   }
 
@@ -217,8 +243,15 @@ public final class ProcedureTestingUtility {
 
   public static <TEnv> void setKillAndToggleBeforeStoreUpdate(ProcedureExecutor<TEnv> procExecutor,
     boolean value) {
-    ProcedureTestingUtility.setKillBeforeStoreUpdate(procExecutor, value);
-    ProcedureTestingUtility.setToggleKillBeforeStoreUpdate(procExecutor, value);
+    setKillBeforeStoreUpdate(procExecutor, value);
+    setToggleKillBeforeStoreUpdate(procExecutor, value);
+    assertSingleExecutorForKillTests(procExecutor);
+  }
+
+  public static <TEnv> void setKillAndToggleBeforeStoreUpdateInRollback(
+    ProcedureExecutor<TEnv> procExecutor, boolean value) {
+    setKillBeforeStoreUpdateInRollback(procExecutor, value);
+    setToggleKillBeforeStoreUpdateInRollback(procExecutor, value);
     assertSingleExecutorForKillTests(procExecutor);
   }
 
