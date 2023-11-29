@@ -69,6 +69,10 @@ message Procedure {
 
   // whether the procedure need to be bypassed
   optional bool bypass = 17 [default = false];
+
+  // whether the procedure has been executed
+  // since we do not always maintain the stack_id now, we need a separated flag
+  optional bool executed = 18 [default = false];
 }
 
 /**
