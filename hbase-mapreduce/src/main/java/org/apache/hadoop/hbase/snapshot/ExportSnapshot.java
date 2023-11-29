@@ -23,6 +23,7 @@ import java.io.DataOutput;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -211,15 +212,13 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       outputArchive = new Path(outputRoot, HConstants.HFILE_ARCHIVE_DIRECTORY);
 
       try {
-        srcConf.setBoolean("fs." + inputRoot.toUri().getScheme() + ".impl.disable.cache", true);
-        inputFs = FileSystem.get(inputRoot.toUri(), srcConf);
+        inputFs = getUnCachedFileSystem(inputRoot.toUri(), srcConf);
       } catch (IOException e) {
         throw new IOException("Could not get the input FileSystem with root=" + inputRoot, e);
       }
 
       try {
-        destConf.setBoolean("fs." + outputRoot.toUri().getScheme() + ".impl.disable.cache", true);
-        outputFs = FileSystem.get(outputRoot.toUri(), destConf);
+        outputFs = getUnCachedFileSystem(outputRoot.toUri(), destConf);
       } catch (IOException e) {
         throw new IOException("Could not get the output FileSystem with root=" + outputRoot, e);
       }
@@ -990,11 +989,9 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     }
 
     Configuration srcConf = HBaseConfiguration.createClusterConf(conf, null, CONF_SOURCE_PREFIX);
-    srcConf.setBoolean("fs." + inputRoot.toUri().getScheme() + ".impl.disable.cache", true);
-    FileSystem inputFs = FileSystem.get(inputRoot.toUri(), srcConf);
+    FileSystem inputFs = getUnCachedFileSystem(inputRoot.toUri(), srcConf);
     Configuration destConf = HBaseConfiguration.createClusterConf(conf, null, CONF_DEST_PREFIX);
-    destConf.setBoolean("fs." + outputRoot.toUri().getScheme() + ".impl.disable.cache", true);
-    FileSystem outputFs = FileSystem.get(outputRoot.toUri(), destConf);
+    FileSystem outputFs = getUnCachedFileSystem(outputRoot.toUri(), destConf);
     boolean skipTmp = conf.getBoolean(CONF_SKIP_TMP, false)
       || conf.get(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR) != null;
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, inputRoot);
@@ -1153,6 +1150,19 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       IOUtils.closeStream(inputFs);
       IOUtils.closeStream(outputFs);
     }
+  }
+
+  /**
+   * Creates an uncached FileSystem. Typically a call to FileSystem.get will be backed by a cache,
+   * but in this case we pass a param to disable that cache. We will manage closing this FileSystem
+   * at the end of the job.
+   * @param root filesystem root
+   * @param conf base conf to use for creating the filesystem
+   */
+  private static FileSystem getUnCachedFileSystem(URI root, Configuration conf) throws IOException {
+    Configuration confNoCache = new Configuration(conf);
+    confNoCache.setBoolean("fs." + root.getScheme() + ".impl.disable.cache", true);
+    return FileSystem.get(root, confNoCache);
   }
 
   @Override
