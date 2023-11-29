@@ -149,11 +149,6 @@
       <artifactId>reload4j</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-all</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>
@@ -575,11 +570,6 @@
               <artifactId>jsr311-api</artifactId>
             </exclusion>
           </exclusions>
-        </dependency>
-        <dependency>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-all</artifactId>
-          <scope>test</scope>
         </dependency>
       </dependencies>
       <build>

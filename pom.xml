@@ -607,7 +607,6 @@
     <kerby.version>2.0.3</kerby.version>
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>5.4.0.7.3.0.0-SNAPSHOT</curator.version>
-    <netty-for-minihdfs.version>4.1.100.Final</netty-for-minihdfs.version>
     <!-- Plugin Dependencies -->
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
@@ -1461,12 +1460,6 @@
             <artifactId>javax.activation-api</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>io.netty</groupId>
-        <artifactId>netty-all</artifactId>
-        <version>${netty-for-minihdfs.version}</version>
-        <scope>test</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>

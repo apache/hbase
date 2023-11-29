@@ -259,11 +259,6 @@
       <artifactId>reload4j</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-all</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
   <build>
     <!-- Makes sure the resources get added before they are processed
@@ -539,11 +534,6 @@
           <groupId>org.glassfish.jaxb</groupId>
           <artifactId>jaxb-runtime</artifactId>
           <version>2.3.2</version>
-        </dependency>
-        <dependency>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-all</artifactId>
-          <scope>test</scope>
         </dependency>
       </dependencies>
     </profile>
