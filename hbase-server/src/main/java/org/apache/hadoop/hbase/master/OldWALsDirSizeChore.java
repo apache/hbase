@@ -29,13 +29,13 @@ import org.slf4j.LoggerFactory;
  * the {@link MasterWalManager#updateOldWALsDirSize()} method.
  */
 @InterfaceAudience.Private
-public class OldWALsDirSizeUpdaterChore extends ScheduledChore {
-  private static final Logger LOG = LoggerFactory.getLogger(OldWALsDirSizeUpdaterChore.class);
+public class OldWALsDirSizeChore extends ScheduledChore {
+  private static final Logger LOG = LoggerFactory.getLogger(OldWALsDirSizeChore.class);
 
-  private final HMaster master;
+  private final MasterServices master;
 
-  public OldWALsDirSizeUpdaterChore(HMaster master) {
-    super(master.getServerName() + "-OldWALsDirSizeUpdaterChore", master,
+  public OldWALsDirSizeChore(MasterServices master) {
+    super(master.getServerName() + "-OldWALsDirSizeChore", master,
       master.getConfiguration().getInt(HConstants.HBASE_OLDWAL_DIR_SIZE_UPDATER_PERIOD,
         HConstants.DEFAULT_HBASE_OLDWAL_DIR_SIZE_UPDATER_PERIOD));
     this.master = master;

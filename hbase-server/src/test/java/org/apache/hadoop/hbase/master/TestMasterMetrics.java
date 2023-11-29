@@ -190,4 +190,11 @@ public class TestMasterMetrics {
     MetricsMasterProcSource masterSource = master.getMasterMetrics().getMetricsProcSource();
     metricsHelper.assertGauge("numMasterWALs", master.getNumWALFiles(), masterSource);
   }
+
+  @Test
+  public void testOldWALsDirSizeMetrics() {
+    MetricsMasterProcSource masterSource = master.getMasterMetrics().getMetricsProcSource();
+    metricsHelper.assertGauge("oldWALsDirSize", master.getMasterWalManager().getOldWALsDirSize(),
+      masterSource);
+  }
 }

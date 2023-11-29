@@ -92,9 +92,6 @@ public class MasterWalManager {
   // old WALs directory size in bytes
   private long oldWALsDirSize;
 
-  // old WALs directory size calculation interval
-  private final int OLD_WAL_DIR_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 mins
-
   /**
    * Superceded by {@link SplitWALManager}; i.e. procedure-based WAL splitting rather than 'classic'
    * zk-coordinated WAL splitting.
