@@ -5806,6 +5806,36 @@ public class TestHRegion {
     }
   }
 
+  @Test
+  public void testFlushWithSpecifiedFamily() throws IOException {
+    byte[] family = Bytes.toBytes("family");
+    this.region = initHRegion(tableName, method, family);
+
+    Put put = new Put(tableName.toBytes()).addColumn(family, family, tableName.toBytes());
+    this.region.put(put);
+
+    HRegion.FlushResult fr =
+      this.region.flushcache(Arrays.asList(family), false, FlushLifeCycleTracker.DUMMY);
+    assertFalse(fr.isFlushSucceeded());
+    assertFalse(fr.isCompactionNeeded());
+  }
+
+  @Test
+  public void testFlushWithSpecifiedNoSuchFamily() throws IOException {
+    byte[] family = Bytes.toBytes("family");
+    byte[] noSuchFamily = Bytes.toBytes("noSuchFamily");
+    this.region = initHRegion(tableName, method, family);
+
+    Put put = new Put(tableName.toBytes()).addColumn(family, family, tableName.toBytes());
+    this.region.put(put);
+
+    HRegion.FlushResult fr =
+      this.region.flushcache(Arrays.asList(noSuchFamily), false, FlushLifeCycleTracker.DUMMY);
+    LOG.error(fr.getResult().toString());
+    assertFalse(fr.isFlushSucceeded());
+    assertFalse(fr.isCompactionNeeded());
+  }
+
   protected Configuration initSplit() {
     // Always compact if there is more than one store file.
     CONF.setInt("hbase.hstore.compactionThreshold", 2);
