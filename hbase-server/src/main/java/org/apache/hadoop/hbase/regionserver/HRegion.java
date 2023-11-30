@@ -2597,7 +2597,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private Collection<HStore> getSpecificStores(List<byte[]> families) {
     Collection<HStore> specificStoresToFlush = new ArrayList<>();
     for (byte[] family : families) {
-      specificStoresToFlush.add(stores.get(family));
+      if (stores.keySet().contains(family)) {
+        specificStoresToFlush.add(stores.get(family));
+      }
     }
     return specificStoresToFlush;
   }
