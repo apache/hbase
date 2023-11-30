@@ -522,7 +522,7 @@
     </site>
   </distributionManagement>
   <properties>
-    <revision>2.6.0-SNAPSHOT</revision>
+    <revision>2.7.0-SNAPSHOT</revision>
     <!-- override on command line to have generated LICENSE files include
          diagnostic info for verifying notice requirements -->
     <license.debug.print.included>false</license.debug.print.included>
