@@ -116,12 +116,9 @@ public class TestReopenTableRegionsProcedureBatching {
     procExec.submitProcedure(proc);
     UTIL.waitFor(10000, () -> proc.getState() == ProcedureState.WAITING_TIMEOUT);
 
-    // the first batch should be small
-    confirmBatchSize(1, stuckRegions, proc);
+    // the first batch should be large
+    confirmBatchSize(regions.size(), stuckRegions, proc);
     ProcedureSyncWait.waitForProcedureToComplete(procExec, proc, 60_000);
-
-    // other batches should get larger
-    assertTrue(proc.getBatchesProcessed() < regions.size());
 
     // all regions should only be opened once
     assertEquals(proc.getRegionsReopened(), regions.size());

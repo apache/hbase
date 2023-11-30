@@ -54,12 +54,12 @@ public class ReopenTableRegionsProcedure
 
   private static final Logger LOG = LoggerFactory.getLogger(ReopenTableRegionsProcedure.class);
 
-  public static final String REOPEN_BATCH_BACKOFF_MILLIS_KEY =
-    "hbase.table.regions.reopen.batch.backoff.ms";
-  public static final long REOPEN_BATCH_BACKOFF_MILLIS_DEFAULT = 0L;
-  public static final String REOPEN_BATCH_SIZE_MAX_KEY =
-    "hbase.table.regions.reopen.batch.size.max";
-  public static final int REOPEN_BATCH_SIZE_MAX_DEFAULT = Integer.MAX_VALUE;
+  public static final String PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY =
+    "hbase.reopen.table.regions.progressive.batch.backoff.ms";
+  public static final long PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT = 0L;
+  public static final String PROGRESSIVE_BATCH_SIZE_MAX_KEY =
+    "hbase.reopen.table.regions.progressive.batch.size.max";
+  public static final int PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT = Integer.MAX_VALUE;
 
   // this minimum prevents a max which would break this procedure
   private static final int MINIMUM_BATCH_SIZE_MAX = 1;
@@ -91,8 +91,8 @@ public class ReopenTableRegionsProcedure
   }
 
   public ReopenTableRegionsProcedure(final TableName tableName, final List<byte[]> regionNames) {
-    this(tableName, regionNames, REOPEN_BATCH_BACKOFF_MILLIS_DEFAULT,
-      REOPEN_BATCH_SIZE_MAX_DEFAULT);
+    this(tableName, regionNames, PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT,
+      PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT);
   }
 
   public ReopenTableRegionsProcedure(final TableName tableName, long reopenBatchBackoffMillis,
@@ -105,7 +105,9 @@ public class ReopenTableRegionsProcedure
     this.tableName = tableName;
     this.regionNames = regionNames;
     this.reopenBatchBackoffMillis = reopenBatchBackoffMillis;
-    this.reopenBatchSize = 1;
+    this.reopenBatchSize = reopenBatchSizeMax != PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT
+      ? 1
+      : PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT;
     this.reopenBatchSizeMax = Math.max(reopenBatchSizeMax, MINIMUM_BATCH_SIZE_MAX);
   }
 
@@ -220,8 +222,8 @@ public class ReopenTableRegionsProcedure
     if (regionsToReopen.stream().anyMatch(loc -> canSchedule(env, loc))) {
       retryCounter = null;
       setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
-      reopenBatchSize = Math.min(reopenBatchSizeMax, 2 * reopenBatchSize);
       if (shouldBatchBackoff && reopenBatchBackoffMillis > 0) {
+        reopenBatchSize = Math.min(reopenBatchSizeMax, 2 * reopenBatchSize);
         setBackoffState(reopenBatchBackoffMillis);
         throw new ProcedureSuspendedException();
       } else {
