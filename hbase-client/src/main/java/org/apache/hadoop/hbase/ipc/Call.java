@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
@@ -56,14 +57,15 @@ class Call {
   final Descriptors.MethodDescriptor md;
   final int timeout; // timeout in millisecond for this call; 0 means infinite.
   final int priority;
+  final Map<String, byte[]> attributes;
   final MetricsConnection.CallStats callStats;
   private final RpcCallback<Call> callback;
   final Span span;
   Timeout timeoutTask;
 
   Call(int id, final Descriptors.MethodDescriptor md, Message param, final CellScanner cells,
-    final Message responseDefaultType, int timeout, int priority, RpcCallback<Call> callback,
-    MetricsConnection.CallStats callStats) {
+    final Message responseDefaultType, int timeout, int priority, Map<String, byte[]> attributes,
+    RpcCallback<Call> callback, MetricsConnection.CallStats callStats) {
     this.param = param;
     this.md = md;
     this.cells = cells;
@@ -73,6 +75,7 @@ class Call {
     this.id = id;
     this.timeout = timeout;
     this.priority = priority;
+    this.attributes = attributes;
     this.callback = callback;
     this.span = Span.current();
   }

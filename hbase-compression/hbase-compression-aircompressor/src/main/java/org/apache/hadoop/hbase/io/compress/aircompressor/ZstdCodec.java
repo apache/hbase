@@ -54,14 +54,17 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   public static final int ZSTD_BUFFER_SIZE_DEFAULT = 256 * 1024;
 
   private Configuration conf;
+  private int bufferSize;
 
   public ZstdCodec() {
     conf = new Configuration();
+    bufferSize = getBufferSize(conf);
   }
 
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+    this.bufferSize = getBufferSize(conf);
   }
 
   @Override
@@ -87,7 +90,7 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   @Override
   public CompressionInputStream createInputStream(InputStream in, Decompressor d)
     throws IOException {
-    return new BlockDecompressorStream(in, d, getBufferSize(conf));
+    return new BlockDecompressorStream(in, d, bufferSize);
   }
 
   @Override
@@ -98,7 +101,6 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out, Compressor c)
     throws IOException {
-    int bufferSize = getBufferSize(conf);
     return new BlockCompressorStream(out, c, bufferSize,
       CompressionUtil.compressionOverhead(bufferSize));
   }

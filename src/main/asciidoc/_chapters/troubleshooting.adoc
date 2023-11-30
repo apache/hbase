@@ -1566,3 +1566,25 @@ then check if you compiled with jdk8 and tried to run it on jdk7.
 If so, this won't work.
 Run on jdk8 or recompile with jdk7.
 See link:https://issues.apache.org/jira/browse/HBASE-10607[HBASE-10607 JDK8 NoSuchMethodError involving ConcurrentHashMap.keySet if running on JRE 7].
+
+=== Full gc caused by mslab when using G1
+
+The default size of chunk used by mslab is 2MB, when using G1, if heapRegionSize equals 4MB, these chunks are allocated as humongous objects, exclusively allocating one region, then the remaining 2MB become memory fragment.
+
+Lots of memory fragment may lead to full gc even if the percent of used heap not high enough.
+
+The G1HeapRegionSize calculated by initial_heap_size and max_heap_size, here are some cases for better understand:
+
+- xmx=10G -&gt; region size 2M
+- xms=10G, xmx=10G -&gt; region size 4M
+- xmx=20G -&gt; region size 4M
+- xms=20G, xmx=20G -&gt; region size 8M
+- xmx=30G -&gt; region size 4M
+- xmx=32G -&gt; region size 8M
+
+You can avoid this problem by reducing the chunk size a bit to 2047KB as below.
+
+----
+hbase.hregion.memstore.mslab.chunksize 2096128
+----
+

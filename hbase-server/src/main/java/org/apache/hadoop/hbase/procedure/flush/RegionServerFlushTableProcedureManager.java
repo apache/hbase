@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.procedure.ZKProcedureMemberRpcs;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -50,6 +51,7 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -129,7 +131,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
    * of a race where regions may be missed.
    * @return Subprocedure to submit to the ProcedureMember.
    */
-  public Subprocedure buildSubprocedure(String table, String family) {
+  public Subprocedure buildSubprocedure(String table, List<String> families) {
 
     // don't run the subprocedure if the parent is stop(ping)
     if (rss.isStopping() || rss.isStopped()) {
@@ -159,7 +161,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
     FlushTableSubprocedurePool taskManager =
       new FlushTableSubprocedurePool(rss.getServerName().toString(), conf, rss);
     return new FlushTableSubprocedure(member, exnDispatcher, wakeMillis, timeoutMillis,
-      involvedRegions, table, family, taskManager);
+      involvedRegions, table, families, taskManager);
   }
 
   /**
@@ -175,19 +177,19 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
 
     @Override
     public Subprocedure buildSubprocedure(String name, byte[] data) {
-      String family = null;
-      // Currently we do not put other data except family, so it is ok to
-      // judge by length that if family was specified
+      List<String> families = null;
+      // Currently we do not put other data except families, so it is ok to
+      // judge by length that if families were specified
       if (data.length > 0) {
         try {
           HBaseProtos.NameStringPair nsp = HBaseProtos.NameStringPair.parseFrom(data);
-          family = nsp.getValue();
+          families = ImmutableList.copyOf(Strings.SPLITTER.split(nsp.getValue()));
         } catch (Exception e) {
-          LOG.error("fail to get family by parsing from data", e);
+          LOG.error("fail to get families by parsing from data", e);
         }
       }
       // The name of the procedure instance from the master is the table name.
-      return RegionServerFlushTableProcedureManager.this.buildSubprocedure(name, family);
+      return RegionServerFlushTableProcedureManager.this.buildSubprocedure(name, families);
     }
 
   }

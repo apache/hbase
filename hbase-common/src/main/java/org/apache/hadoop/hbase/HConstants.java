@@ -326,6 +326,11 @@ public final class HConstants {
   public static final String COMPACTION_KV_MAX = "hbase.hstore.compaction.kv.max";
   public static final int COMPACTION_KV_MAX_DEFAULT = 10;
 
+  /** Parameter name for the scanner size limit to be used in compactions */
+  public static final String COMPACTION_SCANNER_SIZE_MAX =
+    "hbase.hstore.compaction.scanner.size.limit";
+  public static final long COMPACTION_SCANNER_SIZE_MAX_DEFAULT = 10 * 1024 * 1024L; // 10MB
+
   /** Parameter name for HBase instance root directory */
   public static final String HBASE_DIR = "hbase.rootdir";
 
@@ -1331,6 +1336,18 @@ public final class HConstants {
   public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
 
   /**
+   * If the chosen ioengine can persist its state across restarts, the path to the file to persist
+   * to. This file is NOT the data file. It is a file into which we will serialize the map of what
+   * is in the data file. For example, if you pass the following argument as
+   * BUCKET_CACHE_IOENGINE_KEY ("hbase.bucketcache.ioengine"),
+   * <code>file:/tmp/bucketcache.data </code>, then we will write the bucketcache data to the file
+   * <code>/tmp/bucketcache.data</code> but the metadata on where the data is in the supplied file
+   * is an in-memory map that needs to be persisted across restarts. Where to store this in-memory
+   * state is what you supply here: e.g. <code>/tmp/bucketcache.map</code>.
+   */
+  public static final String BUCKET_CACHE_PERSISTENT_PATH_KEY = "hbase.bucketcache.persistent.path";
+
+  /**
    * HConstants for fast fail on the client side follow
    */
   /**
@@ -1563,6 +1580,9 @@ public final class HConstants {
     "hbase.slowlog.systable.chore.duration";
   // Default 10 mins.
   public static final int DEFAULT_SLOW_LOG_SYS_TABLE_CHORE_DURATION = 10 * 60 * 1000;
+
+  public static final String SLOW_LOG_SCAN_PAYLOAD_ENABLED = "hbase.slowlog.scan.payload.enabled";
+  public static final boolean SLOW_LOG_SCAN_PAYLOAD_ENABLED_DEFAULT = false;
 
   public static final String SHELL_TIMESTAMP_FORMAT_EPOCH_KEY =
     "hbase.shell.timestamp.format.epoch";

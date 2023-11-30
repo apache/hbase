@@ -42,7 +42,9 @@ public final class ThrottleQuotaTestUtil {
   private final static int REFRESH_TIME = 30 * 60000;
   static {
     envEdge.setValue(EnvironmentEdgeManager.currentTime());
-    EnvironmentEdgeManagerTestHelper.injectEdge(envEdge);
+    // only active the envEdge for quotas package
+    EnvironmentEdgeManagerTestHelper.injectEdgeForPackage(envEdge,
+      ThrottleQuotaTestUtil.class.getPackage().getName());
   }
 
   private ThrottleQuotaTestUtil() {

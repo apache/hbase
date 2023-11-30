@@ -621,7 +621,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
         heap.recordBlockSize(blockSize -> {
           if (rpcCall.isPresent()) {
-            rpcCall.get().incrementResponseBlockSize(blockSize);
+            rpcCall.get().incrementBlockBytesScanned(blockSize);
           }
           scannerContext.incrementBlockProgress(blockSize);
         });
@@ -935,7 +935,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // We need this check because it may happen that the new scanner that we get
     // during heap.next() is requiring reseek due of fake KV previously generated for
     // ROWCOL bloom filter optimization. See HBASE-19863 for more details
-    if (useRowColBloom && nextCell != null && matcher.compareKeyForNextColumn(nextCell, cell) < 0) {
+    if (
+      useRowColBloom && nextCell != null && cell.getTimestamp() == PrivateConstants.OLDEST_TIMESTAMP
+    ) {
       return false;
     }
     return true;

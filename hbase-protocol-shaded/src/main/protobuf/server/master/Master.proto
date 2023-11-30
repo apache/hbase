@@ -137,6 +137,16 @@ message SplitTableRegionResponse {
   optional uint64 proc_id = 1;
 }
 
+message TruncateRegionRequest {
+  required RegionInfo region_info = 1;
+  optional uint64 nonce_group = 2 [default = 0];
+  optional uint64 nonce = 3 [default = 0];
+}
+
+message TruncateRegionResponse {
+  optional uint64 proc_id = 1;
+}
+
 message CreateTableRequest {
   required TableSchema table_schema = 1;
   repeated bytes split_keys = 2;
@@ -194,9 +204,21 @@ message ModifyTableRequest {
   required TableSchema table_schema = 2;
   optional uint64 nonce_group = 3 [default = 0];
   optional uint64 nonce = 4 [default = 0];
+  optional bool reopen_regions = 5 [default = true];
 }
 
 message ModifyTableResponse {
+  optional uint64 proc_id = 1;
+}
+
+message FlushTableRequest {
+  required TableName table_name = 1;
+  repeated bytes column_family = 2;
+  optional uint64 nonce_group = 3 [default = 0];
+  optional uint64 nonce = 4 [default = 0];
+}
+
+message FlushTableResponse {
   optional uint64 proc_id = 1;
 }
 
@@ -853,6 +875,12 @@ service MasterService {
   rpc SplitRegion(SplitTableRegionRequest)
     returns(SplitTableRegionResponse);
 
+  /**
+   * Truncate region
+   */
+  rpc TruncateRegion(TruncateRegionRequest)
+    returns(TruncateRegionResponse);
+
   /** Deletes a table */
   rpc DeleteTable(DeleteTableRequest)
     returns(DeleteTableResponse);
@@ -1133,6 +1161,15 @@ service MasterService {
   rpc IsReplicationPeerEnabled(GetReplicationPeerStateRequest)
     returns(GetReplicationPeerStateResponse);
 
+  rpc ReplicationPeerModificationSwitch(ReplicationPeerModificationSwitchRequest)
+    returns(ReplicationPeerModificationSwitchResponse);
+
+  rpc GetReplicationPeerModificationProcedures(GetReplicationPeerModificationProceduresRequest)
+    returns(GetReplicationPeerModificationProceduresResponse);
+
+  rpc IsReplicationPeerModificationEnabled(IsReplicationPeerModificationEnabledRequest)
+    returns(IsReplicationPeerModificationEnabledResponse);
+
   /** Returns a list of ServerNames marked as decommissioned. */
   rpc ListDecommissionedRegionServers(ListDecommissionedRegionServersRequest)
     returns(ListDecommissionedRegionServersResponse);
@@ -1230,6 +1267,9 @@ service MasterService {
 
   rpc FlushMasterStore(FlushMasterStoreRequest)
     returns(FlushMasterStoreResponse);
+
+  rpc FlushTable(FlushTableRequest)
+    returns(FlushTableResponse);
 }
 
 // HBCK Service definitions.

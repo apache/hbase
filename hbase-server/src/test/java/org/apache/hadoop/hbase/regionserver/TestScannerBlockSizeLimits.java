@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -69,10 +70,7 @@ public class TestScannerBlockSizeLimits {
   private static final byte[] COLUMN1 = Bytes.toBytes(0);
   private static final byte[] COLUMN2 = Bytes.toBytes(1);
   private static final byte[] COLUMN3 = Bytes.toBytes(2);
-  private static final byte[] COLUMN4 = Bytes.toBytes(4);
   private static final byte[] COLUMN5 = Bytes.toBytes(5);
-
-  private static final byte[][] COLUMNS = new byte[][] { COLUMN1, COLUMN2 };
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -83,6 +81,15 @@ public class TestScannerBlockSizeLimits {
     createTestData();
   }
 
+  @Before
+  public void setupEach() throws Exception {
+    HRegionServer regionServer = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+    for (HRegion region : regionServer.getRegions(TABLE)) {
+      System.out.println("Clearing cache for region " + region.getRegionInfo().getEncodedName());
+      regionServer.clearRegionBlockCache(region);
+    }
+  }
+
   private static void createTestData() throws IOException, InterruptedException {
     RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(TABLE);
     String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
@@ -91,12 +98,13 @@ public class TestScannerBlockSizeLimits {
     for (int i = 1; i < 10; i++) {
       // 5 columns per row, in 2 families
       // Each column value is 1000 bytes, which is enough to fill a full block with row and header.
-      // So 5 blocks per row.
+      // So 5 blocks per row in FAMILY1
       Put put = new Put(Bytes.toBytes(i));
       for (int j = 0; j < 6; j++) {
         put.addColumn(FAMILY1, Bytes.toBytes(j), DATA);
       }
 
+      // Additional block in FAMILY2 (notably smaller than block size)
       put.addColumn(FAMILY2, COLUMN1, DATA);
 
       region.put(put);
@@ -128,6 +136,8 @@ public class TestScannerBlockSizeLimits {
 
     scanner.next(100);
 
+    // we fetch 2 columns from 1 row, so about 2 blocks
+    assertEquals(4120, metrics.countOfBlockBytesScanned.get());
     assertEquals(1, metrics.countOfRowsScanned.get());
     assertEquals(1, metrics.countOfRPCcalls.get());
   }
@@ -150,6 +160,8 @@ public class TestScannerBlockSizeLimits {
       .addColumn(FAMILY1, COLUMN2).addColumn(FAMILY1, COLUMN3).addFamily(FAMILY2)
       .setFilter(new RowFilter(CompareOperator.NOT_EQUAL, new BinaryComparator(Bytes.toBytes(2)))));
 
+    ScanMetrics metrics = scanner.getScanMetrics();
+
     boolean foundRow3 = false;
     for (Result result : scanner) {
       Set<Integer> rows = new HashSet<>();
@@ -163,10 +175,11 @@ public class TestScannerBlockSizeLimits {
         foundRow3 = true;
       }
     }
-    ScanMetrics metrics = scanner.getScanMetrics();
 
-    // 4 blocks per row, so 36 blocks. We can scan 3 blocks per RPC, which is 12 RPCs. But we can
-    // skip 1 row, so skip 2 RPCs.
+    // 22 blocks, last one is 1030 bytes (approx 3 per row for 8 rows, but some compaction happens
+    // in family2 since each row only has 1 cell there and 2 can fit per block)
+    assertEquals(44290, metrics.countOfBlockBytesScanned.get());
+    // We can return 22 blocks in 9 RPCs, but need an extra one to check for more rows at end
     assertEquals(10, metrics.countOfRPCcalls.get());
   }
 
@@ -192,6 +205,7 @@ public class TestScannerBlockSizeLimits {
     ScanMetrics metrics = scanner.getScanMetrics();
 
     // scanning over 9 rows, filtering on 2 contiguous columns each, so 9 blocks total
+    assertEquals(18540, metrics.countOfBlockBytesScanned.get());
     // limited to 4200 bytes per which is enough for 3 blocks (exceed limit after loading 3rd)
     // so that's 3 RPC and the last RPC pulls the cells loaded by the last block
     assertEquals(4, metrics.countOfRPCcalls.get());
@@ -216,9 +230,11 @@ public class TestScannerBlockSizeLimits {
       }
     }
     ScanMetrics metrics = scanner.getScanMetrics();
+    System.out.println(metrics.countOfBlockBytesScanned.get());
 
-    // We will return 9 rows, but also 2 cursors because we exceed the scan size limit partway
-    // through. So that accounts for 11 rpcs.
+    // 9 rows, total of 32 blocks (last one is 1030)
+    assertEquals(64890, metrics.countOfBlockBytesScanned.get());
+    // We can return 32 blocks in approx 11 RPCs but we need 2 cursors due to the narrow filter
     assertEquals(2, cursors);
     assertEquals(11, metrics.countOfRPCcalls.get());
   }
@@ -247,8 +263,9 @@ public class TestScannerBlockSizeLimits {
     ScanMetrics metrics = scanner.getScanMetrics();
 
     // Our filter causes us to read the first column of each row, then INCLUDE_AND_SEEK_NEXT_ROW.
-    // So we load 1 block per row, and there are 9 rows. Our max scan size is large enough to
-    // return 2 full blocks, with some overflow. So we are able to squeeze this all into 4 RPCs.
+    // So we load 1 block per row, and there are 9 rows. So 9 blocks
+    assertEquals(18540, metrics.countOfBlockBytesScanned.get());
+    // We can return 9 blocks in 3 RPCs, but need 1 more to check for more results (returns 0)
     assertEquals(4, metrics.countOfRPCcalls.get());
   }
 
@@ -266,8 +283,9 @@ public class TestScannerBlockSizeLimits {
     ScanMetrics metrics = scanner.getScanMetrics();
 
     // We have to read the first cell/block of each row, then can skip to the last block. So that's
-    // 2 blocks per row to read (18 total). Our max scan size is enough to read 3 blocks per RPC,
-    // plus one final RPC to finish region.
+    // 2 blocks per row to read (18 blocks total)
+    assertEquals(37080, metrics.countOfBlockBytesScanned.get());
+    // Our max scan size is enough to read 3 blocks per RPC, plus one final RPC to finish region.
     assertEquals(7, metrics.countOfRPCcalls.get());
   }
 

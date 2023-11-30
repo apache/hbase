@@ -940,6 +940,21 @@ public class TestMasterProcedureScheduler {
     }
   }
 
+  public static class TestGlobalProcedure extends TestProcedure
+    implements GlobalProcedureInterface {
+    private final String globalId;
+
+    public TestGlobalProcedure(long procId, String globalId) {
+      super(procId);
+      this.globalId = globalId;
+    }
+
+    @Override
+    public String getGlobalId() {
+      return globalId;
+    }
+  }
+
   private static LockProcedure createLockProcedure(LockType lockType, long procId)
     throws Exception {
     LockProcedure procedure = new LockProcedure();
@@ -1087,6 +1102,39 @@ public class TestMasterProcedureScheduler {
 
     resource = locks.get(0);
     assertLockResource(resource, LockedResourceType.PEER, peerId);
+    // LockedResource owner still is the origin procedure
+    assertExclusiveLock(resource, procedure);
+    // The new procedure should in the waiting list
+    assertEquals(1, resource.getWaitingProcedures().size());
+  }
+
+  @Test
+  public void testListLocksGlobal() throws Exception {
+    String globalId = "1";
+    LockProcedure procedure = createExclusiveLockProcedure(4);
+    queue.waitGlobalExclusiveLock(procedure, globalId);
+
+    List<LockedResource> locks = queue.getLocks();
+    assertEquals(1, locks.size());
+
+    LockedResource resource = locks.get(0);
+    assertLockResource(resource, LockedResourceType.GLOBAL, globalId);
+    assertExclusiveLock(resource, procedure);
+    assertTrue(resource.getWaitingProcedures().isEmpty());
+
+    // Try to acquire the exclusive lock again with same procedure
+    assertFalse(queue.waitGlobalExclusiveLock(procedure, globalId));
+
+    // Try to acquire the exclusive lock again with new procedure
+    LockProcedure procedure2 = createExclusiveLockProcedure(5);
+    assertTrue(queue.waitGlobalExclusiveLock(procedure2, globalId));
+
+    // Same peerId, still only has 1 LockedResource
+    locks = queue.getLocks();
+    assertEquals(1, locks.size());
+
+    resource = locks.get(0);
+    assertLockResource(resource, LockedResourceType.GLOBAL, globalId);
     // LockedResource owner still is the origin procedure
     assertExclusiveLock(resource, procedure);
     // The new procedure should in the waiting list

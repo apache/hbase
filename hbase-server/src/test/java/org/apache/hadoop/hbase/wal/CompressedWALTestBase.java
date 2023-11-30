@@ -97,7 +97,7 @@ public class CompressedWALTestBase {
     wals.shutdown();
 
     // Confirm the WAL can be read back
-    try (WAL.Reader reader = wals.createReader(TEST_UTIL.getTestFileSystem(), walPath)) {
+    try (WALStreamReader reader = wals.createStreamReader(TEST_UTIL.getTestFileSystem(), walPath)) {
       int count = 0;
       WAL.Entry entry = new WAL.Entry();
       while (reader.next(entry) != null) {

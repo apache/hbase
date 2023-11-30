@@ -71,6 +71,19 @@ See Nick Dimiduk's contribution on this link:http://stackoverflow.com/questions/
 If you know how to fix this without opening a second port for HTTPS, patches are appreciated.
 ====
 
+[[hbase.ui.cache]]
+=== Disable cache in HBase UI
+
+Set the following configuration in hbase-site to set max age to zero and disable cache for the web UI:
+
+[source,xml]
+----
+<property>
+  <name>hbase.http.filter.no-store.enable</name>
+  <value>true</value>
+</property>
+----
+
 [[hbase.secure.spnego.ui]]
 === Using SPNEGO for Kerberos authentication with Web UIs
 
@@ -185,6 +198,64 @@ non-sensitive endpoints in the Web UI.
 
 If it doesn't go without saying: non-authenticated users cannot access any part of the Web UI.
 
+[[hbase.secure.ldap.ui]]
+=== Using LDAP authentication with Web UIs
+
+LDAP authentication to HBase Web UIs can be enabled via configuring LDAP with the `hbase.security.authentication.ui`
+property in _hbase-site.xml_. The `hbase.http.filter.initializers` property also needs to have the `AuthenticationFilterInitializer` class.
+
+*IMPORTANT:* A LDAP server must be configured and running. When TLS is enabled for communication with LDAP server (either via ldaps scheme or ‘start TLS’ extension), configure the public certificate of the LDAP server in the local truststore.
+The LDAP authentication mechanism uses HTTP Basic authentication scheme to verify user specified credentials against a configured LDAP (or Active Directory) server. The authentication filter must be configured with the following init parameters:
+
+[source,xml]
+----
+<property>
+  <name>hbase.security.authentication.ui</name>
+  <value>ldap</value>
+  <description>Controls what kind of authentication should be used for the HBase web UIs.</description>
+</property>
+<property>
+  <name>hbase.http.filter.initializers</name>
+  <value>org.apache.hadoop.hbase.http.lib.AuthenticationFilterInitializer</value>
+  <description>Comma separated class names corresponding to the Filters that will be initialized.
+  Then, the Filters will be applied to all user facing jsp and servlet web pages.</description>
+</property>
+<property>
+  <name>hadoop.http.authentication.type</name>
+  <value>ldap</value>
+  <description>Defines authentication used for the HTTP web-consoles in Hadoop ecosystem.</description>
+</property>
+----
+
+A number of properties exist to configure LDAP authentication for the web server:
+
+[source,xml]
+----
+<property>
+  <name>hadoop.http.authentication.ldap.binddomain</name>
+  <value>EXAMPLE.COM</value>
+  <description>The LDAP bind domain value to be used with the LDAP server. This property is optional
+   and useful only in case of Active Directory server (e.g. example.com).</description>
+</property>
+<property>
+  <name>hadoop.http.authentication.ldap.providerurl</name>
+  <value>ldap://ldap-server-host:8920</value>
+  <description>The url of the LDAP server.</description>
+</property>
+<property>
+  <name>hadoop.http.authentication.ldap.enablestarttls</name>
+  <value>false</value>
+  <description>A boolean value used to define if the LDAP server supports ‘StartTLS’ extension.</description>
+</property>
+<property>
+  <name>hadoop.http.authentication.ldap.basedn</name>
+  <value>ou=users,dc=example,dc=com</value>
+  <description>The base distinguished name (DN) to be used with the LDAP server. This value is
+  appended to the provided user id for authentication purpose. This property is not useful in case
+  of Active Directory server.</description>
+</property>
+----
+
 === Other UI security-related configuration
 
 While it is a clear anti-pattern for HBase developers, the developers acknowledge that the HBase
@@ -200,6 +271,15 @@ Users who wish to change this would set the following in their hbase-site.xml:
 <property>
   <name>hbase.security.authentication.ui.config.protected</name>
   <value>true</value>
+</property>
+----
+
+To disable showing stack traces in HBase UI for hiding sensitive information, set the following in hbase-site:
+[source,xml]
+----
+<property>
+  <name>hbase.ui.show-stack-traces</name>
+  <value>false</value>
 </property>
 ----
 
@@ -2027,6 +2107,8 @@ You can include these in the HMaster's _hbase-site.xml_ as well, but the HMaster
 </property>
 ----
 
+NOTE: Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify them any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL encryption.
+
 . (Optional) Configure encryption key hash algorithm.
 +
 Since link:https://issues.apache.org/jira/browse/HBASE-25181[HBASE-25181] it is possible to use
@@ -2257,6 +2339,8 @@ All options have been discussed separately in the sections above.
 </property>
 ----
 ====
+
+NOTE: Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify them any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL encryption.
 
 .Example Group Mapper in Hadoop _core-site.xml_
 ====

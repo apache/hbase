@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
@@ -298,12 +299,17 @@ public class TestBucketCache {
     testRetrievalUtils(testDir, ioEngineName);
     int[] smallBucketSizes = new int[] { 3 * 1024, 5 * 1024 };
     String persistencePath = testDir + "/bucket.persistence";
-    BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
-      smallBucketSizes, writeThreads, writerQLen, persistencePath);
-    assertFalse(new File(persistencePath).exists());
-    assertEquals(0, bucketCache.getAllocator().getUsedSize());
-    assertEquals(0, bucketCache.backingMap.size());
-    HBASE_TESTING_UTILITY.cleanupTestDir();
+    BucketCache bucketCache = null;
+    try {
+      bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        smallBucketSizes, writeThreads, writerQLen, persistencePath);
+      assertFalse(new File(persistencePath).exists());
+      assertEquals(0, bucketCache.getAllocator().getUsedSize());
+      assertEquals(0, bucketCache.backingMap.size());
+    } finally {
+      bucketCache.shutdown();
+      HBASE_TESTING_UTILITY.cleanupTestDir();
+    }
   }
 
   @Test
@@ -319,21 +325,28 @@ public class TestBucketCache {
     final String ioEngineName = "pmem:" + testDir + "/bucket.cache";
     testRetrievalUtils(testDir, ioEngineName);
     int[] smallBucketSizes = new int[] { 3 * 1024, 5 * 1024 };
-    String persistencePath = testDir + "/bucket.persistence";
-    BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
-      smallBucketSizes, writeThreads, writerQLen, persistencePath);
-    assertFalse(new File(persistencePath).exists());
-    assertEquals(0, bucketCache.getAllocator().getUsedSize());
-    assertEquals(0, bucketCache.backingMap.size());
-    HBASE_TESTING_UTILITY.cleanupTestDir();
+    String persistencePath = testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime();
+    BucketCache bucketCache = null;
+    try {
+      bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        smallBucketSizes, writeThreads, writerQLen, persistencePath);
+      assertFalse(new File(persistencePath).exists());
+      assertEquals(0, bucketCache.getAllocator().getUsedSize());
+      assertEquals(0, bucketCache.backingMap.size());
+    } finally {
+      bucketCache.shutdown();
+      HBASE_TESTING_UTILITY.cleanupTestDir();
+    }
   }
 
   private void testRetrievalUtils(Path testDir, String ioEngineName)
     throws IOException, InterruptedException {
-    final String persistencePath = testDir + "/bucket.persistence";
-    BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
-      constructedBlockSizes, writeThreads, writerQLen, persistencePath);
+    final String persistencePath =
+      testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime();
+    BucketCache bucketCache = null;
     try {
+      bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen, persistencePath);
       long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
       HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
@@ -350,10 +363,11 @@ public class TestBucketCache {
       assertTrue(new File(persistencePath).exists());
       bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
         constructedBlockSizes, writeThreads, writerQLen, persistencePath);
-      assertFalse(new File(persistencePath).exists());
       assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
     } finally {
-      bucketCache.shutdown();
+      if (bucketCache != null) {
+        bucketCache.shutdown();
+      }
     }
     assertTrue(new File(persistencePath).exists());
   }
@@ -382,12 +396,17 @@ public class TestBucketCache {
     testRetrievalUtils(testDirInitial, ioEngineName);
     int[] smallBucketSizes = new int[] { 3 * 1024, 5 * 1024 };
     String persistencePath = testDirInitial + "/bucket.persistence";
-    BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
-      smallBucketSizes, writeThreads, writerQLen, persistencePath);
-    assertFalse(new File(persistencePath).exists());
-    assertEquals(0, bucketCache.getAllocator().getUsedSize());
-    assertEquals(0, bucketCache.backingMap.size());
-    HBASE_TESTING_UTILITY.cleanupTestDir();
+    BucketCache bucketCache = null;
+    try {
+      bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        smallBucketSizes, writeThreads, writerQLen, persistencePath);
+      assertFalse(new File(persistencePath).exists());
+      assertEquals(0, bucketCache.getAllocator().getUsedSize());
+      assertEquals(0, bucketCache.backingMap.size());
+    } finally {
+      bucketCache.shutdown();
+      HBASE_TESTING_UTILITY.cleanupTestDir();
+    }
   }
 
   @Test
@@ -572,7 +591,7 @@ public class TestBucketCache {
     // This number is picked because it produces negative output if the values isn't ensured to be
     // positive. See HBASE-18757 for more information.
     long testValue = 549888460800L;
-    BucketEntry bucketEntry = new BucketEntry(testValue, 10, 10L, true, (entry) -> {
+    BucketEntry bucketEntry = new BucketEntry(testValue, 10, 10, 10L, true, (entry) -> {
       return ByteBuffAllocator.NONE;
     }, ByteBuffAllocator.HEAP);
     assertEquals(testValue, bucketEntry.offset());
@@ -701,8 +720,8 @@ public class TestBucketCache {
       HFileBlock.FILL_HEADER, -1, 52, -1, meta, ByteBuffAllocator.HEAP);
     HFileBlock blk2 = new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(buf),
       HFileBlock.FILL_HEADER, -1, -1, -1, meta, ByteBuffAllocator.HEAP);
-    RAMQueueEntry re1 = new RAMQueueEntry(key1, blk1, 1, false);
-    RAMQueueEntry re2 = new RAMQueueEntry(key1, blk2, 1, false);
+    RAMQueueEntry re1 = new RAMQueueEntry(key1, blk1, 1, false, false);
+    RAMQueueEntry re2 = new RAMQueueEntry(key1, blk2, 1, false, false);
 
     assertFalse(cache.containsKey(key1));
     assertNull(cache.putIfAbsent(key1, re1));
@@ -749,7 +768,7 @@ public class TestBucketCache {
     BucketAllocator allocator = new BucketAllocator(availableSpace, null);
 
     BlockCacheKey key = new BlockCacheKey("dummy", 1L);
-    RAMQueueEntry re = new RAMQueueEntry(key, block, 1, true);
+    RAMQueueEntry re = new RAMQueueEntry(key, block, 1, true, false);
 
     Assert.assertEquals(0, allocator.getUsedSize());
     try {
@@ -768,13 +787,14 @@ public class TestBucketCache {
    */
   @Test
   public void testFreeBucketEntryRestoredFromFile() throws Exception {
+    BucketCache bucketCache = null;
     try {
       final Path dataTestDir = createAndGetTestDir();
 
       String ioEngineName = "file:" + dataTestDir + "/bucketNoRecycler.cache";
       String persistencePath = dataTestDir + "/bucketNoRecycler.persistence";
 
-      BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+      bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
         constructedBlockSizes, writeThreads, writerQLen, persistencePath);
       long usedByteSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedByteSize);
@@ -799,7 +819,6 @@ public class TestBucketCache {
       // restore cache from file
       bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
         constructedBlockSizes, writeThreads, writerQLen, persistencePath);
-      assertFalse(new File(persistencePath).exists());
       assertEquals(usedByteSize, bucketCache.getAllocator().getUsedSize());
 
       for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
@@ -809,19 +828,21 @@ public class TestBucketCache {
       assertEquals(0, bucketCache.getAllocator().getUsedSize());
       assertEquals(0, bucketCache.backingMap.size());
     } finally {
+      bucketCache.shutdown();
       HBASE_TESTING_UTILITY.cleanupTestDir();
     }
   }
 
   @Test
   public void testBlockAdditionWaitWhenCache() throws Exception {
+    BucketCache bucketCache = null;
     try {
       final Path dataTestDir = createAndGetTestDir();
 
       String ioEngineName = "file:" + dataTestDir + "/bucketNoRecycler.cache";
       String persistencePath = dataTestDir + "/bucketNoRecycler.persistence";
 
-      BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+      bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
         constructedBlockSizes, 1, 1, persistencePath);
       long usedByteSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedByteSize);
@@ -854,7 +875,6 @@ public class TestBucketCache {
       // restore cache from file
       bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
         constructedBlockSizes, writeThreads, writerQLen, persistencePath);
-      assertFalse(new File(persistencePath).exists());
       assertEquals(usedByteSize, bucketCache.getAllocator().getUsedSize());
 
       for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
@@ -864,6 +884,9 @@ public class TestBucketCache {
       assertEquals(0, bucketCache.getAllocator().getUsedSize());
       assertEquals(0, bucketCache.backingMap.size());
     } finally {
+      if (bucketCache != null) {
+        bucketCache.shutdown();
+      }
       HBASE_TESTING_UTILITY.cleanupTestDir();
     }
   }

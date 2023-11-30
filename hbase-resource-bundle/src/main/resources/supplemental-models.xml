@@ -586,10 +586,10 @@ under the License.
   <supplement>
     <project>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk15on</artifactId>
+      <artifactId>bcpkix-jdk18on</artifactId>
 
       <licenses>
-        <!-- bcpkix-jdk15on is licensed under the Bouncy Castle License, which is equivalent to the MIT License -->
+        <!-- bcpkix-jdk18on is licensed under the Bouncy Castle License, which is equivalent to the MIT License -->
         <license>
           <name>MIT License</name>
           <url>http://www.opensource.org/licenses/mit-license.php</url>
@@ -2393,7 +2393,51 @@ Copyright (c) 2007-2017 The JRuby project
   <supplement>
     <project>
       <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>native-osx-aarch64</artifactId>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>service</artifactId>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>com.aayushatharva.brotli4j</groupId>
       <artifactId>native-windows-x86_64</artifactId>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <!-- avro does not specify license in pom -->
+  <supplement>
+    <project>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+      <organization>
+        <name>The Apache Software Foundation</name>
+        <url>http://www.apache.org/</url>
+      </organization>
       <licenses>
         <license>
           <name>Apache License, Version 2.0</name>

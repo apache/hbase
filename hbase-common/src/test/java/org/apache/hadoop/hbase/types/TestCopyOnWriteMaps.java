@@ -41,6 +41,7 @@ public class TestCopyOnWriteMaps {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCopyOnWriteMaps.class);
 
+  private static final int MAX_INITIAL_ENTRIES = 10_000;
   private static final int MAX_RAND = 10 * 1000 * 1000;
   private ConcurrentNavigableMap<Long, Long> m;
   private ConcurrentSkipListMap<Long, Long> csm;
@@ -50,7 +51,7 @@ public class TestCopyOnWriteMaps {
     m = new CopyOnWriteArrayMap<>();
     csm = new ConcurrentSkipListMap<>();
 
-    for (long i = 0; i < 10000; i++) {
+    for (long i = 0; i < MAX_INITIAL_ENTRIES; i++) {
       long o = ThreadLocalRandom.current().nextLong(MAX_RAND);
       m.put(i, o);
       csm.put(i, o);
@@ -58,6 +59,18 @@ public class TestCopyOnWriteMaps {
     long o = ThreadLocalRandom.current().nextLong(MAX_RAND);
     m.put(0L, o);
     csm.put(0L, o);
+  }
+
+  @Test
+  public void testPutIfAbsent() {
+    long key = MAX_INITIAL_ENTRIES * 2;
+    long val = ThreadLocalRandom.current().nextLong(MAX_RAND);
+    // initial call should return null, then should return previous value
+    assertNull(m.putIfAbsent(key, val));
+    assertEquals(val, (long) m.putIfAbsent(key, val * 2));
+    // test same with csm so we ensure similar semantics
+    assertNull(csm.putIfAbsent(key, val));
+    assertEquals(val, (long) csm.putIfAbsent(key, val * 2));
   }
 
   @Test

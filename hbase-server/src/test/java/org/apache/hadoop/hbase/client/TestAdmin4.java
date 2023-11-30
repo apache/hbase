@@ -17,12 +17,20 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -60,5 +68,25 @@ public class TestAdmin4 extends TestAdminBase {
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     assertEquals(-1, ZKUtil.checkExists(zkw,
       ZNodePaths.joinZNode(zkw.getZNodePaths().drainingZNode, serverName.getServerName())));
+  }
+
+  @Test
+  public void testReplicationPeerModificationSwitch() throws Exception {
+    assertTrue(ADMIN.isReplicationPeerModificationEnabled());
+    try {
+      // disable modification, should returns true as it is enabled by default and the above
+      // assertion has confirmed it
+      assertTrue(ADMIN.replicationPeerModificationSwitch(false));
+      IOException error =
+        assertThrows(IOException.class, () -> ADMIN.addReplicationPeer("peer", ReplicationPeerConfig
+          .newBuilder().setClusterKey(TEST_UTIL.getClusterKey() + "-test").build()));
+      assertThat(error.getCause().getMessage(),
+        containsString("Replication peer modification disabled"));
+      // enable again, and the previous value should be false
+      assertFalse(ADMIN.replicationPeerModificationSwitch(true));
+    } finally {
+      // always reset to avoid mess up other tests
+      ADMIN.replicationPeerModificationSwitch(true);
+    }
   }
 }

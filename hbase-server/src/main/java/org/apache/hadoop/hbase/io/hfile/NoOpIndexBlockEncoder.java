@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.MID_KEY_METADATA_SIZE;
-import static org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.SECONDARY_INDEX_ENTRY_OVERHEAD;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -204,10 +203,10 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
 
     private void init(HFileBlock blk, int numEntries) throws IOException {
       DataInputStream in = readRootIndex(blk, numEntries);
-      // after reading the root index the checksum bytes have to
-      // be subtracted to know if the mid key exists.
-      int checkSumBytes = blk.totalChecksumBytes();
-      if ((in.available() - checkSumBytes) < MID_KEY_METADATA_SIZE) {
+      // HFileBlock.getByteStream() returns a byte stream for reading the data(excluding checksum)
+      // of root index block, so after reading the root index there is no need to subtract the
+      // checksum bytes.
+      if (in.available() < MID_KEY_METADATA_SIZE) {
         // No mid-key metadata available.
         return;
       }
@@ -269,14 +268,9 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
         HFileBlock midLeafBlock = cachingBlockReader.readBlock(midLeafBlockOffset,
           midLeafBlockOnDiskSize, true, true, false, true, BlockType.LEAF_INDEX, null);
         try {
-          ByteBuff b = midLeafBlock.getBufferWithoutHeader();
-          int numDataBlocks = b.getIntAfterPosition(0);
-          int keyRelOffset = b.getIntAfterPosition(Bytes.SIZEOF_INT * (midKeyEntry + 1));
-          int keyLen = b.getIntAfterPosition(Bytes.SIZEOF_INT * (midKeyEntry + 2)) - keyRelOffset
-            - SECONDARY_INDEX_ENTRY_OVERHEAD;
-          int keyOffset =
-            Bytes.SIZEOF_INT * (numDataBlocks + 2) + keyRelOffset + SECONDARY_INDEX_ENTRY_OVERHEAD;
-          byte[] bytes = b.toBytes(keyOffset, keyLen);
+          byte[] bytes = HFileBlockIndex.BlockIndexReader
+            .getNonRootIndexedKey(midLeafBlock.getBufferWithoutHeader(), midKeyEntry);
+          assert bytes != null;
           targetMidKey = new KeyValue.KeyOnlyKeyValue(bytes, 0, bytes.length);
         } finally {
           midLeafBlock.release();
@@ -379,7 +373,8 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
           currentOnDiskSize = buffer.getInt();
 
           // Only update next indexed key if there is a next indexed key in the current level
-          byte[] nonRootIndexedKey = getNonRootIndexedKey(buffer, index + 1);
+          byte[] nonRootIndexedKey =
+            HFileBlockIndex.BlockIndexReader.getNonRootIndexedKey(buffer, index + 1);
           if (nonRootIndexedKey != null) {
             tmpNextIndexKV.setKey(nonRootIndexedKey, 0, nonRootIndexedKey.length);
             nextIndexedKey = tmpNextIndexKV;
@@ -440,38 +435,6 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
           .append(", dataSize=" + blockDataSizes[i]).append("\n");
       }
       return sb.toString();
-    }
-
-    /**
-     * The indexed key at the ith position in the nonRootIndex. The position starts at 0.
-     * @param i the ith position
-     * @return The indexed key at the ith position in the nonRootIndex.
-     */
-    protected byte[] getNonRootIndexedKey(ByteBuff nonRootIndex, int i) {
-      int numEntries = nonRootIndex.getInt(0);
-      if (i < 0 || i >= numEntries) {
-        return null;
-      }
-
-      // Entries start after the number of entries and the secondary index.
-      // The secondary index takes numEntries + 1 ints.
-      int entriesOffset = Bytes.SIZEOF_INT * (numEntries + 2);
-      // Targetkey's offset relative to the end of secondary index
-      int targetKeyRelOffset = nonRootIndex.getInt(Bytes.SIZEOF_INT * (i + 1));
-
-      // The offset of the target key in the blockIndex buffer
-      int targetKeyOffset = entriesOffset // Skip secondary index
-        + targetKeyRelOffset // Skip all entries until mid
-        + SECONDARY_INDEX_ENTRY_OVERHEAD; // Skip offset and on-disk-size
-
-      // We subtract the two consecutive secondary index elements, which
-      // gives us the size of the whole (offset, onDiskSize, key) tuple. We
-      // then need to subtract the overhead of offset and onDiskSize.
-      int targetKeyLength = nonRootIndex.getInt(Bytes.SIZEOF_INT * (i + 2)) - targetKeyRelOffset
-        - SECONDARY_INDEX_ENTRY_OVERHEAD;
-
-      // TODO check whether we can make BB backed Cell here? So can avoid bytes copy.
-      return nonRootIndex.toBytes(targetKeyOffset, targetKeyLength);
     }
   }
 }

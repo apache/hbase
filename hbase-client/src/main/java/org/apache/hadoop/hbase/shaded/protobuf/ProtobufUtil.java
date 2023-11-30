@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.shaded.protobuf;
 import static org.apache.hadoop.hbase.protobuf.ProtobufMagic.PB_MAGIC;
 
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
@@ -126,9 +127,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
+import org.apache.hadoop.hbase.util.ReflectedFunctionCache;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.hbase.thirdparty.com.google.gson.JsonArray;
@@ -137,6 +141,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Parser;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
@@ -149,6 +154,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -229,6 +236,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 @InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class
 public final class ProtobufUtil {
 
+  private static final Logger LOG = LoggerFactory.getLogger(ProtobufUtil.class.getName());
+
   private ProtobufUtil() {
   }
 
@@ -296,6 +305,23 @@ public final class ProtobufUtil {
 
   public static boolean isClassLoaderLoaded() {
     return classLoaderLoaded;
+  }
+
+  private static final String PARSE_FROM = "parseFrom";
+
+  // We don't bother using the dynamic CLASS_LOADER above, because currently we can't support
+  // optimizing dynamically loaded classes. We can do it once we build for java9+, see the todo
+  // in ReflectedFunctionCache
+  private static final ReflectedFunctionCache<byte[], Filter> FILTERS =
+    new ReflectedFunctionCache<>(Filter.class, byte[].class, PARSE_FROM);
+  private static final ReflectedFunctionCache<byte[], ByteArrayComparable> COMPARATORS =
+    new ReflectedFunctionCache<>(ByteArrayComparable.class, byte[].class, PARSE_FROM);
+
+  private static volatile boolean ALLOW_FAST_REFLECTION_FALLTHROUGH = true;
+
+  // Visible for tests
+  public static void setAllowFastReflectionFallthrough(boolean val) {
+    ALLOW_FAST_REFLECTION_FALLTHROUGH = val;
   }
 
   /**
@@ -1546,13 +1572,23 @@ public final class ProtobufUtil {
   public static ByteArrayComparable toComparator(ComparatorProtos.Comparator proto)
     throws IOException {
     String type = proto.getName();
-    String funcName = "parseFrom";
     byte[] value = proto.getSerializedComparator().toByteArray();
+
     try {
+      ByteArrayComparable result = COMPARATORS.getAndCallByName(type, value);
+      if (result != null) {
+        return result;
+      }
+
+      if (!ALLOW_FAST_REFLECTION_FALLTHROUGH) {
+        throw new IllegalStateException("Failed to deserialize comparator " + type
+          + " because fast reflection returned null and fallthrough is disabled");
+      }
+
       Class<?> c = Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
-      Method parseFrom = c.getMethod(funcName, byte[].class);
+      Method parseFrom = c.getMethod(PARSE_FROM, byte[].class);
       if (parseFrom == null) {
-        throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
+        throw new IOException("Unable to locate function: " + PARSE_FROM + " in type: " + type);
       }
       return (ByteArrayComparable) parseFrom.invoke(null, value);
     } catch (Exception e) {
@@ -1569,12 +1605,22 @@ public final class ProtobufUtil {
   public static Filter toFilter(FilterProtos.Filter proto) throws IOException {
     String type = proto.getName();
     final byte[] value = proto.getSerializedFilter().toByteArray();
-    String funcName = "parseFrom";
+
     try {
+      Filter result = FILTERS.getAndCallByName(type, value);
+      if (result != null) {
+        return result;
+      }
+
+      if (!ALLOW_FAST_REFLECTION_FALLTHROUGH) {
+        throw new IllegalStateException("Failed to deserialize comparator " + type
+          + " because fast reflection returned null and fallthrough is disabled");
+      }
+
       Class<?> c = Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
-      Method parseFrom = c.getMethod(funcName, byte[].class);
+      Method parseFrom = c.getMethod(PARSE_FROM, byte[].class);
       if (parseFrom == null) {
-        throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
+        throw new IOException("Unable to locate function: " + PARSE_FROM + " in type: " + type);
       }
       return (Filter) parseFrom.invoke(c, value);
     } catch (Exception e) {
@@ -1772,6 +1818,21 @@ public final class ProtobufUtil {
       throw getRemoteException(se);
     }
     return getRegionInfos(response);
+  }
+
+  /**
+   * Get the list of cached files
+   */
+  public static List<String> getCachedFilesList(final RpcController controller,
+    final AdminService.BlockingInterface admin) throws IOException {
+    GetCachedFilesListRequest request = GetCachedFilesListRequest.newBuilder().build();
+    GetCachedFilesListResponse response = null;
+    try {
+      response = admin.getCachedFilesList(controller, request);
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+    return new ArrayList<>(response.getCachedFilesList());
   }
 
   /**
@@ -2142,7 +2203,7 @@ public final class ProtobufUtil {
    * @param message Message object {@link Message}
    * @return SlowLogParams with regionName(for filter queries) and params
    */
-  public static SlowLogParams getSlowLogParams(Message message) {
+  public static SlowLogParams getSlowLogParams(Message message, boolean slowLogScanPayloadEnabled) {
     if (message == null) {
       return null;
     }
@@ -2150,10 +2211,15 @@ public final class ProtobufUtil {
       ScanRequest scanRequest = (ScanRequest) message;
       String regionName = getStringForByteString(scanRequest.getRegion().getValue());
       String params = TextFormat.shortDebugString(message);
-      return new SlowLogParams(regionName, params);
+      if (slowLogScanPayloadEnabled) {
+        return new SlowLogParams(regionName, params, scanRequest.getScan());
+      } else {
+        return new SlowLogParams(regionName, params);
+      }
     } else if (message instanceof MutationProto) {
       MutationProto mutationProto = (MutationProto) message;
-      String params = "type= " + mutationProto.getMutateType().toString();
+      String params = "type= " + mutationProto.getMutateType().toString() + ", row= "
+        + getStringForByteString(mutationProto.getRow());
       return new SlowLogParams(params);
     } else if (message instanceof GetRequest) {
       GetRequest getRequest = (GetRequest) message;
@@ -2172,7 +2238,8 @@ public final class ProtobufUtil {
     } else if (message instanceof MutateRequest) {
       MutateRequest mutateRequest = (MutateRequest) message;
       String regionName = getStringForByteString(mutateRequest.getRegion().getValue());
-      String params = "region= " + regionName;
+      String params = "region= " + regionName + ", row= "
+        + getStringForByteString(mutateRequest.getMutation().getRow());
       return new SlowLogParams(regionName, params);
     } else if (message instanceof CoprocessorServiceRequest) {
       CoprocessorServiceRequest coprocessorServiceRequest = (CoprocessorServiceRequest) message;
@@ -2182,6 +2249,25 @@ public final class ProtobufUtil {
     }
     String params = message.getClass().toString();
     return new SlowLogParams(params);
+  }
+
+  /**
+   * Convert a list of NameBytesPair to a more readable CSV
+   */
+  public static String convertAttributesToCsv(List<NameBytesPair> attributes) {
+    if (attributes.isEmpty()) {
+      return HConstants.EMPTY_STRING;
+    }
+    return deserializeAttributes(convertNameBytesPairsToMap(attributes)).entrySet().stream()
+      .map(entry -> entry.getKey() + " = " + entry.getValue()).collect(Collectors.joining(", "));
+  }
+
+  /**
+   * Convert a map of byte array attributes to a more readable map of binary string representations
+   */
+  public static Map<String, String> deserializeAttributes(Map<String, byte[]> attributes) {
+    return attributes.entrySet().stream().collect(
+      Collectors.toMap(Map.Entry::getKey, entry -> Bytes.toStringBinary(entry.getValue())));
   }
 
   /**
@@ -3365,7 +3451,7 @@ public final class ProtobufUtil {
    * @return SlowLog Payload for client usecase
    */
   private static LogEntry getSlowLogRecord(final TooSlowLog.SlowLogPayload slowLogPayload) {
-    OnlineLogRecord onlineLogRecord =
+    OnlineLogRecord.OnlineLogRecordBuilder onlineLogRecord =
       new OnlineLogRecord.OnlineLogRecordBuilder().setCallDetails(slowLogPayload.getCallDetails())
         .setClientAddress(slowLogPayload.getClientAddress())
         .setMethodName(slowLogPayload.getMethodName())
@@ -3377,8 +3463,24 @@ public final class ProtobufUtil {
         .setResponseSize(slowLogPayload.getResponseSize())
         .setBlockBytesScanned(slowLogPayload.getBlockBytesScanned())
         .setServerClass(slowLogPayload.getServerClass()).setStartTime(slowLogPayload.getStartTime())
-        .setUserName(slowLogPayload.getUserName()).build();
-    return onlineLogRecord;
+        .setUserName(slowLogPayload.getUserName())
+        .setRequestAttributes(convertNameBytesPairsToMap(slowLogPayload.getRequestAttributeList()))
+        .setConnectionAttributes(
+          convertNameBytesPairsToMap(slowLogPayload.getConnectionAttributeList()));
+    if (slowLogPayload.hasScan()) {
+      try {
+        onlineLogRecord.setScan(ProtobufUtil.toScan(slowLogPayload.getScan()));
+      } catch (Exception e) {
+        LOG.warn("Failed to convert Scan proto {}", slowLogPayload.getScan(), e);
+      }
+    }
+    return onlineLogRecord.build();
+  }
+
+  private static Map<String, byte[]>
+    convertNameBytesPairsToMap(List<NameBytesPair> nameBytesPairs) {
+    return nameBytesPairs.stream().collect(Collectors.toMap(NameBytesPair::getName,
+      nameBytesPair -> nameBytesPair.getValue().toByteArray()));
   }
 
   /**
@@ -3700,4 +3802,52 @@ public final class ProtobufUtil {
       .setStartTime(task.getStartTime()).setCompletionTime(task.getCompletionTime()).build();
   }
 
+  /**
+   * Check whether this IPBE indicates EOF or not.
+   * <p/>
+   * We will check the exception message, if it is likely the one of
+   * InvalidProtocolBufferException.truncatedMessage, we will consider it as EOF, otherwise not.
+   */
+  public static boolean isEOF(InvalidProtocolBufferException e) {
+    return e.getMessage().contains("input has been truncated");
+  }
+
+  /**
+   * This is a wrapper of the PB message's parseDelimitedFrom. The difference is, if we can not
+   * determine whether there are enough bytes in stream, i.e, the available method does not have a
+   * valid return value, we will try to read all the bytes to a byte array first, and then parse the
+   * pb message with {@link Parser#parseFrom(byte[])} instead of call
+   * {@link Parser#parseDelimitedFrom(InputStream)} directly. This is because even if the bytes are
+   * not enough bytes, {@link Parser#parseDelimitedFrom(InputStream)} could still return without any
+   * errors but just leave us a partial PB message.
+   * @return The PB message if we can parse it successfully, otherwise there will always be an
+   *         exception thrown, will never return {@code null}.
+   */
+  public static <T extends Message> T parseDelimitedFrom(InputStream in, Parser<T> parser)
+    throws IOException {
+    int firstByte = in.read();
+    if (firstByte < 0) {
+      throw new EOFException("EOF while reading message size");
+    }
+    int size = CodedInputStream.readRawVarint32(firstByte, in);
+    int available = in.available();
+    if (available > 0) {
+      if (available < size) {
+        throw new EOFException("Available bytes not enough for parsing PB message, expect at least "
+          + size + " bytes, but only " + available + " bytes available");
+      }
+      // this piece of code is copied from GeneratedMessageV3.parseFrom
+      try {
+        return parser.parseFrom(ByteStreams.limit(in, size));
+      } catch (InvalidProtocolBufferException e) {
+        throw e.unwrapIOException();
+      }
+    } else {
+      // this usually means the stream does not have a proper available implementation, let's read
+      // the content to an byte array before parsing.
+      byte[] bytes = new byte[size];
+      ByteStreams.readFully(in, bytes);
+      return parser.parseFrom(bytes);
+    }
+  }
 }

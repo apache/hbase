@@ -146,11 +146,11 @@ function get_release_info {
   if [[ -z "${ASF_REPO}" ]]; then
     ASF_REPO="https://gitbox.apache.org/repos/asf/${PROJECT}.git"
   fi
-  if [[ -z "${ASF_REPO_WEBUI}" ]]; then
-    ASF_REPO_WEBUI="https://gitbox.apache.org/repos/asf?p=${PROJECT}.git"
-  fi
   if [[ -z "${ASF_GITHUB_REPO}" ]]; then
     ASF_GITHUB_REPO="https://github.com/apache/${PROJECT}"
+  fi
+  if [[ -z "${ASF_GITHUB_WEBUI}" ]] ; then
+    ASF_GITHUB_WEBUI="https://raw.githubusercontent.com/apache/${PROJECT}"
   fi
   if [ -z "$GIT_BRANCH" ]; then
     # If no branch is specified, find out the latest branch from the repo.
@@ -167,14 +167,14 @@ function get_release_info {
 
   # Find the current version for the branch.
   local version
-  version="$(curl -s "$ASF_REPO_WEBUI;a=blob_plain;f=pom.xml;hb=refs/heads/$GIT_BRANCH" |
+  version="$(curl -s "$ASF_GITHUB_WEBUI/refs/heads/$GIT_BRANCH/pom.xml" |
     parse_version)"
   # We do not want to expand ${revision} here, see https://maven.apache.org/maven-ci-friendly.html
   # If we use ${revision} as placeholder, we need to parse the revision property to
   # get maven version
   # shellcheck disable=SC2016
   if [[ "${version}" == '${revision}' ]]; then
-    version="$(curl -s "$ASF_REPO_WEBUI;a=blob_plain;f=pom.xml;hb=refs/heads/$GIT_BRANCH" |
+    version="$(curl -s "$ASF_GITHUB_WEBUI/refs/heads/$GIT_BRANCH/pom.xml" |
       parse_revision)"
   fi
   log "Current branch VERSION is $version."

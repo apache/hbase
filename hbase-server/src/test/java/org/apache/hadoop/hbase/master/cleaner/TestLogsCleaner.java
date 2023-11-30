@@ -18,56 +18,59 @@
 package org.apache.hadoop.hbase.master.cleaner;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.Collections;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.replication.ReplicationGroupOffset;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
-import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
+import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MockServer;
-import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestLogsCleaner {
@@ -88,22 +91,29 @@ public class TestLogsCleaner {
 
   private static DirScanPool POOL;
 
+  private static String peerId = "1";
+
+  private MasterServices masterServices;
+
+  private ReplicationQueueStorage queueStorage;
+
+  @Rule
+  public final TableNameTestRule tableNameRule = new TableNameTestRule();
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniZKCluster();
-    TEST_UTIL.startMiniDFSCluster(1);
+    TEST_UTIL.startMiniCluster();
     POOL = DirScanPool.getLogCleanerScanPool(TEST_UTIL.getConfiguration());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniZKCluster();
-    TEST_UTIL.shutdownMiniDFSCluster();
+    TEST_UTIL.shutdownMiniCluster();
     POOL.shutdownNow();
   }
 
   @Before
-  public void beforeTest() throws IOException {
+  public void beforeTest() throws Exception {
     conf = TEST_UTIL.getConfiguration();
 
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
@@ -112,14 +122,52 @@ public class TestLogsCleaner {
 
     // root directory
     fs.mkdirs(OLD_WALS_DIR);
+
+    TableName tableName = tableNameRule.getTableName();
+    TableDescriptor td = ReplicationStorageFactory.createReplicationQueueTableDescriptor(tableName);
+    TEST_UTIL.getAdmin().createTable(td);
+    TEST_UTIL.waitTableAvailable(tableName);
+    queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(TEST_UTIL.getConnection(),
+      conf, tableName);
+
+    masterServices = mock(MasterServices.class);
+    when(masterServices.getConnection()).thenReturn(TEST_UTIL.getConnection());
+    when(masterServices.getReplicationLogCleanerBarrier())
+      .thenReturn(new ReplicationLogCleanerBarrier());
+    ReplicationPeerManager rpm = mock(ReplicationPeerManager.class);
+    when(masterServices.getReplicationPeerManager()).thenReturn(rpm);
+    when(rpm.getQueueStorage()).thenReturn(queueStorage);
+    when(rpm.listPeers(null)).thenReturn(new ArrayList<>());
+    ServerManager sm = mock(ServerManager.class);
+    when(masterServices.getServerManager()).thenReturn(sm);
+    when(sm.getOnlineServersList()).thenReturn(Collections.emptyList());
+    @SuppressWarnings("unchecked")
+    ProcedureExecutor<MasterProcedureEnv> procExec = mock(ProcedureExecutor.class);
+    when(masterServices.getMasterProcedureExecutor()).thenReturn(procExec);
+    when(procExec.getProcedures()).thenReturn(Collections.emptyList());
   }
 
   /**
    * This tests verifies LogCleaner works correctly with WALs and Procedure WALs located in the same
-   * oldWALs directory. Created files: - 2 invalid files - 5 old Procedure WALs - 30 old WALs from
-   * which 3 are in replication - 5 recent Procedure WALs - 1 recent WAL - 1 very new WAL (timestamp
-   * in future) - masterProcedureWALs subdirectory Files which should stay: - 3 replication WALs - 2
-   * new WALs - 5 latest Procedure WALs - masterProcedureWALs subdirectory
+   * oldWALs directory.
+   * <p/>
+   * Created files:
+   * <ul>
+   * <li>2 invalid files</li>
+   * <li>5 old Procedure WALs</li>
+   * <li>30 old WALs from which 3 are in replication</li>
+   * <li>5 recent Procedure WALs</li>
+   * <li>1 recent WAL</li>
+   * <li>1 very new WAL (timestamp in future)</li>
+   * <li>masterProcedureWALs subdirectory</li>
+   * </ul>
+   * Files which should stay:
+   * <ul>
+   * <li>3 replication WALs</li>
+   * <li>2 new WALs</li>
+   * <li>5 latest Procedure WALs</li>
+   * <li>masterProcedureWALs subdirectory</li>
+   * </ul>
    */
   @Test
   public void testLogCleaning() throws Exception {
@@ -131,9 +179,6 @@ public class TestLogsCleaner {
 
     HMaster.decorateMasterConfiguration(conf);
     Server server = new DummyServer();
-    ReplicationQueueStorage queueStorage =
-      ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
-
     String fakeMachineName =
       URLEncoder.encode(server.getServerName().toString(), StandardCharsets.UTF_8.name());
 
@@ -159,14 +204,12 @@ public class TestLogsCleaner {
     for (int i = 1; i <= 30; i++) {
       Path fileName = new Path(OLD_WALS_DIR, fakeMachineName + "." + (now - i));
       fs.createNewFile(fileName);
-      // Case 4: put 3 WALs in ZK indicating that they are scheduled for replication so these
-      // files would pass TimeToLiveLogCleaner but would be rejected by ReplicationLogCleaner
-      if (i % (30 / 3) == 0) {
-        queueStorage.addWAL(server.getServerName(), fakeMachineName, fileName.getName());
-        LOG.info("Replication log file: " + fileName);
-      }
     }
-
+    // Case 4: the newest 3 WALs will be kept because they are beyond the replication offset
+    masterServices.getReplicationPeerManager().listPeers(null)
+      .add(new ReplicationPeerDescription(peerId, true, null, null));
+    queueStorage.setOffset(new ReplicationQueueId(server.getServerName(), peerId), fakeMachineName,
+      new ReplicationGroupOffset(fakeMachineName + "." + (now - 3), 0), Collections.emptyMap());
     // Case 5: 5 Procedure WALs that are new, will stay
     for (int i = 6; i <= 10; i++) {
       Path fileName = new Path(OLD_PROCEDURE_WALS_DIR, String.format("pv2-%020d.log", i));
@@ -189,7 +232,8 @@ public class TestLogsCleaner {
     // 10 procedure WALs
     assertEquals(10, fs.listStatus(OLD_PROCEDURE_WALS_DIR).length);
 
-    LogCleaner cleaner = new LogCleaner(1000, server, conf, fs, OLD_WALS_DIR, POOL, null);
+    LogCleaner cleaner = new LogCleaner(1000, server, conf, fs, OLD_WALS_DIR, POOL,
+      ImmutableMap.of(HMaster.MASTER, masterServices));
     cleaner.chore();
 
     // In oldWALs we end up with the current WAL, a newer WAL, the 3 old WALs which
@@ -209,97 +253,13 @@ public class TestLogsCleaner {
   }
 
   @Test
-  public void testZooKeeperRecoveryDuringGetListOfReplicators() throws Exception {
-    ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
-
-    List<FileStatus> dummyFiles = Arrays.asList(
-      new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(), new Path("log1")),
-      new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(), new Path("log2")));
-
-    FaultyZooKeeperWatcher faultyZK =
-      new FaultyZooKeeperWatcher(conf, "testZooKeeperAbort-faulty", null);
-    final AtomicBoolean getListOfReplicatorsFailed = new AtomicBoolean(false);
-
-    try {
-      faultyZK.init(false);
-      ReplicationQueueStorage queueStorage =
-        spy(ReplicationStorageFactory.getReplicationQueueStorage(faultyZK, conf));
-      doAnswer(new Answer<Object>() {
-        @Override
-        public Object answer(InvocationOnMock invocation) throws Throwable {
-          try {
-            return invocation.callRealMethod();
-          } catch (ReplicationException e) {
-            LOG.debug("Caught Exception", e);
-            getListOfReplicatorsFailed.set(true);
-            throw e;
-          }
-        }
-      }).when(queueStorage).getAllWALs();
-
-      cleaner.setConf(conf, faultyZK, queueStorage);
-      // should keep all files due to a ConnectionLossException getting the queues znodes
-      cleaner.preClean();
-      Iterable<FileStatus> toDelete = cleaner.getDeletableFiles(dummyFiles);
-
-      assertTrue(getListOfReplicatorsFailed.get());
-      assertFalse(toDelete.iterator().hasNext());
-      assertFalse(cleaner.isStopped());
-
-      // zk recovery.
-      faultyZK.init(true);
-      cleaner.preClean();
-      Iterable<FileStatus> filesToDelete = cleaner.getDeletableFiles(dummyFiles);
-      Iterator<FileStatus> iter = filesToDelete.iterator();
-      assertTrue(iter.hasNext());
-      assertEquals(new Path("log1"), iter.next().getPath());
-      assertTrue(iter.hasNext());
-      assertEquals(new Path("log2"), iter.next().getPath());
-      assertFalse(iter.hasNext());
-
-    } finally {
-      faultyZK.close();
-    }
-  }
-
-  /**
-   * When zk is working both files should be returned
-   * @throws Exception from ZK watcher
-   */
-  @Test
-  public void testZooKeeperNormal() throws Exception {
-    ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
-
-    // Subtract 1000 from current time so modtime is for sure older
-    // than 'now'.
-    long modTime = EnvironmentEdgeManager.currentTime() - 1000;
-    List<FileStatus> dummyFiles =
-      Arrays.asList(new FileStatus(100, false, 3, 100, modTime, new Path("log1")),
-        new FileStatus(100, false, 3, 100, modTime, new Path("log2")));
-
-    ZKWatcher zkw = new ZKWatcher(conf, "testZooKeeperAbort-normal", null);
-    try {
-      cleaner.setConf(conf, zkw);
-      cleaner.preClean();
-      Iterable<FileStatus> filesToDelete = cleaner.getDeletableFiles(dummyFiles);
-      Iterator<FileStatus> iter = filesToDelete.iterator();
-      assertTrue(iter.hasNext());
-      assertEquals(new Path("log1"), iter.next().getPath());
-      assertTrue(iter.hasNext());
-      assertEquals(new Path("log2"), iter.next().getPath());
-      assertFalse(iter.hasNext());
-    } finally {
-      zkw.close();
-    }
-  }
-
-  @Test
   public void testOnConfigurationChange() throws Exception {
     // Prepare environments
     Server server = new DummyServer();
 
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    LogCleaner cleaner = new LogCleaner(3000, server, conf, fs, OLD_WALS_DIR, POOL, null);
+    LogCleaner cleaner = new LogCleaner(3000, server, conf, fs, OLD_WALS_DIR, POOL,
+      ImmutableMap.of(HMaster.MASTER, masterServices));
     int size = cleaner.getSizeOfCleaners();
     assertEquals(LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
       cleaner.getCleanerThreadTimeoutMsec());
@@ -338,7 +298,7 @@ public class TestLogsCleaner {
     }
   }
 
-  static class DummyServer extends MockServer {
+  private static final class DummyServer extends MockServer {
 
     @Override
     public Configuration getConfiguration() {
@@ -353,28 +313,6 @@ public class TestLogsCleaner {
         e.printStackTrace();
       }
       return null;
-    }
-  }
-
-  static class FaultyZooKeeperWatcher extends ZKWatcher {
-    private RecoverableZooKeeper zk;
-
-    public FaultyZooKeeperWatcher(Configuration conf, String identifier, Abortable abortable)
-      throws ZooKeeperConnectionException, IOException {
-      super(conf, identifier, abortable);
-    }
-
-    public void init(boolean autoRecovery) throws Exception {
-      this.zk = spy(super.getRecoverableZooKeeper());
-      if (!autoRecovery) {
-        doThrow(new KeeperException.ConnectionLossException()).when(zk)
-          .getChildren("/hbase/replication/rs", null);
-      }
-    }
-
-    @Override
-    public RecoverableZooKeeper getRecoverableZooKeeper() {
-      return zk;
     }
   }
 }

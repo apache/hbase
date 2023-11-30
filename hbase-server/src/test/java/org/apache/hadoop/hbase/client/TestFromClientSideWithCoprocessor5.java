@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.regionserver.NoOpScanPolicyObserver;
@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
-import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 /**
  * Test all client operations with a coprocessor that just implements the default flush/compact/scan
@@ -41,10 +41,10 @@ public class TestFromClientSideWithCoprocessor5 extends TestFromClientSide5 {
 
   // Override the parameters from the parent class. We just want to run it for the default
   // param combination.
-  @Parameterized.Parameters
-  public static Collection parameters() {
-    return Arrays
-      .asList(new Object[][] { { MasterRegistry.class, 1 }, { ZKConnectionRegistry.class, 1 } });
+  @Parameters(name = "{index}: registry={0}, numHedgedReqs={1}")
+  public static List<Object[]> parameters() {
+    return Arrays.asList(new Object[] { MasterRegistry.class, 1 },
+      new Object[] { ZKConnectionRegistry.class, 1 });
   }
 
   @AfterClass
@@ -52,7 +52,8 @@ public class TestFromClientSideWithCoprocessor5 extends TestFromClientSide5 {
     afterClass();
   }
 
-  public TestFromClientSideWithCoprocessor5(Class registry, int numHedgedReqs) throws Exception {
+  public TestFromClientSideWithCoprocessor5(Class<? extends ConnectionRegistry> registry,
+    int numHedgedReqs) throws Exception {
     initialize(registry, numHedgedReqs, NoOpScanPolicyObserver.class,
       MultiRowMutationEndpoint.class);
   }

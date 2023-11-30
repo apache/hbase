@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
@@ -90,6 +91,7 @@ public class AssignRegionHandler extends EventHandler {
 
   @Override
   public void process() throws IOException {
+    MDC.put("pid", Long.toString(openProcId));
     HRegionServer rs = getServer();
     String encodedName = regionInfo.getEncodedName();
     byte[] encodedNameBytes = regionInfo.getEncodedNameAsBytes();

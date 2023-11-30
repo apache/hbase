@@ -97,6 +97,8 @@ public class FSDataInputStreamWrapper implements Closeable {
   private Boolean instanceOfCanUnbuffer = null;
   private CanUnbuffer unbuffer = null;
 
+  protected Path readerPath;
+
   public FSDataInputStreamWrapper(FileSystem fs, Path path) throws IOException {
     this(fs, path, false, -1L);
   }
@@ -127,6 +129,9 @@ public class FSDataInputStreamWrapper implements Closeable {
     // Initially we are going to read the tail block. Open the reader w/FS checksum.
     this.useHBaseChecksumConfigured = this.useHBaseChecksum = false;
     this.stream = (link != null) ? link.open(hfs) : hfs.open(path);
+    this.readerPath = this.stream.getWrappedStream() instanceof FileLink.FileLinkInputStream
+      ? ((FileLink.FileLinkInputStream) this.stream.getWrappedStream()).getCurrentPath()
+      : path;
     setStreamOptions(stream);
   }
 
@@ -341,5 +346,9 @@ public class FSDataInputStreamWrapper implements Closeable {
         }
       }
     }
+  }
+
+  public Path getReaderPath() {
+    return readerPath;
   }
 }

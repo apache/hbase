@@ -23,13 +23,14 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class ReplicationPeerImpl implements ReplicationPeer {
+public class ReplicationPeerImpl implements ReplicationPeer, ConfigurationObserver {
 
-  private final Configuration conf;
+  private volatile Configuration conf;
 
   private final String id;
 
@@ -150,5 +151,10 @@ public class ReplicationPeerImpl implements ReplicationPeer {
   @Override
   public void registerPeerConfigListener(ReplicationPeerConfigListener listener) {
     this.peerConfigListeners.add(listener);
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    this.conf = conf;
   }
 }

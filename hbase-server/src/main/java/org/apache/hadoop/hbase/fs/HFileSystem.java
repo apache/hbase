@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.fs;
 
+import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
+
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
@@ -425,7 +427,7 @@ public class HFileSystem extends FilterFileSystem {
 
       // Just check for all blocks
       for (LocatedBlock lb : lbs.getLocatedBlocks()) {
-        DatanodeInfo[] dnis = lb.getLocations();
+        DatanodeInfo[] dnis = getLocatedBlockLocations(lb);
         if (dnis != null && dnis.length > 1) {
           boolean found = false;
           for (int i = 0; i < dnis.length - 1 && !found; i++) {
@@ -449,13 +451,6 @@ public class HFileSystem extends FilterFileSystem {
    */
   static public FileSystem get(Configuration conf) throws IOException {
     return new HFileSystem(conf, true);
-  }
-
-  /**
-   * Wrap a LocalFileSystem within a HFileSystem.
-   */
-  static public FileSystem getLocalFs(Configuration conf) throws IOException {
-    return new HFileSystem(FileSystem.getLocal(conf));
   }
 
   /**

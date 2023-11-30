@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -49,6 +51,8 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
 
   private IOException exception;
 
+  private TableName tableName;
+
   /**
    * Rpc target Region's RegionInfo we are going against. May be null.
    * @see #hasRegionInfo()
@@ -69,6 +73,8 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
    * block that implements CellScanner.
    */
   private CellScanner cellScanner;
+
+  private Map<String, byte[]> requestAttributes = Collections.emptyMap();
 
   public HBaseRpcControllerImpl() {
     this(null, (CellScanner) null);
@@ -140,6 +146,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
     exception = null;
     callTimeout = null;
     regionInfo = null;
+    tableName = null;
     // In the implementations of some callable with replicas, rpc calls are executed in a executor
     // and we could cancel the operation from outside which means there could be a race between
     // reset and startCancel. Although I think the race should be handled by the callable since the
@@ -164,6 +171,16 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
   @Override
   public boolean hasCallTimeout() {
     return callTimeout != null;
+  }
+
+  @Override
+  public Map<String, byte[]> getRequestAttributes() {
+    return requestAttributes;
+  }
+
+  @Override
+  public void setRequestAttributes(Map<String, byte[]> requestAttributes) {
+    this.requestAttributes = requestAttributes;
   }
 
   @Override
@@ -258,5 +275,15 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
       cancellationCbs.add(callback);
       action.run(false);
     }
+  }
+
+  @Override
+  public void setTableName(TableName tableName) {
+    this.tableName = tableName;
+  }
+
+  @Override
+  public TableName getTableName() {
+    return tableName;
   }
 }

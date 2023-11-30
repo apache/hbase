@@ -78,9 +78,13 @@ class TimeoutExecutorThread<TEnvironment> extends StoppableThread {
   }
 
   public void add(Procedure<TEnvironment> procedure) {
-    LOG.info("ADDED {}; timeout={}, timestamp={}", procedure, procedure.getTimeout(),
-      procedure.getTimeoutTimestamp());
-    queue.add(new DelayedProcedure<>(procedure));
+    if (procedure.getTimeout() > 0) {
+      LOG.info("ADDED {}; timeout={}, timestamp={}", procedure, procedure.getTimeout(),
+        procedure.getTimeoutTimestamp());
+      queue.add(new DelayedProcedure<>(procedure));
+    } else {
+      LOG.info("Got negative timeout {} for {}, skip adding", procedure.getTimeout(), procedure);
+    }
   }
 
   public boolean remove(Procedure<TEnvironment> procedure) {

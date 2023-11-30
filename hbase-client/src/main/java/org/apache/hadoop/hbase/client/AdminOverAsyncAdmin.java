@@ -265,6 +265,11 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void flush(TableName tableName, List<byte[]> columnFamilies) throws IOException {
+    get(admin.flush(tableName, columnFamilies));
+  }
+
+  @Override
   public void flushRegion(byte[] regionName) throws IOException {
     get(admin.flushRegion(regionName));
   }
@@ -486,8 +491,24 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void truncateRegion(byte[] regionName) throws IOException {
+    get(admin.truncateRegion(regionName));
+  }
+
+  @Override
+  public Future<Void> truncateRegionAsync(byte[] regionName) {
+    return admin.truncateRegion(regionName);
+  }
+
+  @Override
   public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
-    return admin.modifyTable(td);
+    return modifyTableAsync(td, true);
+  }
+
+  @Override
+  public Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions)
+    throws IOException {
+    return admin.modifyTable(td, reopenRegions);
   }
 
   @Override
@@ -892,6 +913,17 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
+    throws IOException {
+    return get(admin.replicationPeerModificationSwitch(on, drainProcedures));
+  }
+
+  @Override
+  public boolean isReplicationPeerModificationEnabled() throws IOException {
+    return get(admin.isReplicationPeerModificationEnabled());
+  }
+
+  @Override
   public void decommissionRegionServers(List<ServerName> servers, boolean offload)
     throws IOException {
     get(admin.decommissionRegionServers(servers, offload));
@@ -1098,5 +1130,10 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public void flushMasterStore() throws IOException {
     get(admin.flushMasterStore());
+  }
+
+  @Override
+  public List<String> getCachedFilesList(ServerName serverName) throws IOException {
+    return get(admin.getCachedFilesList(serverName));
   }
 }

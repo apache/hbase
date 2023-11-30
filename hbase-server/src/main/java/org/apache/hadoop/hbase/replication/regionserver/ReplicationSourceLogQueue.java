@@ -97,7 +97,7 @@ public class ReplicationSourceLogQueue {
    * @param walGroupId walGroupId
    */
   public int getQueueSize(String walGroupId) {
-    Queue queue = queues.get(walGroupId);
+    Queue<Path> queue = queues.get(walGroupId);
     if (queue == null) {
       return 0;
     }
@@ -117,7 +117,7 @@ public class ReplicationSourceLogQueue {
 
   /**
    * Return queue for the given walGroupId Please don't add or remove elements from the returned
-   * queue. Use @enqueueLog and @remove methods respectively.
+   * queue. Use {@link #enqueueLog(Path, String)} and {@link #remove(String)} methods respectively.
    * @param walGroupId walGroupId
    */
   public PriorityBlockingQueue<Path> getQueue(String walGroupId) {

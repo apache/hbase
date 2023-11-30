@@ -17,83 +17,27 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Used by a {@link RecoveredReplicationSource}.
  */
 @InterfaceAudience.Private
 public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper {
-  private static final Logger LOG =
-    LoggerFactory.getLogger(RecoveredReplicationSourceShipper.class);
 
-  protected final RecoveredReplicationSource source;
-  private final ReplicationQueueStorage replicationQueues;
+  private final Runnable tryFinish;
 
   public RecoveredReplicationSourceShipper(Configuration conf, String walGroupId,
-    ReplicationSourceLogQueue logQueue, RecoveredReplicationSource source,
-    ReplicationQueueStorage queueStorage) {
-    super(conf, walGroupId, logQueue, source);
-    this.source = source;
-    this.replicationQueues = queueStorage;
+    RecoveredReplicationSource source, ReplicationSourceWALReader walReader,
+    ReplicationQueueStorage queueStorage, Runnable tryFinish) {
+    super(conf, walGroupId, source, walReader);
+    this.tryFinish = tryFinish;
   }
 
   @Override
   protected void postFinish() {
-    source.tryFinish();
-  }
-
-  @Override
-  public long getStartPosition() {
-    long startPosition = getRecoveredQueueStartPos();
-    int numRetries = 0;
-    while (numRetries <= maxRetriesMultiplier) {
-      try {
-        source.locateRecoveredPaths(walGroupId);
-        break;
-      } catch (IOException e) {
-        LOG.error("Error while locating recovered queue paths, attempt #" + numRetries, e);
-        numRetries++;
-      }
-    }
-    return startPosition;
-  }
-
-  // If this is a recovered queue, the queue is already full and the first log
-  // normally has a position (unless the RS failed between 2 logs)
-  private long getRecoveredQueueStartPos() {
-    long startPosition = 0;
-    String peerClusterZNode = source.getQueueId();
-    try {
-      startPosition = this.replicationQueues.getWALPosition(source.getServer().getServerName(),
-        peerClusterZNode, this.logQueue.getQueue(walGroupId).peek().getName());
-      LOG.trace("Recovered queue started with log {} at position {}",
-        this.logQueue.getQueue(walGroupId).peek(), startPosition);
-    } catch (ReplicationException e) {
-      terminate("Couldn't get the position of this recovered queue " + peerClusterZNode, e);
-    }
-    return startPosition;
-  }
-
-  private void terminate(String reason, Exception cause) {
-    if (cause == null) {
-      LOG.info("Closing worker for wal group {} because: {}", this.walGroupId, reason);
-    } else {
-      LOG.error(
-        "Closing worker for wal group " + this.walGroupId + " because an error occurred: " + reason,
-        cause);
-    }
-    entryReader.interrupt();
-    Threads.shutdown(entryReader, sleepForRetries);
-    this.interrupt();
-    Threads.shutdown(this, sleepForRetries);
-    LOG.info("ReplicationSourceWorker {} terminated", this.getName());
+    tryFinish.run();
   }
 }

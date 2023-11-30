@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
@@ -156,8 +158,19 @@ public interface MasterServices extends Server {
    * @param tableName  The table name
    * @param descriptor The updated table descriptor
    */
+  default long modifyTable(final TableName tableName, final TableDescriptor descriptor,
+    final long nonceGroup, final long nonce) throws IOException {
+    return modifyTable(tableName, descriptor, nonceGroup, nonce, true);
+  }
+
+  /**
+   * Modify the descriptor of an existing table
+   * @param tableName     The table name
+   * @param descriptor    The updated table descriptor
+   * @param reopenRegions Whether to reopen regions after modifying the table descriptor
+   */
   long modifyTable(final TableName tableName, final TableDescriptor descriptor,
-    final long nonceGroup, final long nonce) throws IOException;
+    final long nonceGroup, final long nonce, final boolean reopenRegions) throws IOException;
 
   /**
    * Modify the store file tracker of an existing table
@@ -362,6 +375,17 @@ public interface MasterServices extends Server {
   ReplicationPeerManager getReplicationPeerManager();
 
   /**
+   * Returns the {@link ReplicationLogCleanerBarrier}. It will be used at multiple places so we put
+   * it in MasterServices directly.
+   */
+  ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier();
+
+  /**
+   * Returns the SyncReplicationPeerLock.
+   */
+  Semaphore getSyncReplicationPeerLock();
+
+  /**
    * Returns the {@link SyncReplicationReplayWALManager}.
    */
   SyncReplicationReplayWALManager getSyncReplicationReplayWALManager();
@@ -389,6 +413,10 @@ public interface MasterServices extends Server {
    */
   long transitReplicationPeerSyncReplicationState(String peerId, SyncReplicationState clusterState)
     throws ReplicationException, IOException;
+
+  boolean replicationPeerModificationSwitch(boolean on) throws IOException;
+
+  boolean isReplicationPeerModificationEnabled();
 
   /** Returns {@link LockManager} to lock namespaces/tables/regions. */
   LockManager getLockManager();
@@ -460,4 +488,24 @@ public interface MasterServices extends Server {
    * Flush master local region
    */
   void flushMasterStore() throws IOException;
+
+  /**
+   * Flush an existing table
+   * @param tableName      The table name
+   * @param columnFamilies The column families to flush
+   * @param nonceGroup     the nonce group
+   * @param nonce          the nonce
+   * @return the flush procedure id
+   */
+  long flushTable(final TableName tableName, final List<byte[]> columnFamilies,
+    final long nonceGroup, final long nonce) throws IOException;
+
+  /**
+   * Truncate region
+   * @param regionInfo region to be truncated
+   * @param nonceGroup the nonce group
+   * @param nonce      the nonce
+   * @return procedure Id
+   */
+  long truncateRegion(RegionInfo regionInfo, long nonceGroup, long nonce) throws IOException;
 }

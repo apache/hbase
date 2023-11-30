@@ -28,10 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
-import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
@@ -39,10 +36,10 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -59,7 +56,7 @@ public abstract class WALEntryStreamTestBase {
   protected static final long TEST_TIMEOUT_MS = 5000;
   protected static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();;
   protected static Configuration CONF;
-  protected static FileSystem fs;
+  protected static DistributedFileSystem fs;
   protected static MiniDFSCluster cluster;
   protected static final TableName tableName = TableName.valueOf("tablename");
   protected static final byte[] family = Bytes.toBytes("column");
@@ -80,22 +77,30 @@ public abstract class WALEntryStreamTestBase {
    * the test code simpler.
    */
   protected static class WALEntryStreamWithRetries extends WALEntryStream {
-    // Class member to be able to set a non-final from within a lambda.
-    private Entry result;
 
-    public WALEntryStreamWithRetries(ReplicationSourceLogQueue logQueue, Configuration conf,
-      long startPosition, WALFileLengthProvider walFileLengthProvider, ServerName serverName,
-      MetricsSource metrics, String walGroupId) throws IOException {
-      super(logQueue, conf, startPosition, walFileLengthProvider, serverName, metrics, walGroupId);
+    private boolean retry = true;
+
+    public WALEntryStreamWithRetries(ReplicationSourceLogQueue logQueue, FileSystem fs,
+      Configuration conf, long startPosition, WALFileLengthProvider walFileLengthProvider,
+      MetricsSource metrics, String walGroupId) {
+      super(logQueue, fs, conf, startPosition, walFileLengthProvider, metrics, walGroupId);
+    }
+
+    public void enableRetry() {
+      retry = true;
+    }
+
+    public void disableRetry() {
+      retry = false;
     }
 
     @Override
-    public Entry next() {
-      Waiter.waitFor(CONF, TEST_TIMEOUT_MS, () -> {
-        result = WALEntryStreamWithRetries.super.next();
-        return result != null;
-      });
-      return result;
+    public HasNext hasNext() {
+      // hasNext is idempotent, so we can call it again and do not need to store its return value
+      if (retry) {
+        TEST_UTIL.waitFor(TEST_TIMEOUT_MS, () -> super.hasNext() == HasNext.YES);
+      }
+      return super.hasNext();
     }
   }
 
@@ -125,7 +130,6 @@ public abstract class WALEntryStreamTestBase {
   protected final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
 
   protected static void startCluster() throws Exception {
-    TEST_UTIL = new HBaseTestingUtil();
     CONF = TEST_UTIL.getConfiguration();
     CONF.setLong("replication.source.sleepforretries", 10);
     TEST_UTIL.startMiniDFSCluster(3);
@@ -146,8 +150,7 @@ public abstract class WALEntryStreamTestBase {
     metricsSource.clear();
     logQueue = new ReplicationSourceLogQueue(CONF, metricsSource, source);
     pathWatcher = new PathWatcher();
-    final WALFactory wals =
-      new WALFactory(CONF, TableNameTestRule.cleanUpTestName(tn.getMethodName()));
+    final WALFactory wals = new WALFactory(CONF, tn.getMethodName().replaceAll("[\\[:]", "_"));
     wals.getWALProvider().addWALActionsListener(pathWatcher);
     log = wals.getWAL(info);
   }

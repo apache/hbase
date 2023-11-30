@@ -20,7 +20,10 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import javax.net.ssl.SSLException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelDuplexHandler;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
@@ -32,6 +35,8 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
  */
 @InterfaceAudience.Private
 class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
+
+  private static final Logger LOG = LoggerFactory.getLogger(BufferCallBeforeInitHandler.class);
 
   static final String NAME = "BufferCall";
 
@@ -93,20 +98,50 @@ class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
           for (Call call : id2Call.values()) {
             ctx.write(call);
           }
+          ctx.flush();
+          ctx.pipeline().remove(this);
           break;
         case FAIL:
           for (Call call : id2Call.values()) {
             call.setException(bcEvt.error);
           }
+          // here we do not remove us from the pipeline, for receiving possible exceptions and log
+          // it, especially the ssl exceptions, to prevent it reaching the tail of the pipeline and
+          // generate a confusing netty WARN
           break;
       }
-      ctx.flush();
-      ctx.pipeline().remove(this);
     } else if (evt instanceof CallEvent) {
       // just remove the call for now until we add other call event other than timeout and cancel.
       id2Call.remove(((CallEvent) evt).call.id);
     } else {
       ctx.fireUserEventTriggered(evt);
+    }
+  }
+
+  private boolean isSslError(Throwable cause) {
+    Throwable error = cause;
+    do {
+      if (error instanceof SSLException) {
+        return true;
+      }
+      error = error.getCause();
+    } while (error != null);
+    return false;
+  }
+
+  @Override
+  public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    if (isSslError(cause)) {
+      // this should have been logged in other places, see HBASE-27782 for more details.
+      // here we just log it with debug and tell users that this is not a critical problem,
+      // otherwise if we just pass it through the pipeline, it will lead to a confusing
+      // "An exceptionCaught() event was fired, and it reached at the tail of the pipeline"
+      LOG.debug(
+        "got ssl exception, which should have already been proceeded, log it here to"
+          + " prevent it being passed to netty's TailContext and trigger a confusing WARN message",
+        cause);
+    } else {
+      ctx.fireExceptionCaught(cause);
     }
   }
 }

@@ -41,6 +41,8 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl
   private final MutableGaugeLong blockedFlushGauge;
   private final MutableGaugeLong unblockedFlushGauge;
   private final MutableGaugeLong memStoreSizeGauge;
+  private final MutableGaugeLong memStoreOnHeapSizeGauge;
+  private final MutableGaugeLong memStoreOffHeapSizeGauge;
   private final MutableGaugeLong blockCacheSizeGauge;
 
   private final MutableFastCounter doNothingCounter;
@@ -75,6 +77,10 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl
       getMetricsRegistry().newGauge(UNBLOCKED_FLUSH_GAUGE_NAME, UNBLOCKED_FLUSH_GAUGE_DESC, 0L);
     memStoreSizeGauge =
       getMetricsRegistry().newGauge(MEMSTORE_SIZE_GAUGE_NAME, MEMSTORE_SIZE_GAUGE_DESC, 0L);
+    memStoreOnHeapSizeGauge = getMetricsRegistry().newGauge(MEMSTORE_ONHEAP_SIZE_GAUGE_NAME,
+      MEMSTORE_ONHEAP_SIZE_GAUGE_DESC, 0L);
+    memStoreOffHeapSizeGauge = getMetricsRegistry().newGauge(MEMSTORE_OFFHEAP_SIZE_GAUGE_NAME,
+      MEMSTORE_OFFHEAP_SIZE_GAUGE_DESC, 0L);
     blockCacheSizeGauge =
       getMetricsRegistry().newGauge(BLOCKCACHE_SIZE_GAUGE_NAME, BLOCKCACHE_SIZE_GAUGE_DESC, 0L);
 
@@ -109,6 +115,16 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl
   @Override
   public void setCurMemStoreSizeGauge(long memstoreSize) {
     memStoreSizeGauge.set(memstoreSize);
+  }
+
+  @Override
+  public void setCurMemStoreOnHeapSizeGauge(long memstoreOnHeapSize) {
+    memStoreOnHeapSizeGauge.set(memstoreOnHeapSize);
+  }
+
+  @Override
+  public void setCurMemStoreOffHeapSizeGauge(long memstoreOffHeapSize) {
+    memStoreOffHeapSizeGauge.set(memstoreOffHeapSize);
   }
 
   @Override

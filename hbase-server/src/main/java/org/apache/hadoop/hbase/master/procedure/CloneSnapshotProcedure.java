@@ -52,7 +52,9 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -378,6 +380,14 @@ public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<C
     final TableName tableName = getTableName();
     if (env.getMasterServices().getTableDescriptors().exists(tableName)) {
       throw new TableExistsException(tableName);
+    }
+
+    // check whether ttl has expired for this snapshot
+    if (
+      SnapshotDescriptionUtils.isExpiredSnapshot(snapshot.getTtl(), snapshot.getCreationTime(),
+        EnvironmentEdgeManager.currentTime())
+    ) {
+      throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(snapshot));
     }
 
     validateSFT();

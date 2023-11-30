@@ -279,16 +279,6 @@ possible configurations would overwhelm and obscure the important.
     to ride over transient HDFS errors.</description>
   </property>
   <property>
-    <name>hbase.regionserver.hlog.reader.impl</name>
-    <value>org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader</value>
-    <description>The WAL file reader implementation.</description>
-  </property>
-  <property>
-    <name>hbase.regionserver.hlog.writer.impl</name>
-    <value>org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter</value>
-    <description>The WAL file writer implementation.</description>
-  </property>
-  <property>
     <name>hbase.regionserver.global.memstore.size</name>
     <value></value>
     <description>Maximum size of all memstores in a region server before new
@@ -667,6 +657,12 @@ possible configurations would overwhelm and obscure the important.
       MBs.</description>
   </property>
   <property>
+    <name>hbase.normalizer.merge.merge_request_max_number_of_regions</name>
+    <value>100</value>
+    <description>The maximum number of region count in a merge request for merge
+      normalization.</description>
+  </property>
+  <property>
     <name>hbase.table.normalization.enabled</name>
     <value>false</value>
     <description>This config is used to set default behaviour of normalizer at table level.
@@ -822,7 +818,7 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.hstore.compactionThreshold</name>
     <value>3</value>
-    <description> If more than this number of StoreFiles exist in any one Store
+    <description> If more than or equal to this number of StoreFiles exist in any one Store
       (one StoreFile is written per flush of MemStore), a compaction is run to rewrite all
       StoreFiles into a single StoreFile. Larger values delay compaction, but when compaction does
       occur, it takes longer to complete.</description>

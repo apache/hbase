@@ -272,10 +272,14 @@ public class MetricsSource implements BaseSource {
 
   /** Removes all metrics about this Source. */
   public void clear() {
+    terminate();
+    singleSourceSource.clear();
+  }
+
+  public void terminate() {
     int lastQueueSize = singleSourceSource.getSizeOfLogQueue();
     globalSourceSource.decrSizeOfLogQueue(lastQueueSize);
     singleSourceSource.decrSizeOfLogQueue(lastQueueSize);
-    singleSourceSource.clear();
     globalSourceSource.decrSizeOfHFileRefsQueue(lastHFileRefsQueueSize);
     lastShippedTimeStamps.clear();
     lastHFileRefsQueueSize = 0;

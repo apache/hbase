@@ -24,9 +24,11 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -46,6 +48,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
@@ -71,6 +74,20 @@ public class TestNamedQueueRecorder {
   private static final Logger LOG = LoggerFactory.getLogger(TestNamedQueueRecorder.class);
 
   private static final HBaseTestingUtil HBASE_TESTING_UTILITY = new HBaseTestingUtil();
+  private static final List<HBaseProtos.NameBytesPair> REQUEST_HEADERS =
+    ImmutableList.<HBaseProtos.NameBytesPair> builder()
+      .add(HBaseProtos.NameBytesPair.newBuilder().setName("1")
+        .setValue(ByteString.copyFromUtf8("r")).build())
+      .add(HBaseProtos.NameBytesPair.newBuilder().setName("2")
+        .setValue(ByteString.copyFromUtf8("h")).build())
+      .build();
+  private static final List<HBaseProtos.NameBytesPair> CONNECTION_HEADERS =
+    ImmutableList.<HBaseProtos.NameBytesPair> builder()
+      .add(HBaseProtos.NameBytesPair.newBuilder().setName("1")
+        .setValue(ByteString.copyFromUtf8("c")).build())
+      .add(HBaseProtos.NameBytesPair.newBuilder().setName("2")
+        .setValue(ByteString.copyFromUtf8("h")).build())
+      .build();
 
   private NamedQueueRecorder namedQueueRecorder;
 
@@ -527,10 +544,142 @@ public class TestNamedQueueRecorder {
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(requestSlowLog).size() == 15));
   }
 
+  @Test
+  public void testOnlineSlowLogScanPayloadDefaultDisabled() throws Exception {
+    Configuration conf = applySlowLogRecorderConf(1);
+    conf.unset(HConstants.SLOW_LOG_SCAN_PAYLOAD_ENABLED);
+    Constructor<NamedQueueRecorder> constructor =
+      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+    constructor.setAccessible(true);
+    namedQueueRecorder = constructor.newInstance(conf);
+    AdminProtos.SlowLogResponseRequest request =
+      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
+
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    LOG.debug("Initially ringbuffer of Slow Log records is empty");
+    RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
+    namedQueueRecorder.addRecord(rpcLogDetails);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
+      if (slowLogPayload.isPresent()) {
+        return !slowLogPayload.get().hasScan();
+      }
+      return false;
+    }));
+  }
+
+  @Test
+  public void testOnlineSlowLogScanPayloadExplicitlyDisabled() throws Exception {
+    Configuration conf = applySlowLogRecorderConf(1);
+    conf.setBoolean(HConstants.SLOW_LOG_SCAN_PAYLOAD_ENABLED, false);
+    Constructor<NamedQueueRecorder> constructor =
+      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+    constructor.setAccessible(true);
+    namedQueueRecorder = constructor.newInstance(conf);
+    AdminProtos.SlowLogResponseRequest request =
+      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
+
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    LOG.debug("Initially ringbuffer of Slow Log records is empty");
+    RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
+    namedQueueRecorder.addRecord(rpcLogDetails);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
+      if (slowLogPayload.isPresent()) {
+        return !slowLogPayload.get().hasScan();
+      }
+      return false;
+    }));
+  }
+
+  @Test
+  public void testOnlineSlowLogScanPayloadExplicitlyEnabled() throws Exception {
+    Configuration conf = applySlowLogRecorderConf(1);
+    conf.setBoolean(HConstants.SLOW_LOG_SCAN_PAYLOAD_ENABLED, true);
+    Constructor<NamedQueueRecorder> constructor =
+      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+    constructor.setAccessible(true);
+    namedQueueRecorder = constructor.newInstance(conf);
+    AdminProtos.SlowLogResponseRequest request =
+      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
+
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    LOG.debug("Initially ringbuffer of Slow Log records is empty");
+    RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
+    namedQueueRecorder.addRecord(rpcLogDetails);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
+      if (slowLogPayload.isPresent()) {
+        return slowLogPayload.get().hasScan();
+      }
+      return false;
+    }));
+  }
+
+  @Test
+  public void testOnlineSlowLogRequestAttributes() throws Exception {
+    Configuration conf = applySlowLogRecorderConf(1);
+    Constructor<NamedQueueRecorder> constructor =
+      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+    constructor.setAccessible(true);
+    namedQueueRecorder = constructor.newInstance(conf);
+    AdminProtos.SlowLogResponseRequest request =
+      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
+
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    LOG.debug("Initially ringbuffer of Slow Log records is empty");
+    RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
+    namedQueueRecorder.addRecord(rpcLogDetails);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
+      if (slowLogPayload.isPresent() && !slowLogPayload.get().getRequestAttributeList().isEmpty()) {
+        return slowLogPayload.get().getRequestAttributeList().containsAll(REQUEST_HEADERS);
+      }
+      return false;
+    }));
+  }
+
+  @Test
+  public void testOnlineSlowLogConnectionAttributes() throws Exception {
+    Configuration conf = applySlowLogRecorderConf(1);
+    Constructor<NamedQueueRecorder> constructor =
+      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+    constructor.setAccessible(true);
+    namedQueueRecorder = constructor.newInstance(conf);
+    AdminProtos.SlowLogResponseRequest request =
+      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
+
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    LOG.debug("Initially ringbuffer of Slow Log records is empty");
+    RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
+    namedQueueRecorder.addRecord(rpcLogDetails);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
+      if (
+        slowLogPayload.isPresent() && !slowLogPayload.get().getConnectionAttributeList().isEmpty()
+      ) {
+        return slowLogPayload.get().getConnectionAttributeList().containsAll(CONNECTION_HEADERS);
+      }
+      return false;
+    }));
+  }
+
+  static RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className,
+    int forcedParamIndex) {
+    RpcCall rpcCall = getRpcCall(userName, forcedParamIndex);
+    return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, 0, className, true,
+      true);
+  }
+
   static RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className) {
     RpcCall rpcCall = getRpcCall(userName);
     return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, 0, className, true,
       true);
+  }
+
+  private static RpcLogDetails getRpcLogDetailsOfScan() {
+    // forcedParamIndex of 0 results in a ScanRequest
+    return getRpcLogDetails("userName_1", "client_1", "class_1", 0);
   }
 
   private RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className,
@@ -541,6 +690,15 @@ public class TestNamedQueueRecorder {
   }
 
   private static RpcCall getRpcCall(String userName) {
+    return getRpcCall(userName, Optional.empty());
+  }
+
+  private static RpcCall getRpcCall(String userName, int forcedParamIndex) {
+    return getRpcCall(userName, Optional.of(forcedParamIndex));
+  }
+
+  @SuppressWarnings("checkstyle:methodlength")
+  private static RpcCall getRpcCall(String userName, Optional<Integer> forcedParamIndex) {
     RpcCall rpcCall = new RpcCall() {
       @Override
       public BlockingService getService() {
@@ -554,7 +712,7 @@ public class TestNamedQueueRecorder {
 
       @Override
       public Message getParam() {
-        return getMessage();
+        return getMessage(forcedParamIndex);
       }
 
       @Override
@@ -574,7 +732,6 @@ public class TestNamedQueueRecorder {
 
       @Override
       public void setStartTime(long startTime) {
-
       }
 
       @Override
@@ -599,6 +756,23 @@ public class TestNamedQueueRecorder {
 
       @Override
       public RPCProtos.RequestHeader getHeader() {
+        return null;
+      }
+
+      @Override
+      public Map<String, byte[]> getConnectionAttributes() {
+        return CONNECTION_HEADERS.stream().collect(Collectors
+          .toMap(HBaseProtos.NameBytesPair::getName, pair -> pair.getValue().toByteArray()));
+      }
+
+      @Override
+      public Map<String, byte[]> getRequestAttributes() {
+        return REQUEST_HEADERS.stream().collect(Collectors.toMap(HBaseProtos.NameBytesPair::getName,
+          pair -> pair.getValue().toByteArray()));
+      }
+
+      @Override
+      public byte[] getRequestAttribute(String key) {
         return null;
       }
 
@@ -669,12 +843,12 @@ public class TestNamedQueueRecorder {
       }
 
       @Override
-      public long getResponseBlockSize() {
+      public long getBlockBytesScanned() {
         return 0;
       }
 
       @Override
-      public void incrementResponseBlockSize(long blockSize) {
+      public void incrementBlockBytesScanned(long blockSize) {
       }
 
       @Override
@@ -689,13 +863,13 @@ public class TestNamedQueueRecorder {
     return rpcCall;
   }
 
-  private static Message getMessage() {
+  private static Message getMessage(Optional<Integer> forcedParamIndex) {
 
     i = (i + 1) % 3;
 
     Message message = null;
 
-    switch (i) {
+    switch (forcedParamIndex.orElse(i)) {
 
       case 0: {
         message = ClientProtos.ScanRequest.newBuilder()

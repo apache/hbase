@@ -114,7 +114,7 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
     admin1 = UTIL1.getConnection().getAdmin();
     admin2 = UTIL2.getConnection().getAdmin();
 
-    queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(UTIL1.getZooKeeperWatcher(),
+    queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(UTIL1.getConnection(),
       UTIL1.getConfiguration());
 
     admin1.createNamespace(NamespaceDescriptor.create(REPLICATE_NAMESPACE).build());

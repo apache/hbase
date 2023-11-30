@@ -56,6 +56,7 @@ class TableQueue extends Queue<TableName> {
         // we allow concurrent edit on the ns family in meta table
         return !proc.getTableName().equals(TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME);
       case READ:
+      case FLUSH:
       case SNAPSHOT:
         return false;
       // region operations are using the shared-lock on the table
@@ -68,6 +69,7 @@ class TableQueue extends Queue<TableName> {
       case REGION_GC:
       case MERGED_REGIONS_GC:
       case REGION_SNAPSHOT:
+      case REGION_TRUNCATE:
         return false;
       default:
         break;

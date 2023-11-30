@@ -54,9 +54,8 @@ public class TestCoreMasterCoprocessor {
   private MasterCoprocessorHost mch;
 
   @Before
-  public void before() throws IOException {
-    String methodName = this.name.getMethodName();
-    this.ms = new MockMasterServices(HTU.getConfiguration(), null);
+  public void before() throws Exception {
+    this.ms = new MockMasterServices(HTU.getConfiguration());
     this.mch = new MasterCoprocessorHost(this.ms, HTU.getConfiguration());
     this.mch.preMasterInitialization();
   }

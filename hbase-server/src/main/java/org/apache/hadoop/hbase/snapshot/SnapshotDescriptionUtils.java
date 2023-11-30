@@ -419,17 +419,46 @@ public final class SnapshotDescriptionUtils {
     // if this fails
     URI workingURI = workingDirFs.getUri();
     URI rootURI = fs.getUri();
+
     if (
-      (!workingURI.getScheme().equals(rootURI.getScheme()) || workingURI.getAuthority() == null
-        || !workingURI.getAuthority().equals(rootURI.getAuthority())
-        || workingURI.getUserInfo() == null
-        || !workingURI.getUserInfo().equals(rootURI.getUserInfo())
+      (shouldSkipRenameSnapshotDirectories(workingURI, rootURI)
         || !fs.rename(workingDir, snapshotDir))
         && !FileUtil.copy(workingDirFs, workingDir, fs, snapshotDir, true, true, conf)
     ) {
       throw new SnapshotCreationException("Failed to copy working directory(" + workingDir
         + ") to completed directory(" + snapshotDir + ").");
     }
+  }
+
+  static boolean shouldSkipRenameSnapshotDirectories(URI workingURI, URI rootURI) {
+    // check scheme, e.g. file, hdfs
+    if (workingURI.getScheme() == null && rootURI.getScheme() != null) {
+      return true;
+    }
+    if (workingURI.getScheme() != null && !workingURI.getScheme().equals(rootURI.getScheme())) {
+      return true;
+    }
+
+    // check Authority, e.g. localhost:port
+    if (workingURI.getAuthority() == null && rootURI.getAuthority() != null) {
+      return true;
+    }
+    if (
+      workingURI.getAuthority() != null && !workingURI.getAuthority().equals(rootURI.getAuthority())
+    ) {
+      return true;
+    }
+
+    // check UGI/userInfo
+    if (workingURI.getUserInfo() == null && rootURI.getUserInfo() != null) {
+      return true;
+    }
+    if (
+      workingURI.getUserInfo() != null && !workingURI.getUserInfo().equals(rootURI.getUserInfo())
+    ) {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -464,5 +493,19 @@ public final class SnapshotDescriptionUtils {
       });
     return snapshot.toBuilder()
       .setUsersAndPermissions(ShadedAccessControlUtil.toUserTablePermissions(perms)).build();
+  }
+
+  /**
+   * Method to check whether TTL has expired for specified snapshot creation time and snapshot ttl.
+   * NOTE: For backward compatibility (after the patch deployment on HMaster), any snapshot with ttl
+   * 0 is to be considered as snapshot to keep FOREVER. Default ttl value specified by
+   * {@link HConstants#DEFAULT_SNAPSHOT_TTL}
+   * @return true if ttl has expired, or, false, otherwise
+   */
+  public static boolean isExpiredSnapshot(long snapshotTtl, long snapshotCreatedTime,
+    long currentTime) {
+    return snapshotCreatedTime > 0 && snapshotTtl > HConstants.DEFAULT_SNAPSHOT_TTL
+      && snapshotTtl < TimeUnit.MILLISECONDS.toSeconds(Long.MAX_VALUE)
+      && (snapshotCreatedTime + TimeUnit.SECONDS.toMillis(snapshotTtl)) < currentTime;
   }
 }

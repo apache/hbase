@@ -21,8 +21,10 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.Cell;
@@ -88,7 +90,7 @@ public final class ProtobufLogTestHelper {
     wal.sync();
   }
 
-  public static void doRead(ProtobufLogReader reader, boolean withTrailer, RegionInfo hri,
+  public static void doRead(ProtobufWALStreamReader reader, boolean withTrailer, RegionInfo hri,
     TableName tableName, int columnCount, int recordCount, byte[] row, long timestamp)
     throws IOException {
     if (withTrailer) {
@@ -110,11 +112,18 @@ public final class ProtobufLogTestHelper {
         idx++;
       }
     }
-    assertNull(reader.next());
+    if (withTrailer) {
+      // we can finish normally
+      assertNull(reader.next());
+    } else {
+      // we will get an EOF since there is no trailer
+      assertThrows(EOFException.class, () -> reader.next());
+    }
   }
 
-  public static void doRead(ProtobufLogReader reader, boolean withTrailer, TableName tableName,
-    int columnCount, int recordCount, byte[] row, long timestamp) throws IOException {
+  public static void doRead(ProtobufWALStreamReader reader, boolean withTrailer,
+    TableName tableName, int columnCount, int recordCount, byte[] row, long timestamp)
+    throws IOException {
     doRead(reader, withTrailer, toRegionInfo(tableName), tableName, columnCount, recordCount, row,
       timestamp);
   }

@@ -31,6 +31,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
@@ -44,6 +46,7 @@ import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
 import org.apache.hadoop.hbase.security.SaslStatus;
@@ -65,6 +68,7 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteInput;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
@@ -75,6 +79,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -103,6 +108,7 @@ abstract class ServerRpcConnection implements Closeable {
   protected int remotePort;
   protected InetAddress addr;
   protected ConnectionHeader connectionHeader;
+  protected Map<String, byte[]> connectionAttributes;
 
   /**
    * Codec the client asked use.
@@ -405,6 +411,19 @@ abstract class ServerRpcConnection implements Closeable {
   // Reads the connection header following version
   private void processConnectionHeader(ByteBuff buf) throws IOException {
     this.connectionHeader = ConnectionHeader.parseFrom(createCis(buf));
+
+    // we want to copy the attributes prior to releasing the buffer so that they don't get corrupted
+    // eventually
+    if (connectionHeader.getAttributeList().isEmpty()) {
+      this.connectionAttributes = Collections.emptyMap();
+    } else {
+      this.connectionAttributes =
+        Maps.newHashMapWithExpectedSize(connectionHeader.getAttributeList().size());
+      for (HBaseProtos.NameBytesPair nameBytesPair : connectionHeader.getAttributeList()) {
+        this.connectionAttributes.put(nameBytesPair.getName(),
+          nameBytesPair.getValue().toByteArray());
+      }
+    }
     String serviceName = connectionHeader.getServiceName();
     if (serviceName == null) {
       throw new EmptyServiceNameException();
@@ -530,6 +549,19 @@ abstract class ServerRpcConnection implements Closeable {
     Span span = TraceUtil.createRemoteSpan("RpcServer.process", traceCtx);
     try (Scope ignored = span.makeCurrent()) {
       int id = header.getCallId();
+      // HBASE-28128 - if server is aborting, don't bother trying to process. It will
+      // fail at the handler layer, but worse might result in CallQueueTooBigException if the
+      // queue is full but server is not properly processing requests. Better to throw an aborted
+      // exception here so that the client can properly react.
+      if (rpcServer.server != null && rpcServer.server.isAborted()) {
+        RegionServerAbortedException serverIsAborted = new RegionServerAbortedException(
+          "Server " + rpcServer.server.getServerName() + " aborting");
+        this.rpcServer.metrics.exception(serverIsAborted);
+        sendErrorResponseForCall(id, totalRequestSize, span, serverIsAborted.getMessage(),
+          serverIsAborted);
+        return;
+      }
+
       if (RpcServer.LOG.isTraceEnabled()) {
         RpcServer.LOG.trace("RequestHeader " + TextFormat.shortDebugString(header)
           + " totalRequestSize: " + totalRequestSize + " bytes");
@@ -541,14 +573,11 @@ abstract class ServerRpcConnection implements Closeable {
         (totalRequestSize + this.rpcServer.callQueueSizeInBytes.sum())
             > this.rpcServer.maxQueueSizeInBytes
       ) {
-        final ServerCall<?> callTooBig = createCall(id, this.service, null, null, null, null,
-          totalRequestSize, null, 0, this.callCleanup);
         this.rpcServer.metrics.exception(RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION);
-        callTooBig.setResponse(null, null, RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION,
+        sendErrorResponseForCall(id, totalRequestSize, span,
           "Call queue is full on " + this.rpcServer.server.getServerName()
-            + ", is hbase.ipc.server.max.callqueue.size too small?");
-        TraceUtil.setError(span, RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION);
-        callTooBig.sendResponseIfReady();
+            + ", is hbase.ipc.server.max.callqueue.size too small?",
+          RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION);
         return;
       }
       MethodDescriptor md = null;
@@ -603,12 +632,8 @@ abstract class ServerRpcConnection implements Closeable {
           responseThrowable = thrown;
         }
 
-        ServerCall<?> readParamsFailedCall = createCall(id, this.service, null, null, null, null,
-          totalRequestSize, null, 0, this.callCleanup);
-        readParamsFailedCall.setResponse(null, null, responseThrowable,
-          msg + "; " + responseThrowable.getMessage());
-        TraceUtil.setError(span, responseThrowable);
-        readParamsFailedCall.sendResponseIfReady();
+        sendErrorResponseForCall(id, totalRequestSize, span,
+          msg + "; " + responseThrowable.getMessage(), responseThrowable);
         return;
       }
 
@@ -636,6 +661,15 @@ abstract class ServerRpcConnection implements Closeable {
         span.end();
       }
     }
+  }
+
+  private void sendErrorResponseForCall(int id, long totalRequestSize, Span span, String msg,
+    Throwable responseThrowable) throws IOException {
+    ServerCall<?> failedcall = createCall(id, this.service, null, null, null, null,
+      totalRequestSize, null, 0, this.callCleanup);
+    failedcall.setResponse(null, null, responseThrowable, msg);
+    TraceUtil.setError(span, responseThrowable);
+    failedcall.sendResponseIfReady();
   }
 
   protected final RpcResponse getErrorResponse(String msg, Exception e) throws IOException {

@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.junit.BeforeClass;
@@ -318,108 +319,131 @@ public class TestLogRolling extends AbstractTestLogRolling {
    */
   @Test
   public void testLogRollOnDatanodeDeath() throws Exception {
-    TEST_UTIL.ensureSomeRegionServersAvailable(2);
-    assertTrue("This test requires WAL file replication set to 2.",
-      fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) == 2);
-    LOG.info("Replication=" + fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
 
-    this.server = cluster.getRegionServer(0);
+    Long oldValue = TEST_UTIL.getConfiguration()
+      .getLong("hbase.regionserver.hlog.check.lowreplication.interval", -1);
 
-    // Create the test table and open it
-    TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+    try {
+      /**
+       * When we reuse the code of AsyncFSWAL to FSHLog, the low replication is only checked by
+       * {@link LogRoller#checkLowReplication},so in order to make this test spend less time,we
+       * should minimize following config which is maximized by
+       * {@link AbstractTestLogRolling#setUpBeforeClass}
+       */
+      TEST_UTIL.getConfiguration().setLong("hbase.regionserver.hlog.check.lowreplication.interval",
+        1000);
+      this.tearDown();
+      this.setUp();
 
-    admin.createTable(desc);
-    Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
+      TEST_UTIL.ensureSomeRegionServersAvailable(2);
+      assertTrue("This test requires WAL file replication set to 2.",
+        fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) == 2);
+      LOG.info("Replication=" + fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
 
-    server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
-    RegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
-    final FSHLog log = (FSHLog) server.getWAL(region);
-    final AtomicBoolean lowReplicationHookCalled = new AtomicBoolean(false);
+      this.server = cluster.getRegionServer(0);
 
-    log.registerWALActionsListener(new WALActionsListener() {
-      @Override
-      public void logRollRequested(WALActionsListener.RollRequestReason reason) {
-        switch (reason) {
-          case LOW_REPLICATION:
-            lowReplicationHookCalled.lazySet(true);
-            break;
-          default:
-            break;
+      // Create the test table and open it
+      TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+
+      admin.createTable(desc);
+      Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
+
+      server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
+      RegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
+      final FSHLog log = (FSHLog) server.getWAL(region);
+      final AtomicBoolean lowReplicationHookCalled = new AtomicBoolean(false);
+
+      log.registerWALActionsListener(new WALActionsListener() {
+        @Override
+        public void logRollRequested(WALActionsListener.RollRequestReason reason) {
+          switch (reason) {
+            case LOW_REPLICATION:
+              lowReplicationHookCalled.lazySet(true);
+              break;
+            default:
+              break;
+          }
+        }
+      });
+
+      // add up the datanode count, to ensure proper replication when we kill 1
+      // This function is synchronous; when it returns, the dfs cluster is active
+      // We start 3 servers and then stop 2 to avoid a directory naming conflict
+      // when we stop/start a namenode later, as mentioned in HBASE-5163
+      List<DataNode> existingNodes = dfsCluster.getDataNodes();
+      int numDataNodes = 3;
+      TEST_UTIL.getConfiguration().setLong("hbase.regionserver.hlog.check.lowreplication.interval",
+        1000);
+      dfsCluster.startDataNodes(TEST_UTIL.getConfiguration(), numDataNodes, true, null, null);
+      List<DataNode> allNodes = dfsCluster.getDataNodes();
+      for (int i = allNodes.size() - 1; i >= 0; i--) {
+        if (existingNodes.contains(allNodes.get(i))) {
+          dfsCluster.stopDataNode(i);
         }
       }
-    });
 
-    // add up the datanode count, to ensure proper replication when we kill 1
-    // This function is synchronous; when it returns, the dfs cluster is active
-    // We start 3 servers and then stop 2 to avoid a directory naming conflict
-    // when we stop/start a namenode later, as mentioned in HBASE-5163
-    List<DataNode> existingNodes = dfsCluster.getDataNodes();
-    int numDataNodes = 3;
-    dfsCluster.startDataNodes(TEST_UTIL.getConfiguration(), numDataNodes, true, null, null);
-    List<DataNode> allNodes = dfsCluster.getDataNodes();
-    for (int i = allNodes.size() - 1; i >= 0; i--) {
-      if (existingNodes.contains(allNodes.get(i))) {
-        dfsCluster.stopDataNode(i);
-      }
+      assertTrue(
+        "DataNodes " + dfsCluster.getDataNodes().size() + " default replication "
+          + fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()),
+        dfsCluster.getDataNodes().size()
+            >= fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) + 1);
+
+      writeData(table, 2);
+
+      long curTime = EnvironmentEdgeManager.currentTime();
+      LOG.info("log.getCurrentFileName(): " + log.getCurrentFileName());
+      long oldFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
+      assertTrue("Log should have a timestamp older than now",
+        curTime > oldFilenum && oldFilenum != -1);
+
+      assertTrue("The log shouldn't have rolled yet",
+        oldFilenum == AbstractFSWALProvider.extractFileNumFromWAL(log));
+      final DatanodeInfo[] pipeline = log.getPipeline();
+      assertTrue(pipeline.length == fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
+
+      // kill a datanode in the pipeline to force a log roll on the next sync()
+      // This function is synchronous, when it returns the node is killed.
+      assertTrue(dfsCluster.stopDataNode(pipeline[0].getName()) != null);
+
+      // this write should succeed, but trigger a log roll
+      writeData(table, 2);
+
+      TEST_UTIL.waitFor(10000, 100, () -> {
+        long newFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
+        return newFilenum > oldFilenum && newFilenum > curTime && lowReplicationHookCalled.get();
+      });
+
+      long newFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
+
+      // write some more log data (this should use a new hdfs_out)
+      writeData(table, 3);
+      assertTrue("The log should not roll again.",
+        AbstractFSWALProvider.extractFileNumFromWAL(log) == newFilenum);
+      // kill another datanode in the pipeline, so the replicas will be lower than
+      // the configured value 2.
+      assertTrue(dfsCluster.stopDataNode(pipeline[1].getName()) != null);
+
+      batchWriteAndWait(table, log, 3, false, 14000);
+      int replication = log.getLogReplication();
+      assertTrue(
+        "LowReplication Roller should've been disabled, current replication=" + replication,
+        !log.isLowReplicationRollEnabled());
+
+      dfsCluster.startDataNodes(TEST_UTIL.getConfiguration(), 1, true, null, null);
+
+      // Force roll writer. The new log file will have the default replications,
+      // and the LowReplication Roller will be enabled.
+      log.rollWriter(true);
+      batchWriteAndWait(table, log, 13, true, 10000);
+      replication = log.getLogReplication();
+      assertTrue("New log file should have the default replication instead of " + replication,
+        replication == fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
+      assertTrue("LowReplication Roller should've been enabled", log.isLowReplicationRollEnabled());
+    } finally {
+      TEST_UTIL.getConfiguration().setLong("hbase.regionserver.hlog.check.lowreplication.interval",
+        oldValue);
     }
-
-    assertTrue(
-      "DataNodes " + dfsCluster.getDataNodes().size() + " default replication "
-        + fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()),
-      dfsCluster.getDataNodes().size()
-          >= fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) + 1);
-
-    writeData(table, 2);
-
-    long curTime = EnvironmentEdgeManager.currentTime();
-    LOG.info("log.getCurrentFileName(): " + log.getCurrentFileName());
-    long oldFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
-    assertTrue("Log should have a timestamp older than now",
-      curTime > oldFilenum && oldFilenum != -1);
-
-    assertTrue("The log shouldn't have rolled yet",
-      oldFilenum == AbstractFSWALProvider.extractFileNumFromWAL(log));
-    final DatanodeInfo[] pipeline = log.getPipeline();
-    assertTrue(pipeline.length == fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
-
-    // kill a datanode in the pipeline to force a log roll on the next sync()
-    // This function is synchronous, when it returns the node is killed.
-    assertTrue(dfsCluster.stopDataNode(pipeline[0].getName()) != null);
-
-    // this write should succeed, but trigger a log roll
-    writeData(table, 2);
-    long newFilenum = AbstractFSWALProvider.extractFileNumFromWAL(log);
-
-    assertTrue("Missing datanode should've triggered a log roll",
-      newFilenum > oldFilenum && newFilenum > curTime);
-
-    assertTrue("The log rolling hook should have been called with the low replication flag",
-      lowReplicationHookCalled.get());
-
-    // write some more log data (this should use a new hdfs_out)
-    writeData(table, 3);
-    assertTrue("The log should not roll again.",
-      AbstractFSWALProvider.extractFileNumFromWAL(log) == newFilenum);
-    // kill another datanode in the pipeline, so the replicas will be lower than
-    // the configured value 2.
-    assertTrue(dfsCluster.stopDataNode(pipeline[1].getName()) != null);
-
-    batchWriteAndWait(table, log, 3, false, 14000);
-    int replication = log.getLogReplication();
-    assertTrue("LowReplication Roller should've been disabled, current replication=" + replication,
-      !log.isLowReplicationRollEnabled());
-
-    dfsCluster.startDataNodes(TEST_UTIL.getConfiguration(), 1, true, null, null);
-
-    // Force roll writer. The new log file will have the default replications,
-    // and the LowReplication Roller will be enabled.
-    log.rollWriter(true);
-    batchWriteAndWait(table, log, 13, true, 10000);
-    replication = log.getLogReplication();
-    assertTrue("New log file should have the default replication instead of " + replication,
-      replication == fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
-    assertTrue("LowReplication Roller should've been enabled", log.isLowReplicationRollEnabled());
   }
 
   /**
@@ -515,9 +539,8 @@ public class TestLogRolling extends AbstractTestLogRolling {
           TEST_UTIL.getConfiguration(), null);
 
         LOG.debug("Reading WAL " + CommonFSUtils.getPath(p));
-        WAL.Reader reader = null;
-        try {
-          reader = WALFactory.createReader(fs, p, TEST_UTIL.getConfiguration());
+        try (WALStreamReader reader =
+          WALFactory.createStreamReader(fs, p, TEST_UTIL.getConfiguration())) {
           WAL.Entry entry;
           while ((entry = reader.next()) != null) {
             LOG.debug("#" + entry.getKey().getSequenceId() + ": " + entry.getEdit().getCells());
@@ -528,8 +551,6 @@ public class TestLogRolling extends AbstractTestLogRolling {
           }
         } catch (EOFException e) {
           LOG.debug("EOF reading file " + CommonFSUtils.getPath(p));
-        } finally {
-          if (reader != null) reader.close();
         }
       }
 

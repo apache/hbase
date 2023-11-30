@@ -390,6 +390,26 @@ mvn clean install
 mvn clean install -DskipTests
 ----
 
+[[maven.build.commands.silicon]]
+=====  Building HBase 2.x on Apple Silicon
+
+Building a non-master branch requires protoc 2.5.0 binary which is not available for Apple Silicon.
+HBASE-27741 added a workaround to the build to fall back to osx-x86_64 version of protoc automatically by `apple-silicon-workaround` Maven profile.
+The intention is that this change will permit the build to proceed with the x86 version of `protoc`, making use of the Rosetta instruction translation service built into the OS.
+If you'd like to provide and make use of your own aarch_64 `protoc`, you can disable this profile on the command line by adding `-P'!apple-silicon-workaround'`, or through configuration in your `settings.xml`.
+
+You can use the following commands to build protoc on your Apple Silicon machine.
+[source,bourne]
+----
+curl -sSL https://github.com/protocolbuffers/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz | tar zx -
+cd protobuf-2.5.0
+curl -L -O https://gist.githubusercontent.com/liusheng/64aee1b27de037f8b9ccf1873b82c413/raw/118c2fce733a9a62a03281753572a45b6efb8639/protobuf-2.5.0-arm64.patch
+patch -p1 < protobuf-2.5.0-arm64.patch
+./configure --disable-shared
+make
+mvn install:install-file -DgroupId=com.google.protobuf -DartifactId=protoc -Dversion=2.5.0 -Dclassifier=osx-aarch_64 -Dpackaging=exe -Dfile=src/protoc
+----
+
 [[maven.build.commands.unitall]]
 ==== Running all or individual Unit Tests
 
@@ -1739,7 +1759,7 @@ following example runs ChaosMonkey with the default configuration:
 
 [source,bash]
 ----
-$ bin/hbase org.apache.hadoop.hbase.util.ChaosMonkey
+$ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner
 
 12/11/19 23:21:57 INFO util.ChaosMonkey: Using ChaosMonkey Policy: class org.apache.hadoop.hbase.util.ChaosMonkey$PeriodicRandomActionPolicy, period:60000
 12/11/19 23:21:57 INFO util.ChaosMonkey: Sleeping for 26953 to add jitter
@@ -1780,6 +1800,86 @@ $ bin/hbase org.apache.hadoop.hbase.util.ChaosMonkey
 
 The output indicates that ChaosMonkey started the default `PeriodicRandomActionPolicy`
 policy, which is configured with all the available actions. It chose to run `RestartActiveMaster` and `RestartRandomRs` actions.
+
+==== ChaosMonkey without SSH
+
+Chaos monkey can be run without SSH using the Chaos service and ZNode cluster manager. HBase ships
+with many cluster managers, available in the `hbase-it/src/test/java/org/apache/hadoop/hbase/` directory.
+
+Set the following property in hbase configuration to switch to `ZNodeClusterManager`:
+[source,xml]
+----
+<property>
+  <name>hbase.it.clustermanager.class</name>
+  <value>org.apache.hadoop.hbase.ZNodeClusterManager</value>
+</property>
+----
+
+Start chaos agent on all hosts where you want to test chaos scenarios.
+
+[source,bash]
+----
+$ bin/hbase org.apache.hadoop.hbase.chaos.ChaosService -c start
+----
+
+Start chaos monkey runner from any one host, preferrably an edgenode.
+An example log while running chaos monkey with default policy `PeriodicRandomActionPolicy` is as shown below:
+[source,bash]
+----
+$ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner
+
+INFO  [main] hbase.HBaseCommonTestingUtility: Instantiating org.apache.hadoop.hbase.ZNodeClusterManager
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe] zookeeper.ZooKeeper: Initiating client connection, connectString=host1.example.com:2181,host2.example.com:2181,host3.example.com:2181 sessionTimeout=90000 watcher=org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient$$Lambda$19/2106254492@1a39cf8
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe] zookeeper.ClientCnxnSocket: jute.maxbuffer value is 4194304 Bytes
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe] zookeeper.ClientCnxn: zookeeper.request.timeout value is 0. feature enabled=
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe-SendThread(host2.example.com:2181)] zookeeper.ClientCnxn: Opening socket connection to server host2.example.com/10.20.30.40:2181. Will not attempt to authenticate using SASL (unknown error)
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe-SendThread(host2.example.com:2181)] zookeeper.ClientCnxn: Socket connection established, initiating session, client: /10.20.30.40:35164, server: host2.example.com/10.20.30.40:2181
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe-SendThread(host2.example.com:2181)] zookeeper.ClientCnxn: Session establishment complete on server host2.example.com/10.20.30.40:2181, sessionid = 0x101de9204670877, negotiated timeout = 60000
+INFO  [main] policies.Policy: Using ChaosMonkey Policy class org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy, period=60000 ms
+ [ChaosMonkey-2] policies.Policy: Sleeping for 93741 ms to add jitter
+INFO  [ChaosMonkey-0] policies.Policy: Sleeping for 9752 ms to add jitter
+INFO  [ChaosMonkey-1] policies.Policy: Sleeping for 65562 ms to add jitter
+INFO  [ChaosMonkey-3] policies.Policy: Sleeping for 38777 ms to add jitter
+INFO  [ChaosMonkey-0] actions.CompactRandomRegionOfTableAction: Performing action: Compact random region of table usertable, major=false
+INFO  [ChaosMonkey-0] policies.Policy: Sleeping for 59532 ms
+INFO  [ChaosMonkey-3] client.ConnectionImplementation: Getting master connection state from TTL Cache
+INFO  [ChaosMonkey-3] client.ConnectionImplementation: Getting master state using rpc call
+INFO  [ChaosMonkey-3] actions.DumpClusterStatusAction: Cluster status
+Master: host1.example.com,16000,1678339058222
+Number of backup masters: 0
+Number of live region servers: 3
+  host1.example.com,16020,1678794551244
+  host2.example.com,16020,1678341258970
+  host3.example.com,16020,1678347834336
+Number of dead region servers: 0
+Number of unknown region servers: 0
+Average load: 123.6666666666666
+Number of requests: 118645157
+Number of regions: 2654
+Number of regions in transition: 0
+INFO  [ChaosMonkey-3] policies.Policy: Sleeping for 89614 ms
+----
+
+For info on more customisations we can see help for the `ChaosMonkeyRunner`. For example we can pass the table name on which the chaos operations to be performed etc.
+Below is the output of the help command, listing all the supported options.
+[source,bash]
+----
+$ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner --help
+
+usage: hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner <options>
+Options:
+ -c <arg>             Name of extra configurations file to find on CLASSPATH
+ -m,--monkey <arg>    Which chaos monkey to run
+ -monkeyProps <arg>   The properties file for specifying chaos monkey properties.
+ -tableName <arg>     Table name in the test to run chaos monkey against
+ -familyName <arg>    Family name in the test to run chaos monkey against
+----
+
+For example, running the following will start `ServerKillingMonkeyFactory` that chooses among actions to rolling batch restart RS, graceful rolling restart RS one at a time, restart active master, force balancer run etc.
+[source,bash]
+----
+$ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner -m org.apache.hadoop.hbase.chaos.factories.ServerKillingMonkeyFactory
+----
 
 ==== Available Policies
 HBase ships with several ChaosMonkey policies, available in the
@@ -2234,75 +2334,31 @@ If you are new to submitting patches to open source or new to submitting patches
  link:https://commons.apache.org/[Apache Commons Project].
 It provides a nice overview that applies equally to the Apache HBase Project.
 
-[[submitting.patches.create]]
-==== Create Patch
-
-Make sure you review <<common.patch.feedback,common.patch.feedback>> for code style. If your
-patch
+Make sure you review <<common.patch.feedback,common.patch.feedback>> for code style. If your patch
 was generated incorrectly or your code does not adhere to the code formatting guidelines, you may
 be asked to redo some work.
 
-
-.Using submit-patch.py (recommended)
+HBase enforces code style via a maven plugin. After you've written up your changes, apply the
+formatter before committing.
 
 [source,bourne]
-----
-$ dev-support/submit-patch.py -jid HBASE-xxxxx
-----
+---
+$ mvn spotless:apply
+---
 
-Use this script to create patches, upload to jira and optionally create/update reviews on
-Review Board. Patch name is automatically formatted as _(JIRA).(branch name).(patch number).patch_
- to follow Yetus' naming rules. Use `-h` flag to know detailed usage information. Most useful options
-are:
-
-* `-b BRANCH, --branch BRANCH` : Specify base branch for generating the diff. If not specified,
-tracking branch is used. If there is no tracking branch, error will be thrown.
-* `-jid JIRA_ID, --jira-id JIRA_ID` : If used, deduces next patch version from attachments in the
-jira and uploads the new patch. Script will ask for jira username/password for authentication.
-If not set, patch is named <branch>.patch.
-
-By default, it'll also create/update review board. To skip that action, use `-srb` option. It uses
-'Issue Links' in the jira to figure out if a review request already exists. If no review
-request is present, then creates a new one and populates all required fields using jira summary,
-patch description, etc. Also adds this review's link to the jira.
-
-Save authentication credentials (optional)::
-Since attaching patches on JIRA and creating/changing review request on ReviewBoard requires
-valid user authentication, the script will prompt you for username and password. To avoid the hassle every
-time, set up `~/.apache-creds` with login details and encrypt it by following the steps in footer
-of script's help message.
-
-Python dependencies:: To install required python dependencies, execute
-`pip install -r dev-support/python-requirements.txt` from the master branch.
-
-.Manually
-
-  . Use `git rebase -i` first, to combine (squash) smaller commits into a single larger one.
-  . Create patch using IDE or Git commands. `git format-patch` is preferred since it preserves patch
-    author's name and commit message. Also, it handles binary files by default, whereas `git diff`
-    ignores them unless you use the `--binary` option.
-  . Patch name should be as follows to adhere to Yetus' naming convention: +
-    `(JIRA).(branch name).(patch number).patch` +
-    For eg. HBASE-11625.master.001.patch, HBASE-XXXXX.branch-1.2.0005.patch, etc.
-  . Attach the patch to the JIRA using `More->Attach Files` then click on btn:[Submit Patch]
-    button, which'll trigger Hudson job to check patch for validity.
-  . If your patch is longer than a single screen, also create a review on Review Board  and
-    add the link to JIRA. See <<reviewboard,reviewboard>>.
-
-
+When your commit is ready, present it to the community as a
+link:https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests[GitHub Pull Request].
 
 .Few general guidelines
 * Always patch against the master branch first, even if you want to patch in another branch.
-  HBase committers always apply patches first to the master branch, and backport if necessary.
-* Submit one single patch for a fix. If necessary, squash local commits to merge local commits into
-  a single one first. See this
+  HBase committers always apply patches first to the master branch, and backport as necessary. For
+  complex patches, you may be asked to perform the backport(s) yourself.
+* Submit one single PR for a single fix. If necessary, squash local commits to merge local commits
+  into a single one first. See this
   link:http://stackoverflow.com/questions/5308816/how-to-use-git-merge-squash[Stack Overflow
   question] for more information about squashing commits.
 * Please understand that not every patch may get committed, and that feedback will likely be
   provided on the patch.
-* If you need to revise your patch, leave the previous patch file(s) attached to the JIRA, and
-  upload a new one with incremented patch number. +
-  Click on btn:[Cancel Patch] and then on btn:[Submit Patch] to trigger the presubmit run.
 
 [[submitting.patches.tests]]
 ==== Unit Tests

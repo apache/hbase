@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -183,4 +184,17 @@ public class TestWALMethods {
     return entry;
   }
 
+  @Test
+  public void testParseServerNameFromWALName() {
+    assertEquals(ServerName.valueOf("abc,123,123"),
+      AbstractFSWALProvider.parseServerNameFromWALName("abc,123,123.1.12345.meta"));
+    assertEquals(ServerName.valueOf("abc,123,123"),
+      AbstractFSWALProvider.parseServerNameFromWALName("abc,123,123.12345"));
+    assertEquals(ServerName.valueOf("abc,123,123"),
+      AbstractFSWALProvider.parseServerNameFromWALName("abc,123,123"));
+    assertThrows(IllegalArgumentException.class,
+      () -> AbstractFSWALProvider.parseServerNameFromWALName("test,abc,123,123.12345"));
+    assertThrows(IllegalArgumentException.class,
+      () -> AbstractFSWALProvider.parseServerNameFromWALName("abc"));
+  }
 }

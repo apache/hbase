@@ -74,11 +74,15 @@ public class TestMetricsHeapMemoryManager {
     hmm.updateBlockedFlushCount(200);
     hmm.updateUnblockedFlushCount(50);
     hmm.setCurMemStoreSizeGauge(256 * 1024 * 1024);
+    hmm.setCurMemStoreOnHeapSizeGauge(512 * 1024 * 1024);
+    hmm.setCurMemStoreOffHeapSizeGauge(128 * 1024 * 1024);
     hmm.setCurBlockCacheSizeGauge(100 * 1024 * 1024);
 
     HELPER.assertGauge("blockedFlushGauge", 200, source);
     HELPER.assertGauge("unblockedFlushGauge", 50, source);
     HELPER.assertGauge("memStoreSize", 256 * 1024 * 1024, source);
+    HELPER.assertGauge("memStoreOnHeapSize", 512 * 1024 * 1024, source);
+    HELPER.assertGauge("memStoreOffHeapSize", 128 * 1024 * 1024, source);
     HELPER.assertGauge("blockCacheSize", 100 * 1024 * 1024, source);
   }
 }

@@ -22,7 +22,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
-import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
@@ -99,7 +98,6 @@ public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
           ((MetricsRegionSourceImpl) regionMetricSource).snapshot(mrb, all);
         }
       }
-      mrb.addGauge(Interns.info(NUM_REGIONS, NUMBER_OF_REGIONS_DESC), regionSources.size());
       metricsRegistry.snapshot(mrb, all);
     }
   }

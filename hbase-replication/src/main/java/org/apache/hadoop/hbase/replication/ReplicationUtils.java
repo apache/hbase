@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -79,20 +78,6 @@ public final class ReplicationUtils {
     }
 
     return otherConf;
-  }
-
-  public static void removeAllQueues(ReplicationQueueStorage queueStorage, String peerId)
-    throws ReplicationException {
-    for (ServerName replicator : queueStorage.getListOfReplicators()) {
-      List<String> queueIds = queueStorage.getAllQueues(replicator);
-      for (String queueId : queueIds) {
-        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
-        if (queueInfo.getPeerId().equals(peerId)) {
-          queueStorage.removeQueue(replicator, queueId);
-        }
-      }
-      queueStorage.removeReplicatorIfQueueIsEmpty(replicator);
-    }
   }
 
   private static boolean isCollectionEqual(Collection<String> c1, Collection<String> c2) {

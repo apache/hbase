@@ -17,20 +17,16 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.IOException;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
 import org.apache.hadoop.hbase.security.SaslStatus;
 import org.apache.hadoop.hbase.security.SaslUnwrapHandler;
 import org.apache.hadoop.hbase.security.SaslWrapHandler;
 import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
-import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufOutputStream;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
 import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
@@ -54,23 +50,6 @@ class NettyHBaseSaslRpcServerHandler extends SimpleChannelInboundHandler<ByteBuf
     this.conn = conn;
   }
 
-  private void doResponse(ChannelHandlerContext ctx, SaslStatus status, Writable rv,
-    String errorClass, String error) throws IOException {
-    // In my testing, have noticed that sasl messages are usually
-    // in the ballpark of 100-200. That's why the initial capacity is 256.
-    ByteBuf resp = ctx.alloc().buffer(256);
-    try (ByteBufOutputStream out = new ByteBufOutputStream(resp)) {
-      out.writeInt(status.state); // write status
-      if (status == SaslStatus.SUCCESS) {
-        rv.write(out);
-      } else {
-        WritableUtils.writeString(out, errorClass);
-        WritableUtils.writeString(out, error);
-      }
-    }
-    NettyFutureUtils.safeWriteAndFlush(ctx, resp);
-  }
-
   @Override
   protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
     LOG.debug("Read input token of size={} for processing by saslServer.evaluateResponse()",
@@ -81,7 +60,7 @@ class NettyHBaseSaslRpcServerHandler extends SimpleChannelInboundHandler<ByteBuf
     byte[] replyToken = saslServer.evaluateResponse(saslToken);
     if (replyToken != null) {
       LOG.debug("Will send token of size {} from saslServer.", replyToken.length);
-      doResponse(ctx, SaslStatus.SUCCESS, new BytesWritable(replyToken), null, null);
+      conn.doRawSaslReply(SaslStatus.SUCCESS, new BytesWritable(replyToken), null, null);
     }
     if (saslServer.isComplete()) {
       conn.finishSaslNegotiation();
@@ -89,9 +68,11 @@ class NettyHBaseSaslRpcServerHandler extends SimpleChannelInboundHandler<ByteBuf
       boolean useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
       ChannelPipeline p = ctx.pipeline();
       if (useWrap) {
-        p.addBefore(DECODER_NAME, null, new SaslWrapHandler(saslServer::wrap)).addLast(
-          new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4),
-          new SaslUnwrapHandler(saslServer::unwrap));
+        p.addBefore(DECODER_NAME, null, new SaslWrapHandler(saslServer::wrap))
+          .addBefore(NettyRpcServerResponseEncoder.NAME, null,
+            new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4))
+          .addBefore(NettyRpcServerResponseEncoder.NAME, null,
+            new SaslUnwrapHandler(saslServer::unwrap));
       }
       conn.setupHandler();
       p.remove(this);
@@ -103,7 +84,7 @@ class NettyHBaseSaslRpcServerHandler extends SimpleChannelInboundHandler<ByteBuf
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
     LOG.error("Error when doing SASL handshade, provider={}", conn.provider, cause);
     Throwable sendToClient = HBaseSaslRpcServer.unwrap(cause);
-    doResponse(ctx, SaslStatus.ERROR, null, sendToClient.getClass().getName(),
+    conn.doRawSaslReply(SaslStatus.ERROR, null, sendToClient.getClass().getName(),
       sendToClient.getLocalizedMessage());
     rpcServer.metrics.authenticationFailure();
     String clientIP = this.toString();

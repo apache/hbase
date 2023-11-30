@@ -30,6 +30,7 @@ import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -158,6 +159,15 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
   static final String OUTPUT_TABLE_NAME_CONF_KEY = "hbase.mapreduce.hfileoutputformat.table.name";
   static final String MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY =
     "hbase.mapreduce.use.multi.table.hfileoutputformat";
+
+  /**
+   * ExtendedCell and ExtendedCellSerialization are InterfaceAudience.Private. We expose this config
+   * package-private for internal usage for jobs like WALPlayer which need to use features of
+   * ExtendedCell.
+   */
+  static final String EXTENDED_CELL_SERIALIZATION_ENABLED_KEY =
+    "hbase.mapreduce.hfileoutputformat.extendedcell.enabled";
+  static final boolean EXTENDED_CELL_SERIALIZATION_ENABLED_DEFULT = false;
 
   public static final String REMOTE_CLUSTER_CONF_PREFIX = "hbase.hfileoutputformat.remote.cluster.";
   public static final String REMOTE_CLUSTER_ZOOKEEPER_QUORUM_CONF_KEY =
@@ -619,9 +629,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
       LOG.warn("Unknown map output value type:" + job.getMapOutputValueClass());
     }
 
-    conf.setStrings("io.serializations", conf.get("io.serializations"),
-      MutationSerialization.class.getName(), ResultSerialization.class.getName(),
-      CellSerialization.class.getName());
+    mergeSerializations(conf);
 
     if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
       LOG.info("bulkload locality sensitive enabled");
@@ -668,6 +676,33 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.initCredentials(job);
     LOG.info("Incremental output configured for tables: " + StringUtils.join(allTableNames, ","));
+  }
+
+  private static void mergeSerializations(Configuration conf) {
+    List<String> serializations = new ArrayList<>();
+
+    // add any existing values that have been set
+    String[] existing = conf.getStrings("io.serializations");
+    if (existing != null) {
+      Collections.addAll(serializations, existing);
+    }
+
+    serializations.add(MutationSerialization.class.getName());
+    serializations.add(ResultSerialization.class.getName());
+
+    // Add ExtendedCellSerialization, if configured. Order matters here. Hadoop's
+    // SerializationFactory runs through serializations in the order they are registered.
+    // We want to register ExtendedCellSerialization before CellSerialization because both
+    // work for ExtendedCells but only ExtendedCellSerialization handles them properly.
+    if (
+      conf.getBoolean(EXTENDED_CELL_SERIALIZATION_ENABLED_KEY,
+        EXTENDED_CELL_SERIALIZATION_ENABLED_DEFULT)
+    ) {
+      serializations.add(ExtendedCellSerialization.class.getName());
+    }
+    serializations.add(CellSerialization.class.getName());
+
+    conf.setStrings("io.serializations", serializations.toArray(new String[0]));
   }
 
   public static void configureIncrementalLoadMap(Job job, TableDescriptor tableDescriptor)

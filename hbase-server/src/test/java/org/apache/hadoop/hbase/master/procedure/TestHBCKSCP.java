@@ -25,31 +25,38 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseServerBase;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Threads;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +70,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
  * Regions that were on the server-to-process rather than consult Master in-memory-state.
  */
 @Category({ MasterTests.class, LargeTests.class })
+@RunWith(Parameterized.class)
 public class TestHBCKSCP extends TestSCPBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestHBCKSCP.class);
 
@@ -70,7 +78,27 @@ public class TestHBCKSCP extends TestSCPBase {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestHBCKSCP.class);
   @Rule
-  public TestName name = new TestName();
+  public TableNameTestRule tableNameTestRule = new TableNameTestRule();
+
+  private final int replicas;
+  private final HBCKSCPScheduler hbckscpScheduler;
+  private final RegionSelector regionSelector;
+
+  public TestHBCKSCP(final int replicas, final HBCKSCPScheduler hbckscpScheduler,
+    final RegionSelector regionSelector) {
+    this.replicas = replicas;
+    this.hbckscpScheduler = hbckscpScheduler;
+    this.regionSelector = regionSelector;
+  }
+
+  @Parameterized.Parameters(name = "replicas:{0} scheduler:{1} selector:{2}")
+  public static Object[][] params() {
+    return new Object[][] {
+      { 1, new ScheduleServerCrashProcedure(), new PrimaryNotMetaRegionSelector() },
+      { 3, new ScheduleServerCrashProcedure(), new ReplicaNonMetaRegionSelector() },
+      { 1, new ScheduleSCPsForUnknownServers(), new PrimaryNotMetaRegionSelector() },
+      { 3, new ScheduleSCPsForUnknownServers(), new ReplicaNonMetaRegionSelector() } };
+  }
 
   @Test
   public void test() throws Exception {
@@ -81,10 +109,10 @@ public class TestHBCKSCP extends TestSCPBase {
     assertEquals(RS_COUNT, cluster.getLiveRegionServerThreads().size());
 
     int count;
-    try (Table table = createTable(TableName.valueOf(this.name.getMethodName()))) {
+    try (Table table = createTable(tableNameTestRule.getTableName())) {
       // Load the table with a bit of data so some logs to split and some edits in each region.
       this.util.loadTable(table, HBaseTestingUtil.COLUMNS[0]);
-      count = util.countRows(table);
+      count = HBaseTestingUtil.countRows(table);
     }
     assertTrue("expected some rows", count > 0);
 
@@ -92,17 +120,24 @@ public class TestHBCKSCP extends TestSCPBase {
     // Find another RS. Purge it from Master memory w/o running SCP (if
     // SCP runs, it will clear entries from hbase:meta which frustrates
     // our attempt at manufacturing 'Unknown Servers' condition).
-    int metaIndex = this.util.getMiniHBaseCluster().getServerWithMeta();
-    int rsIndex = (metaIndex + 1) % RS_COUNT;
-    ServerName rsServerName = cluster.getRegionServer(rsIndex).getServerName();
+    final ServerName metaServer = util.getMiniHBaseCluster().getServerHoldingMeta();
+    final ServerName rsServerName = cluster.getRegionServerThreads().stream()
+      .map(JVMClusterUtil.RegionServerThread::getRegionServer).map(HBaseServerBase::getServerName)
+      .filter(sn -> !sn.equals(metaServer)).findAny().orElseThrow(() -> new NoSuchElementException(
+        "Cannot locate a region server that is not hosting meta."));
     HMaster master = cluster.getMaster();
     // Get a Region that is on the server.
-    RegionInfo rsRI = master.getAssignmentManager().getRegionsOnServer(rsServerName).get(0);
-    Result r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
+    final List<RegionInfo> regions = master.getAssignmentManager().getRegionsOnServer(rsServerName);
+    LOG.debug("{} is holding {} regions.", rsServerName, regions.size());
+    final RegionInfo rsRI =
+      regions.stream().peek(info -> LOG.debug("{}", info)).filter(regionSelector::regionFilter)
+        .findAny().orElseThrow(regionSelector::regionFilterFailure);
+    final int replicaId = rsRI.getReplicaId();
+    Result r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI);
     // Assert region is OPEN.
-    assertEquals(RegionState.State.OPEN.toString(),
-      Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
-    ServerName serverName = CatalogFamilyFormat.getServerName(r, 0);
+    assertEquals(RegionState.State.OPEN.toString(), Bytes.toString(
+      r.getValue(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getRegionStateColumn(replicaId))));
+    ServerName serverName = CatalogFamilyFormat.getServerName(r, replicaId);
     assertEquals(rsServerName, serverName);
     // moveFrom adds to dead servers and adds it to processing list only we will
     // not be processing this server 'normally'. Remove it from processing by
@@ -117,18 +152,16 @@ public class TestHBCKSCP extends TestSCPBase {
     // Kill the server. Nothing should happen since an 'Unknown Server' as far
     // as the Master is concerned; i.e. no SCP.
     HRegionServer hrs = cluster.getRegionServer(rsServerName);
-    while (!hrs.isStopped()) {
-      Threads.sleep(10);
-    }
+    util.waitFor(TimeUnit.MINUTES.toMillis(1), hrs::isStopped);
     LOG.info("Dead {}", rsServerName);
     // Now assert still references in hbase:meta to the 'dead' server -- they haven't been
     // cleaned up by an SCP or by anything else.
     assertTrue(searchMeta(master, rsServerName));
     // Assert region is OPEN on dead server still.
-    r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
-    assertEquals(RegionState.State.OPEN.toString(),
-      Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
-    serverName = CatalogFamilyFormat.getServerName(r, 0);
+    r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI);
+    assertEquals(RegionState.State.OPEN.toString(), Bytes.toString(
+      r.getValue(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getRegionStateColumn(replicaId))));
+    serverName = CatalogFamilyFormat.getServerName(r, replicaId);
     assertNotNull(cluster.getRegionServer(serverName));
     assertEquals(rsServerName, serverName);
 
@@ -136,13 +169,11 @@ public class TestHBCKSCP extends TestSCPBase {
     // with no corresponding SCP. Queue one.
     long pid = scheduleHBCKSCP(rsServerName, master);
     assertNotEquals(Procedure.NO_PROC_ID, pid);
-    while (master.getMasterProcedureExecutor().getActiveProcIds().contains(pid)) {
-      Threads.sleep(10);
-    }
+    ProcedureTestingUtility.waitProcedure(master.getMasterProcedureExecutor(), pid);
     // After SCP, assert region is OPEN on new server.
-    r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
-    assertEquals(RegionState.State.OPEN.toString(),
-      Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
+    r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI);
+    assertEquals(RegionState.State.OPEN.toString(), Bytes.toString(
+      r.getValue(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getRegionStateColumn(replicaId))));
     serverName = CatalogFamilyFormat.getServerName(r, 0);
     assertNotNull(cluster.getRegionServer(serverName));
     assertNotEquals(rsServerName, serverName);
@@ -151,12 +182,12 @@ public class TestHBCKSCP extends TestSCPBase {
   }
 
   protected long scheduleHBCKSCP(ServerName rsServerName, HMaster master) throws ServiceException {
-    MasterProtos.ScheduleServerCrashProcedureResponse response = master.getMasterRpcServices()
-      .scheduleServerCrashProcedure(null, MasterProtos.ScheduleServerCrashProcedureRequest
-        .newBuilder().addServerName(ProtobufUtil.toServerName(rsServerName)).build());
-    assertEquals(1, response.getPidCount());
-    long pid = response.getPid(0);
-    return pid;
+    return hbckscpScheduler.scheduleHBCKSCP(rsServerName, master);
+  }
+
+  @Override
+  protected int getRegionReplication() {
+    return replicas;
   }
 
   /** Returns True if we find reference to <code>sn</code> in meta table. */
@@ -169,5 +200,91 @@ public class TestHBCKSCP extends TestSCPBase {
       }
     }
     return false;
+  }
+
+  /**
+   * Encapsulates the choice of which HBCK2 method to call.
+   */
+  private abstract static class HBCKSCPScheduler {
+    abstract long scheduleHBCKSCP(ServerName rsServerName, HMaster master) throws ServiceException;
+
+    @Override
+    public String toString() {
+      return this.getClass().getSimpleName();
+    }
+  }
+
+  /**
+   * Invokes {@code MasterRpcServices#scheduleServerCrashProcedure}.
+   */
+  private static class ScheduleServerCrashProcedure extends HBCKSCPScheduler {
+    @Override
+    public long scheduleHBCKSCP(ServerName rsServerName, HMaster master) throws ServiceException {
+      MasterProtos.ScheduleServerCrashProcedureResponse response = master.getMasterRpcServices()
+        .scheduleServerCrashProcedure(null, MasterProtos.ScheduleServerCrashProcedureRequest
+          .newBuilder().addServerName(ProtobufUtil.toServerName(rsServerName)).build());
+      assertEquals(1, response.getPidCount());
+      return response.getPid(0);
+    }
+  }
+
+  /**
+   * Invokes {@code MasterRpcServices#scheduleSCPsForUnknownServers}.
+   */
+  private static class ScheduleSCPsForUnknownServers extends HBCKSCPScheduler {
+    @Override
+    long scheduleHBCKSCP(ServerName rsServerName, HMaster master) throws ServiceException {
+      MasterProtos.ScheduleSCPsForUnknownServersResponse response =
+        master.getMasterRpcServices().scheduleSCPsForUnknownServers(null,
+          MasterProtos.ScheduleSCPsForUnknownServersRequest.newBuilder().build());
+      assertEquals(1, response.getPidCount());
+      return response.getPid(0);
+    }
+  }
+
+  /**
+   * Encapsulates how the target region is selected.
+   */
+  private static abstract class RegionSelector {
+    abstract boolean regionFilter(RegionInfo info);
+
+    abstract Exception regionFilterFailure();
+
+    @Override
+    public String toString() {
+      return this.getClass().getSimpleName();
+    }
+  }
+
+  /**
+   * Selects a non-meta region that is also a primary region.
+   */
+  private static class PrimaryNotMetaRegionSelector extends RegionSelector {
+    @Override
+    boolean regionFilter(final RegionInfo info) {
+      return !Objects.equals(TableName.META_TABLE_NAME, info.getTable())
+        && Objects.equals(RegionInfo.DEFAULT_REPLICA_ID, info.getReplicaId());
+    }
+
+    @Override
+    Exception regionFilterFailure() {
+      return new NoSuchElementException("Cannot locate a primary, non-meta region.");
+    }
+  }
+
+  /**
+   * Selects a non-meta region that is also a replica region.
+   */
+  private static class ReplicaNonMetaRegionSelector extends RegionSelector {
+    @Override
+    boolean regionFilter(RegionInfo info) {
+      return !Objects.equals(TableName.META_TABLE_NAME, info.getTable())
+        && !Objects.equals(RegionInfo.DEFAULT_REPLICA_ID, info.getReplicaId());
+    }
+
+    @Override
+    Exception regionFilterFailure() {
+      return new NoSuchElementException("Cannot locate a replica, non-meta region.");
+    }
   }
 }

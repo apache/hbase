@@ -28,14 +28,15 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
+import org.apache.hadoop.hbase.regionserver.wal.WALHeaderEOFException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,8 +99,12 @@ public class ReplaySyncReplicationWALCallable extends BaseRSProcedureCallable {
   }
 
   private void replayWAL(String wal) throws IOException {
-    try (Reader reader = getReader(wal)) {
-      List<Entry> entries = readWALEntries(reader);
+    WALStreamReader reader = getReader(wal);
+    if (reader == null) {
+      return;
+    }
+    try {
+      List<Entry> entries = readWALEntries(reader, wal);
       while (!entries.isEmpty()) {
         Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtobufUtil
           .buildReplicateWALEntryRequest(entries.toArray(new Entry[entries.size()]));
@@ -108,23 +113,21 @@ public class ReplaySyncReplicationWALCallable extends BaseRSProcedureCallable {
           request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
           request.getSourceHFileArchiveDirPath());
         // Read next entries.
-        entries = readWALEntries(reader);
+        entries = readWALEntries(reader, wal);
       }
+    } finally {
+      reader.close();
     }
   }
 
-  private Reader getReader(String wal) throws IOException {
+  private WALStreamReader getReader(String wal) throws IOException {
     Path path = new Path(rs.getWALRootDir(), wal);
-    long length = rs.getWALFileSystem().getFileStatus(path).getLen();
     try {
       RecoverLeaseFSUtils.recoverFileLease(rs.getWALFileSystem(), path, rs.getConfiguration());
-      return WALFactory.createReader(rs.getWALFileSystem(), path, rs.getConfiguration());
-    } catch (EOFException e) {
-      if (length <= 0) {
-        LOG.warn("File is empty. Could not open {} for reading because {}", path, e);
-        return null;
-      }
-      throw e;
+      return WALFactory.createStreamReader(rs.getWALFileSystem(), path, rs.getConfiguration());
+    } catch (WALHeaderEOFException e) {
+      LOG.warn("EOF while opening WAL reader for {}", path, e);
+      return null;
     }
   }
 
@@ -135,14 +138,20 @@ public class ReplaySyncReplicationWALCallable extends BaseRSProcedureCallable {
     return !edit.isEmpty();
   }
 
-  private List<Entry> readWALEntries(Reader reader) throws IOException {
+  private List<Entry> readWALEntries(WALStreamReader reader, String wal) throws IOException {
     List<Entry> entries = new ArrayList<>();
     if (reader == null) {
       return entries;
     }
     long size = 0;
     for (;;) {
-      Entry entry = reader.next();
+      Entry entry;
+      try {
+        entry = reader.next();
+      } catch (EOFException e) {
+        LOG.info("EOF while reading WAL entries from {}: {}, continuing", wal, e.toString());
+        break;
+      }
       if (entry == null) {
         break;
       }

@@ -104,7 +104,7 @@ class NettyRpcConnection extends RpcConnection {
   NettyRpcConnection(NettyRpcClient rpcClient, ConnectionId remoteId) throws IOException {
     super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
       rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor,
-      rpcClient.metrics);
+      rpcClient.metrics, rpcClient.connectionAttributes);
     this.rpcClient = rpcClient;
     this.eventLoop = rpcClient.group.next();
     byte[] connectionHeaderPreamble = getConnectionHeaderPreamble();
@@ -293,7 +293,7 @@ class NettyRpcConnection extends RpcConnection {
               conf.getInt(X509Util.HBASE_CLIENT_NETTY_TLS_HANDSHAKETIMEOUT,
                 X509Util.DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS));
             ch.pipeline().addFirst(sslHandler);
-            LOG.info("SSL handler added with handshake timeout {} ms",
+            LOG.debug("SSL handler added with handshake timeout {} ms",
               sslHandler.getHandshakeTimeoutMillis());
           }
           ch.pipeline().addLast(BufferCallBeforeInitHandler.NAME,
@@ -347,7 +347,7 @@ class NettyRpcConnection extends RpcConnection {
   private void sendRequest0(Call call, HBaseRpcController hrc) throws IOException {
     assert eventLoop.inEventLoop();
     if (reloginInProgress) {
-      throw new IOException("Can not send request because relogin is in progress.");
+      throw new IOException(RpcConnectionConstants.RELOGIN_IS_IN_PROGRESS);
     }
     hrc.notifyOnCancel(new RpcCallback<Object>() {
 

@@ -74,6 +74,7 @@ public class ProfileServlet extends HttpServlet {
 
   enum Event {
     CPU("cpu"),
+    WALL("wall"),
     ALLOC("alloc"),
     LOCK("lock"),
     PAGE_FAULTS("page-faults"),

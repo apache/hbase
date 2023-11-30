@@ -33,18 +33,7 @@ The source code can be found at https://hbase.apache.org/source-repository.html
 
 The HBase issue tracker is at https://hbase.apache.org/issue-tracking.html
 
-Notice that, the public registration for https://issues.apache.org/ has been disabled due to spam. If you want to contribute to HBase, please send an email to [private@hbase.apache.org](mailto:private@hbase.apache.org) in the follow format so the HBase PMC members can acquire a jira account for you:
-
-```
-Subject: Request for Jira account
-
-Contents of the mail(should be in English):
-Preferred Jira Id: [a-z0-9]+
-Full Name:
-E-Mail Address:
-
-Reason: Jira Id you wish to contribute to, or details around the bug/feature you wish to report or work on.
-```
+Notice that, the public registration for https://issues.apache.org/ has been disabled due to spam. If you want to contribute to HBase, please visit the [Request a jira account](https://selfserve.apache.org/jira-account.html) page to submit your request. Please make sure to select **hbase** as the '_ASF project you want to file a ticket_' so we can receive your request and process it.
 
 > **_NOTE:_** we need to process the requests manually so it may take sometime, for example, up to a week, for us to respond to your request.
 

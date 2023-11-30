@@ -83,7 +83,7 @@ public class FileLink {
    * FileLink InputStream that handles the switch between the original path and the alternative
    * locations, when the file is moved.
    */
-  private static class FileLinkInputStream extends InputStream
+  protected static class FileLinkInputStream extends InputStream
     implements Seekable, PositionedReadable, CanSetDropBehind, CanSetReadahead, CanUnbuffer {
     private FSDataInputStream in = null;
     private Path currentPath = null;
@@ -285,6 +285,10 @@ public class FileLink {
     @Override
     public void setDropBehind(Boolean dropCache) throws IOException, UnsupportedOperationException {
       in.setDropBehind(dropCache);
+    }
+
+    public Path getCurrentPath() {
+      return currentPath;
     }
   }
 

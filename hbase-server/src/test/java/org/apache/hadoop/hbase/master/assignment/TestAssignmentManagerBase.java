@@ -67,7 +67,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,8 +95,6 @@ public abstract class TestAssignmentManagerBase {
 
   @Rule
   public TestName name = new TestName();
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   protected static final int PROC_NTHREADS = 64;
   protected static final int NREGIONS = 1 * 1000;
@@ -157,7 +154,7 @@ public abstract class TestAssignmentManagerBase {
     this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
       .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
     setupConfiguration(util.getConfiguration());
-    master = new MockMasterServices(util.getConfiguration(), this.regionsToRegionServers);
+    master = new MockMasterServices(util.getConfiguration());
     rsDispatcher = new MockRSProcedureDispatcher(master);
     master.start(NSERVERS, rsDispatcher);
     newRsAdded = 0;

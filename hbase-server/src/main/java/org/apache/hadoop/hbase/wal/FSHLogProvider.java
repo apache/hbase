@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
@@ -40,6 +41,8 @@ import org.slf4j.LoggerFactory;
 public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
 
   private static final Logger LOG = LoggerFactory.getLogger(FSHLogProvider.class);
+
+  public static final String WRITER_IMPL = "hbase.regionserver.wal.writer.impl";
 
   // Only public so classes back in regionserver.wal can access
   public interface Writer extends WALProvider.Writer {
@@ -71,7 +74,7 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
     final boolean overwritable, long blocksize) throws IOException {
     // Configuration already does caching for the Class lookup.
     Class<? extends Writer> logWriterClass =
-      conf.getClass("hbase.regionserver.hlog.writer.impl", ProtobufLogWriter.class, Writer.class);
+      conf.getClass(WRITER_IMPL, ProtobufLogWriter.class, Writer.class);
     Writer writer = null;
     try {
       writer = logWriterClass.getDeclaredConstructor().newInstance();
@@ -98,10 +101,20 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
     return new FSHLog(CommonFSUtils.getWALFileSystem(conf), abortable,
       CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
       getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
-      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
+      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null, null, null);
+  }
+
+  @Override
+  protected WAL createRemoteWAL(RegionInfo region, FileSystem remoteFs, Path remoteWALDir,
+    String prefix, String suffix) throws IOException {
+    return new FSHLog(CommonFSUtils.getWALFileSystem(conf), abortable,
+      CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
+      getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, prefix, suffix,
+      remoteFs, remoteWALDir);
   }
 
   @Override
   protected void doInit(Configuration conf) throws IOException {
   }
+
 }

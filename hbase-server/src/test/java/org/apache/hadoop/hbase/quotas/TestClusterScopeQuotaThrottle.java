@@ -28,7 +28,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -75,7 +74,6 @@ public class TestClusterScopeQuotaThrottle {
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compactionThreshold", 10);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     TEST_UTIL.startMiniCluster(2);
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
@@ -83,12 +81,16 @@ public class TestClusterScopeQuotaThrottle {
 
     tables = new Table[TABLE_NAMES.length];
     for (int i = 0; i < TABLE_NAMES.length; ++i) {
-      tables[i] = TEST_UTIL.createTable(TABLE_NAMES[i], FAMILY);
+      TEST_UTIL.createTable(TABLE_NAMES[i], FAMILY);
       TEST_UTIL.waitTableAvailable(TABLE_NAMES[i]);
+      tables[i] = TEST_UTIL.getConnection().getTableBuilder(TABLE_NAMES[i], null)
+        .setOperationTimeout(10000).build();
     }
     TEST_UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(NAMESPACE).build());
-    table = TEST_UTIL.createTable(TABLE_NAME, FAMILY, SPLITS);
+    TEST_UTIL.createTable(TABLE_NAME, FAMILY, SPLITS);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
+    table = TEST_UTIL.getConnection().getTableBuilder(TABLE_NAME, null).setOperationTimeout(10000)
+      .build();
   }
 
   @AfterClass
@@ -180,7 +182,6 @@ public class TestClusterScopeQuotaThrottle {
     triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAMES);
   }
 
-  @org.junit.Ignore
   @Test // Spews the log w/ triggering of scheduler? HBASE-24035
   public void testUserNamespaceClusterScopeQuota() throws Exception {
     final Admin admin = TEST_UTIL.getAdmin();

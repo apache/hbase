@@ -1296,6 +1296,15 @@ Options:
 
 ----
 
+[[ops.conf-tool]]
+=== HBase Conf Tool
+HBase Conf tool can be used to print out the current value of a configuration. It can be used by passing the configuration key on the command-line.
+
+[source, bash]
+----
+$ bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool <configuration_key>
+----
+
 [[ops.regionmgt]]
 == Region Management
 
@@ -1904,13 +1913,21 @@ It is also prepended with identifying tags `(responseTooSlow)`, `(responseTooLar
 
 ==== Configuration
 
-There are two configuration knobs that can be used to adjust the thresholds for when queries are logged.
+There are four configuration knobs that can be used to adjust the thresholds for when queries are logged. Two of these knobs
+control the size and time thresholds for all queries. Because Scans can often be larger and slower than other types of
+queries, there are two additional knobs which can control size and time thresholds for Scans specifically.
 
 * `hbase.ipc.warn.response.time` Maximum number of milliseconds that a query can be run without being logged.
   Defaults to 10000, or 10 seconds.
   Can be set to -1 to disable logging by time.
 * `hbase.ipc.warn.response.size` Maximum byte size of response that a query can return without being logged.
   Defaults to 100 megabytes.
+  Can be set to -1 to disable logging by size.
+* `hbase.ipc.warn.response.time.scan` Maximum number of milliseconds that a Scan can be run without being logged.
+  Defaults to the `hbase.ipc.warn.response.time` value.
+  Can be set to -1 to disable logging by time.
+* `hbase.ipc.warn.response.size.scan` Maximum byte size of response that a Scan can return without being logged.
+  Defaults to the `hbase.ipc.warn.response.size` value.
   Can be set to -1 to disable logging by size.
 
 ==== Metrics
@@ -2275,6 +2292,33 @@ enable_table_replication <TABLE_NAME>::
   Enable the table replication switch for all its column families. If the table is not found in the destination cluster then it will create one with the same name and column families.
 disable_table_replication <TABLE_NAME>::
   Disable the table replication switch for all its column families.
+peer_modification_switch <enable_or_disable>, <drain_procedures>::
+  Enabled/Disable peer modification operations, such as adding/removing replication peers.
+  The second parameter means whether you want to wait until all existing peer modification
+procedures to finish before returning when disabling peer modification.
+peer_modification_enabled::
+  Check whether peer modification is enabled.
+
+=== Migrate Across Different Replication Peer Storages
+Starting from 2.6.0, we introduce a file system based `ReplicationPeerStorage`, which stores
+the replication peer state with files on HFile file system, instead of znodes on ZooKeeper.
+And we have also implemented a tool to copy replication peer state across different replication
+peer storages.
+[source,shell]
+----
+./bin/hbase copyreppeers <SRC_REPLICATION_PEER_STORAGE> <DST_REPLICATION_PEER_STORAGE>
+----
+To support doing the migrate online, we introduce a shell command called `peer_modification_switch`.
+[source,ruby]
+----
+hbase> peer_modification_switch false, true
+----
+Use the above command can disable peer modification operations. The second `true` means you want to
+wait until all the existing replication peer modification procedures to finish before returning.
+After disabling the peer modification, it is safe for you to copy replication peer state with the
+above tool, and then update all the _hbase-site.xml_ files in the cluster to specify the new
+replication peer storage, and finally trigger an online configuration update to load the new
+replication peer storage.
 
 === Serial Replication
 
@@ -2384,10 +2428,21 @@ This option was introduced in link:https://issues.apache.org/jira/browse/HBASE-1
 
 ==== Replication Internals
 
+Replication State Storage::
+  In HBASE-15867, we abstract two interfaces for storing replication state,
+`ReplicationPeerStorage` and `ReplicationQueueStorage`. The former one is for storing the
+replication peer related states, and the latter one is for storing the replication queue related
+states.
+  HBASE-15867 is only half done, as although we have abstract these two interfaces, we still only
+have zookeeper based implementations.
+
+  And in HBASE-27110, we have implemented a file system based replication peer storage, to store replication peer state on file system. Of course you can still use the zookeeper based replication peer storage.
+  And in HBASE-27109, we have changed the replication queue storage from zookeeper based to hbase table based. See the below `Replication Queue State` in hbase:replication table section for more details.
+
 Replication State in ZooKeeper::
-  HBase replication maintains its state in ZooKeeper.
   By default, the state is contained in the base node _/hbase/replication_.
-  This node contains two child nodes, the `Peers` znode and the `RS`                znode.
+  Usually this nodes contains two child nodes, the peers znode is for storing replication peer state, and the rs znodes is for storing replication queue state. And if you choose the file system based replication peer storage, you will not see the peers znode.
+  And starting from 3.0.0, we have moved the replication queue state to <<hbase:replication,hbase:replication>> table, so you will not see the rs znode.
 
 The `Peers` Znode::
   The `peers` znode is stored in _/hbase/replication/peers_ by default.
@@ -2402,6 +2457,21 @@ The `RS` Znode::
   The child znode name is the region server's hostname, client port, and start code.
   This list includes both live and dead region servers.
 
+[[hbase:replication]]
+The hbase:replication Table::
+  After 3.0.0, the `Queue` has been stored in the hbase:replication table, where the row key is <PeerId>-<ServerName>[/<SourceServerName>], the WAL group will be the qualifier, and the serialized ReplicationGroupOffset will be the value.
+  The ReplicationGroupOffset includes the wal file of the corresponding queue (<PeerId>-<ServerName>[/<SourceServerName>]) and its offset.
+  Because we track replication offset per queue instead of per file, we only need to store one replication offset per queue.
+
+Other implementations for `ReplicationPeerStorage`::
+  Starting from 2.6.0, we introduce a file system based `ReplicationPeerStorage`, which stores
+the replication peer state with files on HFile file system, instead of znodes on ZooKeeper.
+  The layout is almost the same with znodes on zookeeper, the main difference is that, the HFile
+file system may not support atomic rename, so we use two files to store the state and when reading
+we will read them both and compare the timestamp to find out the newer one. So typically, you will
+see two peer config files. And for enable/disable state, we just touch a disabled file if the peer
+is disabled, and remove the file when enabling the peer.
+
 ==== Choosing Region Servers to Replicate To
 
 When a master cluster region server initiates a replication source to a slave cluster, it first connects to the slave's ZooKeeper ensemble using the provided cluster key . It then scans the _rs/_ directory to discover all the available sinks (region servers that are accepting incoming streams of edits to replicate) and randomly chooses a subset of them using a configured ratio which has a default value of 10%. For example, if a slave cluster has 150 machines, 15 will be chosen as potential recipient for edits that this master cluster region server sends.
@@ -2412,7 +2482,7 @@ A ZooKeeper watcher is placed on the _${zookeeper.znode.parent}/rs_ node of the 
 This watch is used to monitor changes in the composition of the slave cluster.
 When nodes are removed from the slave cluster, or if nodes go down or come back up, the master cluster's region servers will respond by selecting a new pool of slave region servers to replicate to.
 
-==== Keeping Track of Logs
+==== Keeping Track of Logs(based on ZooKeeper)
 
 Each master cluster region server has its own znode in the replication znodes hierarchy.
 It contains one znode per peer cluster (if 5 slave clusters, 5 znodes are created), and each of these contain a queue of WALs to process.
@@ -2432,6 +2502,18 @@ If a particular source has already finished with an archived log, it will just i
 If the log is in the queue, the path will be updated in memory.
 If the log is currently being replicated, the change will be done atomically so that the reader doesn't attempt to open the file when has already been moved.
 Because moving a file is a NameNode operation , if the reader is currently reading the log, it won't generate any exception.
+
+==== Keeping Track of Logs(based on hbase table)
+
+After 3.0.0, for table based implementation, we have server name in row key, which means we will have lots of rows for a given peer.
+
+For a normal replication queue, the WAL files belong to the region server that is still alive, all the WAL files are kept in memory, so we do not need to get the WAL files from replication queue storage.
+And for a recovered replication queue, we could get the WAL files of the dead region server by listing the old WAL directory on HDFS. So theoretically, we do not need to store every WAL file in replication queue storage.
+And what’s more, we store the created time(usually) in the WAL file name, so for all the WAL files in a WAL group, we can sort them(actually we will sort them in the current replication framework), which means we only need to store one replication offset per queue.
+When starting a recovered replication queue, we will skip all the files before this offset, and start replicating from this offset.
+
+For ReplicationLogCleaner, all the files before this offset can be deleted, otherwise not.
+
 
 ==== Reading, Filtering and Sending Edits
 
@@ -2462,8 +2544,8 @@ NOTE: WALs are saved when replication is enabled or disabled as long as peers ex
 
 When no region servers are failing, keeping track of the logs in ZooKeeper adds no value.
 Unfortunately, region servers do fail, and since ZooKeeper is highly available, it is useful for managing the transfer of the queues in the event of a failure.
-
-Each of the master cluster region servers keeps a watcher on every other region server, in order to be notified when one dies (just as the master does). When a failure happens, they all race to create a znode called `lock` inside the dead region server's znode that contains its queues.
+Each of the master cluster region servers keeps a watcher on every other region server, in order to be notified when one dies (just as the master does).
+When a failure happens, they all race to create a znode called `lock` inside the dead region server's znode that contains its queues.
 The region server that creates it successfully then transfers all the queues to its own znode, one at a time since ZooKeeper does not support renaming queues.
 After queues are all transferred, they are deleted from the old location.
 The znodes that were recovered are renamed with the ID of the slave cluster appended with the name of the dead server.
@@ -2471,6 +2553,11 @@ The znodes that were recovered are renamed with the ID of the slave cluster appe
 Next, the master cluster region server creates one new source thread per copied queue, and each of the source threads follows the read/filter/ship pattern.
 The main difference is that those queues will never receive new data, since they do not belong to their new region server.
 When the reader hits the end of the last log, the queue's znode is deleted and the master cluster region server closes that replication source.
+
+And starting from 2.5.0, the failover logic has been moved to SCP, where we add a SERVER_CRASH_CLAIM_REPLICATION_QUEUES step in SCP to claim the replication queues for a dead server.
+And starting from 3.0.0, where we changed the replication queue storage from zookeeper to table, the update to the replication queue storage is async, so we also need an extra step to add the missing replication queues before claiming.
+
+==== The replication queue claiming(based on ZooKeeper)
 
 Given a master cluster with 3 region servers replicating to a single slave with id `2`, the following hierarchy represents what the znodes layout could be at some point in time.
 The region servers' znodes all contain a `peers`          znode which contains a single queue.
@@ -2549,6 +2636,32 @@ The new layout will be:
       1.1.1.2,60020.1312  (Contains a position)
 ----
 
+==== The replication queue claiming(based on hbase table)
+
+Given a master cluster with 3 region servers replicating to a single slave with id `2`, the following info represents what the storage layout of queue in the hbase:replication at some point in time.
+Row key is <PeerId>-<ServerName>[/<SourceServerName>], and value is WAL && Offset.
+
+----
+
+  <PeerId>-<ServerName>[/<SourceServerName>]                        WAL && Offset
+  2-1.1.1.1,60020,123456780                            1.1.1.1,60020.1234  (Contains a position)
+  2-1.1.1.2,60020,123456790                            1.1.1.2,60020.1214  (Contains a position)
+  2-1.1.1.3,60020,123456630                            1.1.1.3,60020.1280  (Contains a position)
+----
+
+Assume that 1.1.1.2 failed.
+The survivors will claim queue of that, and, arbitrarily, 1.1.1.3 wins.
+It will claim all the queue of 1.1.1.2, including removing the row of a replication queue, and inserting a new row(where we change the server name to the region server which claims the queue).
+Finally, the layout will look like the following:
+
+----
+
+  <PeerId>-<ServerName>[/<SourceServerName>]                        WAL && Offset
+  2-1.1.1.1,60020,123456780                            1.1.1.1,60020.1234  (Contains a position)
+  2-1.1.1.3,60020,123456630                            1.1.1.3,60020.1280  (Contains a position)
+  2-1.1.1.3,60020,123456630 1.1.1.2,60020,123456790    1.1.1.2,60020.1214  (Contains a position)
+----
+
 === Replication Metrics
 
 The following metrics are exposed at the global region server level and at the peer level:
@@ -2624,6 +2737,23 @@ The following metrics are exposed at the global region server level and at the p
 | The number of region servers a given region server should attempt to
                   failover simultaneously.
 | 1
+
+| hbase.replication.peer.storage.impl
+| The replication peer storage implementation
+| zookeeper
+
+| hbase.replication.peers.directory
+| The directory for storing replication peer state, when filesystem replication
+                  peer storage is specified
+| peers
+
+| hbase.replication.queue.table.name
+| The table for storing replication queue state
+| hbase:replication
+
+| hbase.replication.queue.storage.impl
+| The replication queue storage implementation
+| TableReplicationQueueStorage
 |===
 
 === Monitoring Replication Status

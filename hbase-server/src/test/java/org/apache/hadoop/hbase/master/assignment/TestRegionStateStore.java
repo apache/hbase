@@ -215,7 +215,7 @@ public class TestRegionStateStore {
       assertNull(serverCellA);
       assertNull(startCodeCellA);
 
-      Get get2 = new Get(splitA.getRegionName());
+      Get get2 = new Get(splitB.getRegionName());
       Result resultB = meta.get(get2);
       Cell serverCellB = resultB.getColumnLatestCell(HConstants.CATALOG_FAMILY,
         CatalogFamilyFormat.getServerColumn(splitB.getReplicaId()));

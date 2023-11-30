@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -75,6 +76,11 @@ public class DummyAsyncTable<C extends ScanResultConsumerBase> implements AsyncT
   @Override
   public long getScanTimeout(TimeUnit unit) {
     return 0;
+  }
+
+  @Override
+  public Map<String, byte[]> getRequestAttributes() {
+    return null;
   }
 
   @Override

@@ -62,7 +62,8 @@ def get_bad_tests(console_url):
     for line in response.content.decode("utf-8").splitlines():
         result1 = re.findall("Running org.apache.hadoop.hbase.(.*)", line)
         if len(result1) == 1:
-            test_case = result1[0]
+            # Sometimes the maven build output might have some malformed lines. See HBASE-27874
+            test_case = result1[0].split("WARNING")[0].strip()
             if test_case in all_tests_set:
                 print(("ERROR! Multiple tests with same name '{}'. Might get wrong results "
                        "for this test.".format(test_case)))
@@ -71,7 +72,8 @@ def get_bad_tests(console_url):
                 all_tests_set.add(test_case)
         result2 = re.findall("Tests run:.*?- in org.apache.hadoop.hbase.(.*)", line)
         if len(result2) == 1:
-            test_case = result2[0]
+            # Sometimes the maven build output might have some malformed lines. See HBASE-27874
+            test_case = result2[0].split("WARNING")[0].strip()
             if "FAILURE!" in line:
                 failed_tests_set.add(test_case)
             if test_case not in hanging_tests_set:

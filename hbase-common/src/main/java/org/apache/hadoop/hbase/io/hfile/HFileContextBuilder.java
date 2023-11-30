@@ -84,6 +84,7 @@ public class HFileContextBuilder {
     this.columnFamily = hfc.getColumnFamily();
     this.tableName = hfc.getTableName();
     this.cellComparator = hfc.getCellComparator();
+    this.indexBlockEncoding = hfc.getIndexBlockEncoding();
   }
 
   public HFileContextBuilder withHBaseCheckSum(boolean useHBaseCheckSum) {

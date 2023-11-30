@@ -32,6 +32,7 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -92,9 +93,12 @@ class AsyncClientScanner {
 
   private final Span span;
 
+  private final Map<String, byte[]> requestAttributes;
+
   public AsyncClientScanner(Scan scan, AdvancedScanResultConsumer consumer, TableName tableName,
     AsyncConnectionImpl conn, Timer retryTimer, long pauseNs, long pauseNsForServerOverloaded,
-    int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
+    int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt,
+    Map<String, byte[]> requestAttributes) {
     if (scan.getStartRow() == null) {
       scan.withStartRow(EMPTY_START_ROW, scan.includeStartRow());
     }
@@ -113,6 +117,7 @@ class AsyncClientScanner {
     this.rpcTimeoutNs = rpcTimeoutNs;
     this.startLogErrorsCnt = startLogErrorsCnt;
     this.resultCache = createScanResultCache(scan);
+    this.requestAttributes = requestAttributes;
     if (scan.isScanMetricsEnabled()) {
       this.scanMetrics = new ScanMetrics();
       consumer.onScanMetricsCreated(scanMetrics);
@@ -191,15 +196,17 @@ class AsyncClientScanner {
   }
 
   private void startScan(OpenScannerResponse resp) {
-    addListener(conn.callerFactory.scanSingleRegion().id(resp.resp.getScannerId())
-      .location(resp.loc).remote(resp.isRegionServerRemote)
-      .scannerLeaseTimeoutPeriod(resp.resp.getTtl(), TimeUnit.MILLISECONDS).stub(resp.stub)
-      .setScan(scan).metrics(scanMetrics).consumer(consumer).resultCache(resultCache)
-      .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-      .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-      .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
-      .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt)
-      .start(resp.controller, resp.resp), (hasMore, error) -> {
+    addListener(
+      conn.callerFactory.scanSingleRegion().id(resp.resp.getScannerId()).location(resp.loc)
+        .remote(resp.isRegionServerRemote)
+        .scannerLeaseTimeoutPeriod(resp.resp.getTtl(), TimeUnit.MILLISECONDS).stub(resp.stub)
+        .setScan(scan).metrics(scanMetrics).consumer(consumer).resultCache(resultCache)
+        .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+        .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
+        .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
+        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt)
+        .setRequestAttributes(requestAttributes).start(resp.controller, resp.resp),
+      (hasMore, error) -> {
         try (Scope ignored = span.makeCurrent()) {
           if (error != null) {
             try {
@@ -231,8 +238,8 @@ class AsyncClientScanner {
         .priority(scan.getPriority()).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
         .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
-        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt).action(this::callOpenScanner)
-        .call();
+        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt)
+        .setRequestAttributes(requestAttributes).action(this::callOpenScanner).call();
     }
   }
 

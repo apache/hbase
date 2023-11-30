@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
@@ -39,7 +41,6 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -50,15 +51,18 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Gateway to Replication. Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
+ * <p>
+ * Implement {@link PropagatingConfigurationObserver} mainly for registering
+ * {@link ReplicationPeers}, so we can recreating the replication peer storage.
  */
 @InterfaceAudience.Private
-public class Replication implements ReplicationSourceService {
+public class Replication implements ReplicationSourceService, PropagatingConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(Replication.class);
   private boolean isReplicationForBulkLoadDataEnabled;
   private ReplicationSourceManager replicationManager;
   private ReplicationQueueStorage queueStorage;
   private ReplicationPeers replicationPeers;
-  private Configuration conf;
+  private volatile Configuration conf;
   private SyncReplicationPeerInfoProvider syncReplicationPeerInfoProvider;
   // Hosting server
   private Server server;
@@ -95,9 +99,9 @@ public class Replication implements ReplicationSourceService {
 
     try {
       this.queueStorage =
-        ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
-      this.replicationPeers =
-        ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
+        ReplicationStorageFactory.getReplicationQueueStorage(server.getConnection(), conf);
+      this.replicationPeers = ReplicationFactory.getReplicationPeers(server.getFileSystem(),
+        server.getZooKeeper(), this.conf);
       this.replicationPeers.init();
     } catch (Exception e) {
       throw new IOException("Failed replication handler create", e);
@@ -113,35 +117,34 @@ public class Replication implements ReplicationSourceService {
       .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
     this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers, conf,
       this.server, fs, logDir, oldLogDir, clusterId, walFactory, mapping, globalMetricsSource);
+    this.statsPeriodInSecond = this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
+    this.replicationLoad = new ReplicationLoad();
+
     this.syncReplicationPeerInfoProvider =
       new SyncReplicationPeerInfoProviderImpl(replicationPeers, mapping);
-    PeerActionListener peerActionListener = PeerActionListener.DUMMY;
     // Get the user-space WAL provider
     WALProvider walProvider = walFactory != null ? walFactory.getWALProvider() : null;
     if (walProvider != null) {
       walProvider
         .addWALActionsListener(new ReplicationSourceWALActionListener(conf, replicationManager));
-      if (walProvider instanceof SyncReplicationWALProvider) {
-        SyncReplicationWALProvider syncWALProvider = (SyncReplicationWALProvider) walProvider;
-        peerActionListener = syncWALProvider;
-        syncWALProvider.setPeerInfoProvider(syncReplicationPeerInfoProvider);
-        // for sync replication state change, we need to reload the state twice, you can see the
-        // code in PeerProcedureHandlerImpl, so here we need to go over the sync replication peers
-        // to see if any of them are in the middle of the two refreshes, if so, we need to manually
-        // repeat the action we have done in the first refresh, otherwise when the second refresh
-        // comes we will be in trouble, such as NPE.
-        replicationPeers.getAllPeerIds().stream().map(replicationPeers::getPeer)
-          .filter(p -> p.getPeerConfig().isSyncReplication())
-          .filter(p -> p.getNewSyncReplicationState() != SyncReplicationState.NONE)
-          .forEach(p -> syncWALProvider.peerSyncReplicationStateChange(p.getId(),
-            p.getSyncReplicationState(), p.getNewSyncReplicationState(), 0));
-      }
+      PeerActionListener peerActionListener = walProvider.getPeerActionListener();
+      walProvider.setSyncReplicationPeerInfoProvider(syncReplicationPeerInfoProvider);
+      // for sync replication state change, we need to reload the state twice, you can see the
+      // code in PeerProcedureHandlerImpl, so here we need to go over the sync replication peers
+      // to see if any of them are in the middle of the two refreshes, if so, we need to manually
+      // repeat the action we have done in the first refresh, otherwise when the second refresh
+      // comes we will be in trouble, such as NPE.
+      replicationPeers.getAllPeerIds().stream().map(replicationPeers::getPeer)
+        .filter(p -> p.getPeerConfig().isSyncReplication())
+        .filter(p -> p.getNewSyncReplicationState() != SyncReplicationState.NONE)
+        .forEach(p -> peerActionListener.peerSyncReplicationStateChange(p.getId(),
+          p.getSyncReplicationState(), p.getNewSyncReplicationState(), 0));
+      this.peerProcedureHandler =
+        new PeerProcedureHandlerImpl(replicationManager, peerActionListener);
+    } else {
+      this.peerProcedureHandler =
+        new PeerProcedureHandlerImpl(replicationManager, PeerActionListener.DUMMY);
     }
-    this.statsPeriodInSecond = this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
-    this.replicationLoad = new ReplicationLoad();
-
-    this.peerProcedureHandler =
-      new PeerProcedureHandlerImpl(replicationManager, peerActionListener);
   }
 
   @Override
@@ -228,5 +231,20 @@ public class Replication implements ReplicationSourceService {
   @Override
   public ReplicationPeers getReplicationPeers() {
     return replicationPeers;
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    this.conf = conf;
+  }
+
+  @Override
+  public void registerChildren(ConfigurationManager manager) {
+    manager.registerObserver(replicationPeers);
+  }
+
+  @Override
+  public void deregisterChildren(ConfigurationManager manager) {
+    manager.deregisterObserver(replicationPeers);
   }
 }

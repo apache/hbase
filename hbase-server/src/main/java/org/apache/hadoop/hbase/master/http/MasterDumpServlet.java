@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -45,6 +46,9 @@ public class MasterDumpServlet extends StateDumpServlet {
 
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(), request, response)) {
+      return;
+    }
     HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
     assert master != null : "No Master in context!";
 

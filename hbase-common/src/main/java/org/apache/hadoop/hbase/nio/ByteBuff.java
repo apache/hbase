@@ -65,8 +65,17 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
 
   /*************************** Methods for reference count **********************************/
 
+  /**
+   * Checks that there are still references to the buffer. This protects against the case where a
+   * ByteBuff method (i.e. slice, get, etc) could be called against a buffer whose backing data may
+   * have been released. We only need to do this check if the refCnt has a recycler. If there's no
+   * recycler, the backing data will be handled by normal java GC and won't get incorrectly
+   * released. So we can avoid the overhead of checking the refCnt on every call. See HBASE-27710.
+   */
   protected void checkRefCount() {
-    ObjectUtil.checkPositive(refCnt(), REFERENCE_COUNT_NAME);
+    if (refCnt.hasRecycler()) {
+      ObjectUtil.checkPositive(refCnt(), REFERENCE_COUNT_NAME);
+    }
   }
 
   @Override

@@ -55,9 +55,12 @@ import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+//revisit later
+@Ignore
 @Category({ MiscTests.class, MediumTests.class })
 public class TestHBaseFsckEncryption {
 

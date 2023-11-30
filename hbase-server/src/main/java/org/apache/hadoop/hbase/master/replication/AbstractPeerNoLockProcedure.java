@@ -98,10 +98,7 @@ public abstract class AbstractPeerNoLockProcedure<TState>
     }
     long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
     backoffConsumer.accept(backoff);
-    setTimeout(Math.toIntExact(backoff));
-    setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
-    skipPersistence();
-    throw new ProcedureSuspendedException();
+    throw suspend(Math.toIntExact(backoff), false);
   }
 
   protected final void resetRetry() {

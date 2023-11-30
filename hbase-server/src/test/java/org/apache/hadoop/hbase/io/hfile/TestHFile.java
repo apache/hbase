@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
@@ -162,12 +163,7 @@ public class TestHFile {
     fillByteBuffAllocator(alloc, bufCount);
     // start write to store file.
     Path path = writeStoreFile();
-    try {
-      readStoreFile(path, conf, alloc);
-    } catch (Exception e) {
-      // fail test
-      assertTrue(false);
-    }
+    readStoreFile(path, conf, alloc);
     Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
   }
@@ -1061,4 +1057,11 @@ public class TestHFile {
     alloc.clean();
   }
 
+  @Test
+  public void testHFileContextBuilderWithIndexEncoding() throws IOException {
+    HFileContext context =
+      new HFileContextBuilder().withIndexBlockEncoding(IndexBlockEncoding.PREFIX_TREE).build();
+    HFileContext newContext = new HFileContextBuilder(context).build();
+    assertTrue(newContext.getIndexBlockEncoding() == IndexBlockEncoding.PREFIX_TREE);
+  }
 }

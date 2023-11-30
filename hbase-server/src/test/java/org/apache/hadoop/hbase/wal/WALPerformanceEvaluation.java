@@ -57,15 +57,12 @@ import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
-import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -258,10 +255,6 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       Configuration conf = getConf();
       conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
       conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
-      conf.setClass("hbase.regionserver.hlog.reader.impl", SecureProtobufLogReader.class,
-        WAL.Reader.class);
-      conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
-        Writer.class);
       conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
       conf.set(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, cipher);
     }
@@ -377,7 +370,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
    */
   private long verify(final WALFactory wals, final Path wal, final boolean verbose)
     throws IOException {
-    WAL.Reader reader = wals.createReader(wal.getFileSystem(getConf()), wal);
+    WALStreamReader reader = wals.createStreamReader(wal.getFileSystem(getConf()), wal);
     long count = 0;
     Map<String, Long> sequenceIds = new HashMap<>();
     try {

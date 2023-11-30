@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.io.compress.xerial;
 
+import static org.junit.Assume.assumeTrue;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.compress.CompressionTestBase;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -30,6 +33,11 @@ public class TestSnappyCodec extends CompressionTestBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSnappyCodec.class);
+
+  @BeforeClass
+  public static void setupClass() throws Exception {
+    assumeTrue(SnappyCodec.isLoaded());
+  }
 
   @Test
   public void testSnappyCodecSmall() throws Exception {

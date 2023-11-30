@@ -605,6 +605,12 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     return this.metaRegionLocationCache;
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public ConfigurationManager getConfigurationManager() {
+    return configurationManager;
+  }
+
   /**
    * Reload the configuration from disk.
    */

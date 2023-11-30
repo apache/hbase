@@ -42,13 +42,15 @@ public interface TableProcedureInterface {
     READ,
     SNAPSHOT,
     REGION_SNAPSHOT,
+    FLUSH,
     REGION_EDIT,
     REGION_SPLIT,
     REGION_MERGE,
     REGION_ASSIGN,
     REGION_UNASSIGN,
     REGION_GC,
-    MERGED_REGIONS_GC/* region operations */
+    MERGED_REGIONS_GC/* region operations */,
+    REGION_TRUNCATE
   }
 
   /** Returns the name of the table the procedure is operating on */

@@ -18,8 +18,10 @@
 package org.apache.hadoop.hbase.namequeues.impl;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -42,12 +44,14 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.EvictingQueue;
 import org.apache.hbase.thirdparty.com.google.common.collect.Queues;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
 
 /**
@@ -65,10 +69,13 @@ public class SlowLogQueueService implements NamedQueueService {
   private final boolean isSlowLogTableEnabled;
   private final SlowLogPersistentService slowLogPersistentService;
   private final Queue<TooSlowLog.SlowLogPayload> slowLogQueue;
+  private final boolean slowLogScanPayloadEnabled;
 
   public SlowLogQueueService(Configuration conf) {
     this.isOnlineLogProviderEnabled = conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
       HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
+    this.slowLogScanPayloadEnabled = conf.getBoolean(HConstants.SLOW_LOG_SCAN_PAYLOAD_ENABLED,
+      HConstants.SLOW_LOG_SCAN_PAYLOAD_ENABLED_DEFAULT);
 
     if (!isOnlineLogProviderEnabled) {
       this.isSlowLogTableEnabled = false;
@@ -129,7 +136,8 @@ public class SlowLogQueueService implements NamedQueueService {
     long endTime = EnvironmentEdgeManager.currentTime();
     int processingTime = (int) (endTime - startTime);
     int qTime = (int) (startTime - receiveTime);
-    final SlowLogParams slowLogParams = ProtobufUtil.getSlowLogParams(param);
+    final SlowLogParams slowLogParams =
+      ProtobufUtil.getSlowLogParams(param, slowLogScanPayloadEnabled);
     int numGets = 0;
     int numMutations = 0;
     int numServiceCalls = 0;
@@ -152,7 +160,7 @@ public class SlowLogQueueService implements NamedQueueService {
     final String userName = rpcCall.getRequestUserName().orElse(StringUtils.EMPTY);
     final String methodDescriptorName =
       methodDescriptor != null ? methodDescriptor.getName() : StringUtils.EMPTY;
-    TooSlowLog.SlowLogPayload slowLogPayload = TooSlowLog.SlowLogPayload.newBuilder()
+    TooSlowLog.SlowLogPayload.Builder slowLogPayloadBuilder = TooSlowLog.SlowLogPayload.newBuilder()
       .setCallDetails(methodDescriptorName + "(" + param.getClass().getName() + ")")
       .setClientAddress(clientAddress).setMethodName(methodDescriptorName).setMultiGets(numGets)
       .setMultiMutations(numMutations).setMultiServiceCalls(numServiceCalls)
@@ -161,13 +169,28 @@ public class SlowLogQueueService implements NamedQueueService {
       .setRegionName(slowLogParams != null ? slowLogParams.getRegionName() : StringUtils.EMPTY)
       .setResponseSize(responseSize).setBlockBytesScanned(blockBytesScanned)
       .setServerClass(className).setStartTime(startTime).setType(type).setUserName(userName)
-      .build();
+      .addAllRequestAttribute(buildNameBytesPairs(rpcLogDetails.getRequestAttributes()))
+      .addAllConnectionAttribute(buildNameBytesPairs(rpcLogDetails.getConnectionAttributes()));
+    if (slowLogParams != null && slowLogParams.getScan() != null) {
+      slowLogPayloadBuilder.setScan(slowLogParams.getScan());
+    }
+    TooSlowLog.SlowLogPayload slowLogPayload = slowLogPayloadBuilder.build();
     slowLogQueue.add(slowLogPayload);
     if (isSlowLogTableEnabled) {
       if (!slowLogPayload.getRegionName().startsWith("hbase:slowlog")) {
         slowLogPersistentService.addToQueueForSysTable(slowLogPayload);
       }
     }
+  }
+
+  private static Collection<HBaseProtos.NameBytesPair>
+    buildNameBytesPairs(Map<String, byte[]> attributes) {
+    if (attributes == null) {
+      return Collections.emptySet();
+    }
+    return attributes.entrySet().stream().map(attr -> HBaseProtos.NameBytesPair.newBuilder()
+      .setName(attr.getKey()).setValue(ByteString.copyFrom(attr.getValue())).build())
+      .collect(Collectors.toSet());
   }
 
   @Override

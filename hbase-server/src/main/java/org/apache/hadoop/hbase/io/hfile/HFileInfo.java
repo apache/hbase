@@ -36,6 +36,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -75,6 +76,8 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
   static final byte[] AVG_VALUE_LEN = Bytes.toBytes(RESERVED_PREFIX + "AVG_VALUE_LEN");
   static final byte[] CREATE_TIME_TS = Bytes.toBytes(RESERVED_PREFIX + "CREATE_TIME_TS");
   static final byte[] TAGS_COMPRESSED = Bytes.toBytes(RESERVED_PREFIX + "TAGS_COMPRESSED");
+  static final byte[] KEY_OF_BIGGEST_CELL = Bytes.toBytes(RESERVED_PREFIX + "KEY_OF_BIGGEST_CELL");
+  static final byte[] LEN_OF_BIGGEST_CELL = Bytes.toBytes(RESERVED_PREFIX + "LEN_OF_BIGGEST_CELL");
   public static final byte[] MAX_TAGS_LEN = Bytes.toBytes(RESERVED_PREFIX + "MAX_TAGS_LEN");
   private final SortedMap<byte[], byte[]> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
@@ -94,6 +97,10 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
   private int avgKeyLen = -1;
   /** Average value length read from file info */
   private int avgValueLen = -1;
+  /** Biggest Cell in the file, key only. Filled in when we read in the file info */
+  private Cell biggestCell = null;
+  /** Length of the biggest Cell */
+  private long lenOfBiggestCell = -1;
   private boolean includesMemstoreTS = false;
   private boolean decodeMemstoreTS = false;
 
@@ -437,6 +444,10 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     if (get(HFileInfo.LASTKEY) != null) {
       lastKeyCell = new KeyValue.KeyOnlyKeyValue(get(HFileInfo.LASTKEY));
     }
+    if (get(HFileInfo.KEY_OF_BIGGEST_CELL) != null) {
+      biggestCell = new KeyValue.KeyOnlyKeyValue(get(HFileInfo.KEY_OF_BIGGEST_CELL));
+      lenOfBiggestCell = Bytes.toLong(get(HFileInfo.LEN_OF_BIGGEST_CELL));
+    }
     avgKeyLen = Bytes.toInt(get(HFileInfo.AVG_KEY_LEN));
     avgValueLen = Bytes.toInt(get(HFileInfo.AVG_VALUE_LEN));
     byte[] keyValueFormatVersion = get(HFileWriterImpl.KEY_VALUE_VERSION);
@@ -511,6 +522,14 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
 
   public int getAvgValueLen() {
     return avgValueLen;
+  }
+
+  public String getKeyOfBiggestCell() {
+    return CellUtil.toString(biggestCell, false);
+  }
+
+  public long getLenOfBiggestCell() {
+    return lenOfBiggestCell;
   }
 
   public boolean shouldIncludeMemStoreTS() {

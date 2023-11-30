@@ -40,6 +40,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -551,5 +554,24 @@ public class TestAdmin extends TestAdminBase {
     ADMIN.deleteTable(tableName);
     ADMIN.listTableDescriptors();
     assertFalse(ADMIN.tableExists(tableName));
+  }
+
+  @Test
+  public void testUnknownServers() throws Exception {
+    TableName table = TableName.valueOf(name.getMethodName());
+    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY);
+    ADMIN.createTable(TableDescriptorBuilder.newBuilder(table).setColumnFamily(cfd).build());
+    final List<RegionInfo> regions = ADMIN.getRegions(table);
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    final AssignmentManager am = master.getAssignmentManager();
+    RegionStateNode rsNode = am.getRegionStates().getRegionStateNode(regions.get(0));
+    ServerName regionLocation = rsNode.getRegionLocation();
+    rsNode.setRegionLocation(ServerName.valueOf("dummyserver", 1234, System.currentTimeMillis()));
+    try {
+      assertTrue(ADMIN.listUnknownServers().get(0).getHostname().equals("dummyserver"));
+    } finally {
+      rsNode.setRegionLocation(regionLocation);
+    }
+    assertTrue(ADMIN.listUnknownServers().isEmpty());
   }
 }

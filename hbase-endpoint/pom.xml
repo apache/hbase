@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
     /**
      * Licensed to the Apache Software Foundation (ASF) under one
@@ -101,7 +101,7 @@
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk15on</artifactId>
+      <artifactId>bcprov-jdk18on</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -279,13 +279,6 @@
               <artifactId>jsr311-api</artifactId>
             </exclusion>
           </exclusions>
-        </dependency>
-        <!-- Hadoop needs Netty 3.x at test scope for the minicluster -->
-        <dependency>
-          <groupId>io.netty</groupId>
-          <artifactId>netty</artifactId>
-          <version>3.6.2.Final</version>
-          <scope>test</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>

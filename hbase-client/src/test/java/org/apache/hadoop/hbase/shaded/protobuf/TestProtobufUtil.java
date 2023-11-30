@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.SlowLogParams;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -53,6 +55,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.Any;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.BytesValue;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -62,6 +65,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
@@ -573,5 +577,50 @@ public class TestProtobufUtil {
     Cell decodedCell = getCellFromProtoResult(protoCell, false);
     List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
     assertEquals(0, decodedTags.size());
+  }
+
+  /**
+   * Used to confirm that we only consider truncatedMessage as EOF
+   */
+  @Test
+  public void testIsEOF() throws Exception {
+    for (Method method : InvalidProtocolBufferException.class.getDeclaredMethods()) {
+      if (
+        method.getParameterCount() == 0
+          && method.getReturnType() == InvalidProtocolBufferException.class
+      ) {
+        method.setAccessible(true);
+        InvalidProtocolBufferException e = (InvalidProtocolBufferException) method.invoke(null);
+        assertEquals(method.getName().equals("truncatedMessage"), ProtobufUtil.isEOF(e));
+      }
+    }
+  }
+
+  @Test
+  public void testSlowLogParamsMutationProto() {
+    MutationProto mutationProto =
+      ClientProtos.MutationProto.newBuilder().setRow(ByteString.copyFromUtf8("row123")).build();
+
+    SlowLogParams slowLogParams = ProtobufUtil.getSlowLogParams(mutationProto, false);
+
+    assertTrue(slowLogParams.getParams()
+      .contains(Bytes.toStringBinary(mutationProto.getRow().toByteArray())));
+  }
+
+  @Test
+  public void testSlowLogParamsMutateRequest() {
+    MutationProto mutationProto =
+      ClientProtos.MutationProto.newBuilder().setRow(ByteString.copyFromUtf8("row123")).build();
+    ClientProtos.MutateRequest mutateRequest =
+      ClientProtos.MutateRequest.newBuilder().setMutation(mutationProto)
+        .setRegion(HBaseProtos.RegionSpecifier.newBuilder()
+          .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME)
+          .setValue(ByteString.EMPTY).build())
+        .build();
+
+    SlowLogParams slowLogParams = ProtobufUtil.getSlowLogParams(mutateRequest, false);
+
+    assertTrue(slowLogParams.getParams()
+      .contains(Bytes.toStringBinary(mutationProto.getRow().toByteArray())));
   }
 }

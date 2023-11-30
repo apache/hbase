@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -245,6 +245,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>huiruan</id>
+      <name>Hui Ruan</name>
+      <email>huiruan@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>jdcryans</id>
       <name>Jean-Daniel Cryans</name>
       <email>jdcryans@apache.org</email>
@@ -395,6 +401,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>nihaljain</id>
+      <name>Nihal Jain</name>
+      <email>nihaljain@apache.org</email>
+      <timezone>+5</timezone>
+    </developer>
+    <developer>
       <id>niuyulin</id>
       <name>Yulin Niu</name>
       <email>niuyulin@apache.org</email>
@@ -507,6 +519,12 @@
       <name>Ted Yu</name>
       <email>yuzhihong@gmail.com</email>
       <timezone>-8</timezone>
+    </developer>
+    <developer>
+      <id>tianhang</id>
+      <name>Tianhang Tang</name>
+      <email>tianhang@apache.org</email>
+      <timezone>+8</timezone>
     </developer>
     <developer>
       <id>tianjy</id>
@@ -761,7 +779,7 @@
     </site>
   </distributionManagement>
   <properties>
-    <revision>3.0.0-alpha-4-SNAPSHOT</revision>
+    <revision>4.0.0-alpha-1-SNAPSHOT</revision>
     <!-- override on command line to have generated LICENSE files include
          diagnostic info for verifying notice requirements -->
     <license.debug.print.included>false</license.debug.print.included>
@@ -790,9 +808,18 @@
     -->
     <hadoop.version>${hadoop-three.version}</hadoop.version>
     <assembly.file>src/main/assembly/hadoop-three-compat.xml</assembly.file>
-    <!--This property is for hadoops netty. HBase netty
-         comes in via hbase-thirdparty hbase-shaded-netty-->
-    <netty.hadoop.version>3.10.5.Final</netty.hadoop.version>
+    <!--
+      These property is for transitive netty dependencies from thirdparty dependencies, like
+      hadoop and zookeeper. HBase netty comes in via hbase-thirdparty hbase-shaded-netty
+      In the old time, netty-all includes all the classes but maven does not know it so it is
+      possible that we have netty-all and netty-handler both on the classpath but they have
+      different version and cause conflicts. Newer version of netty-all solved the this problem
+      by depending all other netty modules, but we'd better still specify the version by our own
+      in the dependencyManagement section as it could still lead to different versions of netty
+      modules and cause trouble if we only rely on transitive dependencies.
+    -->
+    <netty3.version>3.10.6.Final</netty3.version>
+    <netty4.version>4.1.100.Final</netty4.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.13.0</audience-annotations.version>
     <!--
@@ -800,14 +827,15 @@
       When building with jdk11, we will use 0.14.1, please see the build-with-jdk11 profile.
     -->
     <javadoc.audience-annotations.version>0.13.0</javadoc.audience-annotations.version>
-    <avro.version>1.11.0</avro.version>
+    <avro.version>1.11.3</avro.version>
     <caffeine.version>2.8.1</caffeine.version>
     <commons-codec.version>1.15</commons-codec.version>
-    <commons-validator.version>1.6</commons-validator.version>
+    <commons-validator.version>1.7</commons-validator.version>
     <commons-io.version>2.11.0</commons-io.version>
     <commons-lang3.version>3.9</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
-    <disruptor.version>3.4.2</disruptor.version>
+    <commons-cli.version>1.5.0</commons-cli.version>
+    <disruptor.version>3.4.4</disruptor.version>
     <httpclient.version>4.5.13</httpclient.version>
     <httpcore.version>4.4.13</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
@@ -828,17 +856,17 @@
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.14.1</thrift.version>
-    <zookeeper.version>3.5.7</zookeeper.version>
+    <zookeeper.version>3.8.3</zookeeper.version>
     <jline.version>2.11</jline.version>
     <slf4j.version>1.7.30</slf4j.version>
     <clover.version>4.0.3</clover.version>
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
-    <jettison.version>1.5.2</jettison.version>
+    <jettison.version>1.5.4</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
     <joni.version>2.1.43</joni.version>
     <jcodings.version>1.0.57</jcodings.version>
     <spy.version>2.12.2</spy.version>
-    <bouncycastle.version>1.70</bouncycastle.version>
+    <bouncycastle.version>1.76</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
@@ -852,7 +880,7 @@
       When updating checkstyle.version, please make the same change in `.idea/checkstyle-idea.xml`
     -->
     <checkstyle.version>8.29</checkstyle.version>
-    <exec.maven.version>1.6.0</exec.maven.version>
+    <exec.maven.version>3.1.0</exec.maven.version>
     <error-prone.version>2.16</error-prone.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
@@ -868,19 +896,23 @@
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
     <spotbugs.version>4.7.3</spotbugs.version>
     <spotbugs.maven.version>4.7.2.1</spotbugs.maven.version>
-    <surefire.version>3.0.0-M6</surefire.version>
+    <surefire.version>3.1.0</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.27.2</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
-    <aircompressor.version>0.21</aircompressor.version>
-    <brotli4j.version>1.8.0</brotli4j.version>
+    <aircompressor.version>0.24</aircompressor.version>
+    <brotli4j.version>1.11.0</brotli4j.version>
     <lz4.version>1.8.0</lz4.version>
-    <snappy.version>1.1.8.4</snappy.version>
+    <snappy.version>1.1.10.4</snappy.version>
     <xz.version>1.9</xz.version>
-    <zstd-jni.version>1.5.0-4</zstd-jni.version>
-    <hbase-thirdparty.version>4.1.4</hbase-thirdparty.version>
+    <zstd-jni.version>1.5.5-2</zstd-jni.version>
+    <hbase-thirdparty.version>4.1.5</hbase-thirdparty.version>
+    <!-- Coverage properties -->
+    <jacoco.version>0.8.8</jacoco.version>
+    <jacocoArgLine/>
+    <sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -919,7 +951,10 @@
       This value is managed separately for jdk11. See below.
     -->
     <surefire.Xmx>2200m</surefire.Xmx>
+    <surefire.Xms>1000m</surefire.Xms>
+
     <surefire.cygwinXmx>2200m</surefire.cygwinXmx>
+    <surefire.cygwinXms>1000m</surefire.cygwinXms>
     <!--Mark our test runs with '-Dhbase.build.id' so we can identify a surefire test as ours in a process listing
 
       And for netty eventloops that have no explicit configuration, netty sets
@@ -927,18 +962,29 @@
       clusters/tests.
      -->
     <hbase-surefire.argLine>-enableassertions -Dhbase.build.id=${build.id} -Xmx${surefire.Xmx}
-      -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
+      -Xms${surefire.Xms} -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true -Djdk.net.URLClassPath.disableClassPathURLCheck=true
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced
       -Dio.netty.eventLoopThreads=3 -Dio.opentelemetry.context.enableStrictContext=true</hbase-surefire.argLine>
     <hbase-surefire.cygwin-argLine>-enableassertions -Xmx${surefire.cygwinXmx}
-      -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
+      -Xms${surefire.cygwinXms} -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       "-Djava.library.path=${hadoop.library.path};${java.library.path}"
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced
       -Dio.opentelemetry.context.enableStrictContext=true</hbase-surefire.cygwin-argLine>
+    <hbase-surefire.jdk11.flags>-Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true
+      --add-modules jdk.unsupported
+      --add-opens java.base/java.nio=ALL-UNNAMED
+      --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+      --add-opens java.base/java.lang=ALL-UNNAMED
+      --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
+      --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+      --add-opens java.base/java.util=ALL-UNNAMED
+      --add-opens java.base/java.util.concurrent=ALL-UNNAMED
+      --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
+      --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED</hbase-surefire.jdk11.flags>
+    <hbase-surefire.jdk17.flags>--add-opens java.base/jdk.internal.util.random=ALL-UNNAMED</hbase-surefire.jdk17.flags>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
-    <argLine>${hbase-surefire.argLine}</argLine>
-    <jacoco.version>0.7.5.201505241946</jacoco.version>
+    <argLine>${hbase-surefire.argLine} @{jacocoArgLine}</argLine>
     <extra.enforcer.version>1.5.1</extra.enforcer.version>
     <enforcer.version>3.0.0</enforcer.version>
     <restrict-imports.enforcer.version>0.14.0</restrict-imports.enforcer.version>
@@ -953,6 +999,9 @@
     <shell-executable>bash</shell-executable>
     <!-- Still need this to ignore some errors when building javadoc-->
     <doclint>none</doclint>
+    <!-- Required for testing LDAP integration -->
+    <apacheds.version>2.0.0.AM26</apacheds.version>
+    <ldap-api.version>2.0.0</ldap-api.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -1028,12 +1077,17 @@
         <artifactId>hbase-hadoop-compat</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-replication</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-replication</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
@@ -1374,6 +1428,11 @@
         <version>${commons-math.version}</version>
       </dependency>
       <dependency>
+        <groupId>commons-cli</groupId>
+        <artifactId>commons-cli</artifactId>
+        <version>${commons-cli.version}</version>
+      </dependency>
+      <dependency>
         <!-- commons-logging is only used by hbase-http's HttpRequestLog and hbase-server's
              HBaseTestingUtil.
           -->
@@ -1387,44 +1446,12 @@
         <version>${zookeeper.version}</version>
         <exclusions>
           <exclusion>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>com.github.spotbugs</groupId>
-            <artifactId>spotbugs-annotations</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>jline</groupId>
-            <artifactId>jline</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.sun.jmx</groupId>
-            <artifactId>jmxri</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.sun.jdmk</groupId>
-            <artifactId>jmxtools</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>javax.jms</groupId>
-            <artifactId>jms</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1580,7 +1607,7 @@
       </dependency>
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk15on</artifactId>
+        <artifactId>bcprov-jdk18on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>test</scope>
       </dependency>
@@ -1592,7 +1619,7 @@
       </dependency>
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcpkix-jdk15on</artifactId>
+        <artifactId>bcpkix-jdk18on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>test</scope>
       </dependency>
@@ -1747,6 +1774,18 @@
           </exclusion>
         </exclusions>
       </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty</artifactId>
+        <version>${netty3.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty4.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
@@ -1818,6 +1857,7 @@
             <trimStackTrace>false</trimStackTrace>
             <skip>${surefire.skipFirstPart}</skip>
             <forkCount>${surefire.firstPartForkCount}</forkCount>
+            <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
             <!--
               The counter in HBaseTestAppender will be broken if we set reuseForks to true, be
               careful when you want to change this value. See HBASE-26947 for more details.
@@ -1872,6 +1912,7 @@
                 -->
                 <reuseForks>false</reuseForks>
                 <forkCount>${surefire.secondPartForkCount}</forkCount>
+                <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                 <groups>${surefire.secondPartGroups}</groups>
                 <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
               </configuration>
@@ -2131,6 +2172,7 @@
         <configuration>
           <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
           <updatePomFile>true</updatePomFile>
+          <flattenMode>oss</flattenMode>
         </configuration>
         <executions>
           <!-- enable flattening -->
@@ -2351,6 +2393,23 @@
                   </excludes>
                   <message>Use OpenTelemetry instead</message>
                   <searchTransitive>false</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>banned-bouncycastle-jdk15on</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.bouncycastle:*-jdk15on</exclude>
+                  </excludes>
+                  <message>Use org.bouncycastle:*-jdk18on instead</message>
+                  <searchTransitive>true</searchTransitive>
                 </bannedDependencies>
               </rules>
             </configuration>
@@ -2758,6 +2817,7 @@
             <excludes>
               <exclude>**/generated/*</exclude>
               <exclude>**/package-info.java</exclude>
+              <exclude>**/.idea/**</exclude>
             </excludes>
             <!--
               e.g., remove the following lines:
@@ -2827,6 +2887,7 @@
               <excludes>
                 <exclude>**/target/**</exclude>
                 <exclude>**/dependency-reduced-pom.xml</exclude>
+                <exclude>**/.idea/**</exclude>
               </excludes>
               <!-- define the steps to apply to those files -->
               <trimTrailingWhitespace/>
@@ -2866,19 +2927,6 @@
             </format>
           </formats>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.cyclonedx</groupId>
-        <artifactId>cyclonedx-maven-plugin</artifactId>
-        <version>2.7.3</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>makeBom</goal>
-            </goals>
-            <phase>package</phase>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
     <extensions>
@@ -3208,18 +3256,9 @@
       <properties>
         <maven.compiler.release>${releaseTarget}</maven.compiler.release>
         <!-- TODO: replicate logic for windows support -->
-        <argLine>-Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true
-          --add-modules jdk.unsupported
-          --add-opens java.base/java.nio=ALL-UNNAMED
-          --add-opens java.base/sun.nio.ch=ALL-UNNAMED
-          --add-opens java.base/java.lang=ALL-UNNAMED
-          --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
-          --add-opens java.base/java.lang.reflect=ALL-UNNAMED
-          --add-opens java.base/java.util=ALL-UNNAMED
-          --add-opens java.base/jdk.internal.util.random=ALL-UNNAMED
-          --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
-          --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED
-          ${hbase-surefire.argLine}</argLine>
+        <argLine>${hbase-surefire.jdk11.flags}
+          ${hbase-surefire.argLine}
+          @{jacocoArgLine}</argLine>
         <!--
           Value to use for surefire when running jdk11.
           TODO: replicate logic for windows
@@ -3256,6 +3295,18 @@
           </plugins>
         </pluginManagement>
       </build>
+    </profile>
+    <profile>
+      <id>build-with-jdk17</id>
+      <activation>
+        <jdk>[17,)</jdk>
+      </activation>
+      <properties>
+        <argLine>${hbase-surefire.jdk11.flags}
+          ${hbase-surefire.jdk17.flags}
+          ${hbase-surefire.argLine}
+          @{jacocoArgLine}</argLine>
+      </properties>
     </profile>
     <!-- profile activated by the Jenkins patch testing job -->
     <profile>
@@ -3298,6 +3349,12 @@
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
+      <properties>
+        <sonar.exclusions>**/generated/**/*</sonar.exclusions>
+        <sonar.coverage.exclusions>**/generated/**/*,hbase-it/**,**/hbase-logging/**/*,**/hbase-testing-util/**/*,
+          **/hbase-protocol-shaded/**/*,**/hbase-external-blockcache/**/*,**/hbase-examples/**/*,
+          **/hbase-archetypes/**/*</sonar.coverage.exclusions>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -3305,11 +3362,8 @@
             <artifactId>jacoco-maven-plugin</artifactId>
             <version>${jacoco.version}</version>
             <configuration>
-              <systemPropertyVariables>
-                <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
-              </systemPropertyVariables>
               <excludes>
-                <exclude>**/generated/**/*.class</exclude>
+                <exclude>**/generated/**/*</exclude>
               </excludes>
             </configuration>
             <executions>
@@ -3318,6 +3372,11 @@
                 <goals>
                   <goal>prepare-agent</goal>
                 </goals>
+                <phase>initialize</phase>
+                <configuration>
+                  <propertyName>jacocoArgLine</propertyName>
+                  <append>true</append>
+                </configuration>
               </execution>
               <execution>
                 <id>report</id>
@@ -3327,6 +3386,11 @@
                 <phase>prepare-package</phase>
               </execution>
             </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonarsource.scanner.maven</groupId>
+            <artifactId>sonar-maven-plugin</artifactId>
+            <version>${sonar-maven-plugin.version}</version>
           </plugin>
         </plugins>
       </build>
@@ -3363,7 +3427,7 @@
       </activation>
       <properties>
         <build.platform>cygwin</build.platform>
-        <argLine>${hbase-surefire.cygwin-argLine}</argLine>
+        <argLine>${hbase-surefire.cygwin-argLine} @{jacocoArgLine}</argLine>
       </properties>
     </profile>
     <!-- this profile should match the name of the release profile in the root asf pom -->
@@ -3433,6 +3497,19 @@
               </dependency>
             </dependencies>
           </plugin>
+          <plugin>
+            <groupId>org.cyclonedx</groupId>
+            <artifactId>cyclonedx-maven-plugin</artifactId>
+            <version>2.7.10</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>makeBom</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+            </executions>
+          </plugin>
         </plugins>
       </build>
     </profile>
@@ -3479,14 +3556,6 @@
               <exclusion>
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>*</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
@@ -3580,14 +3649,6 @@
                 <artifactId>jersey-core</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
-              </exclusion>
-              <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
               </exclusion>
@@ -3615,14 +3676,6 @@
               <exclusion>
                 <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-core</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
@@ -3823,17 +3876,6 @@
                 <artifactId>stax-api</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-              </exclusion>
-              <!-- MiniMRCluster needs the hadoop netty-all transitive include... a
-               netty-all 4.0.52 version.... so we have to let it through.
-             <exclusion>
-               <groupId>io.netty</groupId>
-               <artifactId>netty-all</artifactId>
-             </exclusion>
-             -->
-              <exclusion>
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
               </exclusion>
@@ -3860,14 +3902,6 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3910,13 +3944,6 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
-              <!--
-              Needed in test context when hadoop-3.3 runs.
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
-              </exclusion>
-              -->
               <exclusion>
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>*</artifactId>
@@ -3983,14 +4010,6 @@
                 <artifactId>stax-api</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
-              </exclusion>
-              <exclusion>
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
               </exclusion>
@@ -4009,6 +4028,14 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk15on</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk15on</artifactId>
               </exclusion>
             </exclusions>
           </dependency>

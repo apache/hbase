@@ -113,11 +113,13 @@ public class TestCombinedAsyncWriter {
       CombinedAsyncWriter writer = CombinedAsyncWriter.create(writer1, writer2)) {
       ProtobufLogTestHelper.doWrite(new WriterOverAsyncWriter(writer), withTrailer, tableName,
         columnCount, recordCount, row, timestamp);
-      try (ProtobufLogReader reader = (ProtobufLogReader) WALS.createReader(fs, path1)) {
+      try (ProtobufWALStreamReader reader =
+        (ProtobufWALStreamReader) WALS.createStreamReader(fs, path1)) {
         ProtobufLogTestHelper.doRead(reader, withTrailer, tableName, columnCount, recordCount, row,
           timestamp);
       }
-      try (ProtobufLogReader reader = (ProtobufLogReader) WALS.createReader(fs, path2)) {
+      try (ProtobufWALStreamReader reader =
+        (ProtobufWALStreamReader) WALS.createStreamReader(fs, path2)) {
         ProtobufLogTestHelper.doRead(reader, withTrailer, tableName, columnCount, recordCount, row,
           timestamp);
       }

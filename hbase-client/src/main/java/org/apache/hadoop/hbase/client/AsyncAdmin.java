@@ -198,7 +198,20 @@ public interface AsyncAdmin {
    * Modify an existing table, more IRB friendly version.
    * @param desc modified description of the table
    */
-  CompletableFuture<Void> modifyTable(TableDescriptor desc);
+  default CompletableFuture<Void> modifyTable(TableDescriptor desc) {
+    return modifyTable(desc, true);
+  }
+
+  /**
+   * Modify an existing table, more IRB friendly version.
+   * @param desc          description of the table
+   * @param reopenRegions By default, 'modifyTable' reopens all regions, potentially causing a RIT
+   *                      (Region In Transition) storm in large tables. If set to 'false', regions
+   *                      will remain unaware of the modification until they are individually
+   *                      reopened. Please note that this may temporarily result in configuration
+   *                      inconsistencies among regions.
+   */
+  CompletableFuture<Void> modifyTable(TableDescriptor desc, boolean reopenRegions);
 
   /**
    * Change the store file tracker of the given table.
@@ -346,6 +359,14 @@ public interface AsyncAdmin {
    * @param columnFamily column family within a table
    */
   CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily);
+
+  /**
+   * Flush the specified column family stores on all regions of the passed table. This runs as a
+   * synchronous operation.
+   * @param tableName      table to flush
+   * @param columnFamilies column families within a table
+   */
+  CompletableFuture<Void> flush(TableName tableName, List<byte[]> columnFamilies);
 
   /**
    * Flush an individual region.
@@ -611,6 +632,12 @@ public interface AsyncAdmin {
   CompletableFuture<Void> splitRegion(byte[] regionName, byte[] splitPoint);
 
   /**
+   * Truncate an individual region.
+   * @param regionName region to truncate
+   */
+  CompletableFuture<Void> truncateRegion(byte[] regionName);
+
+  /**
    * Assign an individual region.
    * @param regionName Encoded or full name of region to assign.
    */
@@ -815,9 +842,38 @@ public interface AsyncAdmin {
    * Check if a replication peer is enabled.
    * @param peerId id of replication peer to check
    * @return true if replication peer is enabled. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
+   *         {@link CompletableFuture}
    */
   CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId);
+
+  /**
+   * Enable or disable replication peer modification.
+   * <p/>
+   * This is especially useful when you want to change the replication peer storage.
+   * @param on {@code true} means enable, otherwise disable
+   * @return the previous enable/disable state wrapped by a {@link CompletableFuture}
+   */
+  default CompletableFuture<Boolean> replicationPeerModificationSwitch(boolean on) {
+    return replicationPeerModificationSwitch(on, false);
+  }
+
+  /**
+   * Enable or disable replication peer modification.
+   * <p/>
+   * This is especially useful when you want to change the replication peer storage.
+   * @param on              {@code true} means enable, otherwise disable
+   * @param drainProcedures if {@code true}, will wait until all the running replication peer
+   *                        modification procedures finish
+   * @return the previous enable/disable state wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> replicationPeerModificationSwitch(boolean on, boolean drainProcedures);
+
+  /**
+   * Check whether replication peer modification is enabled.
+   * @return {@code true} if modification is enabled, otherwise {@code false}, wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> isReplicationPeerModificationEnabled();
 
   /**
    * Take a snapshot for the given table. If the table is enabled, a FLUSH-type snapshot will be
@@ -1800,4 +1856,9 @@ public interface AsyncAdmin {
    * Flush master local region
    */
   CompletableFuture<Void> flushMasterStore();
+
+  /**
+   * Get the list of cached files
+   */
+  CompletableFuture<List<String>> getCachedFilesList(ServerName serverName);
 }

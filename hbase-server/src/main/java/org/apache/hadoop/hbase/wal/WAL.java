@@ -43,6 +43,12 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface WAL extends Closeable, WALFileLengthProvider {
 
   /**
+   * Used to initialize the WAL. Usually this is for creating the first writer.
+   */
+  default void init() throws IOException {
+  }
+
+  /**
    * Registers WALActionsListener
    */
   void registerWALActionsListener(final WALActionsListener listener);
@@ -225,27 +231,20 @@ public interface WAL extends Closeable, WALFileLengthProvider {
   long getEarliestMemStoreSeqNum(byte[] encodedRegionName, byte[] familyName);
 
   /**
+   * Tell the WAL that when creating new writer you can skip creating the remote writer.
+   * <p>
+   * Used by sync replication for switching states from ACTIVE, where the remote cluster is broken.
+   */
+  default void skipRemoteWAL(boolean markerEditOnly) {
+  }
+
+  /**
    * Human readable identifying information about the state of this WAL. Implementors are encouraged
    * to include information appropriate for debugging. Consumers are advised not to rely on the
    * details of the returned String; it does not have a defined structure.
    */
   @Override
   String toString();
-
-  /**
-   * When outside clients need to consume persisted WALs, they rely on a provided Reader.
-   */
-  interface Reader extends Closeable {
-    Entry next() throws IOException;
-
-    Entry next(Entry reuse) throws IOException;
-
-    void seek(long pos) throws IOException;
-
-    long getPosition() throws IOException;
-
-    void reset() throws IOException;
-  }
 
   /**
    * Utility class that lets us keep track of the edit with it's key.

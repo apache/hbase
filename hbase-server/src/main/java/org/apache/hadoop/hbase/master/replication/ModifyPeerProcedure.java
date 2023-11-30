@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -27,6 +28,7 @@ import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -74,7 +76,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
    * update the peer storage.
    */
   protected abstract void postPeerModification(MasterProcedureEnv env)
-    throws IOException, ReplicationException;
+    throws IOException, ReplicationException, ProcedureSuspendedException;
 
   protected void releaseLatch(MasterProcedureEnv env) {
     ProcedurePrepareLatch.releaseLatch(latch, this);
@@ -152,12 +154,37 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     }
   }
 
+  private boolean shouldFailForMigrating(MasterProcedureEnv env) throws IOException {
+    long parentProcId = getParentProcId();
+    if (
+      parentProcId != Procedure.NO_PROC_ID && env.getMasterServices().getMasterProcedureExecutor()
+        .getProcedure(parentProcId) instanceof MigrateReplicationQueueFromZkToTableProcedure
+    ) {
+      // this is scheduled by MigrateReplicationQueueFromZkToTableProcedure, should not fail it
+      return false;
+    }
+    return env.getMasterServices().getProcedures().stream()
+      .filter(p -> p instanceof MigrateReplicationQueueFromZkToTableProcedure)
+      .anyMatch(p -> !p.isFinished());
+  }
+
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, PeerModificationState state)
     throws ProcedureSuspendedException, InterruptedException {
     switch (state) {
       case PRE_PEER_MODIFICATION:
         try {
+          if (shouldFailForMigrating(env)) {
+            LOG.info("There is a pending {}, give up execution of {}",
+              MigrateReplicationQueueFromZkToTableProcedure.class.getSimpleName(),
+              getClass().getName());
+            setFailure("master-" + getPeerOperationType().name().toLowerCase() + "-peer",
+              new DoNotRetryIOException("There is a pending "
+                + MigrateReplicationQueueFromZkToTableProcedure.class.getSimpleName()));
+            releaseLatch(env);
+            return Flow.NO_MORE_STATE;
+          }
+          checkPeerModificationEnabled(env);
           prePeerModification(env);
         } catch (IOException e) {
           LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, "

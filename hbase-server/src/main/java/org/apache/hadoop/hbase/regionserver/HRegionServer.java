@@ -65,10 +65,12 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javax.management.MalformedObjectNameException;
 import javax.servlet.http.HttpServlet;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.mutable.MutableFloat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -99,7 +101,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
-import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -108,7 +110,9 @@ import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
+import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -207,7 +211,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.Reg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.UserLoad;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Coprocessor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Coprocessor.Builder;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -239,6 +242,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   implements RegionServerServices, LastSequenceId {
 
   private static final Logger LOG = LoggerFactory.getLogger(HRegionServer.class);
+
+  int unitMB = 1024 * 1024;
+  int unitKB = 1024;
 
   /**
    * For testing only! Set to true to skip notifying region assignment to master .
@@ -782,6 +788,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
   }
 
+  @Override
+  public boolean isStopping() {
+    return stopping;
+  }
+
   /**
    * The HRegionServer sticks in this loop until closed.
    */
@@ -1188,7 +1199,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     serverLoad.setReadRequestsCount(this.metricsRegionServerImpl.getReadRequestsCount());
     serverLoad.setWriteRequestsCount(this.metricsRegionServerImpl.getWriteRequestsCount());
     Set<String> coprocessors = getWAL(null).getCoprocessorHost().getCoprocessors();
-    Builder coprocessorBuilder = Coprocessor.newBuilder();
+    Coprocessor.Builder coprocessorBuilder = Coprocessor.newBuilder();
     for (String coprocessor : coprocessors) {
       serverLoad.addCoprocessors(coprocessorBuilder.setName(coprocessor).build());
     }
@@ -1207,6 +1218,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         serverLoad.addCoprocessors(coprocessorBuilder.setName(coprocessor).build());
       }
     }
+    computeIfPersistentBucketCache(bc -> {
+      bc.getRegionCachedInfo().forEach((regionName, prefetchSize) -> {
+        serverLoad.putRegionCachedInfo(regionName, roundSize(prefetchSize, unitMB));
+      });
+    });
     serverLoad.setReportStartTime(reportStartTime);
     serverLoad.setReportEndTime(reportEndTime);
     if (this.infoServer != null) {
@@ -1375,30 +1391,27 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
           String hostnameFromMasterPOV = e.getValue();
           this.serverName = ServerName.valueOf(hostnameFromMasterPOV,
             rpcServices.getSocketAddress().getPort(), this.startcode);
-          if (
-            !StringUtils.isBlank(useThisHostnameInstead)
-              && !hostnameFromMasterPOV.equals(useThisHostnameInstead)
-          ) {
-            String msg = "Master passed us a different hostname to use; was="
-              + this.useThisHostnameInstead + ", but now=" + hostnameFromMasterPOV;
-            LOG.error(msg);
-            throw new IOException(msg);
-          }
+          String expectedHostName = rpcServices.getSocketAddress().getHostName();
           // if Master use-ip is enabled, RegionServer use-ip will be enabled by default even if it
           // is set to disable. so we will use the ip of the RegionServer to compare with the
           // hostname passed by the Master, see HBASE-27304 for details.
-          InetSocketAddress isa = rpcServices.getSocketAddress();
-          // here getActiveMaster() is definitely not null.
-          String isaHostName = InetAddresses.isInetAddress(getActiveMaster().get().getHostname())
-            ? isa.getAddress().getHostAddress()
-            : isa.getHostName();
           if (
-            StringUtils.isBlank(useThisHostnameInstead)
-              && !hostnameFromMasterPOV.equals(isaHostName)
+            StringUtils.isBlank(useThisHostnameInstead) && getActiveMaster().isPresent()
+              && InetAddresses.isInetAddress(getActiveMaster().get().getHostname())
           ) {
+            expectedHostName = rpcServices.getSocketAddress().getAddress().getHostAddress();
+          }
+          boolean isHostnameConsist = StringUtils.isBlank(useThisHostnameInstead)
+            ? hostnameFromMasterPOV.equals(expectedHostName)
+            : hostnameFromMasterPOV.equals(useThisHostnameInstead);
+          if (!isHostnameConsist) {
             String msg = "Master passed us a different hostname to use; was="
-              + rpcServices.getSocketAddress().getHostName() + ", but now=" + hostnameFromMasterPOV;
+              + (StringUtils.isBlank(useThisHostnameInstead)
+                ? rpcServices.getSocketAddress().getHostName()
+                : this.useThisHostnameInstead)
+              + ", but now=" + hostnameFromMasterPOV;
             LOG.error(msg);
+            throw new IOException(msg);
           }
           continue;
         }
@@ -1509,6 +1522,15 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
   }
 
+  private void computeIfPersistentBucketCache(Consumer<BucketCache> computation) {
+    if (blockCache instanceof CombinedBlockCache) {
+      BlockCache l2 = ((CombinedBlockCache) blockCache).getSecondLevelCache();
+      if (l2 instanceof BucketCache && ((BucketCache) l2).isCachePersistent()) {
+        computation.accept((BucketCache) l2);
+      }
+    }
+  }
+
   /**
    * @param r               Region to get RegionLoad for.
    * @param regionLoadBldr  the RegionLoad.Builder, can be null
@@ -1518,6 +1540,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   RegionLoad createRegionLoad(final HRegion r, RegionLoad.Builder regionLoadBldr,
     RegionSpecifier.Builder regionSpecifier) throws IOException {
     byte[] name = r.getRegionInfo().getRegionName();
+    String regionEncodedName = r.getRegionInfo().getEncodedName();
     int stores = 0;
     int storefiles = 0;
     int storeRefCount = 0;
@@ -1530,6 +1553,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     long totalStaticBloomSize = 0L;
     long totalCompactingKVs = 0L;
     long currentCompactedKVs = 0L;
+    long totalRegionSize = 0L;
     List<HStore> storeList = r.getStores();
     stores += storeList.size();
     for (HStore store : storeList) {
@@ -1541,6 +1565,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         Math.max(maxCompactedStoreFileRefCount, currentMaxCompactedStoreFileRefCount);
       storeUncompressedSize += store.getStoreSizeUncompressed();
       storefileSize += store.getStorefilesSize();
+      totalRegionSize += store.getHFilesSize();
       // TODO: storefileIndexSizeKB is same with rootLevelIndexSizeKB?
       storefileIndexSize += store.getStorefilesRootLevelIndexSize();
       CompactionProgress progress = store.getCompactionProgress();
@@ -1553,9 +1578,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       totalStaticBloomSize += store.getTotalStaticBloomSize();
     }
 
-    int unitMB = 1024 * 1024;
-    int unitKB = 1024;
-
     int memstoreSizeMB = roundSize(r.getMemStoreDataSize(), unitMB);
     int storeUncompressedSizeMB = roundSize(storeUncompressedSize, unitMB);
     int storefileSizeMB = roundSize(storefileSize, unitMB);
@@ -1563,6 +1585,16 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     int rootLevelIndexSizeKB = roundSize(rootLevelIndexSize, unitKB);
     int totalStaticIndexSizeKB = roundSize(totalStaticIndexSize, unitKB);
     int totalStaticBloomSizeKB = roundSize(totalStaticBloomSize, unitKB);
+    int regionSizeMB = roundSize(totalRegionSize, unitMB);
+    final MutableFloat currentRegionCachedRatio = new MutableFloat(0.0f);
+    computeIfPersistentBucketCache(bc -> {
+      if (bc.getRegionCachedInfo().containsKey(regionEncodedName)) {
+        currentRegionCachedRatio.setValue(regionSizeMB == 0
+          ? 0.0f
+          : (float) roundSize(bc.getRegionCachedInfo().get(regionEncodedName), unitMB)
+            / regionSizeMB);
+      }
+    });
 
     HDFSBlocksDistribution hdfsBd = r.getHDFSBlocksDistribution();
     float dataLocality = hdfsBd.getBlockLocalityIndex(serverName.getHostname());
@@ -1593,7 +1625,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       .setDataLocalityForSsd(dataLocalityForSsd).setBlocksLocalWeight(blocksLocalWeight)
       .setBlocksLocalWithSsdWeight(blocksLocalWithSsdWeight).setBlocksTotalWeight(blocksTotalWeight)
       .setCompactionState(ProtobufUtil.createCompactionStateForRegionLoad(r.getCompactionState()))
-      .setLastMajorCompactionTs(r.getOldestHfileTs(true));
+      .setLastMajorCompactionTs(r.getOldestHfileTs(true)).setRegionSizeMB(regionSizeMB)
+      .setCurrentRegionCachedRatio(currentRegionCachedRatio.floatValue());
     r.setCompleteSequenceId(regionLoadBldr);
     return regionLoadBldr.build();
   }
@@ -1642,8 +1675,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     @Override
     protected void chore() {
       for (Region r : this.instance.onlineRegions.values()) {
-        // Skip compaction if region is read only
-        if (r == null || r.isReadOnly()) {
+        // If region is read only or compaction is disabled at table level, there's no need to
+        // iterate through region's stores
+        if (r == null || r.isReadOnly() || !r.getTableDescriptor().isCompactionEnabled()) {
           continue;
         }
 
@@ -1737,7 +1771,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
    * be hooked up to WAL.
    */
   private void setupWALAndReplication() throws IOException {
-    WALFactory factory = new WALFactory(conf, serverName.toString(), this, true);
+    WALFactory factory = new WALFactory(conf, serverName, this);
     // TODO Replication make assumptions here based on the default filesystem impl
     Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String logName = AbstractFSWALProvider.getWALDirectoryName(this.serverName.toString());
@@ -1909,6 +1943,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     executorService.startExecutorService(
       executorService.new ExecutorConfig().setExecutorType(ExecutorType.RS_SNAPSHOT_OPERATIONS)
         .setCorePoolSize(rsSnapshotOperationThreads));
+    final int rsFlushOperationThreads =
+      conf.getInt("hbase.regionserver.executor.flush.operations.threads", 3);
+    executorService.startExecutorService(executorService.new ExecutorConfig()
+      .setExecutorType(ExecutorType.RS_FLUSH_OPERATIONS).setCorePoolSize(rsFlushOperationThreads));
 
     Threads.setDaemonThreadRunning(this.walRoller, getName() + ".logRoller",
       uncaughtExceptionHandler);
@@ -2068,8 +2106,17 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   private void registerConfigurationObservers() {
+    // Register Replication if possible, as now we support recreating replication peer storage, for
+    // migrating across different replication peer storages online
+    if (replicationSourceHandler instanceof ConfigurationObserver) {
+      configurationManager.registerObserver((ConfigurationObserver) replicationSourceHandler);
+    }
+    if (!sameReplicationSourceAndSink && replicationSinkHandler instanceof ConfigurationObserver) {
+      configurationManager.registerObserver((ConfigurationObserver) replicationSinkHandler);
+    }
     // Registering the compactSplitThread object with the ConfigurationManager.
     configurationManager.registerObserver(this.compactSplitThread);
+    configurationManager.registerObserver(this.cacheFlusher);
     configurationManager.registerObserver(this.rpcServices);
     configurationManager.registerObserver(this);
   }
@@ -2112,7 +2159,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return walRoller;
   }
 
-  WALFactory getWalFactory() {
+  public WALFactory getWalFactory() {
     return walFactory;
   }
 
@@ -2450,7 +2497,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       bootstrapNodeManager.stop();
     }
     if (this.cacheFlusher != null) {
-      this.cacheFlusher.join();
+      this.cacheFlusher.shutdown();
     }
     if (this.walRoller != null) {
       this.walRoller.close();
@@ -3316,11 +3363,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   @Override
   public Optional<MobFileCache> getMobFileCache() {
     return Optional.ofNullable(this.mobFileCache);
-  }
-
-  /** Returns : Returns the ConfigurationManager object for testing purposes. */
-  ConfigurationManager getConfigurationManager() {
-    return configurationManager;
   }
 
   CacheEvictionStats clearRegionBlockCache(Region region) {

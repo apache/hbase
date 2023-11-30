@@ -44,11 +44,6 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
   }
 
   @Override
-  public void preLogRoll(Path oldPath, Path newPath) throws IOException {
-    manager.preLogRoll(newPath);
-  }
-
-  @Override
   public void postLogRoll(Path oldPath, Path newPath) throws IOException {
     manager.postLogRoll(newPath);
   }

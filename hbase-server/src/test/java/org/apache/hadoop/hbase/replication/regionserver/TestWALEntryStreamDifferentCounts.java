@@ -18,13 +18,13 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream.HasNext;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runners.Parameterized.Parameter;
@@ -74,16 +74,17 @@ public abstract class TestWALEntryStreamDifferentCounts extends WALEntryStreamTe
     log.rollWriter();
 
     try (WALEntryStream entryStream =
-      new WALEntryStream(logQueue, CONF, 0, log, null, new MetricsSource("1"), fakeWalGroupId)) {
+      new WALEntryStream(logQueue, fs, CONF, 0, log, new MetricsSource("1"), fakeWalGroupId)) {
       int i = 0;
-      while (entryStream.hasNext()) {
+      while (entryStream.hasNext() == HasNext.YES) {
         assertNotNull(entryStream.next());
         i++;
       }
       assertEquals(nbRows, i);
 
-      // should've read all entries
-      assertFalse(entryStream.hasNext());
+      // should've read all entries, and since the last file is still opened for writing so we will
+      // get a RETRY instead of NO here
+      assertEquals(HasNext.RETRY, entryStream.hasNext());
     }
   }
 }

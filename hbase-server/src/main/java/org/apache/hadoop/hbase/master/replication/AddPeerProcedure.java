@@ -21,7 +21,6 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -44,6 +43,8 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
   private ReplicationPeerConfig peerConfig;
 
   private boolean enabled;
+
+  private boolean cleanerDisabled;
 
   public AddPeerProcedure() {
   }
@@ -84,21 +85,30 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
 
   @Override
   protected void releaseLatch(MasterProcedureEnv env) {
-    if (peerConfig.isSyncReplication()) {
-      env.getReplicationPeerManager().releaseSyncReplicationPeerLock();
+    if (cleanerDisabled) {
+      env.getMasterServices().getReplicationLogCleanerBarrier().enable();
     }
-    ProcedurePrepareLatch.releaseLatch(latch, this);
+    if (peerConfig.isSyncReplication()) {
+      env.getMasterServices().getSyncReplicationPeerLock().release();
+    }
+    super.releaseLatch(env);
   }
 
   @Override
   protected void prePeerModification(MasterProcedureEnv env)
     throws IOException, ReplicationException, ProcedureSuspendedException {
+    if (!env.getMasterServices().getReplicationLogCleanerBarrier().disable()) {
+      throw suspend(env.getMasterConfiguration(),
+        backoff -> LOG.warn("LogCleaner is run at the same time when adding peer {}, sleep {} secs",
+          peerId, backoff / 1000));
+    }
+    cleanerDisabled = true;
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preAddReplicationPeer(peerId, peerConfig);
     }
     if (peerConfig.isSyncReplication()) {
-      if (!env.getReplicationPeerManager().tryAcquireSyncReplicationPeerLock()) {
+      if (!env.getMasterServices().getSyncReplicationPeerLock().tryAcquire()) {
         throw suspend(env.getMasterConfiguration(),
           backoff -> LOG.warn(
             "Can not acquire sync replication peer lock for peer {}, sleep {} secs", peerId,
@@ -128,11 +138,16 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
   @Override
   protected void afterReplay(MasterProcedureEnv env) {
     if (getCurrentState() == getInitialState()) {
-      // will try to acquire the lock when executing the procedure, no need to acquire it here
+      // do not need to disable log cleaner or acquire lock if we are in the initial state, later
+      // when executing the procedure we will try to disable and acquire.
       return;
     }
+    if (!env.getMasterServices().getReplicationLogCleanerBarrier().disable()) {
+      throw new IllegalStateException("can not disable log cleaner, this should not happen");
+    }
+    cleanerDisabled = true;
     if (peerConfig.isSyncReplication()) {
-      if (!env.getReplicationPeerManager().tryAcquireSyncReplicationPeerLock()) {
+      if (!env.getMasterServices().getSyncReplicationPeerLock().tryAcquire()) {
         throw new IllegalStateException(
           "Can not acquire sync replication peer lock for peer " + peerId);
       }

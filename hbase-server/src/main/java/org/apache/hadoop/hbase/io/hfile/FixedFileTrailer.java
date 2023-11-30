@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.InnerStoreCellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -121,7 +122,8 @@ public class FixedFileTrailer {
    * Raw key comparator class name in version 3
    */
   // We could write the actual class name from 2.0 onwards and handle BC
-  private String comparatorClassName = CellComparator.getInstance().getClass().getName();
+  private String comparatorClassName =
+    InnerStoreCellComparator.INNER_STORE_COMPARATOR.getClass().getName();
 
   /**
    * The encryption key
@@ -574,7 +576,10 @@ public class FixedFileTrailer {
    */
   @Deprecated
   private String getHBase1CompatibleName(final String comparator) {
-    if (comparator.equals(CellComparatorImpl.class.getName())) {
+    if (
+      comparator.equals(CellComparatorImpl.class.getName())
+        || comparator.equals(InnerStoreCellComparator.class.getName())
+    ) {
       return KeyValue.COMPARATOR.getClass().getName();
     }
     if (comparator.equals(MetaCellComparator.class.getName())) {
@@ -593,7 +598,7 @@ public class FixedFileTrailer {
         || comparatorClassName.equals(KeyValue.COMPARATOR.getClass().getName())
         || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator"))
     ) {
-      comparatorKlass = CellComparatorImpl.class;
+      comparatorKlass = InnerStoreCellComparator.class;
     } else if (
       comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
         || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())
@@ -622,8 +627,11 @@ public class FixedFileTrailer {
   }
 
   static CellComparator createComparator(String comparatorClassName) throws IOException {
-    if (comparatorClassName.equals(CellComparatorImpl.COMPARATOR.getClass().getName())) {
-      return CellComparatorImpl.COMPARATOR;
+    if (
+      comparatorClassName
+        .equals(InnerStoreCellComparator.INNER_STORE_COMPARATOR.getClass().getName())
+    ) {
+      return InnerStoreCellComparator.INNER_STORE_COMPARATOR;
     } else
       if (comparatorClassName.equals(MetaCellComparator.META_COMPARATOR.getClass().getName())) {
         return MetaCellComparator.META_COMPARATOR;

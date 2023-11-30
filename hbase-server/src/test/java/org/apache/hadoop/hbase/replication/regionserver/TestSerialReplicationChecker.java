@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationGroupOffset;
+import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -94,10 +96,11 @@ public class TestSerialReplicationChecker {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     UTIL.startMiniCluster(1);
-    QUEUE_STORAGE = ReplicationStorageFactory.getReplicationQueueStorage(UTIL.getZooKeeperWatcher(),
-      UTIL.getConfiguration());
-    QUEUE_STORAGE.addWAL(UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName(), PEER_ID,
-      WAL_FILE_NAME);
+    TableName repTable = TableName.valueOf("test_serial_rep");
+    UTIL.getAdmin()
+      .createTable(ReplicationStorageFactory.createReplicationQueueTableDescriptor(repTable));
+    QUEUE_STORAGE = ReplicationStorageFactory.getReplicationQueueStorage(UTIL.getConnection(),
+      UTIL.getConfiguration(), repTable);
   }
 
   @AfterClass
@@ -174,8 +177,10 @@ public class TestSerialReplicationChecker {
   }
 
   private void updatePushedSeqId(RegionInfo region, long seqId) throws ReplicationException {
-    QUEUE_STORAGE.setWALPosition(UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName(),
-      PEER_ID, WAL_FILE_NAME, 10, ImmutableMap.of(region.getEncodedName(), seqId));
+    ReplicationQueueId queueId = new ReplicationQueueId(
+      UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName(), PEER_ID);
+    QUEUE_STORAGE.setOffset(queueId, "", new ReplicationGroupOffset(WAL_FILE_NAME, 10),
+      ImmutableMap.of(region.getEncodedName(), seqId));
   }
 
   private void addParents(RegionInfo region, List<RegionInfo> parents) throws IOException {

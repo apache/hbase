@@ -27,8 +27,11 @@ import java.security.KeyStore;
 import java.security.Security;
 import java.security.cert.PKIXBuilderParameters;
 import java.security.cert.X509CertSelector;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.CertPathTrustManagerParameters;
 import javax.net.ssl.KeyManager;
@@ -49,8 +52,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ObjectArrays;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.OpenSsl;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContextBuilder;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslProvider;
 
 /**
  * Utility code for X509 handling Default cipher suites: Performance testing done by Facebook
@@ -74,18 +79,19 @@ public final class X509Util {
   static final String CONFIG_PREFIX = "hbase.rpc.tls.";
   public static final String TLS_CONFIG_PROTOCOL = CONFIG_PREFIX + "protocol";
   public static final String TLS_CONFIG_KEYSTORE_LOCATION = CONFIG_PREFIX + "keystore.location";
-  static final String TLS_CONFIG_KEYSTORE_TYPE = CONFIG_PREFIX + "keystore.type";
-  static final String TLS_CONFIG_KEYSTORE_PASSWORD = CONFIG_PREFIX + "keystore.password";
-  static final String TLS_CONFIG_TRUSTSTORE_LOCATION = CONFIG_PREFIX + "truststore.location";
-  static final String TLS_CONFIG_TRUSTSTORE_TYPE = CONFIG_PREFIX + "truststore.type";
-  static final String TLS_CONFIG_TRUSTSTORE_PASSWORD = CONFIG_PREFIX + "truststore.password";
+  public static final String TLS_CONFIG_KEYSTORE_TYPE = CONFIG_PREFIX + "keystore.type";
+  public static final String TLS_CONFIG_KEYSTORE_PASSWORD = CONFIG_PREFIX + "keystore.password";
+  public static final String TLS_CONFIG_TRUSTSTORE_LOCATION = CONFIG_PREFIX + "truststore.location";
+  public static final String TLS_CONFIG_TRUSTSTORE_TYPE = CONFIG_PREFIX + "truststore.type";
+  public static final String TLS_CONFIG_TRUSTSTORE_PASSWORD = CONFIG_PREFIX + "truststore.password";
   public static final String TLS_CONFIG_CLR = CONFIG_PREFIX + "clr";
   public static final String TLS_CONFIG_OCSP = CONFIG_PREFIX + "ocsp";
   public static final String TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED =
     CONFIG_PREFIX + "host-verification.reverse-dns.enabled";
-  private static final String TLS_ENABLED_PROTOCOLS = CONFIG_PREFIX + "enabledProtocols";
-  private static final String TLS_CIPHER_SUITES = CONFIG_PREFIX + "ciphersuites";
+  public static final String TLS_ENABLED_PROTOCOLS = CONFIG_PREFIX + "enabledProtocols";
+  public static final String TLS_CIPHER_SUITES = CONFIG_PREFIX + "ciphersuites";
   public static final String TLS_CERT_RELOAD = CONFIG_PREFIX + "certReload";
+  public static final String TLS_USE_OPENSSL = CONFIG_PREFIX + "useOpenSsl";
   public static final String DEFAULT_PROTOCOL = "TLSv1.2";
 
   //
@@ -109,6 +115,10 @@ public final class X509Util {
     "hbase.client.netty.tls.handshaketimeout";
   public static final int DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS = 5000;
 
+  private static String[] getTls13Ciphers() {
+    return new String[] { "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384" };
+  }
+
   private static String[] getGCMCiphers() {
     return new String[] { "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
       "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
@@ -130,6 +140,30 @@ public final class X509Util {
   // Note that this performance assumption might not hold true for architectures other than x86_64.
   private static final String[] DEFAULT_CIPHERS_JAVA9 =
     ObjectArrays.concat(getGCMCiphers(), getCBCCiphers(), String.class);
+  private static final String[] DEFAULT_CIPHERS_JAVA11 =
+    ObjectArrays.concat(ObjectArrays.concat(getTls13Ciphers(), getGCMCiphers(), String.class),
+      getCBCCiphers(), String.class);
+
+  private static final String[] DEFAULT_CIPHERS_OPENSSL = getOpenSslFilteredDefaultCiphers();
+
+  /**
+   * Not all of our default ciphers are available in OpenSSL. Takes our default cipher lists and
+   * filters them to only those available in OpenSsl. Prefers TLS 1.3, then GCM, then CBC because
+   * GCM tends to be better and faster, and we don't need to worry about the java8 vs 9 performance
+   * issue if OpenSSL is handling it.
+   */
+  private static String[] getOpenSslFilteredDefaultCiphers() {
+    if (!OpenSsl.isAvailable()) {
+      return new String[0];
+    }
+
+    Set<String> openSslSuites = OpenSsl.availableJavaCipherSuites();
+    List<String> defaultSuites = new ArrayList<>();
+    Arrays.stream(getTls13Ciphers()).filter(openSslSuites::contains).forEach(defaultSuites::add);
+    Arrays.stream(getGCMCiphers()).filter(openSslSuites::contains).forEach(defaultSuites::add);
+    Arrays.stream(getCBCCiphers()).filter(openSslSuites::contains).forEach(defaultSuites::add);
+    return defaultSuites.toArray(new String[0]);
+  }
 
   /**
    * Enum specifying the client auth requirement of server-side TLS sockets created by this
@@ -176,16 +210,28 @@ public final class X509Util {
     // disabled
   }
 
-  static String[] getDefaultCipherSuites() {
+  static String[] getDefaultCipherSuites(boolean useOpenSsl) {
+    if (useOpenSsl) {
+      return DEFAULT_CIPHERS_OPENSSL;
+    }
     return getDefaultCipherSuitesForJavaVersion(System.getProperty("java.specification.version"));
   }
 
   static String[] getDefaultCipherSuitesForJavaVersion(String javaVersion) {
     Objects.requireNonNull(javaVersion);
+
     if (javaVersion.matches("\\d+")) {
       // Must be Java 9 or later
-      LOG.debug("Using Java9+ optimized cipher suites for Java version {}", javaVersion);
-      return DEFAULT_CIPHERS_JAVA9;
+      int javaVersionInt = Integer.parseInt(javaVersion);
+      if (javaVersionInt >= 11) {
+        LOG.debug(
+          "Using Java11+ optimized cipher suites for Java version {}, including TLSv1.3 support",
+          javaVersion);
+        return DEFAULT_CIPHERS_JAVA11;
+      } else {
+        LOG.debug("Using Java9+ optimized cipher suites for Java version {}", javaVersion);
+        return DEFAULT_CIPHERS_JAVA9;
+      }
     } else if (javaVersion.startsWith("1.")) {
       // Must be Java 1.8 or earlier
       LOG.debug("Using Java8 optimized cipher suites for Java version {}", javaVersion);
@@ -202,6 +248,7 @@ public final class X509Util {
 
     SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
 
+    boolean useOpenSsl = configureOpenSslIfAvailable(sslContextBuilder, config);
     String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
     char[] keyStorePassword = config.getPassword(TLS_CONFIG_KEYSTORE_PASSWORD);
     String keyStoreType = config.get(TLS_CONFIG_KEYSTORE_TYPE, "");
@@ -234,9 +281,31 @@ public final class X509Util {
 
     sslContextBuilder.enableOcsp(sslOcspEnabled);
     sslContextBuilder.protocols(getEnabledProtocols(config));
-    sslContextBuilder.ciphers(Arrays.asList(getCipherSuites(config)));
+    sslContextBuilder.ciphers(Arrays.asList(getCipherSuites(config, useOpenSsl)));
 
     return sslContextBuilder.build();
+  }
+
+  /**
+   * Adds SslProvider.OPENSSL if OpenSsl is available and enabled. In order to make it available,
+   * one must ensure that a properly shaded netty-tcnative is on the classpath. Properly shaded
+   * means relocated to be prefixed with "org.apache.hbase.thirdparty" like the rest of the netty
+   * classes.
+   */
+  private static boolean configureOpenSslIfAvailable(SslContextBuilder sslContextBuilder,
+    Configuration conf) {
+    if (OpenSsl.isAvailable() && conf.getBoolean(TLS_USE_OPENSSL, true)) {
+      LOG.debug("Using netty-tcnative to accelerate SSL handling");
+      sslContextBuilder.sslProvider(SslProvider.OPENSSL);
+      return true;
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Using default JDK SSL provider because netty-tcnative is not {}",
+          OpenSsl.isAvailable() ? "enabled" : "available");
+      }
+      sslContextBuilder.sslProvider(SslProvider.JDK);
+      return false;
+    }
   }
 
   public static SslContext createSslContextForServer(Configuration config)
@@ -254,6 +323,7 @@ public final class X509Util {
     sslContextBuilder = SslContextBuilder
       .forServer(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
 
+    boolean useOpenSsl = configureOpenSslIfAvailable(sslContextBuilder, config);
     String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
     char[] trustStorePassword = config.getPassword(TLS_CONFIG_TRUSTSTORE_PASSWORD);
     String trustStoreType = config.get(TLS_CONFIG_TRUSTSTORE_TYPE, "");
@@ -277,7 +347,7 @@ public final class X509Util {
 
     sslContextBuilder.enableOcsp(sslOcspEnabled);
     sslContextBuilder.protocols(getEnabledProtocols(config));
-    sslContextBuilder.ciphers(Arrays.asList(getCipherSuites(config)));
+    sslContextBuilder.ciphers(Arrays.asList(getCipherSuites(config, useOpenSsl)));
     sslContextBuilder.clientAuth(clientAuth.toNettyClientAuth());
 
     return sslContextBuilder.build();
@@ -393,10 +463,10 @@ public final class X509Util {
     return enabledProtocolsInput.split(",");
   }
 
-  private static String[] getCipherSuites(Configuration config) {
+  private static String[] getCipherSuites(Configuration config, boolean useOpenSsl) {
     String cipherSuitesInput = config.get(TLS_CIPHER_SUITES);
     if (cipherSuitesInput == null) {
-      return getDefaultCipherSuites();
+      return getDefaultCipherSuites(useOpenSsl);
     } else {
       return cipherSuitesInput.split(",");
     }
@@ -417,7 +487,11 @@ public final class X509Util {
     String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
     keystoreWatcher.set(newFileChangeWatcher(keyStoreLocation, resetContext));
     String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
-    trustStoreWatcher.set(newFileChangeWatcher(trustStoreLocation, resetContext));
+    // we are using the same callback for both. there's no reason to kick off two
+    // threads if keystore/truststore are both at the same location
+    if (!keyStoreLocation.equals(trustStoreLocation)) {
+      trustStoreWatcher.set(newFileChangeWatcher(trustStoreLocation, resetContext));
+    }
   }
 
   private static FileChangeWatcher newFileChangeWatcher(String fileLocation, Runnable resetContext)
@@ -430,9 +504,10 @@ public final class X509Util {
     if (parentPath == null) {
       throw new IOException("Key/trust store path does not have a parent: " + filePath);
     }
-    FileChangeWatcher fileChangeWatcher = new FileChangeWatcher(parentPath, watchEvent -> {
-      handleWatchEvent(filePath, watchEvent, resetContext);
-    });
+    FileChangeWatcher fileChangeWatcher =
+      new FileChangeWatcher(parentPath, Objects.toString(filePath.getFileName()), watchEvent -> {
+        handleWatchEvent(filePath, watchEvent, resetContext);
+      });
     fileChangeWatcher.start();
     return fileChangeWatcher;
   }

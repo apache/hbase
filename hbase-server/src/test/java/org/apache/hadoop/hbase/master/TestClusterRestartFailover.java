@@ -141,6 +141,12 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     LOG.info("Setup cluster");
     UTIL.startMiniCluster(StartTestingClusterOption.builder().masterClass(HMasterForTest.class)
       .numMasters(1).numRegionServers(3).build());
+    // this test has been flaky. When it is rerun by surefire, the underlying minicluster isn't
+    // completely cleaned. specifically, the metrics system isn't reset. The result is an otherwise
+    // successful re-run is failed because there's 8 or 12 SCPcounts instead of the 4 that a
+    // single run of the test would otherwise produce. Thus, explicitly reset the metrics source
+    // each time we setup the cluster.
+    UTIL.getMiniHBaseCluster().getMaster().getMasterMetrics().getMetricsSource().init();
     LOG.info("Cluster is up");
     UTIL.waitFor(60000, () -> UTIL.getMiniHBaseCluster().getMaster().isInitialized());
     LOG.info("Master is up");

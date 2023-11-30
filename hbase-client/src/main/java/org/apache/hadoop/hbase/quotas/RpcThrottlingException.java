@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -130,29 +129,55 @@ public class RpcThrottlingException extends HBaseIOException {
 
   private static void throwThrottlingException(final Type type, final long waitInterval)
     throws RpcThrottlingException {
-    String msg = MSG_TYPE[type.ordinal()] + MSG_WAIT + StringUtils.formatTime(waitInterval);
+    String msg = MSG_TYPE[type.ordinal()] + MSG_WAIT + stringFromMillis(waitInterval);
     throw new RpcThrottlingException(type, waitInterval, msg);
   }
 
-  private static long timeFromString(String timeDiff) {
-    Pattern[] patterns = new Pattern[] { Pattern.compile("^(\\d+\\.\\d\\d)sec"),
-      Pattern.compile("^(\\d+)mins, (\\d+\\.\\d\\d)sec"),
-      Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+\\.\\d\\d)sec") };
+  // Visible for TestRpcThrottlingException
+  protected static String stringFromMillis(long millis) {
+    StringBuilder buf = new StringBuilder();
+    long hours = millis / (60 * 60 * 1000);
+    long rem = (millis % (60 * 60 * 1000));
+    long minutes = rem / (60 * 1000);
+    rem = rem % (60 * 1000);
+    long seconds = rem / 1000;
+    long milliseconds = rem % 1000;
 
-    for (int i = 0; i < patterns.length; ++i) {
-      Matcher m = patterns[i].matcher(timeDiff);
-      if (m.find()) {
-        long time = Math.round(Float.parseFloat(m.group(1 + i)) * 1000);
-        if (i > 0) {
-          time += Long.parseLong(m.group(i)) * (60 * 1000);
-        }
-        if (i > 1) {
-          time += Long.parseLong(m.group(i - 1)) * (60 * 60 * 1000);
-        }
-        return time;
-      }
+    if (hours != 0) {
+      buf.append(hours);
+      buf.append(hours > 1 ? "hrs, " : "hr, ");
     }
+    if (minutes != 0) {
+      buf.append(minutes);
+      buf.append(minutes > 1 ? "mins, " : "min, ");
+    }
+    if (seconds != 0) {
+      buf.append(seconds);
+      buf.append("sec, ");
+    }
+    buf.append(milliseconds);
+    buf.append("ms");
+    return buf.toString();
+  }
 
+  // Visible for TestRpcThrottlingException
+  protected static long timeFromString(String timeDiff) {
+    Pattern pattern =
+      Pattern.compile("^(?:(\\d+)hrs?, )?(?:(\\d+)mins?, )?(?:(\\d+)sec[, ]{0,2})?(?:(\\d+)ms)?");
+    long[] factors = new long[] { 60 * 60 * 1000, 60 * 1000, 1000, 1 };
+    Matcher m = pattern.matcher(timeDiff);
+    if (m.find()) {
+      int numGroups = m.groupCount();
+      long time = 0;
+      for (int j = 1; j <= numGroups; j++) {
+        String group = m.group(j);
+        if (group == null) {
+          continue;
+        }
+        time += Math.round(Float.parseFloat(group) * factors[j - 1]);
+      }
+      return time;
+    }
     return -1;
   }
 }

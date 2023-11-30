@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
@@ -45,6 +47,7 @@ final class BucketProtoUtils {
       .setIoClass(cache.ioEngine.getClass().getName())
       .setMapClass(cache.backingMap.getClass().getName())
       .putAllDeserializers(CacheableDeserializerIdManager.save())
+      .putAllCachedFiles(toCachedPB(cache.fullyCachedFiles))
       .setBackingMap(BucketProtoUtils.toPB(cache.backingMap))
       .setChecksum(ByteString
         .copyFrom(((PersistentIOEngine) cache.ioEngine).calculateChecksum(cache.getAlgorithm())))
@@ -99,8 +102,10 @@ final class BucketProtoUtils {
 
   private static BucketCacheProtos.BucketEntry toPB(BucketEntry entry) {
     return BucketCacheProtos.BucketEntry.newBuilder().setOffset(entry.offset())
-      .setLength(entry.getLength()).setDeserialiserIndex(entry.deserializerIndex)
-      .setAccessCounter(entry.getAccessCounter()).setPriority(toPB(entry.getPriority())).build();
+      .setCachedTime(entry.getCachedTime()).setLength(entry.getLength())
+      .setDiskSizeWithHeader(entry.getOnDiskSizeWithHeader())
+      .setDeserialiserIndex(entry.deserializerIndex).setAccessCounter(entry.getAccessCounter())
+      .setPriority(toPB(entry.getPriority())).build();
   }
 
   private static BucketCacheProtos.BlockPriority toPB(BlockPriority p) {
@@ -128,7 +133,8 @@ final class BucketProtoUtils {
       // TODO:We use ByteBuffAllocator.HEAP here, because we could not get the ByteBuffAllocator
       // which created by RpcServer elegantly.
       BucketEntry value = new BucketEntry(protoValue.getOffset(), protoValue.getLength(),
-        protoValue.getAccessCounter(),
+        protoValue.getDiskSizeWithHeader(), protoValue.getAccessCounter(),
+        protoValue.getCachedTime(),
         protoValue.getPriority() == BucketCacheProtos.BlockPriority.memory, createRecycler,
         ByteBuffAllocator.HEAP);
       // This is the deserializer that we stored
@@ -180,5 +186,27 @@ final class BucketProtoUtils {
       default:
         throw new Error("Unrecognized BlockType.");
     }
+  }
+
+  static Map<String, BucketCacheProtos.RegionFileSizeMap>
+    toCachedPB(Map<String, Pair<String, Long>> prefetchedHfileNames) {
+    Map<String, BucketCacheProtos.RegionFileSizeMap> tmpMap = new HashMap<>();
+    prefetchedHfileNames.forEach((hfileName, regionPrefetchMap) -> {
+      BucketCacheProtos.RegionFileSizeMap tmpRegionFileSize =
+        BucketCacheProtos.RegionFileSizeMap.newBuilder().setRegionName(regionPrefetchMap.getFirst())
+          .setRegionCachedSize(regionPrefetchMap.getSecond()).build();
+      tmpMap.put(hfileName, tmpRegionFileSize);
+    });
+    return tmpMap;
+  }
+
+  static Map<String, Pair<String, Long>>
+    fromPB(Map<String, BucketCacheProtos.RegionFileSizeMap> prefetchHFileNames) {
+    Map<String, Pair<String, Long>> hfileMap = new HashMap<>();
+    prefetchHFileNames.forEach((hfileName, regionPrefetchMap) -> {
+      hfileMap.put(hfileName,
+        new Pair<>(regionPrefetchMap.getRegionName(), regionPrefetchMap.getRegionCachedSize()));
+    });
+    return hfileMap;
   }
 }

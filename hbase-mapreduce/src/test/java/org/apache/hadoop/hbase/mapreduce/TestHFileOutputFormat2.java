@@ -1667,9 +1667,10 @@ public class TestHFileOutputFormat2 {
 
     private final Connection delegate;
 
-    public ConfigurationCaptorConnection(Configuration conf, ExecutorService es, User user)
-      throws IOException {
-      delegate = FutureUtils.get(createAsyncConnection(conf, user)).toConnection();
+    public ConfigurationCaptorConnection(Configuration conf, ExecutorService es, User user,
+      Map<String, byte[]> connectionAttributes) throws IOException {
+      delegate =
+        FutureUtils.get(createAsyncConnection(conf, user, connectionAttributes)).toConnection();
 
       final String uuid = conf.get(UUID_KEY);
       if (uuid != null) {

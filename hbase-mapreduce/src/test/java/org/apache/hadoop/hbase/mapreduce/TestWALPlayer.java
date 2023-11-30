@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -29,6 +33,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -50,8 +55,10 @@ import org.apache.hadoop.hbase.mapreduce.WALPlayer.WALKeyValueMapper;
 import org.apache.hadoop.hbase.regionserver.TestRecoveredEdits;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -129,6 +136,80 @@ public class TestWALPlayer {
       ToolRunner.run(new WALPlayer(this.conf), new String[] { targetDir.toString() }));
     // I don't know how many edits are in this file for this table... so just check more than 1.
     assertTrue(TEST_UTIL.countRows(tn) > 0);
+  }
+
+  /**
+   * Tests that when you write multiple cells with the same timestamp they are properly sorted by
+   * their sequenceId in WALPlayer/CellSortReducer so that the correct one wins when querying from
+   * the resulting bulkloaded HFiles. See HBASE-27649
+   */
+  @Test
+  public void testWALPlayerBulkLoadWithOverriddenTimestamps() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName() + "1");
+    final byte[] family = Bytes.toBytes("family");
+    final byte[] column1 = Bytes.toBytes("c1");
+    final byte[] column2 = Bytes.toBytes("c2");
+    final byte[] row = Bytes.toBytes("row");
+    Table table = TEST_UTIL.createTable(tableName, family);
+
+    long now = EnvironmentEdgeManager.currentTime();
+    // put a row into the first table
+    Put p = new Put(row);
+    p.addColumn(family, column1, now, column1);
+    p.addColumn(family, column2, now, column2);
+
+    table.put(p);
+
+    byte[] lastVal = null;
+
+    for (int i = 0; i < 50; i++) {
+      lastVal = Bytes.toBytes(ThreadLocalRandom.current().nextLong());
+      p = new Put(row);
+      p.addColumn(family, column1, now, lastVal);
+
+      table.put(p);
+
+      // wal rolling is necessary to trigger the bug. otherwise no sorting
+      // needs to occur in the reducer because it's all sorted and coming from a single file.
+      if (i % 10 == 0) {
+        WAL log = cluster.getRegionServer(0).getWAL(null);
+        log.rollWriter();
+      }
+    }
+
+    WAL log = cluster.getRegionServer(0).getWAL(null);
+    log.rollWriter();
+    String walInputDir = new Path(cluster.getMaster().getMasterFileSystem().getWALRootDir(),
+      HConstants.HREGION_LOGDIR_NAME).toString();
+
+    Configuration configuration = new Configuration(TEST_UTIL.getConfiguration());
+    String outPath = "/tmp/" + name.getMethodName();
+    configuration.set(WALPlayer.BULK_OUTPUT_CONF_KEY, outPath);
+    configuration.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
+
+    WALPlayer player = new WALPlayer(configuration);
+    assertEquals(0, ToolRunner.run(configuration, player,
+      new String[] { walInputDir, tableName.getNameAsString() }));
+
+    Get g = new Get(row);
+    Result result = table.get(g);
+    byte[] value = CellUtil.cloneValue(result.getColumnLatestCell(family, column1));
+    assertThat(Bytes.toStringBinary(value), equalTo(Bytes.toStringBinary(lastVal)));
+
+    table = TEST_UTIL.truncateTable(tableName);
+    g = new Get(row);
+    result = table.get(g);
+    assertThat(result.listCells(), nullValue());
+
+    BulkLoadHFiles.create(configuration).bulkLoad(tableName,
+      new Path(outPath, tableName.getNamespaceAsString() + "/" + tableName.getNameAsString()));
+
+    g = new Get(row);
+    result = table.get(g);
+    value = CellUtil.cloneValue(result.getColumnLatestCell(family, column1));
+
+    assertThat(result.listCells(), notNullValue());
+    assertThat(Bytes.toStringBinary(value), equalTo(Bytes.toStringBinary(lastVal)));
   }
 
   /**

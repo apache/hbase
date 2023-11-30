@@ -487,6 +487,7 @@ Shell.load_command_group(
     list_decommissioned_regionservers
     decommission_regionservers
     recommission_regionserver
+    truncate_region
   ],
   # TODO: remove older hlog_roll command
   aliases: {
@@ -526,6 +527,8 @@ Shell.load_command_group(
     list_peer_configs
     update_peer_config
     transit_peer_sync_replication_state
+    peer_modification_enabled
+    peer_modification_switch
   ]
 )
 

@@ -270,11 +270,21 @@ public final class SnapshotTestingUtils {
    */
   public static void snapshot(Admin admin, final String snapshotName, final TableName tableName,
     final SnapshotType type, final int numTries) throws IOException {
+    snapshot(admin, snapshotName, tableName, type, numTries, null);
+  }
+
+  /*
+   * Take snapshot having snapshot properties with maximum of numTries attempts, ignoring
+   * CorruptedSnapshotException except for the last CorruptedSnapshotException
+   */
+  public static void snapshot(Admin admin, final String snapshotName, final TableName tableName,
+    final SnapshotType type, final int numTries, Map<String, Object> snapshotProps)
+    throws IOException {
     int tries = 0;
     CorruptedSnapshotException lastEx = null;
     while (tries++ < numTries) {
       try {
-        admin.snapshot(snapshotName, tableName, type);
+        admin.snapshot(snapshotName, tableName, type, snapshotProps);
         return;
       } catch (CorruptedSnapshotException cse) {
         LOG.warn("Got CorruptedSnapshotException", cse);

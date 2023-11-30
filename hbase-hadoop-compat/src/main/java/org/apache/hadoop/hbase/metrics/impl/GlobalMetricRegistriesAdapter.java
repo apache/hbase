@@ -115,6 +115,7 @@ public final class GlobalMetricRegistriesAdapter {
     for (MetricRegistry registry : registries) {
       MetricRegistryInfo info = registry.getMetricRegistryInfo();
 
+      LOG.trace("MetricRegistryInfo : " + info.getMetricsName());
       if (info.isExistingSource()) {
         // If there is an already existing BaseSource for this MetricRegistry, skip it here. These
         // types of registries are there only due to existing BaseSource implementations in the

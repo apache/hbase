@@ -21,6 +21,7 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
@@ -67,18 +69,20 @@ public class MockNoopMasterServices implements MasterServices {
   private final Configuration conf;
   private final MetricsMaster metricsMaster;
 
-  public MockNoopMasterServices() {
-    this(null);
-  }
-
   public MockNoopMasterServices(final Configuration conf) {
     this.conf = conf;
-    this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(null));
+    this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(mock(HMaster.class)));
   }
 
   @Override
   public void checkTableModifiable(TableName tableName) throws IOException {
     // no-op
+  }
+
+  @Override
+  public long truncateRegion(RegionInfo regionInfo, long nonceGroup, long nonce)
+    throws IOException {
+    return 0;
   }
 
   @Override
@@ -256,6 +260,12 @@ public class MockNoopMasterServices implements MasterServices {
   @Override
   public long modifyTable(final TableName tableName, final TableDescriptor descriptor,
     final long nonceGroup, final long nonce) throws IOException {
+    return -1;
+  }
+
+  @Override
+  public long modifyTable(TableName tableName, TableDescriptor descriptor, long nonceGroup,
+    long nonce, boolean reopenRegions) throws IOException {
     return -1;
   }
 
@@ -517,5 +527,31 @@ public class MockNoopMasterServices implements MasterServices {
   public long modifyColumnStoreFileTracker(TableName tableName, byte[] family, String dstSFT,
     long nonceGroup, long nonce) throws IOException {
     return -1;
+  }
+
+  @Override
+  public boolean replicationPeerModificationSwitch(boolean on) throws IOException {
+    return false;
+  }
+
+  @Override
+  public boolean isReplicationPeerModificationEnabled() {
+    return false;
+  }
+
+  @Override
+  public ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier() {
+    return null;
+  }
+
+  @Override
+  public Semaphore getSyncReplicationPeerLock() {
+    return null;
+  }
+
+  @Override
+  public long flushTable(TableName tableName, List<byte[]> columnFamilies, long nonceGroup,
+    long nonce) throws IOException {
+    return 0;
   }
 }

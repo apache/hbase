@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.InnerStoreCellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -119,11 +120,11 @@ public class TestFixedFileTrailer {
   public void testCreateComparator() throws IOException {
     FixedFileTrailer t = new FixedFileTrailer(version, HFileReaderImpl.PBUF_TRAILER_MINOR_VERSION);
     try {
-      assertEquals(CellComparatorImpl.class,
+      assertEquals(InnerStoreCellComparator.class,
         t.createComparator(KeyValue.COMPARATOR.getLegacyKeyComparatorName()).getClass());
-      assertEquals(CellComparatorImpl.class,
+      assertEquals(InnerStoreCellComparator.class,
         t.createComparator(KeyValue.COMPARATOR.getClass().getName()).getClass());
-      assertEquals(CellComparatorImpl.class,
+      assertEquals(InnerStoreCellComparator.class,
         t.createComparator(CellComparator.class.getName()).getClass());
       assertEquals(MetaCellComparator.class,
         t.createComparator(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName()).getClass());
@@ -161,7 +162,7 @@ public class TestFixedFileTrailer {
 
     t.setLastDataBlockOffset(291);
     t.setNumDataIndexLevels(3);
-    t.setComparatorClass(CellComparatorImpl.COMPARATOR.getClass());
+    t.setComparatorClass(InnerStoreCellComparator.INNER_STORE_COMPARATOR.getClass());
     t.setFirstDataBlockOffset(9081723123L); // Completely unrealistic.
     t.setUncompressedDataIndexSize(827398717L); // Something random.
 

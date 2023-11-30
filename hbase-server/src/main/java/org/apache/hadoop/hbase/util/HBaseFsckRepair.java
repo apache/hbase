@@ -150,7 +150,7 @@ public class HBaseFsckRepair {
     Collection<ServerName> servers, int numReplicas) throws IOException {
     Connection conn = ConnectionFactory.createConnection(conf);
     Table meta = conn.getTable(TableName.META_TABLE_NAME);
-    Put put = MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
+    Put put = MetaTableAccessor.makePutFromRegionInfo(hri);
     if (numReplicas > 1) {
       Random rand = ThreadLocalRandom.current();
       ServerName[] serversArr = servers.toArray(new ServerName[servers.size()]);

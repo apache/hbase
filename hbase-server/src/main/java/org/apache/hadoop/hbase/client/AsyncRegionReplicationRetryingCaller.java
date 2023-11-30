@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -54,7 +55,8 @@ public class AsyncRegionReplicationRetryingCaller extends AsyncRpcRetryingCaller
     RegionInfo replica, List<Entry> entries) {
     super(retryTimer, conn, ConnectionUtils.getPriority(replica.getTable()),
       conn.connConf.getPauseNs(), conn.connConf.getPauseNsForServerOverloaded(), maxAttempts,
-      operationTimeoutNs, rpcTimeoutNs, conn.connConf.getStartLogErrorsCnt());
+      operationTimeoutNs, rpcTimeoutNs, conn.connConf.getStartLogErrorsCnt(),
+      Collections.emptyMap());
     this.replica = replica;
     this.entries = entries.toArray(new Entry[0]);
   }

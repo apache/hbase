@@ -116,6 +116,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
@@ -988,6 +989,17 @@ public final class RequestConverter {
     return builder.build();
   }
 
+  public static MasterProtos.TruncateRegionRequest
+    buildTruncateRegionRequest(final RegionInfo regionInfo, final long nonceGroup, final long nonce)
+      throws DeserializationException {
+    MasterProtos.TruncateRegionRequest.Builder builder =
+      MasterProtos.TruncateRegionRequest.newBuilder();
+    builder.setRegionInfo(ProtobufUtil.toRegionInfo(regionInfo));
+    builder.setNonceGroup(nonceGroup);
+    builder.setNonce(nonce);
+    return builder.build();
+  }
+
   /**
    * Create a protocol buffer AssignRegionRequest
    * @return an AssignRegionRequest
@@ -1096,12 +1108,14 @@ public final class RequestConverter {
    * @return a ModifyTableRequest
    */
   public static ModifyTableRequest buildModifyTableRequest(final TableName tableName,
-    final TableDescriptor tableDesc, final long nonceGroup, final long nonce) {
+    final TableDescriptor tableDesc, final long nonceGroup, final long nonce,
+    final boolean reopenRegions) {
     ModifyTableRequest.Builder builder = ModifyTableRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     builder.setTableSchema(ProtobufUtil.toTableSchema(tableDesc));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
+    builder.setReopenRegions(reopenRegions);
     return builder.build();
   }
 
@@ -1713,5 +1727,17 @@ public final class RequestConverter {
         .setPort(el.getPort()).build());
     }
     return RemoveServersRequest.newBuilder().addAllServers(hostPorts).build();
+  }
+
+  public static FlushTableRequest buildFlushTableRequest(final TableName tableName,
+    final List<byte[]> columnFamilies, final long nonceGroup, final long nonce) {
+    FlushTableRequest.Builder builder = FlushTableRequest.newBuilder();
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
+    if (!columnFamilies.isEmpty()) {
+      for (byte[] columnFamily : columnFamilies) {
+        builder.addColumnFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
+      }
+    }
+    return builder.setNonceGroup(nonceGroup).setNonce(nonce).build();
   }
 }

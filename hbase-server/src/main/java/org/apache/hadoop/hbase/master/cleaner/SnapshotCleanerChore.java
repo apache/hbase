@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.master.cleaner;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -72,22 +72,14 @@ public class SnapshotCleanerChore extends ScheduledChore {
       for (SnapshotProtos.SnapshotDescription snapshotDescription : completedSnapshotsList) {
         long snapshotCreatedTime = snapshotDescription.getCreationTime();
         long snapshotTtl = snapshotDescription.getTtl();
-        /*
-         * Backward compatibility after the patch deployment on HMaster Any snapshot with ttl 0 is
-         * to be considered as snapshot to keep FOREVER Default ttl value specified by
-         * {@HConstants.DEFAULT_SNAPSHOT_TTL}
-         */
+        long currentTime = EnvironmentEdgeManager.currentTime();
         if (
-          snapshotCreatedTime > 0 && snapshotTtl > 0
-            && snapshotTtl < TimeUnit.MILLISECONDS.toSeconds(Long.MAX_VALUE)
+          SnapshotDescriptionUtils.isExpiredSnapshot(snapshotTtl, snapshotCreatedTime, currentTime)
         ) {
-          long currentTime = EnvironmentEdgeManager.currentTime();
-          if ((snapshotCreatedTime + TimeUnit.SECONDS.toMillis(snapshotTtl)) < currentTime) {
-            LOG.info("Event: {} Name: {}, CreatedTime: {}, TTL: {}, currentTime: {}",
-              DELETE_SNAPSHOT_EVENT, snapshotDescription.getName(), snapshotCreatedTime,
-              snapshotTtl, currentTime);
-            deleteExpiredSnapshot(snapshotDescription);
-          }
+          LOG.info("Event: {} Name: {}, CreatedTime: {}, TTL: {}, currentTime: {}",
+            DELETE_SNAPSHOT_EVENT, snapshotDescription.getName(), snapshotCreatedTime, snapshotTtl,
+            currentTime);
+          deleteExpiredSnapshot(snapshotDescription);
         }
       }
     } catch (IOException e) {

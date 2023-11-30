@@ -34,9 +34,12 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
@@ -50,10 +53,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
  * This class is for maintaining the various connection statistics and publishing them through the
  * metrics interfaces. This class manages its own {@link MetricRegistry} and {@link JmxReporter} so
  * as to not conflict with other uses of Yammer Metrics within the client application. Calling
- * {@link #getMetricsConnection(String, Supplier, Supplier)} implicitly creates and "starts"
- * instances of these classes; be sure to call {@link #deleteMetricsConnection(String)} to terminate
- * the thread pools they allocate. The metrics reporter will be shutdown {@link #shutdown()} when
- * all connections within this metrics instances are closed.
+ * {@link #getMetricsConnection(Configuration, String, Supplier, Supplier)} implicitly creates and
+ * "starts" instances of these classes; be sure to call {@link #deleteMetricsConnection(String)} to
+ * terminate the thread pools they allocate. The metrics reporter will be shutdown
+ * {@link #shutdown()} when all connections within this metrics instances are closed.
  */
 @InterfaceAudience.Private
 public final class MetricsConnection implements StatisticTrackable {
@@ -61,11 +64,11 @@ public final class MetricsConnection implements StatisticTrackable {
   private static final ConcurrentMap<String, MetricsConnection> METRICS_INSTANCES =
     new ConcurrentHashMap<>();
 
-  static MetricsConnection getMetricsConnection(final String scope,
+  static MetricsConnection getMetricsConnection(final Configuration conf, final String scope,
     Supplier<ThreadPoolExecutor> batchPool, Supplier<ThreadPoolExecutor> metaPool) {
     return METRICS_INSTANCES.compute(scope, (s, metricsConnection) -> {
       if (metricsConnection == null) {
-        MetricsConnection newMetricsConn = new MetricsConnection(scope, batchPool, metaPool);
+        MetricsConnection newMetricsConn = new MetricsConnection(conf, scope, batchPool, metaPool);
         newMetricsConn.incrConnectionCount();
         return newMetricsConn;
       } else {
@@ -89,6 +92,10 @@ public final class MetricsConnection implements StatisticTrackable {
 
   /** Set this key to {@code true} to enable metrics collection of client requests. */
   public static final String CLIENT_SIDE_METRICS_ENABLED_KEY = "hbase.client.metrics.enable";
+
+  /** Set this key to {@code true} to enable table metrics collection of client requests. */
+  public static final String CLIENT_SIDE_TABLE_METRICS_ENABLED_KEY =
+    "hbase.client.table.metrics.enable";
 
   /**
    * Set to specify a custom scope for the metrics published through {@link MetricsConnection}. The
@@ -118,6 +125,9 @@ public final class MetricsConnection implements StatisticTrackable {
 
   private static final String CNT_BASE = "rpcCount_";
   private static final String FAILURE_CNT_BASE = "rpcFailureCount_";
+  private static final String TOTAL_EXCEPTION_CNT = "rpcTotalExceptions";
+  private static final String LOCAL_EXCEPTION_CNT_BASE = "rpcLocalExceptions_";
+  private static final String REMOTE_EXCEPTION_CNT_BASE = "rpcRemoteExceptions_";
   private static final String DRTN_BASE = "rpcCallDurationMs_";
   private static final String REQ_BASE = "rpcCallRequestSizeBytes_";
   private static final String RESP_BASE = "rpcCallResponseSizeBytes_";
@@ -307,6 +317,7 @@ public final class MetricsConnection implements StatisticTrackable {
   private final MetricRegistry registry;
   private final JmxReporter reporter;
   private final String scope;
+  private final boolean tableMetricsEnabled;
 
   private final NewMetric<Timer> timerFactory = new NewMetric<Timer>() {
     @Override
@@ -370,9 +381,10 @@ public final class MetricsConnection implements StatisticTrackable {
   private final ConcurrentMap<String, Counter> rpcCounters =
     new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
 
-  private MetricsConnection(String scope, Supplier<ThreadPoolExecutor> batchPool,
-    Supplier<ThreadPoolExecutor> metaPool) {
+  private MetricsConnection(Configuration conf, String scope,
+    Supplier<ThreadPoolExecutor> batchPool, Supplier<ThreadPoolExecutor> metaPool) {
     this.scope = scope;
+    this.tableMetricsEnabled = conf.getBoolean(CLIENT_SIDE_TABLE_METRICS_ENABLED_KEY, false);
     addThreadPools(batchPool, metaPool);
     this.registry = new MetricRegistry();
     this.registry.register(getExecutorPoolName(), new RatioGauge() {
@@ -502,6 +514,16 @@ public final class MetricsConnection implements StatisticTrackable {
     return rpcCounters;
   }
 
+  /** rpcTimers metric */
+  public ConcurrentMap<String, Timer> getRpcTimers() {
+    return rpcTimers;
+  }
+
+  /** rpcHistograms metric */
+  public ConcurrentMap<String, Histogram> getRpcHistograms() {
+    return rpcHistograms;
+  }
+
   /** getTracker metric */
   public CallTracker getGetTracker() {
     return getTracker;
@@ -551,6 +573,10 @@ public final class MetricsConnection implements StatisticTrackable {
   /** Increment the number of meta cache misses. */
   public void incrMetaCacheMiss() {
     metaCacheMisses.inc();
+  }
+
+  public long getMetaCacheMisses() {
+    return metaCacheMisses.getCount();
   }
 
   /** Increment the number of meta cache drops requested for entire RegionServer. */
@@ -638,16 +664,49 @@ public final class MetricsConnection implements StatisticTrackable {
   }
 
   /** Report RPC context to metrics system. */
-  public void updateRpc(MethodDescriptor method, Message param, CallStats stats, boolean failed) {
+  public void updateRpc(MethodDescriptor method, TableName tableName, Message param,
+    CallStats stats, Throwable e) {
     int callsPerServer = stats.getConcurrentCallsPerServer();
     if (callsPerServer > 0) {
       concurrentCallsPerServerHist.update(callsPerServer);
     }
     // Update the counter that tracks RPCs by type.
-    final String methodName = method.getService().getName() + "_" + method.getName();
+    StringBuilder methodName = new StringBuilder();
+    methodName.append(method.getService().getName()).append("_").append(method.getName());
+    // Distinguish mutate types.
+    if ("Mutate".equals(method.getName())) {
+      final MutationType type = ((MutateRequest) param).getMutation().getMutateType();
+      switch (type) {
+        case APPEND:
+          methodName.append("(Append)");
+          break;
+        case DELETE:
+          methodName.append("(Delete)");
+          break;
+        case INCREMENT:
+          methodName.append("(Increment)");
+          break;
+        case PUT:
+          methodName.append("(Put)");
+          break;
+        default:
+          methodName.append("(Unknown)");
+      }
+    }
     getMetric(CNT_BASE + methodName, rpcCounters, counterFactory).inc();
-    if (failed) {
+    if (e != null) {
       getMetric(FAILURE_CNT_BASE + methodName, rpcCounters, counterFactory).inc();
+      getMetric(TOTAL_EXCEPTION_CNT, rpcCounters, counterFactory).inc();
+      if (e instanceof RemoteException) {
+        String fullClassName = ((RemoteException) e).getClassName();
+        String simpleClassName = (fullClassName != null)
+          ? fullClassName.substring(fullClassName.lastIndexOf(".") + 1)
+          : "unknown";
+        getMetric(REMOTE_EXCEPTION_CNT_BASE + simpleClassName, rpcCounters, counterFactory).inc();
+      } else {
+        getMetric(LOCAL_EXCEPTION_CNT_BASE + e.getClass().getSimpleName(), rpcCounters,
+          counterFactory).inc();
+      }
     }
     // this implementation is tied directly to protobuf implementation details. would be better
     // if we could dispatch based on something static, ie, request Message type.
@@ -656,6 +715,7 @@ public final class MetricsConnection implements StatisticTrackable {
         case 0:
           assert "Get".equals(method.getName());
           getTracker.updateRpc(stats);
+          updateTableMetric(methodName.toString(), tableName, stats, e);
           return;
         case 1:
           assert "Mutate".equals(method.getName());
@@ -663,22 +723,25 @@ public final class MetricsConnection implements StatisticTrackable {
           switch (mutationType) {
             case APPEND:
               appendTracker.updateRpc(stats);
-              return;
+              break;
             case DELETE:
               deleteTracker.updateRpc(stats);
-              return;
+              break;
             case INCREMENT:
               incrementTracker.updateRpc(stats);
-              return;
+              break;
             case PUT:
               putTracker.updateRpc(stats);
-              return;
+              break;
             default:
               throw new RuntimeException("Unrecognized mutation type " + mutationType);
           }
+          updateTableMetric(methodName.toString(), tableName, stats, e);
+          return;
         case 2:
           assert "Scan".equals(method.getName());
           scanTracker.updateRpc(stats);
+          updateTableMetric(methodName.toString(), tableName, stats, e);
           return;
         case 3:
           assert "BulkLoadHFile".equals(method.getName());
@@ -704,13 +767,34 @@ public final class MetricsConnection implements StatisticTrackable {
           assert "Multi".equals(method.getName());
           numActionsPerServerHist.update(stats.getNumActionsPerServer());
           multiTracker.updateRpc(stats);
+          updateTableMetric(methodName.toString(), tableName, stats, e);
           return;
         default:
           throw new RuntimeException("Unrecognized ClientService RPC type " + method.getFullName());
       }
     }
     // Fallback to dynamic registry lookup for DDL methods.
-    updateRpcGeneric(methodName, stats);
+    updateRpcGeneric(methodName.toString(), stats);
+  }
+
+  /** Report table rpc context to metrics system. */
+  private void updateTableMetric(String methodName, TableName tableName, CallStats stats,
+    Throwable e) {
+    if (tableMetricsEnabled) {
+      if (methodName != null) {
+        String table = tableName != null && StringUtils.isNotEmpty(tableName.getNameAsString())
+          ? tableName.getNameAsString()
+          : "unknown";
+        String metricKey = methodName + "_" + table;
+        // update table rpc context to metrics system,
+        // includes rpc call duration, rpc call request/response size(bytes).
+        updateRpcGeneric(metricKey, stats);
+        if (e != null) {
+          // rpc failure call counter with table name.
+          getMetric(FAILURE_CNT_BASE + metricKey, rpcCounters, counterFactory).inc();
+        }
+      }
+    }
   }
 
   public void incrCacheDroppingExceptions(Object exception) {

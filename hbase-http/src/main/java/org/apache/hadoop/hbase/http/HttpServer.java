@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.http.conf.ConfServlet;
 import org.apache.hadoop.hbase.http.log.LogLevel;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -81,6 +82,7 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ContextHandlerCollection;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ErrorHandler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.HandlerCollection;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.gzip.GzipHandler;
@@ -113,6 +115,11 @@ public class HttpServer implements FilterContainer {
   // limitation otherwise the UTs will fail
   private static final int DEFAULT_MAX_HEADER_SIZE = Character.MAX_VALUE - 1;
 
+  // Add configuration for jetty idle timeout
+  private static final String HTTP_JETTY_IDLE_TIMEOUT = "hbase.ui.connection.idleTimeout";
+  // Default jetty idle timeout
+  private static final long DEFAULT_HTTP_JETTY_IDLE_TIMEOUT = 30000;
+
   static final String FILTER_INITIALIZERS_PROPERTY = "hbase.http.filter.initializers";
   static final String HTTP_MAX_THREADS = "hbase.http.max.threads";
 
@@ -142,6 +149,7 @@ public class HttpServer implements FilterContainer {
     HTTP_SPNEGO_AUTHENTICATION_PREFIX + "admin.groups";
   public static final String HTTP_PRIVILEGED_CONF_KEY =
     "hbase.security.authentication.ui.config.protected";
+  public static final String HTTP_UI_NO_CACHE_ENABLE_KEY = "hbase.http.filter.no-store.enable";
   public static final boolean HTTP_PRIVILEGED_CONF_DEFAULT = false;
 
   // The ServletContext attribute where the daemon Configuration
@@ -153,6 +161,7 @@ public class HttpServer implements FilterContainer {
   public static final String SPNEGO_PROXYUSER_FILTER = "SpnegoProxyUserFilter";
   public static final String NO_CACHE_FILTER = "NoCacheFilter";
   public static final String APP_DIR = "webapps";
+  public static final String HTTP_UI_SHOW_STACKTRACE_KEY = "hbase.ui.show-stack-traces";
 
   public static final String METRIC_SERVLETS_CONF_KEY = "hbase.http.metrics.servlets";
   public static final String[] METRICS_SERVLETS_DEFAULT = { "jmx", "metrics", "prometheus" };
@@ -463,6 +472,9 @@ public class HttpServer implements FilterContainer {
 
         // default settings for connector
         listener.setAcceptQueueSize(128);
+        // config idle timeout for jetty
+        listener
+          .setIdleTimeout(conf.getLong(HTTP_JETTY_IDLE_TIMEOUT, DEFAULT_HTTP_JETTY_IDLE_TIMEOUT));
         if (Shell.WINDOWS) {
           // result of setting the SO_REUSEADDR flag is different on Windows
           // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
@@ -652,6 +664,14 @@ public class HttpServer implements FilterContainer {
         addFilterPathMapping(path, webAppContext);
       }
     }
+    // Check if disable stack trace property is configured
+    if (!conf.getBoolean(HTTP_UI_SHOW_STACKTRACE_KEY, true)) {
+      // Disable stack traces for server errors in UI
+      webServer.setErrorHandler(new ErrorHandler());
+      webServer.getErrorHandler().setShowStacks(false);
+      // Disable stack traces for web app errors in UI
+      webAppContext.getErrorHandler().setShowStacks(false);
+    }
   }
 
   private void addManagedListener(ServerConnector connector) {
@@ -669,7 +689,7 @@ public class HttpServer implements FilterContainer {
     ctx.getServletContext().setAttribute(org.apache.hadoop.http.HttpServer2.CONF_CONTEXT_ATTRIBUTE,
       conf);
     ctx.getServletContext().setAttribute(ADMINS_ACL, adminsAcl);
-    addNoCacheFilter(ctx);
+    addNoCacheFilter(ctx, conf);
     return ctx;
   }
 
@@ -691,9 +711,16 @@ public class HttpServer implements FilterContainer {
     return gzipHandler;
   }
 
-  private static void addNoCacheFilter(WebAppContext ctxt) {
-    defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(),
-      Collections.<String, String> emptyMap(), new String[] { "/*" });
+  private static void addNoCacheFilter(ServletContextHandler ctxt, Configuration conf) {
+    if (conf.getBoolean(HTTP_UI_NO_CACHE_ENABLE_KEY, false)) {
+      Map<String, String> filterConfig =
+        AuthenticationFilterInitializer.getFilterConfigMap(conf, "hbase.http.filter.");
+      defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(), filterConfig,
+        new String[] { "/*" });
+    } else {
+      defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(),
+        Collections.<String, String> emptyMap(), new String[] { "/*" });
+    }
   }
 
   /** Get an array of FilterConfiguration specified in the conf */
@@ -739,6 +766,7 @@ public class HttpServer implements FilterContainer {
       }
       logContext.setDisplayName("logs");
       setContextAttributes(logContext, conf);
+      addNoCacheFilter(logContext, conf);
       defaultContexts.put(logContext, true);
     }
     // set up the context for "/static/*"

@@ -23,27 +23,41 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This provides an class for maintaining a set of peer clusters. These peers are remote slave
  * clusters that data is replicated to.
+ * <p>
+ * We implement {@link ConfigurationObserver} mainly for recreating the
+ * {@link ReplicationPeerStorage}, so we can change the {@link ReplicationPeerStorage} without
+ * restarting the region server.
  */
 @InterfaceAudience.Private
-public class ReplicationPeers {
+public class ReplicationPeers implements ConfigurationObserver {
 
-  private final Configuration conf;
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationPeers.class);
+
+  private volatile Configuration conf;
 
   // Map of peer clusters keyed by their id
   private final ConcurrentMap<String, ReplicationPeerImpl> peerCache;
-  private final ReplicationPeerStorage peerStorage;
+  private final FileSystem fs;
+  private final ZKWatcher zookeeper;
+  private volatile ReplicationPeerStorage peerStorage;
 
-  ReplicationPeers(ZKWatcher zookeeper, Configuration conf) {
+  ReplicationPeers(FileSystem fs, ZKWatcher zookeeper, Configuration conf) {
     this.conf = conf;
+    this.fs = fs;
+    this.zookeeper = zookeeper;
     this.peerCache = new ConcurrentHashMap<>();
-    this.peerStorage = ReplicationStorageFactory.getReplicationPeerStorage(zookeeper, conf);
+    this.peerStorage = ReplicationStorageFactory.getReplicationPeerStorage(fs, zookeeper, conf);
   }
 
   public Configuration getConf() {
@@ -143,5 +157,19 @@ public class ReplicationPeers {
       peerStorage.getPeerNewSyncReplicationState(peerId);
     return new ReplicationPeerImpl(ReplicationUtils.getPeerClusterConfiguration(peerConfig, conf),
       peerId, peerConfig, enabled, syncReplicationState, newSyncReplicationState);
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    this.conf = conf;
+    this.peerStorage = ReplicationStorageFactory.getReplicationPeerStorage(fs, zookeeper, conf);
+    for (ReplicationPeerImpl peer : peerCache.values()) {
+      try {
+        peer.onConfigurationChange(
+          ReplicationUtils.getPeerClusterConfiguration(peer.getPeerConfig(), conf));
+      } catch (ReplicationException e) {
+        LOG.warn("failed to reload configuration for peer {}", peer.getId(), e);
+      }
+    }
   }
 }

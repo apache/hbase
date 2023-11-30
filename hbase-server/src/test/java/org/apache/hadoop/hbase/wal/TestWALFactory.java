@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.wal.WALFactory.WAL_PROVIDER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -63,6 +65,7 @@ import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
+import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -261,91 +264,63 @@ public class TestWALFactory {
     in.close();
 
     final int total = 20;
-    WAL.Reader reader = null;
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    scopes.put(tableName.getName(), 0);
+    final WAL wal = wals.getWAL(info);
 
-    try {
-      RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
-      NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      scopes.put(tableName.getName(), 0);
-      final WAL wal = wals.getWAL(info);
-
-      for (int i = 0; i < total; i++) {
-        WALEdit kvs = new WALEdit();
-        kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-        wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-          EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
-      }
-      // Now call sync and try reading. Opening a Reader before you sync just
-      // gives you EOFE.
-      wal.sync();
-      // Open a Reader.
-      Path walPath = AbstractFSWALProvider.getCurrentFileName(wal);
-      reader = wals.createReader(fs, walPath);
-      int count = 0;
-      WAL.Entry entry = new WAL.Entry();
-      while ((entry = reader.next(entry)) != null)
-        count++;
-      assertEquals(total, count);
-      reader.close();
-      // Add test that checks to see that an open of a Reader works on a file
-      // that has had a sync done on it.
-      for (int i = 0; i < total; i++) {
-        WALEdit kvs = new WALEdit();
-        kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-        wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-          EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
-      }
-      wal.sync();
-      reader = wals.createReader(fs, walPath);
-      count = 0;
-      while ((entry = reader.next(entry)) != null)
-        count++;
-      assertTrue(count >= total);
-      reader.close();
-      // If I sync, should see double the edits.
-      wal.sync();
-      reader = wals.createReader(fs, walPath);
-      count = 0;
-      while ((entry = reader.next(entry)) != null)
-        count++;
-      assertEquals(total * 2, count);
-      reader.close();
-      // Now do a test that ensures stuff works when we go over block boundary,
-      // especially that we return good length on file.
-      final byte[] value = new byte[1025 * 1024]; // Make a 1M value.
-      for (int i = 0; i < total; i++) {
-        WALEdit kvs = new WALEdit();
-        kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), value));
-        wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-          EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
-      }
-      // Now I should have written out lots of blocks. Sync then read.
-      wal.sync();
-      reader = wals.createReader(fs, walPath);
-      count = 0;
-      while ((entry = reader.next(entry)) != null)
-        count++;
-      assertEquals(total * 3, count);
-      reader.close();
-      // shutdown and ensure that Reader gets right length also.
-      wal.shutdown();
-      reader = wals.createReader(fs, walPath);
-      count = 0;
-      while ((entry = reader.next(entry)) != null)
-        count++;
-      assertEquals(total * 3, count);
-      reader.close();
-    } finally {
-      if (reader != null) reader.close();
+    for (int i = 0; i < total; i++) {
+      WALEdit kvs = new WALEdit();
+      kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
+      wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+        EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
     }
+    // Now call sync and try reading. Opening a Reader before you sync just
+    // gives you EOFE.
+    wal.sync();
+    // Open a Reader.
+    Path walPath = AbstractFSWALProvider.getCurrentFileName(wal);
+    int count = NoEOFWALStreamReader.count(wals, fs, walPath);
+    assertEquals(total, count);
+    // Add test that checks to see that an open of a Reader works on a file
+    // that has had a sync done on it.
+    for (int i = 0; i < total; i++) {
+      WALEdit kvs = new WALEdit();
+      kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
+      wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+        EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
+    }
+    wal.sync();
+    count = NoEOFWALStreamReader.count(wals, fs, walPath);
+    assertTrue(count >= total);
+    // If I sync, should see double the edits.
+    wal.sync();
+    count = NoEOFWALStreamReader.count(wals, fs, walPath);
+    assertEquals(total * 2, count);
+    // Now do a test that ensures stuff works when we go over block boundary,
+    // especially that we return good length on file.
+    final byte[] value = new byte[1025 * 1024]; // Make a 1M value.
+    for (int i = 0; i < total; i++) {
+      WALEdit kvs = new WALEdit();
+      kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), value));
+      wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+        EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
+    }
+    // Now I should have written out lots of blocks. Sync then read.
+    wal.sync();
+    count = NoEOFWALStreamReader.count(wals, fs, walPath);
+    assertEquals(total * 3, count);
+    // shutdown and ensure that Reader gets right length also.
+    wal.shutdown();
+    count = NoEOFWALStreamReader.count(wals, fs, walPath);
+    assertEquals(total * 3, count);
   }
 
   private void verifySplits(final List<Path> splits, final int howmany) throws IOException {
     assertEquals(howmany * howmany, splits.size());
     for (int i = 0; i < splits.size(); i++) {
       LOG.info("Verifying=" + splits.get(i));
-      WAL.Reader reader = wals.createReader(fs, splits.get(i));
-      try {
+      try (WALStreamReader reader = wals.createStreamReader(fs, splits.get(i))) {
         int count = 0;
         String previousRegion = null;
         long seqno = -1;
@@ -364,8 +339,6 @@ public class TestWALFactory {
           count++;
         }
         assertEquals(howmany, count);
-      } finally {
-        reader.close();
       }
     }
   }
@@ -475,15 +448,15 @@ public class TestWALFactory {
     if (t.exception != null) throw t.exception;
 
     // Make sure you can read all the content
-    WAL.Reader reader = wals.createReader(fs, walPath);
     int count = 0;
-    WAL.Entry entry = new WAL.Entry();
-    while (reader.next(entry) != null) {
-      count++;
-      assertTrue("Should be one KeyValue per WALEdit", entry.getEdit().getCells().size() == 1);
+    try (NoEOFWALStreamReader reader = NoEOFWALStreamReader.create(wals, fs, walPath)) {
+      WAL.Entry entry = new WAL.Entry();
+      while (reader.next(entry) != null) {
+        count++;
+        assertTrue("Should be one KeyValue per WALEdit", entry.getEdit().getCells().size() == 1);
+      }
     }
     assertEquals(total, count);
-    reader.close();
 
     // Reset the lease period
     setLeasePeriod.invoke(cluster, new Object[] { 60000L, 3600000L });
@@ -503,31 +476,29 @@ public class TestWALFactory {
       scopes.put(fam, 0);
     }
     byte[] row = Bytes.toBytes("row");
-    WAL.Reader reader = null;
-    try {
-      final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
+    final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
 
-      // Write columns named 1, 2, 3, etc. and then values of single byte
-      // 1, 2, 3...
-      long timestamp = EnvironmentEdgeManager.currentTime();
-      WALEdit cols = new WALEdit();
-      for (int i = 0; i < colCount; i++) {
-        cols.add(new KeyValue(row, Bytes.toBytes("column"), Bytes.toBytes(Integer.toString(i)),
-          timestamp, new byte[] { (byte) (i + '0') }));
-      }
-      RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(row)
-        .setEndKey(Bytes.toBytes(Bytes.toString(row) + "1")).build();
-      final WAL log = wals.getWAL(info);
+    // Write columns named 1, 2, 3, etc. and then values of single byte
+    // 1, 2, 3...
+    long timestamp = EnvironmentEdgeManager.currentTime();
+    WALEdit cols = new WALEdit();
+    for (int i = 0; i < colCount; i++) {
+      cols.add(new KeyValue(row, Bytes.toBytes("column"), Bytes.toBytes(Integer.toString(i)),
+        timestamp, new byte[] { (byte) (i + '0') }));
+    }
+    RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(row)
+      .setEndKey(Bytes.toBytes(Bytes.toString(row) + "1")).build();
+    final WAL log = wals.getWAL(info);
 
-      final long txid = log.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(),
-        htd.getTableName(), EnvironmentEdgeManager.currentTime(), mvcc, scopes), cols);
-      log.sync(txid);
-      log.startCacheFlush(info.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
-      log.completeCacheFlush(info.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
-      log.shutdown();
-      Path filename = AbstractFSWALProvider.getCurrentFileName(log);
-      // Now open a reader on the log and assert append worked.
-      reader = wals.createReader(fs, filename);
+    final long txid = log.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(),
+      htd.getTableName(), EnvironmentEdgeManager.currentTime(), mvcc, scopes), cols);
+    log.sync(txid);
+    log.startCacheFlush(info.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
+    log.completeCacheFlush(info.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
+    log.shutdown();
+    Path filename = AbstractFSWALProvider.getCurrentFileName(log);
+    // Now open a reader on the log and assert append worked.
+    try (NoEOFWALStreamReader reader = NoEOFWALStreamReader.create(wals, fs, filename)) {
       // Above we added all columns on a single row so we only read one
       // entry in the below... thats why we have '1'.
       for (int i = 0; i < 1; i++) {
@@ -541,11 +512,7 @@ public class TestWALFactory {
         assertTrue(Bytes.equals(row, 0, row.length, cell.getRowArray(), cell.getRowOffset(),
           cell.getRowLength()));
         assertEquals((byte) (i + '0'), CellUtil.cloneValue(cell)[0]);
-        System.out.println(key + " " + val);
-      }
-    } finally {
-      if (reader != null) {
-        reader.close();
+        LOG.info(key + " " + val);
       }
     }
   }
@@ -561,28 +528,26 @@ public class TestWALFactory {
       scopes.put(fam, 0);
     }
     byte[] row = Bytes.toBytes("row");
-    WAL.Reader reader = null;
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
-    try {
-      // Write columns named 1, 2, 3, etc. and then values of single byte
-      // 1, 2, 3...
-      long timestamp = EnvironmentEdgeManager.currentTime();
-      WALEdit cols = new WALEdit();
-      for (int i = 0; i < colCount; i++) {
-        cols.add(new KeyValue(row, Bytes.toBytes("column"), Bytes.toBytes(Integer.toString(i)),
-          timestamp, new byte[] { (byte) (i + '0') }));
-      }
-      RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
-      final WAL log = wals.getWAL(hri);
-      final long txid = log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
-        htd.getTableName(), EnvironmentEdgeManager.currentTime(), mvcc, scopes), cols);
-      log.sync(txid);
-      log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
-      log.completeCacheFlush(hri.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
-      log.shutdown();
-      Path filename = AbstractFSWALProvider.getCurrentFileName(log);
-      // Now open a reader on the log and assert append worked.
-      reader = wals.createReader(fs, filename);
+    // Write columns named 1, 2, 3, etc. and then values of single byte
+    // 1, 2, 3...
+    long timestamp = EnvironmentEdgeManager.currentTime();
+    WALEdit cols = new WALEdit();
+    for (int i = 0; i < colCount; i++) {
+      cols.add(new KeyValue(row, Bytes.toBytes("column"), Bytes.toBytes(Integer.toString(i)),
+        timestamp, new byte[] { (byte) (i + '0') }));
+    }
+    RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
+    final WAL log = wals.getWAL(hri);
+    final long txid = log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
+      htd.getTableName(), EnvironmentEdgeManager.currentTime(), mvcc, scopes), cols);
+    log.sync(txid);
+    log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
+    log.completeCacheFlush(hri.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
+    log.shutdown();
+    Path filename = AbstractFSWALProvider.getCurrentFileName(log);
+    // Now open a reader on the log and assert append worked.
+    try (WALStreamReader reader = wals.createStreamReader(fs, filename)) {
       WAL.Entry entry = reader.next();
       assertEquals(colCount, entry.getEdit().size());
       int idx = 0;
@@ -595,10 +560,6 @@ public class TestWALFactory {
         assertEquals((byte) (idx + '0'), CellUtil.cloneValue(val)[0]);
         System.out.println(entry.getKey() + " " + val);
         idx++;
-      }
-    } finally {
-      if (reader != null) {
-        reader.close();
       }
     }
   }
@@ -662,16 +623,11 @@ public class TestWALFactory {
   @Test
   public void testWALProviders() throws IOException {
     Configuration conf = new Configuration();
-    // if providers are not set but enable SyncReplicationWALProvider by default for master node
-    // with not only system tables
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
-    assertEquals(SyncReplicationWALProvider.class, walFactory.getWALProvider().getClass());
-    WALProvider wrappedWALProvider =
-      ((SyncReplicationWALProvider) walFactory.getWALProvider()).getWrappedProvider();
-    assertEquals(wrappedWALProvider.getClass(), walFactory.getMetaProvider().getClass());
+    assertEquals(walFactory.getWALProvider().getClass(), walFactory.getMetaProvider().getClass());
 
     // if providers are not set and do not enable SyncReplicationWALProvider
-    walFactory = new WALFactory(conf, this.currentServername.toString(), null, false);
+    walFactory = new WALFactory(conf, this.currentServername, null);
     assertEquals(walFactory.getWALProvider().getClass(), walFactory.getMetaProvider().getClass());
   }
 
@@ -680,12 +636,8 @@ public class TestWALFactory {
     Configuration conf = new Configuration();
     conf.set(WAL_PROVIDER, WALFactory.Providers.multiwal.name());
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
-    WALProvider wrappedWALProvider =
-      ((SyncReplicationWALProvider) walFactory.getWALProvider()).getWrappedProvider();
-
-    assertEquals(SyncReplicationWALProvider.class, walFactory.getWALProvider().getClass());
     // class of WALProvider and metaWALProvider are the same when metaWALProvider is not set
-    assertEquals(WALFactory.Providers.multiwal.clazz, wrappedWALProvider.getClass());
+    assertEquals(WALFactory.Providers.multiwal.clazz, walFactory.getWALProvider().getClass());
     assertEquals(WALFactory.Providers.multiwal.clazz, walFactory.getMetaProvider().getClass());
   }
 
@@ -694,11 +646,8 @@ public class TestWALFactory {
     Configuration conf = new Configuration();
     conf.set(META_WAL_PROVIDER, WALFactory.Providers.asyncfs.name());
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
-    WALProvider wrappedWALProvider =
-      ((SyncReplicationWALProvider) walFactory.getWALProvider()).getWrappedProvider();
-
-    assertEquals(SyncReplicationWALProvider.class, walFactory.getWALProvider().getClass());
-    assertEquals(WALFactory.Providers.defaultProvider.clazz, wrappedWALProvider.getClass());
+    assertEquals(WALFactory.Providers.defaultProvider.clazz,
+      walFactory.getWALProvider().getClass());
     assertEquals(WALFactory.Providers.asyncfs.clazz, walFactory.getMetaProvider().getClass());
   }
 
@@ -750,6 +699,32 @@ public class TestWALFactory {
   }
 
   @Test
+  public void testCustomReplicationProvider() throws IOException {
+    final Configuration config = new Configuration();
+    config.set(WALFactory.REPLICATION_WAL_PROVIDER, IOTestProvider.class.getName());
+    final WALFactory walFactory = new WALFactory(config, this.currentServername.toString());
+    Class<? extends WALProvider> walProvider =
+      walFactory.getProviderClass(WALFactory.WAL_PROVIDER, Providers.filesystem.name());
+    assertEquals(Providers.filesystem.clazz, walProvider);
+    WALProvider replicationWALProvider = walFactory.getReplicationProvider();
+    assertEquals(IOTestProvider.class, replicationWALProvider.getClass());
+  }
+
+  /**
+   * Confirm that we will use different WALs for hbase:meta and hbase:replication
+   */
+  @Test
+  public void testDifferentWALs() throws IOException {
+    WAL normalWAL = wals.getWAL(null);
+    WAL metaWAL = wals.getWAL(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    WAL replicationWAL = wals.getWAL(RegionInfoBuilder
+      .newBuilder(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME_DEFAULT).build());
+    assertNotSame(normalWAL, metaWAL);
+    assertNotSame(normalWAL, replicationWAL);
+    assertNotSame(metaWAL, replicationWAL);
+  }
+
+  @Test
   public void testReaderClosedOnBadCodec() throws IOException {
     // Create our own Configuration and WALFactory to avoid breaking other test methods
     Configuration confWithCodec = new Configuration(conf);
@@ -786,45 +761,34 @@ public class TestWALFactory {
       scopes.put(fam, 0);
     }
     byte[] row = Bytes.toBytes("row");
-    WAL.Reader reader = null;
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
-    try {
-      // Write one column in one edit.
-      WALEdit cols = new WALEdit();
-      cols.add(new KeyValue(row, Bytes.toBytes("column"), Bytes.toBytes("0"),
-        EnvironmentEdgeManager.currentTime(), new byte[] { 0 }));
-      final WAL log = customFactory.getWAL(hri);
-      final long txid = log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
-        htd.getTableName(), EnvironmentEdgeManager.currentTime(), mvcc, scopes), cols);
-      // Sync the edit to the WAL
-      log.sync(txid);
-      log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
-      log.completeCacheFlush(hri.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
-      log.shutdown();
+    // Write one column in one edit.
+    WALEdit cols = new WALEdit();
+    cols.add(new KeyValue(row, Bytes.toBytes("column"), Bytes.toBytes("0"),
+      EnvironmentEdgeManager.currentTime(), new byte[] { 0 }));
+    final WAL log = customFactory.getWAL(hri);
+    final long txid = log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
+      htd.getTableName(), EnvironmentEdgeManager.currentTime(), mvcc, scopes), cols);
+    // Sync the edit to the WAL
+    log.sync(txid);
+    log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
+    log.completeCacheFlush(hri.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
+    log.shutdown();
 
-      // Inject our failure, object is constructed via reflection.
-      BrokenWALCellCodec.THROW_FAILURE_ON_INIT.set(true);
+    // Inject our failure, object is constructed via reflection.
+    BrokenWALCellCodec.THROW_FAILURE_ON_INIT.set(true);
 
-      // Now open a reader on the log which will throw an exception when
-      // we try to instantiate the custom Codec.
-      Path filename = AbstractFSWALProvider.getCurrentFileName(log);
-      try {
-        reader = customFactory.createReader(proxyFs, filename);
-        fail("Expected to see an exception when creating WAL reader");
-      } catch (Exception e) {
-        // Expected that we get an exception
-      }
-      // We should have exactly one reader
-      assertEquals(1, openedReaders.size());
-      // And that reader should be closed.
-      long unclosedReaders =
-        openedReaders.stream().filter((r) -> !r.isClosed.get()).collect(Collectors.counting());
-      assertEquals("Should not find any open readers", 0, (int) unclosedReaders);
-    } finally {
-      if (reader != null) {
-        reader.close();
-      }
-    }
+    // Now open a reader on the log which will throw an exception when
+    // we try to instantiate the custom Codec.
+    Path filename = AbstractFSWALProvider.getCurrentFileName(log);
+    assertThrows("Expected to see an exception when creating WAL reader", IOException.class,
+      () -> customFactory.createStreamReader(proxyFs, filename));
+    // We should have exactly one reader
+    assertEquals(1, openedReaders.size());
+    // And that reader should be closed.
+    long unclosedReaders =
+      openedReaders.stream().filter((r) -> !r.isClosed.get()).collect(Collectors.counting());
+    assertEquals("Should not find any open readers", 0, unclosedReaders);
   }
 
   /**

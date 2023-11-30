@@ -47,9 +47,15 @@ public class BrotliCodec implements Configurable, CompressionCodec {
   public static final int BROTLI_BUFFERSIZE_DEFAULT = 256 * 1024;
 
   private Configuration conf;
+  private int bufferSize;
+  private int level;
+  private int window;
 
   public BrotliCodec() {
     conf = new Configuration();
+    bufferSize = getBufferSize(conf);
+    level = getLevel(conf);
+    window = getWindow(conf);
   }
 
   @Override
@@ -60,16 +66,19 @@ public class BrotliCodec implements Configurable, CompressionCodec {
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+    this.bufferSize = getBufferSize(conf);
+    this.level = getLevel(conf);
+    this.window = getWindow(conf);
   }
 
   @Override
   public Compressor createCompressor() {
-    return new BrotliCompressor(getLevel(conf), getWindow(conf), getBufferSize(conf));
+    return new BrotliCompressor(level, window, bufferSize);
   }
 
   @Override
   public Decompressor createDecompressor() {
-    return new BrotliDecompressor(getBufferSize(conf));
+    return new BrotliDecompressor(bufferSize);
   }
 
   @Override
@@ -80,7 +89,7 @@ public class BrotliCodec implements Configurable, CompressionCodec {
   @Override
   public CompressionInputStream createInputStream(InputStream in, Decompressor d)
     throws IOException {
-    return new BlockDecompressorStream(in, d, getBufferSize(conf));
+    return new BlockDecompressorStream(in, d, bufferSize);
   }
 
   @Override
@@ -91,7 +100,6 @@ public class BrotliCodec implements Configurable, CompressionCodec {
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out, Compressor c)
     throws IOException {
-    int bufferSize = getBufferSize(conf);
     return new BlockCompressorStream(out, c, bufferSize,
       CompressionUtil.compressionOverhead(bufferSize));
   }

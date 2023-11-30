@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -136,8 +137,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private long maxRunningTime = DEFAULT_MAX_RUNNING_TIME;
   private int numRegionLoadsToRemember = DEFAULT_KEEP_REGION_LOADS;
   private float minCostNeedBalance = DEFAULT_MIN_COST_NEED_BALANCE;
+  Map<String, Pair<ServerName, Float>> regionCacheRatioOnOldServerMap = new HashMap<>();
 
-  private List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
+  protected List<CostFunction> costFunctions; // FindBugs: Wants this protected;
+                                              // IS2_INCONSISTENT_SYNC
   // To save currently configed sum of multiplier. Defaulted at 1 for cases that carry high cost
   private float sumMultiplier;
   // to save and report costs to JMX
@@ -224,6 +227,24 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return candidateGenerators;
   }
 
+  protected List<CostFunction> createCostFunctions(Configuration conf) {
+    List<CostFunction> costFunctions = new ArrayList<>();
+    addCostFunction(costFunctions, new RegionCountSkewCostFunction(conf));
+    addCostFunction(costFunctions, new PrimaryRegionCountSkewCostFunction(conf));
+    addCostFunction(costFunctions, new MoveCostFunction(conf, provider));
+    addCostFunction(costFunctions, localityCost);
+    addCostFunction(costFunctions, rackLocalityCost);
+    addCostFunction(costFunctions, new TableSkewCostFunction(conf));
+    addCostFunction(costFunctions, regionReplicaHostCostFunction);
+    addCostFunction(costFunctions, regionReplicaRackCostFunction);
+    addCostFunction(costFunctions, new ReadRequestCostFunction(conf));
+    addCostFunction(costFunctions, new CPRequestCostFunction(conf));
+    addCostFunction(costFunctions, new WriteRequestCostFunction(conf));
+    addCostFunction(costFunctions, new MemStoreSizeCostFunction(conf));
+    addCostFunction(costFunctions, new StoreFileCostFunction(conf));
+    return costFunctions;
+  }
+
   @Override
   protected void loadConf(Configuration conf) {
     super.loadConf(conf);
@@ -242,20 +263,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     regionReplicaHostCostFunction = new RegionReplicaHostCostFunction(conf);
     regionReplicaRackCostFunction = new RegionReplicaRackCostFunction(conf);
-    costFunctions = new ArrayList<>();
-    addCostFunction(new RegionCountSkewCostFunction(conf));
-    addCostFunction(new PrimaryRegionCountSkewCostFunction(conf));
-    addCostFunction(new MoveCostFunction(conf, provider));
-    addCostFunction(localityCost);
-    addCostFunction(rackLocalityCost);
-    addCostFunction(new TableSkewCostFunction(conf));
-    addCostFunction(regionReplicaHostCostFunction);
-    addCostFunction(regionReplicaRackCostFunction);
-    addCostFunction(new ReadRequestCostFunction(conf));
-    addCostFunction(new CPRequestCostFunction(conf));
-    addCostFunction(new WriteRequestCostFunction(conf));
-    addCostFunction(new MemStoreSizeCostFunction(conf));
-    addCostFunction(new StoreFileCostFunction(conf));
+    this.costFunctions = createCostFunctions(conf);
     loadCustomCostFunctions(conf);
 
     curFunctionCosts = new double[costFunctions.size()];
@@ -459,8 +467,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // The clusterState that is given to this method contains the state
     // of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
-    BalancerClusterState cluster =
-      new BalancerClusterState(loadOfOneTable, loads, finder, rackManager);
+    BalancerClusterState cluster = new BalancerClusterState(loadOfOneTable, loads, finder,
+      rackManager, regionCacheRatioOnOldServerMap);
 
     long startTime = EnvironmentEdgeManager.currentTime();
 
@@ -568,7 +576,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return null;
   }
 
-  private void sendRejectionReasonToRingBuffer(Supplier<String> reason,
+  protected void sendRejectionReasonToRingBuffer(Supplier<String> reason,
     List<CostFunction> costFunctions) {
     provider.recordBalancerRejection(() -> {
       BalancerRejection.Builder builder = new BalancerRejection.Builder().setReason(reason.get());
@@ -627,14 +635,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
-  private void addCostFunction(CostFunction costFunction) {
+  private void addCostFunction(List<CostFunction> costFunctions, CostFunction costFunction) {
     float multiplier = costFunction.getMultiplier();
     if (multiplier > 0) {
       costFunctions.add(costFunction);
     }
   }
 
-  private String functionCost() {
+  protected String functionCost() {
     StringBuilder builder = new StringBuilder();
     for (CostFunction c : costFunctions) {
       builder.append(c.getClass().getSimpleName());
@@ -653,6 +661,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       builder.append("); ");
     }
     return builder.toString();
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
+  List<CostFunction> getCostFunctions() {
+    return costFunctions;
   }
 
   private String totalCostsPerFunc() {

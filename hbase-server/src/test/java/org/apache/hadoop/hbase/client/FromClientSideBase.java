@@ -98,8 +98,8 @@ class FromClientSideBase {
     return confClass.getName().equals(registryImpl.getName()) && numHedgedReqs == hedgedReqConfig;
   }
 
-  protected static final void initialize(Class<?> registryImpl, int numHedgedReqs, Class<?>... cps)
-    throws Exception {
+  protected static final void initialize(Class<? extends ConnectionRegistry> registryImpl,
+    int numHedgedReqs, Class<?>... cps) throws Exception {
     // initialize() is called for every unit test, however we only want to reset the cluster state
     // at the end of every parameterized run.
     if (isSameParameterizedCluster(registryImpl, numHedgedReqs)) {

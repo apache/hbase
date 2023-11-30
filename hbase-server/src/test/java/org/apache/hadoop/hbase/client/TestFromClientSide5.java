@@ -28,7 +28,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +90,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,6 +115,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestFromClientSide5.class);
+
   @Rule
   public TableNameTestRule name = new TableNameTestRule();
 
@@ -122,14 +123,15 @@ public class TestFromClientSide5 extends FromClientSideBase {
   TestFromClientSide5() {
   }
 
-  public TestFromClientSide5(Class registry, int numHedgedReqs) throws Exception {
+  public TestFromClientSide5(Class<? extends ConnectionRegistry> registry, int numHedgedReqs)
+    throws Exception {
     initialize(registry, numHedgedReqs, MultiRowMutationEndpoint.class);
   }
 
-  @Parameterized.Parameters
-  public static Collection parameters() {
-    return Arrays.asList(new Object[][] { { MasterRegistry.class, 1 }, { MasterRegistry.class, 2 },
-      { ZKConnectionRegistry.class, 1 } });
+  @Parameters(name = "{index}: registry={0}, numHedgedReqs={1}")
+  public static List<Object[]> parameters() {
+    return Arrays.asList(new Object[] { MasterRegistry.class, 1 },
+      new Object[] { MasterRegistry.class, 2 }, new Object[] { ZKConnectionRegistry.class, 1 });
   }
 
   @AfterClass
@@ -771,10 +773,20 @@ public class TestFromClientSide5 extends FromClientSideBase {
       t.put(put_1);
       List<Result> results = new LinkedList<>();
       try (ResultScanner scanner = t.getScanner(s)) {
+        // get one row(should be row3) from the scanner to make sure that we have send a request to
+        // region server, which means we have already set the read point, so later we should not see
+        // the new appended values.
+        Result r = scanner.next();
+        assertNotNull(r);
+        results.add(r);
         t.append(append_1);
         t.append(append_2);
         t.append(append_3);
-        for (Result r : scanner) {
+        for (;;) {
+          r = scanner.next();
+          if (r == null) {
+            break;
+          }
           results.add(r);
         }
       }
@@ -788,11 +800,11 @@ public class TestFromClientSide5 extends FromClientSideBase {
     List<Result> resultsWithWal = doAppend(true);
     List<Result> resultsWithoutWal = doAppend(false);
     assertEquals(resultsWithWal.size(), resultsWithoutWal.size());
-    for (int i = 0; i != resultsWithWal.size(); ++i) {
+    for (int i = 0; i < resultsWithWal.size(); ++i) {
       Result resultWithWal = resultsWithWal.get(i);
       Result resultWithoutWal = resultsWithoutWal.get(i);
       assertEquals(resultWithWal.rawCells().length, resultWithoutWal.rawCells().length);
-      for (int j = 0; j != resultWithWal.rawCells().length; ++j) {
+      for (int j = 0; j < resultWithWal.rawCells().length; ++j) {
         Cell cellWithWal = resultWithWal.rawCells()[j];
         Cell cellWithoutWal = resultWithoutWal.rawCells()[j];
         assertArrayEquals(CellUtil.cloneRow(cellWithWal), CellUtil.cloneRow(cellWithoutWal));

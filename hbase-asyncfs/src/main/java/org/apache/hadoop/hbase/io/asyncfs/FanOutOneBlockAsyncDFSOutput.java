@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHel
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.completeFile;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.endFileLease;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.getStatus;
+import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
 import static org.apache.hadoop.hbase.util.NettyFutureUtils.consume;
 import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeWrite;
 import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeWriteAndFlush;
@@ -364,7 +365,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     this.clientName = clientName;
     this.src = src;
     this.block = locatedBlock.getBlock();
-    this.locations = locatedBlock.getLocations();
+    this.locations = getLocatedBlockLocations(locatedBlock);
     this.encryptor = encryptor;
     this.datanodeInfoMap = datanodeInfoMap;
     this.summer = summer;

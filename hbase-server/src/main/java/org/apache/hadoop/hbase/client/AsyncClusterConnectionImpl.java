@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.net.SocketAddress;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -59,7 +60,7 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
 
   public AsyncClusterConnectionImpl(Configuration conf, ConnectionRegistry registry,
     String clusterId, SocketAddress localAddress, User user) {
-    super(conf, registry, clusterId, localAddress, user);
+    super(conf, registry, clusterId, localAddress, user, Collections.emptyMap());
   }
 
   @Override

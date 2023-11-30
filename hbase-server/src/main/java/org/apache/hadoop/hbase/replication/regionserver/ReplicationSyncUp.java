@@ -17,13 +17,19 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
@@ -35,11 +41,18 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.master.replication.OfflineTableReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationGroupOffset;
+import org.apache.hadoop.hbase.replication.ReplicationQueueId;
+import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.JsonMapper;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -59,6 +72,31 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class ReplicationSyncUp extends Configured implements Tool {
 
+  public static class ReplicationSyncUpToolInfo {
+
+    private long startTimeMs;
+
+    public ReplicationSyncUpToolInfo() {
+    }
+
+    public ReplicationSyncUpToolInfo(long startTimeMs) {
+      this.startTimeMs = startTimeMs;
+    }
+
+    public long getStartTimeMs() {
+      return startTimeMs;
+    }
+
+    public void setStartTimeMs(long startTimeMs) {
+      this.startTimeMs = startTimeMs;
+    }
+  }
+
+  // For storing the information used to skip replicating some wals after the cluster is back online
+  public static final String INFO_DIR = "ReplicationSyncUp";
+
+  public static final String INFO_FILE = "info";
+
   private static final long SLEEP_TIME = 10000;
 
   /**
@@ -69,42 +107,156 @@ public class ReplicationSyncUp extends Configured implements Tool {
     System.exit(ret);
   }
 
-  private Set<ServerName> getLiveRegionServers(ZKWatcher zkw) throws KeeperException {
-    List<String> rsZNodes = ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode);
-    return rsZNodes == null
-      ? Collections.emptySet()
-      : rsZNodes.stream().map(ServerName::parseServerName).collect(Collectors.toSet());
+  // Find region servers under wal directory
+  // Here we only care about the region servers which may still be alive, as we need to add
+  // replications for them if missing. The dead region servers which have already been processed
+  // fully do not need to add their replication queues again, as the operation has already been done
+  // in SCP.
+  private Set<ServerName> listRegionServers(FileSystem walFs, Path walDir) throws IOException {
+    FileStatus[] statuses;
+    try {
+      statuses = walFs.listStatus(walDir);
+    } catch (FileNotFoundException e) {
+      System.out.println("WAL directory " + walDir + " does not exists, ignore");
+      return Collections.emptySet();
+    }
+    Set<ServerName> regionServers = new HashSet<>();
+    for (FileStatus status : statuses) {
+      // All wal files under the walDir is within its region server's directory
+      if (!status.isDirectory()) {
+        continue;
+      }
+      ServerName sn = AbstractFSWALProvider.getServerNameFromWALDirectoryName(status.getPath());
+      if (sn != null) {
+        regionServers.add(sn);
+      }
+    }
+    return regionServers;
+  }
+
+  private void addMissingReplicationQueues(ReplicationQueueStorage storage, ServerName regionServer,
+    Set<String> peerIds) throws ReplicationException {
+    Set<String> existingQueuePeerIds = new HashSet<>();
+    List<ReplicationQueueId> queueIds = storage.listAllQueueIds(regionServer);
+    for (Iterator<ReplicationQueueId> iter = queueIds.iterator(); iter.hasNext();) {
+      ReplicationQueueId queueId = iter.next();
+      if (!queueId.isRecovered()) {
+        existingQueuePeerIds.add(queueId.getPeerId());
+      }
+    }
+
+    for (String peerId : peerIds) {
+      if (!existingQueuePeerIds.contains(peerId)) {
+        ReplicationQueueId queueId = new ReplicationQueueId(regionServer, peerId);
+        System.out.println("Add replication queue " + queueId + " for claiming");
+        storage.setOffset(queueId, regionServer.toString(), ReplicationGroupOffset.BEGIN,
+          Collections.emptyMap());
+      }
+    }
+  }
+
+  private void addMissingReplicationQueues(ReplicationQueueStorage storage,
+    Set<ServerName> regionServers, Set<String> peerIds) throws ReplicationException {
+    for (ServerName regionServer : regionServers) {
+      addMissingReplicationQueues(storage, regionServer, peerIds);
+    }
   }
 
   // When using this tool, usually the source cluster is unhealthy, so we should try to claim the
   // replication queues for the dead region servers first and then replicate the data out.
-  private void claimReplicationQueues(ZKWatcher zkw, ReplicationSourceManager mgr)
-    throws ReplicationException, KeeperException {
-    List<ServerName> replicators = mgr.getQueueStorage().getListOfReplicators();
-    Set<ServerName> liveRegionServers = getLiveRegionServers(zkw);
+  private void claimReplicationQueues(ReplicationSourceManager mgr, Set<ServerName> regionServers)
+    throws ReplicationException, KeeperException, IOException {
+    // union the region servers from both places, i.e, from the wal directory, and the records in
+    // replication queue storage.
+    Set<ServerName> replicators = new HashSet<>(regionServers);
+    ReplicationQueueStorage queueStorage = mgr.getQueueStorage();
+    replicators.addAll(queueStorage.listAllReplicators());
+    FileSystem fs = CommonFSUtils.getCurrentFileSystem(getConf());
+    Path infoDir = new Path(CommonFSUtils.getRootDir(getConf()), INFO_DIR);
     for (ServerName sn : replicators) {
-      if (!liveRegionServers.contains(sn)) {
-        List<String> replicationQueues = mgr.getQueueStorage().getAllQueues(sn);
-        System.out.println(sn + " is dead, claim its replication queues: " + replicationQueues);
-        for (String queue : replicationQueues) {
-          mgr.claimQueue(sn, queue);
-        }
+      List<ReplicationQueueId> replicationQueues = queueStorage.listAllQueueIds(sn);
+      System.out.println(sn + " is dead, claim its replication queues: " + replicationQueues);
+      // record the rs name, so when master restarting, we will skip claiming its replication queue
+      fs.createNewFile(new Path(infoDir, sn.getServerName()));
+      for (ReplicationQueueId queueId : replicationQueues) {
+        mgr.claimQueue(queueId, true);
       }
     }
+  }
+
+  private void writeInfoFile(FileSystem fs, boolean isForce) throws IOException {
+    // Record the info of this run. Currently only record the time we run the job. We will use this
+    // timestamp to clean up the data for last sequence ids and hfile refs in replication queue
+    // storage. See ReplicationQueueStorage.removeLastSequenceIdsAndHFileRefsBefore.
+    ReplicationSyncUpToolInfo info =
+      new ReplicationSyncUpToolInfo(EnvironmentEdgeManager.currentTime());
+    String json = JsonMapper.writeObjectAsString(info);
+    Path infoDir = new Path(CommonFSUtils.getRootDir(getConf()), INFO_DIR);
+    try (FSDataOutputStream out = fs.create(new Path(infoDir, INFO_FILE), isForce)) {
+      out.write(Bytes.toBytes(json));
+    }
+  }
+
+  private static boolean parseOpts(String args[]) {
+    LinkedList<String> argv = new LinkedList<>();
+    argv.addAll(Arrays.asList(args));
+    String cmd = null;
+    while ((cmd = argv.poll()) != null) {
+      if (cmd.equals("-h") || cmd.equals("--h") || cmd.equals("--help")) {
+        printUsageAndExit(null, 0);
+      }
+      if (cmd.equals("-f")) {
+        return true;
+      }
+      if (!argv.isEmpty()) {
+        printUsageAndExit("ERROR: Unrecognized option/command: " + cmd, -1);
+      }
+    }
+    return false;
+  }
+
+  private static void printUsageAndExit(final String message, final int exitCode) {
+    printUsage(message);
+    System.exit(exitCode);
+  }
+
+  private static void printUsage(final String message) {
+    if (message != null && message.length() > 0) {
+      System.err.println(message);
+    }
+    System.err.println("Usage: hbase " + ReplicationSyncUp.class.getName() + " \\");
+    System.err.println("  <OPTIONS> [-D<property=value>]*");
+    System.err.println();
+    System.err.println("General Options:");
+    System.err.println(" -h|--h|--help  Show this help and exit.");
+    System.err
+      .println(" -f Start a new ReplicationSyncUp after the previous ReplicationSyncUp failed. "
+        + "See HBASE-27623 for details.");
   }
 
   @Override
   public int run(String[] args) throws Exception {
     Abortable abortable = new Abortable() {
+
+      private volatile boolean abort = false;
+
       @Override
       public void abort(String why, Throwable e) {
+        if (isAborted()) {
+          return;
+        }
+        abort = true;
+        System.err.println("Aborting because of " + why);
+        e.printStackTrace();
+        System.exit(1);
       }
 
       @Override
       public boolean isAborted() {
-        return false;
+        return abort;
       }
     };
+    boolean isForce = parseOpts(args);
     Configuration conf = getConf();
     try (ZKWatcher zkw = new ZKWatcher(conf,
       "syncupReplication" + EnvironmentEdgeManager.currentTime(), abortable, true)) {
@@ -113,13 +265,25 @@ public class ReplicationSyncUp extends Configured implements Tool {
       Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
       Path logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
 
-      System.out.println("Start Replication Server start");
+      System.out.println("Start Replication Server");
+      writeInfoFile(fs, isForce);
       Replication replication = new Replication();
-      replication.initialize(new DummyServer(zkw), fs, logDir, oldLogDir,
-        new WALFactory(conf, "test", null, false));
+      // use offline table replication queue storage
+      getConf().setClass(ReplicationStorageFactory.REPLICATION_QUEUE_IMPL,
+        OfflineTableReplicationQueueStorage.class, ReplicationQueueStorage.class);
+      DummyServer server = new DummyServer(getConf(), zkw);
+      replication
+        .initialize(server, fs, new Path(logDir, server.toString()), oldLogDir,
+          new WALFactory(conf,
+            ServerName.valueOf(
+              getClass().getSimpleName() + ",16010," + EnvironmentEdgeManager.currentTime()),
+            null));
       ReplicationSourceManager manager = replication.getReplicationManager();
       manager.init();
-      claimReplicationQueues(zkw, manager);
+      Set<ServerName> regionServers = listRegionServers(fs, logDir);
+      addMissingReplicationQueues(manager.getQueueStorage(), regionServers,
+        manager.getReplicationPeers().getAllPeerIds());
+      claimReplicationQueues(manager, regionServers);
       while (manager.activeFailoverTaskCount() > 0) {
         Thread.sleep(SLEEP_TIME);
       }
@@ -134,23 +298,22 @@ public class ReplicationSyncUp extends Configured implements Tool {
     return 0;
   }
 
-  class DummyServer implements Server {
-    String hostname;
-    ZKWatcher zkw;
+  private static final class DummyServer implements Server {
+    private final Configuration conf;
+    private final String hostname;
+    private final ZKWatcher zkw;
+    private volatile boolean abort = false;
 
-    DummyServer(ZKWatcher zkw) {
+    DummyServer(Configuration conf, ZKWatcher zkw) {
       // a unique name in case the first run fails
       hostname = EnvironmentEdgeManager.currentTime() + ".SyncUpTool.replication.org";
+      this.conf = conf;
       this.zkw = zkw;
-    }
-
-    DummyServer(String hostname) {
-      this.hostname = hostname;
     }
 
     @Override
     public Configuration getConfiguration() {
-      return getConf();
+      return conf;
     }
 
     @Override
@@ -170,11 +333,18 @@ public class ReplicationSyncUp extends Configured implements Tool {
 
     @Override
     public void abort(String why, Throwable e) {
+      if (isAborted()) {
+        return;
+      }
+      abort = true;
+      System.err.println("Aborting because of " + why);
+      e.printStackTrace();
+      System.exit(1);
     }
 
     @Override
     public boolean isAborted() {
-      return false;
+      return abort;
     }
 
     @Override

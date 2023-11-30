@@ -41,7 +41,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
   private ReplicationSourceManager manager;
   private ReplicationPeer replicationPeer;
-  private String peerClusterId;
+  private ReplicationQueueId queueId;
   private Path currentPath;
   private MetricsSource metrics;
   private WALFileLengthProvider walFileLengthProvider;
@@ -49,11 +49,11 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-    ReplicationQueueStorage rq, ReplicationPeer rp, Server server, String peerClusterId,
+    ReplicationQueueStorage rq, ReplicationPeer rp, Server server, ReplicationQueueData queueData,
     UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
     throws IOException {
     this.manager = manager;
-    this.peerClusterId = peerClusterId;
+    this.queueId = queueData.getId();
     this.metrics = metrics;
     this.walFileLengthProvider = walFileLengthProvider;
     this.replicationPeer = rp;
@@ -94,18 +94,19 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   public void terminate(String reason, Exception e, boolean clearMetrics) {
     if (clearMetrics) {
       this.metrics.clear();
+    } else {
+      this.metrics.terminate();
     }
   }
 
   @Override
-  public String getQueueId() {
-    return peerClusterId;
+  public ReplicationQueueId getQueueId() {
+    return queueId;
   }
 
   @Override
   public String getPeerId() {
-    String[] parts = peerClusterId.split("-", 2);
-    return parts.length != 1 ? parts[0] : peerClusterId;
+    return queueId.getPeerId();
   }
 
   @Override
@@ -149,7 +150,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   }
 
   @Override
-  public void postShipEdits(List<Entry> entries, int batchSize) {
+  public void postShipEdits(List<Entry> entries, long batchSize) {
   }
 
   @Override

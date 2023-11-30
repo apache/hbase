@@ -569,8 +569,22 @@ public class HFileArchiver {
           + " because it does not exist! Skipping and continuing on.", fnfe);
         success = true;
       } catch (IOException e) {
-        LOG.warn("Failed to archive " + currentFile + " on try #" + i, e);
         success = false;
+        // When HFiles are placed on a filesystem other than HDFS a rename operation can be a
+        // non-atomic file copy operation. It can take a long time to copy a large hfile and if
+        // interrupted there may be a partially copied file present at the destination. We must
+        // remove the partially copied file, if any, or otherwise the archive operation will fail
+        // indefinitely from this point.
+        LOG.warn("Failed to archive " + currentFile + " on try #" + i, e);
+        try {
+          fs.delete(archiveFile, false);
+        } catch (FileNotFoundException fnfe) {
+          // This case is fine.
+        } catch (IOException ee) {
+          // Complain about other IO exceptions
+          LOG.warn("Failed to clean up from failure to archive " + currentFile + " on try #" + i,
+            ee);
+        }
       }
     }
 

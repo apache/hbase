@@ -22,15 +22,24 @@ import static org.apache.hadoop.hbase.replication.TestReplicationBase.NB_RETRIES
 import static org.apache.hadoop.hbase.replication.TestReplicationBase.NB_ROWS_IN_BATCH;
 import static org.apache.hadoop.hbase.replication.TestReplicationBase.SLEEP_TIME;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -52,39 +61,70 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
    */
   @Test
   public void testSyncUpTool() throws Exception {
-
-    /**
-     * Set up Replication: on Master and one Slave Table: t1_syncup and t2_syncup columnfamily:
-     * 'cf1' : replicated 'norep': not replicated
-     */
+    // Set up Replication: on Master and one Slave
+    // Table: t1_syncup and t2_syncup
+    // columnfamily:
+    // 'cf1' : replicated
+    // 'norep': not replicated
     setupReplication();
 
-    /**
-     * at Master: t1_syncup: put 100 rows into cf1, and 1 rows into norep t2_syncup: put 200 rows
-     * into cf1, and 1 rows into norep verify correctly replicated to slave
-     */
+    //
+    // at Master:
+    // t1_syncup: put 100 rows into cf1, and 1 rows into norep
+    // t2_syncup: put 200 rows into cf1, and 1 rows into norep
+    //
+    // verify correctly replicated to slave
     putAndReplicateRows();
 
-    /**
-     * Verify delete works step 1: stop hbase on Slave step 2: at Master: t1_syncup: delete 50 rows
-     * from cf1 t2_syncup: delete 100 rows from cf1 no change on 'norep' step 3: stop hbase on
-     * master, restart hbase on Slave step 4: verify Slave still have the rows before delete
-     * t1_syncup: 100 rows from cf1 t2_syncup: 200 rows from cf1 step 5: run syncup tool on Master
-     * step 6: verify that delete show up on Slave t1_syncup: 50 rows from cf1 t2_syncup: 100 rows
-     * from cf1 verify correctly replicated to Slave
-     */
+    // Verify delete works
+    //
+    // step 1: stop hbase on Slave
+    //
+    // step 2: at Master:
+    // t1_syncup: delete 50 rows from cf1
+    // t2_syncup: delete 100 rows from cf1
+    // no change on 'norep'
+    //
+    // step 3: stop hbase on master, restart hbase on Slave
+    //
+    // step 4: verify Slave still have the rows before delete
+    // t1_syncup: 100 rows from cf1
+    // t2_syncup: 200 rows from cf1
+    //
+    // step 5: run syncup tool on Master
+    //
+    // step 6: verify that delete show up on Slave
+    // t1_syncup: 50 rows from cf1
+    // t2_syncup: 100 rows from cf1
+    //
+    // verify correctly replicated to Slave
     mimicSyncUpAfterDelete();
 
-    /**
-     * Verify put works step 1: stop hbase on Slave step 2: at Master: t1_syncup: put 100 rows from
-     * cf1 t2_syncup: put 200 rows from cf1 and put another row on 'norep' ATTN: put to 'cf1' will
-     * overwrite existing rows, so end count will be 100 and 200 respectively put to 'norep' will
-     * add a new row. step 3: stop hbase on master, restart hbase on Slave step 4: verify Slave
-     * still has the rows before put t1_syncup: 50 rows from cf1 t2_syncup: 100 rows from cf1 step
-     * 5: run syncup tool on Master step 6: verify that put show up on Slave and 'norep' does not
-     * t1_syncup: 100 rows from cf1 t2_syncup: 200 rows from cf1 verify correctly replicated to
-     * Slave
-     */
+    // Verify put works
+    //
+    // step 1: stop hbase on Slave
+    //
+    // step 2: at Master:
+    // t1_syncup: put 100 rows from cf1
+    // t2_syncup: put 200 rows from cf1
+    // and put another row on 'norep'
+    // ATTN:
+    // put to 'cf1' will overwrite existing rows, so end count will be 100 and 200 respectively
+    // put to 'norep' will add a new row.
+    //
+    // step 3: stop hbase on master, restart hbase on Slave
+    //
+    // step 4: verify Slave still has the rows before put
+    // t1_syncup: 50 rows from cf1
+    // t2_syncup: 100 rows from cf1
+    //
+    // step 5: run syncup tool on Master
+    //
+    // step 6: verify that put show up on Slave and 'norep' does not
+    // t1_syncup: 100 rows from cf1
+    // t2_syncup: 200 rows from cf1
+    //
+    // verify correctly replicated to Slave
     mimicSyncUpAfterPut();
   }
 
@@ -169,7 +209,8 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
     int rowCount_ht2Source = countRows(ht2Source);
     assertEquals("t2_syncup has 101 rows on source, after remove 100 of the replicated colfam", 101,
       rowCount_ht2Source);
-
+    List<ServerName> sourceRses = UTIL1.getHBaseCluster().getRegionServerThreads().stream()
+      .map(rst -> rst.getRegionServer().getServerName()).collect(Collectors.toList());
     shutDownSourceHBaseCluster();
     restartTargetHBaseCluster(1);
 
@@ -181,40 +222,33 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
     assertEquals("@Peer1 t1_syncup should still have 100 rows", 100, rowCountHt1TargetAtPeer1);
     assertEquals("@Peer1 t2_syncup should still have 200 rows", 200, rowCountHt2TargetAtPeer1);
 
+    syncUp(UTIL1);
+
     // After sync up
-    for (int i = 0; i < NB_RETRIES; i++) {
-      syncUp(UTIL1);
-      rowCountHt1TargetAtPeer1 = countRows(ht1TargetAtPeer1);
-      rowCountHt2TargetAtPeer1 = countRows(ht2TargetAtPeer1);
-      if (i == NB_RETRIES - 1) {
-        if (rowCountHt1TargetAtPeer1 != 50 || rowCountHt2TargetAtPeer1 != 100) {
-          // syncUP still failed. Let's look at the source in case anything wrong there
-          restartSourceHBaseCluster(1);
-          rowCount_ht1Source = countRows(ht1Source);
-          LOG.debug("t1_syncup should have 51 rows at source, and it is " + rowCount_ht1Source);
-          rowCount_ht2Source = countRows(ht2Source);
-          LOG.debug("t2_syncup should have 101 rows at source, and it is " + rowCount_ht2Source);
-        }
-        assertEquals("@Peer1 t1_syncup should be sync up and have 50 rows", 50,
-          rowCountHt1TargetAtPeer1);
-        assertEquals("@Peer1 t2_syncup should be sync up and have 100 rows", 100,
-          rowCountHt2TargetAtPeer1);
-      }
-      if (rowCountHt1TargetAtPeer1 == 50 && rowCountHt2TargetAtPeer1 == 100) {
-        LOG.info("SyncUpAfterDelete succeeded at retry = " + i);
-        break;
-      } else {
-        LOG.debug("SyncUpAfterDelete failed at retry = " + i + ", with rowCount_ht1TargetPeer1 ="
-          + rowCountHt1TargetAtPeer1 + " and rowCount_ht2TargetAtPeer1 ="
-          + rowCountHt2TargetAtPeer1);
-      }
-      Thread.sleep(SLEEP_TIME);
+    rowCountHt1TargetAtPeer1 = countRows(ht1TargetAtPeer1);
+    rowCountHt2TargetAtPeer1 = countRows(ht2TargetAtPeer1);
+    assertEquals("@Peer1 t1_syncup should be sync up and have 50 rows", 50,
+      rowCountHt1TargetAtPeer1);
+    assertEquals("@Peer1 t2_syncup should be sync up and have 100 rows", 100,
+      rowCountHt2TargetAtPeer1);
+
+    // check we have recorded the dead region servers and also have an info file
+    Path rootDir = CommonFSUtils.getRootDir(UTIL1.getConfiguration());
+    Path syncUpInfoDir = new Path(rootDir, ReplicationSyncUp.INFO_DIR);
+    FileSystem fs = UTIL1.getTestFileSystem();
+    for (ServerName sn : sourceRses) {
+      assertTrue(fs.exists(new Path(syncUpInfoDir, sn.getServerName())));
     }
+    assertTrue(fs.exists(new Path(syncUpInfoDir, ReplicationSyncUp.INFO_FILE)));
+    assertEquals(sourceRses.size() + 1, fs.listStatus(syncUpInfoDir).length);
+
+    restartSourceHBaseCluster(1);
+    // should finally removed all the records after restart
+    UTIL1.waitFor(60000, () -> fs.listStatus(syncUpInfoDir).length == 0);
   }
 
   private void mimicSyncUpAfterPut() throws Exception {
     LOG.debug("mimicSyncUpAfterPut");
-    restartSourceHBaseCluster(1);
     shutDownTargetHBaseCluster();
 
     Put p;
@@ -258,34 +292,48 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
     assertEquals("@Peer1 t2_syncup should be NOT sync up and have 100 rows", 100,
       rowCountHt2TargetAtPeer1);
 
-    // after syun up
-    for (int i = 0; i < NB_RETRIES; i++) {
+    syncUp(UTIL1);
+
+    // after sync up
+    rowCountHt1TargetAtPeer1 = countRows(ht1TargetAtPeer1);
+    rowCountHt2TargetAtPeer1 = countRows(ht2TargetAtPeer1);
+    assertEquals("@Peer1 t1_syncup should be sync up and have 100 rows", 100,
+      rowCountHt1TargetAtPeer1);
+    assertEquals("@Peer1 t2_syncup should be sync up and have 200 rows", 200,
+      rowCountHt2TargetAtPeer1);
+  }
+
+  /**
+   * test "start a new ReplicationSyncUp after the previous failed". See HBASE-27623 for details.
+   */
+  @Test
+  public void testStartANewSyncUpToolAfterFailed() throws Exception {
+    // Start syncUpTool for the first time with non-force mode,
+    // let's assume that this will fail in sync data,
+    // this does not affect our test results
+    syncUp(UTIL1);
+    Path rootDir = CommonFSUtils.getRootDir(UTIL1.getConfiguration());
+    Path syncUpInfoDir = new Path(rootDir, ReplicationSyncUp.INFO_DIR);
+    Path replicationInfoPath = new Path(syncUpInfoDir, ReplicationSyncUp.INFO_FILE);
+    FileSystem fs = UTIL1.getTestFileSystem();
+    assertTrue(fs.exists(replicationInfoPath));
+    FileStatus fileStatus1 = fs.getFileStatus(replicationInfoPath);
+
+    // Start syncUpTool for the second time with non-force mode,
+    // startup will fail because replication info file already exists
+    try {
       syncUp(UTIL1);
-      rowCountHt1TargetAtPeer1 = countRows(ht1TargetAtPeer1);
-      rowCountHt2TargetAtPeer1 = countRows(ht2TargetAtPeer1);
-      if (i == NB_RETRIES - 1) {
-        if (rowCountHt1TargetAtPeer1 != 100 || rowCountHt2TargetAtPeer1 != 200) {
-          // syncUP still failed. Let's look at the source in case anything wrong there
-          restartSourceHBaseCluster(1);
-          rowCount_ht1Source = countRows(ht1Source);
-          LOG.debug("t1_syncup should have 102 rows at source, and it is " + rowCount_ht1Source);
-          rowCount_ht2Source = countRows(ht2Source);
-          LOG.debug("t2_syncup should have 202 rows at source, and it is " + rowCount_ht2Source);
-        }
-        assertEquals("@Peer1 t1_syncup should be sync up and have 100 rows", 100,
-          rowCountHt1TargetAtPeer1);
-        assertEquals("@Peer1 t2_syncup should be sync up and have 200 rows", 200,
-          rowCountHt2TargetAtPeer1);
-      }
-      if (rowCountHt1TargetAtPeer1 == 100 && rowCountHt2TargetAtPeer1 == 200) {
-        LOG.info("SyncUpAfterPut succeeded at retry = " + i);
-        break;
-      } else {
-        LOG.debug("SyncUpAfterPut failed at retry = " + i + ", with rowCount_ht1TargetPeer1 ="
-          + rowCountHt1TargetAtPeer1 + " and rowCount_ht2TargetAtPeer1 ="
-          + rowCountHt2TargetAtPeer1);
-      }
-      Thread.sleep(SLEEP_TIME);
+    } catch (Exception e) {
+      assertTrue("e should be a FileAlreadyExistsException",
+        (e instanceof FileAlreadyExistsException));
     }
+    FileStatus fileStatus2 = fs.getFileStatus(replicationInfoPath);
+    assertEquals(fileStatus1.getModificationTime(), fileStatus2.getModificationTime());
+
+    // Start syncUpTool for the third time with force mode,
+    // startup will success and create a new replication info file
+    syncUp(UTIL1, new String[] { "-f" });
+    FileStatus fileStatus3 = fs.getFileStatus(replicationInfoPath);
+    assertTrue(fileStatus3.getModificationTime() > fileStatus2.getModificationTime());
   }
 }

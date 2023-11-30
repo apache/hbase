@@ -26,6 +26,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -49,6 +50,7 @@ public class FileIOEngine extends PersistentIOEngine {
 
   private final long sizePerFile;
   private final long capacity;
+  private boolean maintainPersistence;
 
   private FileReadAccessor readAccessor = new FileReadAccessor();
   private FileWriteAccessor writeAccessor = new FileWriteAccessor();
@@ -59,6 +61,7 @@ public class FileIOEngine extends PersistentIOEngine {
     this.sizePerFile = capacity / filePaths.length;
     this.capacity = this.sizePerFile * filePaths.length;
     this.fileChannels = new FileChannel[filePaths.length];
+    this.maintainPersistence = maintainPersistence;
     if (!maintainPersistence) {
       for (String filePath : filePaths) {
         File file = new File(filePath);
@@ -145,8 +148,38 @@ public class FileIOEngine extends PersistentIOEngine {
         throw ioe;
       }
     }
-    dstBuff.rewind();
+    if (maintainPersistence) {
+      dstBuff.rewind();
+      long cachedNanoTime = dstBuff.getLong();
+      if (be.getCachedTime() != cachedNanoTime) {
+        dstBuff.release();
+        throw new HBaseIOException("The cached time recorded within the cached block: "
+          + cachedNanoTime + " differs from its bucket entry: " + be.getCachedTime());
+      }
+      dstBuff.limit(length);
+      dstBuff = dstBuff.slice();
+    } else {
+      dstBuff.rewind();
+    }
     return be.wrapAsCacheable(dstBuff);
+  }
+
+  void checkCacheTime(BucketEntry be) throws IOException {
+    long offset = be.offset();
+    ByteBuff dstBuff = be.allocator.allocate(Long.BYTES);
+    try {
+      accessFile(readAccessor, dstBuff, offset);
+    } catch (IOException ioe) {
+      dstBuff.release();
+      throw ioe;
+    }
+    dstBuff.rewind();
+    long cachedNanoTime = dstBuff.getLong();
+    if (be.getCachedTime() != cachedNanoTime) {
+      dstBuff.release();
+      throw new HBaseIOException("The cached time recorded within the cached block: "
+        + cachedNanoTime + " differs from its bucket entry: " + be.getCachedTime());
+    }
   }
 
   void closeFileChannels() {

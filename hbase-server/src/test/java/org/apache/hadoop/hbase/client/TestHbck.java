@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -57,7 +58,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -117,7 +117,7 @@ public class TestHbck {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
-    TEST_UTIL.createMultiRegionTable(TABLE_NAME, Bytes.toBytes("family1"), 5);
+    TEST_UTIL.createMultiRegionTable(TABLE_NAME, 3, new byte[][] { Bytes.toBytes("family1") });
     procExec = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
     TEST_UTIL.getHBaseCluster().getMaster().getMasterCoprocessorHost().load(
@@ -187,7 +187,7 @@ public class TestHbck {
     // will be DISABLED
     TableState prevState =
       hbck.setTableStateInMeta(new TableState(TABLE_NAME, TableState.State.ENABLED));
-    assertTrue("Incorrect previous state! expeced=DISABLED, found=" + prevState.getState(),
+    assertTrue("Incorrect previous state! expected=DISABLED, found=" + prevState.getState(),
       prevState.isDisabled());
   }
 
@@ -195,48 +195,57 @@ public class TestHbck {
   public void testSetRegionStateInMeta() throws Exception {
     Hbck hbck = getHbck();
     Admin admin = TEST_UTIL.getAdmin();
+    TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME);
     final List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
     final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
-    Map<String, RegionState.State> prevStates = new HashMap<>();
-    Map<String, RegionState.State> newStates = new HashMap<>();
-    final Map<String, Pair<RegionState.State, RegionState.State>> regionsMap = new HashMap<>();
+    final Map<String, RegionState.State> beforeStates = new HashMap<>();
+    final Map<String, RegionState.State> requestStates = new HashMap<>();
     regions.forEach(r -> {
-      RegionState prevState = am.getRegionStates().getRegionState(r);
-      prevStates.put(r.getEncodedName(), prevState.getState());
-      newStates.put(r.getEncodedName(), RegionState.State.CLOSED);
-      regionsMap.put(r.getEncodedName(),
-        new Pair<>(prevState.getState(), RegionState.State.CLOSED));
+      RegionState beforeState = am.getRegionStates().getRegionState(r);
+      beforeStates.put(r.getEncodedName(), beforeState.getState());
+      LOG.debug("Before test: {} ; {}", r, beforeState.getState());
+      requestStates.put(r.getEncodedName(), RegionState.State.CLOSED);
     });
-    final Map<String, RegionState.State> result = hbck.setRegionStateInMeta(newStates);
-    result.forEach((k, v) -> {
-      RegionState.State prevState = regionsMap.get(k).getFirst();
-      assertEquals(prevState, v);
-    });
-    regions.forEach(r -> {
-      RegionState cachedState = am.getRegionStates().getRegionState(r.getEncodedName());
-      RegionState.State newState = regionsMap.get(r.getEncodedName()).getSecond();
-      assertEquals(newState, cachedState.getState());
-    });
-    hbck.setRegionStateInMeta(prevStates);
+    final Callable<Void> doTest = () -> {
+      // run the entire test with the ProcedureExecution environment paused. This prevents
+      // background operations from modifying AM internal state between the assertions this test
+      // relies upon.
+      Map<String, RegionState.State> result = hbck.setRegionStateInMeta(requestStates);
+      result.forEach((k, v) -> {
+        RegionState.State beforeState = beforeStates.get(k);
+        assertEquals("response state should match before state; " + k, beforeState, v);
+      });
+      regions.forEach(r -> {
+        RegionState afterState = am.getRegionStates().getRegionState(r.getEncodedName());
+        RegionState.State expectedState = requestStates.get(r.getEncodedName());
+        LOG.debug("After test: {}, {}", r, afterState);
+        assertEquals("state in AM should match requested state ; " + r, expectedState,
+          afterState.getState());
+      });
+      return null;
+    };
+    ProcedureTestingUtility.restart(procExec, true, true, null, doTest, null, false, true);
+    // restore the table as we found it -- fragile?
+    hbck.setRegionStateInMeta(beforeStates);
   }
 
   @Test
   public void testAssigns() throws Exception {
     Hbck hbck = getHbck();
+    final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
     try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
-      List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
-      for (RegionInfo ri : regions) {
-        RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-          .getRegionStates().getRegionState(ri.getEncodedName());
-        LOG.info("RS: {}", rs.toString());
-      }
-      List<Long> pids =
-        hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
+      List<RegionInfo> regions = admin.getRegions(TABLE_NAME).stream()
+        .filter(ri -> ri.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID).peek(ri -> {
+          final RegionState rs = am.getRegionStates().getRegionState(ri.getEncodedName());
+          LOG.info("RS: {}", rs);
+        }).collect(Collectors.toList());
+      List<Long> pids = hbck
+        .unassigns(regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()));
       waitOnPids(pids);
       // Rerun the unassign. Should fail for all Regions since they already unassigned; failed
       // unassign will manifest as all pids being -1 (ever since HBASE-24885).
-      pids =
-        hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
+      pids = hbck
+        .unassigns(regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()));
       waitOnPids(pids);
       for (long pid : pids) {
         assertEquals(Procedure.NO_PROC_ID, pid);
@@ -245,7 +254,7 @@ public class TestHbck {
       // unassigned.... makes for a mess but operator might want to do this at an extreme when
       // doing fixup of broke cluster.
       pids = hbck.unassigns(
-        regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()), true);
+        regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()), true);
       waitOnPids(pids);
       for (long pid : pids) {
         assertNotEquals(Procedure.NO_PROC_ID, pid);
@@ -259,12 +268,12 @@ public class TestHbck {
         assertTrue(rs.toString(), rs.isClosed());
       }
       pids =
-        hbck.assigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
+        hbck.assigns(regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()));
       waitOnPids(pids);
       // Rerun the assign. Should fail for all Regions since they already assigned; failed
       // assign will manifest as all pids being -1 (ever since HBASE-24885).
       pids =
-        hbck.assigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
+        hbck.assigns(regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()));
       for (long pid : pids) {
         assertEquals(Procedure.NO_PROC_ID, pid);
       }
@@ -286,17 +295,19 @@ public class TestHbck {
   @Test
   public void testScheduleSCP() throws Exception {
     HRegionServer testRs = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);
-    TEST_UTIL.loadTable(TEST_UTIL.getConnection().getTable(TABLE_NAME), Bytes.toBytes("family1"),
-      true);
+    try (final Table t = TEST_UTIL.getConnection().getTable(TABLE_NAME)) {
+      TEST_UTIL.loadTable(t, Bytes.toBytes("family1"), true);
+    }
     ServerName serverName = testRs.getServerName();
     Hbck hbck = getHbck();
     List<Long> pids = hbck.scheduleServerCrashProcedures(Arrays.asList(serverName));
-    assertTrue(pids.get(0) > 0);
-    LOG.info("pid is {}", pids.get(0));
+    assertEquals(1, pids.size());
+    assertNotEquals((Long) Procedure.NO_PROC_ID, pids.get(0));
+    LOG.debug("SCP pid is {}", pids.get(0));
 
     List<Long> newPids = hbck.scheduleServerCrashProcedures(Arrays.asList(serverName));
-    assertTrue(newPids.get(0) < 0);
-    LOG.info("pid is {}", newPids.get(0));
+    assertEquals(1, pids.size());
+    assertEquals((Long) Procedure.NO_PROC_ID, newPids.get(0));
     waitOnPids(pids);
   }
 

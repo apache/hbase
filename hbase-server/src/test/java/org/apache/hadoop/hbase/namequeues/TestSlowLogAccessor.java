@@ -79,6 +79,7 @@ public class TestSlowLogAccessor {
     conf.setBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY, true);
     conf.setInt("hbase.slowlog.systable.chore.duration", 900);
     conf.setInt("hbase.regionserver.slowlog.ringbuffer.size", 50000);
+    conf.setInt("hbase.regionserver.slowlog.systable.queue.size", 5000);
     HBASE_TESTING_UTILITY.startMiniCluster();
   }
 

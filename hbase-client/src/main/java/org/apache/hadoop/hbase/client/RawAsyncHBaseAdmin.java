@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -96,6 +97,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -130,6 +132,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionS
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -180,6 +184,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProced
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
@@ -288,6 +294,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
@@ -329,12 +336,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Enabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerModificationProceduresRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerModificationProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.IsReplicationPeerModificationEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.IsReplicationPeerModificationEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerModificationSwitchRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerModificationSwitchResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
@@ -681,9 +694,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> modifyTable(TableDescriptor desc) {
+    return modifyTable(desc, true);
+  }
+
+  @Override
+  public CompletableFuture<Void> modifyTable(TableDescriptor desc, boolean reopenRegions) {
     return this.<ModifyTableRequest, ModifyTableResponse> procedureCall(desc.getTableName(),
       RequestConverter.buildModifyTableRequest(desc.getTableName(), desc, ng.getNonceGroup(),
-        ng.newNonce()),
+        ng.newNonce(), reopenRegions),
       (s, c, req, done) -> s.modifyTable(c, req, done), (resp) -> resp.getProcId(),
       new ModifyTableProcedureBiConsumer(this, desc.getTableName()));
   }
@@ -943,12 +961,50 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> flush(TableName tableName) {
-    return flush(tableName, null);
+    return flush(tableName, Collections.emptyList());
   }
 
   @Override
   public CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily) {
+    return flush(tableName, Collections.singletonList(columnFamily));
+  }
+
+  @Override
+  public CompletableFuture<Void> flush(TableName tableName, List<byte[]> columnFamilyList) {
+    // This is for keeping compatibility with old implementation.
+    // If the server version is lower than the client version, it's possible that the
+    // flushTable method is not present in the server side, if so, we need to fall back
+    // to the old implementation.
+    List<byte[]> columnFamilies = columnFamilyList.stream()
+      .filter(cf -> cf != null && cf.length > 0).distinct().collect(Collectors.toList());
+    FlushTableRequest request = RequestConverter.buildFlushTableRequest(tableName, columnFamilies,
+      ng.getNonceGroup(), ng.newNonce());
+    CompletableFuture<Void> procFuture = this.<FlushTableRequest, FlushTableResponse> procedureCall(
+      tableName, request, (s, c, req, done) -> s.flushTable(c, req, done),
+      (resp) -> resp.getProcId(), new FlushTableProcedureBiConsumer(tableName));
     CompletableFuture<Void> future = new CompletableFuture<>();
+    addListener(procFuture, (ret, error) -> {
+      if (error != null) {
+        if (error instanceof TableNotFoundException || error instanceof TableNotEnabledException) {
+          future.completeExceptionally(error);
+        } else if (error instanceof DoNotRetryIOException) {
+          // usually this is caused by the method is not present on the server or
+          // the hbase hadoop version does not match the running hadoop version.
+          // if that happens, we need fall back to the old flush implementation.
+          LOG.info("Unrecoverable error in master side. Fallback to FlushTableProcedure V1", error);
+          legacyFlush(future, tableName, columnFamilies);
+        } else {
+          future.completeExceptionally(error);
+        }
+      } else {
+        future.complete(ret);
+      }
+    });
+    return future;
+  }
+
+  private void legacyFlush(CompletableFuture<Void> future, TableName tableName,
+    List<byte[]> columnFamilies) {
     addListener(tableExists(tableName), (exists, err) -> {
       if (err != null) {
         future.completeExceptionally(err);
@@ -962,8 +1018,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             future.completeExceptionally(new TableNotEnabledException(tableName));
           } else {
             Map<String, String> props = new HashMap<>();
-            if (columnFamily != null) {
-              props.put(HConstants.FAMILY_KEY_STR, Bytes.toString(columnFamily));
+            if (columnFamilies != null && !columnFamilies.isEmpty()) {
+              props.put(HConstants.FAMILY_KEY_STR, Strings.JOINER
+                .join(columnFamilies.stream().map(Bytes::toString).collect(Collectors.toList())));
             }
             addListener(
               execProcedure(FLUSH_TABLE_PROCEDURE_SIGNATURE, tableName.getNameAsString(), props),
@@ -978,7 +1035,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         });
       }
     });
-    return future;
   }
 
   @Override
@@ -1565,6 +1621,60 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       this.procedureCall(tableName, request, MasterService.Interface::splitRegion,
         SplitTableRegionResponse::getProcId, new SplitTableRegionProcedureBiConsumer(tableName)),
       (ret, err2) -> {
+        if (err2 != null) {
+          future.completeExceptionally(err2);
+        } else {
+          future.complete(ret);
+        }
+      });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> truncateRegion(byte[] regionName) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    addListener(getRegionLocation(regionName), (location, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      RegionInfo regionInfo = location.getRegion();
+      if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
+        future.completeExceptionally(new IllegalArgumentException(
+          "Can't truncate replicas directly.Replicas are auto-truncated "
+            + "when their primary is truncated."));
+        return;
+      }
+      ServerName serverName = location.getServerName();
+      if (serverName == null) {
+        future
+          .completeExceptionally(new NoServerForRegionException(Bytes.toStringBinary(regionName)));
+        return;
+      }
+      addListener(truncateRegion(regionInfo), (ret, err2) -> {
+        if (err2 != null) {
+          future.completeExceptionally(err2);
+        } else {
+          future.complete(ret);
+        }
+      });
+    });
+    return future;
+  }
+
+  private CompletableFuture<Void> truncateRegion(final RegionInfo hri) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    TableName tableName = hri.getTable();
+    final MasterProtos.TruncateRegionRequest request;
+    try {
+      request = RequestConverter.buildTruncateRegionRequest(hri, ng.getNonceGroup(), ng.newNonce());
+    } catch (DeserializationException e) {
+      future.completeExceptionally(e);
+      return future;
+    }
+    addListener(this.procedureCall(tableName, request, MasterService.Interface::truncateRegion,
+      MasterProtos.TruncateRegionResponse::getProcId,
+      new TruncateRegionProcedureBiConsumer(tableName)), (ret, err2) -> {
         if (err2 != null) {
           future.completeExceptionally(err2);
         } else {
@@ -2761,6 +2871,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
   }
 
+  private static class FlushTableProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    FlushTableProcedureBiConsumer(TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "FLUSH";
+    }
+  }
+
   private static class CreateNamespaceProcedureBiConsumer extends NamespaceProcedureBiConsumer {
 
     CreateNamespaceProcedureBiConsumer(String namespaceName) {
@@ -2818,6 +2940,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     @Override
     String getOperationType() {
       return "SPLIT_REGION";
+    }
+  }
+
+  private static class TruncateRegionProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    TruncateRegionProcedureBiConsumer(TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "TRUNCATE_REGION";
     }
   }
 
@@ -3774,6 +3908,74 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .call();
   }
 
+  private void waitUntilAllReplicationPeerModificationProceduresDone(
+    CompletableFuture<Boolean> future, boolean prevOn, int retries) {
+    CompletableFuture<List<ProcedureProtos.Procedure>> callFuture =
+      this.<List<ProcedureProtos.Procedure>> newMasterCaller()
+        .action((controller, stub) -> this.<GetReplicationPeerModificationProceduresRequest,
+          GetReplicationPeerModificationProceduresResponse, List<ProcedureProtos.Procedure>> call(
+            controller, stub, GetReplicationPeerModificationProceduresRequest.getDefaultInstance(),
+            (s, c, req, done) -> s.getReplicationPeerModificationProcedures(c, req, done),
+            resp -> resp.getProcedureList()))
+        .call();
+    addListener(callFuture, (r, e) -> {
+      if (e != null) {
+        future.completeExceptionally(e);
+      } else if (r.isEmpty()) {
+        // we are done
+        future.complete(prevOn);
+      } else {
+        // retry later to see if the procedures are done
+        retryTimer.newTimeout(
+          t -> waitUntilAllReplicationPeerModificationProceduresDone(future, prevOn, retries + 1),
+          ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
+      }
+    });
+  }
+
+  @Override
+  public CompletableFuture<Boolean> replicationPeerModificationSwitch(boolean on,
+    boolean drainProcedures) {
+    ReplicationPeerModificationSwitchRequest request =
+      ReplicationPeerModificationSwitchRequest.newBuilder().setOn(on).build();
+    CompletableFuture<Boolean> callFuture = this.<Boolean> newMasterCaller()
+      .action((controller, stub) -> this.<ReplicationPeerModificationSwitchRequest,
+        ReplicationPeerModificationSwitchResponse, Boolean> call(controller, stub, request,
+          (s, c, req, done) -> s.replicationPeerModificationSwitch(c, req, done),
+          resp -> resp.getPreviousValue()))
+      .call();
+    // if we do not need to wait all previous peer modification procedure done, or we are enabling
+    // peer modification, just return here.
+    if (!drainProcedures || on) {
+      return callFuture;
+    }
+    // otherwise we need to wait until all previous peer modification procedure done
+    CompletableFuture<Boolean> future = new CompletableFuture<>();
+    addListener(callFuture, (prevOn, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      // even if the previous state is disabled, we still need to wait here, as there could be
+      // another client thread which called this method just before us and have already changed the
+      // state to off, but there are still peer modification procedures not finished, so we should
+      // also wait here.
+      waitUntilAllReplicationPeerModificationProceduresDone(future, prevOn, 0);
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isReplicationPeerModificationEnabled() {
+    return this.<Boolean> newMasterCaller()
+      .action((controller, stub) -> this.<IsReplicationPeerModificationEnabledRequest,
+        IsReplicationPeerModificationEnabledResponse, Boolean> call(controller, stub,
+          IsReplicationPeerModificationEnabledRequest.getDefaultInstance(),
+          (s, c, req, done) -> s.isReplicationPeerModificationEnabled(c, req, done),
+          (resp) -> resp.getEnabled()))
+      .call();
+  }
+
   @Override
   public CompletableFuture<CacheEvictionStats> clearBlockCache(TableName tableName) {
     CompletableFuture<CacheEvictionStats> future = new CompletableFuture<>();
@@ -4323,5 +4525,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         Void> call(controller, stub, request.build(),
           (s, c, req, done) -> s.flushMasterStore(c, req, done), resp -> null))
       .call();
+  }
+
+  @Override
+  public CompletableFuture<List<String>> getCachedFilesList(ServerName serverName) {
+    GetCachedFilesListRequest.Builder request = GetCachedFilesListRequest.newBuilder();
+    return this.<List<String>> newAdminCaller()
+      .action((controller, stub) -> this.<GetCachedFilesListRequest, GetCachedFilesListResponse,
+        List<String>> adminCall(controller, stub, request.build(),
+          (s, c, req, done) -> s.getCachedFilesList(c, req, done),
+          resp -> resp.getCachedFilesList()))
+      .serverName(serverName).call();
   }
 }

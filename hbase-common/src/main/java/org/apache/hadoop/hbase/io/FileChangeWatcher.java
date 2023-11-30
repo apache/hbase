@@ -27,7 +27,6 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.function.Consumer;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.server.ZooKeeperThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +71,8 @@ public final class FileChangeWatcher {
    *                 relative to <code>dirPath</code>.
    * @throws IOException if there is an error creating the WatchService.
    */
-  public FileChangeWatcher(Path dirPath, Consumer<WatchEvent<?>> callback) throws IOException {
+  public FileChangeWatcher(Path dirPath, String threadNameSuffix, Consumer<WatchEvent<?>> callback)
+    throws IOException {
     FileSystem fs = dirPath.getFileSystem();
     WatchService watchService = fs.newWatchService();
 
@@ -83,7 +83,7 @@ public final class FileChangeWatcher {
         StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY,
         StandardWatchEventKinds.OVERFLOW });
     state = State.NEW;
-    this.watcherThread = new WatcherThread(watchService, callback);
+    this.watcherThread = new WatcherThread(threadNameSuffix, watchService, callback);
     this.watcherThread.setDaemon(true);
   }
 
@@ -172,20 +172,30 @@ public final class FileChangeWatcher {
     }
   }
 
+  String getWatcherThreadName() {
+    return watcherThread.getName();
+  }
+
+  private static void handleException(Thread thread, Throwable e) {
+    LOG.warn("Exception occurred from thread {}", thread.getName(), e);
+  }
+
   /**
    * Inner class that implements the watcher thread logic.
    */
-  private class WatcherThread extends ZooKeeperThread {
+  private class WatcherThread extends Thread {
 
-    private static final String THREAD_NAME = "FileChangeWatcher";
+    private static final String THREAD_NAME_PREFIX = "FileChangeWatcher-";
 
     final WatchService watchService;
     final Consumer<WatchEvent<?>> callback;
 
-    WatcherThread(WatchService watchService, Consumer<WatchEvent<?>> callback) {
-      super(THREAD_NAME);
+    WatcherThread(String threadNameSuffix, WatchService watchService,
+      Consumer<WatchEvent<?>> callback) {
+      super(THREAD_NAME_PREFIX + threadNameSuffix);
       this.watchService = watchService;
       this.callback = callback;
+      setUncaughtExceptionHandler(FileChangeWatcher::handleException);
     }
 
     @Override

@@ -78,22 +78,34 @@ hbase_rotate_log ()
     fi
 }
 
-cleanAfterRun() {
-  if [ -f ${HBASE_PID} ]; then
-    # If the process is still running time to tear it down.
-    kill -9 `cat ${HBASE_PID}` > /dev/null 2>&1
-    rm -f ${HBASE_PID} > /dev/null 2>&1
+function sighup_handler
+{
+  # pass through SIGHUP if we can
+  if [ -f "${HBASE_PID}" ] ; then
+    kill -s HUP "$(cat "${HBASE_PID}")"
   fi
+}
 
-  if [ -f ${HBASE_ZNODE_FILE} ]; then
-    if [ "$command" = "master" ]; then
-      HBASE_OPTS="$HBASE_OPTS $HBASE_MASTER_OPTS" $bin/hbase master clear > /dev/null 2>&1
+function sigterm_handler
+{
+  if [ -f "${HBASE_PID}" ]; then
+    kill -s TERM "$(cat "${HBASE_PID}")"
+    waitForProcessEnd "$(cat "${HBASE_PID}")" "${command}"
+  fi
+  cleanAfterRun
+}
+
+cleanAfterRun() {
+  rm -f "${HBASE_PID}" > /dev/null 2>&1
+  if [ -f "${HBASE_ZNODE_FILE}" ]; then
+    if [ "${command}" = "master" ]; then
+      HBASE_OPTS="$HBASE_OPTS $HBASE_MASTER_OPTS" "${bin}/hbase" master clear > /dev/null 2>&1
     else
-      #call ZK to delete the node
-      ZNODE=`cat ${HBASE_ZNODE_FILE}`
-      HBASE_OPTS="$HBASE_OPTS $HBASE_REGIONSERVER_OPTS" $bin/hbase zkcli delete ${ZNODE} > /dev/null 2>&1
+      # call ZK to delete the node
+      ZNODE="$(cat "${HBASE_ZNODE_FILE}")"
+      HBASE_OPTS="$HBASE_OPTS $HBASE_REGIONSERVER_OPTS" "${bin}/hbase" zkcli delete "${ZNODE}" > /dev/null 2>&1
     fi
-    rm ${HBASE_ZNODE_FILE}
+    rm -f "${HBASE_ZNODE_FILE}" > /dev/null 2>&1
   fi
 }
 
@@ -225,7 +237,9 @@ case $startStop in
   ;;
 
 (foreground_start)
-    trap cleanAfterRun SIGHUP SIGINT SIGTERM EXIT
+    trap sighup_handler HUP
+    trap sigterm_handler INT TERM EXIT
+
     if [ "$HBASE_NO_REDIRECT_LOG" != "" ]; then
         # NO REDIRECT
         echo "`date` Starting $command on `hostname`"

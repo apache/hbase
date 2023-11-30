@@ -149,12 +149,12 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   }
 
   @Override
-  public void updateGet(long mills) {
+  public void updateGet() {
     regionGet.incr();
   }
 
   @Override
-  public void updateScanTime(long mills) {
+  public void updateScan() {
     regionScan.incr();
   }
 

@@ -53,6 +53,7 @@ class SchemaLocking {
   // Single map for all regions irrespective of tables. Key is encoded region name.
   private final Map<String, LockAndQueue> regionLocks = new HashMap<>();
   private final Map<String, LockAndQueue> peerLocks = new HashMap<>();
+  private final Map<String, LockAndQueue> globalLocks = new HashMap<>();
   private final LockAndQueue metaLock;
 
   public SchemaLocking(Function<Long, Procedure<?>> procedureRetriever) {
@@ -94,6 +95,10 @@ class SchemaLocking {
     return metaLock;
   }
 
+  LockAndQueue getGlobalLock(String globalId) {
+    return getLock(globalLocks, globalId);
+  }
+
   LockAndQueue removeRegionLock(String encodedRegionName) {
     return regionLocks.remove(encodedRegionName);
   }
@@ -112,6 +117,10 @@ class SchemaLocking {
 
   LockAndQueue removePeerLock(String peerId) {
     return peerLocks.remove(peerId);
+  }
+
+  LockAndQueue removeGlobalLock(String globalId) {
+    return globalLocks.remove(globalId);
   }
 
   private LockedResource createLockedResource(LockedResourceType resourceType, String resourceName,
@@ -164,6 +173,8 @@ class SchemaLocking {
     addToLockedResources(lockedResources, peerLocks, Function.identity(), LockedResourceType.PEER);
     addToLockedResources(lockedResources, ImmutableMap.of(TableName.META_TABLE_NAME, metaLock),
       tn -> tn.getNameAsString(), LockedResourceType.META);
+    addToLockedResources(lockedResources, globalLocks, Function.identity(),
+      LockedResourceType.GLOBAL);
     return lockedResources;
   }
 
@@ -191,6 +202,10 @@ class SchemaLocking {
         break;
       case META:
         queue = metaLock;
+        break;
+      case GLOBAL:
+        queue = globalLocks.get(resourceName);
+        break;
       default:
         queue = null;
         break;
@@ -216,7 +231,8 @@ class SchemaLocking {
       + filterUnlocked(this.namespaceLocks) + ", tableLocks=" + filterUnlocked(this.tableLocks)
       + ", regionLocks=" + filterUnlocked(this.regionLocks) + ", peerLocks="
       + filterUnlocked(this.peerLocks) + ", metaLocks="
-      + filterUnlocked(ImmutableMap.of(TableName.META_TABLE_NAME, metaLock));
+      + filterUnlocked(ImmutableMap.of(TableName.META_TABLE_NAME, metaLock)) + ", globalLocks="
+      + filterUnlocked(globalLocks);
   }
 
   private String filterUnlocked(Map<?, LockAndQueue> locks) {

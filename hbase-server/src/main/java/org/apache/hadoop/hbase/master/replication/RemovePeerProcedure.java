@@ -18,10 +18,17 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -39,6 +46,8 @@ public class RemovePeerProcedure extends ModifyPeerProcedure {
   private static final Logger LOG = LoggerFactory.getLogger(RemovePeerProcedure.class);
 
   private ReplicationPeerConfig peerConfig;
+
+  private List<Long> ongoingAssignReplicationQueuesProcIds = Collections.emptyList();
 
   public RemovePeerProcedure() {
   }
@@ -64,15 +73,43 @@ public class RemovePeerProcedure extends ModifyPeerProcedure {
   @Override
   protected void updatePeerStorage(MasterProcedureEnv env) throws ReplicationException {
     env.getReplicationPeerManager().removePeer(peerId);
+    // record ongoing AssignReplicationQueuesProcedures after we update the peer storage
+    ongoingAssignReplicationQueuesProcIds = env.getMasterServices().getMasterProcedureExecutor()
+      .getProcedures().stream().filter(p -> p instanceof AssignReplicationQueuesProcedure)
+      .filter(p -> !p.isFinished()).map(Procedure::getProcId).collect(Collectors.toList());
   }
 
   private void removeRemoteWALs(MasterProcedureEnv env) throws IOException {
     env.getMasterServices().getSyncReplicationReplayWALManager().removePeerRemoteWALs(peerId);
   }
 
+  private void checkAssignReplicationQueuesFinished(MasterProcedureEnv env)
+    throws ProcedureSuspendedException {
+    if (ongoingAssignReplicationQueuesProcIds.isEmpty()) {
+      LOG.info("No ongoing assign replication queues procedures when removing peer {}, move on",
+        peerId);
+    }
+    ProcedureExecutor<MasterProcedureEnv> procExec =
+      env.getMasterServices().getMasterProcedureExecutor();
+    long[] unfinishedProcIds =
+      ongoingAssignReplicationQueuesProcIds.stream().map(procExec::getProcedure)
+        .filter(p -> p != null && !p.isFinished()).mapToLong(Procedure::getProcId).toArray();
+    if (unfinishedProcIds.length == 0) {
+      LOG.info(
+        "All assign replication queues procedures are finished when removing peer {}, move on",
+        peerId);
+    } else {
+      throw suspend(env.getMasterConfiguration(), backoff -> LOG.info(
+        "There are still {} pending assign replication queues procedures {} when removing peer {}, sleep {} secs",
+        unfinishedProcIds.length, Arrays.toString(unfinishedProcIds), peerId, backoff / 1000));
+    }
+  }
+
   @Override
   protected void postPeerModification(MasterProcedureEnv env)
-    throws IOException, ReplicationException {
+    throws IOException, ReplicationException, ProcedureSuspendedException {
+    checkAssignReplicationQueuesFinished(env);
+
     if (peerConfig.isSyncReplication()) {
       removeRemoteWALs(env);
     }
@@ -94,6 +131,7 @@ public class RemovePeerProcedure extends ModifyPeerProcedure {
     if (peerConfig != null) {
       builder.setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig));
     }
+    builder.addAllOngoingAssignReplicationQueuesProcIds(ongoingAssignReplicationQueuesProcIds);
     serializer.serialize(builder.build());
   }
 
@@ -104,5 +142,6 @@ public class RemovePeerProcedure extends ModifyPeerProcedure {
     if (data.hasPeerConfig()) {
       this.peerConfig = ReplicationPeerConfigUtil.convert(data.getPeerConfig());
     }
+    ongoingAssignReplicationQueuesProcIds = data.getOngoingAssignReplicationQueuesProcIdsList();
   }
 }

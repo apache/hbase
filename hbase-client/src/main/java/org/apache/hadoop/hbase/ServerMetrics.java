@@ -106,4 +106,10 @@ public interface ServerMetrics {
   @Nullable
   List<ServerTask> getTasks();
 
+  /**
+   * Returns the region cache information for the regions hosted on this server
+   * @return map of region encoded name and the size of the region cached on this region server
+   *         rounded to MB
+   */
+  Map<String, Integer> getRegionCachedInfo();
 }

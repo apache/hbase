@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 import org.apache.commons.validator.routines.InetAddressValidator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -28,6 +29,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 /**
  * Utility methods for reading, and building the ZooKeeper configuration. The order and priority for
@@ -38,6 +40,13 @@ import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 public final class ZKConfig {
 
   private static final String VARIABLE_START = "${";
+  private static final String ZOOKEEPER_JAVA_PROPERTY_PREFIX = "zookeeper.";
+
+  /** Supported ZooKeeper client TLS properties */
+  static final Set<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES =
+    ImmutableSet.of("client.secure", "clientCnxnSocket", "ssl.keyStore.location",
+      "ssl.keyStore.password", "ssl.keyStore.passwordPath", "ssl.trustStore.location",
+      "ssl.trustStore.password", "ssl.trustStore.passwordPath");
 
   private ZKConfig() {
   }
@@ -123,6 +132,7 @@ public final class ZKConfig {
    * @return Quorum servers
    */
   public static String getZKQuorumServersString(Configuration conf) {
+    setZooKeeperClientSystemProperties(HConstants.ZK_CFG_PROPERTY_PREFIX, conf);
     return getZKQuorumServersStringFromHbaseConfig(conf);
   }
 
@@ -318,6 +328,7 @@ public final class ZKConfig {
    * @return Client quorum servers, or null if not specified
    */
   public static String getClientZKQuorumServersString(Configuration conf) {
+    setZooKeeperClientSystemProperties(HConstants.ZK_CFG_PROPERTY_PREFIX, conf);
     String clientQuromServers = conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM);
     if (clientQuromServers == null) {
       return null;
@@ -329,5 +340,28 @@ public final class ZKConfig {
     // Build the ZK quorum server string with "server:clientport" list, separated by ','
     final String[] serverHosts = StringUtils.getStrings(clientQuromServers);
     return buildZKQuorumServerString(serverHosts, clientZkClientPort);
+  }
+
+  private static void setZooKeeperClientSystemProperties(String prefix, Configuration conf) {
+    synchronized (conf) {
+      for (Entry<String, String> entry : conf) {
+        String key = entry.getKey();
+        if (!key.startsWith(prefix)) {
+          continue;
+        }
+        String zkKey = key.substring(prefix.length());
+        if (!ZOOKEEPER_CLIENT_TLS_PROPERTIES.contains(zkKey)) {
+          continue;
+        }
+        String value = entry.getValue();
+        // If the value has variables substitutions, need to do a get.
+        if (value.contains(VARIABLE_START)) {
+          value = conf.get(key);
+        }
+        if (System.getProperty(ZOOKEEPER_JAVA_PROPERTY_PREFIX + zkKey) == null) {
+          System.setProperty(ZOOKEEPER_JAVA_PROPERTY_PREFIX + zkKey, value);
+        }
+      }
+    }
   }
 }

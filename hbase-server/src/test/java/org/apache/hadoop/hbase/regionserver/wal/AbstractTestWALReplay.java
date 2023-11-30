@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.apache.hadoop.hdfs.DFSInputStream;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -907,15 +908,10 @@ public abstract class AbstractTestWALReplay {
 
     // here we let the DFSInputStream throw an IOException just after the WALHeader.
     Path editFile = WALSplitUtil.getSplitEditFilesSorted(this.fs, regionDir).first();
-    FSDataInputStream stream = fs.open(editFile);
-    stream.seek(ProtobufLogReader.PB_WAL_MAGIC.length);
-    Class<? extends AbstractFSWALProvider.Reader> logReaderClass =
-      conf.getClass("hbase.regionserver.hlog.reader.impl", ProtobufLogReader.class,
-        AbstractFSWALProvider.Reader.class);
-    AbstractFSWALProvider.Reader reader = logReaderClass.getDeclaredConstructor().newInstance();
-    reader.init(this.fs, editFile, conf, stream);
-    final long headerLength = stream.getPos();
-    reader.close();
+    final long headerLength;
+    try (WALStreamReader reader = WALFactory.createStreamReader(fs, editFile, conf)) {
+      headerLength = reader.getPosition();
+    }
     FileSystem spyFs = spy(this.fs);
     doAnswer(new Answer<FSDataInputStream>() {
 

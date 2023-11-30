@@ -19,8 +19,10 @@ package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface;
@@ -30,7 +32,9 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
-import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
+import org.apache.hadoop.hbase.replication.ReplicationGroupOffset;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
@@ -44,7 +48,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
  * Used to assign the replication queues of a dead server to other region servers.
+ * @deprecated Use {@link AssignReplicationQueuesProcedure} instead, kept only for keeping
+ *             compatibility.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class ClaimReplicationQueuesProcedure extends Procedure<MasterProcedureEnv>
   implements ServerProcedureInterface {
@@ -82,22 +89,36 @@ public class ClaimReplicationQueuesProcedure extends Procedure<MasterProcedureEn
     throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     ReplicationQueueStorage storage = env.getReplicationPeerManager().getQueueStorage();
     try {
-      List<String> queues = storage.getAllQueues(crashedServer);
+      List<ReplicationQueueId> queues = storage.listAllQueueIds(crashedServer);
+      Set<String> existQueuePeerIds = new HashSet<>();
       // this is for upgrading to the new region replication framework, where we will delete the
-      // legacy region_replica_replication peer directly, without deleting the replication queues,
-      // as it may still be used by region servers which have not been upgraded yet.
-      for (Iterator<String> iter = queues.iterator(); iter.hasNext();) {
-        ReplicationQueueInfo queue = new ReplicationQueueInfo(iter.next());
-        if (queue.getPeerId().equals(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER)) {
+      // legacy region_replica_replication peer directly, without deleting the replication queues
+      for (Iterator<ReplicationQueueId> iter = queues.iterator(); iter.hasNext();) {
+        ReplicationQueueId queueId = iter.next();
+        if (queueId.getPeerId().equals(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER)) {
           LOG.info("Found replication queue {} for legacy region replication peer, "
-            + "skipping claiming and removing...", queue.getQueueId());
+            + "skipping claiming and removing...", queueId);
           iter.remove();
-          storage.removeQueue(crashedServer, queue.getQueueId());
+          storage.removeQueue(queueId);
+        } else if (!queueId.isRecovered()) {
+          existQueuePeerIds.add(queueId.getPeerId());
+        }
+      }
+      List<ReplicationPeerDescription> peers = env.getReplicationPeerManager().listPeers(null);
+      // TODO: the implementation is not enough yet, if there are retries, we need to know whether
+      // the replication queue for the given peer has been claimed or not, otherwise this logic will
+      // introduce redundant replication queues for the same peer. Add this logic to make some UTs
+      // pass first.
+      for (ReplicationPeerDescription peer : peers) {
+        if (!existQueuePeerIds.contains(peer.getPeerId())) {
+          ReplicationQueueId queueId = new ReplicationQueueId(crashedServer, peer.getPeerId());
+          env.getReplicationPeerManager().getQueueStorage().setOffset(queueId,
+            crashedServer.toString(), ReplicationGroupOffset.BEGIN, Collections.emptyMap());
+          queues.add(queueId);
         }
       }
       if (queues.isEmpty()) {
         LOG.debug("Finish claiming replication queues for {}", crashedServer);
-        storage.removeReplicatorIfQueueIsEmpty(crashedServer);
         // we are done
         return null;
       }
@@ -112,8 +133,7 @@ public class ClaimReplicationQueuesProcedure extends Procedure<MasterProcedureEn
       ClaimReplicationQueueRemoteProcedure[] procs =
         new ClaimReplicationQueueRemoteProcedure[Math.min(queues.size(), targetServers.size())];
       for (int i = 0; i < procs.length; i++) {
-        procs[i] = new ClaimReplicationQueueRemoteProcedure(crashedServer, queues.get(i),
-          targetServers.get(i));
+        procs[i] = new ClaimReplicationQueueRemoteProcedure(queues.get(i), targetServers.get(i));
       }
       return procs;
     } catch (ReplicationException e) {

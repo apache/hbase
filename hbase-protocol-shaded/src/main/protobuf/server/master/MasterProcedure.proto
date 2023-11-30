@@ -82,6 +82,7 @@ message ModifyTableStateData {
   required TableSchema modified_table_schema = 3;
   required bool delete_column_family_in_modify = 4;
   optional bool should_check_descriptor = 5;
+  optional bool reopen_regions = 6;
 }
 
 enum TruncateTableState {
@@ -100,6 +101,14 @@ message TruncateTableStateData {
   optional TableName table_name = 3;
   optional TableSchema table_schema = 4;
   repeated RegionInfo region_info = 5;
+}
+
+enum TruncateRegionState {
+  TRUNCATE_REGION_PRE_OPERATION = 1;
+  TRUNCATE_REGION_MAKE_OFFLINE = 2;
+  TRUNCATE_REGION_REMOVE = 3;
+  TRUNCATE_REGION_MAKE_ONLINE = 4;
+  TRUNCATE_REGION_POST_OPERATION = 5;
 }
 
 enum DeleteTableState {
@@ -189,6 +198,26 @@ message RestoreParentToChildRegionsPair {
   required string parent_region_name = 1;
   required string child1_region_name = 2;
   required string child2_region_name = 3;
+}
+
+enum FlushTableState {
+  FLUSH_TABLE_PREPARE = 1;
+  FLUSH_TABLE_FLUSH_REGIONS = 2;
+}
+
+message FlushTableProcedureStateData {
+  required TableName table_name = 1;
+  repeated bytes column_family = 2;
+}
+
+message FlushRegionProcedureStateData {
+  required RegionInfo region = 1;
+  repeated bytes column_family = 2;
+}
+
+message FlushRegionParameter {
+  required RegionInfo region = 1;
+  repeated bytes column_family = 2;
 }
 
 enum SnapshotState {
@@ -515,6 +544,7 @@ message UpdatePeerConfigStateData {
 
 message RemovePeerStateData {
   optional ReplicationPeer peer_config = 1;
+  repeated int64 ongoing_assign_replication_queues_proc_ids = 2;
 }
 
 message EnablePeerStateData {
@@ -679,16 +709,13 @@ message ClaimReplicationQueueRemoteStateData {
   required ServerName crashed_server = 1;
   required string queue = 2;
   required ServerName target_server = 3;
+  optional ServerName source_server = 4;
 }
 
 message ClaimReplicationQueueRemoteParameter {
   required ServerName crashed_server = 1;
   required string queue = 2;
-}
-
-enum ClaimReplicationQueuesState {
-  CLAIM_REPLICATION_QUEUES_DISPATCH = 1;
-  CLAIM_REPLICATION_QUEUES_FINISH = 2;
+  optional ServerName source_server = 3;
 }
 
 enum ModifyTableDescriptorState {
@@ -714,4 +741,28 @@ message ModifyStoreFileTrackerStateData {
 
 message ModifyColumnFamilyStoreFileTrackerStateData {
   required bytes family = 1;
+}
+
+enum AssignReplicationQueuesState {
+  ASSIGN_REPLICATION_QUEUES_ADD_MISSING_QUEUES = 1;
+  ASSIGN_REPLICATION_QUEUES_CLAIM = 2;
+  ASSIGN_REPLICATION_QUEUES_REMOVE_QUEUES = 3;
+}
+
+message AssignReplicationQueuesStateData {
+  required ServerName crashed_server = 1;
+}
+
+enum MigrateReplicationQueueFromZkToTableState {
+  MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_DISABLE_CLEANER = 1;
+  MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_PREPARE = 2;
+  MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_DISABLE_PEER = 3;
+  MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_MIGRATE = 4;
+  MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_WAIT_UPGRADING = 5;
+  MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_PEER = 6;
+  MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_CLEANER = 7;
+}
+
+message MigrateReplicationQueueFromZkToTableStateData {
+  repeated string disabled_peer_id = 1;
 }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -232,7 +233,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     util = new HBaseTestingUtil();
     this.executor = Executors.newSingleThreadScheduledExecutor();
     setupConfiguration(util.getConfiguration());
-    master = new MockMasterServices(util.getConfiguration(), this.regionsToRegionServers);
+    master = new MockMasterServices(util.getConfiguration());
     rsDispatcher = new MockRSProcedureDispatcher(master);
     master.start(NSERVERS, rsDispatcher);
     am = master.getAssignmentManager();
@@ -303,12 +304,13 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
       MetaTableAccessor.addRegionsToMeta(this.util.getConnection(), Collections.singletonList(hri),
         1);
-      assertNull(
-        "RegionInfo was manually added in META, but " + "shouldn't be in AM regionStates yet.",
+      // TODO: is there a race here -- no other thread else will refresh the table states behind
+      // the scenes?
+      assertNull("RegionInfo was manually added in META, but shouldn't be in AM regionStates yet.",
         am.getRegionStates().getRegionState(hri));
-      hri = am.loadRegionFromMeta(hri.getEncodedName());
-      assertEquals(hri.getEncodedName(),
-        am.getRegionStates().getRegionState(hri).getRegion().getEncodedName());
+      am.populateRegionStatesFromMeta(hri.getEncodedName());
+      assertNotNull(am.getRegionInfo(hri.getRegionName()));
+      assertNotNull(am.getRegionInfo(hri.getEncodedName()));
     } finally {
       this.util.killMiniHBaseCluster();
     }
@@ -322,10 +324,10 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
       final TableName tableName = TableName.valueOf("testLoadRegionFromMetaRegionNotInMeta");
       this.util.createTable(tableName, "f");
       final RegionInfo hri = createRegionInfo(tableName, 1);
-      assertNull("RegionInfo was just instantiated by the test, but "
-        + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
-      assertNull("RegionInfo was never added in META, should had returned null.",
-        am.loadRegionFromMeta(hri.getEncodedName()));
+      assertNull("Bogus RegionInfo discovered in RegionStates.",
+        am.getRegionStates().getRegionState(hri));
+      am.populateRegionStatesFromMeta(hri.getEncodedName());
+      assertNull("RegionInfo was never added in META", am.getRegionStates().getRegionState(hri));
     } finally {
       this.util.killMiniHBaseCluster();
     }

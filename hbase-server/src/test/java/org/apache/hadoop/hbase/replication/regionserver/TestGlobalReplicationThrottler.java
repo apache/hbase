@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -137,10 +136,9 @@ public class TestGlobalReplicationThrottler {
     Thread watcher = new Thread(() -> {
       Replication replication = (Replication) utility1.getMiniHBaseCluster().getRegionServer(0)
         .getReplicationSourceService();
-      AtomicLong bufferUsed = replication.getReplicationManager().getTotalBufferUsed();
       testQuotaPass = true;
       while (!Thread.interrupted()) {
-        long size = bufferUsed.get();
+        long size = replication.getReplicationManager().getTotalBufferUsed();
         if (size > 0) {
           testQuotaNonZero = true;
         }

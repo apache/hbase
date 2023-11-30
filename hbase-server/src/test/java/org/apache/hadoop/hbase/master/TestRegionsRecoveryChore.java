@@ -140,7 +140,7 @@ public class TestRegionsRecoveryChore {
 
     // Verify that we need to reopen total 3 regions that have refCount > 300
     Mockito.verify(hMaster, Mockito.times(3)).getAssignmentManager();
-    Mockito.verify(assignmentManager, Mockito.times(3)).getRegionInfo(Mockito.any());
+    Mockito.verify(assignmentManager, Mockito.times(3)).getRegionInfo(Mockito.any(byte[].class));
   }
 
   @Test
@@ -175,7 +175,7 @@ public class TestRegionsRecoveryChore {
 
     // Verify that we need to reopen only 1 region with refCount > 400
     Mockito.verify(hMaster, Mockito.times(1)).getAssignmentManager();
-    Mockito.verify(assignmentManager, Mockito.times(1)).getRegionInfo(Mockito.any());
+    Mockito.verify(assignmentManager, Mockito.times(1)).getRegionInfo(Mockito.any(byte[].class));
   }
 
   @Test
@@ -210,7 +210,7 @@ public class TestRegionsRecoveryChore {
 
     // default maxCompactedStoreFileRefCount is -1 (no regions to be reopened using AM)
     Mockito.verify(hMaster, Mockito.times(0)).getAssignmentManager();
-    Mockito.verify(assignmentManager, Mockito.times(0)).getRegionInfo(Mockito.any());
+    Mockito.verify(assignmentManager, Mockito.times(0)).getRegionInfo(Mockito.any(byte[].class));
   }
 
   private static ClusterMetrics getClusterMetrics(int noOfLiveServer) {
@@ -400,6 +400,10 @@ public class TestRegionsRecoveryChore {
         return null;
       }
 
+      @Override
+      public Map<String, Integer> getRegionCachedInfo() {
+        return new HashMap<>();
+      }
     };
     return serverMetrics;
   }
@@ -540,6 +544,16 @@ public class TestRegionsRecoveryChore {
       @Override
       public CompactionState getCompactionState() {
         return null;
+      }
+
+      @Override
+      public Size getRegionSizeMB() {
+        return null;
+      }
+
+      @Override
+      public float getCurrentRegionCachedRatio() {
+        return 0.0f;
       }
     };
     return regionMetrics;

@@ -34,7 +34,9 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -92,6 +94,11 @@ public class HFileWriterImpl implements HFile.Writer {
 
   /** Used for calculating the average value length. */
   protected long totalValueLength = 0;
+
+  /** Len of the biggest cell. */
+  protected long lenOfBiggestCell = 0;
+  /** Key of the biggest cell. */
+  protected byte[] keyOfBiggestCell;
 
   /** Total uncompressed bytes, maybe calculate a compression ratio later. */
   protected long totalUncompressedBytes = 0;
@@ -741,7 +748,10 @@ public class HFileWriterImpl implements HFile.Writer {
 
     totalKeyLength += PrivateCellUtil.estimatedSerializedSizeOfKey(cell);
     totalValueLength += cell.getValueLength();
-
+    if (lenOfBiggestCell < PrivateCellUtil.estimatedSerializedSizeOf(cell)) {
+      lenOfBiggestCell = PrivateCellUtil.estimatedSerializedSizeOf(cell);
+      keyOfBiggestCell = PrivateCellUtil.getCellKeySerializedAsKeyValueKey(cell);
+    }
     // Are we the first key in this block?
     if (firstCellInBlock == null) {
       // If cell is big, block will be closed and this firstCellInBlock reference will only last
@@ -795,6 +805,16 @@ public class HFileWriterImpl implements HFile.Writer {
     // Average value length.
     int avgValueLen = entryCount == 0 ? 0 : (int) (totalValueLength / entryCount);
     fileInfo.append(HFileInfo.AVG_VALUE_LEN, Bytes.toBytes(avgValueLen), false);
+
+    // Biggest cell.
+    if (keyOfBiggestCell != null) {
+      fileInfo.append(HFileInfo.KEY_OF_BIGGEST_CELL, keyOfBiggestCell, false);
+      fileInfo.append(HFileInfo.LEN_OF_BIGGEST_CELL, Bytes.toBytes(lenOfBiggestCell), false);
+      LOG.debug("Len of the biggest cell in {} is {}, key is {}",
+        this.getPath() == null ? "" : this.getPath().toString(), lenOfBiggestCell,
+        CellUtil.toString(new KeyValue.KeyOnlyKeyValue(keyOfBiggestCell), false));
+    }
+
     if (hFileContext.isIncludesTags()) {
       // When tags are not being written in this file, MAX_TAGS_LEN is excluded
       // from the FileInfo

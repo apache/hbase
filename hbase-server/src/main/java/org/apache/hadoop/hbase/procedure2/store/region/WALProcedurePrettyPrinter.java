@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALPrettyPrinter;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -88,7 +89,7 @@ public class WALProcedurePrettyPrinter extends AbstractHBaseTool {
   protected int doWork() throws Exception {
     Path path = new Path(file);
     FileSystem fs = path.getFileSystem(conf);
-    try (WAL.Reader reader = WALFactory.createReader(fs, path, conf)) {
+    try (WALStreamReader reader = WALFactory.createStreamReader(fs, path, conf)) {
       for (;;) {
         WAL.Entry entry = reader.next();
         if (entry == null) {

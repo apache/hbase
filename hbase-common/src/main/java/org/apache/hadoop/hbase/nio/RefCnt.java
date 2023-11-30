@@ -59,6 +59,13 @@ public class RefCnt extends AbstractReferenceCounted {
     this.leak = recycler == ByteBuffAllocator.NONE ? null : detector.track(this);
   }
 
+  /**
+   * Returns true if this refCnt has a recycler.
+   */
+  public boolean hasRecycler() {
+    return recycler != ByteBuffAllocator.NONE;
+  }
+
   @Override
   public ReferenceCounted retain() {
     maybeRecord();

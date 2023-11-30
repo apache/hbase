@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_TYPE_
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.DELETE_FAMILY_COUNT;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.LAST_BLOOM_KEY;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.Map;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -103,6 +105,7 @@ public class StoreFileReader {
     this.generalBloomFilter = storeFileReader.generalBloomFilter;
     this.deleteFamilyBloomFilter = storeFileReader.deleteFamilyBloomFilter;
     this.bloomFilterType = storeFileReader.bloomFilterType;
+    this.bloomFilterMetrics = storeFileReader.bloomFilterMetrics;
     this.sequenceID = storeFileReader.sequenceID;
     this.timeRange = storeFileReader.timeRange;
     this.lastBloomKey = storeFileReader.lastBloomKey;
@@ -144,7 +147,8 @@ public class StoreFileReader {
   public StoreFileScanner getStoreFileScanner(boolean cacheBlocks, boolean pread,
     boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn) {
     return new StoreFileScanner(this, getScanner(cacheBlocks, pread, isCompaction), !isCompaction,
-      reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn);
+      reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn,
+      reader.getDataBlockEncoding() == DataBlockEncoding.ROW_INDEX_V1);
   }
 
   /**
@@ -401,7 +405,7 @@ public class StoreFileReader {
         // of the hbase:meta cells. We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
         if (keyIsAfterLast) {
           if (bloomFilterType == BloomType.ROWCOL) {
-            keyIsAfterLast = (CellComparator.getInstance().compare(kvKey, lastBloomKeyOnlyKV)) > 0;
+            keyIsAfterLast = (getComparator().compare(kvKey, lastBloomKeyOnlyKV)) > 0;
           } else {
             keyIsAfterLast = (Bytes.BYTES_RAWCOMPARATOR.compare(key, lastBloomKey) > 0);
           }
@@ -415,10 +419,7 @@ public class StoreFileReader {
           Cell rowBloomKey = PrivateCellUtil.createFirstOnRow(kvKey);
           // hbase:meta does not have blooms. So we need not have special interpretation
           // of the hbase:meta cells. We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
-          if (
-            keyIsAfterLast
-              && (CellComparator.getInstance().compare(rowBloomKey, lastBloomKeyOnlyKV)) > 0
-          ) {
+          if (keyIsAfterLast && (getComparator().compare(rowBloomKey, lastBloomKeyOnlyKV)) > 0) {
             exists = false;
           } else {
             exists = bloomFilter.contains(kvKey, bloom, BloomType.ROWCOL)
@@ -499,7 +500,9 @@ public class StoreFileReader {
     return fi;
   }
 
-  public void loadBloomfilter() {
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  void loadBloomfilter() {
     this.loadBloomfilter(BlockType.GENERAL_BLOOM_META, null);
     this.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META, null);
   }
@@ -549,7 +552,9 @@ public class StoreFileReader {
     }
   }
 
-  private void setBloomFilterFaulty(BlockType blockType) {
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/StoreFileReader.java|.*/src/test/.*")
+  void setBloomFilterFaulty(BlockType blockType) {
     if (blockType == BlockType.GENERAL_BLOOM_META) {
       setGeneralBloomFilterFaulty();
     } else if (blockType == BlockType.DELETE_FAMILY_BLOOM_META) {
@@ -566,11 +571,11 @@ public class StoreFileReader {
     return generalBloomFilter != null ? generalBloomFilter.getKeyCount() : reader.getEntries();
   }
 
-  public void setGeneralBloomFilterFaulty() {
+  private void setGeneralBloomFilterFaulty() {
     generalBloomFilter = null;
   }
 
-  public void setDeleteFamilyBloomFilterFaulty() {
+  private void setDeleteFamilyBloomFilterFaulty() {
     this.deleteFamilyBloomFilter = null;
   }
 

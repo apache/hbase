@@ -50,9 +50,13 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   public static final String ZSTD_DICTIONARY_KEY = "hbase.io.compress.zstd.dictionary";
 
   private Configuration conf;
+  private int bufferSize;
+  private int level;
+  private byte[] dictionary;
 
   public ZstdCodec() {
     conf = new Configuration();
+    init();
   }
 
   @Override
@@ -63,16 +67,17 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+    init();
   }
 
   @Override
   public Compressor createCompressor() {
-    return new ZstdCompressor(getLevel(conf), getBufferSize(conf), getDictionary(conf));
+    return new ZstdCompressor(level, bufferSize, dictionary);
   }
 
   @Override
   public Decompressor createDecompressor() {
-    return new ZstdDecompressor(getBufferSize(conf), getDictionary(conf));
+    return new ZstdDecompressor(bufferSize, dictionary);
   }
 
   @Override
@@ -83,7 +88,7 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   @Override
   public CompressionInputStream createInputStream(InputStream in, Decompressor d)
     throws IOException {
-    return new BlockDecompressorStream(in, d, getBufferSize(conf));
+    return new BlockDecompressorStream(in, d, bufferSize);
   }
 
   @Override
@@ -94,7 +99,6 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out, Compressor c)
     throws IOException {
-    int bufferSize = getBufferSize(conf);
     return new BlockCompressorStream(out, c, bufferSize,
       (int) Zstd.compressBound(bufferSize) - bufferSize); // overhead only
   }
@@ -154,4 +158,9 @@ public class ZstdCodec implements Configurable, CompressionCodec {
     return ByteBuffer.wrap(dictionary, 4, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
   }
 
+  private void init() {
+    this.bufferSize = getBufferSize(conf);
+    this.level = getLevel(conf);
+    this.dictionary = getDictionary(conf);
+  }
 }

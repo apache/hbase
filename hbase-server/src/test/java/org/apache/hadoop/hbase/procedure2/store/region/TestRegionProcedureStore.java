@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.hadoop.hbase.CellScanner;
@@ -158,6 +159,7 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
     RpcServer.setCurrentCall(null);
   }
 
+  @SuppressWarnings("checkstyle:methodlength")
   private RpcCall newRpcCallWithDeadline() {
     return new RpcCall() {
       @Override
@@ -217,6 +219,21 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
 
       @Override
       public RPCProtos.RequestHeader getHeader() {
+        return null;
+      }
+
+      @Override
+      public Map<String, byte[]> getConnectionAttributes() {
+        return null;
+      }
+
+      @Override
+      public Map<String, byte[]> getRequestAttributes() {
+        return null;
+      }
+
+      @Override
+      public byte[] getRequestAttribute(String key) {
         return null;
       }
 
@@ -287,12 +304,12 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
       }
 
       @Override
-      public long getResponseBlockSize() {
+      public long getBlockBytesScanned() {
         return 0;
       }
 
       @Override
-      public void incrementResponseBlockSize(long blockSize) {
+      public void incrementBlockBytesScanned(long blockSize) {
       }
 
       @Override

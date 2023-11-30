@@ -90,6 +90,7 @@ include::_chapters/community.adoc[]
 include::_chapters/hbtop.adoc[]
 include::_chapters/tracing.adoc[]
 include::_chapters/store_file_tracking.adoc[]
+include::_chapters/bulk_data_generator_tool.adoc[]
 
 = Appendix
 

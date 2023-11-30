@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -129,39 +128,41 @@ public class RegionAsTable implements Table {
   }
 
   static class RegionScannerToResultScannerAdaptor implements ResultScanner {
-    private static final Result[] EMPTY_RESULT_ARRAY = new Result[0];
-    private final RegionScanner regionScanner;
 
-    RegionScannerToResultScannerAdaptor(final RegionScanner regionScanner) {
-      this.regionScanner = regionScanner;
-    }
+    private final RegionScanner scanner;
 
-    @Override
-    public Iterator<Result> iterator() {
-      throw new UnsupportedOperationException();
+    private boolean moreRows = true;
+
+    private final List<Cell> cells = new ArrayList<>();
+
+    RegionScannerToResultScannerAdaptor(final RegionScanner scanner) {
+      this.scanner = scanner;
     }
 
     @Override
     public Result next() throws IOException {
-      List<Cell> cells = new ArrayList<>();
-      return regionScanner.next(cells) ? Result.create(cells) : null;
-    }
-
-    @Override
-    public Result[] next(int nbRows) throws IOException {
-      List<Result> results = new ArrayList<>(nbRows);
-      for (int i = 0; i < nbRows; i++) {
-        Result result = next();
-        if (result == null) break;
-        results.add(result);
+      if (!moreRows) {
+        return null;
       }
-      return results.toArray(EMPTY_RESULT_ARRAY);
+      for (;;) {
+        moreRows = scanner.next(cells);
+        if (cells.isEmpty()) {
+          if (!moreRows) {
+            return null;
+          } else {
+            continue;
+          }
+        }
+        Result result = Result.create(cells);
+        cells.clear();
+        return result;
+      }
     }
 
     @Override
     public void close() {
       try {
-        regionScanner.close();
+        scanner.close();
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -174,7 +175,7 @@ public class RegionAsTable implements Table {
 
     @Override
     public ScanMetrics getScanMetrics() {
-      throw new UnsupportedOperationException();
+      return null;
     }
   }
 

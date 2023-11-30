@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -137,9 +139,7 @@ public abstract class AbstractTestLogRolling {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  protected void startAndWriteData() throws IOException, InterruptedException {
-    // When the hbase:meta table can be opened, the region servers are running
-    TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
+  private void startAndWriteData() throws IOException, InterruptedException {
     this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
 
     Table table = createTestTable(this.tableName);
@@ -175,19 +175,6 @@ public abstract class AbstractTestLogRolling {
     }
   }
 
-  private void assertLogFileSize(WAL log) throws InterruptedException {
-    if (AbstractFSWALProvider.getNumRolledLogFiles(log) > 0) {
-      assertTrue(AbstractFSWALProvider.getLogFileSize(log) > 0);
-    } else {
-      for (int i = 0; i < 10; i++) {
-        if (AbstractFSWALProvider.getLogFileSize(log) != 0) {
-          Thread.sleep(10);
-        }
-      }
-      assertEquals(0, AbstractFSWALProvider.getLogFileSize(log));
-    }
-  }
-
   /**
    * Tests that logs are deleted
    */
@@ -200,20 +187,25 @@ public abstract class AbstractTestLogRolling {
     final WAL log = server.getWAL(region);
     LOG.info(
       "after writing there are " + AbstractFSWALProvider.getNumRolledLogFiles(log) + " log files");
-    assertLogFileSize(log);
+
+    // roll the log, so we should have at least one rolled file and the log file size should be
+    // greater than 0, in case in the above method we rolled in the last round and then flushed so
+    // all the old wal files are deleted and cause the below assertion to fail
+    log.rollWriter();
+
+    assertThat(AbstractFSWALProvider.getLogFileSize(log), greaterThan(0L));
 
     // flush all regions
     for (HRegion r : server.getOnlineRegionsLocalContext()) {
       r.flush(true);
     }
 
-    // Now roll the log
+    // Now roll the log the again
     log.rollWriter();
 
-    int count = AbstractFSWALProvider.getNumRolledLogFiles(log);
-    LOG.info("after flushing all regions and rolling logs there are " + count + " log files");
-    assertTrue(("actual count: " + count), count <= 2);
-    assertLogFileSize(log);
+    // should have deleted all the rolled wal files
+    TEST_UTIL.waitFor(5000, () -> AbstractFSWALProvider.getNumRolledLogFiles(log) == 0);
+    assertEquals(0, AbstractFSWALProvider.getLogFileSize(log));
   }
 
   protected String getName() {

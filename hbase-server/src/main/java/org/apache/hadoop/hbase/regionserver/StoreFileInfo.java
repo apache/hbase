@@ -73,7 +73,7 @@ public class StoreFileInfo implements Configurable {
     Pattern.compile(String.format("^(%s|%s)\\.(.+)$", HFILE_NAME_REGEX, HFileLink.LINK_NAME_REGEX));
 
   public static final String STORE_FILE_READER_NO_READAHEAD = "hbase.store.reader.no-readahead";
-  public static final boolean DEFAULT_STORE_FILE_READER_NO_READAHEAD = false;
+  public static final boolean DEFAULT_STORE_FILE_READER_NO_READAHEAD = true;
 
   // Configuration
   private Configuration conf;
