@@ -671,7 +671,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     currentHtd = UTIL.getAdmin().getDescriptor(tableName);
     assertEquals(0, currentHtd.getCoprocessorDescriptors().size());
 
-    // Test 6: Modifying REGION_REPLICATION is not allowed
+    // Test 6: Modifying REGION_REPLICATION is not allowed.
     htd = UTIL.getAdmin().getDescriptor(tableName);
     modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd).setRegionReplication(3).build();
     try {
