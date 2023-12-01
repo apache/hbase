@@ -894,7 +894,7 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public Future<Void> modifyTableAsync(TableDescriptor td) {
+  public Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions) {
     throw new NotImplementedException("modifyTableAsync not supported in ThriftAdmin");
   }
 

@@ -1116,7 +1116,7 @@ public class HMaster extends HRegionServer implements MasterServices {
           procedureExecutor.submitProcedure(new ModifyTableProcedure(
             procedureExecutor.getEnvironment(), TableDescriptorBuilder.newBuilder(metaDesc)
               .setRegionReplication(replicasNumInConf).build(),
-            null, metaDesc, false));
+            null, metaDesc, false, true));
         }
       }
     }
@@ -2672,6 +2672,13 @@ public class HMaster extends HRegionServer implements MasterServices {
   private long modifyTable(final TableName tableName,
     final TableDescriptorGetter newDescriptorGetter, final long nonceGroup, final long nonce,
     final boolean shouldCheckDescriptor) throws IOException {
+    return modifyTable(tableName, newDescriptorGetter, nonceGroup, nonce, shouldCheckDescriptor,
+      true);
+  }
+
+  private long modifyTable(final TableName tableName,
+    final TableDescriptorGetter newDescriptorGetter, final long nonceGroup, final long nonce,
+    final boolean shouldCheckDescriptor, final boolean reopenRegions) throws IOException {
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
         @Override
@@ -2690,7 +2697,7 @@ public class HMaster extends HRegionServer implements MasterServices {
           // checks. This will block only the beginning of the procedure. See HBASE-19953.
           ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
           submitProcedure(new ModifyTableProcedure(procedureExecutor.getEnvironment(),
-            newDescriptor, latch, oldDescriptor, shouldCheckDescriptor));
+            newDescriptor, latch, oldDescriptor, shouldCheckDescriptor, reopenRegions));
           latch.await();
 
           getMaster().getMasterCoprocessorHost().postModifyTable(tableName, oldDescriptor,
@@ -2707,14 +2714,14 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   public long modifyTable(final TableName tableName, final TableDescriptor newDescriptor,
-    final long nonceGroup, final long nonce) throws IOException {
+    final long nonceGroup, final long nonce, final boolean reopenRegions) throws IOException {
     checkInitialized();
     return modifyTable(tableName, new TableDescriptorGetter() {
       @Override
       public TableDescriptor get() throws IOException {
         return newDescriptor;
       }
-    }, nonceGroup, nonce, false);
+    }, nonceGroup, nonce, false, reopenRegions);
 
   }
 
