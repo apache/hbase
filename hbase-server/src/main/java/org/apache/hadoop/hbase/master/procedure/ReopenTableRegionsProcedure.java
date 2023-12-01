@@ -59,7 +59,8 @@ public class ReopenTableRegionsProcedure
   public static final long PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT = 0L;
   public static final String PROGRESSIVE_BATCH_SIZE_MAX_KEY =
     "hbase.reopen.table.regions.progressive.batch.size.max";
-  public static final int PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT = Integer.MAX_VALUE;
+  public static final int PROGRESSIVE_BATCH_SIZE_MAX_DISABLED = -1;
+  private static final int PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT_VALUE = Integer.MAX_VALUE;
 
   // this minimum prevents a max which would break this procedure
   private static final int MINIMUM_BATCH_SIZE_MAX = 1;
@@ -92,7 +93,7 @@ public class ReopenTableRegionsProcedure
 
   public ReopenTableRegionsProcedure(final TableName tableName, final List<byte[]> regionNames) {
     this(tableName, regionNames, PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT,
-      PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT);
+      PROGRESSIVE_BATCH_SIZE_MAX_DISABLED);
   }
 
   public ReopenTableRegionsProcedure(final TableName tableName, long reopenBatchBackoffMillis,
@@ -105,9 +106,9 @@ public class ReopenTableRegionsProcedure
     this.tableName = tableName;
     this.regionNames = regionNames;
     this.reopenBatchBackoffMillis = reopenBatchBackoffMillis;
-    this.reopenBatchSize = reopenBatchSizeMax != PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT
+    this.reopenBatchSize = reopenBatchSizeMax != PROGRESSIVE_BATCH_SIZE_MAX_DISABLED
       ? 1
-      : PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT;
+      : PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT_VALUE;
     this.reopenBatchSizeMax = Math.max(reopenBatchSizeMax, MINIMUM_BATCH_SIZE_MAX);
   }
 

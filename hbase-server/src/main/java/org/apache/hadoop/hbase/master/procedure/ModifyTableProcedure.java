@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure.PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT;
 import static org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure.PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY;
-import static org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure.PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT;
+import static org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure.PROGRESSIVE_BATCH_SIZE_MAX_DISABLED;
 import static org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure.PROGRESSIVE_BATCH_SIZE_MAX_KEY;
 
 import java.io.IOException;
@@ -157,7 +157,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
             long backoffMillis = conf.getLong(PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY,
               PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT);
             int batchSizeMax =
-              conf.getInt(PROGRESSIVE_BATCH_SIZE_MAX_KEY, PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT);
+              conf.getInt(PROGRESSIVE_BATCH_SIZE_MAX_KEY, PROGRESSIVE_BATCH_SIZE_MAX_DISABLED);
             addChildProcedure(
               new ReopenTableRegionsProcedure(getTableName(), backoffMillis, batchSizeMax));
           }
