@@ -106,10 +106,13 @@ public class ReopenTableRegionsProcedure
     this.tableName = tableName;
     this.regionNames = regionNames;
     this.reopenBatchBackoffMillis = reopenBatchBackoffMillis;
-    this.reopenBatchSize = reopenBatchSizeMax != PROGRESSIVE_BATCH_SIZE_MAX_DISABLED
-      ? 1
-      : PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT_VALUE;
-    this.reopenBatchSizeMax = Math.max(reopenBatchSizeMax, MINIMUM_BATCH_SIZE_MAX);
+    if (reopenBatchSizeMax == PROGRESSIVE_BATCH_SIZE_MAX_DISABLED) {
+      this.reopenBatchSize = Integer.MAX_VALUE;
+      this.reopenBatchSizeMax = Integer.MAX_VALUE;
+    } else {
+      this.reopenBatchSize = 1;
+      this.reopenBatchSizeMax = Math.max(reopenBatchSizeMax, MINIMUM_BATCH_SIZE_MAX);
+    }
   }
 
   @Override
@@ -132,6 +135,18 @@ public class ReopenTableRegionsProcedure
       allowedOnPath = ".*/src/test/.*")
   public long getBatchesProcessed() {
     return batchesProcessed;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  protected int progressBatchSize() {
+    int previousBatchSize = reopenBatchSize;
+    reopenBatchSize = Math.min(reopenBatchSizeMax, 2 * reopenBatchSize);
+    if (reopenBatchSize < previousBatchSize) {
+      // the batch size should never decrease. this must be overflow, so just use max
+      reopenBatchSize = reopenBatchSizeMax;
+    }
+    return reopenBatchSize;
   }
 
   private boolean canSchedule(MasterProcedureEnv env, HRegionLocation loc) {
@@ -224,7 +239,7 @@ public class ReopenTableRegionsProcedure
       retryCounter = null;
       setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
       if (shouldBatchBackoff && reopenBatchBackoffMillis > 0) {
-        reopenBatchSize = Math.min(reopenBatchSizeMax, 2 * reopenBatchSize);
+        progressBatchSize();
         setBackoffState(reopenBatchBackoffMillis);
         throw new ProcedureSuspendedException();
       } else {

@@ -134,7 +134,7 @@ public class TestReopenTableRegionsProcedureBatching {
     Set<StuckRegion> stuckRegions =
       regions.stream().map(r -> stickRegion(am, procExec, r)).collect(Collectors.toSet());
     ReopenTableRegionsProcedure proc =
-      new ReopenTableRegionsProcedure(TABLE_NAME, BACKOFF_MILLIS_PER_RS, -1);
+      new ReopenTableRegionsProcedure(TABLE_NAME, BACKOFF_MILLIS_PER_RS, -100);
     procExec.submitProcedure(proc);
     UTIL.waitFor(10000, () -> proc.getState() == ProcedureState.WAITING_TIMEOUT);
 
@@ -147,6 +147,17 @@ public class TestReopenTableRegionsProcedureBatching {
 
     // all regions should only be opened once
     assertEquals(proc.getRegionsReopened(), regions.size());
+  }
+
+  @Test
+  public void testBatchSizeDoesNotOverflow() {
+    ReopenTableRegionsProcedure proc =
+      new ReopenTableRegionsProcedure(TABLE_NAME, BACKOFF_MILLIS_PER_RS, Integer.MAX_VALUE);
+    int currentBatchSize = 1;
+    while (currentBatchSize < Integer.MAX_VALUE) {
+      currentBatchSize = proc.progressBatchSize();
+      assertTrue(currentBatchSize > 0);
+    }
   }
 
   private void confirmBatchSize(int expectedBatchSize, Set<StuckRegion> stuckRegions,
