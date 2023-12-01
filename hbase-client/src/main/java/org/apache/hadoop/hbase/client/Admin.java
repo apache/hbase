@@ -1540,12 +1540,12 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Modify an existing table, more IRB friendly version.
-   * @param td modified description of the table
-   * @param reopenRegions By default, 'modifyTable' reopens all regions, potentially causing
-   *                      a RIT(Region In Transition) storm in large tables. If set to 'false',
+   * @param td            modified description of the table
+   * @param reopenRegions By default, 'modifyTable' reopens all regions, potentially causing a
+   *                      RIT(Region In Transition) storm in large tables. If set to 'false',
    *                      regions will remain unaware of the modification until they are
-   *                      individually reopened. Please note that this may temporarily result
-   *                      in configuration inconsistencies among regions.
+   *                      individually reopened. Please note that this may temporarily result in
+   *                      configuration inconsistencies among regions.
    * @throws IOException if a remote or network exception occurs
    */
   default void modifyTable(TableDescriptor td, boolean reopenRegions) throws IOException {
@@ -1606,12 +1606,12 @@ public interface Admin extends Abortable, Closeable {
    * use Future.get(long, TimeUnit) to wait on the operation to complete. It may throw
    * ExecutionException if there was an error while executing the operation or TimeoutException in
    * case the wait timeout was not long enough to allow the operation to complete.
-   * @param td description of the table
-   * @param reopenRegions By default, 'modifyTableAsync' reopens all regions, potentially causing
-   *                      a RIT(Region In Transition) storm in large tables. If set to 'false',
+   * @param td            description of the table
+   * @param reopenRegions By default, 'modifyTableAsync' reopens all regions, potentially causing a
+   *                      RIT(Region In Transition) storm in large tables. If set to 'false',
    *                      regions will remain unaware of the modification until they are
-   *                      individually reopened. Please note that this may temporarily result
-   *                      in configuration inconsistencies among regions.
+   *                      individually reopened. Please note that this may temporarily result in
+   *                      configuration inconsistencies among regions.
    * @throws IOException if a remote or network exception occurs
    * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
    *         operation to complete
