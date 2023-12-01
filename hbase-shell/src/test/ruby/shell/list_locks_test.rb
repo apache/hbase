@@ -81,7 +81,8 @@ module Hbase
           "\"className\"=>\"org.apache.hadoop.hbase.master.locking.LockProcedure\", " \
           "\"procId\"=>\"0\", \"submittedTime\"=>\"0\", \"state\"=>\"RUNNABLE\", " \
           "\"lastUpdate\"=>\"0\", " \
-          "\"stateMessage\"=>[{\"lockType\"=>\"EXCLUSIVE\", \"description\"=>\"description\"}]" \
+          "\"stateMessage\"=>[{\"lockType\"=>\"EXCLUSIVE\", \"description\"=>\"description\"}], " \
+          "\"executed\"=>false" \
         "}\n\n",
         output)
     end
@@ -101,7 +102,8 @@ module Hbase
           "\"className\"=>\"org.apache.hadoop.hbase.master.locking.LockProcedure\", " \
           "\"procId\"=>\"0\", \"submittedTime\"=>\"0\", \"state\"=>\"RUNNABLE\", " \
           "\"lastUpdate\"=>\"0\", " \
-          "\"stateMessage\"=>[{\"lockType\"=>\"EXCLUSIVE\", \"description\"=>\"description\"}]" \
+          "\"stateMessage\"=>[{\"lockType\"=>\"EXCLUSIVE\", \"description\"=>\"description\"}], " \
+          "\"executed\"=>false" \
         "}\n\n",
         output)
     end
@@ -119,7 +121,8 @@ module Hbase
           "\"className\"=>\"org.apache.hadoop.hbase.master.locking.LockProcedure\", " \
           "\"procId\"=>\"1\", \"submittedTime\"=>\"0\", \"state\"=>\"RUNNABLE\", " \
           "\"lastUpdate\"=>\"0\", " \
-          "\"stateMessage\"=>[{\"lockType\"=>\"EXCLUSIVE\", \"description\"=>\"description\"}]" \
+          "\"stateMessage\"=>[{\"lockType\"=>\"EXCLUSIVE\", \"description\"=>\"description\"}], " \
+          "\"executed\"=>false" \
         "}\n\n" \
         "TABLE(hbase:namespace)\n" \
         "Lock type: SHARED, count: 1\n\n",
@@ -143,7 +146,8 @@ module Hbase
           "\"className\"=>\"org.apache.hadoop.hbase.master.locking.LockProcedure\", " \
           "\"procId\"=>\"2\", \"submittedTime\"=>\"0\", \"state\"=>\"RUNNABLE\", " \
           "\"lastUpdate\"=>\"0\", " \
-          "\"stateMessage\"=>[{\"lockType\"=>\"EXCLUSIVE\", \"description\"=>\"description\"}]" \
+          "\"stateMessage\"=>[{\"lockType\"=>\"EXCLUSIVE\", \"description\"=>\"description\"}], " \
+          "\"executed\"=>false" \
         "}\n\n",
         output)
     end
@@ -168,7 +172,8 @@ module Hbase
           "\"className\"=>\"org.apache.hadoop.hbase.master.locking.LockProcedure\", " \
           "\"procId\"=>\"3\", \"submittedTime\"=>\"0\", \"state\"=>\"RUNNABLE\", " \
           "\"lastUpdate\"=>\"0\", " \
-          "\"stateMessage\"=>[{\"lockType\"=>\"EXCLUSIVE\", \"description\"=>\"description\"}]" \
+          "\"stateMessage\"=>[{\"lockType\"=>\"EXCLUSIVE\", \"description\"=>\"description\"}], " \
+          "\"executed\"=>false" \
         "}\n\n",
         output)
     end
@@ -198,14 +203,14 @@ module Hbase
           "\"lastUpdate\"=>\"0\", \"stateMessage\"=>[{" \
             "\"lockType\"=>\"EXCLUSIVE\", " \
             "\"tableName\"=>{\"namespace\"=>\"bnM0\", \"qualifier\"=>\"dGFibGU0\"" \
-          "}, \"description\"=>\"description\"}]}\n" \
+          "}, \"description\"=>\"description\"}], \"executed\"=>false}\n" \
         "Waiting procedures\n" \
         "{\"className\"=>\"org.apache.hadoop.hbase.master.locking.LockProcedure\", " \
           "\"procId\"=>\"2\", \"submittedTime\"=>\"0\", \"state\"=>\"RUNNABLE\", " \
           "\"lastUpdate\"=>\"0\", \"stateMessage\"=>[{" \
             "\"lockType\"=>\"SHARED\", " \
             "\"tableName\"=>{\"namespace\"=>\"bnM0\", \"qualifier\"=>\"dGFibGU0\"}, " \
-            "\"description\"=>\"description\"}]}\n" \
+            "\"description\"=>\"description\"}], \"executed\"=>false}\n" \
         "1 row(s)\n\n",
         output)
     end
