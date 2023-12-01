@@ -717,6 +717,7 @@ module Hbase
       # Get table descriptor
       htd = org.apache.hadoop.hbase.HTableDescriptor.new(@admin.getTableDescriptor(table_name))
       hasTableUpdate = false
+      reopen_regions = true
 
       # Process all args
       args.each do |arg|
@@ -726,9 +727,18 @@ module Hbase
         # Normalize args to support shortcut delete syntax
         arg = { METHOD => 'delete', NAME => arg['delete'] } if arg['delete']
 
+        if arg.key?(REOPEN_REGIONS)
+          if !['true', 'false'].include?(arg[REOPEN_REGIONS].downcase)
+            raise(ArgumentError, "Invalid 'REOPEN_REGIONS' for non-boolean value.")
+          end
+          reopen_regions = JBoolean.valueOf(arg[REOPEN_REGIONS])
+          arg.delete(REOPEN_REGIONS)
+        end
+
         # There are 3 possible options.
         # 1) Column family spec. Distinguished by having a NAME and no METHOD.
         method = arg.delete(METHOD)
+
         if method.nil? && arg.key?(NAME)
           descriptor = hcd(arg, htd)
           column_name = descriptor.getNameAsString
@@ -841,11 +851,23 @@ module Hbase
 
       # Bulk apply all table modifications.
       if hasTableUpdate
-        @admin.modifyTable(table_name, htd)
+        future = @admin.modifyTableAsync(htd, reopen_regions)
+        if reopen_regions == false
+          puts("WARNING: You are using REOPEN_REGIONS => 'false' to modify a table, which will
+          result in inconsistencies in the configuration of online regions and other risks. If you
+          encounter any issues, use the original 'alter' command to make the modification again!")
+        end
 
         if wait == true
-          puts 'Updating all regions with the new schema...'
-          alter_status(table_name_str)
+          # If the changes(reopen_regions=false) are not getting applied immediately -
+          # showing the below can be confusing, hence we only show it when reopen_regions is true.
+          if reopen_regions == true
+            puts 'Updating all regions with the new schema...'
+          end
+          future.get
+          if reopen_regions == true
+            alter_status(table_name_str)
+          end
         end
       end
     end
