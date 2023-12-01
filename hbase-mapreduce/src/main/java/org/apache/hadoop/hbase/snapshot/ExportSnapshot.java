@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -211,14 +210,12 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       outputArchive = new Path(outputRoot, HConstants.HFILE_ARCHIVE_DIRECTORY);
 
       try {
-        srcConf.setBoolean("fs." + inputRoot.toUri().getScheme() + ".impl.disable.cache", true);
         inputFs = FileSystem.get(inputRoot.toUri(), srcConf);
       } catch (IOException e) {
         throw new IOException("Could not get the input FileSystem with root=" + inputRoot, e);
       }
 
       try {
-        destConf.setBoolean("fs." + outputRoot.toUri().getScheme() + ".impl.disable.cache", true);
         outputFs = FileSystem.get(outputRoot.toUri(), destConf);
       } catch (IOException e) {
         throw new IOException("Could not get the output FileSystem with root=" + outputRoot, e);
@@ -239,12 +236,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         // task.
         testing.injectedFailureCount = context.getTaskAttemptID().getId();
       }
-    }
-
-    @Override
-    protected void cleanup(Context context) {
-      IOUtils.closeStream(inputFs);
-      IOUtils.closeStream(outputFs);
     }
 
     @Override
@@ -990,10 +981,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     }
 
     Configuration srcConf = HBaseConfiguration.createClusterConf(conf, null, CONF_SOURCE_PREFIX);
-    srcConf.setBoolean("fs." + inputRoot.toUri().getScheme() + ".impl.disable.cache", true);
     FileSystem inputFs = FileSystem.get(inputRoot.toUri(), srcConf);
     Configuration destConf = HBaseConfiguration.createClusterConf(conf, null, CONF_DEST_PREFIX);
-    destConf.setBoolean("fs." + outputRoot.toUri().getScheme() + ".impl.disable.cache", true);
     FileSystem outputFs = FileSystem.get(outputRoot.toUri(), destConf);
     boolean skipTmp = conf.getBoolean(CONF_SKIP_TMP, false)
       || conf.get(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR) != null;
@@ -1149,9 +1138,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       }
       outputFs.delete(outputSnapshotDir, true);
       return 1;
-    } finally {
-      IOUtils.closeStream(inputFs);
-      IOUtils.closeStream(outputFs);
     }
   }
 
