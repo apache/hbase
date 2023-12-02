@@ -146,7 +146,7 @@ public class StoreFileScanner implements KeyValueScanner {
     }
     boolean succ = false;
     try {
-      for (int i = 0, n = files.size(); i < n && !sortedFiles.isEmpty(); i++) {
+      for (int i = 0, n = sortedFiles.size(); i < n; i++) {
         HStoreFile sf = sortedFiles.remove();
         StoreFileScanner scanner;
         if (usePread) {

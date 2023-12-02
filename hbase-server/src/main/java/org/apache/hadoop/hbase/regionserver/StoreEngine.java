@@ -544,4 +544,39 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   public BloomFilterMetrics getBloomFilterMetrics() {
     return bloomFilterMetrics;
   }
+
+
+  protected void createCompactor(Configuration conf, HStore store, String classKey,
+    String defaultClassName) throws IOException {
+    String className = conf.get(classKey, defaultClassName);
+    try {
+      compactor = ReflectionUtils.instantiateWithCustomCtor(className,
+        new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
+    } catch (Exception e) {
+      throw new IOException("Unable to load configured compactor '" + className + "'", e);
+    }
+  }
+
+  protected void createCompactionPolicy(Configuration conf, HStore store, String classKey,
+    String defaultClassName) throws IOException {
+    String className = conf.get(classKey, defaultClassName);
+    try {
+      compactionPolicy = ReflectionUtils.instantiateWithCustomCtor(className,
+        new Class[] { Configuration.class, StoreConfigInformation.class },
+        new Object[] { conf, store });
+    } catch (Exception e) {
+      throw new IOException("Unable to load configured compaction policy '" + className + "'", e);
+    }
+  }
+
+  protected void createStoreFlusher(Configuration conf, HStore store, String classKey,
+    String defaultClassName) throws IOException {
+    String className = conf.get(classKey, defaultClassName);
+    try {
+      storeFlusher = ReflectionUtils.instantiateWithCustomCtor(className,
+        new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
+    } catch (Exception e) {
+      throw new IOException("Unable to load configured store flusher '" + className + "'", e);
+    }
+  }
 }
