@@ -47,11 +47,11 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
   public static final String DEFAULT_COMPACTION_POLICY_CLASS_KEY =
     "hbase.hstore.defaultengine.compactionpolicy.class";
 
-  public static final Class<? extends DefaultStoreFlusher> DEFAULT_STORE_FLUSHER_CLASS =
+  private static final Class<? extends DefaultStoreFlusher> DEFAULT_STORE_FLUSHER_CLASS =
     DefaultStoreFlusher.class;
-  public static final Class<? extends DefaultCompactor> DEFAULT_COMPACTOR_CLASS =
+  private static final Class<? extends DefaultCompactor> DEFAULT_COMPACTOR_CLASS =
     DefaultCompactor.class;
-  public static final Class<? extends RatioBasedCompactionPolicy> DEFAULT_COMPACTION_POLICY_CLASS =
+  private static final Class<? extends RatioBasedCompactionPolicy> DEFAULT_COMPACTION_POLICY_CLASS =
     ExploringCompactionPolicy.class;
 
   @Override
@@ -70,36 +70,17 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
   }
 
   protected void createCompactor(Configuration conf, HStore store) throws IOException {
-    String className = conf.get(DEFAULT_COMPACTOR_CLASS_KEY, DEFAULT_COMPACTOR_CLASS.getName());
-    try {
-      compactor = ReflectionUtils.instantiateWithCustomCtor(className,
-        new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
-    } catch (Exception e) {
-      throw new IOException("Unable to load configured compactor '" + className + "'", e);
-    }
+    createCompactor(conf, store, DEFAULT_COMPACTOR_CLASS_KEY, DEFAULT_COMPACTOR_CLASS.getName());
   }
 
   protected void createCompactionPolicy(Configuration conf, HStore store) throws IOException {
-    String className =
-      conf.get(DEFAULT_COMPACTION_POLICY_CLASS_KEY, DEFAULT_COMPACTION_POLICY_CLASS.getName());
-    try {
-      compactionPolicy = ReflectionUtils.instantiateWithCustomCtor(className,
-        new Class[] { Configuration.class, StoreConfigInformation.class },
-        new Object[] { conf, store });
-    } catch (Exception e) {
-      throw new IOException("Unable to load configured compaction policy '" + className + "'", e);
-    }
+    createCompactionPolicy(conf, store, DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+      DEFAULT_COMPACTION_POLICY_CLASS.getName());
   }
 
   protected void createStoreFlusher(Configuration conf, HStore store) throws IOException {
-    String className =
-      conf.get(DEFAULT_STORE_FLUSHER_CLASS_KEY, DEFAULT_STORE_FLUSHER_CLASS.getName());
-    try {
-      storeFlusher = ReflectionUtils.instantiateWithCustomCtor(className,
-        new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
-    } catch (Exception e) {
-      throw new IOException("Unable to load configured store flusher '" + className + "'", e);
-    }
+    createStoreFlusher(conf, store, DEFAULT_STORE_FLUSHER_CLASS_KEY,
+      DEFAULT_STORE_FLUSHER_CLASS.getName());
   }
 
   @Override

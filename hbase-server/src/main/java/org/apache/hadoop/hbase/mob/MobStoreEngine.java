@@ -44,12 +44,6 @@ public class MobStoreEngine extends DefaultStoreEngine {
    */
   @Override
   protected void createCompactor(Configuration conf, HStore store) throws IOException {
-    String className = conf.get(MOB_COMPACTOR_CLASS_KEY, DefaultMobStoreCompactor.class.getName());
-    try {
-      compactor = ReflectionUtils.instantiateWithCustomCtor(className,
-        new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
-    } catch (RuntimeException e) {
-      throw new IOException("Unable to load configured compactor '" + className + "'", e);
-    }
+    createCompactor(conf, store, MOB_COMPACTOR_CLASS_KEY, DefaultMobStoreCompactor.class.getName());
   }
 }
