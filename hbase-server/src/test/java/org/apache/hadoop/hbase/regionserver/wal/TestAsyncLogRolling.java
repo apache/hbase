@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -70,16 +71,13 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling {
     public CompletableFuture<Long> sync(boolean forceSync) {
       CompletableFuture<Long> future = new CompletableFuture<>();
       super.sync(forceSync).whenCompleteAsync((lengthAfterFlush, error) -> {
-        if (error != null) {
-          future.completeExceptionally(error);
-        } else {
-          try {
-            Thread.sleep(syncLatencyMillis);
-          } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+        EXECUTOR.schedule(() -> {
+          if (error != null) {
+            future.completeExceptionally(error);
+          } else {
+            future.complete(lengthAfterFlush);
           }
-          future.complete(lengthAfterFlush);
-        }
+        }, syncLatencyMillis, TimeUnit.MILLISECONDS);
       });
       return future;
     }

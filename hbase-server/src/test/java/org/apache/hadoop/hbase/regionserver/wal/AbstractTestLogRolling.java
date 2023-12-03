@@ -24,6 +24,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -63,6 +65,8 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 /**
  * Test log deletion as logs are rolled.
  */
@@ -81,6 +85,9 @@ public abstract class AbstractTestLogRolling {
   protected static int syncLatencyMillis;
   private static int rowNum = 1;
   private static final AtomicBoolean slowSyncHookCalled = new AtomicBoolean();
+  protected static final ScheduledExecutorService EXECUTOR = Executors
+    .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setNameFormat("Slow-sync-%d")
+      .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
   public AbstractTestLogRolling() {
     this.server = null;
