@@ -95,15 +95,16 @@ public class TestStripeStoreFileManager {
     MockHStoreFile sf = createFile();
     manager.insertNewFiles(al(sf));
     assertEquals(1, manager.getStorefileCount());
-    Collection<HStoreFile> filesForGet = manager.getFilesForScan(KEY_A, true, KEY_A, true);
+    Collection<HStoreFile> filesForGet = manager.getFilesForScan(KEY_A, true, KEY_A, true,
+      false);
     assertEquals(1, filesForGet.size());
     assertTrue(filesForGet.contains(sf));
 
     // Add some stripes and make sure we get this file for every stripe.
     manager.addCompactionResults(al(),
       al(createFile(OPEN_KEY, KEY_B), createFile(KEY_B, OPEN_KEY)));
-    assertTrue(manager.getFilesForScan(KEY_A, true, KEY_A, true).contains(sf));
-    assertTrue(manager.getFilesForScan(KEY_C, true, KEY_C, true).contains(sf));
+    assertTrue(manager.getFilesForScan(KEY_A, true, KEY_A, true, false).contains(sf));
+    assertTrue(manager.getFilesForScan(KEY_C, true, KEY_C, true, false).contains(sf));
   }
 
   @Test
@@ -556,7 +557,7 @@ public class TestStripeStoreFileManager {
     Collection<HStoreFile> results) throws Exception {
     start = start != null ? start : HConstants.EMPTY_START_ROW;
     end = end != null ? end : HConstants.EMPTY_END_ROW;
-    Collection<HStoreFile> sfs = manager.getFilesForScan(start, true, end, false);
+    Collection<HStoreFile> sfs = manager.getFilesForScan(start, true, end, false, false);
     assertEquals(results.size(), sfs.size());
     for (HStoreFile result : results) {
       assertTrue(sfs.contains(result));
