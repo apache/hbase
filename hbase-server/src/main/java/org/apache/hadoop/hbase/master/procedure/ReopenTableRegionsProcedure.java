@@ -137,8 +137,8 @@ public class ReopenTableRegionsProcedure
     return batchesProcessed;
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
+  @RestrictedApi(explanation = "Should only be called internally or in tests", link = "",
+      allowedOnPath = ".*(/src/test/.*|ReopenTableRegionsProcedure).java")
   protected int progressBatchSize() {
     int previousBatchSize = reopenBatchSize;
     reopenBatchSize = Math.min(reopenBatchSizeMax, 2 * reopenBatchSize);
