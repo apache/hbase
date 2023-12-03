@@ -50,7 +50,7 @@ public interface StoreFileManager {
    */
   @RestrictedApi(explanation = "Should only be called in StoreEngine", link = "",
       allowedOnPath = ".*(/org/apache/hadoop/hbase/regionserver/StoreEngine.java|/src/test/.*)")
-  void loadFiles(List<HStoreFile> storeFiles);
+  void loadFiles(List<HStoreFile> storeFiles) throws IOException;
 
   /**
    * Adds new files, either for from MemStore flush or bulk insert, into the structure.
@@ -58,7 +58,7 @@ public interface StoreFileManager {
    */
   @RestrictedApi(explanation = "Should only be called in StoreEngine", link = "",
       allowedOnPath = ".*(/org/apache/hadoop/hbase/regionserver/StoreEngine.java|/src/test/.*)")
-  void insertNewFiles(Collection<HStoreFile> sfs);
+  void insertNewFiles(Collection<HStoreFile> sfs) throws IOException;
 
   /**
    * Adds only the new compaction results into the structure.
@@ -67,7 +67,8 @@ public interface StoreFileManager {
    */
   @RestrictedApi(explanation = "Should only be called in StoreEngine", link = "",
       allowedOnPath = ".*(/org/apache/hadoop/hbase/regionserver/StoreEngine.java|/src/test/.*)")
-  void addCompactionResults(Collection<HStoreFile> compactedFiles, Collection<HStoreFile> results);
+  void addCompactionResults(Collection<HStoreFile> compactedFiles, Collection<HStoreFile> results)
+    throws IOException;
 
   /**
    * Remove the compacted files
@@ -124,7 +125,7 @@ public interface StoreFileManager {
    * @return The list of files that are to be read for this request.
    */
   Collection<HStoreFile> getFilesForScan(byte[] startRow, boolean includeStartRow, byte[] stopRow,
-    boolean includeStopRow);
+    boolean includeStopRow, boolean onlyLatestVersion);
 
   /**
    * Gets initial, full list of candidate store files to check for row-key-before.

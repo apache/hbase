@@ -985,7 +985,7 @@ public class HStore
     this.storeEngine.readLock();
     try {
       storeFilesToScan = this.storeEngine.getStoreFileManager().getFilesForScan(startRow,
-        includeStartRow, stopRow, includeStopRow);
+        includeStartRow, stopRow, includeStopRow, onlyLatestVersion);
       memStoreScanners = this.memstore.getScanners(readPt);
       // NOTE: here we must increase the refCount for storeFiles because we would open the
       // storeFiles and get the StoreFileScanners for them.If we don't increase the refCount here,

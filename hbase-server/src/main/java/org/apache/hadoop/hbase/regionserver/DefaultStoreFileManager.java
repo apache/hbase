@@ -71,7 +71,7 @@ class DefaultStoreFileManager implements StoreFileManager {
   }
 
   @Override
-  public void loadFiles(List<HStoreFile> storeFiles) {
+  public void loadFiles(List<HStoreFile> storeFiles) throws IOException {
     this.storefiles = ImmutableList.sortedCopyOf(storeFileComparator, storeFiles);
   }
 
@@ -86,7 +86,7 @@ class DefaultStoreFileManager implements StoreFileManager {
   }
 
   @Override
-  public void insertNewFiles(Collection<HStoreFile> sfs) {
+  public void insertNewFiles(Collection<HStoreFile> sfs) throws IOException {
     this.storefiles =
       ImmutableList.sortedCopyOf(storeFileComparator, Iterables.concat(this.storefiles, sfs));
   }
@@ -117,7 +117,7 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public void addCompactionResults(Collection<HStoreFile> newCompactedfiles,
-    Collection<HStoreFile> results) {
+    Collection<HStoreFile> results) throws IOException {
     this.storefiles = ImmutableList.sortedCopyOf(storeFileComparator, Iterables
       .concat(Iterables.filter(storefiles, sf -> !newCompactedfiles.contains(sf)), results));
     // Mark the files as compactedAway once the storefiles and compactedfiles list is finalized
@@ -157,8 +157,8 @@ class DefaultStoreFileManager implements StoreFileManager {
   }
 
   @Override
-  public final Collection<HStoreFile> getFilesForScan(byte[] startRow, boolean includeStartRow,
-    byte[] stopRow, boolean includeStopRow) {
+  public Collection<HStoreFile> getFilesForScan(byte[] startRow, boolean includeStartRow,
+    byte[] stopRow, boolean includeStopRow, boolean onlyLatestVersion) {
     // We cannot provide any useful input and already have the files sorted by seqNum.
     return getStorefiles();
   }

@@ -70,7 +70,7 @@ public class DualFileStoreEngine extends StoreEngine<DefaultStoreFlusher,
       DUAL_FILE_COMPACTION_POLICY_CLASS.getName());
     createStoreFlusher(conf, store, DUAL_FILE_STORE_FLUSHER_CLASS_KEY,
       DUAL_FILE_STORE_FLUSHER_CLASS.getName());
-    this.storeFileManager = new DefaultStoreFileManager(kvComparator,
+    this.storeFileManager = new DualFileStoreFileManager(kvComparator,
       StoreFileComparators.SEQ_ID_MAX_TIMESTAMP, conf, compactionPolicy.getConf());
   }
 

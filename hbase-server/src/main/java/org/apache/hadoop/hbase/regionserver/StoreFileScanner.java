@@ -136,17 +136,11 @@ public class StoreFileScanner implements KeyValueScanner {
     for (HStoreFile file : files) {
       // The sort function needs metadata so we need to open reader first before sorting the list.
       file.initReader();
-      if (onlyLatestVersion) {
-        if (file.hasLatestVersion()) {
-          sortedFiles.add(file);
-        }
-      } else {
-        sortedFiles.add(file);
-      }
+      sortedFiles.add(file);
     }
     boolean succ = false;
     try {
-      for (int i = 0, n = sortedFiles.size(); i < n; i++) {
+      for (int i = 0, n = files.size(); i < n; i++) {
         HStoreFile sf = sortedFiles.remove();
         StoreFileScanner scanner;
         if (usePread) {
