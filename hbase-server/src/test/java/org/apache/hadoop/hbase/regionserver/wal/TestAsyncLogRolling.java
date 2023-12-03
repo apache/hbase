@@ -68,12 +68,20 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling {
 
     @Override
     public CompletableFuture<Long> sync(boolean forceSync) {
-      try {
-        Thread.sleep(syncLatencyMillis);
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-      return super.sync(forceSync);
+      CompletableFuture<Long> future = new CompletableFuture<>();
+      super.sync(forceSync).whenCompleteAsync((lengthAfterFlush, error) -> {
+        if (error != null) {
+          future.completeExceptionally(error);
+        } else {
+          try {
+            Thread.sleep(syncLatencyMillis);
+          } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+          }
+          future.complete(lengthAfterFlush);
+        }
+      });
+      return future;
     }
   }
 
