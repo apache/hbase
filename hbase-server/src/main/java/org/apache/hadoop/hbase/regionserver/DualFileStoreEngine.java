@@ -32,7 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * HBASE-25972 This store engine allows us to store data in two files,
- * one for the latest put cells and the other for the rest of the cells (i.e.,
+ * one for the latest cells and the other for the rest of the cells (i.e.,
  * older put cells and delete markers).
  */
 @InterfaceAudience.Private

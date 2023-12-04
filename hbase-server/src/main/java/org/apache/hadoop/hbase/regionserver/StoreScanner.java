@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -223,6 +224,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this.currentScanners.addAll(scanners);
   }
 
+  private static boolean isOnlyLatestVersionScan(Scan scan) {
+    return !scan.isRaw() && scan.getMaxVersions() == 1
+      && scan.getTimeRange().getMax() == HConstants.LATEST_TIMESTAMP;
+  }
   /**
    * Opens a scanner across memstore, snapshot, and all StoreFiles. Assumes we are not in a
    * compaction.
@@ -248,7 +253,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       scanners = selectScannersFrom(store,
         store.getScanners(cacheBlocks, scanUsePread, false, matcher, scan.getStartRow(),
           scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(), this.readPt,
-          !scan.isRaw() && scan.getMaxVersions() == 1));
+          isOnlyLatestVersionScan(scan)));
 
       // Seek all scanners to the start of the Row (or if the exact matching row
       // key does not exist, then to the start of the next matching Row).
@@ -998,7 +1003,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // penalty because in scans (that uses stream scanners) the next() call is bound to happen.
       List<KeyValueScanner> scanners = store.getScanners(sfs, cacheBlocks, get, usePread,
         isCompaction, matcher, scan.getStartRow(), scan.getStopRow(),
-        this.readPt, false, !scan.isRaw() && scan.getMaxVersions() == 1);
+        this.readPt, false, isOnlyLatestVersionScan(scan));
       flushedstoreFileScanners.addAll(scanners);
       if (!CollectionUtils.isEmpty(memStoreScanners)) {
         clearAndClose(memStoreScannersAfterFlush);
