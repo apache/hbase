@@ -51,4 +51,15 @@ public interface MetricsMasterProcSource extends BaseSource {
 
   String NUM_MASTER_WALS_DESC = "Number of master WAL files";
 
+  String NUM_COMPLETED_PROCS_NAME = "numCompletedProcs";
+
+  String NUM_COMPLETED_PROCS_DESC = "Number of Completed Procedures";
+
+  String NUM_ACTIVE_PROCS_NAME = "numActiveProcs";
+
+  String NUM_ACTIVE_PROCS_DESC = "Number of Active Procedures";
+
+  String LATEST_PROC_ID_NAME = "latestProcId";
+
+  String LATEST_PROC_ID_DESC = "Latest Procedure Id";
 }

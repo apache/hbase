@@ -56,6 +56,18 @@ public class MetricsMasterProcSourceImpl extends BaseSourceImpl implements Metri
     if (masterWrapper != null) {
       metricsRecordBuilder.addGauge(Interns.info(NUM_MASTER_WALS_NAME, NUM_MASTER_WALS_DESC),
         masterWrapper.getNumWALFiles());
+
+      metricsRecordBuilder
+        .addGauge(Interns.info(NUM_COMPLETED_PROCS_NAME, NUM_COMPLETED_PROCS_DESC),
+          masterWrapper.getNumberOfCompletedProcs());
+
+      metricsRecordBuilder
+        .addGauge(Interns.info(NUM_ACTIVE_PROCS_NAME, NUM_ACTIVE_PROCS_DESC),
+          masterWrapper.getNumberOfActiveProcs());
+
+      metricsRecordBuilder
+        .addGauge(Interns.info(LATEST_PROC_ID_NAME, LATEST_PROC_ID_DESC),
+          masterWrapper.getLatestProcId());
     }
 
     metricsRegistry.snapshot(metricsRecordBuilder, all);

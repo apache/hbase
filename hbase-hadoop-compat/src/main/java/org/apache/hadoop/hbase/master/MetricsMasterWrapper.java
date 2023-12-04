@@ -153,4 +153,21 @@ public interface MetricsMasterWrapper {
    * @return pair of count for online regions and offline regions
    */
   PairOfSameType<Integer> getRegionCounts();
+
+  /**
+   * Get the number of completed procedures
+   */
+
+  long getNumberOfCompletedProcs();
+
+  /**
+   * Get the number of active procedures
+   */
+
+  long getNumberOfActiveProcs();
+
+  /**
+   * Get latest proc Id
+   */
+  long getLatestProcId();
 }
