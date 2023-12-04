@@ -761,6 +761,17 @@ Period at which the region balancer runs in the Master.
 `300000`
 
 
+[[hbase.master.oldwals.dir.updater.period]]
+*`hbase.master.oldwals.dir.updater.period`*::
++
+.Description
+Period at which the oldWALs directory size calculator/updater will run in the Master.
+
++
+.Default
+`300000`
+
+
 [[hbase.regions.slop]]
 *`hbase.regions.slop`*::
 +

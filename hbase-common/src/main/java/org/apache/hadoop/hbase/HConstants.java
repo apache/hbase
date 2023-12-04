@@ -153,6 +153,13 @@ public final class HConstants {
   /** Default value for the balancer period */
   public static final int DEFAULT_HBASE_BALANCER_PERIOD = 300000;
 
+  /** Config for the oldWALs directory size updater period */
+  public static final String HBASE_OLDWAL_DIR_SIZE_UPDATER_PERIOD =
+    "hbase.master.oldwals.dir.updater.period";
+
+  /** Default value for the oldWALs directory size updater period */
+  public static final int DEFAULT_HBASE_OLDWAL_DIR_SIZE_UPDATER_PERIOD = 300000;
+
   /**
    * Config key for enable/disable automatically separate child regions to different region servers
    * in the procedure of split regions. One child will be kept to the server where parent region is

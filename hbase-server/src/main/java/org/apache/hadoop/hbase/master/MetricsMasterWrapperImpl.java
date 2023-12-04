@@ -238,4 +238,12 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
       return new PairOfSameType<>(0, 0);
     }
   }
+
+  @Override
+  public long getOldWALsDirSize() {
+    if (master == null || !master.isInitialized()) {
+      return 0;
+    }
+    return master.getMasterWalManager().getOldWALsDirSize();
+  }
 }

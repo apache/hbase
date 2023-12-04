@@ -129,7 +129,9 @@ public class MetricsMasterSourceImpl extends BaseSourceImpl implements MetricsMa
         .tag(Interns.info(SERVER_NAME_NAME, SERVER_NAME_DESC), masterWrapper.getServerName())
         .tag(Interns.info(CLUSTER_ID_NAME, CLUSTER_ID_DESC), masterWrapper.getClusterId())
         .tag(Interns.info(IS_ACTIVE_MASTER_NAME, IS_ACTIVE_MASTER_DESC),
-          String.valueOf(masterWrapper.getIsActiveMaster()));
+          String.valueOf(masterWrapper.getIsActiveMaster()))
+        .addGauge(Interns.info(OLD_WAL_DIR_SIZE_NAME, OLD_WAL_DIR_SIZE_DESC),
+          masterWrapper.getOldWALsDirSize());
     }
 
     metricsRegistry.snapshot(metricsRecordBuilder, all);

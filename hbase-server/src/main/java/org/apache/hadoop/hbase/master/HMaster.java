@@ -458,6 +458,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private SpaceQuotaSnapshotNotifier spaceQuotaSnapshotNotifier;
   private QuotaObserverChore quotaObserverChore;
   private SnapshotQuotaObserverChore snapshotQuotaChore;
+  private OldWALsDirSizeChore oldWALsDirSizeChore;
 
   private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
   private ProcedureStore procedureStore;
@@ -1362,6 +1363,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     this.rollingUpgradeChore = new RollingUpgradeChore(this);
     getChoreService().scheduleChore(rollingUpgradeChore);
+
+    this.oldWALsDirSizeChore = new OldWALsDirSizeChore(this);
+    getChoreService().scheduleChore(this.oldWALsDirSizeChore);
+
     status.markComplete("Progress after master initialized complete");
   }
 
@@ -1894,6 +1899,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     shutdownChore(hbckChore);
     shutdownChore(regionsRecoveryChore);
     shutdownChore(rollingUpgradeChore);
+    shutdownChore(oldWALsDirSizeChore);
   }
 
   /** Returns Get remote side's InetAddress */
