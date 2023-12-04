@@ -83,6 +83,7 @@ public class TestAssignmentManagerUtil {
       assertFalse(((ReentrantLock) regionNode.lock).isLocked());
       TransitRegionStateProcedure proc = regionNode.getProcedure();
       if (proc != null) {
+        regionNode.removeInTransition();
         regionNode.unsetProcedure(proc);
       }
     }
