@@ -88,6 +88,11 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
 
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
     RegionStateNode regionNode = regionStates.getRegionStateNode(region);
+    if (regionNode == null) {
+      LOG.debug("Region {} is not in region states, it is very likely that it has been cleared by"
+        + " other procedures such as merge or split, so skip {}. See HBASE-28226", region, this);
+      return null;
+    }
     regionNode.lock();
     try {
       if (!regionNode.isInState(State.OPEN) || regionNode.isInTransition()) {
