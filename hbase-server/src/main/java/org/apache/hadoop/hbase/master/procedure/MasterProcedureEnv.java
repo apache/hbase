@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -84,6 +85,13 @@ public class MasterProcedureEnv implements ConfigurationObserver {
     this.procSched = new MasterProcedureScheduler(
       procId -> master.getMasterProcedureExecutor().getProcedure(procId));
     this.remoteDispatcher = remoteDispatcher;
+  }
+
+  /**
+   * Get a thread pool for executing some asynchronous tasks
+   */
+  public ExecutorService getAsyncTaskExecutor() {
+    return master.getMasterProcedureExecutor().getAsyncTaskExecutor();
   }
 
   public User getRequestUser() {

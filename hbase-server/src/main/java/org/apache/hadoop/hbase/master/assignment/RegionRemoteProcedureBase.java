@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.FailedRemoteDispatchException;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
+import org.apache.hadoop.hbase.procedure2.ProcedureFutureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
@@ -72,6 +74,8 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   private long seqId;
 
   private RetryCounter retryCounter;
+
+  private CompletableFuture<Void> future;
 
   protected RegionRemoteProcedureBase() {
   }
@@ -268,11 +272,21 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
     getParent(env).unattachRemoteProc(this);
   }
 
+  private CompletableFuture<Void> getFuture() {
+    return future;
+  }
+
+  private void setFuture(CompletableFuture<Void> f) {
+    future = f;
+  }
+
   @Override
   protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
     throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     RegionStateNode regionNode = getRegionNode(env);
-    regionNode.lock();
+    if (future == null) {
+      regionNode.lock(this);
+    }
     try {
       switch (state) {
         case REGION_REMOTE_PROCEDURE_DISPATCH: {
@@ -294,16 +308,29 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
           throw new ProcedureSuspendedException();
         }
         case REGION_REMOTE_PROCEDURE_REPORT_SUCCEED:
-          env.getAssignmentManager().persistToMeta(regionNode);
-          unattach(env);
+          if (
+            ProcedureFutureUtil.checkFuture(this, this::getFuture, this::setFuture,
+              () -> unattach(env))
+          ) {
+            return null;
+          }
+          ProcedureFutureUtil.suspendIfNecessary(this, this::setFuture,
+            env.getAssignmentManager().persistToMeta(regionNode), env, () -> unattach(env));
           return null;
         case REGION_REMOTE_PROCEDURE_DISPATCH_FAIL:
           // the remote call is failed so we do not need to change the region state, just return.
           unattach(env);
           return null;
         case REGION_REMOTE_PROCEDURE_SERVER_CRASH:
-          env.getAssignmentManager().regionClosedAbnormally(regionNode);
-          unattach(env);
+          if (
+            ProcedureFutureUtil.checkFuture(this, this::getFuture, this::setFuture,
+              () -> unattach(env))
+          ) {
+            return null;
+          }
+          ProcedureFutureUtil.suspendIfNecessary(this, this::setFuture,
+            env.getAssignmentManager().regionClosedAbnormally(regionNode), env,
+            () -> unattach(env));
           return null;
         default:
           throw new IllegalStateException("Unknown state: " + state);
@@ -314,12 +341,11 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
       }
       long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
       LOG.warn("Failed updating meta, suspend {}secs {}; {};", backoff / 1000, this, regionNode, e);
-      setTimeout(Math.toIntExact(backoff));
-      setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
-      skipPersistence();
-      throw new ProcedureSuspendedException();
+      throw suspend(Math.toIntExact(backoff), true);
     } finally {
-      regionNode.unlock();
+      if (future == null) {
+        regionNode.unlock(this);
+      }
     }
   }
 
