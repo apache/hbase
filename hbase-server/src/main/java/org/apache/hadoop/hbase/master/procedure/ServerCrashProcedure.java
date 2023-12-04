@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.master.replication.MigrateReplicationQueueFromZkT
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureFutureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
@@ -106,6 +108,10 @@ public class ServerCrashProcedure extends
   // currentRunningState is updated when ServerCrashProcedure get scheduled, child procedures update
   // progress will not update the state because the actual state is overwritten by its next state
   private ServerCrashState currentRunningState = getInitialState();
+
+  private CompletableFuture<Void> updateMetaFuture;
+
+  private int processedRegions = 0;
 
   /**
    * Call this constructor queuing up a Procedure.
@@ -532,6 +538,14 @@ public class ServerCrashProcedure extends
     return this.serverName.equals(rsn.getRegionLocation());
   }
 
+  private CompletableFuture<Void> getUpdateMetaFuture() {
+    return updateMetaFuture;
+  }
+
+  private void setUpdateMetaFuture(CompletableFuture<Void> f) {
+    updateMetaFuture = f;
+  }
+
   /**
    * Assign the regions on the crashed RS to other Rses.
    * <p/>
@@ -542,14 +556,30 @@ public class ServerCrashProcedure extends
    * We will also check whether the table for a region is enabled, if not, we will skip assigning
    * it.
    */
-  private void assignRegions(MasterProcedureEnv env, List<RegionInfo> regions) throws IOException {
+  private void assignRegions(MasterProcedureEnv env, List<RegionInfo> regions)
+    throws IOException, ProcedureSuspendedException {
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
     boolean retainAssignment = env.getMasterConfiguration().getBoolean(MASTER_SCP_RETAIN_ASSIGNMENT,
       DEFAULT_MASTER_SCP_RETAIN_ASSIGNMENT);
-    for (RegionInfo region : regions) {
+    // Since we may suspend in the middle of this loop, so here we use processedRegions to record
+    // the progress, so next time we can locate the correct region
+    // We do not need to persist the processedRegions when serializing the procedure, as when master
+    // restarts, the sub procedure list will be cleared when rescheduling this SCP again, so we need
+    // to start from beginning.
+    for (int n = regions.size(); processedRegions < n; processedRegions++) {
+      RegionInfo region = regions.get(processedRegions);
       RegionStateNode regionNode = am.getRegionStates().getOrCreateRegionStateNode(region);
-      regionNode.lock();
+      if (updateMetaFuture == null) {
+        regionNode.lock(this);
+      }
       try {
+        if (
+          ProcedureFutureUtil.checkFuture(this, this::getUpdateMetaFuture,
+            this::setUpdateMetaFuture, () -> {
+            })
+        ) {
+          continue;
+        }
         // This is possible, as when a server is dead, TRSP will fail to schedule a RemoteProcedure
         // and then try to assign the region to a new RS. And before it has updated the region
         // location to the new RS, we may have already called the am.getRegionsOnServer so we will
@@ -572,8 +602,10 @@ public class ServerCrashProcedure extends
         }
         if (regionNode.getProcedure() != null) {
           LOG.info("{} found RIT {}; {}", this, regionNode.getProcedure(), regionNode);
-          regionNode.getProcedure().serverCrashed(env, regionNode, getServerName(),
-            !retainAssignment);
+          ProcedureFutureUtil.suspendIfNecessary(this, this::setUpdateMetaFuture, regionNode
+            .getProcedure().serverCrashed(env, regionNode, getServerName(), !retainAssignment), env,
+            () -> {
+            });
           continue;
         }
         if (
@@ -583,7 +615,9 @@ public class ServerCrashProcedure extends
           // We need to change the state here otherwise the TRSP scheduled by DTP will try to
           // close the region from a dead server and will never succeed. Please see HBASE-23636
           // for more details.
-          env.getAssignmentManager().regionClosedAbnormally(regionNode);
+          ProcedureFutureUtil.suspendIfNecessary(this, this::setUpdateMetaFuture,
+            env.getAssignmentManager().regionClosedAbnormally(regionNode), env, () -> {
+            });
           LOG.info("{} found table disabling for region {}, set it state to ABNORMALLY_CLOSED.",
             this, regionNode);
           continue;
@@ -599,11 +633,20 @@ public class ServerCrashProcedure extends
         TransitRegionStateProcedure proc =
           TransitRegionStateProcedure.assign(env, region, !retainAssignment, null);
         regionNode.setProcedure(proc);
+        // It is OK to still use addChildProcedure even if we suspend in the middle of this loop, as
+        // the subProcList will only be cleared when we successfully returned from the
+        // executeFromState method. This means we will submit all the TRSPs after we successfully
+        // finished this loop
         addChildProcedure(proc);
       } finally {
-        regionNode.unlock();
+        if (updateMetaFuture == null) {
+          regionNode.unlock(this);
+        }
       }
     }
+    // we will call this method two times if the region server carries meta, so we need to reset it
+    // to 0 after successfully finished the above loop
+    processedRegions = 0;
   }
 
   @Override

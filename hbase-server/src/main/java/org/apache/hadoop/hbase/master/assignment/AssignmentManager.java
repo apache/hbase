@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -82,6 +83,7 @@ import org.apache.hadoop.hbase.regionserver.SequenceId;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -1989,71 +1991,78 @@ public class AssignmentManager {
   // Should only be called in TransitRegionStateProcedure(and related procedures), as the locking
   // and pre-assumptions are very tricky.
   // ============================================================================================
-  private void transitStateAndUpdate(RegionStateNode regionNode, RegionState.State newState,
-    RegionState.State... expectedStates) throws IOException {
+  private CompletableFuture<Void> transitStateAndUpdate(RegionStateNode regionNode,
+    RegionState.State newState, RegionState.State... expectedStates) {
     RegionState.State state = regionNode.getState();
-    regionNode.transitionState(newState, expectedStates);
-    boolean succ = false;
     try {
-      regionStateStore.updateRegionLocation(regionNode);
-      succ = true;
-    } finally {
-      if (!succ) {
+      regionNode.transitionState(newState, expectedStates);
+    } catch (UnexpectedStateException e) {
+      return FutureUtils.failedFuture(e);
+    }
+    CompletableFuture<Void> future = regionStateStore.updateRegionLocation(regionNode);
+    FutureUtils.addListener(future, (r, e) -> {
+      if (e != null) {
         // revert
         regionNode.setState(state);
       }
-    }
+    });
+    return future;
   }
 
   // should be called within the synchronized block of RegionStateNode
-  void regionOpening(RegionStateNode regionNode) throws IOException {
+  CompletableFuture<Void> regionOpening(RegionStateNode regionNode) {
     // As in SCP, for performance reason, there is no TRSP attached with this region, we will not
     // update the region state, which means that the region could be in any state when we want to
     // assign it after a RS crash. So here we do not pass the expectedStates parameter.
-    transitStateAndUpdate(regionNode, State.OPENING);
-    regionStates.addRegionToServer(regionNode);
-    // update the operation count metrics
-    metrics.incrementOperationCounter();
+    return transitStateAndUpdate(regionNode, State.OPENING).thenAccept(r -> {
+      regionStates.addRegionToServer(regionNode);
+      // update the operation count metrics
+      metrics.incrementOperationCounter();
+    });
   }
 
   // should be called under the RegionStateNode lock
   // The parameter 'giveUp' means whether we will try to open the region again, if it is true, then
   // we will persist the FAILED_OPEN state into hbase:meta.
-  void regionFailedOpen(RegionStateNode regionNode, boolean giveUp) throws IOException {
+  CompletableFuture<Void> regionFailedOpen(RegionStateNode regionNode, boolean giveUp) {
     RegionState.State state = regionNode.getState();
     ServerName regionLocation = regionNode.getRegionLocation();
-    if (giveUp) {
-      regionNode.setState(State.FAILED_OPEN);
-      regionNode.setRegionLocation(null);
-      boolean succ = false;
-      try {
-        regionStateStore.updateRegionLocation(regionNode);
-        succ = true;
-      } finally {
-        if (!succ) {
-          // revert
-          regionNode.setState(state);
-          regionNode.setRegionLocation(regionLocation);
-        }
+    if (!giveUp) {
+      if (regionLocation != null) {
+        regionStates.removeRegionFromServer(regionLocation, regionNode);
       }
+      return CompletableFuture.completedFuture(null);
     }
-    if (regionLocation != null) {
-      regionStates.removeRegionFromServer(regionLocation, regionNode);
-    }
+    regionNode.setState(State.FAILED_OPEN);
+    regionNode.setRegionLocation(null);
+    CompletableFuture<Void> future = regionStateStore.updateRegionLocation(regionNode);
+    FutureUtils.addListener(future, (r, e) -> {
+      if (e == null) {
+        if (regionLocation != null) {
+          regionStates.removeRegionFromServer(regionLocation, regionNode);
+        }
+      } else {
+        // revert
+        regionNode.setState(state);
+        regionNode.setRegionLocation(regionLocation);
+      }
+    });
+    return future;
   }
 
   // should be called under the RegionStateNode lock
-  void regionClosing(RegionStateNode regionNode) throws IOException {
-    transitStateAndUpdate(regionNode, State.CLOSING, STATES_EXPECTED_ON_CLOSING);
-
-    RegionInfo hri = regionNode.getRegionInfo();
-    // Set meta has not initialized early. so people trying to create/edit tables will wait
-    if (isMetaRegion(hri)) {
-      setMetaAssigned(hri, false);
-    }
-    regionStates.addRegionToServer(regionNode);
-    // update the operation count metrics
-    metrics.incrementOperationCounter();
+  CompletableFuture<Void> regionClosing(RegionStateNode regionNode) {
+    return transitStateAndUpdate(regionNode, State.CLOSING, STATES_EXPECTED_ON_CLOSING)
+      .thenAccept(r -> {
+        RegionInfo hri = regionNode.getRegionInfo();
+        // Set meta has not initialized early. so people trying to create/edit tables will wait
+        if (isMetaRegion(hri)) {
+          setMetaAssigned(hri, false);
+        }
+        regionStates.addRegionToServer(regionNode);
+        // update the operation count metrics
+        metrics.incrementOperationCounter();
+      });
   }
 
   // for open and close, they will first be persist to the procedure store in
@@ -2062,7 +2071,8 @@ public class AssignmentManager {
   // RegionRemoteProcedureBase is woken up, we will persist the RegionStateNode to hbase:meta.
 
   // should be called under the RegionStateNode lock
-  void regionOpenedWithoutPersistingToMeta(RegionStateNode regionNode) throws IOException {
+  void regionOpenedWithoutPersistingToMeta(RegionStateNode regionNode)
+    throws UnexpectedStateException {
     regionNode.transitionState(State.OPEN, STATES_EXPECTED_ON_OPEN);
     RegionInfo regionInfo = regionNode.getRegionInfo();
     regionStates.addRegionToServer(regionNode);
@@ -2070,7 +2080,8 @@ public class AssignmentManager {
   }
 
   // should be called under the RegionStateNode lock
-  void regionClosedWithoutPersistingToMeta(RegionStateNode regionNode) throws IOException {
+  void regionClosedWithoutPersistingToMeta(RegionStateNode regionNode)
+    throws UnexpectedStateException {
     ServerName regionLocation = regionNode.getRegionLocation();
     regionNode.transitionState(State.CLOSED, STATES_EXPECTED_ON_CLOSED);
     regionNode.setRegionLocation(null);
@@ -2081,39 +2092,40 @@ public class AssignmentManager {
   }
 
   // should be called under the RegionStateNode lock
+  CompletableFuture<Void> persistToMeta(RegionStateNode regionNode) {
+    return regionStateStore.updateRegionLocation(regionNode).thenAccept(r -> {
+      RegionInfo regionInfo = regionNode.getRegionInfo();
+      if (isMetaRegion(regionInfo) && regionNode.getState() == State.OPEN) {
+        // Usually we'd set a table ENABLED at this stage but hbase:meta is ALWAYs enabled, it
+        // can't be disabled -- so skip the RPC (besides... enabled is managed by TableStateManager
+        // which is backed by hbase:meta... Avoid setting ENABLED to avoid having to update state
+        // on table that contains state.
+        setMetaAssigned(regionInfo, true);
+      }
+    });
+  }
+
+  // should be called under the RegionStateNode lock
   // for SCP
-  public void regionClosedAbnormally(RegionStateNode regionNode) throws IOException {
+  public CompletableFuture<Void> regionClosedAbnormally(RegionStateNode regionNode) {
     RegionState.State state = regionNode.getState();
     ServerName regionLocation = regionNode.getRegionLocation();
-    regionNode.transitionState(State.ABNORMALLY_CLOSED);
+    regionNode.setState(State.ABNORMALLY_CLOSED);
     regionNode.setRegionLocation(null);
-    boolean succ = false;
-    try {
-      regionStateStore.updateRegionLocation(regionNode);
-      succ = true;
-    } finally {
-      if (!succ) {
+    CompletableFuture<Void> future = regionStateStore.updateRegionLocation(regionNode);
+    FutureUtils.addListener(future, (r, e) -> {
+      if (e == null) {
+        if (regionLocation != null) {
+          regionNode.setLastHost(regionLocation);
+          regionStates.removeRegionFromServer(regionLocation, regionNode);
+        }
+      } else {
         // revert
         regionNode.setState(state);
         regionNode.setRegionLocation(regionLocation);
       }
-    }
-    if (regionLocation != null) {
-      regionNode.setLastHost(regionLocation);
-      regionStates.removeRegionFromServer(regionLocation, regionNode);
-    }
-  }
-
-  void persistToMeta(RegionStateNode regionNode) throws IOException {
-    regionStateStore.updateRegionLocation(regionNode);
-    RegionInfo regionInfo = regionNode.getRegionInfo();
-    if (isMetaRegion(regionInfo) && regionNode.getState() == State.OPEN) {
-      // Usually we'd set a table ENABLED at this stage but hbase:meta is ALWAYs enabled, it
-      // can't be disabled -- so skip the RPC (besides... enabled is managed by TableStateManager
-      // which is backed by hbase:meta... Avoid setting ENABLED to avoid having to update state
-      // on table that contains state.
-      setMetaAssigned(regionInfo, true);
-    }
+    });
+    return future;
   }
 
   // ============================================================================================

@@ -24,6 +24,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -85,7 +87,7 @@ public class TestRollbackSCP {
     }
 
     @Override
-    void persistToMeta(RegionStateNode regionNode) throws IOException {
+    CompletableFuture<Void> persistToMeta(RegionStateNode regionNode) {
       TransitRegionStateProcedure proc = regionNode.getProcedure();
       if (!regionNode.getRegionInfo().isMetaRegion() && proc.hasParent()) {
         Procedure<?> p =
@@ -96,10 +98,10 @@ public class TestRollbackSCP {
             ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdateInRollback(
               getMaster().getMasterProcedureExecutor(), true);
           }
-          throw new RuntimeException("inject code bug");
+          return FutureUtils.failedFuture(new RuntimeException("inject code bug"));
         }
       }
-      super.persistToMeta(regionNode);
+      return super.persistToMeta(regionNode);
     }
   }
 
