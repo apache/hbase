@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This compactor generates two files, one for the latest put cells and the other for
+ * This compactor generates two files, one for the latest cells and the other for
  * the rest of the cells (i.e., older put cells and delete markers).
  */
 @InterfaceAudience.Private

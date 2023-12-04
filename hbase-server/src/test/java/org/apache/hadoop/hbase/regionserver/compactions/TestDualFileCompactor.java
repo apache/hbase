@@ -78,6 +78,9 @@ public class TestDualFileCompactor {
 
   private static final TableName TABLE_NAME = TableName.valueOf(NAME_OF_THINGS, NAME_OF_THINGS);
 
+  private static final KeyValue KV_A_DeleteFamilyVersion =
+    new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
+    null,300L, KeyValue.Type.DeleteFamilyVersion);
   private static final KeyValue KV_A_1 = new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
     Bytes.toBytes("a"),300L, KeyValue.Type.Put);
   private static final KeyValue KV_A_2 = new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
@@ -85,7 +88,7 @@ public class TestDualFileCompactor {
   private static final KeyValue KV_A_3 = new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
     Bytes.toBytes("a"),100L, KeyValue.Type.Put);
 
-  private static final KeyValue KV_B_Delete_Column = new KeyValue(Bytes.toBytes("123"),
+  private static final KeyValue KV_B_DeleteColumn = new KeyValue(Bytes.toBytes("123"),
     Bytes.toBytes("0"), Bytes.toBytes("b"),200L, KeyValue.Type.DeleteColumn);
   private static final KeyValue KV_B = new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
     Bytes.toBytes("b"),100L, KeyValue.Type.Put);
@@ -99,13 +102,23 @@ public class TestDualFileCompactor {
   private static final KeyValue KV_D_2 = new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
     Bytes.toBytes("d"),100L, KeyValue.Type.Put);
 
-  private static final KeyValue KV_Delete_Family = new KeyValue(Bytes.toBytes("456"),
+  private static final KeyValue KV_E_F_DeleteFamily = new KeyValue(Bytes.toBytes("456"),
     Bytes.toBytes("0"), null ,200L, KeyValue.Type.DeleteFamily);
   private static final KeyValue KV_E = new KeyValue(Bytes.toBytes("456"), Bytes.toBytes("0"),
     Bytes.toBytes("e"),100L, KeyValue.Type.Put);
   private static final KeyValue KV_F = new KeyValue(Bytes.toBytes("456"), Bytes.toBytes("0"),
     Bytes.toBytes("f"),100L, KeyValue.Type.Put);
-  private static final KeyValue KV_G = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
+  private static final KeyValue KV_G_DeleteFamily = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
+    null,400L, KeyValue.Type.DeleteFamily);
+  private static final KeyValue KV_G_DeleteFamilyVersion = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
+    null,100L, KeyValue.Type.DeleteFamilyVersion);
+  private static final KeyValue KV_G_1 = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
+    Bytes.toBytes("g"),500L, KeyValue.Type.Put);
+  private static final KeyValue KV_G_DeleteColumn = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
+    null,300L, KeyValue.Type.DeleteColumn);
+  private static final KeyValue KV_G_DeleteColumnVersion = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
+    null,200L, KeyValue.Type.Delete);
+  private static final KeyValue KV_G_2 = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
     Bytes.toBytes("g"),100L, KeyValue.Type.Put);
 
   @Parameters(name = "{index}: usePrivateReaders={0}")
@@ -174,11 +187,16 @@ public class TestDualFileCompactor {
 
   @Test
   public void test() throws Exception {
-    verify(a(KV_A_1, KV_A_2, KV_A_3, KV_B_Delete_Column, KV_B, KV_C, KV_D_1, KV_D_2,
-        KV_Delete_Family, KV_E, KV_F, KV_G),
+    verify(a(KV_A_DeleteFamilyVersion, KV_A_1, KV_A_2, KV_A_3, KV_B_DeleteColumn, KV_B, KV_C,
+        KV_D_1, KV_D_2, // Row 123
+        KV_E_F_DeleteFamily, KV_E, KV_F, // Row 456
+        KV_G_DeleteFamily, KV_G_DeleteFamilyVersion, KV_G_1, KV_G_DeleteColumn,
+        KV_G_DeleteColumnVersion, KV_G_2), // Row 789
       a(
-        a(KV_A_1, KV_C, KV_D_1, KV_G), // Latest versions
-        a(KV_A_2, KV_A_3, KV_B_Delete_Column, KV_B, KV_D_2, KV_Delete_Family, KV_E, KV_F)
+        a(KV_A_DeleteFamilyVersion, KV_A_2, KV_B_DeleteColumn, KV_C, KV_D_1,
+          KV_E_F_DeleteFamily, KV_G_DeleteFamily, KV_G_1), // Latest versions
+        a(KV_A_1, KV_A_3, KV_B, KV_D_2, KV_E, KV_F, KV_G_DeleteFamilyVersion, KV_G_DeleteColumn,
+          KV_G_DeleteColumnVersion, KV_G_2)
       ));
   }
 

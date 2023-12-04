@@ -37,7 +37,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 @InterfaceAudience.Private
 class DualFileStoreFileManager extends DefaultStoreFileManager {
   /**
-   * List of store files that include the latest put cells inside this store. This is an
+   * List of store files that include the latest cells inside this store. This is an
    * immutable list that is atomically replaced when its contents change.
    */
   private volatile ImmutableList<HStoreFile> latestVersionStoreFiles = ImmutableList.of();
