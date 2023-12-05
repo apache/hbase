@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import java.util.List;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
@@ -42,6 +43,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({ SmallTests.class, RegionServerTests.class })
@@ -51,7 +53,8 @@ public class TestMetricsRegionServerAggregate {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMetricsRegionServerAggregate.class);
 
-  @Test public void test() {
+  @Test
+  public void test() {
     AtomicInteger retVal = new AtomicInteger(0);
     Answer defaultAnswer = invocation -> {
       Class<?> returnType = invocation.getMethod().getReturnType();
@@ -171,13 +174,17 @@ public class TestMetricsRegionServerAggregate {
         // readRequestCount and writeRequestCount are tracking the value of i, which increases by 1
         // each interval. There are N regions, so the delta each interval is N*i=N. So the rate is
         // simply N / period.
-        assertEquals((double)numRegions / metricsPeriodSec, wrapper.getReadRequestsRatePerSecond(), 0.0001);
-        assertEquals((double)numRegions / metricsPeriodSec, wrapper.getWriteRequestsRatePerSecond(), 0.0001);
+        assertEquals((double) numRegions / metricsPeriodSec, wrapper.getReadRequestsRatePerSecond(),
+          0.0001);
+        assertEquals((double) numRegions / metricsPeriodSec,
+          wrapper.getWriteRequestsRatePerSecond(), 0.0001);
         // total of above, so multiply by 2
-        assertEquals((double)numRegions / metricsPeriodSec * 2, wrapper.getRequestsPerSecond(), 0.0001);
+        assertEquals((double) numRegions / metricsPeriodSec * 2, wrapper.getRequestsPerSecond(),
+          0.0001);
         // Similar logic to above, except there are M totalStores and each one is of
         // size tracking i. So the rate is just M / period.
-        assertEquals((double)totalStores / metricsPeriodSec, wrapper.getStoreFileSizeGrowthRate(), 0.0001);
+        assertEquals((double) totalStores / metricsPeriodSec, wrapper.getStoreFileSizeGrowthRate(),
+          0.0001);
       }
     } finally {
       EnvironmentEdgeManager.reset();
