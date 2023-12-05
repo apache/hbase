@@ -23,6 +23,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -30,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -60,9 +63,12 @@ public class TestRegionStateNodeLock {
   @Test
   public void testLockByThread() {
     assertFalse(lock.isLocked());
+    assertFalse(lock.isLockedBy(Thread.currentThread()));
     assertThrows(IllegalMonitorStateException.class, () -> lock.unlock());
     lock.lock();
     assertTrue(lock.isLocked());
+    assertTrue(lock.isLockedBy(Thread.currentThread()));
+    assertFalse(lock.isLockedBy(new Object()));
     // reentrant
     assertTrue(lock.tryLock());
     lock.unlock();
@@ -72,25 +78,30 @@ public class TestRegionStateNodeLock {
   }
 
   @Test
-  public void testLockByProc() {
+  public void testLockByProc() throws ProcedureSuspendedException {
     NoopProcedure<?> proc = new NoopProcedure<Void>();
     assertFalse(lock.isLocked());
+    assertFalse(lock.isLockedBy(proc));
     assertThrows(IllegalMonitorStateException.class, () -> lock.unlock(proc));
-    lock.lock(proc);
+    // here we do not need wake up
+    lock.lock(proc, null);
     assertTrue(lock.isLocked());
+    assertTrue(lock.isLockedBy(proc));
     // reentrant
     assertTrue(lock.tryLock(proc));
     lock.unlock(proc);
     assertTrue(lock.isLocked());
+    assertTrue(lock.isLockedBy(proc));
     lock.unlock(proc);
     assertFalse(lock.isLocked());
+    assertFalse(lock.isLockedBy(proc));
   }
 
   @Test
-  public void testLockProcThenThread() {
+  public void testLockProcThenThread() throws ProcedureSuspendedException {
     NoopProcedure<?> proc = new NoopProcedure<Void>();
     assertFalse(lock.isLocked());
-    lock.lock(proc);
+    lock.lock(proc, null);
     assertFalse(lock.tryLock());
     assertThrows(IllegalMonitorStateException.class, () -> lock.unlock());
     long startNs = System.nanoTime();
@@ -104,6 +115,18 @@ public class TestRegionStateNodeLock {
     assertTrue(lock.isLocked());
     lock.unlock();
     assertFalse(lock.isLocked());
+  }
+
+  @Test
+  public void testLockThreadThenProc() throws ProcedureSuspendedException {
+    lock.lock();
+    NoopProcedure<?> proc = new NoopProcedure<Void>();
+    Runnable wakeUp = mock(Runnable.class);
+    assertThrows(ProcedureSuspendedException.class, () -> lock.lock(proc, wakeUp));
+    lock.unlock();
+    // make sure that we have woken up the procedure, and the lock has been passed
+    verify(wakeUp).run();
+    assertTrue(lock.isLockedBy(proc));
   }
 
   @Test
@@ -135,5 +158,6 @@ public class TestRegionStateNodeLock {
     }
     assertEquals(0, concurrency.get());
     assertEquals(1, maxConcurrency.get());
+    assertFalse(lock.isLocked());
   }
 }

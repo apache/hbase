@@ -298,15 +298,14 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
     throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     RegionStateNode regionNode = getRegionNode(env);
-    if (future == null) {
-      regionNode.lock(this);
+    if (!regionNode.isLockedBy(this)) {
+      regionNode.lock(this, () -> ProcedureFutureUtil.wakeUp(this, env));
     }
     try {
       switch (state) {
         case REGION_REMOTE_PROCEDURE_DISPATCH: {
           // The code which wakes us up also needs to lock the RSN so here we do not need to
-          // synchronize
-          // on the event.
+          // synchronize on the event.
           ProcedureEvent<?> event = regionNode.getProcedureEvent();
           try {
             env.getRemoteDispatcher().addOperationToNode(targetServer, this);
