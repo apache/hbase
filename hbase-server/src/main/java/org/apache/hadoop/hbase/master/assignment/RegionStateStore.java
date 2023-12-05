@@ -176,7 +176,7 @@ public class RegionStateStore {
     }
   }
 
-  void updateRegionLocation(RegionStateNode regionStateNode) throws IOException {
+  private Put generateUpdateRegionLocationPut(RegionStateNode regionStateNode) throws IOException {
     long time = EnvironmentEdgeManager.currentTime();
     long openSeqNum = regionStateNode.getState() == State.OPEN
       ? regionStateNode.getOpenSeqNum()
@@ -221,11 +221,34 @@ public class RegionStateStore {
       .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put).setValue(Bytes.toBytes(state.name()))
       .build());
     LOG.info(info.toString());
-    updateRegionLocation(regionInfo, state, put);
+    return put;
+  }
+
+  CompletableFuture<Void> updateRegionLocation(RegionStateNode regionStateNode) {
+    Put put;
+    try {
+      put = generateUpdateRegionLocationPut(regionStateNode);
+    } catch (IOException e) {
+      return FutureUtils.failedFuture(e);
+    }
+    RegionInfo regionInfo = regionStateNode.getRegionInfo();
+    State state = regionStateNode.getState();
+    CompletableFuture<Void> future = updateRegionLocation(regionInfo, state, put);
     if (regionInfo.isMetaRegion() && regionInfo.isFirst()) {
       // mirror the meta location to zookeeper
-      mirrorMetaLocation(regionInfo, regionLocation, state);
+      // we store meta location in master local region which means the above method is
+      // synchronous(we just wrap the result with a CompletableFuture to make it look like
+      // asynchronous), so it is OK to just call this method directly here
+      assert future.isDone();
+      if (!future.isCompletedExceptionally()) {
+        try {
+          mirrorMetaLocation(regionInfo, regionStateNode.getRegionLocation(), state);
+        } catch (IOException e) {
+          return FutureUtils.failedFuture(e);
+        }
+      }
     }
+    return future;
   }
 
   private void mirrorMetaLocation(RegionInfo regionInfo, ServerName serverName, State state)
@@ -249,25 +272,31 @@ public class RegionStateStore {
     }
   }
 
-  private void updateRegionLocation(RegionInfo regionInfo, State state, Put put)
-    throws IOException {
-    try {
-      if (regionInfo.isMetaRegion()) {
+  private CompletableFuture<Void> updateRegionLocation(RegionInfo regionInfo, State state,
+    Put put) {
+    CompletableFuture<Void> future;
+    if (regionInfo.isMetaRegion()) {
+      try {
         masterRegion.update(r -> r.put(put));
-      } else {
-        try (Table table = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
-          table.put(put);
-        }
+        future = CompletableFuture.completedFuture(null);
+      } catch (Exception e) {
+        future = FutureUtils.failedFuture(e);
       }
-    } catch (IOException e) {
-      // TODO: Revist!!!! Means that if a server is loaded, then we will abort our host!
-      // In tests we abort the Master!
-      String msg = String.format("FAILED persisting region=%s state=%s",
-        regionInfo.getShortNameToLog(), state);
-      LOG.error(msg, e);
-      master.abort(msg, e);
-      throw e;
+    } else {
+      AsyncTable<?> table = master.getAsyncConnection().getTable(TableName.META_TABLE_NAME);
+      future = table.put(put);
     }
+    FutureUtils.addListener(future, (r, e) -> {
+      if (e != null) {
+        // TODO: Revist!!!! Means that if a server is loaded, then we will abort our host!
+        // In tests we abort the Master!
+        String msg = String.format("FAILED persisting region=%s state=%s",
+          regionInfo.getShortNameToLog(), state);
+        LOG.error(msg, e);
+        master.abort(msg, e);
+      }
+    });
+    return future;
   }
 
   private long getOpenSeqNumForParentRegion(RegionInfo region) throws IOException {

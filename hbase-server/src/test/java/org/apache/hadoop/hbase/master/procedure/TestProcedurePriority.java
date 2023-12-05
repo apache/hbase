@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -55,10 +56,16 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
+
 /**
  * Test to ensure that the priority for procedures and stuck checker can partially solve the problem
  * describe in HBASE-19976, that is, RecoverMetaProcedure can finally be executed within a certain
  * period of time.
+ * <p>
+ * As of HBASE-28199, we no longer block a worker when updating meta now, so this test can not test
+ * adding procedure worker now, but it could still be used to make sure that we could make progress
+ * when meta is gone and we have a lot of pending TRSPs.
  */
 @Category({ MasterTests.class, LargeTests.class })
 public class TestProcedurePriority {
@@ -129,6 +136,7 @@ public class TestProcedurePriority {
     }
     UTIL.getAdmin().balance(BalanceRequest.newBuilder().setIgnoreRegionsInTransition(true).build());
     UTIL.waitUntilNoRegionsInTransition();
+    UTIL.getAdmin().balancerSwitch(false, true);
   }
 
   @AfterClass
@@ -144,22 +152,26 @@ public class TestProcedurePriority {
     HRegionServer rsNoMeta = UTIL.getOtherRegionServer(rsWithMetaThread.getRegionServer());
     FAIL = true;
     UTIL.getMiniHBaseCluster().killRegionServer(rsNoMeta.getServerName());
-    // wait until all the worker thread are stuck, which means that the stuck checker will start to
-    // add new worker thread.
     ProcedureExecutor<?> executor =
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+    // wait until we have way more TRSPs than the core pool size, and then make sure we can recover
+    // normally
     UTIL.waitFor(60000, new ExplainingPredicate<Exception>() {
 
       @Override
       public boolean evaluate() throws Exception {
-        return executor.getWorkerThreadCount() > CORE_POOL_SIZE;
+        return executor.getProcedures().stream().filter(p -> !p.isFinished())
+          .filter(p -> p.getState() != ProcedureState.INITIALIZING)
+          .filter(p -> p instanceof TransitRegionStateProcedure).count() > 5 * CORE_POOL_SIZE;
       }
 
       @Override
       public String explainFailure() throws Exception {
-        return "Stuck checker does not add new worker thread";
+        return "Not enough TRSPs scheduled";
       }
     });
+    // sleep more time to make sure the TRSPs have been executed
+    Thread.sleep(10000);
     UTIL.getMiniHBaseCluster().killRegionServer(rsWithMetaThread.getRegionServer().getServerName());
     rsWithMetaThread.join();
     FAIL = false;
