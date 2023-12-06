@@ -70,7 +70,7 @@ public class CompactedHFilesDischarger extends ScheduledChore {
    * no-executor before you call run.
    * @return The old setting for <code>useExecutor</code>
    */
-  boolean setUseExecutor(final boolean useExecutor) {
+  public boolean setUseExecutor(final boolean useExecutor) {
     boolean oldSetting = this.useExecutor;
     this.useExecutor = useExecutor;
     return oldSetting;

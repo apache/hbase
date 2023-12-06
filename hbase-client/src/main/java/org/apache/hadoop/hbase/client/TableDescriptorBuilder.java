@@ -144,6 +144,13 @@ public class TableDescriptorBuilder {
     new Bytes(Bytes.toBytes(REGION_MEMSTORE_REPLICATION));
 
   /**
+   * If non-null, the HDFS erasure coding policy to set on the data dir of the table
+   */
+  public static String ERASURE_CODING_POLICY = "ERASURE_CODING_POLICY";
+  private static final Bytes ERASURE_CODING_POLICY_KEY =
+    new Bytes(Bytes.toBytes(ERASURE_CODING_POLICY));
+
+  /**
    * Used by shell/rest interface to access this metadata attribute which denotes if the table
    * should be treated by region normalizer.
    */
@@ -490,6 +497,11 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public TableDescriptorBuilder setErasureCodingPolicy(String policy) {
+    desc.setErasureCodingPolicy(policy);
+    return this;
+  }
+
   public TableDescriptorBuilder setRegionMemStoreReplication(boolean memstoreReplication) {
     desc.setRegionMemStoreReplication(memstoreReplication);
     return this;
@@ -746,6 +758,28 @@ public class TableDescriptorBuilder {
      */
     public ModifyableTableDescriptor setReadOnly(final boolean readOnly) {
       return setValue(READONLY_KEY, Boolean.toString(readOnly));
+    }
+
+    /**
+     * The HDFS erasure coding policy for a table. This will be set on the data dir of the table,
+     * and is an alternative to normal replication which takes less space at the cost of locality.
+     * @return the current policy, or null if undefined
+     */
+    @Override
+    public String getErasureCodingPolicy() {
+      return getValue(ERASURE_CODING_POLICY);
+    }
+
+    /**
+     * Sets the HDFS erasure coding policy for the table. This will be propagated to HDFS for the
+     * data dir of the table. Erasure coding is an alternative to normal replication which takes
+     * less space at the cost of locality. The policy must be available and enabled on the hdfs
+     * cluster before being set.
+     * @param policy the policy to set
+     * @return the modifyable TD
+     */
+    public ModifyableTableDescriptor setErasureCodingPolicy(String policy) {
+      return setValue(ERASURE_CODING_POLICY_KEY, policy);
     }
 
     /**
