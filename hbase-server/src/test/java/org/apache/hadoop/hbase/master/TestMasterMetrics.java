@@ -186,6 +186,8 @@ public class TestMasterMetrics {
 
     metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX + "SubmittedCount",
       0, masterSource);
+    metricsHelper.assertGauge("oldWALsDirSize", master.getMasterWalManager().getOldWALsDirSize(),
+      masterSource);
   }
 
   @Test

@@ -209,4 +209,12 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
   Entry<Long, Long> convertSnapshot(SpaceQuotaSnapshot snapshot) {
     return new SimpleImmutableEntry<Long, Long>(snapshot.getUsage(), snapshot.getLimit());
   }
+
+  @Override
+  public long getOldWALsDirSize() {
+    if (master == null || !master.isInitialized()) {
+      return 0;
+    }
+    return master.getMasterWalManager().getOldWALsDirSize();
+  }
 }
