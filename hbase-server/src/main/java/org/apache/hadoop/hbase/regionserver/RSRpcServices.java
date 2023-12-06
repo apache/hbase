@@ -1545,6 +1545,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   }
 
   @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public CompactionSwitchResponse compactionSwitch(RpcController controller,
     CompactionSwitchRequest request) throws ServiceException {
     rpcPreCheck("compactionSwitch");
@@ -2223,6 +2224,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
    * @param request    the request
    */
   @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public RollWALWriterResponse rollWALWriter(final RpcController controller,
     final RollWALWriterRequest request) throws ServiceException {
     try {
