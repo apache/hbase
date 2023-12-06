@@ -504,7 +504,7 @@ public class WALFactory {
     return factoryId;
   }
 
-  public final WALProvider getWALProvider() {
+  public WALProvider getWALProvider() {
     return this.provider;
   }
 
@@ -512,7 +512,7 @@ public class WALFactory {
    * @return Current metaProvider... may be null if not yet initialized.
    * @see #getMetaProvider()
    */
-  public final WALProvider getMetaWALProvider() {
+  public WALProvider getMetaWALProvider() {
     return this.metaProvider.get();
   }
 
