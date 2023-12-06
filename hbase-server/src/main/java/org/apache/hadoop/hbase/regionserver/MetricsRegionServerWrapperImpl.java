@@ -730,7 +730,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     return regionServer.getRpcServices().getScannersCount();
   }
 
-  private static class RegionMetricAggregate {
+  private static final class RegionMetricAggregate {
     private long numStores = 0;
     private long numStoreFiles = 0;
     private long memstoreSize = 0;
@@ -852,7 +852,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
       }
     }
 
-    private static class Deltas {
+    private static final class Deltas {
       private final long readRequestsCountDelta;
       private final long writeRequestsCountDelta;
 
@@ -903,7 +903,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
       storeFileSizeGrowthRate = (double) intervalStoreFileSize * 1000.0 / expectedPeriod;
     }
 
-    private static class StoreFileStats {
+    private static final class StoreFileStats {
       private final long numHFiles;
       private final long avgAgeNumerator;
 
