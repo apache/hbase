@@ -639,4 +639,6 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String SCANNER_LEASE_EXPIRED_COUNT = "scannerLeaseExpiredCount";
   String SCANNER_LEASE_EXPIRED_COUNT_DESC =
     "Count of scanners which were expired due to scanner lease timeout";
+  String CURRENT_REGION_CACHE_RATIO = "currentRegionCacheRatio";
+  String CURRENT_REGION_CACHE_RATIO_DESC = "How much % of this region has been cached";
 }
