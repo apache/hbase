@@ -685,9 +685,11 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private void updateRegionCachedSize(Path filePath, long cachedSize) {
-    String regionName = filePath.getParent().getParent().getName();
-    regionCachedSize.merge(regionName, cachedSize,
-      (previousSize, newBlockSize) -> previousSize + newBlockSize);
+    if (filePath != null) {
+      String regionName = filePath.getParent().getParent().getName();
+      regionCachedSize.merge(regionName, cachedSize,
+        (previousSize, newBlockSize) -> previousSize + newBlockSize);
+    }
   }
 
   /**
