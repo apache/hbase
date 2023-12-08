@@ -66,6 +66,7 @@ public interface MetricsMasterSource extends BaseSource {
   String MERGE_PLAN_COUNT_NAME = "mergePlanCount";
 
   String CLUSTER_REQUESTS_NAME = "clusterRequests";
+  String OLD_WAL_DIR_SIZE_NAME = "oldWALsDirSize";
   String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
   String MASTER_START_TIME_DESC = "Master Start Time";
   String MASTER_FINISHED_INITIALIZATION_TIME_DESC =
@@ -85,6 +86,7 @@ public interface MetricsMasterSource extends BaseSource {
   String MERGE_PLAN_COUNT_DESC = "Number of Region Merge Plans executed";
 
   String SERVER_CRASH_METRIC_PREFIX = "serverCrash";
+  String OLD_WAL_DIR_SIZE_DESC = "size of old WALs directory in bytes";
 
   /**
    * Increment the number of requests the cluster has seen.
