@@ -146,4 +146,9 @@ public interface MetricsMasterWrapper {
    * Get the time in Millis when the master finished initializing/becoming the active master
    */
   long getMasterInitializationTime();
+
+  /**
+   * Get the size of old WALs directory in bytes.
+   */
+  long getOldWALsDirSize();
 }
