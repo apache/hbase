@@ -89,6 +89,9 @@ public class MasterWalManager {
   // create the split log lock
   private final Lock splitLogLock = new ReentrantLock();
 
+  // old WALs directory size in bytes
+  private long oldWALsDirSize;
+
   /**
    * Superceded by {@link SplitWALManager}; i.e. procedure-based WAL splitting rather than 'classic'
    * zk-coordinated WAL splitting.
@@ -113,6 +116,7 @@ public class MasterWalManager {
     this.services = services;
     this.splitLogManager = new SplitLogManager(services, conf);
     this.oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    this.oldWALsDirSize = 0;
   }
 
   public void stop() {
@@ -131,6 +135,14 @@ public class MasterWalManager {
    */
   Path getOldLogDir() {
     return this.oldLogDir;
+  }
+
+  public void updateOldWALsDirSize() throws IOException {
+    this.oldWALsDirSize = fs.getContentSummary(this.oldLogDir).getLength();
+  }
+
+  public long getOldWALsDirSize() {
+    return this.oldWALsDirSize;
   }
 
   public FileSystem getFileSystem() {

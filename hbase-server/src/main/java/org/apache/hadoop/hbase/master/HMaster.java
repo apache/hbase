@@ -386,6 +386,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private SpaceQuotaSnapshotNotifier spaceQuotaSnapshotNotifier;
   private QuotaObserverChore quotaObserverChore;
   private SnapshotQuotaObserverChore snapshotQuotaChore;
+  private OldWALsDirSizeChore oldWALsDirSizeChore;
 
   private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
   private ProcedureStore procedureStore;
@@ -1175,6 +1176,10 @@ public class HMaster extends HRegionServer implements MasterServices {
       LOG.debug("Balancer post startup initialization complete, took "
         + ((System.currentTimeMillis() - start) / 1000) + " seconds");
     }
+
+    this.oldWALsDirSizeChore = new OldWALsDirSizeChore(this);
+    getChoreService().scheduleChore(this.oldWALsDirSizeChore);
+
     status.markComplete("Progress after master initialized complete");
   }
 
@@ -1645,6 +1650,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       shutdownChore(snapshotCleanerChore);
       shutdownChore(hbckChore);
       shutdownChore(regionsRecoveryChore);
+      shutdownChore(oldWALsDirSizeChore);
     }
   }
 

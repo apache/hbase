@@ -609,6 +609,12 @@ possible configurations would overwhelm and obscure the important.
       milliseconds.</description>
   </property>
   <property>
+    <name>hbase.master.oldwals.dir.updater.period</name>
+    <value>300000</value>
+    <description>Period at which the oldWALs directory size calculator/updater will run in the
+      Master, in milliseconds.</description>
+  </property>
+  <property>
     <name>hbase.regions.slop</name>
     <value>0.001</value>
     <description>Rebalance if any regionserver has average + (average * slop) regions.
