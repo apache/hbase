@@ -37,6 +37,14 @@
 # hbase hacking.
 include Java
 
+# Required to access JRuby-specific internal features, such as `JRuby.runtime`
+# Loading 'java' was automatically loading 'jruby' until JRuby 9.2.
+# But, it has changed since JRuby 9.3. JRuby 9.3+ needs loading 'jruby' explicitly.
+#
+# See also: https://github.com/jruby/jruby/issues/7221#issuecomment-1133646241
+#
+require 'jruby'
+
 # Some goodies for hirb. Should these be left up to the user's discretion?
 if $stdin.tty?
   require 'irb/completion'
