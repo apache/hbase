@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
@@ -966,6 +967,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily) {
+    Preconditions.checkNotNull(columnFamily,
+      "columnFamily is null, If you don't specify a columnFamily, use flush(TableName) instead.");
     return flush(tableName, Collections.singletonList(columnFamily));
   }
 
@@ -975,6 +978,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     // If the server version is lower than the client version, it's possible that the
     // flushTable method is not present in the server side, if so, we need to fall back
     // to the old implementation.
+    Preconditions.checkNotNull(columnFamilyList,
+      "columnFamily is null, If you don't specify a columnFamily, use flush(TableName) instead.");
     List<byte[]> columnFamilies = columnFamilyList.stream()
       .filter(cf -> cf != null && cf.length > 0).distinct().collect(Collectors.toList());
     FlushTableRequest request = RequestConverter.buildFlushTableRequest(tableName, columnFamilies,
@@ -983,21 +988,40 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       tableName, request, (s, c, req, done) -> s.flushTable(c, req, done),
       (resp) -> resp.getProcId(), new FlushTableProcedureBiConsumer(tableName));
     CompletableFuture<Void> future = new CompletableFuture<>();
-    addListener(procFuture, (ret, error) -> {
+    addListener(getDescriptor(tableName), (tDesc, error) -> {
       if (error != null) {
-        if (error instanceof TableNotFoundException || error instanceof TableNotEnabledException) {
-          future.completeExceptionally(error);
-        } else if (error instanceof DoNotRetryIOException) {
-          // usually this is caused by the method is not present on the server or
-          // the hbase hadoop version does not match the running hadoop version.
-          // if that happens, we need fall back to the old flush implementation.
-          LOG.info("Unrecoverable error in master side. Fallback to FlushTableProcedure V1", error);
-          legacyFlush(future, tableName, columnFamilies);
-        } else {
-          future.completeExceptionally(error);
-        }
+        future.completeExceptionally(error);
       } else {
-        future.complete(ret);
+        List<String> nonFaimilies = columnFamilies.stream().filter(cf -> !tDesc.hasColumnFamily(cf))
+          .map(cf -> Bytes.toString(cf)).collect(Collectors.toList());
+        if (nonFaimilies.size() > 0) {
+          String noSuchFamiliesMsg =
+            String.format("There are non-existing families %s, we cannot flush the table %s",
+              nonFaimilies, tableName.getNameAsString());
+          future.completeExceptionally(new NoSuchColumnFamilyException(noSuchFamiliesMsg));
+        } else {
+          addListener(procFuture, (ret, error2) -> {
+            if (error2 != null) {
+              if (
+                error2 instanceof TableNotFoundException
+                  || error2 instanceof TableNotEnabledException
+              ) {
+                future.completeExceptionally(error2);
+              } else if (error2 instanceof DoNotRetryIOException) {
+                // usually this is caused by the method is not present on the server or
+                // the hbase hadoop version does not match the running hadoop version.
+                // if that happens, we need fall back to the old flush implementation.
+                LOG.info("Unrecoverable error in master side. Fallback to FlushTableProcedure V1",
+                  error2);
+                legacyFlush(future, tableName, columnFamilies);
+              } else {
+                future.completeExceptionally(error2);
+              }
+            } else {
+              future.complete(ret);
+            }
+          });
+        }
       }
     });
     return future;
@@ -1071,14 +1095,29 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           .completeExceptionally(new NoServerForRegionException(Bytes.toStringBinary(regionName)));
         return;
       }
-      addListener(flush(serverName, location.getRegion(), columnFamily, writeFlushWALMarker),
-        (ret, err2) -> {
-          if (err2 != null) {
-            future.completeExceptionally(err2);
-          } else {
-            future.complete(ret);
-          }
-        });
+      TableName tableName = location.getRegion().getTable();
+      addListener(getDescriptor(tableName), (tDesc, error2) -> {
+        if (error2 != null) {
+          future.completeExceptionally(error2);
+          return;
+        }
+        if (columnFamily != null && !tDesc.hasColumnFamily(columnFamily)) {
+          String noSuchFamiliedMsg = String.format(
+            "There are non-existing family %s, we cannot flush the region %s, in table %s",
+            Bytes.toString(columnFamily), location.getRegion().getRegionNameAsString(),
+            tableName.getNameAsString());
+          future.completeExceptionally(new NoSuchColumnFamilyException(noSuchFamiliedMsg));
+          return;
+        }
+        addListener(flush(serverName, location.getRegion(), columnFamily, writeFlushWALMarker),
+          (ret, error3) -> {
+            if (error3 != null) {
+              future.completeExceptionally(error3);
+            } else {
+              future.complete(ret);
+            }
+          });
+      });
     });
     return future;
   }
