@@ -5828,9 +5828,11 @@ public class TestHRegion {
     Put put = new Put(tableName.toBytes()).addColumn(family, family, tableName.toBytes());
     this.region.put(put);
 
-    HRegion.FlushResult fr =
-      this.region.flushcache(Arrays.asList(noSuchFamily), false, FlushLifeCycleTracker.DUMMY);
-    assertTrue(fr.isFlushSucceeded());
+    HRegion.FlushResult fr = this.region.flushcache(Arrays.asList(family, noSuchFamily), false,
+      FlushLifeCycleTracker.DUMMY);
+    assertEquals(HRegion.FlushResult.Result.CANNOT_FLUSH, fr.getResult());
+    assertFalse("Cannot flush the Region because of non-existing column families.",
+      fr.isFlushSucceeded());
   }
 
   protected Configuration initSplit() {
