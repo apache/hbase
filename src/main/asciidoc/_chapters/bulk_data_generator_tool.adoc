@@ -18,8 +18,8 @@
  * limitations under the License.
  */
 ////
-
-== Bulk Data Generator Tool
+[[BulkDataGeneratorTool]]
+= Bulk Data Generator Tool
 :doctype: book
 :numbered:
 :toc: left
@@ -29,7 +29,7 @@
 This is a random data generator tool for HBase tables leveraging Hbase bulk load.
 It can create pre-splited HBase table and the generated data is *uniformly distributed* to all the regions of the table.
 
-=== How to Use
+== Usage
 
 [source]
 ----
@@ -53,7 +53,7 @@ hbase org.apache.hadoop.hbase.util.bulkdatagenerator.BulkDataGeneratorTool -t TE
 hbase org.apache.hadoop.hbase.util.bulkdatagenerator.BulkDataGeneratorTool -t TEST_TABLE -mc 10 -r 100 -sc 10 -Dmapreduce.map.memory.mb=8192
 ----
 
-=== How it Works
+== Overview
 
 ==== Table Schema
 Tool generates a HBase table with single column family, i.e. *cf* and 9 columns i.e.
