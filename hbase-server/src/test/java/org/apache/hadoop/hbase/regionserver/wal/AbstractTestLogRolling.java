@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -85,9 +86,7 @@ public abstract class AbstractTestLogRolling {
   protected static int syncLatencyMillis;
   private static int rowNum = 1;
   private static final AtomicBoolean slowSyncHookCalled = new AtomicBoolean();
-  protected static final ScheduledExecutorService EXECUTOR = Executors
-    .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setNameFormat("Slow-sync-%d")
-      .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+  protected static ScheduledExecutorService EXECUTOR;
 
   public AbstractTestLogRolling() {
     this.server = null;
@@ -138,6 +137,11 @@ public abstract class AbstractTestLogRolling {
     conf.setInt(FSHLog.SLOW_SYNC_ROLL_INTERVAL_MS, 10 * 1000);
     // For slow sync threshold test: roll once after a sync above this threshold
     conf.setInt(FSHLog.ROLL_ON_SYNC_TIME_MS, 5000);
+
+    // Slow sync executor.
+    EXECUTOR = Executors
+      .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setNameFormat("Slow-sync-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   @Before
@@ -157,6 +161,11 @@ public abstract class AbstractTestLogRolling {
   @After
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() {
+    EXECUTOR.shutdownNow();
   }
 
   private void startAndWriteData() throws IOException, InterruptedException {
