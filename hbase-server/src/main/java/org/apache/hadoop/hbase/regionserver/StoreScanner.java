@@ -227,6 +227,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private static boolean isOnlyLatestVersionScan(Scan scan) {
     return !scan.isRaw() && scan.getTimeRange().getMax() == HConstants.LATEST_TIMESTAMP;
   }
+
   /**
    * Opens a scanner across memstore, snapshot, and all StoreFiles. Assumes we are not in a
    * compaction.
@@ -1000,9 +1001,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // Eagerly creating scanners so that we have the ref counting ticking on the newly created
       // store files. In case of stream scanners this eager creation does not induce performance
       // penalty because in scans (that uses stream scanners) the next() call is bound to happen.
-      List<KeyValueScanner> scanners = store.getScanners(sfs, cacheBlocks, get, usePread,
-        isCompaction, matcher, scan.getStartRow(), scan.getStopRow(),
-        this.readPt, false, isOnlyLatestVersionScan(scan));
+      List<KeyValueScanner> scanners =
+        store.getScanners(sfs, cacheBlocks, get, usePread, isCompaction, matcher,
+          scan.getStartRow(), scan.getStopRow(), this.readPt, false, isOnlyLatestVersionScan(scan));
       flushedstoreFileScanners.addAll(scanners);
       if (!CollectionUtils.isEmpty(memStoreScanners)) {
         clearAndClose(memStoreScannersAfterFlush);

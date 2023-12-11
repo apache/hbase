@@ -78,72 +78,63 @@ public class TestDualFileWriter {
 
   private static final TableName TABLE_NAME = TableName.valueOf(NAME_OF_THINGS, NAME_OF_THINGS);
 
-  private static final KeyValue KV_A_DeleteFamilyVersion =
-    new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
-    null,300L, KeyValue.Type.DeleteFamilyVersion);
+  private static final KeyValue KV_A_DeleteFamilyVersion = new KeyValue(Bytes.toBytes("123"),
+    Bytes.toBytes("0"), null, 300L, KeyValue.Type.DeleteFamilyVersion);
   private static final KeyValue KV_A_1 = new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
-    Bytes.toBytes("a"),300L, KeyValue.Type.Put);
+    Bytes.toBytes("a"), 300L, KeyValue.Type.Put);
   private static final KeyValue KV_A_2 = new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
-    Bytes.toBytes("a"),200L, KeyValue.Type.Put);
+    Bytes.toBytes("a"), 200L, KeyValue.Type.Put);
   private static final KeyValue KV_A_3 = new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
-    Bytes.toBytes("a"),100L, KeyValue.Type.Put);
+    Bytes.toBytes("a"), 100L, KeyValue.Type.Put);
 
   private static final KeyValue KV_B_DeleteColumn = new KeyValue(Bytes.toBytes("123"),
-    Bytes.toBytes("0"), Bytes.toBytes("b"),200L, KeyValue.Type.DeleteColumn);
+    Bytes.toBytes("0"), Bytes.toBytes("b"), 200L, KeyValue.Type.DeleteColumn);
   private static final KeyValue KV_B = new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
-    Bytes.toBytes("b"),100L, KeyValue.Type.Put);
-
+    Bytes.toBytes("b"), 100L, KeyValue.Type.Put);
 
   private static final KeyValue KV_C = new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
-    Bytes.toBytes("c"),100L, KeyValue.Type.Put);
+    Bytes.toBytes("c"), 100L, KeyValue.Type.Put);
 
   private static final KeyValue KV_D_1 = new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
-    Bytes.toBytes("d"),200L, KeyValue.Type.Put);
+    Bytes.toBytes("d"), 200L, KeyValue.Type.Put);
   private static final KeyValue KV_D_2 = new KeyValue(Bytes.toBytes("123"), Bytes.toBytes("0"),
-    Bytes.toBytes("d"),100L, KeyValue.Type.Put);
+    Bytes.toBytes("d"), 100L, KeyValue.Type.Put);
 
-  private static final KeyValue KV_E_F_DeleteFamily = new KeyValue(Bytes.toBytes("456"),
-    Bytes.toBytes("0"), null ,200L, KeyValue.Type.DeleteFamily);
+  private static final KeyValue KV_E_F_DeleteFamily =
+    new KeyValue(Bytes.toBytes("456"), Bytes.toBytes("0"), null, 200L, KeyValue.Type.DeleteFamily);
   private static final KeyValue KV_E = new KeyValue(Bytes.toBytes("456"), Bytes.toBytes("0"),
-    Bytes.toBytes("e"),100L, KeyValue.Type.Put);
+    Bytes.toBytes("e"), 100L, KeyValue.Type.Put);
   private static final KeyValue KV_F = new KeyValue(Bytes.toBytes("456"), Bytes.toBytes("0"),
-    Bytes.toBytes("f"),100L, KeyValue.Type.Put);
-  private static final KeyValue KV_G_DeleteFamily = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
-    null,400L, KeyValue.Type.DeleteFamily);
-  private static final KeyValue KV_G_DeleteFamilyVersion = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
-    null,100L, KeyValue.Type.DeleteFamilyVersion);
+    Bytes.toBytes("f"), 100L, KeyValue.Type.Put);
+  private static final KeyValue KV_G_DeleteFamily =
+    new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"), null, 400L, KeyValue.Type.DeleteFamily);
+  private static final KeyValue KV_G_DeleteFamilyVersion = new KeyValue(Bytes.toBytes("789"),
+    Bytes.toBytes("0"), null, 100L, KeyValue.Type.DeleteFamilyVersion);
   private static final KeyValue KV_G_1 = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
-    Bytes.toBytes("g"),500L, KeyValue.Type.Put);
-  private static final KeyValue KV_G_DeleteColumn = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
-    null,300L, KeyValue.Type.DeleteColumn);
-  private static final KeyValue KV_G_DeleteColumnVersion = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
-    null,200L, KeyValue.Type.Delete);
+    Bytes.toBytes("g"), 500L, KeyValue.Type.Put);
+  private static final KeyValue KV_G_DeleteColumn =
+    new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"), null, 300L, KeyValue.Type.DeleteColumn);
+  private static final KeyValue KV_G_DeleteColumnVersion =
+    new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"), null, 200L, KeyValue.Type.Delete);
   private static final KeyValue KV_G_2 = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
-    Bytes.toBytes("g"),100L, KeyValue.Type.Put);
+    Bytes.toBytes("g"), 100L, KeyValue.Type.Put);
 
   @Parameters(name = "{index}: usePrivateReaders={0}, keepDeletedCells={1}")
   public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[] { true, true }, new Object[] { false, false });
+    return Arrays.asList(new Object[] { true }, new Object[] { false });
   }
 
   @Parameter(0)
   public boolean usePrivateReaders;
 
-  @Parameter(1)
-  public boolean keepDeletedCells;
-
-  private DefaultCompactor createCompactor(StoreFileWritersCapture writers,
-    final KeyValue[] input, List<HStoreFile> storefiles) throws Exception {
+  private DefaultCompactor createCompactor(StoreFileWritersCapture writers, final KeyValue[] input,
+    List<HStoreFile> storefiles) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean("hbase.regionserver.compaction.private.readers", usePrivateReaders);
     conf.setBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY, true);
     final Scanner scanner = new Scanner(input);
     // Create store mock that is satisfactory for compactor.
-    ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder =
-      new ColumnFamilyDescriptorBuilder(NAME_OF_THINGS);
-    columnFamilyDescriptorBuilder.setKeepDeletedCells(keepDeletedCells ? KeepDeletedCells.TRUE
-      : KeepDeletedCells.FALSE);
-    ColumnFamilyDescriptor familyDescriptor = columnFamilyDescriptorBuilder.build();
+    ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.of(NAME_OF_THINGS);
 
     ScanInfo si =
       new ScanInfo(conf, familyDescriptor, Long.MAX_VALUE, 0, CellComparatorImpl.COMPARATOR);
@@ -188,16 +179,6 @@ public class TestDualFileWriter {
     writers.verifyKvs(output);
     assertEquals(output.length, paths.size());
   }
-  private void verify(KeyValue[] input, KeyValue[] output) throws Exception {
-    StoreFileWritersCapture writers = new StoreFileWritersCapture();
-    HStoreFile sf1 = createDummyStoreFile(1L);
-    HStoreFile sf2 = createDummyStoreFile(2L);
-    DefaultCompactor dfc = createCompactor(writers, input, Arrays.asList(sf1, sf2));
-    List<Path> paths = dfc.compact(new CompactionRequestImpl(Arrays.asList(sf1)),
-      NoLimitThroughputController.INSTANCE, null);
-    writers.verifyKv(output);
-    assertEquals(1, paths.size());
-  }
 
   @SuppressWarnings("unchecked")
   private static <T> T[] a(T... a) {
@@ -206,29 +187,16 @@ public class TestDualFileWriter {
 
   @Test
   public void test() throws Exception {
-    if (!keepDeletedCells){
-      verify(
-        a(KV_A_DeleteFamilyVersion, KV_A_1, KV_A_2, KV_A_3, KV_B_DeleteColumn, KV_B, KV_C, KV_D_1,
-          KV_D_2, // Row 123
-          KV_E_F_DeleteFamily, KV_E, KV_F, // Row 456
-          KV_G_DeleteFamily, KV_G_DeleteFamilyVersion, KV_G_1, KV_G_DeleteColumn,
-          KV_G_DeleteColumnVersion, KV_G_2), // Row 789
-        a(KV_A_DeleteFamilyVersion, KV_A_2, KV_B_DeleteColumn, KV_C, KV_D_1, KV_E_F_DeleteFamily,
-            KV_G_DeleteFamily, KV_G_1)// Latest versions
-          );
-
-    } else {
-      verify(
-        a(KV_A_DeleteFamilyVersion, KV_A_1, KV_A_2, KV_A_3, KV_B_DeleteColumn, KV_B, KV_C, KV_D_1,
-          KV_D_2, // Row 123
-          KV_E_F_DeleteFamily, KV_E, KV_F, // Row 456
-          KV_G_DeleteFamily, KV_G_DeleteFamilyVersion, KV_G_1, KV_G_DeleteColumn,
-          KV_G_DeleteColumnVersion, KV_G_2), // Row 789
-        a(a(KV_A_DeleteFamilyVersion, KV_A_2, KV_B_DeleteColumn, KV_C, KV_D_1, KV_E_F_DeleteFamily,
-            KV_G_DeleteFamily, KV_G_1), // Latest versions
-          a(KV_A_1, KV_A_3, KV_B, KV_D_2, KV_E, KV_F, KV_G_DeleteFamilyVersion, KV_G_DeleteColumn,
-            KV_G_DeleteColumnVersion, KV_G_2)));
-    }
+    verify(
+      a(KV_A_DeleteFamilyVersion, KV_A_1, KV_A_2, KV_A_3, KV_B_DeleteColumn, KV_B, KV_C, KV_D_1,
+        KV_D_2, // Row 123
+        KV_E_F_DeleteFamily, KV_E, KV_F, // Row 456
+        KV_G_DeleteFamily, KV_G_DeleteFamilyVersion, KV_G_1, KV_G_DeleteColumn,
+        KV_G_DeleteColumnVersion, KV_G_2), // Row 789
+      a(a(KV_A_DeleteFamilyVersion, KV_A_2, KV_B_DeleteColumn, KV_C, KV_D_1, KV_E_F_DeleteFamily,
+        KV_G_DeleteFamily, KV_G_1), // Latest versions
+        a(KV_A_1, KV_A_3, KV_B, KV_D_2, KV_E, KV_F, KV_G_DeleteFamilyVersion, KV_G_DeleteColumn,
+          KV_G_DeleteColumnVersion, KV_G_2)));
   }
 
   @Test

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.HAS_LIVE_VERSIONS_KEY;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,14 +29,13 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-import static org.apache.hadoop.hbase.regionserver.HStoreFile.HAS_LIVE_VERSIONS_KEY;
 
 /**
- * Separates the provided cells into two files, one file for the latest cells and
- * the other for the rest of the cells. The latest cells includes the latest put cells that are
- * not deleted by a delete marker, the delete markers that delete latest put cells, and the
- * version delete markers (that is, DeleteFamilyVersion and Delete) that are not deleted by other
- * delete markers (that is DeleteFamily and DeleteColumn).
+ * Separates the provided cells into two files, one file for the latest cells and the other for the
+ * rest of the cells. The latest cells includes the latest put cells that are not deleted by a
+ * delete marker, the delete markers that delete latest put cells, and the version delete markers
+ * (that is, DeleteFamilyVersion and Delete) that are not deleted by other delete markers (that is
+ * DeleteFamily and DeleteColumn).
  */
 @InterfaceAudience.Private
 public class DualFileWriter extends AbstractMultiFileWriter {
@@ -57,13 +58,11 @@ public class DualFileWriter extends AbstractMultiFileWriter {
   // The live put cell count for the current column
   private int livePutCellCount;
   private final boolean dualWriterEnabled;
-  private final boolean keepDeletedCells;
   private final int maxVersions;
-  public DualFileWriter(CellComparator comparator, int maxVersions,
-    boolean keepDeletedCells, boolean dualWriterEnabled) {
+
+  public DualFileWriter(CellComparator comparator, int maxVersions, boolean dualWriterEnabled) {
     this.comparator = comparator;
     this.maxVersions = maxVersions;
-    this.keepDeletedCells = keepDeletedCells;
     this.dualWriterEnabled = dualWriterEnabled;
     writers = new ArrayList<>(2);
     initRowState();
@@ -82,7 +81,7 @@ public class DualFileWriter extends AbstractMultiFileWriter {
 
   }
 
-  private void addLiveVersion(Cell cell) throws  IOException {
+  private void addLiveVersion(Cell cell) throws IOException {
     if (liveVersionWriter == null) {
       liveVersionWriter = writerFactory.createWriter();
       writers.add(liveVersionWriter);
@@ -90,10 +89,7 @@ public class DualFileWriter extends AbstractMultiFileWriter {
     liveVersionWriter.append(cell);
   }
 
-  private void addHistoricalVersion(Cell cell) throws  IOException {
-    if (!keepDeletedCells) {
-      return;
-    }
+  private void addHistoricalVersion(Cell cell) throws IOException {
     if (historicalVersionWriter == null) {
       historicalVersionWriter = writerFactory.createWriter();
       writers.add(historicalVersionWriter);
@@ -208,6 +204,7 @@ public class DualFileWriter extends AbstractMultiFileWriter {
       historicalVersionWriter.appendFileInfo(HAS_LIVE_VERSIONS_KEY, Bytes.toBytes(false));
     }
   }
+
   public HFile.Writer getHFileWriter() {
     if (writers.isEmpty()) {
       return null;

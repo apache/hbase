@@ -545,7 +545,6 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     return bloomFilterMetrics;
   }
 
-
   protected void createCompactor(Configuration conf, HStore store, String classKey,
     String defaultClassName) throws IOException {
     String className = conf.get(classKey, defaultClassName);

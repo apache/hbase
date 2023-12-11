@@ -957,8 +957,7 @@ public class HStore
    */
   public List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean isGet, boolean usePread,
     boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, byte[] stopRow, long readPt,
-    boolean onlyLatestVersion)
-    throws IOException {
+    boolean onlyLatestVersion) throws IOException {
     return getScanners(cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow, false,
       readPt, onlyLatestVersion);
   }
@@ -1003,9 +1002,9 @@ public class HStore
       // TODO this used to get the store files in descending order,
       // but now we get them in ascending order, which I think is
       // actually more correct, since memstore get put at the end.
-      List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(
-        storeFilesToScan, cacheBlocks, usePread, isCompaction, false, matcher, readPt,
-        onlyLatestVersion);
+      List<StoreFileScanner> sfScanners =
+        StoreFileScanner.getScannersForStoreFiles(storeFilesToScan, cacheBlocks, usePread,
+          isCompaction, false, matcher, readPt, onlyLatestVersion);
       List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
       scanners.addAll(sfScanners);
       // Then the memstore scanners
@@ -1046,8 +1045,7 @@ public class HStore
   public List<KeyValueScanner> getScanners(List<HStoreFile> files, boolean cacheBlocks,
     boolean isGet, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
     byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner,
-    boolean onlyLatestVersion)
-    throws IOException {
+    boolean onlyLatestVersion) throws IOException {
     return getScanners(files, cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow,
       false, readPt, includeMemstoreScanner, onlyLatestVersion);
   }

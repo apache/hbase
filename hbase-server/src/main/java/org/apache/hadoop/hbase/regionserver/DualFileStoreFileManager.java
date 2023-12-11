@@ -32,13 +32,13 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
- * Implementation of {@link StoreFileManager} for {@link DualFileStoreEngine}. Not thread-safe.
+ * Implementation of {@link StoreFileManager} for {@link DualFileWriter}. Not thread-safe.
  */
 @InterfaceAudience.Private
-class DualFileStoreFileManager extends DefaultStoreFileManager {
+public class DualFileStoreFileManager extends DefaultStoreFileManager {
   /**
-   * List of store files that include the latest cells inside this store. This is an
-   * immutable list that is atomically replaced when its contents change.
+   * List of store files that include the latest cells inside this store. This is an immutable list
+   * that is atomically replaced when its contents change.
    */
   private volatile ImmutableList<HStoreFile> latestVersionStoreFiles = ImmutableList.of();
 
@@ -48,31 +48,30 @@ class DualFileStoreFileManager extends DefaultStoreFileManager {
     super(cellComparator, storeFileComparator, conf, comConf);
   }
 
-  private List <HStoreFile> extractHasLatestVersionFiles(Collection<HStoreFile> storeFiles)
+  private List<HStoreFile> extractHasLiveVersionFiles(Collection<HStoreFile> storeFiles)
     throws IOException {
-    List <HStoreFile> hasLatestVersionFiles = new ArrayList<>(storeFiles.size());
+    List<HStoreFile> hasLiveVersionFiles = new ArrayList<>(storeFiles.size());
     for (HStoreFile file : storeFiles) {
       file.initReader();
-      if (file.hasLatestVersion()) {
-        hasLatestVersionFiles.add(file);
+      if (file.hasLiveVersion()) {
+        hasLiveVersionFiles.add(file);
       }
     }
-    return hasLatestVersionFiles;
+    return hasLiveVersionFiles;
   }
 
   @Override
   public void loadFiles(List<HStoreFile> storeFiles) throws IOException {
     super.loadFiles(storeFiles);
-    this.latestVersionStoreFiles = ImmutableList.sortedCopyOf(getStoreFileComparator(),
-      extractHasLatestVersionFiles(storeFiles));
+    this.latestVersionStoreFiles =
+      ImmutableList.sortedCopyOf(getStoreFileComparator(), extractHasLiveVersionFiles(storeFiles));
   }
 
   @Override
   public void insertNewFiles(Collection<HStoreFile> sfs) throws IOException {
     super.insertNewFiles(sfs);
-    this.latestVersionStoreFiles =
-      ImmutableList.sortedCopyOf(getStoreFileComparator(),
-        Iterables.concat(this.latestVersionStoreFiles, extractHasLatestVersionFiles(sfs)));
+    this.latestVersionStoreFiles = ImmutableList.sortedCopyOf(getStoreFileComparator(),
+      Iterables.concat(this.latestVersionStoreFiles, extractHasLiveVersionFiles(sfs)));
   }
 
   @Override
@@ -84,10 +83,11 @@ class DualFileStoreFileManager extends DefaultStoreFileManager {
   @Override
   public void addCompactionResults(Collection<HStoreFile> newCompactedFiles,
     Collection<HStoreFile> results) throws IOException {
-    Collection<HStoreFile>  newFilesHasLatestVersion= extractHasLatestVersionFiles(results);
-    this.latestVersionStoreFiles = ImmutableList.sortedCopyOf(getStoreFileComparator(), Iterables
-      .concat(Iterables.filter(latestVersionStoreFiles,
-        sf -> !newCompactedFiles.contains(sf)), newFilesHasLatestVersion));
+    Collection<HStoreFile> newFilesHasLatestVersion = extractHasLiveVersionFiles(results);
+    this.latestVersionStoreFiles = ImmutableList.sortedCopyOf(getStoreFileComparator(),
+      Iterables.concat(
+        Iterables.filter(latestVersionStoreFiles, sf -> !newCompactedFiles.contains(sf)),
+        newFilesHasLatestVersion));
     super.addCompactionResults(newCompactedFiles, results);
   }
 

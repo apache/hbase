@@ -126,6 +126,7 @@ public class TestCompaction {
 
   @Parameterized.Parameter
   public boolean enableDualFileWriter;
+
   /** constructor */
   public TestCompaction() {
     super();
@@ -149,8 +150,8 @@ public class TestCompaction {
 
   @Before
   public void setUp() throws Exception {
-    TableDescriptorBuilder builder = UTIL.createModifyableTableDescriptor(
-      name.getMethodName().replaceAll("[^A-Za-z0-9-_]", "_"));
+    TableDescriptorBuilder builder =
+      UTIL.createModifyableTableDescriptor(name.getMethodName().replaceAll("[^A-Za-z0-9-_]", "_"));
     if (name.getMethodName().startsWith("testCompactionSeqId")) {
       UTIL.getConfiguration().set("hbase.hstore.compaction.kv.max", "10");
       UTIL.getConfiguration().set(DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY,
