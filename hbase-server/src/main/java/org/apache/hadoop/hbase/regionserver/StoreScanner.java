@@ -225,8 +225,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   private static boolean isOnlyLatestVersionScan(Scan scan) {
-    return !scan.isRaw() && scan.getMaxVersions() == 1
-      && scan.getTimeRange().getMax() == HConstants.LATEST_TIMESTAMP;
+    return !scan.isRaw() && scan.getTimeRange().getMax() == HConstants.LATEST_TIMESTAMP;
   }
   /**
    * Opens a scanner across memstore, snapshot, and all StoreFiles. Assumes we are not in a

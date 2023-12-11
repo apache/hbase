@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.regionserver.DualFileWriter;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -32,27 +34,35 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY;
 
 /**
  * Compact passed set of files. Create an instance and then call
  * {@link #compact(CompactionRequestImpl, ThroughputController, User)}
  */
 @InterfaceAudience.Private
-public class DefaultCompactor extends Compactor<StoreFileWriter> {
+public class DefaultCompactor extends AbstractMultiOutputCompactor<DualFileWriter> {
   private static final Logger LOG = LoggerFactory.getLogger(DefaultCompactor.class);
 
   public DefaultCompactor(Configuration conf, HStore store) {
     super(conf, store);
   }
 
-  private final CellSinkFactory<StoreFileWriter> writerFactory =
-    new CellSinkFactory<StoreFileWriter>() {
+  private final CellSinkFactory<DualFileWriter> writerFactory =
+    new CellSinkFactory<DualFileWriter>() {
       @Override
-      public StoreFileWriter createWriter(InternalScanner scanner, FileDetails fd,
+      public DualFileWriter createWriter(InternalScanner scanner, FileDetails fd,
         boolean shouldDropBehind, boolean major, Consumer<Path> writerCreationTracker)
         throws IOException {
-        return DefaultCompactor.this.createWriter(fd, shouldDropBehind, major,
-          writerCreationTracker);
+        boolean enableDualFileWriter =
+          conf.getBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY, true);
+        boolean keepDeletedCells = store.getColumnFamilyDescriptor().getKeepDeletedCells()
+          != KeepDeletedCells.FALSE;
+        DualFileWriter writer = new DualFileWriter(store.getComparator(),
+          store.getColumnFamilyDescriptor().getMaxVersions(), keepDeletedCells,
+          enableDualFileWriter);
+        initMultiWriter(writer, scanner, fd, shouldDropBehind, major, writerCreationTracker);
+        return writer;
       }
     };
 
@@ -64,29 +74,11 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
     return compact(request, defaultScannerFactory, writerFactory, throughputController, user);
   }
 
-  @Override
-  protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,
+
+  protected List<Path> commitWriter(DualFileWriter writer, FileDetails fd,
     CompactionRequestImpl request) throws IOException {
-    List<Path> newFiles = Lists.newArrayList(writer.getPath());
-    writer.appendMetadata(fd.maxSeqId, request.isAllFiles(), request.getFiles());
-    writer.close();
-    return newFiles;
+    List<Path> pathList =
+      writer.commitWriters(fd.maxSeqId, request.isAllFiles(), request.getFiles());
+    return pathList;
   }
-
-  @Override
-  protected final void abortWriter(StoreFileWriter writer) throws IOException {
-    Path leftoverFile = writer.getPath();
-    try {
-      writer.close();
-    } catch (IOException e) {
-      LOG.warn("Failed to close the writer after an unfinished compaction.", e);
-    }
-    try {
-      store.getFileSystem().delete(leftoverFile, false);
-    } catch (IOException e) {
-      LOG.warn("Failed to delete the leftover file {} after an unfinished compaction.",
-        leftoverFile, e);
-    }
-  }
-
 }
