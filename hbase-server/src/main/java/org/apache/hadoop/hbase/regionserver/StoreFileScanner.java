@@ -113,8 +113,7 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(Collection<HStoreFile> files,
     boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean useDropBehind, long readPt,
-    boolean onlyLatestVersion)
-    throws IOException {
+    boolean onlyLatestVersion) throws IOException {
     return getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction, useDropBehind, null,
       readPt, onlyLatestVersion);
   }

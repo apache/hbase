@@ -481,9 +481,8 @@ public class TestReversibleScanners {
 
   private List<KeyValueScanner> getScanners(MemStore memstore, HStoreFile sf1, HStoreFile sf2,
     byte[] startRow, boolean doSeek, int readPoint) throws IOException {
-    List<StoreFileScanner> fileScanners = StoreFileScanner
-      .getScannersForStoreFiles(Lists.newArrayList(sf1, sf2), false, true, false, false, readPoint,
-        false);
+    List<StoreFileScanner> fileScanners = StoreFileScanner.getScannersForStoreFiles(
+      Lists.newArrayList(sf1, sf2), false, true, false, false, readPoint, false);
     List<KeyValueScanner> memScanners = memstore.getScanners(readPoint);
     List<KeyValueScanner> scanners = new ArrayList<>(fileScanners.size() + 1);
     scanners.addAll(fileScanners);

@@ -142,7 +142,7 @@ public class HStoreFile implements StoreFile {
 
   // Indicate if the file contains live cell versions for a given column
   // in a row. MemStore flushes generate files with all cell versions. However,
-  // compactions can generate two files, one with the liver version cells and the other
+  // compactions can generate two files, one with the live cell versions and the other
   // with the remaining (historical) cell versions.
   private volatile boolean hasLiveVersions = true;
 
@@ -350,7 +350,7 @@ public class HStoreFile implements StoreFile {
     return compactedAway;
   }
 
-  public boolean hasLatestVersion() {
+  public boolean hasLiveVersion() {
     return hasLiveVersions;
   }
 
@@ -610,6 +610,7 @@ public class HStoreFile implements StoreFile {
   public void setHasLiveVersions(boolean hasLiveVersions) {
     this.hasLiveVersions = hasLiveVersions;
   }
+
   @Override
   public String toString() {
     return this.fileInfo.toString();

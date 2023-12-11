@@ -95,8 +95,7 @@ public class TestStripeStoreFileManager {
     MockHStoreFile sf = createFile();
     manager.insertNewFiles(al(sf));
     assertEquals(1, manager.getStorefileCount());
-    Collection<HStoreFile> filesForGet = manager.getFilesForScan(KEY_A, true, KEY_A, true,
-      false);
+    Collection<HStoreFile> filesForGet = manager.getFilesForScan(KEY_A, true, KEY_A, true, false);
     assertEquals(1, filesForGet.size());
     assertTrue(filesForGet.contains(sf));
 

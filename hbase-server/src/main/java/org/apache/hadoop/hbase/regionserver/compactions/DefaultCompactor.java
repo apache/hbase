@@ -17,24 +17,21 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.regionserver.DualFileWriter;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY;
 
 /**
  * Compact passed set of files. Create an instance and then call
@@ -56,10 +53,8 @@ public class DefaultCompactor extends AbstractMultiOutputCompactor<DualFileWrite
         throws IOException {
         boolean enableDualFileWriter =
           conf.getBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY, true);
-        boolean keepDeletedCells = store.getColumnFamilyDescriptor().getKeepDeletedCells()
-          != KeepDeletedCells.FALSE;
         DualFileWriter writer = new DualFileWriter(store.getComparator(),
-          store.getColumnFamilyDescriptor().getMaxVersions(), keepDeletedCells,
+          store.getColumnFamilyDescriptor().getMaxVersions(),
           enableDualFileWriter);
         initMultiWriter(writer, scanner, fd, shouldDropBehind, major, writerCreationTracker);
         return writer;
@@ -73,7 +68,6 @@ public class DefaultCompactor extends AbstractMultiOutputCompactor<DualFileWrite
     ThroughputController throughputController, User user) throws IOException {
     return compact(request, defaultScannerFactory, writerFactory, throughputController, user);
   }
-
 
   protected List<Path> commitWriter(DualFileWriter writer, FileDetails fd,
     CompactionRequestImpl request) throws IOException {

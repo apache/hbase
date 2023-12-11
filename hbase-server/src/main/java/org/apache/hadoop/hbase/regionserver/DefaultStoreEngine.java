@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolic
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -67,13 +66,13 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
     createCompactor(conf, store);
     createCompactionPolicy(conf, store);
     createStoreFlusher(conf, store);
-    boolean enableDualFileWriter = conf.getBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY,
-      false);
+    boolean enableDualFileWriter =
+      conf.getBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY, false);
     storeFileManager = enableDualFileWriter
       ? new DualFileStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
-      compactionPolicy.getConf())
-      :new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
-      compactionPolicy.getConf());
+        compactionPolicy.getConf())
+      : new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
+        compactionPolicy.getConf());
   }
 
   protected void createCompactor(Configuration conf, HStore store) throws IOException {

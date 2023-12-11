@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS;
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY;
+
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -33,9 +36,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPoli
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
-import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY;
-import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS;
-import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY;
 
 /**
  * MobStoreEngine creates the mob specific compactor, and store flusher.
@@ -64,14 +64,13 @@ public class MobStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBasedC
   protected void createCompactor(Configuration conf, HStore store) throws IOException {
     createCompactor(conf, store, MOB_COMPACTOR_CLASS_KEY, DefaultMobStoreCompactor.class.getName());
   }
+
   @Override
   protected void createComponents(Configuration conf, HStore store, CellComparator kvComparator)
     throws IOException {
     createCompactor(conf, store);
     createCompactionPolicy(conf, store);
     createStoreFlusher(conf, store);
-    boolean enableDualFileWriter = conf.getBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY,
-      false);
     storeFileManager = new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
       compactionPolicy.getConf());
   }
@@ -80,7 +79,6 @@ public class MobStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBasedC
     createCompactionPolicy(conf, store, DEFAULT_COMPACTION_POLICY_CLASS_KEY,
       DEFAULT_COMPACTION_POLICY_CLASS.getName());
   }
-
 
   @Override
   public CompactionContext createCompaction() {
