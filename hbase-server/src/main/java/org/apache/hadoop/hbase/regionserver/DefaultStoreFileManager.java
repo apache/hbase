@@ -41,7 +41,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
  * Default implementation of StoreFileManager. Not thread-safe.
  */
 @InterfaceAudience.Private
-class DefaultStoreFileManager implements StoreFileManager {
+public class DefaultStoreFileManager implements StoreFileManager {
   private static final Logger LOG = LoggerFactory.getLogger(DefaultStoreFileManager.class);
 
   private final CellComparator cellComparator;

@@ -46,12 +46,14 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
     "hbase.hstore.defaultengine.compactor.class";
   public static final String DEFAULT_COMPACTION_POLICY_CLASS_KEY =
     "hbase.hstore.defaultengine.compactionpolicy.class";
+  public static final String DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY =
+    "hbase.hstore.defaultengine.enable.dualfilewriter";
 
   private static final Class<? extends DefaultStoreFlusher> DEFAULT_STORE_FLUSHER_CLASS =
     DefaultStoreFlusher.class;
   private static final Class<? extends DefaultCompactor> DEFAULT_COMPACTOR_CLASS =
     DefaultCompactor.class;
-  private static final Class<? extends RatioBasedCompactionPolicy> DEFAULT_COMPACTION_POLICY_CLASS =
+  public static final Class<? extends RatioBasedCompactionPolicy> DEFAULT_COMPACTION_POLICY_CLASS =
     ExploringCompactionPolicy.class;
 
   @Override
@@ -65,7 +67,12 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
     createCompactor(conf, store);
     createCompactionPolicy(conf, store);
     createStoreFlusher(conf, store);
-    storeFileManager = new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
+    boolean enableDualFileWriter = conf.getBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY,
+      false);
+    storeFileManager = enableDualFileWriter
+      ? new DualFileStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
+      compactionPolicy.getConf())
+      :new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
       compactionPolicy.getConf());
   }
 

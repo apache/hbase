@@ -25,8 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Useful comparators for comparing store files.
  */
-@InterfaceAudience.Private
-final class StoreFileComparators {
+@InterfaceAudience.Private public final class StoreFileComparators {
   /**
    * Comparator that compares based on the Sequence Ids of the the store files. Bulk loads that did
    * not request a seq ID are given a seq id of -1; thus, they are placed before all non- bulk

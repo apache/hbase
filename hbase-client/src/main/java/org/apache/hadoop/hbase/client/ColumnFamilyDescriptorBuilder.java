@@ -398,7 +398,7 @@ public class ColumnFamilyDescriptorBuilder {
     return newBuilder(name).build();
   }
 
-  private ColumnFamilyDescriptorBuilder(final byte[] name) {
+  public ColumnFamilyDescriptorBuilder(final byte[] name) {
     this.desc = new ModifyableColumnFamilyDescriptor(name);
   }
 

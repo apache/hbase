@@ -1064,7 +1064,6 @@ public class HStore
    * @param includeStartRow        true to include start row, false if not
    * @param stopRow                the stop row
    * @param includeStopRow         true to include stop row, false if not
-   * @param maxVersions            the max number of versions to fetch
    * @param readPt                 the read point of the current scan
    * @param includeMemstoreScanner true if memstore has to be included
    * @return scanners on the given files and on the memstore if specified

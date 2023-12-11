@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY_BYTES;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY;
 import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
 import static org.apache.hadoop.hbase.regionserver.compactions.CloseChecker.SIZE_LIMIT_KEY;
 import static org.apache.hadoop.hbase.regionserver.compactions.CloseChecker.TIME_LIMIT_KEY;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -67,7 +69,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
-import org.apache.hadoop.hbase.regionserver.compactions.DualFileCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -86,6 +87,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -93,6 +96,7 @@ import org.mockito.stubbing.Answer;
 /**
  * Test compaction framework and common functions
  */
+@RunWith(Parameterized.class)
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestCompaction {
 
@@ -115,6 +119,13 @@ public class TestCompaction {
   private static final long MAX_FILES_TO_COMPACT = 10;
   private final byte[] FAMILY = Bytes.toBytes("cf");
 
+  @Parameterized.Parameters(name = "{index}: enableDualFileWriter={0}")
+  public static Iterable<Object[]> data() {
+    return Arrays.asList(new Object[] { true }, new Object[] { false });
+  }
+
+  @Parameterized.Parameter
+  public boolean enableDualFileWriter;
   /** constructor */
   public TestCompaction() {
     super();
@@ -125,6 +136,7 @@ public class TestCompaction {
     conf.setLong(HConstants.COMPACTION_SCANNER_SIZE_MAX, 10L);
     conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
       NoLimitThroughputController.class.getName());
+    conf.setBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY, enableDualFileWriter);
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
 
     secondRowBytes = START_KEY_BYTES.clone();
@@ -137,8 +149,9 @@ public class TestCompaction {
 
   @Before
   public void setUp() throws Exception {
-    TableDescriptorBuilder builder = UTIL.createModifyableTableDescriptor(name.getMethodName());
-    if (name.getMethodName().equals("testCompactionSeqId")) {
+    TableDescriptorBuilder builder = UTIL.createModifyableTableDescriptor(
+      name.getMethodName().replaceAll("[^A-Za-z0-9-_]", "_"));
+    if (name.getMethodName().startsWith("testCompactionSeqId")) {
       UTIL.getConfiguration().set("hbase.hstore.compaction.kv.max", "10");
       UTIL.getConfiguration().set(DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY,
         DummyCompactor.class.getName());

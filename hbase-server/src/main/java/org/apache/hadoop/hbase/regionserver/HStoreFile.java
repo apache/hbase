@@ -125,7 +125,7 @@ public class HStoreFile implements StoreFile {
    */
   public static final byte[] SKIP_RESET_SEQ_ID = Bytes.toBytes("SKIP_RESET_SEQ_ID");
 
-  public static final byte[] HAS_LATEST_VERSION_KEY = Bytes.toBytes("HAS_LATEST_VERSION");
+  public static final byte[] HAS_LIVE_VERSIONS_KEY = Bytes.toBytes("HAS_LIVE_VERSIONS");
 
   private final StoreFileInfo fileInfo;
 
@@ -140,11 +140,11 @@ public class HStoreFile implements StoreFile {
   // Indicates if the file got compacted
   private volatile boolean compactedAway = false;
 
-  // Indicate if the file contains only latest (i.e., single) cell version for a given column
-  // in a row. MemStore flushes generate files with multiple cell versions. However,
-  // compactions can generate two files, one with the latest version cells and the other
-  // with the remaining (non-latest) cell versions.
-  private volatile boolean hasLatestVersion = true;
+  // Indicate if the file contains live cell versions for a given column
+  // in a row. MemStore flushes generate files with all cell versions. However,
+  // compactions can generate two files, one with the liver version cells and the other
+  // with the remaining (historical) cell versions.
+  private volatile boolean hasLiveVersions = true;
 
   // Keys for metadata stored in backing HFile.
   // Set when we obtain a Reader.
@@ -346,7 +346,7 @@ public class HStoreFile implements StoreFile {
   }
 
   public boolean hasLatestVersion() {
-    return hasLatestVersion;
+    return hasLiveVersions;
   }
 
   public int getRefCount() {
@@ -467,9 +467,9 @@ public class HStoreFile implements StoreFile {
     b = metadataMap.get(EXCLUDE_FROM_MINOR_COMPACTION_KEY);
     this.excludeFromMinorCompaction = (b != null && Bytes.toBoolean(b));
 
-    b = metadataMap.get(HAS_LATEST_VERSION_KEY);
+    b = metadataMap.get(HAS_LIVE_VERSIONS_KEY);
     if (b != null) {
-      hasLatestVersion = Bytes.toBoolean(b);
+      hasLiveVersions = Bytes.toBoolean(b);
     }
     BloomType hfileBloomType = initialReader.getBloomFilterType();
     if (cfBloomType != BloomType.NONE) {
@@ -599,8 +599,8 @@ public class HStoreFile implements StoreFile {
     this.compactedAway = true;
   }
 
-  public void setHasLatestVersion(boolean hasLatestVersion) {
-    this.hasLatestVersion = hasLatestVersion;
+  public void setHasLiveVersions(boolean hasLiveVersions) {
+    this.hasLiveVersions = hasLiveVersions;
   }
   @Override
   public String toString() {

@@ -24,9 +24,10 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-import static org.apache.hadoop.hbase.regionserver.HStoreFile.HAS_LATEST_VERSION_KEY;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.HAS_LIVE_VERSIONS_KEY;
 
 /**
  * Separates the provided cells into two files, one file for the latest cells and
@@ -39,18 +40,31 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.HAS_LATEST_VERSION
 public class DualFileWriter extends AbstractMultiFileWriter {
 
   private final CellComparator comparator;
-  private StoreFileWriter latestVersionWriter;
-  private StoreFileWriter multiVersionWriter;
+  private StoreFileWriter liveVersionWriter;
+  private StoreFileWriter historicalVersionWriter;
 
   private final List<StoreFileWriter> writers;
+  // The last cell of the current row
   private Cell lastCell;
+  // The first (latest) delete family marker of the current row
   private Cell deleteFamily;
+  // The list of delete family version markers of the current row
   private List<Cell> deleteFamilyVersionList = new ArrayList<>();
+  // The first (latest) delete column marker of the current column
   private Cell deleteColumn;
+  // The list of delete column version markers of the current column
   private List<Cell> deleteColumnVersionList = new ArrayList<>();
-  private Cell firstAndPutCellOfAColumn;
-  public DualFileWriter(CellComparator comparator) {
+  // The live put cell count for the current column
+  private int livePutCellCount;
+  private final boolean dualWriterEnabled;
+  private final boolean keepDeletedCells;
+  private final int maxVersions;
+  public DualFileWriter(CellComparator comparator, int maxVersions,
+    boolean keepDeletedCells, boolean dualWriterEnabled) {
     this.comparator = comparator;
+    this.maxVersions = maxVersions;
+    this.keepDeletedCells = keepDeletedCells;
+    this.dualWriterEnabled = dualWriterEnabled;
     writers = new ArrayList<>(2);
     initRowState();
   }
@@ -62,25 +76,29 @@ public class DualFileWriter extends AbstractMultiFileWriter {
   }
 
   private void initColumnState() {
+    livePutCellCount = 0;
     deleteColumn = null;
     deleteColumnVersionList.clear();
-    firstAndPutCellOfAColumn = null;
+
   }
 
-  private void addLatestVersion(Cell cell) throws  IOException {
-    if (latestVersionWriter == null) {
-      latestVersionWriter = writerFactory.createWriter();
-      writers.add(latestVersionWriter);
+  private void addLiveVersion(Cell cell) throws  IOException {
+    if (liveVersionWriter == null) {
+      liveVersionWriter = writerFactory.createWriter();
+      writers.add(liveVersionWriter);
     }
-    latestVersionWriter.append(cell);
+    liveVersionWriter.append(cell);
   }
 
-  private void addOlderVersion(Cell cell) throws  IOException {
-    if (multiVersionWriter == null) {
-      multiVersionWriter = writerFactory.createWriter();
-      writers.add(multiVersionWriter);
+  private void addHistoricalVersion(Cell cell) throws  IOException {
+    if (!keepDeletedCells) {
+      return;
     }
-    multiVersionWriter.append(cell);
+    if (historicalVersionWriter == null) {
+      historicalVersionWriter = writerFactory.createWriter();
+      writers.add(historicalVersionWriter);
+    }
+    historicalVersionWriter.append(cell);
   }
 
   private boolean isDeletedByDeleteFamily(Cell cell) {
@@ -105,8 +123,15 @@ public class DualFileWriter extends AbstractMultiFileWriter {
     return isDeletedByDeleteFamily(cell) || deleteColumn != null
       || isDeletedByDeleteFamilyVersion(cell) || isDeletedByDeleteColumnVersion(cell);
   }
+
   @Override
   public void append(Cell cell) throws IOException {
+    if (!dualWriterEnabled) {
+      // If the dual writer is not enabled then all cells are written to one file. We use
+      // the live version file in this case
+      addLiveVersion(cell);
+      return;
+    }
     if (lastCell != null && comparator.compareRows(lastCell, cell) != 0) {
       // It is a new row and thus time to reset the state
       initRowState();
@@ -118,45 +143,45 @@ public class DualFileWriter extends AbstractMultiFileWriter {
       if (deleteFamily == null) {
         if (cell.getType() == Cell.Type.DeleteFamily) {
           deleteFamily = cell;
-          addLatestVersion(cell);
+          addLiveVersion(cell);
         } else {
-          addOlderVersion(cell);
+          addHistoricalVersion(cell);
         }
       }
     } else if (cell.getType() == Cell.Type.DeleteFamilyVersion) {
       if (deleteFamily == null) {
         deleteFamilyVersionList.add(cell);
-        addLatestVersion(cell);
+        addLiveVersion(cell);
       } else {
-        addOlderVersion(cell);
+        addHistoricalVersion(cell);
       }
     } else if (cell.getType() == Cell.Type.DeleteColumn) {
       if (!isDeletedByDeleteFamily(cell) && deleteColumn == null) {
         deleteColumn = cell;
-        addLatestVersion(cell);
+        addLiveVersion(cell);
       } else {
-        addOlderVersion(cell);
+        addHistoricalVersion(cell);
       }
     } else if (cell.getType() == Cell.Type.Delete) {
       if (!isDeletedByDeleteFamily(cell) && deleteColumn == null) {
         deleteColumnVersionList.add(cell);
-        addLatestVersion(cell);
+        addLiveVersion(cell);
       } else {
-        addOlderVersion(cell);
+        addHistoricalVersion(cell);
       }
     } else if (cell.getType() == Cell.Type.Put) {
-      if (firstAndPutCellOfAColumn == null) {
-        // This is the first put cell (i.e., the latest version) of a column. Is it deleted?
+      if (livePutCellCount < maxVersions) {
+        // This is a live put cell (i.e., the latest version) of a column. Is it deleted?
         if (!isDeleted(cell)) {
-          addLatestVersion(cell);
-          firstAndPutCellOfAColumn = cell;
+          addLiveVersion(cell);
+          livePutCellCount++;
         } else {
           // It is deleted
-          addOlderVersion(cell);
+          addHistoricalVersion(cell);
         }
       } else {
         // It is an older put cell
-        addOlderVersion(cell);
+        addHistoricalVersion(cell);
       }
     }
     lastCell = cell;
@@ -170,14 +195,23 @@ public class DualFileWriter extends AbstractMultiFileWriter {
   @Override
   protected void preCommitWriters() throws IOException {
     if (writers.isEmpty()) {
-      latestVersionWriter = writerFactory.createWriter();
-      writers.add(latestVersionWriter);
+      liveVersionWriter = writerFactory.createWriter();
+      writers.add(liveVersionWriter);
     }
-    if (latestVersionWriter != null) {
-      latestVersionWriter.appendFileInfo(HAS_LATEST_VERSION_KEY, Bytes.toBytes(true));
+    if (!dualWriterEnabled) {
+      return;
     }
-    if (multiVersionWriter != null) {
-      multiVersionWriter.appendFileInfo(HAS_LATEST_VERSION_KEY, Bytes.toBytes(false));
+    if (liveVersionWriter != null) {
+      liveVersionWriter.appendFileInfo(HAS_LIVE_VERSIONS_KEY, Bytes.toBytes(true));
     }
+    if (historicalVersionWriter != null) {
+      historicalVersionWriter.appendFileInfo(HAS_LIVE_VERSIONS_KEY, Bytes.toBytes(false));
+    }
+  }
+  public HFile.Writer getHFileWriter() {
+    if (writers.isEmpty()) {
+      return null;
+    }
+    return writers.get(0).getHFileWriter();
   }
 }

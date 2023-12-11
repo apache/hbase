@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY;
 import static org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.createDummyRequest;
 import static org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.createDummyStoreFile;
 import static org.junit.Assert.assertEquals;
@@ -28,16 +29,15 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.OptionalLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -68,11 +68,11 @@ import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
 @Category({ RegionServerTests.class, SmallTests.class })
-public class TestDualFileCompactor {
+public class TestDualFileWriter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDualFileCompactor.class);
+    HBaseClassTestRule.forClass(TestDualFileWriter.class);
 
   private static final byte[] NAME_OF_THINGS = Bytes.toBytes("foo");
 
@@ -121,21 +121,30 @@ public class TestDualFileCompactor {
   private static final KeyValue KV_G_2 = new KeyValue(Bytes.toBytes("789"), Bytes.toBytes("0"),
     Bytes.toBytes("g"),100L, KeyValue.Type.Put);
 
-  @Parameters(name = "{index}: usePrivateReaders={0}")
+  @Parameters(name = "{index}: usePrivateReaders={0}, keepDeletedCells={1}")
   public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[] { true }, new Object[] { false });
+    return Arrays.asList(new Object[] { true, true }, new Object[] { false, false });
   }
 
-  @Parameter
+  @Parameter(0)
   public boolean usePrivateReaders;
 
-  private DualFileCompactor createCompactor(StoreFileWritersCapture writers,
+  @Parameter(1)
+  public boolean keepDeletedCells;
+
+  private DefaultCompactor createCompactor(StoreFileWritersCapture writers,
     final KeyValue[] input, List<HStoreFile> storefiles) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean("hbase.regionserver.compaction.private.readers", usePrivateReaders);
+    conf.setBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY, true);
     final Scanner scanner = new Scanner(input);
     // Create store mock that is satisfactory for compactor.
-    ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.of(NAME_OF_THINGS);
+    ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder =
+      new ColumnFamilyDescriptorBuilder(NAME_OF_THINGS);
+    columnFamilyDescriptorBuilder.setKeepDeletedCells(keepDeletedCells ? KeepDeletedCells.TRUE
+      : KeepDeletedCells.FALSE);
+    ColumnFamilyDescriptor familyDescriptor = columnFamilyDescriptorBuilder.build();
+
     ScanInfo si =
       new ScanInfo(conf, familyDescriptor, Long.MAX_VALUE, 0, CellComparatorImpl.COMPARATOR);
     HStore store = mock(HStore.class);
@@ -152,7 +161,7 @@ public class TestDualFileCompactor {
     OptionalLong maxSequenceId = StoreUtils.getMaxSequenceIdInList(storefiles);
     when(store.getMaxSequenceId()).thenReturn(maxSequenceId);
 
-    return new DualFileCompactor(conf, store) {
+    return new DefaultCompactor(conf, store) {
       @Override
       protected InternalScanner createScanner(HStore store, ScanInfo scanInfo,
         List<StoreFileScanner> scanners, long smallestReadPoint, long earliestPutTs,
@@ -173,11 +182,21 @@ public class TestDualFileCompactor {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
     HStoreFile sf1 = createDummyStoreFile(1L);
     HStoreFile sf2 = createDummyStoreFile(2L);
-    DualFileCompactor dfc = createCompactor(writers, input, Arrays.asList(sf1, sf2));
+    DefaultCompactor dfc = createCompactor(writers, input, Arrays.asList(sf1, sf2));
     List<Path> paths = dfc.compact(new CompactionRequestImpl(Arrays.asList(sf1)),
       NoLimitThroughputController.INSTANCE, null);
     writers.verifyKvs(output);
     assertEquals(output.length, paths.size());
+  }
+  private void verify(KeyValue[] input, KeyValue[] output) throws Exception {
+    StoreFileWritersCapture writers = new StoreFileWritersCapture();
+    HStoreFile sf1 = createDummyStoreFile(1L);
+    HStoreFile sf2 = createDummyStoreFile(2L);
+    DefaultCompactor dfc = createCompactor(writers, input, Arrays.asList(sf1, sf2));
+    List<Path> paths = dfc.compact(new CompactionRequestImpl(Arrays.asList(sf1)),
+      NoLimitThroughputController.INSTANCE, null);
+    writers.verifyKv(output);
+    assertEquals(1, paths.size());
   }
 
   @SuppressWarnings("unchecked")
@@ -187,26 +206,38 @@ public class TestDualFileCompactor {
 
   @Test
   public void test() throws Exception {
-    verify(a(KV_A_DeleteFamilyVersion, KV_A_1, KV_A_2, KV_A_3, KV_B_DeleteColumn, KV_B, KV_C,
-        KV_D_1, KV_D_2, // Row 123
-        KV_E_F_DeleteFamily, KV_E, KV_F, // Row 456
-        KV_G_DeleteFamily, KV_G_DeleteFamilyVersion, KV_G_1, KV_G_DeleteColumn,
-        KV_G_DeleteColumnVersion, KV_G_2), // Row 789
-      a(
-        a(KV_A_DeleteFamilyVersion, KV_A_2, KV_B_DeleteColumn, KV_C, KV_D_1,
-          KV_E_F_DeleteFamily, KV_G_DeleteFamily, KV_G_1), // Latest versions
-        a(KV_A_1, KV_A_3, KV_B, KV_D_2, KV_E, KV_F, KV_G_DeleteFamilyVersion, KV_G_DeleteColumn,
-          KV_G_DeleteColumnVersion, KV_G_2)
-      ));
+    if (!keepDeletedCells){
+      verify(
+        a(KV_A_DeleteFamilyVersion, KV_A_1, KV_A_2, KV_A_3, KV_B_DeleteColumn, KV_B, KV_C, KV_D_1,
+          KV_D_2, // Row 123
+          KV_E_F_DeleteFamily, KV_E, KV_F, // Row 456
+          KV_G_DeleteFamily, KV_G_DeleteFamilyVersion, KV_G_1, KV_G_DeleteColumn,
+          KV_G_DeleteColumnVersion, KV_G_2), // Row 789
+        a(KV_A_DeleteFamilyVersion, KV_A_2, KV_B_DeleteColumn, KV_C, KV_D_1, KV_E_F_DeleteFamily,
+            KV_G_DeleteFamily, KV_G_1)// Latest versions
+          );
+
+    } else {
+      verify(
+        a(KV_A_DeleteFamilyVersion, KV_A_1, KV_A_2, KV_A_3, KV_B_DeleteColumn, KV_B, KV_C, KV_D_1,
+          KV_D_2, // Row 123
+          KV_E_F_DeleteFamily, KV_E, KV_F, // Row 456
+          KV_G_DeleteFamily, KV_G_DeleteFamilyVersion, KV_G_1, KV_G_DeleteColumn,
+          KV_G_DeleteColumnVersion, KV_G_2), // Row 789
+        a(a(KV_A_DeleteFamilyVersion, KV_A_2, KV_B_DeleteColumn, KV_C, KV_D_1, KV_E_F_DeleteFamily,
+            KV_G_DeleteFamily, KV_G_1), // Latest versions
+          a(KV_A_1, KV_A_3, KV_B, KV_D_2, KV_E, KV_F, KV_G_DeleteFamilyVersion, KV_G_DeleteColumn,
+            KV_G_DeleteColumnVersion, KV_G_2)));
+    }
   }
 
   @Test
   public void testEmptyOutputFile() throws Exception {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
     CompactionRequestImpl request = createDummyRequest();
-    DualFileCompactor dtc =
+    DefaultCompactor dfc =
       createCompactor(writers, new KeyValue[0], new ArrayList<>(request.getFiles()));
-    List<Path> paths = dtc.compact(request, NoLimitThroughputController.INSTANCE, null);
+    List<Path> paths = dfc.compact(request, NoLimitThroughputController.INSTANCE, null);
     assertEquals(1, paths.size());
     List<StoreFileWritersCapture.Writer> dummyWriters = writers.getWriters();
     assertEquals(1, dummyWriters.size());
