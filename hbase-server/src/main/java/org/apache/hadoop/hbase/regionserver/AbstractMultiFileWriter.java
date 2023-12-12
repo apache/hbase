@@ -64,7 +64,7 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
    * Commit all writers.
    * <p>
    * Notice that here we use the same <code>maxSeqId</code> for all output files since we haven't
-   * find an easy to find enough sequence ids for different output files in some corner cases. See
+   * found an easy to find enough sequence ids for different output files in some corner cases. See
    * comments in HBASE-15400 for more details.
    */
   public List<Path> commitWriters(long maxSeqId, boolean majorCompaction) throws IOException {

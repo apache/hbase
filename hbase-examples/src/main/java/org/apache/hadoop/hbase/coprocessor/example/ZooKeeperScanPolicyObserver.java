@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This is an example showing how a RegionObserver could configured via ZooKeeper in order to
+ * This is an example showing how a RegionObserver could be configured via ZooKeeper in order to
  * control a Region compaction, flush, and scan policy. This also demonstrated the use of shared
  * {@link org.apache.hadoop.hbase.coprocessor.RegionObserver} state. See
  * {@link RegionCoprocessorEnvironment#getSharedData()}.
