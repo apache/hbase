@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.io.MetricsIOWrapperImpl;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -191,7 +192,8 @@ public final class HFile {
     return CHECKSUM_FAILURES.sum();
   }
 
-  public static final void updateReadLatency(long latencyMillis, boolean pread) {
+  public static void updateReadLatency(long latencyMillis, boolean pread) {
+    RpcServer.getCurrentCall().ifPresent(call -> call.updateFsReadTime(latencyMillis));
     if (pread) {
       metrics.updateFsPreadTime(latencyMillis);
     } else {

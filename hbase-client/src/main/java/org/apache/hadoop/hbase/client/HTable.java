@@ -1316,9 +1316,8 @@ public class HTable implements Table {
       final List<String> callbackErrorServers = new ArrayList<>();
       Object[] results = new Object[execs.size()];
 
-      AsyncProcess asyncProcess = new AsyncProcess(
-        connection, configuration, RpcRetryingCallerFactory.instantiate(configuration,
-          connection.getStatisticsTracker(), connection.getConnectionMetrics()),
+      AsyncProcess asyncProcess = new AsyncProcess(connection, configuration,
+        RpcRetryingCallerFactory.instantiate(configuration, connection.getConnectionMetrics()),
         RpcControllerFactory.instantiate(configuration));
 
       Batch.Callback<ClientProtos.CoprocessorServiceResult> resultsCallback =

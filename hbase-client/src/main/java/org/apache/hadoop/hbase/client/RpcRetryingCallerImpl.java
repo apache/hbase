@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseServerException;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -56,6 +57,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
 
   /** How many retries are allowed before we start to log */
   private final int startLogErrorsCnt;
+  private final ScanMetrics scanMetrics;
 
   private final long pause;
   private final long pauseForServerOverloaded;
@@ -69,13 +71,14 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
 
   public RpcRetryingCallerImpl(long pause, long pauseForServerOverloaded, int retries,
     RetryingCallerInterceptor interceptor, int startLogErrorsCnt, int rpcTimeout,
-    MetricsConnection metricsConnection) {
+    MetricsConnection metricsConnection, ScanMetrics scanMetrics) {
     this.pause = pause;
     this.pauseForServerOverloaded = pauseForServerOverloaded;
     this.maxAttempts = retries2Attempts(retries);
     this.interceptor = interceptor;
     context = interceptor.createEmptyContext();
     this.startLogErrorsCnt = startLogErrorsCnt;
+    this.scanMetrics = scanMetrics;
     this.tracker = new RetryingTimeTracker();
     this.rpcTimeout = rpcTimeout;
     this.metrics = metricsConnection;
@@ -149,6 +152,9 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
             LOG.debug("Sleeping for {}ms after catching RpcThrottlingException", expectedSleep,
               rpcThrottlingException);
           }
+          if (scanMetrics != null) {
+            scanMetrics.throttleTime.addAndGet(expectedSleep);
+          }
         } else {
           expectedSleep =
             HBaseServerException.isServerOverloaded(t) ? pauseForServerOverloaded : pause;
@@ -171,8 +177,13 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
             + t.getMessage() + " " + callable.getExceptionMessageAdditionalDetail();
           throw (SocketTimeoutException) new SocketTimeoutException(msg).initCause(t);
         }
-        if (metrics != null && HBaseServerException.isServerOverloaded(t)) {
-          metrics.incrementServerOverloadedBackoffTime(expectedSleep, TimeUnit.MILLISECONDS);
+        if (HBaseServerException.isServerOverloaded(t)) {
+          if (metrics != null) {
+            metrics.incrementServerOverloadedBackoffTime(expectedSleep, TimeUnit.MILLISECONDS);
+          }
+          if (scanMetrics != null) {
+            scanMetrics.throttleTime.addAndGet(expectedSleep);
+          }
         }
       } finally {
         interceptor.updateFailureInfo(context);

@@ -248,7 +248,7 @@ public class TestAsyncProcess {
         });
 
       return new RpcRetryingCallerImpl<AbstractResponse>(100, 500, 10,
-        RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 9, 0, null) {
+        RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 9, 0, null, null) {
         @Override
         public AbstractResponse callWithoutRetries(RetryingCallable<AbstractResponse> callable,
           int callTimeout) throws IOException, RuntimeException {
@@ -309,7 +309,7 @@ public class TestAsyncProcess {
     private final IOException e;
 
     public CallerWithFailure(IOException e) {
-      super(100, 500, 100, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 9, 0, null);
+      super(100, 500, 100, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 9, 0, null, null);
       this.e = e;
     }
 
@@ -331,7 +331,7 @@ public class TestAsyncProcess {
     private MultiAction multi;
 
     public CallerWithRegionException(IOException e, MultiAction multi) {
-      super(100, 500, 100, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 9, 0, null);
+      super(100, 500, 100, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 9, 0, null, null);
       this.e = e;
       this.multi = multi;
     }
@@ -462,7 +462,7 @@ public class TestAsyncProcess {
       }
 
       return new RpcRetryingCallerImpl<AbstractResponse>(100, 500, 10,
-        RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 9, 0, null) {
+        RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 9, 0, null, null) {
         @Override
         public MultiResponse callWithoutRetries(RetryingCallable<AbstractResponse> callable,
           int callTimeout) throws IOException, RuntimeException {

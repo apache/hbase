@@ -18,11 +18,14 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -39,6 +42,9 @@ import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.ipc.CallRunner;
+import org.apache.hadoop.hbase.ipc.PriorityFunction;
+import org.apache.hadoop.hbase.ipc.RpcExecutor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -91,8 +97,14 @@ public class TestServerSideScanMetricsFromClientSide {
   // getCellHeapSize().
   private static long CELL_HEAP_SIZE = -1;
 
+  private static volatile boolean shouldDelayQueue = false;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
+      RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE);
+    TEST_UTIL.getConfiguration().set(RpcExecutor.PLUGGABLE_CALL_QUEUE_CLASS_NAME,
+      DelayingCallQueue.class.getName());
     TEST_UTIL.startMiniCluster(3);
     TABLE = createTestTable(TABLE_NAME, ROWS, FAMILIES, QUALIFIERS, VALUE);
   }
@@ -174,6 +186,30 @@ public class TestServerSideScanMetricsFromClientSide {
   @Test
   public void testRowsSeenMetricWithAsync() throws Exception {
     testRowsSeenMetric(true);
+  }
+
+  @Test
+  public void testFsReadTimeMetric() throws Exception {
+    // write some new puts and flush, as an easy way to ensure the read blocks are not cached
+    // so that we go into the fs write code path
+    List<Put> puts = createPuts(ROWS, FAMILIES, QUALIFIERS, VALUE);
+    TABLE.put(puts);
+    TEST_UTIL.flush(TABLE_NAME);
+    Scan scan = new Scan();
+    scan.setScanMetricsEnabled(true);
+    testMetric(scan, ServerSideScanMetrics.FS_READ_TIME_METRIC_NAME, CompareOp.GREATER, 0);
+  }
+
+  @Test
+  public void testQueueTimeMetric() throws Exception {
+    Scan scan = new Scan();
+    scan.setScanMetricsEnabled(true);
+    shouldDelayQueue = true;
+    try {
+      testMetric(scan, ServerSideScanMetrics.QUEUE_TIME_METRIC_NAME, CompareOp.GREATER, 0);
+    } finally {
+      shouldDelayQueue = false;
+    }
   }
 
   private void testRowsSeenMetric(boolean async) throws Exception {
@@ -343,6 +379,11 @@ public class TestServerSideScanMetricsFromClientSide {
    * @throws Exception on unexpected failure
    */
   public void testMetric(Scan scan, String metricKey, long expectedValue) throws Exception {
+    testMetric(scan, metricKey, CompareOp.EQUAL, expectedValue);
+  }
+
+  public void testMetric(Scan scan, String metricKey, CompareOp compareOp, long expectedValue)
+    throws Exception {
     assertTrue("Scan should be configured to record metrics", scan.isScanMetricsEnabled());
     ResultScanner scanner = TABLE.getScanner(scan);
     // Iterate through all the results
@@ -351,12 +392,43 @@ public class TestServerSideScanMetricsFromClientSide {
     }
     scanner.close();
     ScanMetrics metrics = scanner.getScanMetrics();
-    assertTrue("Metrics are null", metrics != null);
+    assertNotNull("Metrics are null", metrics);
     assertTrue("Metric : " + metricKey + " does not exist", metrics.hasCounter(metricKey));
     final long actualMetricValue = metrics.getCounter(metricKey).get();
-    assertEquals(
-      "Metric: " + metricKey + " Expected: " + expectedValue + " Actual: " + actualMetricValue,
-      expectedValue, actualMetricValue);
+    if (compareOp == CompareOp.EQUAL) {
+      assertEquals(
+        "Metric: " + metricKey + " Expected: " + expectedValue + " Actual: " + actualMetricValue,
+        expectedValue, actualMetricValue);
+    } else {
+      assertTrue(
+        "Metric: " + metricKey + " Expected: > " + expectedValue + " Actual: " + actualMetricValue,
+        actualMetricValue > expectedValue);
+    }
+  }
 
+  public enum CompareOp {
+    EQUAL,
+    GREATER
+  }
+
+  public static class DelayingCallQueue extends LinkedBlockingQueue<CallRunner> {
+
+    public DelayingCallQueue(final int maxQueueLength, final PriorityFunction priority,
+      final Configuration conf) {
+      super(maxQueueLength);
+    }
+
+    @Override
+    public CallRunner poll() {
+      return super.poll();
+    }
+
+    @Override
+    public CallRunner take() throws InterruptedException {
+      if (shouldDelayQueue) {
+        Thread.sleep(500);
+      }
+      return super.take();
+    }
   }
 }

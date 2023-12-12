@@ -1212,7 +1212,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       // Cache Miss, please load.
 
       HFileBlock compressedBlock =
-        fsBlockReader.readBlockData(metaBlockOffset, blockSize, true, false, true);
+        fsBlockReader.readBlockData(metaBlockOffset, blockSize, true, true, true);
       HFileBlock uncompressedBlock = compressedBlock.unpack(hfileContext, fsBlockReader);
       if (compressedBlock != uncompressedBlock) {
         compressedBlock.release();

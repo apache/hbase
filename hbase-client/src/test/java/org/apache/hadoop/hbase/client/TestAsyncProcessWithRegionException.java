@@ -223,7 +223,7 @@ public class TestAsyncProcessWithRegionException {
       });
       mr.addException(REGION_INFO.getRegionName(), IOE);
       return new RpcRetryingCallerImpl<AbstractResponse>(100, 500, 0,
-        RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 9, 0, null) {
+        RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 9, 0, null, null) {
         @Override
         public AbstractResponse callWithoutRetries(RetryingCallable<AbstractResponse> callable,
           int callTimeout) {

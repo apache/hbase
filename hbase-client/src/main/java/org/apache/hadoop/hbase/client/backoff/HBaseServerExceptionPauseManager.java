@@ -18,11 +18,12 @@
 package org.apache.hadoop.hbase.client.backoff;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
 
 import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseServerException;
+import org.apache.hadoop.hbase.client.ConnectionUtils;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -43,6 +44,10 @@ public class HBaseServerExceptionPauseManager {
     this.timeoutNs = timeoutNs;
   }
 
+  public OptionalLong getPauseNsFromException(Throwable error, int tries, long startNs) {
+    return getPauseNsFromException(error, tries, startNs, null);
+  }
+
   /**
    * Returns the nanos, if any, for which the client should wait
    * @param error The exception from the server
@@ -50,13 +55,17 @@ public class HBaseServerExceptionPauseManager {
    * @return The time, in nanos, to pause. If empty then pausing would exceed our timeout, so we
    *         should throw now
    */
-  public OptionalLong getPauseNsFromException(Throwable error, int tries, long startNs) {
-    long expectedSleepNs;
+  public OptionalLong getPauseNsFromException(Throwable error, int tries, long startNs,
+    ScanMetrics scanMetrics) {
     long remainingTimeNs = remainingTimeNs(startNs) - SLEEP_DELTA_NS;
     if (error instanceof RpcThrottlingException) {
       RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) error;
-      expectedSleepNs = TimeUnit.MILLISECONDS.toNanos(rpcThrottlingException.getWaitInterval());
-      if (expectedSleepNs > remainingTimeNs && remainingTimeNs > 0) {
+      long waitInterval = rpcThrottlingException.getWaitInterval();
+      if (scanMetrics != null) {
+        scanMetrics.throttleTime.addAndGet(waitInterval);
+      }
+      long expectedSleepNs = TimeUnit.MILLISECONDS.toNanos(waitInterval);
+      if (timeoutNs > 0 && expectedSleepNs > remainingTimeNs) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("RpcThrottlingException suggested pause of {}ns which would exceed "
             + "the timeout. We should throw instead.", expectedSleepNs, rpcThrottlingException);
@@ -67,21 +76,30 @@ public class HBaseServerExceptionPauseManager {
         LOG.debug("Sleeping for {}ns after catching RpcThrottlingException", expectedSleepNs,
           rpcThrottlingException);
       }
+      return OptionalLong.of(expectedSleepNs);
     } else {
-      expectedSleepNs =
-        HBaseServerException.isServerOverloaded(error) ? pauseNsForServerOverloaded : pauseNs;
-      // RpcThrottlingException tells us exactly how long the client should wait for,
-      // so we should not factor in the retry count for said exception
-      expectedSleepNs = getPauseTime(expectedSleepNs, tries - 1);
+      if (HBaseServerException.isServerOverloaded(error)) {
+        OptionalLong expectedSleepNs =
+          getRelativePauseTime(pauseNsForServerOverloaded, remainingTimeNs, tries);
+        if (scanMetrics != null && expectedSleepNs.isPresent()) {
+          scanMetrics.throttleTime
+            .addAndGet(TimeUnit.NANOSECONDS.toMillis(expectedSleepNs.getAsLong()));
+        }
+        return expectedSleepNs;
+      } else {
+        return getRelativePauseTime(pauseNs, remainingTimeNs, tries);
+      }
     }
+  }
 
+  private OptionalLong getRelativePauseTime(long basePause, long remainingTimeNs, int tries) {
+    long expectedSleepNs = ConnectionUtils.getPauseTime(basePause, tries - 1);
     if (timeoutNs > 0) {
       if (remainingTimeNs <= 0) {
         return OptionalLong.empty();
       }
       expectedSleepNs = Math.min(remainingTimeNs, expectedSleepNs);
     }
-
     return OptionalLong.of(expectedSleepNs);
   }
 

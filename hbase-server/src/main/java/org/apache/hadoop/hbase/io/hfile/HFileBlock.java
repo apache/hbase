@@ -1355,6 +1355,7 @@ public class HFileBlock implements Cacheable {
     private final Lock streamLock = new ReentrantLock();
 
     private final boolean isPreadAllBytes;
+    private final int slowReadThresholdMs;
 
     FSReaderImpl(ReaderContext readerContext, HFileContext fileContext, ByteBuffAllocator allocator,
       Configuration conf) throws IOException {
@@ -1366,7 +1367,7 @@ public class HFileBlock implements Cacheable {
       this.fileContext = fileContext;
       this.hdrSize = headerSize(fileContext.isUseHBaseChecksum());
       this.allocator = allocator;
-
+      this.slowReadThresholdMs = conf.getInt("hfile.slow.read.threshold.ms", 200);
       this.streamWrapper = readerContext.getInputStreamWrapper();
       // Older versions of HBase didn't support checksum.
       this.streamWrapper.prepareForBlockReader(!fileContext.isUseHBaseChecksum());
@@ -1781,9 +1782,7 @@ public class HFileBlock implements Cacheable {
         int sizeWithoutChecksum = curBlock.getInt(Header.ON_DISK_DATA_SIZE_WITH_HEADER_INDEX);
         curBlock.limit(sizeWithoutChecksum);
         long duration = EnvironmentEdgeManager.currentTime() - startTime;
-        if (updateMetrics) {
-          HFile.updateReadLatency(duration, pread);
-        }
+
         // The onDiskBlock will become the headerAndDataBuffer for this block.
         // If nextBlockOnDiskSizeWithHeader is not zero, the onDiskBlock already
         // contains the header of next block, so no need to set next block's header in it.
@@ -1793,7 +1792,14 @@ public class HFileBlock implements Cacheable {
         if (!fileContext.isCompressedOrEncrypted()) {
           hFileBlock.sanityCheckUncompressed();
         }
-        LOG.trace("Read {} in {} ms", hFileBlock, duration);
+        if (updateMetrics) {
+          HFile.updateReadLatency(duration, pread);
+        }
+        if (duration > slowReadThresholdMs) {
+          LOG.warn("FS read took {} ms: pread={}, block={}", duration, pread, hFileBlock);
+        } else {
+          LOG.trace("FS read took {} ms: pread={}, block={}", duration, pread, hFileBlock);
+        }
         span.addEvent("Read block", attributesBuilder.build());
         // Cache next block header if we read it for the next time through here.
         if (nextBlockOnDiskSize != -1) {

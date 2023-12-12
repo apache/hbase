@@ -667,13 +667,13 @@ public class TestNamedQueueRecorder {
   static RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className,
     int forcedParamIndex) {
     RpcCall rpcCall = getRpcCall(userName, forcedParamIndex);
-    return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, 0, className, true,
+    return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, 0, 0, className, true,
       true);
   }
 
   static RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className) {
     RpcCall rpcCall = getRpcCall(userName);
-    return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, 0, className, true,
+    return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, 0, 0, className, true,
       true);
   }
 
@@ -685,8 +685,8 @@ public class TestNamedQueueRecorder {
   private RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className,
     boolean isSlowLog, boolean isLargeLog) {
     RpcCall rpcCall = getRpcCall(userName);
-    return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, 0, className, isSlowLog,
-      isLargeLog);
+    return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, 0, 0, className,
+      isSlowLog, isLargeLog);
   }
 
   private static RpcCall getRpcCall(String userName) {
@@ -858,6 +858,15 @@ public class TestNamedQueueRecorder {
 
       @Override
       public void incrementResponseExceptionSize(long exceptionSize) {
+      }
+
+      @Override
+      public void updateFsReadTime(long latencyMillis) {
+      }
+
+      @Override
+      public long getFsReadTime() {
+        return 0;
       }
     };
     return rpcCall;

@@ -340,8 +340,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics,
         connectionAttributes);
       this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
-      this.rpcCallerFactory =
-        RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats, this.metrics);
+      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, this.metrics);
       this.asyncProcess = new AsyncProcess(this, conf, rpcCallerFactory, rpcControllerFactory);
 
       // Do we publish the status?
@@ -2196,8 +2195,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf) {
-    return RpcRetryingCallerFactory.instantiate(conf, this.interceptor, this.getStatisticsTracker(),
-      metrics);
+    return RpcRetryingCallerFactory.instantiate(conf, metrics);
   }
 
   @Override

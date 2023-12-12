@@ -42,6 +42,7 @@ public class RpcLogDetails extends NamedQueuePayload {
   private final String clientAddress;
   private final long responseSize;
   private final long blockBytesScanned;
+  private final long fsReadTime;
   private final String className;
   private final boolean isSlowLog;
   private final boolean isLargeLog;
@@ -49,12 +50,14 @@ public class RpcLogDetails extends NamedQueuePayload {
   private final Map<String, byte[]> requestAttributes;
 
   public RpcLogDetails(RpcCall rpcCall, Message param, String clientAddress, long responseSize,
-    long blockBytesScanned, String className, boolean isSlowLog, boolean isLargeLog) {
+    long blockBytesScanned, long fsReadTime, String className, boolean isSlowLog,
+    boolean isLargeLog) {
     super(SLOW_LOG_EVENT);
     this.rpcCall = rpcCall;
     this.clientAddress = clientAddress;
     this.responseSize = responseSize;
     this.blockBytesScanned = blockBytesScanned;
+    this.fsReadTime = fsReadTime;
     this.className = className;
     this.isSlowLog = isSlowLog;
     this.isLargeLog = isLargeLog;
@@ -90,6 +93,10 @@ public class RpcLogDetails extends NamedQueuePayload {
 
   public long getBlockBytesScanned() {
     return blockBytesScanned;
+  }
+
+  public long getFsReadTime() {
+    return fsReadTime;
   }
 
   public String getClassName() {
