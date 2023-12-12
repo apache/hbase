@@ -443,7 +443,7 @@ public class MergeTableRegionsProcedure
   private boolean prepareMergeRegion(final MasterProcedureEnv env) throws IOException {
     // Fail if we are taking snapshot for the given table
     TableName tn = regionsToMerge[0].getTable();
-    if (env.getMasterServices().getSnapshotManager().isTakingSnapshot(tn)) {
+    if (env.getMasterServices().getSnapshotManager().isTableTakingAnySnapshot(tn)) {
       throw new MergeRegionException("Skip merging regions "
         + RegionInfo.getShortNameToLog(regionsToMerge) + ", because we are snapshotting " + tn);
     }

@@ -41,6 +41,8 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -50,10 +52,12 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
+import org.apache.hadoop.hbase.master.procedure.TestSnapshotProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -68,6 +72,9 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestSplitTableRegionProcedure {
@@ -548,6 +555,52 @@ public class TestSplitTableRegionProcedure {
 
     // Even split failed after step 4, it should still works fine
     verify(tableName, splitRowNum);
+  }
+
+  @Test
+  public void testSplitRegionWhileTakingSnapshot() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(procExec, tableName, null,
+      columnFamilyName1, columnFamilyName2);
+    int splitRowNum = startRowNum + rowCount / 2;
+    byte[] splitKey = Bytes.toBytes("" + splitRowNum);
+
+    assertTrue("not able to find a splittable region", regions != null);
+    assertTrue("not able to find a splittable region", regions.length == 1);
+    ProcedureTestingUtility.waitNoProcedureRunning(procExec);
+
+    // task snapshot
+    SnapshotDescription snapshot =
+      new SnapshotDescription("SnapshotProcedureTest", tableName, SnapshotType.FLUSH);
+    SnapshotProtos.SnapshotDescription snapshotProto =
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
+    snapshotProto = SnapshotDescriptionUtils.validate(snapshotProto,
+      UTIL.getHBaseCluster().getMaster().getConfiguration());
+    long snapshotProcId = procExec.submitProcedure(
+      new TestSnapshotProcedure.DelaySnapshotProcedure(procExec.getEnvironment(), snapshotProto));
+    UTIL.getHBaseCluster().getMaster().getSnapshotManager().registerSnapshotProcedure(snapshotProto,
+      snapshotProcId);
+
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
+    // Split region of the table
+    long procId = procExec.submitProcedure(
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
+    // Wait the completion
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
+    ProcedureTestingUtility.waitProcedure(procExec, snapshotProcId);
+
+    ProcedureTestingUtility.assertProcFailed(procExec, procId);
+    ProcedureTestingUtility.assertProcNotFailed(procExec, snapshotProcId);
+
+    assertTrue(UTIL.getMiniHBaseCluster().getRegions(tableName).size() == 1);
+    assertTrue(UTIL.countRows(tableName) == 0);
+
+    assertEquals(splitSubmittedCount + 1, splitProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(splitFailedCount + 1, splitProcMetrics.getFailedCounter().getCount());
   }
 
   private void deleteData(final TableName tableName, final int startDeleteRowNum)
