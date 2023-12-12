@@ -46,6 +46,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
@@ -179,6 +180,8 @@ public class TestByteBufferUtils {
       ByteBufferUtils.writeVLong(b, l);
       b.flip();
       assertEquals(l, ByteBufferUtils.readVLong(b));
+      b.flip();
+      assertEquals(l, ByteBufferUtils.readVLong(ByteBuff.wrap(b)));
     }
   }
 

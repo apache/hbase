@@ -468,38 +468,55 @@ public final class ByteBufferUtils {
     }
   }
 
-  private interface ByteVisitor {
-    byte get();
-  }
-
-  private static long readVLong(ByteVisitor visitor) {
-    byte firstByte = visitor.get();
+  /**
+   * Similar to {@link WritableUtils#readVLong(java.io.DataInput)} but reads from a
+   * {@link ByteBuff}.
+   */
+  public static long readVLong(ByteBuff buf) {
+    byte firstByte = buf.get();
     int len = WritableUtils.decodeVIntSize(firstByte);
     if (len == 1) {
       return firstByte;
     }
     long i = 0;
-    for (int idx = 0; idx < len - 1; idx++) {
-      byte b = visitor.get();
-      i = i << 8;
-      i = i | (b & 0xFF);
+    if (buf.remaining() >= 8) {
+      long k = buf.getLongAfterPosition(0);
+      int shift = 72 - (len << 3);
+      i = k >>> shift;
+      buf.skip(len - 1);
+    } else {
+      for (int idx = 0; idx < len - 1; idx++) {
+        byte b = buf.get();
+        i = i << 8;
+        i = i | (b & 0xFF);
+      }
     }
-    return (WritableUtils.isNegativeVInt(firstByte) ? (i ^ -1L) : i);
+    return WritableUtils.isNegativeVInt(firstByte) ? ~i : i;
   }
 
   /**
    * Similar to {@link WritableUtils#readVLong(DataInput)} but reads from a {@link ByteBuffer}.
    */
-  public static long readVLong(ByteBuffer in) {
-    return readVLong(in::get);
-  }
-
-  /**
-   * Similar to {@link WritableUtils#readVLong(java.io.DataInput)} but reads from a
-   * {@link ByteBuff}.
-   */
-  public static long readVLong(ByteBuff in) {
-    return readVLong(in::get);
+  public static long readVLong(ByteBuffer buf) {
+    byte firstByte = buf.get();
+    int len = WritableUtils.decodeVIntSize(firstByte);
+    if (len == 1) {
+      return firstByte;
+    }
+    long i = 0;
+    if (buf.remaining() >= 8) {
+      long k = buf.getLong(buf.position());
+      int shift = 72 - (len << 3);
+      i = k >>> shift;
+      buf.position(buf.position() + len - 1);
+    } else {
+      for (int idx = 0; idx < len - 1; idx++) {
+        byte b = buf.get();
+        i = i << 8;
+        i = i | (b & 0xFF);
+      }
+    }
+    return WritableUtils.isNegativeVInt(firstByte) ? ~i : i;
   }
 
   /**
