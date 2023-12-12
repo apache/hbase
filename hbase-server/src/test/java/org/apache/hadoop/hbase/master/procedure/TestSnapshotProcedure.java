@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotState.SNAPSHOT_SNAPSHOT_ONLINE_REGIONS;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -51,6 +53,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
@@ -69,6 +72,27 @@ public class TestSnapshotProcedure {
   protected String SNAPSHOT_NAME;
   protected SnapshotDescription snapshot;
   protected SnapshotProtos.SnapshotDescription snapshotProto;
+
+  public static final class DelaySnapshotProcedure extends SnapshotProcedure {
+    public DelaySnapshotProcedure() {
+    }
+
+    public DelaySnapshotProcedure(final MasterProcedureEnv env,
+      final SnapshotProtos.SnapshotDescription snapshot) {
+      super(env, snapshot);
+    }
+
+    @Override
+    protected Flow executeFromState(MasterProcedureEnv env,
+      MasterProcedureProtos.SnapshotState state)
+      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      Flow flow = super.executeFromState(env, state);
+      if (state == SNAPSHOT_SNAPSHOT_ONLINE_REGIONS) {
+        TimeUnit.SECONDS.sleep(20);
+      }
+      return flow;
+    }
+  }
 
   @Before
   public void setup() throws Exception {
