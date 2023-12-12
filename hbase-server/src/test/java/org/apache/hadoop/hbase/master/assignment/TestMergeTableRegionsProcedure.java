@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.assertProcFailed;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -33,16 +34,20 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
+import org.apache.hadoop.hbase.master.procedure.TestSnapshotProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -58,6 +63,9 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 @Category({ MasterTests.class, LargeTests.class })
 public class TestMergeTableRegionsProcedure {
@@ -343,6 +351,42 @@ public class TestMergeTableRegionsProcedure {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
     assertRegionCount(tableName, initialRegionCount - 1);
+  }
+
+  @Test
+  public void testMergingRegionWhileTakingSnapshot() throws Exception {
+    final TableName tableName = TableName.valueOf("testMergingRegionWhileTakingSnapshot");
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    List<RegionInfo> tableRegions = createTable(tableName);
+
+    ProcedureTestingUtility.waitNoProcedureRunning(procExec);
+
+    SnapshotDescription snapshot =
+      new SnapshotDescription("SnapshotProcedureTest", tableName, SnapshotType.FLUSH);
+    SnapshotProtos.SnapshotDescription snapshotProto =
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
+    snapshotProto = SnapshotDescriptionUtils.validate(snapshotProto,
+      UTIL.getHBaseCluster().getMaster().getConfiguration());
+    long snapshotProcId = procExec.submitProcedure(
+      new TestSnapshotProcedure.DelaySnapshotProcedure(procExec.getEnvironment(), snapshotProto));
+    UTIL.getHBaseCluster().getMaster().getSnapshotManager().registerSnapshotProcedure(snapshotProto,
+      snapshotProcId);
+
+    RegionInfo[] regionsToMerge = new RegionInfo[2];
+    regionsToMerge[0] = tableRegions.get(0);
+    regionsToMerge[1] = tableRegions.get(1);
+
+    long mergeProcId = procExec.submitProcedure(
+      new MergeTableRegionsProcedure(procExec.getEnvironment(), regionsToMerge, true));
+
+    ProcedureTestingUtility
+      .waitProcedure(UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor(), mergeProcId);
+    ProcedureTestingUtility.waitProcedure(
+      UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor(), snapshotProcId);
+
+    assertProcFailed(procExec, mergeProcId);
+    assertEquals(initialRegionCount, UTIL.getAdmin().getRegions(tableName).size());
   }
 
   private List<RegionInfo> createTable(final TableName tableName) throws Exception {
