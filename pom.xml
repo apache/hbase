@@ -716,7 +716,9 @@
       --add-opens java.base/java.util=ALL-UNNAMED
       --add-opens java.base/java.util.concurrent=ALL-UNNAMED
       --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
-      --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED</hbase-surefire.jdk11.flags>
+      --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED
+      --add-exports java.base/sun.net.dns=ALL-UNNAMED
+      --add-exports java.base/sun.net.util=ALL-UNNAMED</hbase-surefire.jdk11.flags>
     <hbase-surefire.jdk17.flags>--add-opens java.base/jdk.internal.util.random=ALL-UNNAMED</hbase-surefire.jdk17.flags>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine} @{jacocoArgLine}</argLine>
