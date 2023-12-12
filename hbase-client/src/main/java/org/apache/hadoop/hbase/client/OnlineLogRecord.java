@@ -121,6 +121,10 @@ final public class OnlineLogRecord extends LogEntry {
     return blockBytesScanned;
   }
 
+  public long getFsReadTime() {
+    return fsReadTime;
+  }
+
   public String getClientAddress() {
     return clientAddress;
   }
