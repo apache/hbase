@@ -178,8 +178,12 @@ EOF
 fi
 
 function read_java_version() {
-  properties="$("${JAVA_HOME}/bin/java" -XshowSettings:properties -version 2>&1)"
-  echo "${properties}" | "${GREP}" java.runtime.version | head -1 | "${SED}" -e 's/.* = \([^ ]*\)/\1/'
+  # Avoid calling java repeatedly
+  if [ -z "$read_java_version_cached" ]; then
+    properties="$("${JAVA_HOME}/bin/java" -XshowSettings:properties -version 2>&1)"
+    read_java_version_cached="$(echo "${properties}" | "${GREP}" java.runtime.version | head -1 | "${SED}" -e 's/.* = \([^ ]*\)/\1/')"
+  fi
+  echo "$read_java_version_cached"
 }
 
 # Inspect the system properties exposed by this JVM to identify the major
