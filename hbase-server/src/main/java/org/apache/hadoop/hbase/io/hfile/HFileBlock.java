@@ -1792,14 +1792,17 @@ public class HFileBlock implements Cacheable {
         if (!fileContext.isCompressedOrEncrypted()) {
           hFileBlock.sanityCheckUncompressed();
         }
-        if (updateMetrics) {
-          HFile.updateReadLatency(duration, pread);
-        }
-        if (duration > slowReadThresholdMs) {
+        boolean tooSlow = false;
+        if (duration >= slowReadThresholdMs) {
           LOG.warn("FS read took {} ms: pread={}, block={}", duration, pread, hFileBlock);
+          tooSlow = true;
         } else {
           LOG.trace("FS read took {} ms: pread={}, block={}", duration, pread, hFileBlock);
         }
+        if (updateMetrics) {
+          HFile.updateReadLatency(duration, pread, tooSlow);
+        }
+
         span.addEvent("Read block", attributesBuilder.build());
         // Cache next block header if we read it for the next time through here.
         if (nextBlockOnDiskSize != -1) {

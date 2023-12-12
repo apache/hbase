@@ -81,6 +81,7 @@ final public class OnlineLogRecord extends LogEntry {
   private final int queueTime;
   private final long responseSize;
   private final long blockBytesScanned;
+  private final long fsReadTime;
   private final String clientAddress;
   private final String serverClass;
   private final String methodName;
@@ -178,16 +179,18 @@ final public class OnlineLogRecord extends LogEntry {
   }
 
   OnlineLogRecord(final long startTime, final int processingTime, final int queueTime,
-    final long responseSize, final long blockBytesScanned, final String clientAddress,
-    final String serverClass, final String methodName, final String callDetails, final String param,
-    final String regionName, final String userName, final int multiGetsCount,
-    final int multiMutationsCount, final int multiServiceCalls, final Scan scan,
-    final Map<String, byte[]> requestAttributes, final Map<String, byte[]> connectionAttributes) {
+    final long responseSize, final long blockBytesScanned, long fsReadTime,
+    final String clientAddress, final String serverClass, final String methodName,
+    final String callDetails, final String param, final String regionName, final String userName,
+    final int multiGetsCount, final int multiMutationsCount, final int multiServiceCalls,
+    final Scan scan, final Map<String, byte[]> requestAttributes,
+    final Map<String, byte[]> connectionAttributes) {
     this.startTime = startTime;
     this.processingTime = processingTime;
     this.queueTime = queueTime;
     this.responseSize = responseSize;
     this.blockBytesScanned = blockBytesScanned;
+    this.fsReadTime = fsReadTime;
     this.clientAddress = clientAddress;
     this.serverClass = serverClass;
     this.methodName = methodName;
@@ -209,6 +212,7 @@ final public class OnlineLogRecord extends LogEntry {
     private int queueTime;
     private long responseSize;
     private long blockBytesScanned;
+    private long fsReadTime;
     private String clientAddress;
     private String serverClass;
     private String methodName;
@@ -248,6 +252,11 @@ final public class OnlineLogRecord extends LogEntry {
      */
     public OnlineLogRecordBuilder setBlockBytesScanned(long blockBytesScanned) {
       this.blockBytesScanned = blockBytesScanned;
+      return this;
+    }
+
+    public OnlineLogRecordBuilder setFsReadTime(long fsReadTime) {
+      this.fsReadTime = fsReadTime;
       return this;
     }
 
@@ -319,9 +328,9 @@ final public class OnlineLogRecord extends LogEntry {
 
     public OnlineLogRecord build() {
       return new OnlineLogRecord(startTime, processingTime, queueTime, responseSize,
-        blockBytesScanned, clientAddress, serverClass, methodName, callDetails, param, regionName,
-        userName, multiGetsCount, multiMutationsCount, multiServiceCalls, scan, requestAttributes,
-        connectionAttributes);
+        blockBytesScanned, fsReadTime, clientAddress, serverClass, methodName, callDetails, param,
+        regionName, userName, multiGetsCount, multiMutationsCount, multiServiceCalls, scan,
+        requestAttributes, connectionAttributes);
     }
   }
 

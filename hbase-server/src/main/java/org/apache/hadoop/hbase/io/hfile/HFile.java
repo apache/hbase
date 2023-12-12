@@ -192,12 +192,15 @@ public final class HFile {
     return CHECKSUM_FAILURES.sum();
   }
 
-  public static void updateReadLatency(long latencyMillis, boolean pread) {
+  public static void updateReadLatency(long latencyMillis, boolean pread, boolean tooSlow) {
     RpcServer.getCurrentCall().ifPresent(call -> call.updateFsReadTime(latencyMillis));
     if (pread) {
       metrics.updateFsPreadTime(latencyMillis);
     } else {
       metrics.updateFsReadTime(latencyMillis);
+    }
+    if (tooSlow) {
+      metrics.incrSlowFsRead();
     }
   }
 

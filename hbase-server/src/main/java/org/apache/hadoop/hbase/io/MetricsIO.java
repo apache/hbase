@@ -56,4 +56,8 @@ public class MetricsIO {
   public void updateFsWriteTime(long t) {
     source.updateFsWriteTime(t);
   }
+
+  public void incrSlowFsRead() {
+    source.incrSlowFsRead();
+  }
 }
