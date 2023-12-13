@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -61,6 +62,14 @@ public final class ProcedureFutureUtil {
     throws IOException, ProcedureSuspendedException {
     MutableBoolean completed = new MutableBoolean(false);
     Thread currentThread = Thread.currentThread();
+    // This is for testing. In ProcedureTestingUtility, we will restart a ProcedureExecutor and
+    // reuse it, for performance, so we need to make sure that all the procedure have been stopped.
+    // But here, the callback of this future is not executed in a PEWorker, so in ProcedureExecutor
+    // we have no way to stop it. So here, we will get the asyncTaskExecutor first, in the PEWorker
+    // thread, where the ProcedureExecutor should have not been stopped yet, then when calling the
+    // callback, if the ProcedureExecutor have already been stopped and restarted, the
+    // asyncTaskExecutor will also be shutdown so we can not add anything back to the scheduler.
+    ExecutorService asyncTaskExecutor = env.getAsyncTaskExecutor();
     FutureUtils.addListener(future, (r, e) -> {
       if (Thread.currentThread() == currentThread) {
         LOG.debug("The future has completed while adding callback, give up suspending procedure {}",
@@ -77,7 +86,7 @@ public final class ProcedureFutureUtil {
       // And what makes things worse is that, we persist procedure state to master local region,
       // where the AsyncFSWAL implementation will use the same netty's event loop for dealing with
       // I/O, which could even cause dead lock.
-      env.getAsyncTaskExecutor().execute(() -> {
+      asyncTaskExecutor.execute(() -> {
         // should acquire procedure execution lock to make sure that the procedure executor has
         // finished putting this procedure to the WAITING_TIMEOUT state, otherwise there could be
         // race and cause unexpected result
@@ -89,7 +98,7 @@ public final class ProcedureFutureUtil {
         } catch (IOException ioe) {
           LOG.error("Error while acquiring execution lock for procedure {}"
             + " when trying to wake it up, aborting...", proc, ioe);
-          env.getMasterServices().abort("Can not acquire procedure execution lock", e);
+          env.getMasterServices().abort("Can not acquire procedure execution lock", ioe);
           return;
         }
         try {

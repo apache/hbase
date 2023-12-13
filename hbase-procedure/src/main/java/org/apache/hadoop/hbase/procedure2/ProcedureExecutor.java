@@ -35,6 +35,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -605,15 +606,23 @@ public class ProcedureExecutor<TEnvironment> {
     this.threadGroup = new ThreadGroup("PEWorkerGroup");
     this.timeoutExecutor = new TimeoutExecutorThread<>(this, threadGroup, "ProcExecTimeout");
     this.workerMonitorExecutor = new TimeoutExecutorThread<>(this, threadGroup, "WorkerMonitor");
+    ThreadFactory backingThreadFactory = new ThreadFactory() {
 
+      @Override
+      public Thread newThread(Runnable r) {
+        return new Thread(threadGroup, r);
+      }
+    };
     int size = Math.max(2, Runtime.getRuntime().availableProcessors());
-    ThreadPoolExecutor executor = new ThreadPoolExecutor(size, size, 1, TimeUnit.MINUTES,
-      new LinkedBlockingQueue<Runnable>(), new ThreadFactoryBuilder().setDaemon(true)
-        .setNameFormat(getClass().getSimpleName() + "-Async-Task-Executor-%d").build());
+    ThreadPoolExecutor executor =
+      new ThreadPoolExecutor(size, size, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<Runnable>(),
+        new ThreadFactoryBuilder().setDaemon(true)
+          .setNameFormat(getClass().getSimpleName() + "-Async-Task-Executor-%d")
+          .setThreadFactory(backingThreadFactory).build());
     executor.allowCoreThreadTimeOut(true);
     this.asyncTaskExecutor = executor;
-    forceUpdateExecutor = Executors.newSingleThreadExecutor(
-      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Force-Update-PEWorker-%d").build());
+    forceUpdateExecutor = Executors.newFixedThreadPool(1, new ThreadFactoryBuilder().setDaemon(true)
+      .setNameFormat("Force-Update-PEWorker-%d").setThreadFactory(backingThreadFactory).build());
     store.registerListener(new ProcedureStoreListener() {
 
       @Override
@@ -684,10 +693,10 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   public void stop() {
-    if (!running.getAndSet(false)) {
-      return;
-    }
-
+    // it is possible that we fail in init, while loading procedures, so we will not set running to
+    // true but we should have already started the ProcedureScheduler, and also the two
+    // ExecutorServices, so here we do not check running state, just stop them
+    running.set(false);
     LOG.info("Stopping");
     scheduler.stop();
     timeoutExecutor.sendStopSignal();
@@ -708,14 +717,29 @@ public class ProcedureExecutor<TEnvironment> {
     for (WorkerThread worker : workerThreads) {
       worker.awaitTermination();
     }
+    try {
+      if (!forceUpdateExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+        LOG.warn("There are still pending tasks in forceUpdateExecutor");
+      }
+    } catch (InterruptedException e) {
+      LOG.warn("interrupted while waiting for forceUpdateExecutor termination", e);
+      Thread.currentThread().interrupt();
+    }
+    try {
+      if (!asyncTaskExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+        LOG.warn("There are still pending tasks in asyncTaskExecutor");
+      }
+    } catch (InterruptedException e) {
+      LOG.warn("interrupted while waiting for asyncTaskExecutor termination", e);
+      Thread.currentThread().interrupt();
+    }
 
     // Destroy the Thread Group for the executors
     // TODO: Fix. #join is not place to destroy resources.
     try {
       threadGroup.destroy();
     } catch (IllegalThreadStateException e) {
-      LOG.error("ThreadGroup {} contains running threads; {}: See STDOUT", this.threadGroup,
-        e.getMessage());
+      LOG.error("ThreadGroup {} contains running threads; {}: See STDOUT", this.threadGroup, e);
       // This dumps list of threads on STDOUT.
       this.threadGroup.list();
     }
