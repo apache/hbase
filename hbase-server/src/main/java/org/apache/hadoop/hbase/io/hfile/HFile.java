@@ -196,7 +196,7 @@ public final class HFile {
       MetricsIO.getInstance().updateFsReadTime(latencyMillis);
     }
     if (tooSlow) {
-      metrics.incrSlowFsRead();
+      MetricsIO.getInstance().incrSlowFsRead();
     }
   }
 
