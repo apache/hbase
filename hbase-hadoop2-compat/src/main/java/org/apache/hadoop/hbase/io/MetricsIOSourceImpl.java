@@ -51,7 +51,12 @@ public class MetricsIOSourceImpl extends BaseSourceImpl implements MetricsIOSour
       getMetricsRegistry().newTimeHistogram(FS_PREAD_TIME_HISTO_KEY, FS_PREAD_TIME_HISTO_DESC);
     fsWriteTimeHisto =
       getMetricsRegistry().newTimeHistogram(FS_WRITE_HISTO_KEY, FS_WRITE_TIME_HISTO_DESC);
-    fsSlowReads = getMetricsRegistry().newCounter(SLOW_FS_READS_KEY, SLOW_FS_READS_DESC, 0L);
+    // The below usage of Interns is not standard. It's used to get around some illegal access issues
+    // due to the shading we do in our client bundle. Usually a call to newCounter will directly
+    // instantiate MetricsInfoImpl, but we relocate DynamicMetricsRegistry such that it throws
+    // illegal access due to MetricsInfoImpl being package private. Interns is public and not relocated,
+    // so can get around that. We will need to ideally find a better way.
+    fsSlowReads = getMetricsRegistry().newCounter(Interns.info(SLOW_FS_READS_KEY, SLOW_FS_READS_DESC), 0L);
   }
 
   @Override
