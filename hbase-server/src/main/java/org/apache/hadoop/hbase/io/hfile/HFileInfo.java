@@ -334,6 +334,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
   }
 
   public void initTrailerAndContext(ReaderContext context, Configuration conf) throws IOException {
+    boolean succeeded = false;
     try {
       boolean isHBaseChecksum = context.getInputStreamWrapper().shouldUseHBaseChecksum();
       trailer = FixedFileTrailer.readFromStream(
@@ -342,11 +343,14 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
       checkFileVersion(path);
       this.hfileContext = createHFileContext(path, trailer, conf);
       context.getInputStreamWrapper().unbuffer();
+      succeeded = true;
     } catch (Throwable t) {
-      IOUtils.closeQuietly(context.getInputStreamWrapper(),
-        e -> LOG.warn("failed to close input stream wrapper", e));
       throw new CorruptHFileException(
         "Problem reading HFile Trailer from file " + context.getFilePath(), t);
+    } finally {
+      if (!succeeded) {
+        IOUtils.closeQuietly(context.getInputStreamWrapper());
+      }
     }
   }
 
