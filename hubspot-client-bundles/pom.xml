@@ -85,40 +85,6 @@
                     <pattern>com.codahale.metrics</pattern>
                     <shadedPattern>${shade.prefix}.com.codahale.metrics</shadedPattern>
                   </relocation>
-                  <!--
-                    This is a little brittle, but as far as I can tell this class list hasn't
-                    really changed much. The core problem this solves is that our hadoop jobs
-                    are executed with mapreduce.job.classloader.system.classes set, including
-                    org.apache.hadoop. As a result trying to load any of these classes will
-                    throw ClassNotFoundException because they aren't actually system classes
-                    but are covered by that property. Another option would be to exclude
-                    org.apache.hadoop.metrics2 from the system classes list, but there are a
-                    bunch of classes in there in hadoop and it's hard to know the implications
-                    of that. So I decided to solve this for hbase by shading these classes
-                    which are brought in by hbase-hadoop-compat and hbase-hadoop2-compat.
-                    These classes are used in snapshot scan jobs, because the metrics are
-                    initialized when opening an HFile for read.
-                  -->
-                  <relocation>
-                    <pattern>org.apache.hadoop.metrics2</pattern>
-                    <shadedPattern>${shade.prefix}.org.apache.hadoop.metrics2</shadedPattern>
-                    <includes>
-                      <include>org.apache.hadoop.metrics2.MetricHistogram</include>
-                      <include>org.apache.hadoop.metrics2.MetricsExecutor</include>
-                      <include>org.apache.hadoop.metrics2.impl.JmxCacheBuster*</include>
-                      <include>org.apache.hadoop.metrics2.lib.DefaultMetricsSystemHelper</include>
-                      <include>org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry</include>
-                      <include>org.apache.hadoop.metrics2.lib.MetricsExecutorImpl</include>
-                      <include>org.apache.hadoop.metrics2.lib.MetricsExecutorImpl*</include>
-                      <include>org.apache.hadoop.metrics2.lib.MutableFastCounter</include>
-                      <include>org.apache.hadoop.metrics2.lib.MutableHistogram</include>
-                      <include>org.apache.hadoop.metrics2.lib.MutableRangeHistogram</include>
-                      <include>org.apache.hadoop.metrics2.lib.MutableSizeHistogram</include>
-                      <include>org.apache.hadoop.metrics2.lib.MutableTimeHistogram</include>
-                      <include>org.apache.hadoop.metrics2.util.MetricQuantile</include>
-                      <include>org.apache.hadoop.metrics2.util.MetricSampleQuantiles*</include>
-                    </includes>
-                  </relocation>
                 </relocations>
                 <filters>
                   <filter>
