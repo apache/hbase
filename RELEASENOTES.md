@@ -16,6 +16,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.5.7 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-25549](https://issues.apache.org/jira/browse/HBASE-25549) | *Major* | **Provide a switch that allows avoiding reopening all regions when modifying a table to prevent RIT storms.**
+
+New APIs are added to Admin, AsyncAdmin, and hbase shell to allow modifying a table without reopening all regions. Care should be used in using this API, as regions will be in an inconsistent state until they are all reopened. Whether this matters depends on the change, and some changes are disallowed (such as enabling region replication or adding/removing a column family).
+
+
+---
+
+* [HBASE-28168](https://issues.apache.org/jira/browse/HBASE-28168) | *Minor* | **Add option in RegionMover.java to isolate one or more regions on the RegionSever**
+
+This adds a new "isolate\_regions" operation to RegionMover, which allows operators to pass a list of region encoded ids to be "isolated" in the passed RegionServer. 
+Regions currently deployed in the RegionServer that are not in the passed list of regions would be moved to other RegionServers. Regions in the passed list that are currently on other RegionServers would be moved to the passed RegionServer.
+
+Please refer to the command help for further information.
+
+
+
 # HBASE  2.5.6 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.

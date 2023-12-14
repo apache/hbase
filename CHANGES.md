@@ -18,6 +18,70 @@
 -->
 # HBASE Changelog
 
+## Release 2.5.7 - 2023-12-22
+
+
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28168](https://issues.apache.org/jira/browse/HBASE-28168) | Add option in RegionMover.java to isolate one or more regions on the RegionSever |  Minor | . |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28209](https://issues.apache.org/jira/browse/HBASE-28209) | Create a jmx metrics to expose the oldWALs directory size |  Major | metrics |
+| [HBASE-28212](https://issues.apache.org/jira/browse/HBASE-28212) | Do not need to maintain rollback step when root procedure does not support rollback |  Major | master, proc-v2 |
+| [HBASE-25549](https://issues.apache.org/jira/browse/HBASE-25549) | Provide a switch that allows avoiding reopening all regions when modifying a table to prevent RIT storms. |  Major | master, shell |
+| [HBASE-28193](https://issues.apache.org/jira/browse/HBASE-28193) | Update plugin for SBOM generation to 2.7.10 |  Major | build, pom |
+| [HBASE-27276](https://issues.apache.org/jira/browse/HBASE-27276) | Reduce reflection overhead in Filter deserialization |  Major | . |
+| [HBASE-28113](https://issues.apache.org/jira/browse/HBASE-28113) | Modify the way of acquiring the RegionStateNode lock in checkOnlineRegionsReport to tryLock |  Major | master |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28247](https://issues.apache.org/jira/browse/HBASE-28247) | Add java.base/sun.net.dns and java.base/sun.net.util  export to jdk11 JVM test flags |  Minor | java |
+| [HBASE-28252](https://issues.apache.org/jira/browse/HBASE-28252) | Add sun.net.dns and sun.net.util to the JDK11+ module exports in the hbase script |  Major | scripts |
+| [HBASE-28248](https://issues.apache.org/jira/browse/HBASE-28248) | Race between RegionRemoteProcedureBase and rollback operation could lead to ROLLEDBACK state be persisent to procedure store |  Critical | proc-v2, Region Assignment |
+| [HBASE-28211](https://issues.apache.org/jira/browse/HBASE-28211) | BucketCache.blocksByHFile may leak on allocationFailure or if we reach io errors tolerated |  Major | . |
+| [HBASE-28217](https://issues.apache.org/jira/browse/HBASE-28217) | PrefetchExecutor should not run for files from CFs that have disabled BLOCKCACHE |  Major | . |
+| [HBASE-28210](https://issues.apache.org/jira/browse/HBASE-28210) | There could be holes in stack ids when loading procedures |  Critical | master, proc-v2 |
+| [HBASE-24687](https://issues.apache.org/jira/browse/HBASE-24687) | MobFileCleanerChore uses a new Connection for each table each time it runs |  Minor | mob |
+| [HBASE-28191](https://issues.apache.org/jira/browse/HBASE-28191) | Meta browser can happen NPE when the server or target server of region is null |  Major | UI |
+| [HBASE-28175](https://issues.apache.org/jira/browse/HBASE-28175) | RpcLogDetails' Message can become corrupt before log is consumed |  Major | . |
+| [HBASE-28189](https://issues.apache.org/jira/browse/HBASE-28189) | Fix the miss count in one of CombinedBlockCache getBlock implementations |  Major | . |
+| [HBASE-28184](https://issues.apache.org/jira/browse/HBASE-28184) | Tailing the WAL is very slow if there are multiple peers. |  Major | Replication |
+| [HBASE-28185](https://issues.apache.org/jira/browse/HBASE-28185) | Alter table to set TTL using hbase shell failed when ttl string is not match format |  Minor | . |
+| [HBASE-28157](https://issues.apache.org/jira/browse/HBASE-28157) | hbck should report previously reported regions with null region location |  Major | . |
+| [HBASE-28145](https://issues.apache.org/jira/browse/HBASE-28145) | When specifying the wrong BloomFilter type while creating a table in HBase shell, an error will occur. |  Minor | shell |
+| [HBASE-28017](https://issues.apache.org/jira/browse/HBASE-28017) | Client metrics are missing response and request size data when using netty |  Major | . |
+| [HBASE-28146](https://issues.apache.org/jira/browse/HBASE-28146) | Remove ServerManager's rsAdmins map |  Major | master |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28206](https://issues.apache.org/jira/browse/HBASE-28206) | [JDK17] JVM crashes intermittently on aarch64 |  Major | . |
+| [HBASE-24179](https://issues.apache.org/jira/browse/HBASE-24179) | Backport fix for "Netty SASL implementation does not wait for challenge response" to branch-2.x |  Major | netty |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28243](https://issues.apache.org/jira/browse/HBASE-28243) |  Bump jackson version to 2.15.2 |  Major | . |
+| [HBASE-28245](https://issues.apache.org/jira/browse/HBASE-28245) | Sync internal protobuf version for hbase to be same as hbase-thirdparty |  Major | . |
+| [HBASE-28153](https://issues.apache.org/jira/browse/HBASE-28153) | Upgrade zookeeper to a newer version |  Major | security, Zookeeper |
+| [HBASE-28110](https://issues.apache.org/jira/browse/HBASE-28110) | Align TestShadeSaslAuthenticationProvider between different branches |  Major | security, test |
+| [HBASE-28147](https://issues.apache.org/jira/browse/HBASE-28147) | Bump gitpython from 3.1.35 to 3.1.37 in /dev-support/flaky-tests |  Major | dependabot, scripts, security |
+
+
 ## Release 2.5.6 - 2023-10-20
 
 
