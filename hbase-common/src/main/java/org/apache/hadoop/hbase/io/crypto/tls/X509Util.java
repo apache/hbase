@@ -105,6 +105,15 @@ public final class X509Util {
   public static final String HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT =
     "hbase.server.netty.tls.supportplaintext";
 
+  /**
+   * Set the SSL wrapSize for netty. This is only a maximum wrap size. Buffers smaller than this
+   * will not be consolidated, but buffers larger than this will be split into multiple wrap
+   * buffers. The netty default of 16k is not great for hbase which tends to return larger payloads
+   * than that, meaning most responses end up getting chunked up. This leads to more memory
+   * contention in netty's PoolArena. See https://github.com/netty/netty/pull/13551
+   */
+  public static final String HBASE_SERVER_NETTY_TLS_WRAP_SIZE = "hbase.server.netty.tls.wrapSize";
+  public static final int DEFAULT_HBASE_SERVER_NETTY_TLS_WRAP_SIZE = 1024 * 1024;
   //
   // Client-side specific configs
   //
