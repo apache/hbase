@@ -578,8 +578,8 @@
     <httpclient.version>4.5.13</httpclient.version>
     <httpcore.version>4.4.13</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
-    <jackson.version>2.13.4</jackson.version>
-    <jackson.databind.version>2.13.4.2</jackson.databind.version>
+    <jackson.version>2.15.2</jackson.version>
+    <jackson.databind.version>2.15.2</jackson.databind.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
