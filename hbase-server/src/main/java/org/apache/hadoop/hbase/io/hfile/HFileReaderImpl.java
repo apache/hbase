@@ -1290,7 +1290,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     // from doing).
 
     BlockCacheKey cacheKey =
-      new BlockCacheKey(name, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
+      new BlockCacheKey(path, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
     Attributes attributes = Attributes.of(BLOCK_CACHE_KEY_KEY, cacheKey.toString());
 
     boolean cacheable = cacheBlock && cacheIfCompactionsOff();

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -31,6 +32,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   private final long offset;
   private BlockType blockType;
   private final boolean isPrimaryReplicaBlock;
+  private Path filePath;
 
   /**
    * Construct a new BlockCacheKey
@@ -45,6 +47,14 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
     BlockType blockType) {
     this.isPrimaryReplicaBlock = isPrimaryReplica;
     this.hfileName = hfileName;
+    this.offset = offset;
+    this.blockType = blockType;
+  }
+
+  public BlockCacheKey(Path hfilePath, long offset, boolean isPrimaryReplica, BlockType blockType) {
+    this.filePath = hfilePath;
+    this.isPrimaryReplicaBlock = isPrimaryReplica;
+    this.hfileName = hfilePath.getName();
     this.offset = offset;
     this.blockType = blockType;
   }
@@ -102,4 +112,9 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   public void setBlockType(BlockType blockType) {
     this.blockType = blockType;
   }
+
+  public Path getFilePath() {
+    return filePath;
+  }
+
 }
