@@ -32,6 +32,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -185,6 +186,30 @@ public class TestPrefetchWithBucketCache {
     assertTrue(bc.getStats().getEvictedCount() > 200);
   }
 
+  @Test
+  public void testPrefetchMetricProgress() throws Exception {
+    conf.setLong(BUCKET_CACHE_SIZE_KEY, 200);
+    blockCache = BlockCacheFactory.createBlockCache(conf);
+    cacheConf = new CacheConfig(conf, blockCache);
+    Path storeFile = writeStoreFile("testPrefetchMetricsProgress", 100);
+    // Prefetches the file blocks
+    LOG.debug("First read should prefetch the blocks.");
+    readStoreFile(storeFile);
+    String regionName = storeFile.getParent().getParent().getName();
+    BucketCache bc = BucketCache.getBucketCacheFromCacheConfig(cacheConf).get();
+    MutableLong regionCachedSize = new MutableLong(0);
+    // Our file should have 6 DATA blocks. We should wait for all of them to be cached
+    long waitedTime = Waiter.waitFor(conf, 300, () -> {
+      if (bc.getBackingMap().size() > 0) {
+        long currentSize = bc.getRegionCachedInfo().get().get(regionName);
+        assertTrue(regionCachedSize.getValue() <= currentSize);
+        LOG.debug("Logging progress of region caching: {}", currentSize);
+        regionCachedSize.setValue(currentSize);
+      }
+      return bc.getBackingMap().size() == 6;
+    });
+  }
+
   private void readStoreFile(Path storeFilePath) throws Exception {
     readStoreFile(storeFilePath, (r, o) -> {
       HFileBlock block = null;
@@ -216,6 +241,7 @@ public class TestPrefetchWithBucketCache {
       Thread.sleep(1000);
     }
     long offset = 0;
+    long sizeForDataBlocks = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       HFileBlock block = readFunction.apply(reader, offset);
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
@@ -276,5 +302,4 @@ public class TestPrefetchWithBucketCache {
       return keyType;
     }
   }
-
 }
