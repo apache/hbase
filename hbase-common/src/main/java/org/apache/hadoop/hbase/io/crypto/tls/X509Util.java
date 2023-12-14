@@ -112,7 +112,7 @@ public final class X509Util {
    * than that, meaning most responses end up getting chunked up. This leads to more memory
    * contention in netty's PoolArena. See https://github.com/netty/netty/pull/13551
    */
-  public static final String HBASE_SERVER_NETTY_TLS_WRAP_SIZE = "hbase.server.netty.tsl.wrapSize";
+  public static final String HBASE_SERVER_NETTY_TLS_WRAP_SIZE = "hbase.server.netty.tls.wrapSize";
   public static final int DEFAULT_HBASE_SERVER_NETTY_TLS_WRAP_SIZE = 1024 * 1024;
   //
   // Client-side specific configs
