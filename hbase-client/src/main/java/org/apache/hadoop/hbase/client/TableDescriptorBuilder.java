@@ -146,7 +146,7 @@ public class TableDescriptorBuilder {
   /**
    * If non-null, the HDFS erasure coding policy to set on the data dir of the table
    */
-  public static String ERASURE_CODING_POLICY = "ERASURE_CODING_POLICY";
+  public static final String ERASURE_CODING_POLICY = "ERASURE_CODING_POLICY";
   private static final Bytes ERASURE_CODING_POLICY_KEY =
     new Bytes(Bytes.toBytes(ERASURE_CODING_POLICY));
 

@@ -30,7 +30,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class ErasureCodingUtils {
+public final class ErasureCodingUtils {
+
+  private ErasureCodingUtils() {
+  }
 
   private static final Logger LOG = LoggerFactory.getLogger(ErasureCodingUtils.class);
 
