@@ -1513,11 +1513,15 @@ public class HRegionServer extends Thread
         serverLoad.addCoprocessors(coprocessorBuilder.setName(coprocessor).build());
       }
     }
-    computeIfPersistentBucketCache(bc -> {
-      bc.getRegionCachedInfo().forEach((regionName, prefetchSize) -> {
-        serverLoad.putRegionCachedInfo(regionName, roundSize(prefetchSize, unitMB));
+
+    getBlockCache().ifPresent(cache -> {
+      cache.getRegionCachedInfo().ifPresent(regionCachedInfo -> {
+        regionCachedInfo.forEach((regionName, prefetchSize) -> {
+          serverLoad.putRegionCachedInfo(regionName, roundSize(prefetchSize, unitMB));
+        });
       });
     });
+
     serverLoad.setReportStartTime(reportStartTime);
     serverLoad.setReportEndTime(reportEndTime);
     if (this.infoServer != null) {
@@ -1900,13 +1904,14 @@ public class HRegionServer extends Thread
     int totalStaticBloomSizeKB = roundSize(totalStaticBloomSize, unitKB);
     int regionSizeMB = roundSize(totalRegionSize, unitMB);
     final MutableFloat currentRegionCachedRatio = new MutableFloat(0.0f);
-    computeIfPersistentBucketCache(bc -> {
-      if (bc.getRegionCachedInfo().containsKey(regionEncodedName)) {
-        currentRegionCachedRatio.setValue(regionSizeMB == 0
-          ? 0.0f
-          : (float) roundSize(bc.getRegionCachedInfo().get(regionEncodedName), unitMB)
-            / regionSizeMB);
-      }
+    getBlockCache().ifPresent(bc -> {
+      bc.getRegionCachedInfo().ifPresent(regionCachedInfo -> {
+        if (regionCachedInfo.containsKey(regionEncodedName)) {
+          currentRegionCachedRatio.setValue(regionSizeMB == 0
+            ? 0.0f
+            : (float) roundSize(regionCachedInfo.get(regionEncodedName), unitMB) / regionSizeMB);
+        }
+      });
     });
 
     HDFSBlocksDistribution hdfsBd = r.getHDFSBlocksDistribution();

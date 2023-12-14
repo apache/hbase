@@ -26,6 +26,7 @@ import java.util.OptionalLong;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -61,6 +62,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private Map<String, Long> mixedReadsOnStore;
 
   private ScheduledFuture<?> regionMetricsUpdateTask;
+
+  private float currentRegionCacheRatio;
 
   public MetricsRegionWrapperImpl(HRegion region) {
     this.region = region;
@@ -119,6 +122,10 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   @Override
   public long getStoreFileSize() {
     return storeFileSize;
+  }
+
+  public float getCurrentRegionCacheRatio() {
+    return currentRegionCacheRatio;
   }
 
   @Override
@@ -310,7 +317,15 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
           readsOnlyFromMemstore.put(store.getColumnFamilyName(), tempVal);
         }
       }
-
+      MutableLong regionCachedAmount = new MutableLong(0);
+      region.getBlockCache().getRegionCachedInfo().ifPresent(regionCacheRatio -> regionCachedAmount
+        .addAndGet(regionCacheRatio.getOrDefault(region.getRegionInfo().getEncodedName(), 0L)));
+      if (tempStoreFileSize > 0) {
+        LOG.debug("Region {}, had cached {} bytes from a total of {}",
+          region.getRegionInfo().getEncodedName(), regionCachedAmount.getValue(),
+          tempStoreFileSize);
+        currentRegionCacheRatio = regionCachedAmount.floatValue() / tempStoreFileSize;
+      }
       numStoreFiles = tempNumStoreFiles;
       storeRefCount = tempStoreRefCount;
       maxCompactedStoreFileRefCount = tempMaxCompactedStoreFileRefCount;
