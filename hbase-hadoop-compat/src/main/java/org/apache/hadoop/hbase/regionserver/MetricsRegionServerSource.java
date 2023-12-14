@@ -598,4 +598,6 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String BYTE_BUFF_ALLOCATOR_TOTAL_BUFFER_COUNT_DESC = "Total buffer count in ByteBuffAllocator";
   String BYTE_BUFF_ALLOCATOR_USED_BUFFER_COUNT = "ByteBuffAllocatorUsedBufferCount";
   String BYTE_BUFF_ALLOCATOR_USED_BUFFER_COUNT_DESC = "Used buffer count in ByteBuffAllocator";
+  String CURRENT_REGION_CACHE_RATIO = "currentRegionCacheRatio";
+  String CURRENT_REGION_CACHE_RATIO_DESC = "The percentage of caching completed for this region.";
 }

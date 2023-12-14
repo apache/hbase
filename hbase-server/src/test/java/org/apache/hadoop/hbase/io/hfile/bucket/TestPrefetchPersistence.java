@@ -145,11 +145,11 @@ public class TestPrefetchPersistence {
   public void closeStoreFile(Path path) throws Exception {
     HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf);
     assertTrue(bucketCache.fullyCachedFiles.containsKey(path.getName()));
-    int initialRegionPrefetchInfoSize = bucketCache.getRegionCachedInfo().size();
+    int initialRegionPrefetchInfoSize = bucketCache.getRegionCachedInfo().get().size();
     assertTrue(initialRegionPrefetchInfoSize > 0);
     reader.close(true);
     assertFalse(bucketCache.fullyCachedFiles.containsKey(path.getName()));
-    int newRegionPrefetchInfoSize = bucketCache.getRegionCachedInfo().size();
+    int newRegionPrefetchInfoSize = bucketCache.getRegionCachedInfo().get().size();
     assertTrue(initialRegionPrefetchInfoSize - newRegionPrefetchInfoSize == 1);
   }
 

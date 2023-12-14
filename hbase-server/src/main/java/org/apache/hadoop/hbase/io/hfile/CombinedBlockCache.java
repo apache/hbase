@@ -430,6 +430,11 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
+  public Optional<Map<String, Long>> getRegionCachedInfo() {
+    return l2Cache.getRegionCachedInfo();
+  }
+
+  @Override
   public void setMaxSize(long size) {
     this.l1Cache.setMaxSize(size);
   }
@@ -455,12 +460,6 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     l1Cache.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
     l2Cache.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
 
-  }
-
-  @Override
-  public void notifyFileBlockEvicted(String fileName) {
-    l1Cache.notifyFileBlockEvicted(fileName);
-    l1Cache.notifyFileBlockEvicted(fileName);
   }
 
   @Override

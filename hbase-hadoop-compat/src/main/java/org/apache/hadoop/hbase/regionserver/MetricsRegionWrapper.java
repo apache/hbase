@@ -66,6 +66,11 @@ public interface MetricsRegionWrapper {
   long getStoreFileSize();
 
   /**
+   * Gets the current cache % ratio for this region.
+   */
+  float getCurrentRegionCacheRatio();
+
+  /**
    * Get the total number of read requests that have been issued against this region
    */
   long getReadRequestCount();
