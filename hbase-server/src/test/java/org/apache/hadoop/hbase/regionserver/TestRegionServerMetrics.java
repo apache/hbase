@@ -21,11 +21,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -35,6 +42,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -61,6 +69,8 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -116,6 +126,8 @@ public class TestRegionServerMetrics {
     conf.setInt("hbase.hstore.compaction.max", 100);
     conf.setInt("hbase.regionserver.periodicmemstoreflusher.rangeofdelayseconds", 4 * 60);
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
+    conf.set("hbase.region.hfile.accessed.days.thresholds", "7,30,90");
+    conf.setLong("hbase.hstore.hfile.load.initialDelay", 1 * 60 * 1000);
 
     TEST_UTIL.startMiniCluster();
     cluster = TEST_UTIL.getHBaseCluster();
@@ -383,6 +395,122 @@ public class TestRegionServerMetrics {
   }
 
   @Test
+  public void testRegionStoreFilesAccessedDaysAndSize() throws Exception {
+    HRegion region = mock(HRegion.class);
+    HStore hStore = mock(HStore.class);
+    MemStoreSize memStoreSize = mock(MemStoreSize.class);
+
+    doReturn(conf).when(region).getReadOnlyConfiguration();
+    doReturn(getSFAccessTimeAndSizeMap()).when(hStore).getStoreFilesAccessTimeAndSize();
+    doReturn(memStoreSize).when(hStore).getMemStoreSize();
+    doReturn(0L).when(memStoreSize).getDataSize();
+    doReturn(0L).when(hStore).getStorefilesSize();
+    doReturn(OptionalLong.empty()).when(hStore).getMaxStoreFileAge();
+    doReturn(OptionalLong.empty()).when(hStore).getMinStoreFileAge();
+    doReturn(0L).when(hStore).getNumHFiles();
+    doReturn(0L).when(hStore).getNumReferenceFiles();
+    doReturn(OptionalDouble.empty()).when(hStore).getAvgStoreFileAge();
+    doReturn(Collections.singletonList(hStore)).when(region).getStores();
+
+    TestMetricsRegionWrapperImpl mrwi = new TestMetricsRegionWrapperImpl(region);
+    MetricsRegion mr = new MetricsRegion(mrwi, conf);
+    MetricsRegionAggregateSource agg = mr.getSource().getAggregateSource();
+
+    String prefix = "namespace_" + mrwi.getNamespace() + "_table_" + mrwi.getTableName()
+      + "_region_" + mrwi.getRegionName() + "_metric_";
+
+    TEST_UTIL.waitFor(120000, 1000, new Waiter.ExplainingPredicate<Exception>() {
+      @Override
+      public boolean evaluate() {
+        return metricsHelper.checkGaugeExists(prefix + "storeFilesAccessed7DaysSize", agg)
+          && metricsHelper.getGaugeLong(prefix + "storeFilesAccessed7DaysSize", agg) > 0;
+      }
+
+      @Override
+      public String explainFailure() {
+        return prefix
+          + "storeFilesAccessed7DaysSize value is 0 or does not exists in the region metrics";
+      }
+    });
+    metricsHelper.assertGauge(prefix + "storeFilesAccessed7DaysSize", 3000L, agg);
+    metricsHelper.assertGauge(prefix + "storeFilesAccessed30DaysSize", 2000L, agg);
+    metricsHelper.assertGauge(prefix + "storeFilesAccessed90DaysSize", 1000L, agg);
+  }
+
+  @Test
+  public void testTableStoreFilesAccessedDaysAndSize() throws Exception {
+    String testTable = "test_table";
+    HRegion region = mock(HRegion.class);
+    HStore hStore = mock(HStore.class);
+    MemStoreSize memStoreSize = mock(MemStoreSize.class);
+
+    doReturn(conf).when(region).getReadOnlyConfiguration();
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(testTable)).build();
+    doReturn(htd).when(region).getTableDescriptor();
+    doReturn(Collections.singletonList(hStore)).when(region).getStores();
+    doReturn(0L).when(region).getReadRequestsCount();
+    doReturn(0L).when(region).getFilteredReadRequestsCount();
+    doReturn(0L).when(region).getWriteRequestsCount();
+    doReturn(0L).when(hStore).getStorefilesSize();
+    doReturn(OptionalLong.empty()).when(hStore).getMaxStoreFileAge();
+    doReturn(OptionalLong.empty()).when(hStore).getMinStoreFileAge();
+    doReturn(OptionalDouble.empty()).when(hStore).getAvgStoreFileAge();
+    doReturn(0L).when(hStore).getNumHFiles();
+    doReturn(0L).when(hStore).getNumReferenceFiles();
+    doReturn(0).when(hStore).getStorefilesCount();
+    doReturn(0L).when(hStore).getTotalStaticIndexSize();
+    doReturn(0L).when(hStore).getTotalStaticBloomSize();
+    doReturn(0L).when(hStore).getBloomFilterRequestsCount();
+    doReturn(0L).when(hStore).getBloomFilterNegativeResultsCount();
+    doReturn(0L).when(hStore).getBloomFilterEligibleRequestsCount();
+    doReturn(0L).when(hStore).getMemstoreOnlyRowReadsCount();
+    doReturn(0L).when(hStore).getMixedRowReadsCount();
+    doReturn(getSFAccessTimeAndSizeMap()).when(hStore).getStoreFilesAccessTimeAndSize();
+    doReturn(memStoreSize).when(hStore).getMemStoreSize();
+
+    doReturn(0L).when(memStoreSize).getDataSize();
+    doReturn(0L).when(memStoreSize).getHeapSize();
+    doReturn(0L).when(memStoreSize).getOffHeapSize();
+
+    HRegionServer rs = mock(HRegionServer.class);
+    doReturn(conf).when(rs).getConfiguration();
+    doReturn(Collections.singletonList(region)).when(rs).getOnlineRegionsLocalContext();
+
+    MetricsTableWrapperAggregateImpl mrwi = new MetricsTableWrapperAggregateImpl(rs);
+    MetricsTable mr = new MetricsTable(mrwi);
+    MetricsTableAggregateSource agg = mr.getTableSourceAgg();
+
+    String prefix = "namespace_" + NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR + "_table_"
+      + testTable + "_metric_";
+
+    TEST_UTIL.waitFor(120000, 1000, new Waiter.ExplainingPredicate<Exception>() {
+      @Override
+      public boolean evaluate() {
+        return metricsHelper.checkGaugeExists(prefix + "storeFilesAccessed7DaysSize", agg)
+          && metricsHelper.getGaugeLong(prefix + "storeFilesAccessed7DaysSize", agg) > 0;
+      }
+
+      @Override
+      public String explainFailure() {
+        return prefix
+          + "storeFilesAccessed7DaysSize value is 0 or does not exists in the table metrics";
+      }
+    });
+    metricsHelper.assertGauge(prefix + "storeFilesAccessed7DaysSize", 3000L, agg);
+    metricsHelper.assertGauge(prefix + "storeFilesAccessed30DaysSize", 2000L, agg);
+    metricsHelper.assertGauge(prefix + "storeFilesAccessed90DaysSize", 1000L, agg);
+  }
+
+  private Map<String, Pair<Long, Long>> getSFAccessTimeAndSizeMap() {
+    long now = EnvironmentEdgeManager.currentTime();
+    Map<String, Pair<Long, Long>> sfAccessTimeAndSizeMap = new HashMap<>();
+    sfAccessTimeAndSizeMap.put("teststorefile1", Pair.newPair(now - 8 * 24 * 3600 * 1000L, 1000L));
+    sfAccessTimeAndSizeMap.put("teststorefile2", Pair.newPair(now - 31 * 24 * 3600 * 1000L, 1000L));
+    sfAccessTimeAndSizeMap.put("teststorefile3", Pair.newPair(now - 91 * 24 * 3600 * 1000L, 1000L));
+    return sfAccessTimeAndSizeMap;
+  }
+
+  @Test
   public void testScanSize() throws Exception {
     doNPuts(100, true); // batch put
     Scan s = new Scan();
@@ -597,5 +725,169 @@ public class TestRegionServerMetrics {
       metricsRegionServer.getRegionServerWrapper().getShortCircuitBytesRead());
     assertEquals("Total zero-byte read bytes should be equal to 0", 0,
       metricsRegionServer.getRegionServerWrapper().getZeroCopyBytesRead());
+  }
+
+  private static class TestMetricsRegionWrapperImpl extends MetricsRegionWrapperImpl {
+    public TestMetricsRegionWrapperImpl(HRegion region) {
+      super(region);
+    }
+
+    @Override
+    public String getTableName() {
+      return "testtable";
+    }
+
+    @Override
+    public String getNamespace() {
+      return "default";
+    }
+
+    @Override
+    public String getRegionName() {
+      return "testregion";
+    }
+
+    @Override
+    public long getNumStores() {
+      return 0L;
+    }
+
+    @Override
+    public long getNumStoreFiles() {
+      return 0L;
+    }
+
+    @Override
+    public long getMemStoreSize() {
+      return 0L;
+    }
+
+    @Override
+    public long getStoreFileSize() {
+      return 0L;
+    }
+
+    @Override
+    public long getStoreRefCount() {
+      return 0L;
+    }
+
+    @Override
+    public long getMaxCompactedStoreFileRefCount() {
+      return 0L;
+    }
+
+    @Override
+    public long getReadRequestCount() {
+      return 0L;
+    }
+
+    @Override
+    public long getCpRequestCount() {
+      return 0L;
+    }
+
+    @Override
+    public long getFilteredReadRequestCount() {
+      return 0L;
+    }
+
+    @Override
+    public long getWriteRequestCount() {
+      return 0L;
+    }
+
+    @Override
+    public long getNumFilesCompacted() {
+      return 0L;
+    }
+
+    @Override
+    public long getNumBytesCompacted() {
+      return 0L;
+    }
+
+    @Override
+    public long getNumCompactionsCompleted() {
+      return 0L;
+    }
+
+    @Override
+    public long getLastMajorCompactionAge() {
+      return 0L;
+    }
+
+    @Override
+    public long getTotalRequestCount() {
+      return 0L;
+    }
+
+    @Override
+    public long getNumCompactionsFailed() {
+      return 0L;
+    }
+
+    @Override
+    public long getNumCompactionsQueued() {
+      return 0L;
+    }
+
+    @Override
+    public long getNumFlushesQueued() {
+      return 0L;
+    }
+
+    @Override
+    public long getMaxCompactionQueueSize() {
+      return 0L;
+    }
+
+    @Override
+    public long getMaxFlushQueueSize() {
+      return 0L;
+    }
+
+    @Override
+    public long getMaxStoreFileAge() {
+      return 0L;
+    }
+
+    @Override
+    public long getMinStoreFileAge() {
+      return 0L;
+    }
+
+    @Override
+    public long getAvgStoreFileAge() {
+      return 0L;
+    }
+
+    @Override
+    public long getNumReferenceFiles() {
+      return 0L;
+    }
+
+    @Override
+    public int getRegionHashCode() {
+      return 0;
+    }
+
+    @Override
+    public Map<String, Long> getMemstoreOnlyRowReadsCount() {
+      return null;
+    }
+
+    @Override
+    public Map<String, Long> getMixedRowReadsCount() {
+      return null;
+    }
+
+    /**
+     * Get the replica id of this region.
+     */
+    @Override
+    public int getReplicaId() {
+      return 0;
+    }
   }
 }

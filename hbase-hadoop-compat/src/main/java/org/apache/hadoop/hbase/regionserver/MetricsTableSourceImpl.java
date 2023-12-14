@@ -346,6 +346,18 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
           Interns.info(tableNamePrefix + MetricsRegionServerSource.STATIC_INDEX_SIZE,
             MetricsRegionServerSource.STATIC_INDEX_SIZE),
           tableWrapperAgg.getStaticIndexSize(tableName.getNameAsString()));
+        Map<Integer, Long> sfAccessDaysAndSize =
+          tableWrapperAgg.getStoreFilesAccessedDaysAndSize(tableName.getNameAsString());
+        if (sfAccessDaysAndSize != null) {
+          for (Map.Entry<Integer, Long> e : sfAccessDaysAndSize.entrySet()) {
+            mrb.addGauge(Interns.info(
+              tableNamePrefix + String
+                .format(MetricsRegionSource.STOREFILES_ACCESSED_DAYS_AND_SIZE_TEMPLATE, e.getKey()),
+              String.format(MetricsRegionSource.STOREFILES_ACCESSED_DAYS_AND_SIZE_DESC_TEMPLATE,
+                e.getKey())),
+              e.getValue());
+          }
+        }
         mrb.addCounter(
           Interns.info(tableNamePrefix + MetricsRegionServerSource.BLOOM_FILTER_REQUESTS_COUNT,
             MetricsRegionServerSource.BLOOM_FILTER_REQUESTS_COUNT_DESC),

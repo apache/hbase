@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.MetricsRegionWrapperImpl.ONE_DAY_MS;
+import static org.apache.hadoop.hbase.regionserver.MetricsRegionWrapperImpl.STOREFILES_ACCESSED_DAYS_THRESHOLDS;
+import static org.apache.hadoop.hbase.regionserver.MetricsRegionWrapperImpl.STOREFILES_ACCESSED_DAYS_THRESHOLDS_DEFAULT;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -29,6 +34,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -43,6 +50,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   private ScheduledFuture<?> tableMetricsUpdateTask;
   private ConcurrentHashMap<TableName, MetricsTableValues> metricsTableMap =
     new ConcurrentHashMap<>();
+  private int[] storeFilesAccessedDaysThresholds;
 
   public MetricsTableWrapperAggregateImpl(final HRegionServer regionServer) {
     this.regionServer = regionServer;
@@ -52,6 +60,12 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     this.runnable = new TableMetricsWrapperRunnable();
     this.tableMetricsUpdateTask =
       this.executor.scheduleWithFixedDelay(this.runnable, period, period, TimeUnit.MILLISECONDS);
+
+    storeFilesAccessedDaysThresholds =
+      regionServer.getConfiguration().getInts(STOREFILES_ACCESSED_DAYS_THRESHOLDS);
+    if (storeFilesAccessedDaysThresholds == null || storeFilesAccessedDaysThresholds.length == 0) {
+      storeFilesAccessedDaysThresholds = STOREFILES_ACCESSED_DAYS_THRESHOLDS_DEFAULT;
+    }
   }
 
   public class TableMetricsWrapperRunnable implements Runnable {
@@ -64,6 +78,11 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
         MetricsTableValues mt = localMetricsTableMap.get(tbl);
         if (mt == null) {
           mt = new MetricsTableValues();
+          Map<Integer, Long> tmpStoreFileAccessDaysAndSize = new TreeMap<>();
+          for (int threshold : storeFilesAccessedDaysThresholds) {
+            tmpStoreFileAccessDaysAndSize.put(threshold, 0L);
+          }
+          mt.storeFilesAccessedDaysAndSize = tmpStoreFileAccessDaysAndSize;
           localMetricsTableMap.put(tbl, mt);
         }
         long memstoreReadCount = 0L;
@@ -115,10 +134,23 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
             // accumulate the count
             mt.perStoreMemstoreOnlyReadCount.put(tempKey, memstoreReadCount);
             mt.perStoreMixedReadCount.put(tempKey, mixedReadCount);
+            Map<String, Pair<Long, Long>> sfAccessTimeAndSizeMap =
+              store.getStoreFilesAccessTimeAndSize();
+            long now = EnvironmentEdgeManager.currentTime();
+            for (Pair<Long, Long> pair : sfAccessTimeAndSizeMap.values()) {
+              Long accessTime = pair.getFirst();
+              Long size = pair.getSecond();
+              for (int threshold : storeFilesAccessedDaysThresholds) {
+                Long sumSize = mt.storeFilesAccessedDaysAndSize.get(threshold);
+                if ((now - accessTime) >= threshold * ONE_DAY_MS) {
+                  sumSize = sumSize + size;
+                  mt.storeFilesAccessedDaysAndSize.put(threshold, sumSize);
+                }
+              }
+            }
           }
 
           mt.regionCount += 1;
-
           mt.readRequestCount += r.getReadRequestsCount();
           mt.filteredReadRequestCount += r.getFilteredReadRequestsCount();
           mt.writeRequestCount += r.getWriteRequestsCount();
@@ -175,6 +207,16 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       return null;
     } else {
       return metricsTable.perStoreMixedReadCount;
+    }
+  }
+
+  @Override
+  public Map<Integer, Long> getStoreFilesAccessedDaysAndSize(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return null;
+    } else {
+      return metricsTable.storeFilesAccessedDaysAndSize;
     }
   }
 
@@ -419,6 +461,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     long cpRequestCount;
     Map<String, Long> perStoreMemstoreOnlyReadCount = new HashMap<>();
     Map<String, Long> perStoreMixedReadCount = new HashMap<>();
+    Map<Integer, Long> storeFilesAccessedDaysAndSize = new TreeMap<>();
   }
 
 }

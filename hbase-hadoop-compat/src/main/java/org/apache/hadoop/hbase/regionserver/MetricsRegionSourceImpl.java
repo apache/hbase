@@ -233,6 +233,18 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
         this.regionWrapper.getNumReferenceFiles());
       mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
         MetricsRegionServerSource.STOREFILE_SIZE_DESC), this.regionWrapper.getStoreFileSize());
+
+      Map<Integer, Long> sfAccessDaysAndSize = regionWrapper.getStoreFilesAccessedDaysAndSize();
+      if (sfAccessDaysAndSize != null) {
+        for (Map.Entry<Integer, Long> e : sfAccessDaysAndSize.entrySet()) {
+          mrb.addGauge(Interns.info(
+            regionNamePrefix + String
+              .format(MetricsRegionSource.STOREFILES_ACCESSED_DAYS_AND_SIZE_TEMPLATE, e.getKey()),
+            String.format(MetricsRegionSource.STOREFILES_ACCESSED_DAYS_AND_SIZE_DESC_TEMPLATE,
+              e.getKey())),
+            e.getValue());
+        }
+      }
       mrb.addCounter(
         Interns.info(regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
           MetricsRegionSource.COMPACTIONS_COMPLETED_DESC),

@@ -42,6 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,6 +55,7 @@ import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -211,6 +213,9 @@ public class HStore
   private AtomicLong majorCompactedCellsSize = new AtomicLong();
 
   private final StoreContext storeContext;
+  private long nextSFileAccessTimeLoadTime;
+  private long sfileAccessTimeLoadInterval;
+  private Map<String, Pair<Long, Long>> sfAccessTimeAndSizeMap = new HashMap<>();
 
   // Used to track the store files which are currently being written. For compaction, if we want to
   // compact store file [a, b, c] to [d], then here we will record 'd'. And we will also use it to
@@ -320,6 +325,10 @@ public class HStore
       confPrintThreshold = 10;
     }
     this.parallelPutCountPrintThreshold = confPrintThreshold;
+    int initialDelay = conf.getInt("hbase.hstore.hfile.load.initialDelay", 60 * 60 * 1000);
+    sfileAccessTimeLoadInterval = conf.getLong("hbase.hstore.hfile.load.interval", 60 * 60 * 1000);
+    nextSFileAccessTimeLoadTime =
+      EnvironmentEdgeManager.currentTime() + ThreadLocalRandom.current().nextInt(initialDelay);
 
     LOG.info(
       "Store={},  memstore type={}, storagePolicy={}, verifyBulkLoads={}, "
@@ -1807,6 +1816,35 @@ public class HStore
   @Override
   public OptionalDouble getAvgStoreFileAge() {
     return getStoreFileAgeStream().average();
+  }
+
+  @Override
+  public Map<String, Pair<Long, Long>> getStoreFilesAccessTimeAndSize() {
+    long now = EnvironmentEdgeManager.currentTime();
+    if (now < nextSFileAccessTimeLoadTime) {
+      return sfAccessTimeAndSizeMap;
+    }
+    Collection<HStoreFile> storeFiles = this.storeEngine.getStoreFileManager().getStorefiles();
+    Map<String, Pair<Long, Long>> tmpSFAccessTimeAndSizeMap = new HashMap<>();
+    for (HStoreFile sf : storeFiles) {
+      if (sf.getReader() == null) {
+        continue;
+      }
+      FileStatus fileStatus;
+      try {
+        fileStatus = sf.getFileInfo().getFileStatus();
+      } catch (IOException e) {
+        LOG.warn(e.getMessage());
+        continue;
+      }
+      if (fileStatus != null) {
+        tmpSFAccessTimeAndSizeMap.put(fileStatus.getPath().getName(),
+          Pair.newPair(fileStatus.getAccessTime(), fileStatus.getLen()));
+      }
+    }
+    this.sfAccessTimeAndSizeMap = tmpSFAccessTimeAndSizeMap;
+    nextSFileAccessTimeLoadTime = now + sfileAccessTimeLoadInterval;
+    return tmpSFAccessTimeAndSizeMap;
   }
 
   @Override

@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
+import java.util.TreeMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -59,8 +61,19 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long maxCompactionQueueSize;
   private Map<String, Long> readsOnlyFromMemstore;
   private Map<String, Long> mixedReadsOnStore;
+  private Map<Integer, Long> storeFilesAccessedDaysAndSize;
 
+  private int[] storeFilesAccessedDaysThresholds;
   private ScheduledFuture<?> regionMetricsUpdateTask;
+
+  // Count the size of the region's storefiles according to the access time,
+  // and set the size to the accessed-days interval to expose it to metrics.
+  // the accessed-days interval default value is "7,30,90", we can change it through
+  // 'hbase.region.hfile.accessed.days.thresholds'. see HBASE-27483 for details.
+  public static final long ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  public static final String STOREFILES_ACCESSED_DAYS_THRESHOLDS =
+    "hbase.region.hfile.accessed.days.thresholds";
+  public static final int[] STOREFILES_ACCESSED_DAYS_THRESHOLDS_DEFAULT = { 7, 30, 90 };
 
   public MetricsRegionWrapperImpl(HRegion region) {
     this.region = region;
@@ -68,6 +81,12 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     this.runnable = new HRegionMetricsWrapperRunnable();
     this.regionMetricsUpdateTask =
       this.executor.scheduleWithFixedDelay(this.runnable, PERIOD, PERIOD, TimeUnit.SECONDS);
+
+    storeFilesAccessedDaysThresholds =
+      region.getReadOnlyConfiguration().getInts(STOREFILES_ACCESSED_DAYS_THRESHOLDS);
+    if (storeFilesAccessedDaysThresholds == null || storeFilesAccessedDaysThresholds.length == 0) {
+      storeFilesAccessedDaysThresholds = STOREFILES_ACCESSED_DAYS_THRESHOLDS_DEFAULT;
+    }
   }
 
   @Override
@@ -243,6 +262,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     return mixedReadsOnStore;
   }
 
+  @Override
+  public Map<Integer, Long> getStoreFilesAccessedDaysAndSize() {
+    return storeFilesAccessedDaysAndSize;
+  }
+
   public class HRegionMetricsWrapperRunnable implements Runnable {
 
     @Override
@@ -259,8 +283,12 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       long tempMaxFlushQueueSize = 0;
       long avgAgeNumerator = 0;
       long numHFiles = 0;
-      if (region.stores != null) {
-        for (HStore store : region.stores.values()) {
+      Map<Integer, Long> tmpStoreFileAccessDaysAndSize = new TreeMap<>();
+      for (int threshold : storeFilesAccessedDaysThresholds) {
+        tmpStoreFileAccessDaysAndSize.put(threshold, 0L);
+      }
+      if (region.getStores() != null) {
+        for (HStore store : region.getStores()) {
           tempNumStoreFiles += store.getStorefilesCount();
           int currentStoreRefCount = store.getStoreRefCount();
           tempStoreRefCount += currentStoreRefCount;
@@ -313,9 +341,24 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
             tempVal += store.getMemstoreOnlyRowReadsCount();
           }
           readsOnlyFromMemstore.put(store.getColumnFamilyName(), tempVal);
+
+          Map<String, Pair<Long, Long>> sfAccessTimeAndSizeMap =
+            store.getStoreFilesAccessTimeAndSize();
+          long now = EnvironmentEdgeManager.currentTime();
+          for (Pair<Long, Long> pair : sfAccessTimeAndSizeMap.values()) {
+            long accessTime = pair.getFirst();
+            long size = pair.getSecond();
+            for (int threshold : storeFilesAccessedDaysThresholds) {
+              long sumSize = tmpStoreFileAccessDaysAndSize.get(threshold);
+              if ((now - accessTime) >= threshold * ONE_DAY_MS) {
+                sumSize = sumSize + size;
+                tmpStoreFileAccessDaysAndSize.put(threshold, sumSize);
+              }
+            }
+          }
         }
       }
-
+      storeFilesAccessedDaysAndSize = tmpStoreFileAccessDaysAndSize;
       numStoreFiles = tempNumStoreFiles;
       storeRefCount = tempStoreRefCount;
       maxCompactedStoreFileRefCount = tempMaxCompactedStoreFileRefCount;

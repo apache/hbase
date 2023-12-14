@@ -56,6 +56,8 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
   String ROW_READS_ONLY_ON_MEMSTORE_DESC = "Row reads happening completely out of memstore";
   String MIXED_ROW_READS = "mixedRowReadsCount";
   String MIXED_ROW_READS_ON_STORE_DESC = "Row reads happening out of files and memstore on store";
+  String STOREFILES_ACCESSED_DAYS_AND_SIZE_TEMPLATE = "storeFilesAccessed%sDaysSize";
+  String STOREFILES_ACCESSED_DAYS_AND_SIZE_DESC_TEMPLATE = "Store file accessed %s days size.";
 
   /**
    * Close the region's metrics as this region is closing.
