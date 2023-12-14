@@ -1208,12 +1208,4 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
     return new DatanodeInfo[0];
   }
-
-  Writer getWriter() {
-    return this.writer;
-  }
-
-  void setWriter(Writer writer) {
-    this.writer = writer;
-  }
 }
