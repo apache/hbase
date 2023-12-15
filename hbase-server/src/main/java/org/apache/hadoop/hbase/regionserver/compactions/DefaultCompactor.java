@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY;
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_ENABLE_DUAL_FILE_WRITER;
 
 import java.io.IOException;
 import java.util.List;
@@ -51,8 +52,8 @@ public class DefaultCompactor extends AbstractMultiOutputCompactor<DualFileWrite
       public DualFileWriter createWriter(InternalScanner scanner, FileDetails fd,
         boolean shouldDropBehind, boolean major, Consumer<Path> writerCreationTracker)
         throws IOException {
-        boolean enableDualFileWriter =
-          conf.getBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY, true);
+        boolean enableDualFileWriter = conf.getBoolean(
+          DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY, DEFAULT_ENABLE_DUAL_FILE_WRITER);
         DualFileWriter writer = new DualFileWriter(store.getComparator(),
           store.getColumnFamilyDescriptor().getMaxVersions(), enableDualFileWriter);
         initMultiWriter(writer, scanner, fd, shouldDropBehind, major, writerCreationTracker);
