@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY;
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_ENABLE_DUAL_FILE_WRITER;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -77,8 +78,8 @@ public class DefaultStoreFileManager implements StoreFileManager {
     this.comConf = comConf;
     this.blockingFileCount =
       conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
-    this.enableLiveVersionFiles =
-      conf.getBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY, true);
+    this.enableLiveVersionFiles = conf.getBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY,
+      DEFAULT_ENABLE_DUAL_FILE_WRITER);
   }
 
   private List<HStoreFile> getLiveVersionFiles(Collection<HStoreFile> storeFiles)
