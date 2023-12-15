@@ -1756,7 +1756,29 @@ public class AssignmentManager {
         localState.matches(State.OPEN, State.OPENING, State.CLOSING, State.SPLITTING, State.MERGING)
       ) {
         assert regionLocation != null : "found null region location for " + regionNode;
-        regionStates.addRegionToServer(regionNode);
+
+        // If the startcode of the regionLocation expired, and neither TRSP on region nor SCP on
+        // regionserver, then we should reassign the region
+        boolean startcodeExpired = false;
+        if (localState.matches(State.OPEN, State.OPENING) && regionNode.getProcedure() == null
+          && !getMaster().getServerManager().getDeadServers().isDeadServer(regionLocation)) {
+          List<ServerName> serverNames = getMaster().getServerManager().getOnlineServersList();
+          for (ServerName sn : serverNames) {
+            if (regionLocation.getHostname().equals(sn.getHostname())
+              && regionLocation.getPort() == sn.getPort()
+              && regionLocation.getStartcode() < sn.getStartcode()) {
+              startcodeExpired = true;
+              break;
+            }
+          }
+        }
+        if (startcodeExpired) {
+          LOG.warn("The startcode of regionLocation expired, reassign the region {}", regionNode);
+          regionNode.setState(State.OFFLINE);
+          regionStates.addToOfflineRegions(regionNode);
+        } else {
+          regionStates.addRegionToServer(regionNode);
+        }
       } else if (localState == State.OFFLINE || regionInfo.isOffline()) {
         regionStates.addToOfflineRegions(regionNode);
       }
