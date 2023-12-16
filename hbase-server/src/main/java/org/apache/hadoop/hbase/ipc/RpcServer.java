@@ -711,7 +711,10 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     return getRequestUser().map(User::getShortName);
   }
 
-  /** Returns Address of remote client if a request is ongoing, else null */
+  /**
+   * Returns the address of the remote client associated with the current RPC request or not present
+   * if no address is set.
+   */
   public static Optional<InetAddress> getRemoteAddress() {
     return getCurrentCall().map(RpcCall::getRemoteAddress);
   }
