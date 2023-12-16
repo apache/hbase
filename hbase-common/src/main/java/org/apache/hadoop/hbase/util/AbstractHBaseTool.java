@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -119,9 +120,7 @@ public abstract class AbstractHBaseTool implements Tool {
 
     CommandLine cmd;
     List<String> argsList = new ArrayList<>(args.length);
-    for (String arg : args) {
-      argsList.add(arg);
-    }
+    Collections.addAll(argsList, args);
     // For backward compatibility of args which can't be parsed as Option. See javadoc for
     // processOldArgs(..)
     processOldArgs(argsList);
