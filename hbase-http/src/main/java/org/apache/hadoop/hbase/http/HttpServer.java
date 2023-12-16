@@ -769,10 +769,10 @@ public class HttpServer implements FilterContainer {
   /**
    * This method configures the alias checks for the given ServletContextHandler based on the
    * provided value of shouldServeAlias.<br>
-   * If the configuration allows serving aliases, it checks if SymlinkAllowedResourceAliasChecker is
-   * already a part of the alias check list.<br>
-   * If not, it adds it to the list. If it is already a part of the list, no changes are made.<br>
-   * If the configuration does not allow serving aliases, it clears all alias checks from the
+   * If shouldServeAlias is set to true, it checks if SymlinkAllowedResourceAliasChecker is already
+   * a part of the alias check list. If it is already a part of the list, no changes are made, else,
+   * it adds it to the list.<br>
+   * If shouldServeAlias is set to false, it clears all alias checks from the
    * ServletContextHandler.<br>
    * .
    * @param context          The ServletContextHandler whose alias checks are to be configured
@@ -782,12 +782,12 @@ public class HttpServer implements FilterContainer {
     if (shouldServeAlias) {
       Class aliasCheckerClass = SymlinkAllowedResourceAliasChecker.class;
       // check if SymlinkAllowedResourceAliasChecker is already part of alias check list
-      // NOTE: we are doing this because by default this is already present in the context
-      if (!context.getAliasChecks().stream().anyMatch(aliasCheckerClass::isInstance)) {
+      // NOTE: we are doing this because this is already present in the context (by default)
+      if (context.getAliasChecks().stream().anyMatch(aliasCheckerClass::isInstance)) {
+        LOG.debug("{} is already part of alias check list", aliasCheckerClass.getName());
+      } else {
         context.addAliasCheck(new SymlinkAllowedResourceAliasChecker(context));
         LOG.debug("{} added to the alias check list", aliasCheckerClass.getName());
-      } else {
-        LOG.debug("{} is already part of alias check list", aliasCheckerClass.getName());
       }
       LOG.info("Serving aliases allowed for /logs context");
     } else {
