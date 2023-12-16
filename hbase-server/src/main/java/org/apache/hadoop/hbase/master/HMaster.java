@@ -3342,6 +3342,18 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     procedureExecutor.getEnvironment().setEventReady(initialized, isInitialized);
   }
 
+  /**
+   * Mainly used in procedure related tests, where we will restart ProcedureExecutor and
+   * AssignmentManager, but we do not want to restart master(to speed up the test), so we need to
+   * disable rpc for a while otherwise some critical rpc requests such as
+   * reportRegionStateTransition could fail and cause region server to abort.
+   */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public void setServiceStarted(boolean started) {
+    this.serviceStarted = started;
+  }
+
   @Override
   public ProcedureEvent<?> getInitializedEvent() {
     return initialized;

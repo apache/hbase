@@ -87,6 +87,7 @@ public class MasterProcedureTestingUtility {
       new Callable<Void>() {
         @Override
         public Void call() throws Exception {
+          master.setServiceStarted(false);
           AssignmentManager am = env.getAssignmentManager();
           // try to simulate a master restart by removing the ServerManager states about seqIDs
           for (RegionState regionState : am.getRegionStates().getRegionStates()) {
@@ -109,6 +110,10 @@ public class MasterProcedureTestingUtility {
           am.setupRIT(procExec.getActiveProceduresNoCopy().stream().filter(p -> !p.isSuccess())
             .filter(p -> p instanceof TransitRegionStateProcedure)
             .map(p -> (TransitRegionStateProcedure) p).collect(Collectors.toList()));
+          // create server state node, to simulate master start up
+          env.getMasterServices().getServerManager().getOnlineServersList()
+            .forEach(am.getRegionStates()::createServer);
+          master.setServiceStarted(true);
           return null;
         }
       },

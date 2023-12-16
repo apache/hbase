@@ -333,6 +333,12 @@ public class AssignmentManager {
               regionNode.getProcedure().stateLoaded(this, regionNode);
             }
             if (regionLocation != null) {
+              // TODO: this could lead to some orphan server state nodes, as it is possible that the
+              // region server is already dead and its SCP has already finished but we have
+              // persisted an opening state on this region server. Finally the TRSP will assign the
+              // region to another region server, so it will not cause critical problems, just waste
+              // some memory as no one will try to cleanup these orphan server state nodes.
+              regionStates.createServer(regionLocation);
               regionStates.addRegionToServer(regionNode);
             }
             if (RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
@@ -1110,7 +1116,7 @@ public class AssignmentManager {
   // RS Region Transition Report helpers
   // ============================================================================================
   private void reportRegionStateTransition(ReportRegionStateTransitionResponse.Builder builder,
-    ServerName serverName, List<RegionStateTransition> transitionList) throws IOException {
+    ServerStateNode serverNode, List<RegionStateTransition> transitionList) throws IOException {
     for (RegionStateTransition transition : transitionList) {
       switch (transition.getTransitionCode()) {
         case OPENED:
@@ -1120,7 +1126,7 @@ public class AssignmentManager {
           final RegionInfo hri = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
           long procId =
             transition.getProcIdCount() > 0 ? transition.getProcId(0) : Procedure.NO_PROC_ID;
-          updateRegionTransition(serverName, transition.getTransitionCode(), hri,
+          updateRegionTransition(serverNode, transition.getTransitionCode(), hri,
             transition.hasOpenSeqNum() ? transition.getOpenSeqNum() : HConstants.NO_SEQNUM, procId);
           break;
         case READY_TO_SPLIT:
@@ -1130,7 +1136,7 @@ public class AssignmentManager {
           final RegionInfo parent = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
           final RegionInfo splitA = ProtobufUtil.toRegionInfo(transition.getRegionInfo(1));
           final RegionInfo splitB = ProtobufUtil.toRegionInfo(transition.getRegionInfo(2));
-          updateRegionSplitTransition(serverName, transition.getTransitionCode(), parent, splitA,
+          updateRegionSplitTransition(serverNode, transition.getTransitionCode(), parent, splitA,
             splitB);
           break;
         case READY_TO_MERGE:
@@ -1140,7 +1146,7 @@ public class AssignmentManager {
           final RegionInfo merged = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
           final RegionInfo mergeA = ProtobufUtil.toRegionInfo(transition.getRegionInfo(1));
           final RegionInfo mergeB = ProtobufUtil.toRegionInfo(transition.getRegionInfo(2));
-          updateRegionMergeTransition(serverName, transition.getTransitionCode(), merged, mergeA,
+          updateRegionMergeTransition(serverNode, transition.getTransitionCode(), merged, mergeA,
             mergeB);
           break;
       }
@@ -1152,7 +1158,12 @@ public class AssignmentManager {
     ReportRegionStateTransitionResponse.Builder builder =
       ReportRegionStateTransitionResponse.newBuilder();
     ServerName serverName = ProtobufUtil.toServerName(req.getServer());
-    ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
+    ServerStateNode serverNode = regionStates.getServerNode(serverName);
+    if (serverNode == null) {
+      LOG.warn("No server node for {}", serverName);
+      builder.setErrorMessage("No server node for " + serverName);
+      return builder.build();
+    }
     // here we have to acquire a read lock instead of a simple exclusive lock. This is because that
     // we should not block other reportRegionStateTransition call from the same region server. This
     // is not only about performance, but also to prevent dead lock. Think of the meta region is
@@ -1165,7 +1176,7 @@ public class AssignmentManager {
       // above in submitServerCrash method and HBASE-21508 for more details.
       if (serverNode.isInState(ServerState.ONLINE)) {
         try {
-          reportRegionStateTransition(builder, serverName, req.getTransitionList());
+          reportRegionStateTransition(builder, serverNode, req.getTransitionList());
         } catch (PleaseHoldException e) {
           LOG.trace("Failed transition ", e);
           throw e;
@@ -1187,7 +1198,7 @@ public class AssignmentManager {
     return builder.build();
   }
 
-  private void updateRegionTransition(ServerName serverName, TransitionCode state,
+  private void updateRegionTransition(ServerStateNode serverNode, TransitionCode state,
     RegionInfo regionInfo, long seqId, long procId) throws IOException {
     checkMetaLoaded(regionInfo);
 
@@ -1195,13 +1206,12 @@ public class AssignmentManager {
     if (regionNode == null) {
       // the table/region is gone. maybe a delete, split, merge
       throw new UnexpectedStateException(String.format(
-        "Server %s was trying to transition region %s to %s. but Region is not known.", serverName,
-        regionInfo, state));
+        "Server %s was trying to transition region %s to %s. but Region is not known.",
+        serverNode.getServerName(), regionInfo, state));
     }
-    LOG.trace("Update region transition serverName={} region={} regionState={}", serverName,
-      regionNode, state);
+    LOG.trace("Update region transition serverName={} region={} regionState={}",
+      serverNode.getServerName(), regionNode, state);
 
-    ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
     regionNode.lock();
     try {
       if (!reportTransition(regionNode, serverNode, state, seqId, procId)) {
@@ -1218,8 +1228,8 @@ public class AssignmentManager {
         ) {
           LOG.info("RegionServer {} {}", state, regionNode.getRegionInfo().getEncodedName());
         } else {
-          LOG.warn("No matching procedure found for {} transition on {} to {}", serverName,
-            regionNode, state);
+          LOG.warn("No matching procedure found for {} transition on {} to {}",
+            serverNode.getServerName(), regionNode, state);
         }
       }
     } finally {
@@ -1239,8 +1249,9 @@ public class AssignmentManager {
     return true;
   }
 
-  private void updateRegionSplitTransition(final ServerName serverName, final TransitionCode state,
-    final RegionInfo parent, final RegionInfo hriA, final RegionInfo hriB) throws IOException {
+  private void updateRegionSplitTransition(final ServerStateNode serverNode,
+    final TransitionCode state, final RegionInfo parent, final RegionInfo hriA,
+    final RegionInfo hriB) throws IOException {
     checkMetaLoaded(parent);
 
     if (state != TransitionCode.READY_TO_SPLIT) {
@@ -1264,8 +1275,8 @@ public class AssignmentManager {
     // Submit the Split procedure
     final byte[] splitKey = hriB.getStartKey();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Split request from " + serverName + ", parent=" + parent + " splitKey="
-        + Bytes.toStringBinary(splitKey));
+      LOG.debug("Split request from {}, parent={}, splitKey={}", serverNode.getServerName(), parent,
+        Bytes.toStringBinary(splitKey));
     }
     // Processing this report happens asynchronously from other activities which can mutate
     // the region state. For example, a split procedure may already be running for this parent.
@@ -1279,21 +1290,22 @@ public class AssignmentManager {
     if (parentState != null && parentState.isOpened()) {
       master.getMasterProcedureExecutor().submitProcedure(createSplitProcedure(parent, splitKey));
     } else {
-      LOG.info("Ignoring split request from " + serverName + ", parent=" + parent
-        + " because parent is unknown or not open");
+      LOG.info("Ignoring split request from {}, parent={} because parent is unknown or not open",
+        serverNode.getServerName(), parent);
       return;
     }
 
     // If the RS is < 2.0 throw an exception to abort the operation, we are handling the split
-    if (master.getServerManager().getVersionNumber(serverName) < 0x0200000) {
+    if (master.getServerManager().getVersionNumber(serverNode.getServerName()) < 0x0200000) {
       throw new UnsupportedOperationException(
         String.format("Split handled by the master: " + "parent=%s hriA=%s hriB=%s",
           parent.getShortNameToLog(), hriA, hriB));
     }
   }
 
-  private void updateRegionMergeTransition(final ServerName serverName, final TransitionCode state,
-    final RegionInfo merged, final RegionInfo hriA, final RegionInfo hriB) throws IOException {
+  private void updateRegionMergeTransition(final ServerStateNode serverNode,
+    final TransitionCode state, final RegionInfo merged, final RegionInfo hriA,
+    final RegionInfo hriB) throws IOException {
     checkMetaLoaded(merged);
 
     if (state != TransitionCode.READY_TO_MERGE) {
@@ -1315,7 +1327,7 @@ public class AssignmentManager {
     master.getMasterProcedureExecutor().submitProcedure(createMergeProcedure(hriA, hriB));
 
     // If the RS is < 2.0 throw an exception to abort the operation, we are handling the merge
-    if (master.getServerManager().getVersionNumber(serverName) < 0x0200000) {
+    if (master.getServerManager().getVersionNumber(serverNode.getServerName()) < 0x0200000) {
       throw new UnsupportedOperationException(
         String.format("Merge not handled yet: regionState=%s merged=%s hriA=%s hriB=%s", state,
           merged, hriA, hriB));
@@ -1345,12 +1357,19 @@ public class AssignmentManager {
         regionNames.stream().map(Bytes::toStringBinary).collect(Collectors.toList()));
     }
 
-    ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
-    synchronized (serverNode) {
+    ServerStateNode serverNode = regionStates.getServerNode(serverName);
+    if (serverNode == null) {
+      LOG.warn("Got a report from server {} where its server node is null", serverName);
+      return;
+    }
+    serverNode.readLock().lock();
+    try {
       if (!serverNode.isInState(ServerState.ONLINE)) {
-        LOG.warn("Got a report from a server result in state " + serverNode.getState());
+        LOG.warn("Got a report from a server result in state {}", serverNode);
         return;
       }
+    } finally {
+      serverNode.readLock().unlock();
     }
 
     // Track the regionserver reported online regions in memory.
@@ -1756,6 +1775,12 @@ public class AssignmentManager {
         localState.matches(State.OPEN, State.OPENING, State.CLOSING, State.SPLITTING, State.MERGING)
       ) {
         assert regionLocation != null : "found null region location for " + regionNode;
+        // TODO: this could lead to some orphan server state nodes, as it is possible that the
+        // region server is already dead and its SCP has already finished but we have
+        // persisted an opening state on this region server. Finally the TRSP will assign the
+        // region to another region server, so it will not cause critical problems, just waste
+        // some memory as no one will try to cleanup these orphan server state nodes.
+        regionStates.createServer(regionLocation);
         regionStates.addRegionToServer(regionNode);
       } else if (localState == State.OFFLINE || regionInfo.isOffline()) {
         regionStates.addToOfflineRegions(regionNode);
@@ -1841,7 +1866,17 @@ public class AssignmentManager {
     synchronized (rsReports) {
       rsReports.remove(serverName);
     }
+    if (serverNode == null) {
+      if (force) {
+        LOG.info("Force adding ServerCrashProcedure for {} when server node is null", serverName);
+      } else {
+        // for normal case, do not schedule SCP if ServerStateNode is null
+        LOG.warn("Skip adding ServerCrashProcedure for {} because server node is null", serverName);
+        return Procedure.NO_PROC_ID;
+      }
+    }
 
+    ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
     // We hold the write lock here for fencing on reportRegionStateTransition. Once we set the
     // server state to CRASHED, we will no longer accept the reportRegionStateTransition call from
     // this server. This is used to simplify the implementation for TRSP and SCP, where we can make
@@ -1849,44 +1884,42 @@ public class AssignmentManager {
     if (serverNode != null) {
       serverNode.writeLock().lock();
     }
-    boolean carryingMeta;
-    long pid;
     try {
-      ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
-      carryingMeta = isCarryingMeta(serverName);
-      if (!force && serverNode != null && !serverNode.isInState(ServerState.ONLINE)) {
-        LOG.info("Skip adding ServerCrashProcedure for {} (meta={}) -- running?", serverNode,
-          carryingMeta);
-        return Procedure.NO_PROC_ID;
-      } else {
-        MasterProcedureEnv mpe = procExec.getEnvironment();
-        // If serverNode == null, then 'Unknown Server'. Schedule HBCKSCP instead.
-        // HBCKSCP scours Master in-memory state AND hbase;meta for references to
-        // serverName just-in-case. An SCP that is scheduled when the server is
-        // 'Unknown' probably originated externally with HBCK2 fix-it tool.
-        ServerState oldState = null;
-        if (serverNode != null) {
-          oldState = serverNode.getState();
-          serverNode.setState(ServerState.CRASHED);
-        }
 
+      boolean carryingMeta = isCarryingMeta(serverName);
+      if (serverNode != null && !serverNode.isInState(ServerState.ONLINE)) {
         if (force) {
-          pid = procExec.submitProcedure(
-            new HBCKServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta));
+          LOG.info("Force adding ServerCrashProcedure for {} (meta={}) when state is not {}",
+            serverNode, carryingMeta, ServerState.ONLINE);
         } else {
-          pid = procExec.submitProcedure(
-            new ServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta));
+          LOG.info("Skip adding ServerCrashProcedure for {} (meta={}) when state is not {}",
+            serverNode, carryingMeta, ServerState.ONLINE);
+          return Procedure.NO_PROC_ID;
         }
-        LOG.info("Scheduled ServerCrashProcedure pid={} for {} (carryingMeta={}){}.", pid,
-          serverName, carryingMeta,
-          serverNode == null ? "" : " " + serverNode.toString() + ", oldState=" + oldState);
       }
+      MasterProcedureEnv mpe = procExec.getEnvironment();
+      // If serverNode == null, then 'Unknown Server'. Schedule HBCKSCP instead.
+      // HBCKSCP scours Master in-memory state AND hbase;meta for references to
+      // serverName just-in-case. An SCP that is scheduled when the server is
+      // 'Unknown' probably originated externally with HBCK2 fix-it tool.
+      ServerState oldState = null;
+      if (serverNode != null) {
+        oldState = serverNode.getState();
+        serverNode.setState(ServerState.CRASHED);
+      }
+      ServerCrashProcedure scp = force
+        ? new HBCKServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta)
+        : new ServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta);
+      long pid = procExec.submitProcedure(scp);
+      LOG.info("Scheduled ServerCrashProcedure pid={} for {} (carryingMeta={}){}.", pid, serverName,
+        carryingMeta,
+        serverNode == null ? "" : " " + serverNode.toString() + ", oldState=" + oldState);
+      return pid;
     } finally {
       if (serverNode != null) {
         serverNode.writeLock().unlock();
       }
     }
-    return pid;
   }
 
   public void offlineRegion(final RegionInfo regionInfo) {
@@ -2015,7 +2048,18 @@ public class AssignmentManager {
     // update the region state, which means that the region could be in any state when we want to
     // assign it after a RS crash. So here we do not pass the expectedStates parameter.
     return transitStateAndUpdate(regionNode, State.OPENING).thenAccept(r -> {
-      regionStates.addRegionToServer(regionNode);
+      ServerStateNode serverNode = regionStates.getServerNode(regionNode.getRegionLocation());
+      // Here the server node could be null. For example, we want to assign the region to a given
+      // region server and it crashes, and it is the region server which holds hbase:meta, then the
+      // above transitStateAndUpdate call will never succeed until we finishes the SCP for it. But
+      // after the SCP finishes, the server node will be removed, so when we arrive there, the
+      // server
+      // node will be null. This is not a big problem if we skip adding it, as later we will fail to
+      // execute the remote procedure on the region server and then try to assign to another region
+      // server
+      if (serverNode != null) {
+        serverNode.addRegion(regionNode);
+      }
       // update the operation count metrics
       metrics.incrementOperationCounter();
     });
@@ -2059,7 +2103,6 @@ public class AssignmentManager {
         if (isMetaRegion(hri)) {
           setMetaAssigned(hri, false);
         }
-        regionStates.addRegionToServer(regionNode);
         // update the operation count metrics
         metrics.incrementOperationCounter();
       });
