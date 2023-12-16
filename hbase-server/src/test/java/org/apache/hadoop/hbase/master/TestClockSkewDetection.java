@@ -26,8 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -48,17 +48,28 @@ public class TestClockSkewDetection {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClockSkewDetection.class);
 
+  private static final class DummyMasterServices extends MockNoopMasterServices {
+
+    private final AssignmentManager am;
+
+    public DummyMasterServices(Configuration conf) {
+      super(conf);
+      am = mock(AssignmentManager.class);
+      RegionStates rss = mock(RegionStates.class);
+      when(am.getRegionStates()).thenReturn(rss);
+    }
+
+    @Override
+    public AssignmentManager getAssignmentManager() {
+      return am;
+    }
+  }
+
   @Test
   public void testClockSkewDetection() throws Exception {
     final Configuration conf = HBaseConfiguration.create();
-    ServerManager sm = new ServerManager(new MockNoopMasterServices(conf) {
-      @Override
-      public ClusterConnection getClusterConnection() {
-        ClusterConnection conn = mock(ClusterConnection.class);
-        when(conn.getRpcControllerFactory()).thenReturn(mock(RpcControllerFactory.class));
-        return conn;
-      }
-    }, new DummyRegionServerList());
+    ServerManager sm =
+      new ServerManager(new DummyMasterServices(conf), new DummyRegionServerList());
 
     LOG.debug("regionServerStartup 1");
     InetAddress ia1 = InetAddress.getLocalHost();

@@ -395,6 +395,7 @@ public class ServerManager {
   void recordNewServerWithLock(final ServerName serverName, final ServerMetrics sl) {
     LOG.info("Registering regionserver=" + serverName);
     this.onlineServers.put(serverName, sl);
+    master.getAssignmentManager().getRegionStates().createServer(serverName);
   }
 
   public RegionStoreSequenceIds getLastFlushedSequenceId(byte[] encodedRegionName) {
@@ -567,6 +568,10 @@ public class ServerManager {
     }
     LOG.info("Processing expiration of " + serverName + " on " + this.master.getServerName());
     long pid = master.getAssignmentManager().submitServerCrash(serverName, true, force);
+    if (pid == Procedure.NO_PROC_ID) {
+      // skip later processing as we failed to submit SCP
+      return Procedure.NO_PROC_ID;
+    }
     storage.expired(serverName);
     // Tell our listeners that a server was removed
     if (!this.listeners.isEmpty()) {

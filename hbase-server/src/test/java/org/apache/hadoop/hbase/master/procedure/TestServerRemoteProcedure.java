@@ -88,7 +88,7 @@ public class TestServerRemoteProcedure {
     master.start(2, rsDispatcher);
     am = master.getAssignmentManager();
     master.getServerManager().getOnlineServersList().stream()
-      .forEach(serverName -> am.getRegionStates().getOrCreateServer(serverName));
+      .forEach(serverName -> am.getRegionStates().createServer(serverName));
   }
 
   @After

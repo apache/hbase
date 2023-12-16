@@ -135,7 +135,7 @@ public class RegionServerTracker extends ZKListener {
       .forEach(s -> LOG.error("{} has no matching ServerCrashProcedure", s));
     // create ServerNode for all possible live servers from wal directory
     liveServersBeforeRestart
-      .forEach(sn -> server.getAssignmentManager().getRegionStates().getOrCreateServer(sn));
+      .forEach(sn -> server.getAssignmentManager().getRegionStates().createServer(sn));
     ServerManager serverManager = server.getServerManager();
     synchronized (this) {
       Set<ServerName> liveServers = regionServers;

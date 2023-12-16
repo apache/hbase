@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -116,36 +117,44 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     UTIL.waitFor(60000, () -> UTIL.getHBaseCluster().getMaster().isInitialized());
     LOG.info("Started cluster master, waiting for {}", SERVER_FOR_TEST);
     UTIL.waitFor(60000, () -> getServerStateNode(SERVER_FOR_TEST) != null);
-    serverNode = getServerStateNode(SERVER_FOR_TEST);
-    assertFalse("serverNode should not be ONLINE during SCP processing",
-      serverNode.isInState(ServerState.ONLINE));
+    UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
+
+      @Override
+      public boolean evaluate() throws Exception {
+        return !getServerStateNode(SERVER_FOR_TEST).isInState(ServerState.ONLINE);
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        return "serverNode should not be ONLINE during SCP processing";
+      }
+    });
     Optional<Procedure<?>> procedure = UTIL.getHBaseCluster().getMaster().getProcedures().stream()
       .filter(p -> (p instanceof ServerCrashProcedure)
         && ((ServerCrashProcedure) p).getServerName().equals(SERVER_FOR_TEST))
       .findAny();
     assertTrue("Should have one SCP for " + SERVER_FOR_TEST, procedure.isPresent());
-    assertTrue("Submit the SCP for the same serverName " + SERVER_FOR_TEST + " which should fail",
-      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST)
-          == Procedure.NO_PROC_ID);
+    assertEquals("Submit the SCP for the same serverName " + SERVER_FOR_TEST + " which should fail",
+      Procedure.NO_PROC_ID,
+      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST));
 
     // Wait the SCP to finish
     LOG.info("Waiting on latch");
     SCP_LATCH.countDown();
     UTIL.waitFor(60000, () -> procedure.get().isFinished());
+    assertNull("serverNode should be deleted after SCP finished",
+      getServerStateNode(SERVER_FOR_TEST));
 
-    assertFalse(
+    assertEquals(
       "Even when the SCP is finished, the duplicate SCP should not be scheduled for "
         + SERVER_FOR_TEST,
-      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST)
-          == Procedure.NO_PROC_ID);
-    serverNode = UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-      .getServerNode(SERVER_FOR_TEST);
-    assertNull("serverNode should be deleted after SCP finished", serverNode);
+      Procedure.NO_PROC_ID,
+      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST));
 
     MetricsMasterSource masterSource =
       UTIL.getHBaseCluster().getMaster().getMasterMetrics().getMetricsSource();
     metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX + "SubmittedCount",
-      4, masterSource);
+      3, masterSource);
   }
 
   private void setupCluster() throws Exception {
