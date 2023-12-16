@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -148,9 +149,7 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
     for (FileStatus status : super.listStatus(job)) {
       if (status.isDirectory()) {
         FileSystem fs = status.getPath().getFileSystem(job.getConfiguration());
-        for (FileStatus match : fs.listStatus(status.getPath(), HIDDEN_FILE_FILTER)) {
-          result.add(match);
-        }
+        Collections.addAll(result, fs.listStatus(status.getPath(), HIDDEN_FILE_FILTER));
       } else {
         result.add(status);
       }
