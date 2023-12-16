@@ -35,6 +35,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class ServerStateNode implements Comparable<ServerStateNode> {
   private final Set<RegionStateNode> regions;
   private final ServerName serverName;
+  // the lock here is for fencing SCP and TRSP, so not all operations need to hold this lock
   private final ReadWriteLock lock = new ReentrantReadWriteLock();
   private volatile ServerState state = ServerState.ONLINE;
 

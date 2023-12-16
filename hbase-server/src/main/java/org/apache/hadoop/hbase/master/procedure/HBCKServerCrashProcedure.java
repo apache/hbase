@@ -103,6 +103,8 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
       LOG.warn("Failed scan of hbase:meta for 'Unknown Servers'", ioe);
       return ris;
     }
+    // create the server state node too
+    env.getAssignmentManager().getRegionStates().createServer(getServerName());
     LOG.info("Found {} mentions of {} in hbase:meta of OPEN/OPENING Regions: {}",
       visitor.getReassigns().size(), getServerName(), visitor.getReassigns().stream()
         .map(RegionInfo::getEncodedName).collect(Collectors.joining(",")));
