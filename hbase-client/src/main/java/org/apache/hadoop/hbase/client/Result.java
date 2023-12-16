@@ -791,9 +791,7 @@ public class Result implements CellScannable, CellScanner {
       }
       prevRow = currentRow;
       stale = stale || r.isStale();
-      for (Cell c : r.rawCells()) {
-        cells.add(c);
-      }
+      Collections.addAll(cells, r.rawCells());
     }
 
     return Result.create(cells, null, stale);
