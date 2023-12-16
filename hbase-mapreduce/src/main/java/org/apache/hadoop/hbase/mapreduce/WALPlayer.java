@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -130,9 +131,7 @@ public class WALPlayer extends Configured implements Tool {
       Configuration conf = context.getConfiguration();
       String[] tables = conf.getStrings(TABLES_KEY);
       this.multiTableSupport = conf.getBoolean(MULTI_TABLES_SUPPORT, false);
-      for (String table : tables) {
-        tableSet.add(table);
-      }
+      Collections.addAll(tableSet, tables);
     }
   }
 
