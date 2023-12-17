@@ -477,6 +477,7 @@ module Hbase
     define_test "create should be able to set table options" do
       drop_test_table(@create_test_name)
       command(:create, @create_test_name, 'a', 'b', 'MAX_FILESIZE' => 12345678,
+              ERASURE_CODING_POLICY => 'RS-6-3-1024K'
               PRIORITY => '77',
               FLUSH_POLICY => 'org.apache.hadoop.hbase.regionserver.FlushAllLargeStoresPolicy',
               REGION_MEMSTORE_REPLICATION => 'TRUE',
@@ -962,6 +963,26 @@ module Hbase
     define_test "alter should be able to change table options w/o table_att" do
       command(:alter, @test_name, 'MAX_FILESIZE' => 12345678)
       assert_match(/12345678/, admin.describe(@test_name))
+    end
+
+    define_test "alter should be able to change EC policy" do
+      command(:alter, @test_name, METHOD => 'table_att', 'ERASURE_CODING_POLICY' => "RS-6-3-1024")
+      assert_match(/RS-6-3-1024/, admin.describe(@test_name))
+    end
+
+    define_test "alter should be able to remove EC policy" do
+      command(:alter, @test_name, METHOD => 'table_att_unset', NAME => 'ERASURE_CODING_POLICY')
+      assert_not_match(/ERASURE_CODING_POLICY/, admin.describe(@test_name))
+    end
+
+    define_test "alter should be able to change EC POLICY w/o table_att" do
+      command(:alter, @test_name, 'ERASURE_CODING_POLICY' => "RS-6-3-1024")
+      assert_match(/RS-6-3-1024/, admin.describe(@test_name))
+    end
+
+    define_test "alter should be able to remove EC POLICY w/o table_att" do
+      command(:alter, @test_name, 'ERASURE_CODING_POLICY' => "null")
+      assert_not_match(/ERASURE_CODING_POLICY/, admin.describe(@test_name))
     end
 
     define_test "alter should be able to specify coprocessor attributes with spec string" do
