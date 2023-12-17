@@ -150,6 +150,7 @@ public class TableDescriptorBuilder {
   private static final Bytes ERASURE_CODING_POLICY_KEY =
     new Bytes(Bytes.toBytes(ERASURE_CODING_POLICY));
 
+  private static final String DEFAULT_ERASURE_CODING_POLICY = null;
   /**
    * Used by shell/rest interface to access this metadata attribute which denotes if the table
    * should be treated by region normalizer.
@@ -233,6 +234,7 @@ public class TableDescriptorBuilder {
     DEFAULT_VALUES.put(DURABILITY, DEFAULT_DURABLITY.name()); // use the enum name
     DEFAULT_VALUES.put(REGION_REPLICATION, String.valueOf(DEFAULT_REGION_REPLICATION));
     DEFAULT_VALUES.put(PRIORITY, String.valueOf(DEFAULT_PRIORITY));
+    DEFAULT_VALUES.put(ERASURE_CODING_POLICY, String.valueOf(DEFAULT_ERASURE_CODING_POLICY));
     DEFAULT_VALUES.keySet().stream().map(s -> new Bytes(Bytes.toBytes(s)))
       .forEach(RESERVED_KEYWORDS::add);
     RESERVED_KEYWORDS.add(IS_META_KEY);
@@ -775,7 +777,7 @@ public class TableDescriptorBuilder {
      * data dir of the table. Erasure coding is an alternative to normal replication which takes
      * less space at the cost of locality. The policy must be available and enabled on the hdfs
      * cluster before being set.
-     * @param policy the policy to set
+     * @param policy the policy to set, or null to disable erasure coding
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setErasureCodingPolicy(String policy) {

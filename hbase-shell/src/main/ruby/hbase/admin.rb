@@ -1580,6 +1580,7 @@ module Hbase
     # Parse arguments and update TableDescriptorBuilder accordingly
     # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     def update_tdb_from_arg(tdb, arg)
+      tdb.setErasureCodingPolicy(arg.delete(TableDescriptorBuilder::ERASURE_CODING_POLICY)) if arg.include?(TableDescriptorBuilder::ERASURE_CODING_POLICY)
       tdb.setMaxFileSize(arg.delete(TableDescriptorBuilder::MAX_FILESIZE)) if arg.include?(TableDescriptorBuilder::MAX_FILESIZE)
       tdb.setReadOnly(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::READONLY))) if arg.include?(TableDescriptorBuilder::READONLY)
       tdb.setCompactionEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::COMPACTION_ENABLED))) if arg.include?(TableDescriptorBuilder::COMPACTION_ENABLED)

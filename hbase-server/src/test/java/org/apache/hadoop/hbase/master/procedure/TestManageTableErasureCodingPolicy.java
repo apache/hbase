@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -55,21 +56,27 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestModifyTableErasureCodingPolicy {
+public class TestManageTableErasureCodingPolicy {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestModifyTableErasureCodingPolicy.class);
+    HBaseClassTestRule.forClass(TestManageTableErasureCodingPolicy.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
-  private static final TableName TABLE = TableName.valueOf("foo");
   private static final byte[] FAMILY = Bytes.toBytes("a");
+  private static final TableName NON_EC_TABLE = TableName.valueOf("foo");
+  private static final TableDescriptor NON_EC_TABLE_DESC = TableDescriptorBuilder
+    .newBuilder(NON_EC_TABLE).setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+  private static final TableName EC_TABLE = TableName.valueOf("bar");
+  private static final TableDescriptor EC_TABLE_DESC =
+    TableDescriptorBuilder.newBuilder(EC_TABLE).setErasureCodingPolicy("RS-6-3-1024k")
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.startMiniDFSCluster(6); // 6 necessary for RS-6-3-1024k
     UTIL.startMiniCluster(1);
-    Table table = UTIL.createTable(TABLE, FAMILY);
+    Table table = UTIL.createTable(NON_EC_TABLE_DESC, null);
     UTIL.loadTable(table, FAMILY);
     UTIL.flush();
   }
@@ -81,10 +88,31 @@ public class TestModifyTableErasureCodingPolicy {
   }
 
   @Test
-  public void itValidatesPolicyName() {
+  public void itValidatesPolicyNameForCreate() {
     HBaseIOException thrown = assertThrows(HBaseIOException.class, () -> {
       try (Admin admin = UTIL.getAdmin()) {
-        TableDescriptor desc = UTIL.getAdmin().getDescriptor(TABLE);
+        admin.createTable(
+          TableDescriptorBuilder.newBuilder(EC_TABLE_DESC).setErasureCodingPolicy("foo").build());
+      }
+    });
+    assertThat(thrown.getMessage(),
+      containsString("Cannot set Erasure Coding policy: foo. Policy not found"));
+
+    thrown = assertThrows(HBaseIOException.class, () -> {
+      try (Admin admin = UTIL.getAdmin()) {
+        admin.createTable(TableDescriptorBuilder.newBuilder(EC_TABLE_DESC)
+          .setErasureCodingPolicy("RS-10-4-1024k").build());
+      }
+    });
+    assertThat(thrown.getMessage(), containsString(
+      "Cannot set Erasure Coding policy: RS-10-4-1024k. The policy must be enabled"));
+  }
+
+  @Test
+  public void itValidatesPolicyNameForAlter() {
+    HBaseIOException thrown = assertThrows(HBaseIOException.class, () -> {
+      try (Admin admin = UTIL.getAdmin()) {
+        TableDescriptor desc = UTIL.getAdmin().getDescriptor(NON_EC_TABLE);
         admin.modifyTable(
           TableDescriptorBuilder.newBuilder(desc).setErasureCodingPolicy("foo").build());
       }
@@ -94,7 +122,7 @@ public class TestModifyTableErasureCodingPolicy {
 
     thrown = assertThrows(HBaseIOException.class, () -> {
       try (Admin admin = UTIL.getAdmin()) {
-        TableDescriptor desc = UTIL.getAdmin().getDescriptor(TABLE);
+        TableDescriptor desc = UTIL.getAdmin().getDescriptor(NON_EC_TABLE);
         admin.modifyTable(
           TableDescriptorBuilder.newBuilder(desc).setErasureCodingPolicy("RS-10-4-1024k").build());
       }
@@ -104,25 +132,37 @@ public class TestModifyTableErasureCodingPolicy {
   }
 
   @Test
-  public void testErasureCodingSync() throws IOException, InterruptedException {
+  public void testCreateTableErasureCodingSync() throws IOException {
+    try (Admin admin = UTIL.getAdmin(); Table table = UTIL.getConnection().getTable(EC_TABLE)) {
+      admin.createTable(EC_TABLE_DESC);
+      UTIL.loadTable(table, FAMILY);
+      UTIL.flush(EC_TABLE);
+      Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
+      DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(UTIL.getConfiguration());
+      checkRegionDirAndFilePolicies(dfs, rootDir, EC_TABLE, "RS-6-3-1024k", "RS-6-3-1024k");
+    }
+  }
+
+  @Test
+  public void testModifyTableErasureCodingSync() throws IOException, InterruptedException {
     try (Admin admin = UTIL.getAdmin()) {
       Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
-      Path tableDir = CommonFSUtils.getTableDir(rootDir, TABLE);
       DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(UTIL.getConfiguration());
 
       // start off without EC
-      checkRegionDirAndFilePolicies(dfs, tableDir, null, null);
+      checkRegionDirAndFilePolicies(dfs, rootDir, NON_EC_TABLE, null, null);
 
       // add EC
-      TableDescriptor desc = UTIL.getAdmin().getDescriptor(TABLE);
-      admin.modifyTable(
-        TableDescriptorBuilder.newBuilder(desc).setErasureCodingPolicy("RS-6-3-1024k").build());
+      TableDescriptor desc = UTIL.getAdmin().getDescriptor(NON_EC_TABLE);
+      TableDescriptor newDesc =
+        TableDescriptorBuilder.newBuilder(desc).setErasureCodingPolicy("RS-6-3-1024k").build();
+      admin.modifyTable(newDesc);
 
       // check dirs, but files should not be changed yet
-      checkRegionDirAndFilePolicies(dfs, tableDir, "RS-6-3-1024k", null);
+      checkRegionDirAndFilePolicies(dfs, rootDir, NON_EC_TABLE, "RS-6-3-1024k", null);
 
       // compact to rewrite files with EC, then run discharger to get rid of the old non-EC files
-      UTIL.compact(TABLE, true);
+      UTIL.compact(NON_EC_TABLE, true);
       for (JVMClusterUtil.RegionServerThread regionserver : UTIL.getHBaseCluster()
         .getLiveRegionServerThreads()) {
         CompactedHFilesDischarger chore =
@@ -132,16 +172,17 @@ public class TestModifyTableErasureCodingPolicy {
       }
 
       // expect both dirs and files to be EC now
-      checkRegionDirAndFilePolicies(dfs, tableDir, "RS-6-3-1024k", "RS-6-3-1024k");
+      checkRegionDirAndFilePolicies(dfs, rootDir, NON_EC_TABLE, "RS-6-3-1024k", "RS-6-3-1024k");
 
+      newDesc = TableDescriptorBuilder.newBuilder(newDesc).setErasureCodingPolicy(null).build();
       // remove EC now
-      admin.modifyTable(desc);
+      admin.modifyTable(newDesc);
 
       // dirs should no longer be EC, but old EC files remain
-      checkRegionDirAndFilePolicies(dfs, tableDir, null, "RS-6-3-1024k");
+      checkRegionDirAndFilePolicies(dfs, rootDir, NON_EC_TABLE, null, "RS-6-3-1024k");
 
       // compact to rewrite EC files without EC, then run discharger to get rid of the old EC files
-      UTIL.compact(TABLE, true);
+      UTIL.compact(NON_EC_TABLE, true);
       for (JVMClusterUtil.RegionServerThread regionserver : UTIL.getHBaseCluster()
         .getLiveRegionServerThreads()) {
         CompactedHFilesDischarger chore =
@@ -150,16 +191,17 @@ public class TestModifyTableErasureCodingPolicy {
         chore.chore();
       }
 
-      checkRegionDirAndFilePolicies(dfs, tableDir, null, null);
+      checkRegionDirAndFilePolicies(dfs, rootDir, NON_EC_TABLE, null, null);
     }
   }
 
-  private void checkRegionDirAndFilePolicies(DistributedFileSystem dfs, Path tableDir,
-    String expectedDirPolicy, String expectedFilePolicy) throws IOException {
+  private void checkRegionDirAndFilePolicies(DistributedFileSystem dfs, Path rootDir,
+    TableName testTable, String expectedDirPolicy, String expectedFilePolicy) throws IOException {
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, testTable);
     checkPolicy(dfs, tableDir, expectedDirPolicy);
 
     int filesMatched = 0;
-    for (HRegion region : UTIL.getHBaseCluster().getRegions(TABLE)) {
+    for (HRegion region : UTIL.getHBaseCluster().getRegions(testTable)) {
       Path regionDir = new Path(tableDir, region.getRegionInfo().getEncodedName());
       checkPolicy(dfs, regionDir, expectedDirPolicy);
       RemoteIterator<LocatedFileStatus> itr = dfs.listFiles(regionDir, true);
