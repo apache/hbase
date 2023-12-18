@@ -27,14 +27,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -52,7 +49,6 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerValidationUtils;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,11 +114,6 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
             "Delete of hbase:meta column family " + Bytes.toString(family));
         }
       }
-    }
-
-    String policy = modifiedTableDescriptor.getErasureCodingPolicy();
-    if (policy != null) {
-      ErasureCodingUtils.checkAvailable(env.getMasterFileSystem().getFileSystem(), policy);
     }
 
     if (!reopenRegions) {
@@ -230,9 +221,12 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
           postModify(env, state);
           if (reopenRegions) {
             setNextState(ModifyTableState.MODIFY_TABLE_REOPEN_ALL_REGIONS);
-          } else {
-            setNextState(ModifyTableState.MODIFY_TABLE_SYNC_ERASURE_CODING_POLICY);
-          }
+          } else
+            if (ErasureCodingUtils.needsSync(unmodifiedTableDescriptor, modifiedTableDescriptor)) {
+              setNextState(ModifyTableState.MODIFY_TABLE_SYNC_ERASURE_CODING_POLICY);
+            } else {
+              return Flow.NO_MORE_STATE;
+            }
           break;
         case MODIFY_TABLE_REOPEN_ALL_REGIONS:
           if (isTableEnabled(env)) {
@@ -256,16 +250,24 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
           }
           if (deleteColumnFamilyInModify) {
             setNextState(ModifyTableState.MODIFY_TABLE_DELETE_FS_LAYOUT);
-          } else {
-            setNextState(ModifyTableState.MODIFY_TABLE_SYNC_ERASURE_CODING_POLICY);
-          }
+          } else
+            if (ErasureCodingUtils.needsSync(unmodifiedTableDescriptor, modifiedTableDescriptor)) {
+              setNextState(ModifyTableState.MODIFY_TABLE_SYNC_ERASURE_CODING_POLICY);
+            } else {
+              return Flow.NO_MORE_STATE;
+            }
           break;
         case MODIFY_TABLE_DELETE_FS_LAYOUT:
           deleteFromFs(env, unmodifiedTableDescriptor, modifiedTableDescriptor);
-          setNextState(ModifyTableState.MODIFY_TABLE_SYNC_ERASURE_CODING_POLICY);
-          break;
+          if (ErasureCodingUtils.needsSync(unmodifiedTableDescriptor, modifiedTableDescriptor)) {
+            setNextState(ModifyTableState.MODIFY_TABLE_SYNC_ERASURE_CODING_POLICY);
+            break;
+          } else {
+            return Flow.NO_MORE_STATE;
+          }
         case MODIFY_TABLE_SYNC_ERASURE_CODING_POLICY:
-          syncErasureCodingPolicy(env);
+          ErasureCodingUtils.sync(env.getMasterFileSystem().getFileSystem(),
+            env.getMasterFileSystem().getRootDir(), modifiedTableDescriptor);
           return Flow.NO_MORE_STATE;
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);
@@ -525,23 +527,6 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
     }
     addChildProcedure(env.getAssignmentManager()
       .createUnassignProceduresForClosingExcessRegionReplicas(getTableName(), newReplicaCount));
-  }
-
-  private void syncErasureCodingPolicy(MasterProcedureEnv env) throws IOException {
-    String oldPolicy = unmodifiedTableDescriptor.getErasureCodingPolicy();
-    String newPolicy = modifiedTableDescriptor.getErasureCodingPolicy();
-    if (Objects.equals(oldPolicy, newPolicy)) {
-      return;
-    }
-
-    FileSystem fileSystem = env.getMasterFileSystem().getFileSystem();
-    Path tableDir = CommonFSUtils.getTableDir(env.getMasterFileSystem().getRootDir(),
-      unmodifiedTableDescriptor.getTableName());
-    if (newPolicy == null) {
-      ErasureCodingUtils.unsetPolicy(fileSystem, tableDir);
-    } else {
-      ErasureCodingUtils.setPolicy(fileSystem, tableDir, newPolicy);
-    }
   }
 
   /**

@@ -99,15 +99,16 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
           DeleteTableProcedure.deleteFromFs(env, getTableName(), newRegions, true);
           newRegions = createFsLayout(env, tableDescriptor, newRegions);
           env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
-          setNextState(CreateTableState.CREATE_TABLE_SYNC_ERASURE_CODING_POLICY);
-          break;
-        case CREATE_TABLE_SYNC_ERASURE_CODING_POLICY:
           if (tableDescriptor.getErasureCodingPolicy() != null) {
-            final Path tableDir = CommonFSUtils.getTableDir(env.getMasterFileSystem().getRootDir(),
-              tableDescriptor.getTableName());
-            ErasureCodingUtils.setPolicy(env.getMasterFileSystem().getFileSystem(), tableDir,
-              tableDescriptor.getErasureCodingPolicy());
+            setNextState(CreateTableState.CREATE_TABLE_SET_ERASURE_CODING_POLICY);
+          } else {
+            setNextState(CreateTableState.CREATE_TABLE_ADD_TO_META);
           }
+          break;
+        case CREATE_TABLE_SET_ERASURE_CODING_POLICY:
+          ErasureCodingUtils.setPolicy(env.getMasterFileSystem().getFileSystem(),
+            env.getMasterFileSystem().getRootDir(), getTableName(),
+            tableDescriptor.getErasureCodingPolicy());
           setNextState(CreateTableState.CREATE_TABLE_ADD_TO_META);
           break;
         case CREATE_TABLE_ADD_TO_META:
@@ -282,11 +283,6 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
     // check for store file tracker configurations
     StoreFileTrackerValidationUtils.checkForCreateTable(env.getMasterConfiguration(),
       tableDescriptor);
-
-    if (tableDescriptor.getErasureCodingPolicy() != null) {
-      ErasureCodingUtils.checkAvailable(env.getMasterFileSystem().getFileSystem(),
-        tableDescriptor.getErasureCodingPolicy());
-    }
 
     return true;
   }

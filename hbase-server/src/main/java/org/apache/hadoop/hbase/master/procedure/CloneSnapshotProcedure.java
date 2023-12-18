@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
@@ -155,6 +156,16 @@ public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<C
           updateTableDescriptorWithSFT();
           newRegions = createFilesystemLayout(env, tableDescriptor, newRegions);
           env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
+          if (tableDescriptor.getErasureCodingPolicy() != null) {
+            setNextState(CloneSnapshotState.CLONE_SNAPSHOT_SET_ERASURE_CODING_POLICY);
+          } else {
+            setNextState(CloneSnapshotState.CLONE_SNAPSHOT_ADD_TO_META);
+          }
+          break;
+        case CLONE_SNAPSHOT_SET_ERASURE_CODING_POLICY:
+          ErasureCodingUtils.setPolicy(env.getMasterFileSystem().getFileSystem(),
+            env.getMasterFileSystem().getRootDir(), getTableName(),
+            tableDescriptor.getErasureCodingPolicy());
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_ADD_TO_META);
           break;
         case CLONE_SNAPSHOT_ADD_TO_META:

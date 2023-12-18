@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -70,6 +71,7 @@ public class RestoreSnapshotProcedure
   extends AbstractStateMachineTableProcedure<RestoreSnapshotState> {
   private static final Logger LOG = LoggerFactory.getLogger(RestoreSnapshotProcedure.class);
 
+  private TableDescriptor oldTableDescriptor;
   private TableDescriptor modifiedTableDescriptor;
   private List<RegionInfo> regionsToRestore = null;
   private List<RegionInfo> regionsToRemove = null;
@@ -94,18 +96,25 @@ public class RestoreSnapshotProcedure
     this(env, tableDescriptor, snapshot, false);
   }
 
-  /**
-   * Constructor
-   * @param env             MasterProcedureEnv
-   * @param tableDescriptor the table to operate on
-   * @param snapshot        snapshot to restore from
-   */
   public RestoreSnapshotProcedure(final MasterProcedureEnv env,
     final TableDescriptor tableDescriptor, final SnapshotDescription snapshot,
     final boolean restoreAcl) throws HBaseIOException {
+    this(env, tableDescriptor, tableDescriptor, snapshot, restoreAcl);
+  }
+
+  /**
+   * Constructor
+   * @param env                     MasterProcedureEnv
+   * @param modifiedTableDescriptor the table to operate on
+   * @param snapshot                snapshot to restore from
+   */
+  public RestoreSnapshotProcedure(final MasterProcedureEnv env,
+    final TableDescriptor oldTableDescriptor, final TableDescriptor modifiedTableDescriptor,
+    final SnapshotDescription snapshot, final boolean restoreAcl) throws HBaseIOException {
     super(env);
+    this.oldTableDescriptor = oldTableDescriptor;
     // This is the new schema we are going to write out as this modification.
-    this.modifiedTableDescriptor = tableDescriptor;
+    this.modifiedTableDescriptor = modifiedTableDescriptor;
     preflightChecks(env, null/* Table can be online when restore is called? */);
     // Snapshot information
     this.snapshot = snapshot;
@@ -143,8 +152,18 @@ public class RestoreSnapshotProcedure
           break;
         case RESTORE_SNAPSHOT_UPDATE_TABLE_DESCRIPTOR:
           updateTableDescriptor(env);
-          setNextState(RestoreSnapshotState.RESTORE_SNAPSHOT_WRITE_FS_LAYOUT);
+          // for restore, table dir already exists. sync EC if necessary before doing the real
+          // restore. this may be useful in certain restore scenarios where a user is explicitly
+          // trying to disable EC for some reason as part of the restore.
+          if (ErasureCodingUtils.needsSync(oldTableDescriptor, modifiedTableDescriptor)) {
+            setNextState(RestoreSnapshotState.RESTORE_SNAPSHOT_SYNC_ERASURE_CODING_POLICY);
+          } else {
+            setNextState(RestoreSnapshotState.RESTORE_SNAPSHOT_WRITE_FS_LAYOUT);
+          }
           break;
+        case RESTORE_SNAPSHOT_SYNC_ERASURE_CODING_POLICY:
+          ErasureCodingUtils.sync(env.getMasterFileSystem().getFileSystem(),
+            env.getMasterFileSystem().getRootDir(), modifiedTableDescriptor);
         case RESTORE_SNAPSHOT_WRITE_FS_LAYOUT:
           restoreSnapshot(env);
           setNextState(RestoreSnapshotState.RESTORE_SNAPSHOT_UPDATE_META);
