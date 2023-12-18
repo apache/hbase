@@ -53,6 +53,9 @@ public final class ErasureCodingUtils {
     DistributedFileSystem dfs = getDfs(conf);
     checkAvailable(dfs, policy);
 
+    // Enable the policy on a test directory. Try writing ot it to ensure that HDFS allows it
+    // This acts as a safeguard against topology issues (not enough nodes for policy, etc) and
+    // anything else. This is otherwise hard to validate more directly.
     Path globalTempDir = new Path(conf.get(HConstants.HBASE_DIR), HConstants.HBASE_TEMP_DIRECTORY);
     Path currentTempDir = createTempDir(dfs, globalTempDir);
     try {
@@ -104,12 +107,22 @@ public final class ErasureCodingUtils {
         + policies.stream().map(p -> p.getPolicy().getName()).collect(Collectors.joining(", ")));
   }
 
+  /**
+   * Check if EC policy is different between two descriptors
+   * @return true if a sync is necessary
+   */
   public static boolean needsSync(TableDescriptor oldDescriptor, TableDescriptor newDescriptor) {
     String newPolicy = oldDescriptor.getErasureCodingPolicy();
     String oldPolicy = newDescriptor.getErasureCodingPolicy();
     return !Objects.equals(oldPolicy, newPolicy);
   }
 
+  /**
+   * Sync the EC policy state from the newDescriptor onto the FS for the table dir of the provided
+   * table descriptor. If the policy is null, we will remove erasure coding from the FS for the
+   * table dir. If it's non-null, we'll set it to that policy.
+   * @param newDescriptor descriptor containing the policy and table name
+   */
   public static void sync(FileSystem fs, Path rootDir, TableDescriptor newDescriptor)
     throws IOException {
     String newPolicy = newDescriptor.getErasureCodingPolicy();

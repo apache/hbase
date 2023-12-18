@@ -164,6 +164,8 @@ public class RestoreSnapshotProcedure
         case RESTORE_SNAPSHOT_SYNC_ERASURE_CODING_POLICY:
           ErasureCodingUtils.sync(env.getMasterFileSystem().getFileSystem(),
             env.getMasterFileSystem().getRootDir(), modifiedTableDescriptor);
+          setNextState(RestoreSnapshotState.RESTORE_SNAPSHOT_WRITE_FS_LAYOUT);
+          break;
         case RESTORE_SNAPSHOT_WRITE_FS_LAYOUT:
           restoreSnapshot(env);
           setNextState(RestoreSnapshotState.RESTORE_SNAPSHOT_UPDATE_META);
