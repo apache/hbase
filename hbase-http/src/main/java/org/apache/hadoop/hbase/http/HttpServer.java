@@ -80,6 +80,7 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SecureRequestCustomi
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SymlinkAllowedResourceAliasChecker;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ErrorHandler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.HandlerCollection;
@@ -747,15 +748,10 @@ public class HttpServer implements FilterContainer {
       ServletContextHandler logContext = new ServletContextHandler(parent, "/logs");
       logContext.addServlet(AdminAuthorizedServlet.class, "/*");
       logContext.setResourceBase(logDir);
-
-      if (
-        conf.getBoolean(ServerConfigurationKeys.HBASE_JETTY_LOGS_SERVE_ALIASES,
-          ServerConfigurationKeys.DEFAULT_HBASE_JETTY_LOGS_SERVE_ALIASES)
-      ) {
-        Map<String, String> params = logContext.getInitParams();
-        params.put("org.mortbay.jetty.servlet.Default.aliases", "true");
-      }
       logContext.setDisplayName("logs");
+      configureAliasChecks(logContext,
+        conf.getBoolean(ServerConfigurationKeys.HBASE_JETTY_LOGS_SERVE_ALIASES,
+          ServerConfigurationKeys.DEFAULT_HBASE_JETTY_LOGS_SERVE_ALIASES));
       setContextAttributes(logContext, conf);
       defaultContexts.put(logContext, true);
     }
@@ -766,6 +762,37 @@ public class HttpServer implements FilterContainer {
     staticContext.setDisplayName("static");
     setContextAttributes(staticContext, conf);
     defaultContexts.put(staticContext, true);
+  }
+
+  /**
+   * This method configures the alias checks for the given ServletContextHandler based on the
+   * provided value of shouldServeAlias.<br>
+   * If shouldServeAlias is set to true, it checks if SymlinkAllowedResourceAliasChecker is already
+   * a part of the alias check list. If it is already a part of the list, no changes are made, else,
+   * it adds it to the list.<br>
+   * If shouldServeAlias is set to false, it clears all alias checks from the
+   * ServletContextHandler.<br>
+   * .
+   * @param context          The ServletContextHandler whose alias checks are to be configured
+   * @param shouldServeAlias Whether aliases should be allowed or not
+   */
+  private void configureAliasChecks(ServletContextHandler context, boolean shouldServeAlias) {
+    if (shouldServeAlias) {
+      Class aliasCheckerClass = SymlinkAllowedResourceAliasChecker.class;
+      // check if SymlinkAllowedResourceAliasChecker is already part of alias check list
+      // NOTE: we are doing this because this is already present in the context (by default)
+      if (context.getAliasChecks().stream().anyMatch(aliasCheckerClass::isInstance)) {
+        LOG.debug("{} is already part of alias check list", aliasCheckerClass.getName());
+      } else {
+        context.addAliasCheck(new SymlinkAllowedResourceAliasChecker(context));
+        LOG.debug("{} added to the alias check list", aliasCheckerClass.getName());
+      }
+      LOG.info("Serving aliases allowed for /logs context");
+    } else {
+      // if aliasing is disabled, then we should clear the alias check list
+      context.clearAliasChecks();
+      LOG.info("Serving aliases disabled for /logs context");
+    }
   }
 
   private void setContextAttributes(ServletContextHandler context, Configuration conf) {
