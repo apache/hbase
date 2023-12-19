@@ -154,13 +154,23 @@ public class TestManageTableErasureCodingPolicy {
 
   @Test
   public void testCreateTableErasureCodingSync() throws IOException {
-    try (Admin admin = UTIL.getAdmin(); Table table = UTIL.getConnection().getTable(EC_TABLE)) {
-      admin.createTable(EC_TABLE_DESC);
-      UTIL.loadTable(table, FAMILY);
+    try (Admin admin = UTIL.getAdmin()) {
+      recreateTable(admin, EC_TABLE_DESC);
       UTIL.flush(EC_TABLE);
       Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
       DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(UTIL.getConfiguration());
       checkRegionDirAndFilePolicies(dfs, rootDir, EC_TABLE, "XOR-2-1-1024k", "XOR-2-1-1024k");
+    }
+  }
+
+  private void recreateTable(Admin admin, TableDescriptor desc) throws IOException {
+    if (admin.tableExists(desc.getTableName())) {
+      admin.disableTable(desc.getTableName());
+      admin.deleteTable(desc.getTableName());
+    }
+    admin.createTable(desc);
+    try (Table table = UTIL.getConnection().getTable(desc.getTableName())) {
+      UTIL.loadTable(table, FAMILY);
     }
   }
 
@@ -230,14 +240,7 @@ public class TestManageTableErasureCodingPolicy {
       DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(UTIL.getConfiguration());
 
       // recreate EC test table and load it
-      if (admin.tableExists(EC_TABLE)) {
-        admin.disableTable(EC_TABLE);
-        admin.deleteTable(EC_TABLE);
-      }
-      admin.createTable(EC_TABLE_DESC);
-      try (Table table = UTIL.getConnection().getTable(EC_TABLE)) {
-        UTIL.loadTable(table, FAMILY);
-      }
+      recreateTable(admin, EC_TABLE_DESC);
 
       // Take a snapshot, then clone it into a new table
       admin.snapshot(snapshotName, EC_TABLE);
