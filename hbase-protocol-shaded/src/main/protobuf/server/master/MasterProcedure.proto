@@ -300,6 +300,7 @@ message RestoreSnapshotStateData {
   repeated RegionInfo region_info_for_add = 6;
   repeated RestoreParentToChildRegionsPair parent_to_child_regions_pair_list = 7;
   optional bool restore_acl = 8;
+  required TableSchema old_table_schema = 9;
 }
 
 enum DispatchMergingRegionsState {

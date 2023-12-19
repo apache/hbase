@@ -212,7 +212,7 @@ public final class TableDescriptorChecker {
 
   private static void checkCompactionPolicy(final Configuration conf, final TableDescriptor td)
     throws IOException {
-    warnOrThrowExceptionForFailure(conf, () -> {
+    warnOrThrowExceptionForFailure(false, () -> {
       // FIFO compaction has some requirements
       // Actually FCP ignores periodic major compactions
       String className = td.getValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);

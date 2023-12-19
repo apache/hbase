@@ -966,24 +966,24 @@ module Hbase
       assert_match(/12345678/, admin.describe(@test_name))
     end
 
-    define_test "alter should be able to change EC policy" do
-      command(:alter, @test_name, METHOD => 'table_att', 'ERASURE_CODING_POLICY' => "XOR-2-1-1024k")
+    define_test 'alter should be able to change EC policy' do
+      command(:alter, @test_name, METHOD => 'table_att', 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
       assert_match(/XOR-2-1-1024k/, admin.describe(@test_name))
     end
 
-    define_test "alter should be able to remove EC policy" do
-      command(:alter, @test_name, METHOD => 'table_att', 'ERASURE_CODING_POLICY' => "XOR-2-1-1024k")
+    define_test 'alter should be able to remove EC policy' do
+      command(:alter, @test_name, METHOD => 'table_att', 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
       command(:alter, @test_name, METHOD => 'table_att_unset', NAME => 'ERASURE_CODING_POLICY')
       assert_not_match(/ERASURE_CODING_POLICY/, admin.describe(@test_name))
     end
 
-    define_test "alter should be able to change EC POLICY w/o table_att" do
-      command(:alter, @test_name, 'ERASURE_CODING_POLICY' => "XOR-2-1-1024k")
+    define_test 'alter should be able to change EC POLICY w/o table_att' do
+      command(:alter, @test_name, 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
       assert_match(/XOR-2-1-1024k/, admin.describe(@test_name))
     end
 
-    define_test "alter should be able to remove EC POLICY w/o table_att" do
-      command(:alter, @test_name, 'ERASURE_CODING_POLICY' => "XOR-2-1-1024k")
+    define_test 'alter should be able to remove EC POLICY w/o table_att' do
+      command(:alter, @test_name, 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
       command(:alter, @test_name, 'ERASURE_CODING_POLICY' => nil)
       assert_not_match(/ERASURE_CODING_POLICY/, admin.describe(@test_name))
     end

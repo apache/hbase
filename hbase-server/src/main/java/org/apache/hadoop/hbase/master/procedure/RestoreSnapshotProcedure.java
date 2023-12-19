@@ -260,7 +260,8 @@ public class RestoreSnapshotProcedure
 
     RestoreSnapshotStateData.Builder restoreSnapshotMsg = RestoreSnapshotStateData.newBuilder()
       .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser())).setSnapshot(this.snapshot)
-      .setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor));
+      .setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor))
+      .setOldTableSchema(ProtobufUtil.toTableSchema(oldTableDescriptor));
 
     if (regionsToRestore != null) {
       for (RegionInfo hri : regionsToRestore) {
@@ -302,6 +303,7 @@ public class RestoreSnapshotProcedure
       serializer.deserialize(RestoreSnapshotStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(restoreSnapshotMsg.getUserInfo()));
     snapshot = restoreSnapshotMsg.getSnapshot();
+    oldTableDescriptor = ProtobufUtil.toTableDescriptor(restoreSnapshotMsg.getOldTableSchema());
     modifiedTableDescriptor =
       ProtobufUtil.toTableDescriptor(restoreSnapshotMsg.getModifiedTableSchema());
 
