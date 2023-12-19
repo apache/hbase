@@ -683,13 +683,13 @@ module Hbase
 
       # Insert test data
       @test_table.put(1, "x:a", 1)
-      sleep(1.0/10.0)
+      sleep(1.0/1000.0)
       @test_table.put(2, "x:raw1", 11)
-      sleep(1.0/10.0)
+      sleep(1.0/1000.0)
       @test_table.put(2, "x:raw1", 11)
-      sleep(1.0/10.0)
+      sleep(1.0/1000.0)
       @test_table.put(2, "x:raw1", 11)
-      sleep(1.0/10.0)
+      sleep(1.0/1000.0)
       @test_table.put(2, "x:raw1", 11)
 
       args = {}
