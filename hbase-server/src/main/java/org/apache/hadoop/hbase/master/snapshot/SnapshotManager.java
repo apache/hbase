@@ -916,9 +916,10 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     }
 
     try {
+      TableDescriptor oldDescriptor = master.getTableDescriptors().get(tableName);
       long procId = master.getMasterProcedureExecutor().submitProcedure(
         new RestoreSnapshotProcedure(master.getMasterProcedureExecutor().getEnvironment(),
-          tableDescriptor, snapshot, restoreAcl),
+          oldDescriptor, tableDescriptor, snapshot, restoreAcl),
         nonceKey);
       this.restoreTableToProcIdMap.put(tableName, procId);
       return procId;

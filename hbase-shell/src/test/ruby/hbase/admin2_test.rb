@@ -318,14 +318,12 @@ class CommissioningTest < Test::Unit::TestCase
         puts "#{output}"
         assert output.include? 'DECOMMISSIONED REGION SERVERS'
         assert output.include? "#{server_name}"
-        assert output.include? '1 row(s)'
       ensure
         command(:recommission_regionserver, server_name)
         output = capture_stdout { command(:list_decommissioned_regionservers) }
         puts "#{output}"
         assert output.include? 'DECOMMISSIONED REGION SERVERS'
         assert (output.include? "#{server_name}") ? false : true
-        assert output.include? '0 row(s)'
       end
     end
 

@@ -1505,7 +1505,10 @@ module Hbase
     end
 
     # Parse arguments and update HTableDescriptor accordingly
+    # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     def update_htd_from_arg(htd, arg)
+      htd.setErasureCodingPolicy(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::ERASURE_CODING_POLICY)) \
+        if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::ERASURE_CODING_POLICY)
       htd.setOwnerString(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::OWNER)) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::OWNER)
       htd.setMaxFileSize(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::MAX_FILESIZE)) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::MAX_FILESIZE)
       htd.setReadOnly(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::READONLY))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::READONLY)

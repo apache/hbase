@@ -281,6 +281,15 @@ public interface TableDescriptor {
   boolean isReadOnly();
 
   /**
+   * The HDFS erasure coding policy for a table. This will be set on the data dir of the table, and
+   * is an alternative to normal replication which takes less space at the cost of locality.
+   * @return the current policy, or null if undefined
+   */
+  default String getErasureCodingPolicy() {
+    return null;
+  }
+
+  /**
    * Returns Name of this table and then a map of all of the column family descriptors (with only
    * the non-default column family attributes)
    */

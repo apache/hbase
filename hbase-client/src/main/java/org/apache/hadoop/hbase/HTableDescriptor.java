@@ -77,6 +77,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public static final String NORMALIZER_TARGET_REGION_SIZE_MB =
     TableDescriptorBuilder.NORMALIZER_TARGET_REGION_SIZE_MB;
   public static final String PRIORITY = TableDescriptorBuilder.PRIORITY;
+
+  public static final String ERASURE_CODING_POLICY = TableDescriptorBuilder.ERASURE_CODING_POLICY;
   public static final boolean DEFAULT_READONLY = TableDescriptorBuilder.DEFAULT_READONLY;
   public static final boolean DEFAULT_COMPACTION_ENABLED =
     TableDescriptorBuilder.DEFAULT_COMPACTION_ENABLED;
@@ -832,6 +834,28 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   @Deprecated
   public String getOwnerString() {
     return delegatee.getOwnerString();
+  }
+
+  /**
+   * Sets the HDFS erasure coding policy for the table. This will be propagated to HDFS for the data
+   * dir of the table. Erasure coding is an alternative to normal replication which takes less space
+   * at the cost of locality. The policy must be available and enabled on the hdfs cluster before
+   * being set.
+   * @param policy the policy to set, or null to disable erasure coding
+   */
+  public HTableDescriptor setErasureCodingPolicy(String policy) {
+    getDelegateeForModification().setErasureCodingPolicy(policy);
+    return this;
+  }
+
+  /**
+   * The HDFS erasure coding policy for a table. This will be set on the data dir of the table, and
+   * is an alternative to normal replication which takes less space at the cost of locality.
+   * @return the current policy, or null if undefined
+   */
+  @Override
+  public String getErasureCodingPolicy() {
+    return delegatee.getErasureCodingPolicy();
   }
 
   /**
