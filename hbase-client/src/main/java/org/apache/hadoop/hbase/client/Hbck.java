@@ -64,7 +64,7 @@ public interface Hbck extends Abortable, Closeable {
    * hooks.
    * @param override           You need to add override for unset of the procedure from
    *                           RegionStateNode without byPassing preTransitCheck
-   * @param forceOverride      You need to add forceOverride for case where a region has previously
+   * @param force              You need to add force for case where a region has previously
    *                           been bypassed. When a Procedure has been bypassed, a Procedure will
    *                           have completed but no other Procedure will be able to make progress
    *                           on the target entity (intentionally). Skips preTransitCheck only when
@@ -73,11 +73,11 @@ public interface Hbck extends Abortable, Closeable {
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example
    *                           of what a random user-space encoded Region name looks like.
    */
-  List<Long> assigns(List<String> encodedRegionNames, boolean override, boolean forceOverride)
+  List<Long> assigns(List<String> encodedRegionNames, boolean override, boolean force)
     throws IOException;
 
   default List<Long> assigns(List<String> encodedRegionNames, boolean override) throws IOException {
-    return assigns(encodedRegionNames, override, false);
+    return assigns(encodedRegionNames, override, true);
   }
 
   default List<Long> assigns(List<String> encodedRegionNames) throws IOException {
@@ -91,7 +91,7 @@ public interface Hbck extends Abortable, Closeable {
    * Coprocessor hooks.
    * @param override           You need to add override for unset of the procedure from
    *                           RegionStateNode without byPassing preTransitCheck
-   * @param forceOverride      You need to add forceOverride for case where a region has previously
+   * @param force              You need to add force for case where a region has previously
    *                           been bypassed. When a Procedure has been bypassed, a Procedure will
    *                           have completed but no other Procedure will be able to make progress
    *                           on the target entity (intentionally). Skips preTransitCheck only when
@@ -100,16 +100,16 @@ public interface Hbck extends Abortable, Closeable {
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example
    *                           of what a random user-space encoded Region name looks like.
    */
-  List<Long> unassigns(List<String> encodedRegionNames, boolean override, boolean forceOverride)
+  List<Long> unassigns(List<String> encodedRegionNames, boolean override, boolean force)
     throws IOException;
 
   default List<Long> unassigns(List<String> encodedRegionNames, boolean override)
     throws IOException {
-    return unassigns(encodedRegionNames, override, false);
+    return unassigns(encodedRegionNames, override, true);
   }
 
   default List<Long> unassigns(List<String> encodedRegionNames) throws IOException {
-    return unassigns(encodedRegionNames, false, false);
+    return unassigns(encodedRegionNames, false, true);
   }
 
   /**

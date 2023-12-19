@@ -136,10 +136,10 @@ public class HBaseHbck implements Hbck {
 
   @Override
   public List<Long> assigns(List<String> encodedRegionNames, boolean override,
-    boolean forceOverride) throws IOException {
+    boolean force) throws IOException {
     try {
       AssignsResponse response = this.hbck.assigns(rpcControllerFactory.newController(),
-        RequestConverter.toAssignRegionsRequest(encodedRegionNames, override, forceOverride));
+        RequestConverter.toAssignRegionsRequest(encodedRegionNames, override, force));
       return response.getPidList();
     } catch (ServiceException se) {
       LOG.debug(toCommaDelimitedString(encodedRegionNames), se);
@@ -149,10 +149,10 @@ public class HBaseHbck implements Hbck {
 
   @Override
   public List<Long> unassigns(List<String> encodedRegionNames, boolean override,
-    boolean forceOverride) throws IOException {
+    boolean force) throws IOException {
     try {
       UnassignsResponse response = this.hbck.unassigns(rpcControllerFactory.newController(),
-        RequestConverter.toUnassignRegionsRequest(encodedRegionNames, override, forceOverride));
+        RequestConverter.toUnassignRegionsRequest(encodedRegionNames, override, force));
       return response.getPidList();
     } catch (ServiceException se) {
       LOG.debug(toCommaDelimitedString(encodedRegionNames), se);

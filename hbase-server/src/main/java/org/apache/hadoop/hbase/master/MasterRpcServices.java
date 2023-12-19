@@ -2714,7 +2714,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     MasterProtos.AssignsResponse.Builder responseBuilder =
       MasterProtos.AssignsResponse.newBuilder();
     final boolean override = request.getOverride();
-    final boolean forceOverride = request.getForceOverride();
+    final boolean force = request.getForce();
     LOG.info("{} assigns, override={}", server.getClientIdAuditPrefix(), override);
     for (HBaseProtos.RegionSpecifier rs : request.getRegionList()) {
       final RegionInfo info = getRegionInfo(rs);
@@ -2723,7 +2723,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         continue;
       }
       responseBuilder
-        .addPid(Optional.ofNullable(am.createOneAssignProcedure(info, override, forceOverride))
+        .addPid(Optional.ofNullable(am.createOneAssignProcedure(info, override, force))
           .map(pe::submitProcedure).orElse(Procedure.NO_PROC_ID));
     }
     return responseBuilder.build();
@@ -2743,7 +2743,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     MasterProtos.UnassignsResponse.Builder responseBuilder =
       MasterProtos.UnassignsResponse.newBuilder();
     final boolean override = request.getOverride();
-    final boolean forceOverride = request.getForceOverride();
+    final boolean force = request.getForce();
     LOG.info("{} unassigns, override={}", server.getClientIdAuditPrefix(), override);
     for (HBaseProtos.RegionSpecifier rs : request.getRegionList()) {
       final RegionInfo info = getRegionInfo(rs);
@@ -2752,7 +2752,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         continue;
       }
       responseBuilder
-        .addPid(Optional.ofNullable(am.createOneUnassignProcedure(info, override, forceOverride))
+        .addPid(Optional.ofNullable(am.createOneUnassignProcedure(info, override, force))
           .map(pe::submitProcedure).orElse(Procedure.NO_PROC_ID));
     }
     return responseBuilder.build();

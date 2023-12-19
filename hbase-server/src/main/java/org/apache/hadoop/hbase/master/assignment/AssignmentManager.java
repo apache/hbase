@@ -757,12 +757,12 @@ public class AssignmentManager {
    * @param override If false, check RegionState is appropriate for assign; if not throw exception.
    */
   private TransitRegionStateProcedure createAssignProcedure(RegionInfo regionInfo, ServerName sn,
-    boolean override, boolean forceOverride) throws IOException {
+    boolean override, boolean force) throws IOException {
     RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
     regionNode.lock();
     try {
       if (override) {
-        if (!forceOverride) {
+        if (!force) {
           preTransitCheck(regionNode, STATES_EXPECTED_ON_ASSIGN);
         }
         if (regionNode.getProcedure() != null) {
@@ -957,10 +957,10 @@ public class AssignmentManager {
    * @return an assign or null
    */
   public TransitRegionStateProcedure createOneAssignProcedure(RegionInfo ri, boolean override,
-    boolean forceOverride) {
+    boolean force) {
     TransitRegionStateProcedure trsp = null;
     try {
-      trsp = createAssignProcedure(ri, null, override, forceOverride);
+      trsp = createAssignProcedure(ri, null, override, force);
     } catch (IOException ioe) {
       LOG.info(
         "Failed {} assign, override={}"
@@ -975,13 +975,13 @@ public class AssignmentManager {
    * @return an unassign or null
    */
   public TransitRegionStateProcedure createOneUnassignProcedure(RegionInfo ri, boolean override,
-    boolean forceOverride) {
+    boolean force) {
     RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(ri);
     TransitRegionStateProcedure trsp = null;
     regionNode.lock();
     try {
       if (override) {
-        if (!forceOverride) {
+        if (!force) {
           preTransitCheck(regionNode, STATES_EXPECTED_ON_UNASSIGN_OR_MOVE);
         }
         if (regionNode.getProcedure() != null) {

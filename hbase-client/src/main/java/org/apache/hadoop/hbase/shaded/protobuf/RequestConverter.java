@@ -1590,17 +1590,17 @@ public final class RequestConverter {
 
   // HBCK2
   public static MasterProtos.AssignsRequest toAssignRegionsRequest(List<String> encodedRegionNames,
-    boolean override, boolean forceOverride) {
+    boolean override, boolean force) {
     MasterProtos.AssignsRequest.Builder b = MasterProtos.AssignsRequest.newBuilder();
     return b.addAllRegion(toEncodedRegionNameRegionSpecifiers(encodedRegionNames))
-      .setOverride(override).setForceOverride(forceOverride).build();
+      .setOverride(override).setForce(force).build();
   }
 
   public static MasterProtos.UnassignsRequest toUnassignRegionsRequest(
-    List<String> encodedRegionNames, boolean override, boolean forceOverride) {
+    List<String> encodedRegionNames, boolean override, boolean force) {
     MasterProtos.UnassignsRequest.Builder b = MasterProtos.UnassignsRequest.newBuilder();
     return b.addAllRegion(toEncodedRegionNameRegionSpecifiers(encodedRegionNames))
-      .setOverride(override).setForceOverride(forceOverride).build();
+      .setOverride(override).setForce(force).build();
   }
 
   public static MasterProtos.ScheduleServerCrashProcedureRequest
