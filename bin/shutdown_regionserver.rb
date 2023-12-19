@@ -24,7 +24,6 @@
 
 include Java
 java_import org.apache.hadoop.hbase.HBaseConfiguration
-java_import org.apache.hadoop.hbase.client.HBaseAdmin
 java_import org.apache.hadoop.hbase.client.ConnectionFactory
 
 def usage(msg = nil)

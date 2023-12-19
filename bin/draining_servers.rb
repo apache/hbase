@@ -25,7 +25,6 @@ include Java
 
 java_import org.apache.hadoop.hbase.HBaseConfiguration
 java_import org.apache.hadoop.hbase.client.ConnectionFactory
-java_import org.apache.hadoop.hbase.client.HBaseAdmin
 java_import org.apache.hadoop.hbase.zookeeper.ZKUtil
 java_import org.apache.hadoop.hbase.zookeeper.ZNodePaths
 java_import org.slf4j.LoggerFactory

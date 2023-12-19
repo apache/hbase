@@ -27,10 +27,8 @@ include Java
 java_import org.apache.hadoop.conf.Configuration
 java_import org.apache.hadoop.hbase.HBaseConfiguration
 java_import org.apache.hadoop.hbase.HConstants
-java_import org.apache.hadoop.hbase.HTableDescriptor
 java_import org.apache.hadoop.hbase.TableName
 java_import org.apache.hadoop.hbase.client.ConnectionFactory
-java_import org.apache.hadoop.hbase.client.HBaseAdmin
 java_import org.slf4j.LoggerFactory
 
 # Name of this script
@@ -45,7 +43,7 @@ end
 def copy(src, dst, table)
   # verify if table exists in source cluster
   begin
-    t = src.getTableDescriptor(TableName.valueOf(table))
+    t = src.getDescriptor(TableName.valueOf(table))
   rescue org.apache.hadoop.hbase.TableNotFoundException
     puts format("Source table \"%s\" doesn't exist, skipping.", table)
     return
