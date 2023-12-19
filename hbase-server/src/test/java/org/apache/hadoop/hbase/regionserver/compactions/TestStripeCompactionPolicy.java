@@ -182,7 +182,7 @@ public class TestStripeCompactionPolicy {
         if (!filesCompacting.isEmpty()) {
           return null;
         }
-        return selectSingleStripeCompaction(si, false, false, isOffpeak);
+        return selectSingleStripeCompaction(si, false, false, isOffpeak, false);
       }
 
       @Override
@@ -227,6 +227,43 @@ public class TestStripeCompactionPolicy {
     si = createStripesWithSizes(0, 0, new Long[] { 5L }, new Long[] { 50L, 4L, 4L, 4L, 4L });
     sfs = si.getStripes().get(1).subList(1, 5);
     verifyCompaction(policy, si, sfs, null, 1, null, si.getStartRow(1), si.getEndRow(1), true);
+  }
+
+  @Test
+  public void testMajorStripeCompaction() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.unset("hbase.hstore.compaction.min.size");
+    conf.setLong("hbase.hstore.compaction.max.size", 100L);
+    conf.setFloat(CompactionConfiguration.HBASE_HSTORE_COMPACTION_RATIO_KEY, 1.0F);
+    conf.setInt(StripeStoreConfig.MIN_FILES_L0_KEY, 5);
+    conf.setInt(StripeStoreConfig.MIN_FILES_KEY, 5);
+    conf.setInt(StripeStoreConfig.MAX_FILES_KEY, 20);
+    conf.setLong(StripeStoreConfig.SIZE_TO_SPLIT_KEY, 1000L);
+
+    StoreConfigInformation sci = mock(StoreConfigInformation.class);
+    when(sci.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    StripeStoreConfig ssc = new StripeStoreConfig(conf, sci);
+    StripeCompactionPolicy policy = new StripeCompactionPolicy(conf, sci, ssc);
+
+    StripeInformationProvider si = createStripesWithSizes(3, 10L,
+      new Long[] { 2L, 3L, 20L, 40L }, new Long[] { 3L, 4L, 27L, 30L, 40L, 100L }, new Long[] { 5L, 1L, 20L });
+
+    StripeCompactionPolicy.StripeCompactionRequest request =
+      policy.selectCompaction(si, al(), false, false, false);
+    assertNull(request);
+    // enable major, Pick the right Stripe, total size <= hbase.hstore.compaction.max.size
+    StripeCompactionPolicy.StripeCompactionRequest request2 =
+      policy.selectCompaction(si, al(), false, false, true);
+    assertNotNull(request2);
+    assertFalse(request2.getRequest().isMajor());
+    assertEquals(5, request2.getRequest().getFiles().size());
+    // The user executes the Major command through the HBase shell,
+    // Forcibly merge all store files under Stripe, including L0
+    StripeCompactionPolicy.StripeCompactionRequest request3 =
+      policy.selectCompaction(si, al(), true, false, true);
+    assertNotNull(request3);
+    assertTrue(request3.getRequest().isMajor());
+    assertEquals(16, request3.getRequest().getFiles().size());
   }
 
   @Test

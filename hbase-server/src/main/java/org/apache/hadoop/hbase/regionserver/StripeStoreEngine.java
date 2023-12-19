@@ -81,7 +81,8 @@ public class StripeStoreEngine extends
     public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
       boolean mayUseOffPeak, boolean forceMajor) throws IOException {
       this.stripeRequest =
-        compactionPolicy.selectCompaction(storeFileManager, filesCompacting, mayUseOffPeak);
+        compactionPolicy.selectCompaction(storeFileManager, filesCompacting, isUserCompaction,
+        mayUseOffPeak, forceMajor);
       this.request = (this.stripeRequest == null)
         ? new CompactionRequestImpl(new ArrayList<>())
         : this.stripeRequest.getRequest();

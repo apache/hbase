@@ -99,8 +99,8 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     return new StripeStoreFlusher.BoundaryStripeFlushRequest(comparator, si.getStripeBoundaries());
   }
 
-  public StripeCompactionRequest selectCompaction(StripeInformationProvider si,
-    List<HStoreFile> filesCompacting, boolean isOffpeak) throws IOException {
+  public StripeCompactionRequest selectCompaction(StripeInformationProvider si, List<HStoreFile> filesCompacting,
+    boolean isUserCompaction, boolean isOffpeak, boolean forceMajor) throws IOException {
     // TODO: first cut - no parallel compactions. To have more fine grained control we
     // probably need structure more sophisticated than a list.
     if (!filesCompacting.isEmpty()) {
@@ -125,6 +125,21 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       return request;
     }
 
+    if (forceMajor && isUserCompaction) {
+      if (allFiles == null || allFiles.isEmpty()) {
+        LOG.debug("There is no store file to force a major compaction.");
+        return null;
+      }
+      LOG.debug("The user enforces a major compaction; compacting all files");
+      long targetKvs = estimateTargetKvs(allFiles, config.getInitialCount()).getFirst();
+      SplitStripeCompactionRequest request =
+        new SplitStripeCompactionRequest(allFiles, OPEN_KEY, OPEN_KEY, targetKvs);
+      request.setMajorRangeFull();
+      request.getRequest().setOffPeak(isOffpeak);
+      request.getRequest().setIsMajor(true, true);
+      return request;
+    }
+
     int stripeCount = si.getStripeCount();
     List<HStoreFile> l0Files = si.getLevel0Files();
 
@@ -143,7 +158,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       if (!canDropDeletesNoL0) {
         // If we need to compact L0, see if we can add something to it, and drop deletes.
         StripeCompactionRequest result =
-          selectSingleStripeCompaction(si, !shouldSelectL0Files(si), canDropDeletesNoL0, isOffpeak);
+          selectSingleStripeCompaction(si, !shouldSelectL0Files(si), canDropDeletesNoL0, isOffpeak, forceMajor);
         if (result != null) {
           return result;
         }
@@ -160,7 +175,12 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
     // Ok, nothing special here, let's see if we need to do a common compaction.
     // This will also split the stripes that are too big if needed.
-    return selectSingleStripeCompaction(si, false, canDropDeletesNoL0, isOffpeak);
+    return selectSingleStripeCompaction(si, false, canDropDeletesNoL0, isOffpeak, forceMajor);
+  }
+
+  public StripeCompactionRequest selectCompaction(StripeInformationProvider si,
+          List<HStoreFile> filesCompacting, boolean isOffpeak) throws IOException {
+    return selectCompaction(si, filesCompacting, false, isOffpeak, false);
   }
 
   public boolean needsCompactions(StripeInformationProvider si, List<HStoreFile> filesCompacting) {
@@ -194,7 +214,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
   }
 
   protected StripeCompactionRequest selectSingleStripeCompaction(StripeInformationProvider si,
-    boolean includeL0, boolean canDropDeletesWithoutL0, boolean isOffpeak) throws IOException {
+    boolean includeL0, boolean canDropDeletesWithoutL0, boolean isOffpeak, boolean forceMajor) throws IOException {
     ArrayList<ImmutableList<HStoreFile>> stripes = si.getStripes();
 
     int bqIndex = -1;
@@ -205,7 +225,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       // If we want to compact L0 to drop deletes, we only want whole-stripe compactions.
       // So, pass includeL0 as 2nd parameter to indicate that.
       List<HStoreFile> selection = selectSimpleCompaction(stripes.get(i),
-        !canDropDeletesWithoutL0 && includeL0, isOffpeak, false);
+        !canDropDeletesWithoutL0 && includeL0, isOffpeak, forceMajor);
       if (selection.isEmpty()) continue;
       long size = 0;
       for (HStoreFile sf : selection) {
@@ -260,6 +280,11 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       req = new SplitStripeCompactionRequest(filesToCompact, si.getStartRow(bqIndex),
         si.getEndRow(bqIndex), targetCount, targetKvs);
     }
+    boolean isTryingMajor =
+      (((forceMajor && hasAllFiles) || shouldPerformMajorCompaction(filesToCompact))
+      && (filesToCompact.size() < comConf.getMaxFilesToCompact()));
+    req.getRequest().setIsMajor(isTryingMajor, hasAllFiles);
+
     if (hasAllFiles && (canDropDeletesWithoutL0 || includeL0)) {
       req.setMajorRange(si.getStartRow(bqIndex), si.getEndRow(bqIndex));
     }
