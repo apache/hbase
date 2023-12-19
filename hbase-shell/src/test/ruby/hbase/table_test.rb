@@ -681,11 +681,15 @@ module Hbase
       create_test_table(@test_name_raw)
       @test_table = table(@test_name_raw)
 
-      # Instert test data
+      # Insert test data
       @test_table.put(1, "x:a", 1)
+      sleep(1.0/10.0)
       @test_table.put(2, "x:raw1", 11)
+      sleep(1.0/10.0)
       @test_table.put(2, "x:raw1", 11)
+      sleep(1.0/10.0)
       @test_table.put(2, "x:raw1", 11)
+      sleep(1.0/10.0)
       @test_table.put(2, "x:raw1", 11)
 
       args = {}
