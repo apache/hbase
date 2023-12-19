@@ -56,6 +56,7 @@ enum CreateTableState {
   CREATE_TABLE_ASSIGN_REGIONS = 4;
   CREATE_TABLE_UPDATE_DESC_CACHE = 5;
   CREATE_TABLE_POST_OPERATION = 6;
+  CREATE_TABLE_SET_ERASURE_CODING_POLICY = 7;
 }
 
 message CreateTableStateData {
@@ -74,6 +75,7 @@ enum ModifyTableState {
   MODIFY_TABLE_REOPEN_ALL_REGIONS = 7;
   MODIFY_TABLE_CLOSE_EXCESS_REPLICAS = 8;
   MODIFY_TABLE_ASSIGN_NEW_REPLICAS = 9;
+  MODIFY_TABLE_SYNC_ERASURE_CODING_POLICY = 10;
 }
 
 message ModifyTableStateData {
@@ -267,6 +269,7 @@ enum CloneSnapshotState {
   CLONE_SNAPSHOT_UPDATE_DESC_CACHE = 5;
   CLONE_SNAPSHOT_POST_OPERATION = 6;
   CLONE_SNAPHOST_RESTORE_ACL = 7;
+  CLONE_SNAPSHOT_SET_ERASURE_CODING_POLICY = 8;
 }
 
 message CloneSnapshotStateData {
@@ -285,6 +288,7 @@ enum RestoreSnapshotState {
   RESTORE_SNAPSHOT_WRITE_FS_LAYOUT = 3;
   RESTORE_SNAPSHOT_UPDATE_META = 4;
   RESTORE_SNAPSHOT_RESTORE_ACL = 5;
+  RESTORE_SNAPSHOT_SYNC_ERASURE_CODING_POLICY = 6;
 }
 
 message RestoreSnapshotStateData {
@@ -296,6 +300,7 @@ message RestoreSnapshotStateData {
   repeated RegionInfo region_info_for_add = 6;
   repeated RestoreParentToChildRegionsPair parent_to_child_regions_pair_list = 7;
   optional bool restore_acl = 8;
+  required TableSchema old_table_schema = 9;
 }
 
 enum DispatchMergingRegionsState {

@@ -86,6 +86,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
     TableDescriptorBuilder.DEFAULT_REGION_REPLICATION;
   public static final boolean DEFAULT_REGION_MEMSTORE_REPLICATION =
     TableDescriptorBuilder.DEFAULT_REGION_MEMSTORE_REPLICATION;
+
+  public static final String ERASURE_CODING_POLICY = TableDescriptorBuilder.ERASURE_CODING_POLICY;
   protected final ModifyableTableDescriptor delegatee;
 
   /**
@@ -258,6 +260,27 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public HTableDescriptor setCompactionEnabled(final boolean isEnable) {
     getDelegateeForModification().setCompactionEnabled(isEnable);
     return this;
+  }
+
+  /**
+   * Sets the HDFS erasure coding policy for the table. This will be propagated to HDFS for the data
+   * dir of the table. Erasure coding is an alternative to normal replication which takes less space
+   * at the cost of locality. The policy must be available and enabled on the hdfs cluster before
+   * being set.
+   * @param policy the policy to set, or null to disable erasure coding
+   */
+  public void setErasureCodingPolicy(final String policy) {
+    getDelegateeForModification().setErasureCodingPolicy(policy);
+  }
+
+  /**
+   * The HDFS erasure coding policy for a table. This will be set on the data dir of the table, and
+   * is an alternative to normal replication which takes less space at the cost of locality.
+   * @return the current policy, or null if undefined
+   */
+  @Override
+  public String getErasureCodingPolicy() {
+    return delegatee.getErasureCodingPolicy();
   }
 
   /**
