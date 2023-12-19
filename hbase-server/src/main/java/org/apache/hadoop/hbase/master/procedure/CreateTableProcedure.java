@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -98,6 +99,16 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
           DeleteTableProcedure.deleteFromFs(env, getTableName(), newRegions, true);
           newRegions = createFsLayout(env, tableDescriptor, newRegions);
           env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
+          if (tableDescriptor.getErasureCodingPolicy() != null) {
+            setNextState(CreateTableState.CREATE_TABLE_SET_ERASURE_CODING_POLICY);
+          } else {
+            setNextState(CreateTableState.CREATE_TABLE_ADD_TO_META);
+          }
+          break;
+        case CREATE_TABLE_SET_ERASURE_CODING_POLICY:
+          ErasureCodingUtils.setPolicy(env.getMasterFileSystem().getFileSystem(),
+            env.getMasterFileSystem().getRootDir(), getTableName(),
+            tableDescriptor.getErasureCodingPolicy());
           setNextState(CreateTableState.CREATE_TABLE_ADD_TO_META);
           break;
         case CREATE_TABLE_ADD_TO_META:
