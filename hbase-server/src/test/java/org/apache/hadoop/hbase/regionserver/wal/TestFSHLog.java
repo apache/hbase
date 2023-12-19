@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -196,9 +197,10 @@ public class TestFSHLog extends AbstractTestFSWAL {
     }
 
     final String name = this.name.getMethodName();
-    try (CustomFSHLog log = new CustomFSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
-      HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
-      log.setWriter(new FailingWriter());
+    Configuration conf = new Configuration(CONF);
+    conf.set(FSHLogProvider.WRITER_IMPL, FailingWriter.class.getName());
+    try (CustomFSHLog log = new CustomFSHLog(FS, CommonFSUtils.getRootDir(conf), name,
+      HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null, null)) {
       Field ringBufferEventHandlerField = FSHLog.class.getDeclaredField("ringBufferEventHandler");
       ringBufferEventHandlerField.setAccessible(true);
       FSHLog.RingBufferEventHandler ringBufferEventHandler =
@@ -208,7 +210,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       try {
         SyncFuture future0 = log.publishSyncOnRingBuffer();
         // Wait for the sync to be done.
-        Waiter.waitFor(CONF, TEST_TIMEOUT_MS, future0::isDone);
+        Waiter.waitFor(conf, TEST_TIMEOUT_MS, future0::isDone);
         // Publish another sync from the same thread, this should not overwrite the done sync.
         SyncFuture future1 = log.publishSyncOnRingBuffer();
         assertFalse(future1.isDone());
@@ -217,7 +219,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
         // Wait for the safe point to be reached.
         // With the deadlock in HBASE-25984, this is never possible, thus blocking the sync
         // pipeline.
-        Waiter.waitFor(CONF, TEST_TIMEOUT_MS, latch::isSafePointAttained);
+        Waiter.waitFor(conf, TEST_TIMEOUT_MS, latch::isSafePointAttained);
       } finally {
         // Force release the safe point, for the clean up.
         latch.releaseSafePoint();
