@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -114,6 +115,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
         }
       }
     }
+
     if (!reopenRegions) {
       if (this.unmodifiedTableDescriptor == null) {
         throw new HBaseIOException(
@@ -219,9 +221,12 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
           postModify(env, state);
           if (reopenRegions) {
             setNextState(ModifyTableState.MODIFY_TABLE_REOPEN_ALL_REGIONS);
-          } else {
-            return Flow.NO_MORE_STATE;
-          }
+          } else
+            if (ErasureCodingUtils.needsSync(unmodifiedTableDescriptor, modifiedTableDescriptor)) {
+              setNextState(ModifyTableState.MODIFY_TABLE_SYNC_ERASURE_CODING_POLICY);
+            } else {
+              return Flow.NO_MORE_STATE;
+            }
           break;
         case MODIFY_TABLE_REOPEN_ALL_REGIONS:
           if (isTableEnabled(env)) {
@@ -245,12 +250,24 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
           }
           if (deleteColumnFamilyInModify) {
             setNextState(ModifyTableState.MODIFY_TABLE_DELETE_FS_LAYOUT);
-          } else {
-            return Flow.NO_MORE_STATE;
-          }
+          } else
+            if (ErasureCodingUtils.needsSync(unmodifiedTableDescriptor, modifiedTableDescriptor)) {
+              setNextState(ModifyTableState.MODIFY_TABLE_SYNC_ERASURE_CODING_POLICY);
+            } else {
+              return Flow.NO_MORE_STATE;
+            }
           break;
         case MODIFY_TABLE_DELETE_FS_LAYOUT:
           deleteFromFs(env, unmodifiedTableDescriptor, modifiedTableDescriptor);
+          if (ErasureCodingUtils.needsSync(unmodifiedTableDescriptor, modifiedTableDescriptor)) {
+            setNextState(ModifyTableState.MODIFY_TABLE_SYNC_ERASURE_CODING_POLICY);
+            break;
+          } else {
+            return Flow.NO_MORE_STATE;
+          }
+        case MODIFY_TABLE_SYNC_ERASURE_CODING_POLICY:
+          ErasureCodingUtils.sync(env.getMasterFileSystem().getFileSystem(),
+            env.getMasterFileSystem().getRootDir(), modifiedTableDescriptor);
           return Flow.NO_MORE_STATE;
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);

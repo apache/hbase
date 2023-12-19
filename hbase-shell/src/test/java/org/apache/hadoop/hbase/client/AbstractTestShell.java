@@ -21,11 +21,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 import org.junit.AfterClass;
@@ -99,7 +101,11 @@ public abstract class AbstractTestShell {
     setUpConfig();
 
     // Start mini cluster
-    TEST_UTIL.startMiniCluster(1);
+    // 3 datanodes needed for erasure coding checks
+    TEST_UTIL.startMiniCluster(3);
+    DistributedFileSystem dfs =
+      (DistributedFileSystem) FileSystem.get(TEST_UTIL.getConfiguration());
+    dfs.enableErasureCodingPolicy("XOR-2-1-1024k");
 
     setUpJRubyRuntime();
   }
