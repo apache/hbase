@@ -603,14 +603,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return new DatanodeInfo[0];
   }
 
-  Writer getWriter() {
-    return this.writer;
-  }
-
-  void setWriter(Writer writer) {
-    this.writer = writer;
-  }
-
   @Override
   protected Writer createCombinedWriter(Writer localWriter, Writer remoteWriter) {
     // put remote writer first as usually it will cost more time to finish, so we write to it first

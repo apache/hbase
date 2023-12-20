@@ -143,3 +143,22 @@ example, that would be as follows:
 ----
 alter 'my-table', CONFIGURATION => {'hbase.store.file-tracker.impl' => 'FILE'}
 ----
+
+### Specifying trackers during snapshot recovery
+
+It's also possible to specify a given store file tracking implementation when recovering a snapshot
+using the _CLONE_SFT_ option of  _clone_snasphot_ command. This is useful when recovering old
+snapshots, taken prior to a change in the global configuration, or if the snapshot has been
+imported from a different cluster that had a different store file tracking setting.
+Because snapshots preserve table and colum family descriptors, a simple restore would reload
+the original configuration, requiring the additional steps described above to convert the
+table/column family to the desired tracker implementation.
+An example of how to use _clone_snapshot_ to specify the *FILE* tracker implementation
+is shown below:
+
+----
+clone_snapshot 'snapshotName', 'namespace:tableName', {CLONE_SFT=>'FILE'}
+----
+
+NOTE: The option to specify the tracker during snapshot recovery is only available for the
+_clone_snapshot_ command. The _restore_snapshot_ command does not support this parameter.

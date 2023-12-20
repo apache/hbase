@@ -458,6 +458,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private SpaceQuotaSnapshotNotifier spaceQuotaSnapshotNotifier;
   private QuotaObserverChore quotaObserverChore;
   private SnapshotQuotaObserverChore snapshotQuotaChore;
+  private OldWALsDirSizeChore oldWALsDirSizeChore;
 
   private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
   private ProcedureStore procedureStore;
@@ -1362,6 +1363,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     this.rollingUpgradeChore = new RollingUpgradeChore(this);
     getChoreService().scheduleChore(rollingUpgradeChore);
+
+    this.oldWALsDirSizeChore = new OldWALsDirSizeChore(this);
+    getChoreService().scheduleChore(this.oldWALsDirSizeChore);
+
     status.markComplete("Progress after master initialized complete");
   }
 
@@ -1894,6 +1899,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     shutdownChore(hbckChore);
     shutdownChore(regionsRecoveryChore);
     shutdownChore(rollingUpgradeChore);
+    shutdownChore(oldWALsDirSizeChore);
   }
 
   /** Returns Get remote side's InetAddress */
@@ -3334,6 +3340,18 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   public void setInitialized(boolean isInitialized) {
     procedureExecutor.getEnvironment().setEventReady(initialized, isInitialized);
+  }
+
+  /**
+   * Mainly used in procedure related tests, where we will restart ProcedureExecutor and
+   * AssignmentManager, but we do not want to restart master(to speed up the test), so we need to
+   * disable rpc for a while otherwise some critical rpc requests such as
+   * reportRegionStateTransition could fail and cause region server to abort.
+   */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public void setServiceStarted(boolean started) {
+    this.serviceStarted = started;
   }
 
   @Override

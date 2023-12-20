@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionStateTransitionState.REGION_STATE_TRANSITION_OPEN;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -93,7 +94,7 @@ public class TestRegionBypass {
       TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
     List<RegionInfo> regions = admin.getRegions(this.tableName);
     for (RegionInfo ri : regions) {
-      admin.unassign(ri.getRegionName(), false);
+      admin.unassign(ri.getRegionName());
     }
     List<Long> pids = new ArrayList<>(regions.size());
     for (RegionInfo ri : regions) {
@@ -102,11 +103,8 @@ public class TestRegionBypass {
       pids.add(
         TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().submitProcedure(p));
     }
-    for (Long pid : pids) {
-      while (!TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().isStarted(pid)) {
-        Thread.sleep(100);
-      }
-    }
+    TEST_UTIL.waitFor(30000, () -> pids.stream().allMatch(
+      pid -> TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().isStarted(pid)));
     List<Procedure<MasterProcedureEnv>> ps =
       TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().getProcedures();
     for (Procedure<MasterProcedureEnv> p : ps) {
@@ -120,29 +118,17 @@ public class TestRegionBypass {
     }
     // Try and assign WITHOUT override flag. Should fail!.
     for (RegionInfo ri : regions) {
-      try {
-        admin.assign(ri.getRegionName());
-      } catch (Throwable dnrioe) {
-        // Expected
-        LOG.info("Expected {}", dnrioe);
-      }
+      IOException error = assertThrows(IOException.class, () -> admin.assign(ri.getRegionName()));
+      LOG.info("Expected {}", error);
     }
-    while (
-      !TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().getActiveProcIds()
-        .isEmpty()
-    ) {
-      Thread.sleep(100);
-    }
+    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getHBaseCluster().getMaster()
+      .getMasterProcedureExecutor().getActiveProcIds().isEmpty());
     // Now assign with the override flag.
     for (RegionInfo ri : regions) {
       TEST_UTIL.getHbck().assigns(Arrays.<String> asList(ri.getEncodedName()), true, true);
     }
-    while (
-      !TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().getActiveProcIds()
-        .isEmpty()
-    ) {
-      Thread.sleep(100);
-    }
+    TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getHBaseCluster().getMaster()
+      .getMasterProcedureExecutor().getActiveProcIds().isEmpty());
     for (RegionInfo ri : regions) {
       assertTrue(ri.toString(), TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
         .getRegionStates().isRegionOnline(ri));
@@ -173,6 +159,8 @@ public class TestRegionBypass {
     @Override
     protected Flow executeFromState(MasterProcedureEnv env, RegionStateTransitionState state)
       throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      // add a sleep so we will not consume all the CPUs and write a bunch of logs
+      Thread.sleep(100);
       switch (state) {
         case REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE:
           LOG.info("LATCH1 {}", this.latch.getCount());
