@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CacheEvictionStats;
-import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -172,19 +171,22 @@ public interface RegionServerObserver {
 
   }
 
-  default void preClearRegionBlockCache(
-    ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException { }
+  default void preClearRegionBlockCache(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+    throws IOException {
+  }
 
-  default void postClearRegionBlockCache(
-    ObserverContext<RegionServerCoprocessorEnvironment> ctx, CacheEvictionStats stats)
-    throws IOException { }
+  default void postClearRegionBlockCache(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+    CacheEvictionStats stats) throws IOException {
+  }
 
   default void preUpdateRegionServerConfiguration(
     ObserverContext<RegionServerCoprocessorEnvironment> ctx, Configuration preReloadConf)
-    throws IOException { }
+    throws IOException {
+  }
 
   default void postUpdateRegionServerConfiguration(
     ObserverContext<RegionServerCoprocessorEnvironment> ctx, Configuration postReloadConf)
-    throws IOException { }
+    throws IOException {
+  }
 
 }

@@ -1876,8 +1876,10 @@ public interface MasterObserver {
   }
 
   default void preUpdateMasterConfiguration(ObserverContext<MasterCoprocessorEnvironment> ctx,
-    Configuration preReloadConf) throws IOException { }
+    Configuration preReloadConf) throws IOException {
+  }
 
   default void postUpdateMasterConfiguration(ObserverContext<MasterCoprocessorEnvironment> ctx,
-    Configuration postReloadConf) throws IOException { }
+    Configuration postReloadConf) throws IOException {
+  }
 }

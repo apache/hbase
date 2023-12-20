@@ -627,20 +627,20 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   private void preUpdateConfiguration() throws IOException {
     if (rpcServices instanceof RSRpcServices) {
-      ((RSRpcServices)rpcServices).server.getRegionServerCoprocessorHost()
+      ((RSRpcServices) rpcServices).server.getRegionServerCoprocessorHost()
         .preUpdateConfiguration(conf);
     } else if (rpcServices instanceof MasterRpcServices) {
-      ((MasterRpcServices)rpcServices).server.getMasterCoprocessorHost()
+      ((MasterRpcServices) rpcServices).server.getMasterCoprocessorHost()
         .preUpdateConfiguration(conf);
     }
   }
 
   private void postUpdateConfiguration() throws IOException {
     if (rpcServices instanceof RSRpcServices) {
-      ((RSRpcServices)rpcServices).server.getRegionServerCoprocessorHost()
+      ((RSRpcServices) rpcServices).server.getRegionServerCoprocessorHost()
         .postUpdateConfiguration(conf);
     } else if (rpcServices instanceof MasterRpcServices) {
-      ((MasterRpcServices)rpcServices).server.getMasterCoprocessorHost()
+      ((MasterRpcServices) rpcServices).server.getMasterCoprocessorHost()
         .postUpdateConfiguration(conf);
     }
   }
