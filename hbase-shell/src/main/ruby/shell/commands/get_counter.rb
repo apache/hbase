@@ -47,6 +47,13 @@ The same commands also can be run on a table reference.
 EOF
       end
 
+      # Gets the counter value(s) from a table for a specific row and column(s).
+      # If the column parameter is an array, it retrieves multiple counter values.
+      # If no counter is found, it prints an error message.
+      #
+      # @param table [String] the name of the table
+      # @param row [String] the row key
+      # @param column [String, Array<String>] the column name(s)
       def command(table, row, column)
         get_counter(table(table), row, column)
       end

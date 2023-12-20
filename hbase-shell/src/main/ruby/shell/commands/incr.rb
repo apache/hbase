@@ -62,6 +62,13 @@ The same commands also can be run on a table reference.
 EOF
       end
 
+      # Methods to increment counter(s) for specified column(s) of a row for the table.
+      #
+      # @param table [String] The name of the table
+      # @param row [String] The row key
+      # @param column [String, Hash, Array] The column name or a hash or array of columns
+      # @param value [Integer, Hash] THe value to increment by or a hash of values
+      # @param args [Hash] Additional arguments
       def command(table, row, column, value = nil, args = {})
         incr(table(table), row, column, value, args)
       end

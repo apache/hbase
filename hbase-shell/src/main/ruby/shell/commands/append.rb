@@ -47,6 +47,13 @@ The same commands also can be run on a table reference.
 EOF
       end
 
+      # Executes an append command on a specified table.
+      #
+      # @param table_name [String] The name of the table
+      # @param row [String] The row key
+      # @param column [String, Hash] The column name or a hash of column names and values
+      # @param value [String, Hash] The value to append or a hash of column names and values
+      # @param args [Hash] optional arguments
       def command(table_name, row, column, value = value_omitted = {}, args = args_omitted = {})
         table = table(table_name)
         @start_time = Time.now

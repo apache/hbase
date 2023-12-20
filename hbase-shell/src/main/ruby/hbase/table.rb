@@ -132,44 +132,82 @@ EOF
     # they will be much less likely to tab complete to the 'dangerous' internal method
     #----------------------------------------------------------------------------------------------
 
-    # Method to add column family to passed put mutation
-    def _add_column_to_put(p, column, value, timestamp)
+    ##
+    # Method to initialize the object using the passed argument args
+    def _parse_args_and_init(obj, args)
+      attributes = args[ATTRIBUTES]
+      set_attributes(obj, attributes) if attributes
+      visibility = args[VISIBILITY]
+      set_cell_visibility(obj, visibility) if visibility
+      ttl = args[TTL]
+      set_op_ttl(obj, ttl) if ttl
+    end
+
+    #----------------------------------------------------------------------------------------------
+
+    ##
+    # Method to add column to passed put mutation
+    #
+    # @param put [Put] The put mutation to which the column will be added
+    # @param column [String] The column to be added
+    # @param value [String] The value to be added in the column
+    # @param timestamp [Integer] The timestamp for the column value
+    def _add_column_to_put(put, column, value, timestamp)
       family, qualifier = parse_column_name(column)
       if timestamp
-        p.addColumn(family, qualifier, timestamp, value.to_s.to_java_bytes)
+        put.addColumn(family, qualifier, timestamp, value.to_s.to_java_bytes)
       else
-        p.addColumn(family, qualifier, value.to_s.to_java_bytes)
+        put.addColumn(family, qualifier, value.to_s.to_java_bytes)
       end
     end
 
-    # Create and return a new put object, initialized with the passed argument
+    ##
+    # Method to create and return a new put object, initialized with the passed argument
+    #
+    # @param row [String] The row to which the put will be added
+    # @param timestamp [Integer] The timestamp for the put
+    # @param args [Hash] Additional arguments for initializing the put
+    # @return [Put, Integer] The created and initialized Put object and timestamp
     def _create_and_initialize_put(row, timestamp, args)
-      p = org.apache.hadoop.hbase.client.Put.new(row.to_s.to_java_bytes)
-      _parse_args_and_init(p, args) if args.any?
+      put = org.apache.hadoop.hbase.client.Put.new(row.to_s.to_java_bytes)
+      _parse_args_and_init(put, args) if args.any?
       # Case where attributes are specified without timestamp
       if timestamp.is_a?(Hash)
         timestamp.each do |k, v|
           if k == 'ATTRIBUTES'
-            set_attributes(p, v)
+            set_attributes(put, v)
           elsif k == 'VISIBILITY'
-            set_cell_visibility(p, v)
+            set_cell_visibility(put, v)
           elsif k == 'TTL'
-            set_op_ttl(p, v)
+            set_op_ttl(put, v)
           end
         end
         timestamp = nil
       end
-      return p, timestamp
+      return put, timestamp
     end
 
-    # Put a cell 'value' at specified table/row/column
+    ##
+    # Method to put a cell 'value' at specified table/row/column
+    #
+    # @param row [String] The row where the cell will be put
+    # @param column [String] The column where the cell will be put
+    # @param value [String] The value to be put in the cell
+    # @param timestamp [Integer] The timestamp for the cell value
+    # @param args [Hash] Additional arguments for the put
     def _put_internal(row, column, value, timestamp = nil, args = {})
       p, timestamp = _create_and_initialize_put(row, timestamp, args)
       _add_column_to_put(p, column, value, timestamp)
       @table.put(p)
     end
 
-    # Put cell values at specified columns for given table/row
+    ##
+    # Method to put cell values at specified columns for the given table/row.
+    #
+    # @param row [String] The row where the cells will be put
+    # @param column_value_map [Hash] A map of column names to values to be put
+    # @param timestamp [Integer] The timestamp for the cell values
+    # @param args [Hash] Additional arguments for the put
     def _put_multi_column_internal(row, column_value_map, timestamp = nil, args = {})
       p, timestamp = _create_and_initialize_put(row, timestamp, args)
       column_value_map.each do |column, value|
@@ -179,26 +217,34 @@ EOF
     end
 
     #----------------------------------------------------------------------------------------------
-    # Method to add column family to passed delete mutation
+
+    ##
+    # Method to add a column to the passed delete mutation.
+    #
+    # @param d [Delete] The delete mutation to which the column will be added
+    # @param column [String] The column to be added
+    # @param timestamp [Integer] The timestamp of the mutation
+    # @param all_version [Boolean]  Flag indicating whether all versions should be deleted
     def _add_column_to_delete(d, column, timestamp, all_version)
-      if column && all_version
-        family, qualifier = parse_column_name(column)
-        if qualifier
-          d.addColumns(family, qualifier, timestamp)
-        else
-          d.addFamily(family, timestamp)
-        end
-      elsif column && !all_version
-        family, qualifier = parse_column_name(column)
-        if qualifier
-          d.addColumn(family, qualifier, timestamp)
-        else
-          d.addFamilyVersion(family, timestamp)
-        end
+      return unless column
+
+      family, qualifier = parse_column_name(column)
+
+      if all_version
+        qualifier ? d.addColumns(family, qualifier, timestamp) : d.addFamily(family, timestamp)
+      else
+        qualifier ? d.addColumn(family, qualifier, timestamp) : d.addFamilyVersion(family, timestamp)
       end
     end
 
-    # Create a Delete mutation
+    ##
+    # Method to create a delete mutation.
+    #
+    # @param row [String] The row key for the delete mutation
+    # @param column [String, Array<String>] The column(s) to be deleted
+    # @param timestamp [Integer, Hash] The timestamp of the mutation
+    # @param args [Hash] Additional arguments for the mutation
+    # @param all_version [Boolean] Flag indicating whether all versions should be deleted
     def _createdelete_internal(row, column = nil,
                                timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP,
                                args = {}, all_version = true)
@@ -220,9 +266,7 @@ EOF
       end
       if column != ""
         if column.is_a?(Array)
-          column.each do |column_name|
-            _add_column_to_delete(d, column_name, timestamp, all_version)
-          end
+          column.each { |column_name| _add_column_to_delete(d, column_name, timestamp, all_version) }
         else
           _add_column_to_delete(d, column, timestamp, all_version)
         end
@@ -230,8 +274,15 @@ EOF
       d
     end
 
+    ##
     #----------------------------------------------------------------------------------------------
-    # Delete rows using prefix
+    # Method to delete rows using prefix.
+    #
+    # @param row [String] The row key for the delete mutation
+    # @param column [String, Array<String>] The column(s) to be deleted
+    # @param timestamp [Integer, Hash]  The timestamp of the mutation
+    # @param args [Hash]  Additional arguments for the mutation
+    # @param all_version [Boolean] Flag indicating whether all versions should be deleted
     def _deleterows_internal(row, column = nil,
                              timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP,
                              args = {}, all_version = true)
@@ -261,15 +312,30 @@ EOF
     end
 
     #----------------------------------------------------------------------------------------------
-    # Delete a cell
+
+    ##
+    # Method to delete a cell.
+    #
+    # @param row [String] The row key for the delete mutation
+    # @param column [String, Array<String>] The column(s) to be deleted
+    # @param timestamp [Integer, Hash] The timestamp of the mutation
+    # @param args [Hash]  Additional arguments for the mutation
+    # @param all_version[Boolean] Flag indicating whether all versions should be deleted
     def _delete_internal(row, column,
                          timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP,
                          args = {}, all_version = false)
       _deleteall_internal(row, column, timestamp, args, all_version)
     end
 
+    ##
     #----------------------------------------------------------------------------------------------
-    # Delete a row
+    # Method to delete a row.
+    #
+    # @param row [String] The row key for the delete mutation
+    # @param column [String, Array<String>] The column(s) to be deleted
+    # @param timestamp [Integer, Hash]  The timestamp of the mutation
+    # @param args [Hash] Additional arguments for the mutation
+    # @param all_version [Boolean] Flag indicating whether all versions should be deleted
     def _deleteall_internal(row, column = nil,
                             timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP,
                             args = {}, all_version = true)
@@ -291,114 +357,182 @@ EOF
     end
 
     #----------------------------------------------------------------------------------------------
-    # Increment a counter atomically
-    # rubocop:disable Metrics/AbcSize, CyclomaticComplexity, MethodLength
-    def _incr_internal(row, column, value = nil, args = {})
-      incr = _create_and_initialize_incr(row, args)
-      value = 1 if value.is_a?(Hash)
-      value ||= 1
-      family, qualifier = parse_column_name(column)
-      incr.addColumn(family, qualifier, value)
-      result = @table.increment(incr)
-      return nil if result.isEmpty
 
-      # Fetch cell value
-      cell = result.listCells[0]
-      org.apache.hadoop.hbase.util.Bytes.toLong(cell.getValueArray,
-                                                cell.getValueOffset, cell.getValueLength)
+    ##
+    # Parses the value from a cell and return it
+    #
+    # @param cell [Cell] The cell from which the value is to be parsed
+    # @param is_long [Boolean] A flag indicating whether the value is a Long
+    # @return [Long, String] Returns the value from the cell as a Long if is_long is true, otherwise returns the value as a String
+    def _parse_value_from_cell(cell, is_long)
+      if is_long
+        org.apache.hadoop.hbase.util.Bytes.toLong(cell.getValueArray,
+              cell.getValueOffset, cell.getValueLength)
+      else
+        org.apache.hadoop.hbase.util.Bytes.toStringBinary(cell.getValueArray,
+              cell.getValueOffset, cell.getValueLength)
+      end
     end
 
-    # Increment counters at specified columns for given table/row
-    def _incr_multi_column_internal(row, column_value, args = {})
-      incr = _create_and_initialize_incr(row, args)
-      if column_value.is_a?(Array)
-        column_value.each do |column|
-          family, qualifier = parse_column_name(column)
-          if qualifier.nil?
-            raise ArgumentError, 'Failed to provide both column family and column qualifier for incr'
-          end
-          incr.addColumn(family, qualifier, 1)
-        end
-      elsif column_value.is_a?(Hash)
-        column_value.each do |key, value|
-          family, qualifier = parse_column_name(key)
-          if qualifier.nil?
-            raise ArgumentError, 'Failed to provide both column family and column qualifier for incr'
-          end
-          incr.addColumn(family, qualifier, value)
-        end
-      end
-      result = @table.increment(incr)
+    ##
+    # Parses the passed result object and returns a map containing "family:qualifier" as key and
+    # "value" as value for each cell if the call originated from multi column path.
+    # If the call is not from multi column path, it returns the value of the first cell.
+    # Depending on the value of is_long, it returns value as Long or String.
+    #
+    # @param result [Object] The result to parse
+    # @param is_multi_column [Boolean] Specifies whether the call originated from multi column path
+    # @param is_long [Boolean] Specifies whether to return value as Long or String
+    # @return [nil, String, Long, Hash] A map of cell values if is_multi_column is true, otherwise the value of the first cell.
+    # If result is empty, it returns nil.
+    def _parse_and_get_result(result, is_multi_column, is_long)
       return nil if result.isEmpty
-      _parse_and_get_result_as_map(result, true)
+
+      if is_multi_column
+        # Fetch cell values
+        value_map = {}
+        result.listCells.each do |cell|
+          family = org.apache.hadoop.hbase.util.Bytes.toStringBinary(cell.getFamilyArray,
+            cell.getFamilyOffset, cell.getFamilyLength)
+          qualifier = org.apache.hadoop.hbase.util.Bytes.toStringBinary(cell.getQualifierArray,
+            cell.getQualifierOffset, cell.getQualifierLength)
+          column = "#{family}:#{qualifier}"
+          value_map[column] = _parse_value_from_cell(cell, is_long)
+        end
+        value_map
+      else
+        # Fetch cell value
+        _parse_value_from_cell(result.listCells[0], is_long)
+      end
+    end
+
+    #----------------------------------------------------------------------------------------------
+
+    ##
+    # Method to add the columns to 'incr' object
+    #
+    # @param incr [Object] The object to which the column is to be added
+    # @param column [String] The column name to be added
+    # @param value [Integer] The value to be added to the column, defaults to 1
+    # @raise [ArgumentError] If both column family and column qualifier are not provided for 'incr'
+    def _add_column_to_incr(incr, column, value = 1)
+      family, qualifier = parse_column_name(column)
+      if family.nil? && qualifier.nil?
+        raise ArgumentError, 'Failed to provide both column family and column qualifier for incr'
+      end
+      incr.addColumn(family, qualifier, value)
     end
 
     # Create and return a new increment object, initialized with the passed argument
+    #
+    # @param row [String] the row to create increment for
+    # @param args [Hash] the arguments to initialize increment with
+    # @return [Increment] the created increment object
     def _create_and_initialize_incr(row, args)
       incr = org.apache.hadoop.hbase.client.Increment.new(row.to_s.to_java_bytes)
       _parse_args_and_init(incr, args) if args.any?
       incr
     end
 
-    #----------------------------------------------------------------------------------------------
-    # appends the value atomically
-    def _append_internal(row, column, value, args = {})
-      append = _create_and_initialize_append(row, args)
-      family, qualifier = parse_column_name(column)
-      append.addColumn(family, qualifier, value.to_s.to_java_bytes)
-      result = @table.append(append)
-      return nil if result.isEmpty
+    ##
+    # Increment a counter atomically
+    #
+    # @param row [String] the row to increment
+    # @param column [String] the column to increment
+    # @param value [Integer, Hash] the value to increment by
+    # @param args [Hash] additional arguments
+    # @return [Long] the incremented value
+    def _incr_internal(row, column, value = nil, args = {})
+      incr = _create_and_initialize_incr(row, args)
+      value = value.is_a?(Hash) || value.nil? ? 1 : value
 
-      # Fetch cell value
-      cell = result.listCells[0]
-      org.apache.hadoop.hbase.util.Bytes.toStringBinary(cell.getValueArray,
-                                                        cell.getValueOffset, cell.getValueLength)
+      _add_column_to_incr(incr, column, value)
+
+      result = @table.increment(incr)
+      _parse_and_get_result(result, false, true)
     end
 
-    # Append cell values at specified columns for given table/row
-    def _append_multi_column_internal(row, column_value_map, args = {})
-      append = _create_and_initialize_append(row, args)
-      column_value_map.each do |k, v|
-        family, qualifier = parse_column_name(k)
-        if qualifier.nil?
-          raise ArgumentError, 'Failed to provide both column family and column qualifier for append'
-        end
-        append.addColumn(family, qualifier, v.to_s.to_java_bytes)
+    ##
+    # Increment counters atomically at specified columns for given table/row
+    #
+    # @param row [String] the row to increment
+    # @param column_value [Array, Hash] the columns to increment and their values
+    # @param args [Hash] additional arguments
+    # @return [Hash] a map of incremented values
+    def _incr_multi_column_internal(row, column_value, args = {})
+      incr = _create_and_initialize_incr(row, args)
+
+      if column_value.is_a?(Array)
+        column_value.each { |column| _add_column_to_incr(incr, column) }
+      elsif column_value.is_a?(Hash)
+        column_value.each { |key, value| _add_column_to_incr(incr, key, value) }
       end
-      result = @table.append(append)
-      return nil if result.isEmpty
-      _parse_and_get_result_as_map(result, false)
+
+      result = @table.increment(incr)
+     _parse_and_get_result(result, false, true)
     end
 
-    # Create and return a new append object, initialized with the passed argument
+    #----------------------------------------------------------------------------------------------
+
+    ##
+    #  Method to add the columns to 'append' object
+    #
+    # @param append [Object] The object to which the column is to be added
+    # @param column [String] The column name to be added
+    # @param value [Integer] The value to be appended to the column
+    # @raise [ArgumentError] If both column family and column qualifier are not provided for 'append'
+    def _add_column_to_append(append, column, value)
+      family, qualifier = parse_column_name(column)
+      if family.nil? && qualifier.nil?
+        raise ArgumentError, 'Failed to provide both column family and column qualifier for append'
+      end
+      append.addColumn(family, qualifier, value.to_s.to_java_bytes)
+    end
+
+    ##
+    # Create and return a new Append object, initialized with the passed argument
+    #
+    # @param row [String] The row key for the append operation
+    # @param args [Hash] Additional arguments for the append operation
+    # @return [Append] The created and initialized Append object
     def _create_and_initialize_append(row, args)
       append = org.apache.hadoop.hbase.client.Append.new(row.to_s.to_java_bytes)
       _parse_args_and_init(append, args) if args.any?
       append
     end
 
-    # Parses the passed result object and returns a map containing "family:qualifier" as key and
-    # "value" as value for each cell. Depending on value of isLong, it returns value as Long or
-    # a String
-    def _parse_and_get_result_as_map(result, isLong)
-      # Fetch cell values
-      value_map = {}
-      result.listCells.each do |cell|
-        family = org.apache.hadoop.hbase.util.Bytes.toStringBinary(cell.getFamilyArray,
-        cell.getFamilyOffset, cell.getFamilyLength)
-        qualifier = org.apache.hadoop.hbase.util.Bytes.toStringBinary(cell.getQualifierArray,
-        cell.getQualifierOffset, cell.getQualifierLength)
-        column = "#{family}:#{qualifier}"
-        if isLong
-          value = org.apache.hadoop.hbase.util.Bytes.toLong(cell.getValueArray,
-          cell.getValueOffset, cell.getValueLength)
-        else
-          value = org.apache.hadoop.hbase.util.Bytes.toStringBinary(cell.getValueArray,
-          cell.getValueOffset, cell.getValueLength)
-        end
-        value_map[column] = value
+    ##
+    # Append the value atomically to a specified column in a row
+    #
+    # @param row [String] The row key for the append operation
+    # @param column [String] The column for the append operation
+    # @param value [String] The value to be appended
+    # @param args [Hash] Additional arguments for the append operation
+    # @return [String, nil] The appended value or nil if the result is empty
+    def _append_internal(row, column, value, args = {})
+      append = _create_and_initialize_append(row, args)
+
+      _add_column_to_append(append, column, value)
+
+      result = @table.append(append)
+     _parse_and_get_result(result, false, false)
+    end
+
+    # Append cell values to specified columns for a given table/row
+    #
+    # @param row [String] The row key for the append operation
+    # @param column_value_map [Hash] A map of columns and corresponding values to be appended
+    # @param args [Hash] Additional arguments for the append operation
+    # @return [Hash, nil] A map of the results or nil if the result is empty
+    def _append_multi_column_internal(row, column_value_map, args = {})
+      append = _create_and_initialize_append(row, args)
+
+      column_value_map.each do |k, v|
+        _add_column_to_append(append, k, v)
       end
-      value_map
+
+      result = @table.append(append)
+     _parse_and_get_result(result, false, false)
     end
 
     # rubocop:enable Metrics/AbcSize, CyclomaticComplexity, MethodLength
@@ -576,23 +710,39 @@ EOF
     end
 
     #----------------------------------------------------------------------------------------------
-    # Fetches and decodes a counter value from hbase
+
+    # Creates and returns a new get for counter with the maximum version set to 1.
+    #
+    # @param row [String]  The row key for the get
+    # @return [Get] The initialized get for the counter
+    # Create and return a new get for counter with max version set to 1
+    def _create_and_initialize_get_for_counter(row)
+      get = org.apache.hadoop.hbase.client.Get.new(row.to_s.to_java_bytes)
+      get.readVersions(1)
+      get
+    end
+
+    # Fetches and decodes a counter value from HBase.
+    #
+    # @param row [String] The row key to fetch the counter from
+    # @param column [String] The column to fetch the counter from
+    # @return [Integer] The fetched counter value
     def _get_counter_internal(row, column)
       get = _create_and_initialize_get_for_counter(row)
+
       family, qualifier = parse_column_name(column.to_s)
       get.addColumn(family, qualifier)
 
       # Call hbase
       result = @table.get(get)
-      return nil if result.isEmpty
-
-      # Fetch cell value
-      cell = result.listCells[0]
-      org.apache.hadoop.hbase.util.Bytes.toLong(cell.getValueArray,
-                                                cell.getValueOffset, cell.getValueLength)
+      _parse_and_get_result(result, false, true)
     end
 
-    # Fetches and decodes counter values for multiple columns from hbase
+    # Fetches and decodes counter values for multiple columns from HBase.
+    #
+    # @param row [String] The row key to fetch the counters from
+    # @param column_array [Array<String>] The array of columns to fetch the counters from
+    # @return [Hash] a hash with the column names as keys and the fetched counter values as values
     def _get_counter_multi_column_internal(row, column_array)
       get = _create_and_initialize_get_for_counter(row)
 
@@ -604,18 +754,10 @@ EOF
 
       # Call hbase
       result = @table.get(get)
-      return nil if result.isEmpty
-
-      # Fetch cell values as map
-      _parse_and_get_result_as_map(result, true)
+      _parse_and_get_result(result, true, true)
     end
 
-    # Create and return a new get for counter with max version set to 1
-    def _create_and_initialize_get_for_counter(row)
-      get = org.apache.hadoop.hbase.client.Get.new(row.to_s.to_java_bytes)
-      get.readVersions(1)
-      get
-    end
+    #----------------------------------------------------------------------------------------------
 
     def _hash_to_scan(args)
       if args.any?
@@ -1001,15 +1143,6 @@ EOF
     extend Gem::Deprecate
     deprecate :set_converter, "4.0.0", nil, nil
 
-    # Method to initialize the object using the passed argument args
-    def _parse_args_and_init(obj, args)
-      attributes = args[ATTRIBUTES]
-      set_attributes(obj, attributes) if attributes
-      visibility = args[VISIBILITY]
-      set_cell_visibility(obj, visibility) if visibility
-      ttl = args[TTL]
-      set_op_ttl(obj, ttl) if ttl
-    end
 
     #----------------------------------------------------------------------------------------------
     # Get the split points for the table

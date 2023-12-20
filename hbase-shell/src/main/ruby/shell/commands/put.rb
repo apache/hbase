@@ -54,6 +54,14 @@ The same commands also can be run on a table reference.
 EOF
       end
 
+      # Method to put values in specified table/row/column and optionally timestamp coordinates.
+      # @param table [String] The name of the table
+      # @param row [String] The row key
+      # @param column [String, Hash] The column name or a hash of column names and values
+      # @param value [String, Hash] The value to append or a hash of column names and values,
+      #                             optional in case of multi column put.
+      # @param timestamp [Integer, Hash] optional timestamp for the cell value ora hash of additional args
+      # @param args [Hash] optional arguments. Must be nil in case of  multi column put
       def command(table, row, column, value = value_omitted = {}, timestamp = nil, args = args_omitted = {})
         # Conditional block to omit passing optional arguments explicitly
         if !value_omitted.nil?
