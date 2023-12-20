@@ -2722,9 +2722,8 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         LOG.info("Unknown region {}", rs);
         continue;
       }
-      responseBuilder
-        .addPid(Optional.ofNullable(am.createOneAssignProcedure(info, override, force))
-          .map(pe::submitProcedure).orElse(Procedure.NO_PROC_ID));
+      responseBuilder.addPid(Optional.ofNullable(am.createOneAssignProcedure(info, override, force))
+        .map(pe::submitProcedure).orElse(Procedure.NO_PROC_ID));
     }
     return responseBuilder.build();
   }

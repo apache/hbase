@@ -64,10 +64,10 @@ public interface Hbck extends Abortable, Closeable {
    * hooks.
    * @param override           You need to add override for unset of the procedure from
    *                           RegionStateNode without byPassing preTransitCheck
-   * @param force              You need to add force for case where a region has previously
-   *                           been bypassed. When a Procedure has been bypassed, a Procedure will
-   *                           have completed but no other Procedure will be able to make progress
-   *                           on the target entity (intentionally). Skips preTransitCheck only when
+   * @param force              You need to add force for case where a region has previously been
+   *                           bypassed. When a Procedure has been bypassed, a Procedure will have
+   *                           completed but no other Procedure will be able to make progress on the
+   *                           target entity (intentionally). Skips preTransitCheck only when
    *                           selected along with override option
    * @param encodedRegionNames Region encoded names; e.g. 1588230740 is the hard-coded encoding for
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example
@@ -91,10 +91,10 @@ public interface Hbck extends Abortable, Closeable {
    * Coprocessor hooks.
    * @param override           You need to add override for unset of the procedure from
    *                           RegionStateNode without byPassing preTransitCheck
-   * @param force              You need to add force for case where a region has previously
-   *                           been bypassed. When a Procedure has been bypassed, a Procedure will
-   *                           have completed but no other Procedure will be able to make progress
-   *                           on the target entity (intentionally). Skips preTransitCheck only when
+   * @param force              You need to add force for case where a region has previously been
+   *                           bypassed. When a Procedure has been bypassed, a Procedure will have
+   *                           completed but no other Procedure will be able to make progress on the
+   *                           target entity (intentionally). Skips preTransitCheck only when
    *                           selected along with override option
    * @param encodedRegionNames Region encoded names; e.g. 1588230740 is the hard-coded encoding for
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example

@@ -1596,8 +1596,8 @@ public final class RequestConverter {
       .setOverride(override).setForce(force).build();
   }
 
-  public static MasterProtos.UnassignsRequest toUnassignRegionsRequest(
-    List<String> encodedRegionNames, boolean override, boolean force) {
+  public static MasterProtos.UnassignsRequest
+    toUnassignRegionsRequest(List<String> encodedRegionNames, boolean override, boolean force) {
     MasterProtos.UnassignsRequest.Builder b = MasterProtos.UnassignsRequest.newBuilder();
     return b.addAllRegion(toEncodedRegionNameRegionSpecifiers(encodedRegionNames))
       .setOverride(override).setForce(force).build();
