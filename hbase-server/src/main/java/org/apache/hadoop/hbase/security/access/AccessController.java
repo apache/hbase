@@ -34,6 +34,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
+import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -2576,4 +2577,28 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     accessChecker.requirePermission(getActiveUser(ctx), "updateRSGroupConfig", null,
       Permission.Action.ADMIN);
   }
+
+  @Override
+  public void preClearRegionBlockCache(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+    throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "clearRegionBlockCache", null,
+      Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preUpdateRegionServerConfiguration(
+    ObserverContext<RegionServerCoprocessorEnvironment> ctx, Configuration preReloadConf)
+    throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "updateConfiguration", null,
+      Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preUpdateMasterConfiguration(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    Configuration preReloadConf) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "updateConfiguration", null,
+      Permission.Action.ADMIN);
+  }
+
+
 }

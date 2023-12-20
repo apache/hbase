@@ -52,10 +52,12 @@ import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.ShutdownHook;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
@@ -614,11 +616,33 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   /**
    * Reload the configuration from disk.
    */
-  public void updateConfiguration() {
+  public void updateConfiguration() throws IOException {
     LOG.info("Reloading the configuration from disk.");
     // Reload the configuration from disk.
+    preUpdateConfiguration();
     conf.reloadConfiguration();
     configurationManager.notifyAllObservers(conf);
+    postUpdateConfiguration();
+  }
+
+  private void preUpdateConfiguration() throws IOException {
+    if (rpcServices instanceof RSRpcServices) {
+      ((RSRpcServices)rpcServices).server.getRegionServerCoprocessorHost()
+        .preUpdateConfiguration(conf);
+    } else if (rpcServices instanceof MasterRpcServices) {
+      ((MasterRpcServices)rpcServices).server.getMasterCoprocessorHost()
+        .preUpdateConfiguration(conf);
+    }
+  }
+
+  private void postUpdateConfiguration() throws IOException {
+    if (rpcServices instanceof RSRpcServices) {
+      ((RSRpcServices)rpcServices).server.getRegionServerCoprocessorHost()
+        .postUpdateConfiguration(conf);
+    } else if (rpcServices instanceof MasterRpcServices) {
+      ((MasterRpcServices)rpcServices).server.getMasterCoprocessorHost()
+        .postUpdateConfiguration(conf);
+    }
   }
 
   @Override

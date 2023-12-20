@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
@@ -1873,4 +1874,10 @@ public interface MasterObserver {
   default void postHasUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
     String userName, List<Permission> permissions) throws IOException {
   }
+
+  default void preUpdateMasterConfiguration(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    Configuration preReloadConf) throws IOException { }
+
+  default void postUpdateMasterConfiguration(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    Configuration postReloadConf) throws IOException { }
 }
