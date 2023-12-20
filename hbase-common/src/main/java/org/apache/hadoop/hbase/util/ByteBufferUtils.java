@@ -470,16 +470,19 @@ public final class ByteBufferUtils {
 
   /**
    * Similar to {@link WritableUtils#readVLong(java.io.DataInput)} but reads from a
-   * {@link ByteBuff}.
+   * {@link ByteBuff}. This method is optimized to read memstoreTs fields in data block encodings.
+   * Since a memstoreTs is 7 bytes when encoded as a vLong (1 size byte + 6 data bytes), this method
+   * is optimized to read that. Small regressions are present when reading smaller vLongs (2-3
+   * bytes).
    */
-  public static long readVLong(ByteBuff buf) {
+  public static long readVLongTimestamp(ByteBuff buf) {
     byte firstByte = buf.get();
     int len = WritableUtils.decodeVIntSize(firstByte);
     if (len == 1) {
       return firstByte;
     }
     long i = 0;
-    if (buf.remaining() >= 8) {
+    if (buf.remaining() >= Bytes.SIZEOF_LONG) {
       long k = buf.getLongAfterPosition(0);
       int shift = 72 - (len << 3);
       i = k >>> shift;
@@ -495,16 +498,19 @@ public final class ByteBufferUtils {
   }
 
   /**
-   * Similar to {@link WritableUtils#readVLong(DataInput)} but reads from a {@link ByteBuffer}.
+   * Similar to {@link WritableUtils#readVLong(DataInput)} but reads from a {@link ByteBuffer}. This
+   * method is optimized to read memstoreTs fields in data block encodings. Since a memstoreTs is 7
+   * bytes when encoded as a vLong (1 size byte + 6 data bytes), this method is optimized to read
+   * that. Small regressions are present when reading smaller vLongs (2-3 bytes).
    */
-  public static long readVLong(ByteBuffer buf) {
+  public static long readVLongTimestamp(ByteBuffer buf) {
     byte firstByte = buf.get();
     int len = WritableUtils.decodeVIntSize(firstByte);
     if (len == 1) {
       return firstByte;
     }
     long i = 0;
-    if (buf.remaining() >= 8) {
+    if (buf.remaining() >= Bytes.SIZEOF_LONG) {
       long k = buf.getLong(buf.position());
       int shift = 72 - (len << 3);
       i = k >>> shift;

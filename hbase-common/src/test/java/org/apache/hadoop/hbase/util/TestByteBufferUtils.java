@@ -179,9 +179,9 @@ public class TestByteBufferUtils {
       ByteBuffer b = ByteBuffer.allocate(MAX_VLONG_LENGTH);
       ByteBufferUtils.writeVLong(b, l);
       b.flip();
-      assertEquals(l, ByteBufferUtils.readVLong(b));
+      assertEquals(l, ByteBufferUtils.readVLongTimestamp(b));
       b.flip();
-      assertEquals(l, ByteBufferUtils.readVLong(ByteBuff.wrap(b)));
+      assertEquals(l, ByteBufferUtils.readVLongTimestamp(ByteBuff.wrap(b)));
     }
   }
 

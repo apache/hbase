@@ -112,7 +112,7 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
         currentBuffer.skip(current.tagsLength);
       }
       if (includesMvcc()) {
-        current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
+        current.memstoreTS = ByteBufferUtils.readVLongTimestamp(currentBuffer);
       } else {
         current.memstoreTS = 0;
       }

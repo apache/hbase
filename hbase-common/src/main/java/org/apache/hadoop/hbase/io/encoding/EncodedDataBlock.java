@@ -147,7 +147,7 @@ public class EncodedDataBlock {
           new KeyValue(decompressedData.array(), decompressedData.arrayOffset() + offset,
             (int) KeyValue.getKeyValueDataStructureSize(klen, vlen, tagsLen));
         if (meta.isIncludesMvcc()) {
-          long mvccVersion = ByteBufferUtils.readVLong(decompressedData);
+          long mvccVersion = ByteBufferUtils.readVLongTimestamp(decompressedData);
           kv.setSequenceId(mvccVersion);
         }
         return kv;
@@ -270,7 +270,7 @@ public class EncodedDataBlock {
           this.isTagsLenZero.add(tagsLength == 0);
         }
         if (this.meta.isIncludesMvcc()) {
-          memstoreTS = ByteBufferUtils.readVLong(in);
+          memstoreTS = ByteBufferUtils.readVLongTimestamp(in);
         }
         kv = new KeyValue(in.array(), in.arrayOffset() + kvOffset,
           (int) KeyValue.getKeyValueDataStructureSize(klength, vlength, tagsLength));
