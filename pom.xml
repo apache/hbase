@@ -2580,41 +2580,6 @@
         </executions>
       </plugin>
       <!-- parent-module only plugins -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>xml-maven-plugin</artifactId>
-        <version>${xml.maven.version}</version>
-        <inherited>false</inherited>
-        <configuration>
-          <transformationSets>
-            <!-- For asciidoc -->
-            <transformationSet>
-              <!--Reaching up and over into common sub-module for hbase-default.xml-->
-              <dir>${basedir}/hbase-common/src/main/resources/</dir>
-              <includes>
-                <include>hbase-default.xml</include>
-              </includes>
-              <stylesheet>${basedir}/src/main/xslt/configuration_to_asciidoc_chapter.xsl</stylesheet>
-              <fileMappers>
-                <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.RegExpFileMapper">
-                  <pattern>^(.*)\.xml$</pattern>
-                  <replacement>$1.adoc</replacement>
-                </fileMapper>
-              </fileMappers>
-              <outputDir>${basedir}/target/asciidoc</outputDir>
-            </transformationSet>
-          </transformationSets>
-        </configuration>
-        <executions>
-          <execution>
-            <!-- Run the hbase-default.xml through a stylesheet so can show it in doc-->
-            <goals>
-              <goal>transform</goal>
-            </goals>
-            <phase>site</phase>
-          </execution>
-        </executions>
-      </plugin>
       <!-- Special configuration for spotbugs just in the parent so
       the filter file location can be more general (see definition in pluginManagement) -->
       <plugin>
