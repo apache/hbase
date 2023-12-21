@@ -186,6 +186,21 @@ public class TestByteBufferUtils {
   }
 
   @Test
+  public void testReadWriteConsecutiveVLong() {
+    for (long l : testNumbers) {
+      ByteBuffer b = ByteBuffer.allocate(2 * MAX_VLONG_LENGTH);
+      ByteBufferUtils.writeVLong(b, l);
+      ByteBufferUtils.writeVLong(b, l - 4);
+      b.flip();
+      assertEquals(l, ByteBufferUtils.readVLong(b));
+      assertEquals(l - 4, ByteBufferUtils.readVLong(b));
+      b.flip();
+      assertEquals(l, ByteBufferUtils.readVLong(ByteBuff.wrap(b)));
+      assertEquals(l - 4, ByteBufferUtils.readVLong(ByteBuff.wrap(b)));
+    }
+  }
+
+  @Test
   public void testConsistencyWithHadoopVLong() throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);

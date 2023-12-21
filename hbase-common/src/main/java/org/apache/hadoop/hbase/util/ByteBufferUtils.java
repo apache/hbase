@@ -499,6 +499,7 @@ public final class ByteBufferUtils {
         i = i << 8;
         i = i | (b & 0xFF);
       }
+      buf.skip(len - 1);
       return WritableUtils.isNegativeVInt(firstByte) ? ~i : i;
     }
   }
@@ -533,6 +534,7 @@ public final class ByteBufferUtils {
         i = i << 8;
         i = i | (b & 0xFF);
       }
+      buf.position(buf.position() + len - 1);
       return WritableUtils.isNegativeVInt(firstByte) ? ~i : i;
     }
   }
