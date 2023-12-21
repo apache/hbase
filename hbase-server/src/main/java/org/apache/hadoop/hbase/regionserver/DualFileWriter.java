@@ -31,11 +31,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Separates the provided cells into two files, one file for the latest cells and the other for the
- * rest of the cells. The latest cells includes the latest put cells that are not deleted by a
- * delete marker, the delete markers that delete latest put cells, and the version delete markers
- * (that is, DeleteFamilyVersion and Delete) that are not deleted by other delete markers (that is
- * DeleteFamily and DeleteColumn).
+ * Separates the provided cells into two files, one file for the live cells and the other for the
+ * rest of the cells (historical cells). The live cells includes the live put cells, delete
+ * all and version delete markers that are not masked by other delete all markers.
  */
 @InterfaceAudience.Private
 public class DualFileWriter extends AbstractMultiFileWriter {
@@ -120,18 +118,7 @@ public class DualFileWriter extends AbstractMultiFileWriter {
       || isDeletedByDeleteFamilyVersion(cell) || isDeletedByDeleteColumnVersion(cell);
   }
 
-  @Override
-  public void append(Cell cell) throws IOException {
-    if (!dualWriterEnabled) {
-      // If the dual writer is not enabled then all cells are written to one file. We use
-      // the live version file in this case
-      addLiveVersion(cell);
-      return;
-    }
-    if (lastCell != null && comparator.compareRows(lastCell, cell) != 0) {
-      // It is a new row and thus time to reset the state
-      initRowState();
-    }
+  private void appendCell(Cell cell) throws IOException {
     if ((lastCell == null || !CellUtil.matchingColumn(lastCell, cell))) {
       initColumnState();
     }
@@ -181,6 +168,43 @@ public class DualFileWriter extends AbstractMultiFileWriter {
       }
     }
     lastCell = cell;
+  }
+
+  @Override
+  public void appendAll(List<Cell> cellList) throws IOException {
+    if (!dualWriterEnabled) {
+      // If the dual writer is not enabled then all cells are written to one file. We use
+      // the live version file in this case
+      for (Cell cell : cellList) {
+        addLiveVersion(cell);
+      }
+      return;
+    }
+    if (cellList.isEmpty()) {
+      return;
+    }
+    if (lastCell != null && comparator.compareRows(lastCell, cellList.get(0)) != 0) {
+      // It is a new row and thus time to reset the state
+      initRowState();
+    }
+    for (Cell cell : cellList) {
+      appendCell(cell);
+    }
+  }
+
+  @Override
+  public void append(Cell cell) throws IOException {
+    if (!dualWriterEnabled) {
+      // If the dual writer is not enabled then all cells are written to one file. We use
+      // the live version file in this case
+      addLiveVersion(cell);
+      return;
+    }
+    if (lastCell != null && comparator.compareRows(lastCell, cell) != 0) {
+      // It is a new row and thus time to reset the state
+      initRowState();
+    }
+    appendCell(cell);
   }
 
   @Override
