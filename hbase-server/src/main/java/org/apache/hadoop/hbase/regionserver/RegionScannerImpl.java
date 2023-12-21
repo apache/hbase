@@ -647,11 +647,16 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       region.getMetrics().updateFilteredRecords();
     }
 
-    if (scannerContext == null || !scannerContext.isTrackingMetrics()) {
+    if (scannerContext == null) {
       return false;
     }
 
-    long countOfRowsFiltered = scannerContext.getMetrics().countOfRowsFiltered.incrementAndGet();
+    if (scannerContext.isTrackingMetrics()) {
+      scannerContext.getMetrics().countOfRowsFiltered.incrementAndGet();
+    }
+
+    scannerContext.incrementFilteredRowsProgress(1);
+    long countOfRowsFiltered = scannerContext.getFilterRowsProgress();
     if (region.rsServices instanceof HRegionServer) {
       RegionScannerLimiter regionScannerLimiter =
         ((HRegionServer) region.rsServices).getRegionScannerLimiter();

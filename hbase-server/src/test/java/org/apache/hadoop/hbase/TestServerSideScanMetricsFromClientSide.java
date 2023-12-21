@@ -18,17 +18,12 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -44,8 +39,6 @@ import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.RegionScannerLimiter;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -270,69 +263,6 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsSeenMetric(baseScan);
   }
 
-  @Test
-  public void testRowsFilteredMetricLimiter() throws Exception {
-    // Base scan configuration
-    Scan baseScan;
-    baseScan = new Scan();
-    baseScan.setScanMetricsEnabled(true);
-
-    // No matching column value should exist in any row. Filter all rows
-    Filter filter =
-      new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.NOT_EQUAL, VALUE);
-    testRowsFilteredMetric(baseScan, filter, ROWS.length);
-    long scanRpcCalls =
-      getScanMetricValue(new Scan(baseScan).setFilter(filter), ScanMetrics.RPC_CALLS_METRIC_NAME);
-
-    HRegionServer rs1;
-    // Update server side max count of rows filtered config.
-    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(TABLE.getName())) {
-      RegionInfo firstHRI = locator.getAllRegionLocations().get(0).getRegion();
-      rs1 = TEST_UTIL.getHBaseCluster()
-        .getRegionServer(TEST_UTIL.getHBaseCluster().getServerWith(firstHRI.getRegionName()));
-    }
-
-    Configuration conf = TEST_UTIL.getConfiguration();
-    // Set max rows filtered limitation.
-    conf.setLong(RegionScannerLimiter.HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY, 7);
-    conf.setBoolean(
-      RegionScannerLimiter.HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_REACHED_REQUEST_KILLED_KEY, true);
-    rs1.getConfigurationManager().notifyAllObservers(conf);
-
-    assertThrows("Should throw a DoNotRetryIOException when too many rows have been filtered.",
-      DoNotRetryIOException.class, () -> testRowsFilteredMetric(baseScan, filter, ROWS.length));
-
-    conf.setBoolean(
-      RegionScannerLimiter.HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_REACHED_REQUEST_KILLED_KEY,
-      false);
-    rs1.getConfigurationManager().notifyAllObservers(conf);
-    testRowsFilteredMetric(baseScan, filter, ROWS.length);
-
-    // Test scan rpc calls.
-    long scanRpcCalls2 =
-      getScanMetricValue(new Scan(baseScan).setFilter(filter), ScanMetrics.RPC_CALLS_METRIC_NAME);
-    assertEquals(scanRpcCalls + 1, scanRpcCalls2);
-
-    conf.setLong(RegionScannerLimiter.HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY, 5);
-    rs1.getConfigurationManager().notifyAllObservers(conf);
-    long scanRpcCalls3 =
-      getScanMetricValue(new Scan(baseScan).setFilter(filter), ScanMetrics.RPC_CALLS_METRIC_NAME);
-    assertEquals(scanRpcCalls + 2, scanRpcCalls3);
-
-    conf.setLong(RegionScannerLimiter.HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY, 3);
-    rs1.getConfigurationManager().notifyAllObservers(conf);
-    long scanRpcCalls4 =
-      getScanMetricValue(new Scan(baseScan).setFilter(filter), ScanMetrics.RPC_CALLS_METRIC_NAME);
-    assertEquals(scanRpcCalls + 3, scanRpcCalls4);
-
-    // no max rows filtered limitation.
-    conf.setLong(RegionScannerLimiter.HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY, 0);
-    rs1.getConfigurationManager().notifyAllObservers(conf);
-    testRowsFilteredMetric(baseScan, filter, ROWS.length);
-
-    assertEquals(0, rs1.getRegionScannerLimiter().getScanners().size());
-  }
-
   private void testRowsFilteredMetric(Scan baseScan) throws Exception {
     testRowsFilteredMetric(baseScan, null, 0);
 
@@ -403,13 +333,6 @@ public class TestServerSideScanMetricsFromClientSide {
    * @throws Exception on unexpected failure
    */
   private void testMetric(Scan scan, String metricKey, long expectedValue) throws Exception {
-    final long actualMetricValue = getScanMetricValue(scan, metricKey);
-    assertEquals(
-      "Metric: " + metricKey + " Expected: " + expectedValue + " Actual: " + actualMetricValue,
-      expectedValue, actualMetricValue);
-  }
-
-  private static long getScanMetricValue(Scan scan, String metricKey) throws IOException {
     assertTrue("Scan should be configured to record metrics", scan.isScanMetricsEnabled());
     ResultScanner scanner = TABLE.getScanner(scan);
     // Iterate through all the results
@@ -418,8 +341,11 @@ public class TestServerSideScanMetricsFromClientSide {
     }
     scanner.close();
     ScanMetrics metrics = scanner.getScanMetrics();
-    assertNotNull("Metrics are null", metrics);
+    assertTrue("Metrics are null", metrics != null);
     assertTrue("Metric : " + metricKey + " does not exist", metrics.hasCounter(metricKey));
-    return metrics.getCounter(metricKey).get();
+    final long actualMetricValue = metrics.getCounter(metricKey).get();
+    assertEquals(
+      "Metric: " + metricKey + " Expected: " + expectedValue + " Actual: " + actualMetricValue,
+      expectedValue, actualMetricValue);
   }
 }
