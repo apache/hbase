@@ -146,8 +146,8 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
   }
 
   /**
-   * Test method has been renamed to be the first in NAME_ASCENDING.
-   * It's an ugly hack to avoid flakiness.
+   * Test method has been renamed to be the first in NAME_ASCENDING. It's an ugly hack to avoid
+   * flakiness.
    */
   @Test
   public void test0Recover() throws IOException, InterruptedException, ExecutionException {
