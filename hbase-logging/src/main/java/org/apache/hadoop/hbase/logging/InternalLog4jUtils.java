@@ -47,7 +47,6 @@ final class InternalLog4jUtils {
   }
 
   static void setAllLevels(String loggerName, String levelName) {
-    org.apache.logging.log4j.Level level = getLevel(levelName);
     org.apache.logging.log4j.core.config.Configurator.setAllLevels(loggerName, getLevel(levelName));
   }
 

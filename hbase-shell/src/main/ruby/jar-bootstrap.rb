@@ -104,7 +104,7 @@ opts = GetoptLong.new(
 opts.ordering = GetoptLong::REQUIRE_ORDER
 
 script2run = nil
-log_level = "ERROR"
+log_level = 'ERROR'
 @shell_debug = false
 interactive = true
 full_backtrace = false
@@ -118,7 +118,7 @@ opts.each do |opt, arg|
   when D_ARG
     conf_from_cli = add_to_configuration(conf_from_cli, arg)
   when '--debug'
-    log_level = "DEBUG"
+    log_level = 'DEBUG'
     full_backtrace = true
     @shell_debug = true
     puts 'Setting DEBUG log level...'
@@ -165,11 +165,11 @@ def debug
   if @shell_debug
     @shell_debug = false
     conf.back_trace_limit = 0
-    log_level = "ERROR"
+    log_level = 'ERROR'
   else
     @shell_debug = true
     conf.back_trace_limit = 100
-    log_level = "DEBUG"
+    log_level = 'DEBUG'
   end
   org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.zookeeper', log_level)
   org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop', log_level)
