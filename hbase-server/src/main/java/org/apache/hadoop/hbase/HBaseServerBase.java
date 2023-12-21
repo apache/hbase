@@ -626,22 +626,30 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   private void preUpdateConfiguration() throws IOException {
-    if (rpcServices instanceof RSRpcServices) {
-      ((RSRpcServices) rpcServices).server.getRegionServerCoprocessorHost()
-        .preUpdateConfiguration(conf);
-    } else if (rpcServices instanceof MasterRpcServices) {
-      ((MasterRpcServices) rpcServices).server.getMasterCoprocessorHost()
-        .preUpdateConfiguration(conf);
+    if (rpcServices instanceof RSRpcServices && rpcServices.server != null) {
+      RSRpcServices rsRpcServices = (RSRpcServices) rpcServices;
+      if (rsRpcServices.server.getRegionServerCoprocessorHost() != null) {
+        rsRpcServices.server.getRegionServerCoprocessorHost().preUpdateConfiguration(conf);
+      }
+    } else if (rpcServices instanceof MasterRpcServices && rpcServices.server != null) {
+      MasterRpcServices masterRpcServices = (MasterRpcServices) rpcServices;
+      if (masterRpcServices.server.getMasterCoprocessorHost() != null) {
+        masterRpcServices.server.getMasterCoprocessorHost().preUpdateConfiguration(conf);
+      }
     }
   }
 
   private void postUpdateConfiguration() throws IOException {
-    if (rpcServices instanceof RSRpcServices) {
-      ((RSRpcServices) rpcServices).server.getRegionServerCoprocessorHost()
-        .postUpdateConfiguration(conf);
-    } else if (rpcServices instanceof MasterRpcServices) {
-      ((MasterRpcServices) rpcServices).server.getMasterCoprocessorHost()
-        .postUpdateConfiguration(conf);
+    if (rpcServices instanceof RSRpcServices && rpcServices.server != null) {
+      RSRpcServices rsRpcServices = (RSRpcServices) rpcServices;
+      if (rsRpcServices.server.getRegionServerCoprocessorHost() != null) {
+        rsRpcServices.server.getRegionServerCoprocessorHost().postUpdateConfiguration(conf);
+      }
+    } else if (rpcServices instanceof MasterRpcServices && rpcServices.server != null) {
+      MasterRpcServices masterRpcServices = (MasterRpcServices) rpcServices;
+      if (masterRpcServices.server.getMasterCoprocessorHost() != null) {
+        masterRpcServices.server.getMasterCoprocessorHost().postUpdateConfiguration(conf);
+      }
     }
   }
 
