@@ -313,19 +313,24 @@ class CommissioningTest < Test::Unit::TestCase
     define_test 'list decommissioned regionservers' do
       server_name = admin.getServerNames([], true)[0].getServerName()
       command(:decommission_regionservers, server_name)
+      initial_number_of_rows = -1
       begin
         output = capture_stdout { command(:list_decommissioned_regionservers) }
         puts "#{output}"
         assert output.include? 'DECOMMISSIONED REGION SERVERS'
         assert output.include? "#{server_name}"
-        assert output.include? '1 row(s)'
+        matches = output.match(/(\d+) row\(s\)/)
+        initial_number_of_rows = matches[1].to_i unless matches.nil?
+        assert initial_number_of_rows > 0
       ensure
         command(:recommission_regionserver, server_name)
         output = capture_stdout { command(:list_decommissioned_regionservers) }
         puts "#{output}"
         assert output.include? 'DECOMMISSIONED REGION SERVERS'
         assert (output.include? "#{server_name}") ? false : true
-        assert output.include? '0 row(s)'
+        matches = output.match(/(\d+) row\(s\)/)
+        final_number_of_rows = matches[1].to_i unless matches.nil?
+        assert (initial_number_of_rows - final_number_of_rows) == 1
       end
     end
 
