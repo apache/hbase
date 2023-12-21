@@ -470,59 +470,71 @@ public final class ByteBufferUtils {
 
   /**
    * Similar to {@link WritableUtils#readVLong(java.io.DataInput)} but reads from a
-   * {@link ByteBuff}. This method is optimized to read memstoreTs fields in data block encodings.
-   * Since a memstoreTs is 7 bytes when encoded as a vLong (1 size byte + 6 data bytes), this method
-   * is optimized to read that. Small regressions are present when reading smaller vLongs (2-3
-   * bytes).
+   * {@link ByteBuff}.
    */
-  public static long readVLongTimestamp(ByteBuff buf) {
+  public static long readVLong(ByteBuff buf) {
     byte firstByte = buf.get();
     int len = WritableUtils.decodeVIntSize(firstByte);
     if (len == 1) {
       return firstByte;
-    }
-    long i = 0;
-    if (buf.remaining() >= Bytes.SIZEOF_LONG) {
-      long k = buf.getLongAfterPosition(0);
-      int shift = 72 - (len << 3);
-      i = k >>> shift;
-      buf.skip(len - 1);
     } else {
-      for (int idx = 0; idx < len - 1; idx++) {
-        byte b = buf.get();
+      int remaining = len - 1;
+      long i = 0;
+      int offsetFromPos = 0;
+      if (remaining >= Bytes.SIZEOF_INT) {
+        // The int read has to be converted to unsigned long so the & op
+        i = (buf.getIntAfterPosition(offsetFromPos) & 0x00000000ffffffffL);
+        remaining -= Bytes.SIZEOF_INT;
+        offsetFromPos += Bytes.SIZEOF_INT;
+      }
+      if (remaining >= Bytes.SIZEOF_SHORT) {
+        short s = buf.getShortAfterPosition(offsetFromPos);
+        i = i << 16;
+        i = i | (s & 0xFFFF);
+        remaining -= Bytes.SIZEOF_SHORT;
+        offsetFromPos += Bytes.SIZEOF_SHORT;
+      }
+      for (int idx = 0; idx < remaining; idx++) {
+        byte b = buf.getByteAfterPosition(offsetFromPos + idx);
         i = i << 8;
         i = i | (b & 0xFF);
       }
+      return WritableUtils.isNegativeVInt(firstByte) ? ~i : i;
     }
-    return WritableUtils.isNegativeVInt(firstByte) ? ~i : i;
   }
 
   /**
-   * Similar to {@link WritableUtils#readVLong(DataInput)} but reads from a {@link ByteBuffer}. This
-   * method is optimized to read memstoreTs fields in data block encodings. Since a memstoreTs is 7
-   * bytes when encoded as a vLong (1 size byte + 6 data bytes), this method is optimized to read
-   * that. Small regressions are present when reading smaller vLongs (2-3 bytes).
+   * Similar to {@link WritableUtils#readVLong(DataInput)} but reads from a {@link ByteBuffer}.
    */
-  public static long readVLongTimestamp(ByteBuffer buf) {
+  public static long readVLong(ByteBuffer buf) {
     byte firstByte = buf.get();
     int len = WritableUtils.decodeVIntSize(firstByte);
     if (len == 1) {
       return firstByte;
-    }
-    long i = 0;
-    if (buf.remaining() >= Bytes.SIZEOF_LONG) {
-      long k = buf.getLong(buf.position());
-      int shift = 72 - (len << 3);
-      i = k >>> shift;
-      buf.position(buf.position() + len - 1);
     } else {
-      for (int idx = 0; idx < len - 1; idx++) {
-        byte b = buf.get();
+      int remaining = len - 1;
+      long i = 0;
+      int offsetFromPos = 0;
+      if (remaining >= Bytes.SIZEOF_INT) {
+        // The int read has to be converted to unsigned long so the & op
+        i = (buf.getInt(buf.position() + offsetFromPos) & 0x00000000ffffffffL);
+        remaining -= Bytes.SIZEOF_INT;
+        offsetFromPos += Bytes.SIZEOF_INT;
+      }
+      if (remaining >= Bytes.SIZEOF_SHORT) {
+        short s = buf.getShort(buf.position() + offsetFromPos);
+        i = i << 16;
+        i = i | (s & 0xFFFF);
+        remaining -= Bytes.SIZEOF_SHORT;
+        offsetFromPos += Bytes.SIZEOF_SHORT;
+      }
+      for (int idx = 0; idx < remaining; idx++) {
+        byte b = buf.get(buf.position() + offsetFromPos + idx);
         i = i << 8;
         i = i | (b & 0xFF);
       }
+      return WritableUtils.isNegativeVInt(firstByte) ? ~i : i;
     }
-    return WritableUtils.isNegativeVInt(firstByte) ? ~i : i;
   }
 
   /**

@@ -226,7 +226,7 @@ public class KeyValueUtil {
     int kvLength = (int) KeyValue.getKeyValueDataStructureSize(keyLength, valueLength, tagsLength);
     KeyValue keyValue = new KeyValue(bb.array(), underlyingArrayOffset, kvLength);
     if (includesMvccVersion) {
-      long mvccVersion = ByteBufferUtils.readVLongTimestamp(bb);
+      long mvccVersion = ByteBufferUtils.readVLong(bb);
       keyValue.setSequenceId(mvccVersion);
     }
     return keyValue;

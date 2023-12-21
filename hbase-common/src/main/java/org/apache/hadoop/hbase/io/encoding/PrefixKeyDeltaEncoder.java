@@ -209,7 +209,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
         decodeTags();
       }
       if (includesMvcc()) {
-        current.memstoreTS = ByteBufferUtils.readVLongTimestamp(currentBuffer);
+        current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
       } else {
         current.memstoreTS = 0;
       }

@@ -265,7 +265,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
       decodeTags();
     }
     if (includesMvcc()) {
-      current.memstoreTS = ByteBufferUtils.readVLongTimestamp(currentBuffer);
+      current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
     } else {
       current.memstoreTS = 0;
     }
