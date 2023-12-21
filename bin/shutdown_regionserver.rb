@@ -34,6 +34,12 @@ def usage(msg = nil)
   abort
 end
 
+# disable debug/info logging on this script for clarity
+log_level = "ERROR"
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop.hbase', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.zookeeper', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop', log_level)
+
 usage if ARGV.empty?
 
 ARGV.each do |x|

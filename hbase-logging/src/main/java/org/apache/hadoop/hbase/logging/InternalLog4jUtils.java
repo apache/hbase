@@ -36,13 +36,28 @@ final class InternalLog4jUtils {
   private InternalLog4jUtils() {
   }
 
-  static void setLogLevel(String loggerName, String levelName) {
+  private static org.apache.logging.log4j.Level getLevel(String levelName)
+    throws IllegalArgumentException {
     org.apache.logging.log4j.Level level =
       org.apache.logging.log4j.Level.toLevel(levelName.toUpperCase());
     if (!level.toString().equalsIgnoreCase(levelName)) {
       throw new IllegalArgumentException("Unsupported log level " + levelName);
     }
-    org.apache.logging.log4j.core.config.Configurator.setLevel(loggerName, level);
+    return level;
+  }
+
+  static void setAllLevels(String loggerName, String levelName) {
+    org.apache.logging.log4j.Level level = getLevel(levelName);
+    org.apache.logging.log4j.core.config.Configurator.setAllLevels(loggerName, getLevel(levelName));
+  }
+
+  static void setLogLevel(String loggerName, String levelName) {
+    org.apache.logging.log4j.core.config.Configurator.setLevel(loggerName, getLevel(levelName));
+  }
+
+  static void setRootLevel(String levelName) {
+    String loggerName = org.apache.logging.log4j.LogManager.getRootLogger().getName();
+    setLogLevel(loggerName, levelName);
   }
 
   static String getEffectiveLevel(String loggerName) {
