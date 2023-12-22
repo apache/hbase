@@ -27,11 +27,8 @@ include Java
 java_import org.apache.hadoop.conf.Configuration
 java_import org.apache.hadoop.hbase.HBaseConfiguration
 java_import org.apache.hadoop.hbase.HConstants
-java_import org.apache.hadoop.hbase.HTableDescriptor
 java_import org.apache.hadoop.hbase.TableName
 java_import org.apache.hadoop.hbase.client.ConnectionFactory
-java_import org.apache.hadoop.hbase.client.HBaseAdmin
-java_import org.slf4j.LoggerFactory
 
 # Name of this script
 NAME = 'copy_tables_desc'.freeze
@@ -45,7 +42,7 @@ end
 def copy(src, dst, table)
   # verify if table exists in source cluster
   begin
-    t = src.getTableDescriptor(TableName.valueOf(table))
+    t = src.getDescriptor(TableName.valueOf(table))
   rescue org.apache.hadoop.hbase.TableNotFoundException
     puts format("Source table \"%s\" doesn't exist, skipping.", table)
     return
@@ -62,9 +59,13 @@ def copy(src, dst, table)
   puts format('Schema for table "%s" was succesfully copied to remote cluster.', table)
 end
 
-usage if ARGV.size < 2 || ARGV.size > 3
+# disable debug/info logging on this script for clarity
+log_level = 'ERROR'
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop.hbase', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.zookeeper', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop', log_level)
 
-LOG = LoggerFactory.getLogger(NAME)
+usage if ARGV.size < 2 || ARGV.size > 3
 
 parts1 = ARGV[0].split(':')
 

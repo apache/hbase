@@ -28,11 +28,13 @@ unless defined?($TEST_CLUSTER)
   include Java
 
   # Set logging level to avoid verboseness
-  org.apache.log4j.Logger.getRootLogger.setLevel(org.apache.log4j.Level::OFF)
-  org.apache.log4j.Logger.getLogger("org.apache.zookeeper").setLevel(org.apache.log4j.Level::OFF)
-  org.apache.log4j.Logger.getLogger("org.apache.hadoop.hdfs").setLevel(org.apache.log4j.Level::OFF)
-  org.apache.log4j.Logger.getLogger("org.apache.hadoop.hbase").setLevel(org.apache.log4j.Level::OFF)
-  org.apache.log4j.Logger.getLogger("org.apache.hadoop.ipc.HBaseServer").setLevel(org.apache.log4j.Level::OFF)
+  log_level = 'OFF'
+  org.apache.hadoop.hbase.logging.Log4jUtils.setRootLevel(log_level)
+  org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.zookeeper', log_level)
+  org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop.hdfs', log_level)
+  org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop.hbase', log_level)
+  org.apache.hadoop.hbase.logging.Log4jUtils
+    .setAllLevels('org.apache.hadoop.ipc.HBaseServer', log_level)
 
   java_import org.apache.hadoop.hbase.HBaseTestingUtility
 

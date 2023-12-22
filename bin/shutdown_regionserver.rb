@@ -24,7 +24,6 @@
 
 include Java
 java_import org.apache.hadoop.hbase.HBaseConfiguration
-java_import org.apache.hadoop.hbase.client.HBaseAdmin
 java_import org.apache.hadoop.hbase.client.ConnectionFactory
 
 def usage(msg = nil)
@@ -34,6 +33,12 @@ def usage(msg = nil)
   warn format('Error: %<msg>s') if msg
   abort
 end
+
+# disable debug/info logging on this script for clarity
+log_level = 'ERROR'
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop.hbase', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.zookeeper', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop', log_level)
 
 usage if ARGV.empty?
 
