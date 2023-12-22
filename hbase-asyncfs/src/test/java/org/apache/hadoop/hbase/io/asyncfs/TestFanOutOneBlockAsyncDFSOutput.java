@@ -48,10 +48,12 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.FixMethodOrder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +63,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Category({ MiscTests.class, MediumTests.class })
 public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
@@ -135,8 +138,12 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     writeAndVerify(FS, f, out);
   }
 
+  /**
+   * Test method has been renamed to be the first in NAME_ASCENDING. It's an ugly hack to avoid
+   * flakiness.
+   */
   @Test
-  public void testRecover() throws IOException, InterruptedException, ExecutionException {
+  public void test0Recover() throws IOException, InterruptedException, ExecutionException {
     Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
