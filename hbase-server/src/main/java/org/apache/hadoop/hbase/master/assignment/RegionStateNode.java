@@ -381,7 +381,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
   }
 
   /**
-   * @see RegionStateNodeLock#isLockedBy(Procedure)
+   * @see RegionStateNodeLock#isLockedBy(Object)
    */
   public boolean isLockedBy(Procedure<?> proc) {
     return lock.isLockedBy(proc);
