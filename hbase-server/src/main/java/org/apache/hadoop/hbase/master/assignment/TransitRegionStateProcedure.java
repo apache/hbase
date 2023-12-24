@@ -445,10 +445,8 @@ public class TransitRegionStateProcedure
     throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     RegionStateNode regionNode =
       env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(getRegion());
-    if (future == null) {
-      // if future is not null, we will not release the regionNode lock, so do not need to lock it
-      // again
-      regionNode.lock(this);
+    if (!regionNode.isLockedBy(this)) {
+      regionNode.lock(this, () -> ProcedureFutureUtil.wakeUp(this, env));
     }
     try {
       return super.execute(env);
