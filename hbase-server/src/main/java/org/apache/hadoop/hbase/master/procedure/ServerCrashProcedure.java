@@ -569,8 +569,14 @@ public class ServerCrashProcedure extends
     for (int n = regions.size(); processedRegions < n; processedRegions++) {
       RegionInfo region = regions.get(processedRegions);
       RegionStateNode regionNode = am.getRegionStates().getOrCreateRegionStateNode(region);
-      if (updateMetaFuture == null) {
-        regionNode.lock(this);
+      // There are two possible ways where we have already hold the lock here
+      // 1. We have already hold the lock and we suspend while updating meta, so after being woken
+      // up, we should skip lock again.
+      // 2. We suspend the procedure while trying to hold the lock, and finally it is our turn to
+      // hold the lock and we schedule the procedure again, this time we should have already hold
+      // the lock, so we do not need to lock again
+      if (!regionNode.isLockedBy(this)) {
+        regionNode.lock(this, () -> ProcedureFutureUtil.wakeUp(this, env));
       }
       try {
         if (

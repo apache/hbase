@@ -86,27 +86,7 @@ public final class ProcedureFutureUtil {
       // And what makes things worse is that, we persist procedure state to master local region,
       // where the AsyncFSWAL implementation will use the same netty's event loop for dealing with
       // I/O, which could even cause dead lock.
-      asyncTaskExecutor.execute(() -> {
-        // should acquire procedure execution lock to make sure that the procedure executor has
-        // finished putting this procedure to the WAITING_TIMEOUT state, otherwise there could be
-        // race and cause unexpected result
-        IdLock procLock =
-          env.getMasterServices().getMasterProcedureExecutor().getProcExecutionLock();
-        IdLock.Entry lockEntry;
-        try {
-          lockEntry = procLock.getLockEntry(proc.getProcId());
-        } catch (IOException ioe) {
-          LOG.error("Error while acquiring execution lock for procedure {}"
-            + " when trying to wake it up, aborting...", proc, ioe);
-          env.getMasterServices().abort("Can not acquire procedure execution lock", ioe);
-          return;
-        }
-        try {
-          env.getProcedureScheduler().addFront(proc);
-        } finally {
-          procLock.releaseLockEntry(lockEntry);
-        }
-      });
+      asyncTaskExecutor.execute(() -> wakeUp(proc, env));
     });
     if (completed.getValue()) {
       FutureUtils.get(future);
@@ -115,7 +95,33 @@ public final class ProcedureFutureUtil {
       // suspend the procedure
       setFuture.accept(future);
       proc.skipPersistence();
-      throw new ProcedureSuspendedException();
+      suspend(proc);
+    }
+  }
+
+  public static void suspend(Procedure<?> proc) throws ProcedureSuspendedException {
+    proc.skipPersistence();
+    throw new ProcedureSuspendedException();
+  }
+
+  public static void wakeUp(Procedure<?> proc, MasterProcedureEnv env) {
+    // should acquire procedure execution lock to make sure that the procedure executor has
+    // finished putting this procedure to the WAITING_TIMEOUT state, otherwise there could be
+    // race and cause unexpected result
+    IdLock procLock = env.getMasterServices().getMasterProcedureExecutor().getProcExecutionLock();
+    IdLock.Entry lockEntry;
+    try {
+      lockEntry = procLock.getLockEntry(proc.getProcId());
+    } catch (IOException e) {
+      LOG.error("Error while acquiring execution lock for procedure {}"
+        + " when trying to wake it up, aborting...", proc, e);
+      env.getMasterServices().abort("Can not acquire procedure execution lock", e);
+      return;
+    }
+    try {
+      env.getProcedureScheduler().addFront(proc);
+    } finally {
+      procLock.releaseLockEntry(lockEntry);
     }
   }
 }
