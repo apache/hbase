@@ -141,7 +141,7 @@ public class TestExpiredMobFileCleaner {
     assertEquals("Before cleanup without delay 1", 1, firstFiles.length);
     String firstFile = firstFiles[0].getPath().getName();
 
-    ts = EnvironmentEdgeManager.currentTime() - 1 * secondsOfDay() * 1000; // 1 day before
+    ts = (long) (EnvironmentEdgeManager.currentTime() - 1.5 * secondsOfDay() * 1000); // 1.5 day before
     putKVAndFlush(table, row2, dummyData, ts);
     FileStatus[] secondFiles = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     // now there are 2 mob files
