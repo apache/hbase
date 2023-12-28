@@ -55,7 +55,8 @@ public class DefaultCompactor extends AbstractMultiOutputCompactor<DualFileWrite
         boolean enableDualFileWriter = conf.getBoolean(
           DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY, DEFAULT_ENABLE_DUAL_FILE_WRITER);
         DualFileWriter writer = new DualFileWriter(store.getComparator(),
-          store.getColumnFamilyDescriptor().getMaxVersions(), enableDualFileWriter);
+          store.getColumnFamilyDescriptor().getMaxVersions(), enableDualFileWriter,
+          store.getColumnFamilyDescriptor().isNewVersionBehavior());
         initMultiWriter(writer, scanner, fd, shouldDropBehind, major, writerCreationTracker);
         return writer;
       }
