@@ -181,8 +181,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     addCommandDescriptor(RandomScanWithRange10000Test.class, "scanRange10000",
       "Run random seek scan with both start and stop row (max 10000 rows)");
     addCommandDescriptor(RandomWriteTest.class, "randomWrite", "Run random write test");
-    addCommandDescriptor(RandomDeleteTest.class, "randomDelete",
-      "Run random delete test");
+    addCommandDescriptor(RandomDeleteTest.class, "randomDelete", "Run random delete test");
     addCommandDescriptor(SequentialReadTest.class, "sequentialRead", "Run sequential read test");
     addCommandDescriptor(SequentialWriteTest.class, "sequentialWrite", "Run sequential write test");
     addCommandDescriptor(SequentialDeleteTest.class, "sequentialDelete",
@@ -2444,7 +2443,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
       delete.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
       if (opts.autoFlush) {
-          table.delete(delete);
+        table.delete(delete);
       } else {
         mutator.mutate(delete);
       }

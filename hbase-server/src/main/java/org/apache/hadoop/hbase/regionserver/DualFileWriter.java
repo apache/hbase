@@ -32,8 +32,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Separates the provided cells into two files, one file for the live cells and the other for the
- * rest of the cells (historical cells). The live cells includes the live put cells, delete
- * all and version delete markers that are not masked by other delete all markers.
+ * rest of the cells (historical cells). The live cells includes the live put cells, delete all and
+ * version delete markers that are not masked by other delete all markers.
  */
 @InterfaceAudience.Private
 public class DualFileWriter extends AbstractMultiFileWriter {
@@ -57,11 +57,14 @@ public class DualFileWriter extends AbstractMultiFileWriter {
   private int livePutCellCount;
   private final boolean dualWriterEnabled;
   private final int maxVersions;
+  private final boolean newVersionBehavior;
 
-  public DualFileWriter(CellComparator comparator, int maxVersions, boolean dualWriterEnabled) {
+  public DualFileWriter(CellComparator comparator, int maxVersions, boolean dualWriterEnabled,
+    boolean newVersionBehavior) {
     this.comparator = comparator;
     this.maxVersions = maxVersions;
     this.dualWriterEnabled = dualWriterEnabled;
+    this.newVersionBehavior = newVersionBehavior;
     writers = new ArrayList<>(2);
     initRowState();
   }
@@ -96,25 +99,39 @@ public class DualFileWriter extends AbstractMultiFileWriter {
   }
 
   private boolean isDeletedByDeleteFamily(Cell cell) {
-    return deleteFamily != null && deleteFamily.getTimestamp() >= cell.getTimestamp();
+    return deleteFamily != null && (deleteFamily.getTimestamp() > cell.getTimestamp()
+      || (deleteFamily.getTimestamp() == cell.getTimestamp()
+        && (!newVersionBehavior || cell.getSequenceId() < deleteFamily.getSequenceId())));
   }
 
   private boolean isDeletedByDeleteFamilyVersion(Cell cell) {
     for (Cell deleteFamilyVersion : deleteFamilyVersionList) {
-      if (deleteFamilyVersion.getTimestamp() == cell.getTimestamp()) return true;
+      if (
+        deleteFamilyVersion.getTimestamp() == cell.getTimestamp()
+          && (!newVersionBehavior || cell.getSequenceId() < deleteFamilyVersion.getSequenceId())
+      ) return true;
     }
     return false;
   }
 
+  private boolean isDeletedByDeleteColumn(Cell cell) {
+    return deleteColumn != null && (deleteColumn.getTimestamp() > cell.getTimestamp()
+      || (deleteColumn.getTimestamp() == cell.getTimestamp()
+        && (!newVersionBehavior || cell.getSequenceId() < deleteColumn.getSequenceId())));
+  }
+
   private boolean isDeletedByDeleteColumnVersion(Cell cell) {
     for (Cell deleteColumnVersion : deleteColumnVersionList) {
-      if (deleteColumnVersion.getTimestamp() == cell.getTimestamp()) return true;
+      if (
+        deleteColumnVersion.getTimestamp() == cell.getTimestamp()
+          && (!newVersionBehavior || cell.getSequenceId() < deleteColumnVersion.getSequenceId())
+      ) return true;
     }
     return false;
   }
 
   private boolean isDeleted(Cell cell) {
-    return isDeletedByDeleteFamily(cell) || deleteColumn != null
+    return isDeletedByDeleteFamily(cell) || isDeletedByDeleteColumn(cell)
       || isDeletedByDeleteFamilyVersion(cell) || isDeletedByDeleteColumnVersion(cell);
   }
 
