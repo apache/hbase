@@ -112,7 +112,7 @@ copy_hadoop_artifacts() {
   local HADOOP_HOME=$(hadoop envvars | fgrep HADOOP_COMMON_HOME | cut -d= -f2 | tr -d "'")
   local JARS_TO_INCLUDE=("gcs-connector-shaded.jar" "hadoop-annotations.jar" "hadoop-auth.jar" "hadoop-aws.jar"
     "hadoop-azure.jar" "hadoop-azure-datalake.jar" "hadoop-common.jar" "lib/commons-logging*.jar" "lib/asm-*.jar"
-    "lib/azure-data-lake-store-sdk-*.jar" "lib/aws-java-sdk-bundle-*.jar" "lib/wildfly-openssl-*.jar"
+    "lib/azure-data-lake-store-sdk-*.jar" "lib/wildfly-openssl-*.jar"
     "lib/jersey-core-*.jar" "client/jersey-client-*.jar")
   for jar in "${JARS_TO_INCLUDE[@]}"; do
     cp -L "$HADOOP_HOME/"$jar "$clientTarballDir/lib" || true
@@ -138,7 +138,7 @@ copy_yarn_artifacts() {
 
 copy_mapreduce_artifacts() {
   MAPREDUCE_HOME=$(mapred envvars | fgrep HADOOP_MAPRED_HOME | cut -d= -f2 | tr -d "'")
-  local JARS_TO_INCLUDE=("azure-keyvault-core-*.jar" "azure-storage-*.jar" "commons-configuration-*.jar" "flogger*.jar"
+  local JARS_TO_INCLUDE=("azure-keyvault-core-*.jar" "azure-storage-*.jar" "bundle-*.jar" "commons-configuration-*.jar" "flogger*.jar"
     "forbiddenapis-*.jar" "gateway-cloud-bindings.jar" "gateway-i18n.jar" "gateway-shell.jar" "gateway-util-common.jar"
     "google-extensions-*.jar" "hadoop-distcp.jar" "hadoop-mapreduce-client-app.jar" "hadoop-mapreduce-client-common.jar"
     "hadoop-mapreduce-client-core.jar" "hadoop-mapreduce-client-jobclient.jar" "hadoop-mapreduce-client-nativetask.jar"
