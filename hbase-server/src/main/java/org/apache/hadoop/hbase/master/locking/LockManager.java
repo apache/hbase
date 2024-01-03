@@ -109,18 +109,9 @@ public final class LockManager {
     }
 
     /**
-     * Acquire the lock, waiting indefinitely until the lock is released or the thread is
-     * interrupted.
-     * @throws InterruptedException If current thread is interrupted while waiting for the lock
-     */
-    public boolean acquire() throws InterruptedException {
-      return tryAcquire(0);
-    }
-
-    /**
      * Acquire the lock within a wait time.
-     * @param timeoutMs The maximum time (in milliseconds) to wait for the lock, 0 to wait
-     *                  indefinitely
+     * @param timeoutMs The maximum time (in milliseconds) to wait for the lock, Long#MAX_VALUE or
+     *                  negative value to wait indefinitely
      * @return True if the lock was acquired, false if waiting time elapsed before the lock was
      *         acquired
      * @throws InterruptedException If the thread is interrupted while waiting to acquire the lock
@@ -150,7 +141,7 @@ public final class LockManager {
       master.getMasterProcedureExecutor().submitProcedure(proc);
 
       long deadline =
-        (timeoutMs > 0) ? EnvironmentEdgeManager.currentTime() + timeoutMs : Long.MAX_VALUE;
+        (timeoutMs >= 0) ? EnvironmentEdgeManager.currentTime() + timeoutMs : Long.MAX_VALUE;
       while (deadline >= EnvironmentEdgeManager.currentTime() && !proc.isLocked()) {
         try {
           lockAcquireLatch.await(deadline - EnvironmentEdgeManager.currentTime(),
