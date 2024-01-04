@@ -198,7 +198,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
           if (newProgress > lastProgress) {
 
             BigDecimal progressData =
-              new BigDecimal(newProgress * 100).setScale(1, BigDecimal.ROUND_HALF_UP);
+              BigDecimal.valueOf(newProgress * 100).setScale(1, BigDecimal.ROUND_HALF_UP);
             String newProgressStr = progressData + "%";
             LOG.info("Progress: " + newProgressStr);
             updateProgress(backupInfo, backupManager, progressData.intValue(), bytesCopied);
@@ -212,7 +212,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
         float newProgress =
           progressDone + job.mapProgress() * subTaskPercntgInWholeTask * (1 - INIT_PROGRESS);
         BigDecimal progressData =
-          new BigDecimal(newProgress * 100).setScale(1, BigDecimal.ROUND_HALF_UP);
+          BigDecimal.valueOf(newProgress * 100).setScale(1, BigDecimal.ROUND_HALF_UP);
 
         String newProgressStr = progressData + "%";
         LOG.info("Progress: " + newProgressStr + " subTask: " + subTaskPercntgInWholeTask
