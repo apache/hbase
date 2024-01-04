@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
