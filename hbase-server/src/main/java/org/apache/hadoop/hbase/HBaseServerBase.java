@@ -46,18 +46,19 @@ import org.apache.hadoop.hbase.client.ConnectionRegistryEndpoint;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.MasterRpcServices;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ShutdownHook;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
@@ -189,11 +190,10 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   /**
    * If running on Windows, do windows-specific setup.
    */
-  private static void setupWindows(final Configuration conf, ConfigurationManager cm) {
+  private void setupSignalHandlers() {
     if (!SystemUtils.IS_OS_WINDOWS) {
       HBasePlatformDependent.handle("HUP", (number, name) -> {
-        conf.reloadConfiguration();
-        cm.notifyAllObservers(conf);
+        updateConfiguration();
       });
     }
   }
@@ -278,7 +278,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
         new ZKWatcher(conf, getProcessName() + ":" + addr.getPort(), this, canCreateBaseZNode());
 
       this.configurationManager = new ConfigurationManager();
-      setupWindows(conf, configurationManager);
+      setupSignalHandlers();
 
       initializeFileSystem();
 
@@ -616,7 +616,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   /**
    * Reload the configuration from disk.
    */
-  public void updateConfiguration() throws IOException {
+  public void updateConfiguration() {
     LOG.info("Reloading the configuration from disk.");
     // Reload the configuration from disk.
     preUpdateConfiguration();
@@ -625,31 +625,29 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     postUpdateConfiguration();
   }
 
-  private void preUpdateConfiguration() throws IOException {
-    if (rpcServices instanceof RSRpcServices && rpcServices.server != null) {
-      RSRpcServices rsRpcServices = (RSRpcServices) rpcServices;
-      if (rsRpcServices.server.getRegionServerCoprocessorHost() != null) {
-        rsRpcServices.server.getRegionServerCoprocessorHost().preUpdateConfiguration(conf);
+  private void preUpdateConfiguration() {
+    try {
+      CoprocessorHost<?, ?> coprocessorHost = getCoprocessorHost();
+      if (coprocessorHost instanceof RegionServerCoprocessorHost) {
+        ((RegionServerCoprocessorHost) coprocessorHost).preUpdateConfiguration(conf);
+      } else if (coprocessorHost instanceof MasterCoprocessorHost) {
+        ((MasterCoprocessorHost) coprocessorHost).preUpdateConfiguration(conf);
       }
-    } else if (rpcServices instanceof MasterRpcServices && rpcServices.server != null) {
-      MasterRpcServices masterRpcServices = (MasterRpcServices) rpcServices;
-      if (masterRpcServices.server.getMasterCoprocessorHost() != null) {
-        masterRpcServices.server.getMasterCoprocessorHost().preUpdateConfiguration(conf);
-      }
+    } catch (IOException e) {
+      LOG.error("Error while calling coprocessor preUpdateConfiguration()", e);
     }
   }
 
-  private void postUpdateConfiguration() throws IOException {
-    if (rpcServices instanceof RSRpcServices && rpcServices.server != null) {
-      RSRpcServices rsRpcServices = (RSRpcServices) rpcServices;
-      if (rsRpcServices.server.getRegionServerCoprocessorHost() != null) {
-        rsRpcServices.server.getRegionServerCoprocessorHost().postUpdateConfiguration(conf);
+  private void postUpdateConfiguration() {
+    try {
+      CoprocessorHost<?, ?> coprocessorHost = getCoprocessorHost();
+      if (coprocessorHost instanceof RegionServerCoprocessorHost) {
+        ((RegionServerCoprocessorHost) coprocessorHost).postUpdateConfiguration(conf);
+      } else if (coprocessorHost instanceof MasterCoprocessorHost) {
+        ((MasterCoprocessorHost) coprocessorHost).postUpdateConfiguration(conf);
       }
-    } else if (rpcServices instanceof MasterRpcServices && rpcServices.server != null) {
-      MasterRpcServices masterRpcServices = (MasterRpcServices) rpcServices;
-      if (masterRpcServices.server.getMasterCoprocessorHost() != null) {
-        masterRpcServices.server.getMasterCoprocessorHost().postUpdateConfiguration(conf);
-      }
+    } catch (IOException e) {
+      LOG.error("Error while calling coprocessor postUpdateConfiguration()", e);
     }
   }
 
@@ -657,6 +655,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   public String toString() {
     return getServerName().toString();
   }
+
+  protected abstract CoprocessorHost<?, ?> getCoprocessorHost();
 
   protected abstract boolean canCreateBaseZNode();
 

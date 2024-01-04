@@ -1875,10 +1875,22 @@ public interface MasterObserver {
     String userName, List<Permission> permissions) throws IOException {
   }
 
+  /**
+   * Called before reloading the HMaster's {@link Configuration} from disk
+   * @param ctx           the coprocessor instance's environment
+   * @param preReloadConf the {@link Configuration} in use prior to reload
+   * @throws IOException if you need to signal an IO error
+   */
   default void preUpdateMasterConfiguration(ObserverContext<MasterCoprocessorEnvironment> ctx,
     Configuration preReloadConf) throws IOException {
   }
 
+  /**
+   * Called after reloading the HMaster's {@link Configuration} from disk
+   * @param ctx            the coprocessor instance's environment
+   * @param postReloadConf the {@link Configuration} that was loaded
+   * @throws IOException if you need to signal an IO error
+   */
   default void postUpdateMasterConfiguration(ObserverContext<MasterCoprocessorEnvironment> ctx,
     Configuration postReloadConf) throws IOException {
   }

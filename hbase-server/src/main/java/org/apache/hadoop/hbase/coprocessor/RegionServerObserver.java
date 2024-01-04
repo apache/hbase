@@ -171,19 +171,42 @@ public interface RegionServerObserver {
 
   }
 
+  /**
+   * Called before clearing the block caches for one or more regions
+   * @param ctx the coprocessor instance's environment
+   * @throws IOException if you need to signal an IO error
+   */
   default void preClearRegionBlockCache(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
     throws IOException {
   }
 
+  /**
+   * Called after clearing the block caches for one or more regions
+   * @param ctx   the coprocessor instance's environment
+   * @param stats statistics about the cache evictions that happened
+   * @throws IOException if you need to signal an IO error
+   */
   default void postClearRegionBlockCache(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
     CacheEvictionStats stats) throws IOException {
   }
 
+  /**
+   * Called before reloading the RegionServer's {@link Configuration} from disk
+   * @param ctx           the coprocessor instance's environment
+   * @param preReloadConf the {@link Configuration} in use prior to reload
+   * @throws IOException if you need to signal an IO error
+   */
   default void preUpdateRegionServerConfiguration(
     ObserverContext<RegionServerCoprocessorEnvironment> ctx, Configuration preReloadConf)
     throws IOException {
   }
 
+  /**
+   * Called after reloading the RegionServer's {@link Configuration} from disk
+   * @param ctx            the coprocessor instance's environment
+   * @param postReloadConf the {@link Configuration} that was loaded
+   * @throws IOException if you need to signal an IO error
+   */
   default void postUpdateRegionServerConfiguration(
     ObserverContext<RegionServerCoprocessorEnvironment> ctx, Configuration postReloadConf)
     throws IOException {
