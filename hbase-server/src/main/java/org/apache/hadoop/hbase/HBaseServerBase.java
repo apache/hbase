@@ -190,7 +190,11 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   private void setupSignalHandlers() {
     if (!SystemUtils.IS_OS_WINDOWS) {
       HBasePlatformDependent.handle("HUP", (number, name) -> {
-        updateConfiguration();
+        try {
+          updateConfiguration();
+        } catch (IOException e) {
+          LOG.error("Problem while reloading configuration", e);
+        }
       });
     }
   }
@@ -613,7 +617,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   /**
    * Reload the configuration from disk.
    */
-  public void updateConfiguration() {
+  public void updateConfiguration() throws IOException {
     LOG.info("Reloading the configuration from disk.");
     // Reload the configuration from disk.
     preUpdateConfiguration();
@@ -622,29 +626,21 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     postUpdateConfiguration();
   }
 
-  private void preUpdateConfiguration() {
-    try {
-      CoprocessorHost<?, ?> coprocessorHost = getCoprocessorHost();
-      if (coprocessorHost instanceof RegionServerCoprocessorHost) {
-        ((RegionServerCoprocessorHost) coprocessorHost).preUpdateConfiguration(conf);
-      } else if (coprocessorHost instanceof MasterCoprocessorHost) {
-        ((MasterCoprocessorHost) coprocessorHost).preUpdateConfiguration(conf);
-      }
-    } catch (IOException e) {
-      LOG.error("Error while calling coprocessor preUpdateConfiguration()", e);
+  private void preUpdateConfiguration() throws IOException {
+    CoprocessorHost<?, ?> coprocessorHost = getCoprocessorHost();
+    if (coprocessorHost instanceof RegionServerCoprocessorHost) {
+      ((RegionServerCoprocessorHost) coprocessorHost).preUpdateConfiguration(conf);
+    } else if (coprocessorHost instanceof MasterCoprocessorHost) {
+      ((MasterCoprocessorHost) coprocessorHost).preUpdateConfiguration(conf);
     }
   }
 
-  private void postUpdateConfiguration() {
-    try {
-      CoprocessorHost<?, ?> coprocessorHost = getCoprocessorHost();
-      if (coprocessorHost instanceof RegionServerCoprocessorHost) {
-        ((RegionServerCoprocessorHost) coprocessorHost).postUpdateConfiguration(conf);
-      } else if (coprocessorHost instanceof MasterCoprocessorHost) {
-        ((MasterCoprocessorHost) coprocessorHost).postUpdateConfiguration(conf);
-      }
-    } catch (IOException e) {
-      LOG.error("Error while calling coprocessor postUpdateConfiguration()", e);
+  private void postUpdateConfiguration() throws IOException {
+    CoprocessorHost<?, ?> coprocessorHost = getCoprocessorHost();
+    if (coprocessorHost instanceof RegionServerCoprocessorHost) {
+      ((RegionServerCoprocessorHost) coprocessorHost).postUpdateConfiguration(conf);
+    } else if (coprocessorHost instanceof MasterCoprocessorHost) {
+      ((MasterCoprocessorHost) coprocessorHost).postUpdateConfiguration(conf);
     }
   }
 
