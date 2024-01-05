@@ -141,15 +141,13 @@ public class DualFileWriter extends AbstractMultiFileWriter {
     }
     if (cell.getType() == Cell.Type.DeleteFamily) {
       if (deleteFamily == null) {
-        if (cell.getType() == Cell.Type.DeleteFamily) {
-          deleteFamily = cell;
-          addLiveVersion(cell);
-        } else {
-          addHistoricalVersion(cell);
-        }
+        deleteFamily = cell;
+        addLiveVersion(cell);
+      } else {
+        addHistoricalVersion(cell);
       }
     } else if (cell.getType() == Cell.Type.DeleteFamilyVersion) {
-      if (deleteFamily == null) {
+      if (!isDeletedByDeleteFamily(cell)) {
         deleteFamilyVersionList.add(cell);
         addLiveVersion(cell);
       } else {
@@ -246,7 +244,7 @@ public class DualFileWriter extends AbstractMultiFileWriter {
     }
   }
 
-  public HFile.Writer getHFileWriter() {
+  public HFile.Writer getLiveVersionHFileWriter() {
     if (writers.isEmpty()) {
       return null;
     }

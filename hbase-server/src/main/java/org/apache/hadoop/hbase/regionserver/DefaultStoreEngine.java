@@ -54,7 +54,7 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
     DefaultCompactor.class;
   public static final Class<? extends RatioBasedCompactionPolicy> DEFAULT_COMPACTION_POLICY_CLASS =
     ExploringCompactionPolicy.class;
-  public static final boolean DEFAULT_ENABLE_DUAL_FILE_WRITER = false;
+  public static final boolean DEFAULT_ENABLE_DUAL_FILE_WRITER = true;
 
   @Override
   public boolean needsCompaction(List<HStoreFile> filesCompacting) {
