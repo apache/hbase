@@ -707,6 +707,7 @@
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced</hbase-surefire.cygwin-argLine>
     <hbase-surefire.jdk11.flags>-Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true
       --add-modules jdk.unsupported
+      --add-opens java.base/java.io=ALL-UNNAMED
       --add-opens java.base/java.nio=ALL-UNNAMED
       --add-opens java.base/sun.nio.ch=ALL-UNNAMED
       --add-opens java.base/java.lang=ALL-UNNAMED
