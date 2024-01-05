@@ -31,6 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -38,16 +40,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public final class PrefetchExecutor {
+public final class PrefetchExecutor implements PropagatingConfigurationObserver {
 
   private static final Logger LOG = LoggerFactory.getLogger(PrefetchExecutor.class);
+  /** Wait time in miliseconds before executing prefetch */
+  public static final String PREFETCH_DELAY = "hbase.hfile.prefetch.delay";
+  public static final String PREFETCH_DELAY_VARIATION = "hbase.hfile.prefetch.delay.variation";
 
   /** Futures for tracking block prefetch activity */
   private static final Map<Path, Future<?>> prefetchFutures = new ConcurrentSkipListMap<>();
   /** Executor pool shared among all HFiles for block prefetch */
   private static final ScheduledExecutorService prefetchExecutorPool;
   /** Delay before beginning prefetch */
-  private static final int prefetchDelayMillis;
+  private static int prefetchDelayMillis;
   /** Variation in prefetch delay times, to mitigate stampedes */
   private static final float prefetchDelayVariation;
   static {
@@ -56,8 +61,8 @@ public final class PrefetchExecutor {
     Configuration conf = HBaseConfiguration.create();
     // 1s here for tests, consider 30s in hbase-default.xml
     // Set to 0 for no delay
-    prefetchDelayMillis = conf.getInt("hbase.hfile.prefetch.delay", 1000);
-    prefetchDelayVariation = conf.getFloat("hbase.hfile.prefetch.delay.variation", 0.2f);
+    prefetchDelayMillis = conf.getInt(PREFETCH_DELAY, 1000);
+    prefetchDelayVariation = conf.getFloat(PREFETCH_DELAY_VARIATION, 0.2f);
     int prefetchThreads = conf.getInt("hbase.hfile.thread.prefetch", 4);
     prefetchExecutorPool = new ScheduledThreadPoolExecutor(prefetchThreads, new ThreadFactory() {
       @Override
@@ -133,5 +138,26 @@ public final class PrefetchExecutor {
   /* Visible for testing only */
   static ScheduledExecutorService getExecutorPool() {
     return prefetchExecutorPool;
+  }
+
+  public static int getPrefetchDelay() {
+    return prefetchDelayMillis;
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    PrefetchExecutor.loadConfiguration(conf);
+  }
+
+  @Override
+  public void registerChildren(ConfigurationManager manager) {
+  }
+
+  @Override
+  public void deregisterChildren(ConfigurationManager manager) {
+  }
+
+  public static void loadConfiguration(Configuration conf) {
+    prefetchDelayMillis = conf.getInt(PREFETCH_DELAY, 1000);
   }
 }
