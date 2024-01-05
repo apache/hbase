@@ -126,13 +126,13 @@ public class TestReversibleScanners {
         BloomType.NONE, true);
 
       List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
-        Collections.singletonList(sf), false, true, false, false, Long.MAX_VALUE, false);
+        Collections.singletonList(sf), false, true, false, false, Long.MAX_VALUE);
       StoreFileScanner scanner = scanners.get(0);
       seekTestOfReversibleKeyValueScanner(scanner);
       for (int readPoint = 0; readPoint < MAXMVCC; readPoint++) {
         LOG.info("Setting read point to " + readPoint);
         scanners = StoreFileScanner.getScannersForStoreFiles(Collections.singletonList(sf), false,
-          true, false, false, readPoint, false);
+          true, false, false, readPoint);
         seekTestOfReversibleKeyValueScannerWithMVCC(scanners, readPoint);
       }
     }
@@ -481,8 +481,8 @@ public class TestReversibleScanners {
 
   private List<KeyValueScanner> getScanners(MemStore memstore, HStoreFile sf1, HStoreFile sf2,
     byte[] startRow, boolean doSeek, int readPoint) throws IOException {
-    List<StoreFileScanner> fileScanners = StoreFileScanner.getScannersForStoreFiles(
-      Lists.newArrayList(sf1, sf2), false, true, false, false, readPoint, false);
+    List<StoreFileScanner> fileScanners = StoreFileScanner
+      .getScannersForStoreFiles(Lists.newArrayList(sf1, sf2), false, true, false, false, readPoint);
     List<KeyValueScanner> memScanners = memstore.getScanners(readPoint);
     List<KeyValueScanner> scanners = new ArrayList<>(fileScanners.size() + 1);
     scanners.addAll(fileScanners);

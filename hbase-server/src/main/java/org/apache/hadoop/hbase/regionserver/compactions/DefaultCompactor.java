@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Compact passed set of files. Create an instance and then call
@@ -40,7 +38,6 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class DefaultCompactor extends AbstractMultiOutputCompactor<DualFileWriter> {
-  private static final Logger LOG = LoggerFactory.getLogger(DefaultCompactor.class);
 
   public DefaultCompactor(Configuration conf, HStore store) {
     super(conf, store);

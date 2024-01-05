@@ -1002,9 +1002,8 @@ public class HStore
       // TODO this used to get the store files in descending order,
       // but now we get them in ascending order, which I think is
       // actually more correct, since memstore get put at the end.
-      List<StoreFileScanner> sfScanners =
-        StoreFileScanner.getScannersForStoreFiles(storeFilesToScan, cacheBlocks, usePread,
-          isCompaction, false, matcher, readPt, onlyLatestVersion);
+      List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(
+        storeFilesToScan, cacheBlocks, usePread, isCompaction, false, matcher, readPt);
       List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
       scanners.addAll(sfScanners);
       // Then the memstore scanners
@@ -1081,7 +1080,7 @@ public class HStore
     }
     try {
       List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(files,
-        cacheBlocks, usePread, isCompaction, false, matcher, readPt, onlyLatestVersion);
+        cacheBlocks, usePread, isCompaction, false, matcher, readPt);
       List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
       scanners.addAll(sfScanners);
       // Then the memstore scanners
