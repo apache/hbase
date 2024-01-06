@@ -48,6 +48,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
+/**
+ * Snapshot creation with master lock timeout test.
+ */
 @Category({ MasterTests.class, MediumTests.class })
 public class TestSnapshotProcedureWithLockTimeout {
 

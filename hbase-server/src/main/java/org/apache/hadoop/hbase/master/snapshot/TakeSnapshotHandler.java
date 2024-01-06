@@ -23,6 +23,7 @@ import java.util.concurrent.CancellationException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -87,6 +88,12 @@ public abstract class TakeSnapshotHandler extends EventHandler
   protected final TableName snapshotTable;
   protected final SnapshotManifest snapshotManifest;
   protected final SnapshotManager snapshotManager;
+  /**
+   * Snapshot creation requires table lock. If any region of the table is in transition,
+   * table lock cannot be acquired by LockProcedure and hence snapshot creation could hang for
+   * potentially very long time. This timeout will ensure snapshot creation fails-fast by waiting
+   * for only given timeout.
+   */
   private final long lockAcquireTimeoutMs;
 
   protected TableDescriptor htd;
@@ -133,7 +140,7 @@ public abstract class TakeSnapshotHandler extends EventHandler
     this.snapshotManifest =
       SnapshotManifest.create(conf, rootFs, workingDir, snapshot, monitor, status);
     this.lockAcquireTimeoutMs =
-      conf.getLong(HBASE_SNAPSHOT_MASTER_LOCK_ACQUIRE_TIMEOUT, 5 * 60 * 1000L);
+      conf.getLong(HBASE_SNAPSHOT_MASTER_LOCK_ACQUIRE_TIMEOUT, 60 * 1000L);
   }
 
   private TableDescriptor loadTableDescriptor() throws IOException {
@@ -161,7 +168,7 @@ public abstract class TakeSnapshotHandler extends EventHandler
       }
     } else {
       LOG.error("Master lock could not be acquired in {} ms", lockAcquireTimeoutMs);
-      throw new IOException("Master lock could not be acquired");
+      throw new DoNotRetryIOException("Master lock could not be acquired");
     }
     return this;
   }
