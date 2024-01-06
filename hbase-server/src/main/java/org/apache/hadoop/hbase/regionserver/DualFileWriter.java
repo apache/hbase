@@ -149,7 +149,16 @@ public class DualFileWriter extends AbstractMultiFileWriter {
     } else if (cell.getType() == Cell.Type.DeleteFamilyVersion) {
       if (!isDeletedByDeleteFamily(cell)) {
         deleteFamilyVersionList.add(cell);
-        addLiveVersion(cell);
+        if (deleteFamily != null && deleteFamily.getTimestamp() == cell.getTimestamp()) {
+          // This means both the delete-family and delete-family-version markers have the same
+          // timestamp but the sequence id of delete-family-version marker is higher than that of
+          // the delete-family marker. In this case, there is no need to add the
+          // delete-family-version marker to the live version file. This case happens only with
+          // the new version behavior.
+          addHistoricalVersion(cell);
+        } else {
+          addLiveVersion(cell);
+        }
       } else {
         addHistoricalVersion(cell);
       }
@@ -163,7 +172,16 @@ public class DualFileWriter extends AbstractMultiFileWriter {
     } else if (cell.getType() == Cell.Type.Delete) {
       if (!isDeletedByDeleteFamily(cell) && deleteColumn == null) {
         deleteColumnVersionList.add(cell);
-        addLiveVersion(cell);
+        if (deleteFamily != null && deleteFamily.getTimestamp() == cell.getTimestamp()) {
+          // This means both the delete-family and delete-column-version markers have the same
+          // timestamp but the sequence id of delete-column-version marker is higher than that of
+          // the delete-family marker. In this case, there is no need to add the
+          // delete-column-version marker to the live version file. This case happens only with
+          // the new version behavior.
+          addHistoricalVersion(cell);
+        } else {
+          addLiveVersion(cell);
+        }
       } else {
         addHistoricalVersion(cell);
       }

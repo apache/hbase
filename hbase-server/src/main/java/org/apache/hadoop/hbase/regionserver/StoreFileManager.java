@@ -122,6 +122,7 @@ public interface StoreFileManager {
    * Gets the store files to scan for a Scan or Get request.
    * @param startRow Start row of the request.
    * @param stopRow  Stop row of the request.
+   * @param onlyLatestVersion  Scan only latest live version cells.
    * @return The list of files that are to be read for this request.
    */
   Collection<HStoreFile> getFilesForScan(byte[] startRow, boolean includeStartRow, byte[] stopRow,
