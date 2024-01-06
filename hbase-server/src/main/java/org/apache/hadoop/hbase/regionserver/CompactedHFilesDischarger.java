@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.List;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
@@ -70,7 +71,9 @@ public class CompactedHFilesDischarger extends ScheduledChore {
    * no-executor before you call run.
    * @return The old setting for <code>useExecutor</code>
    */
-  boolean setUseExecutor(final boolean useExecutor) {
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public boolean setUseExecutor(final boolean useExecutor) {
     boolean oldSetting = this.useExecutor;
     this.useExecutor = useExecutor;
     return oldSetting;

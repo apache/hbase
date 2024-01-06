@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -76,8 +78,14 @@ public class TestRaceBetweenSCPAndTRSP {
     }
 
     @Override
-    void regionOpening(RegionStateNode regionNode) throws IOException {
-      super.regionOpening(regionNode);
+    CompletableFuture<Void> regionOpening(RegionStateNode regionNode) {
+      CompletableFuture<Void> future = super.regionOpening(regionNode);
+      try {
+        // wait until the operation done, then trigger later processing, to make the test more
+        // stable
+        FutureUtils.get(future);
+      } catch (IOException e) {
+      }
       if (regionNode.getRegionInfo().getTable().equals(NAME) && ARRIVE_REGION_OPENING != null) {
         ARRIVE_REGION_OPENING.countDown();
         ARRIVE_REGION_OPENING = null;
@@ -86,6 +94,7 @@ public class TestRaceBetweenSCPAndTRSP {
         } catch (InterruptedException e) {
         }
       }
+      return future;
     }
 
     @Override

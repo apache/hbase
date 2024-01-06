@@ -26,6 +26,7 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -35,6 +36,7 @@ import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -118,6 +120,40 @@ public class TestPrefetch {
     assertFalse(c.getBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, false));
     CacheConfig cc = new CacheConfig(c, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
     assertTrue(cc.shouldPrefetchOnOpen());
+  }
+
+  @Test
+  public void testPrefetchBlockCacheDisabled() throws Exception {
+    ScheduledThreadPoolExecutor poolExecutor =
+      (ScheduledThreadPoolExecutor) PrefetchExecutor.getExecutorPool();
+    long totalCompletedBefore = poolExecutor.getCompletedTaskCount();
+    long queueBefore = poolExecutor.getQueue().size();
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).setPrefetchBlocksOnOpen(true)
+        .setBlockCacheEnabled(false).build();
+    HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
+    CacheConfig cacheConfig =
+      new CacheConfig(conf, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
+    Path storeFile = writeStoreFile("testPrefetchBlockCacheDisabled", meta, cacheConfig);
+    readStoreFile(storeFile, (r, o) -> {
+      HFileBlock block = null;
+      try {
+        block = r.readBlock(o, -1, false, true, false, true, null, null);
+      } catch (IOException e) {
+        fail(e.getMessage());
+      }
+      return block;
+    }, (key, block) -> {
+      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      if (
+        block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
+          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
+      ) {
+        assertFalse(isCached);
+      }
+    }, cacheConfig);
+    assertEquals(totalCompletedBefore + queueBefore,
+      poolExecutor.getCompletedTaskCount() + poolExecutor.getQueue().size());
   }
 
   @Test
@@ -212,8 +248,15 @@ public class TestPrefetch {
   private void readStoreFile(Path storeFilePath,
     BiFunction<HFile.Reader, Long, HFileBlock> readFunction,
     BiConsumer<BlockCacheKey, HFileBlock> validationFunction) throws Exception {
+    readStoreFile(storeFilePath, readFunction, validationFunction, cacheConf);
+  }
+
+  private void readStoreFile(Path storeFilePath,
+    BiFunction<HFile.Reader, Long, HFileBlock> readFunction,
+    BiConsumer<BlockCacheKey, HFileBlock> validationFunction, CacheConfig cacheConfig)
+    throws Exception {
     // Open the file
-    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, true, conf);
+    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
 
     while (!reader.prefetchComplete()) {
       // Sleep for a bit
@@ -237,7 +280,6 @@ public class TestPrefetch {
     Path storeFile = writeStoreFile("TestPrefetchCompressed", context);
     readStoreFileCacheOnly(storeFile);
     conf.setBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, false);
-
   }
 
   @Test
@@ -351,8 +393,13 @@ public class TestPrefetch {
   }
 
   private Path writeStoreFile(String fname, HFileContext context) throws IOException {
+    return writeStoreFile(fname, context, cacheConf);
+  }
+
+  private Path writeStoreFile(String fname, HFileContext context, CacheConfig cacheConfig)
+    throws IOException {
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), fname);
-    StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
+    StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConfig, fs)
       .withOutputDir(storeFileParentDir).withFileContext(context).build();
     Random rand = ThreadLocalRandom.current();
     final int rowLen = 32;

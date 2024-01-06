@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.procedure2.TestYieldProcedures.TestStateMachineProcedure.State;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -236,6 +237,11 @@ public class TestYieldProcedures {
 
     public ArrayList<ExecutionInfo> getExecutionInfo() {
       return executionInfo;
+    }
+
+    @Override
+    protected boolean isRollbackSupported(State state) {
+      return true;
     }
 
     @Override

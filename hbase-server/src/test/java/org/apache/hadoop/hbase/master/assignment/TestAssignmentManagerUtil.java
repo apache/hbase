@@ -22,7 +22,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -80,7 +79,7 @@ public class TestAssignmentManagerUtil {
     for (RegionInfo region : UTIL.getAdmin().getRegions(TABLE_NAME)) {
       RegionStateNode regionNode = AM.getRegionStates().getRegionStateNode(region);
       // confirm that we have released the lock
-      assertFalse(((ReentrantLock) regionNode.lock).isLocked());
+      assertFalse(regionNode.isLocked());
       TransitRegionStateProcedure proc = regionNode.getProcedure();
       if (proc != null) {
         regionNode.unsetProcedure(proc);

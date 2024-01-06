@@ -23,6 +23,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -367,6 +368,19 @@ public class BalancerTestBase {
     int numTables) {
     int numServers = mockCluster.length;
     TreeMap<ServerName, List<RegionInfo>> servers = new TreeMap<>();
+    for (int i = 0; i < numServers; i++) {
+      int numRegions = mockCluster[i];
+      ServerAndLoad sal = randomServer(0);
+      List<RegionInfo> regions = randomRegions(numRegions, numTables);
+      servers.put(sal.getServerName(), regions);
+    }
+    return servers;
+  }
+
+  protected Map<ServerName, List<RegionInfo>> mockClusterServersUnsorted(int[] mockCluster,
+    int numTables) {
+    int numServers = mockCluster.length;
+    Map<ServerName, List<RegionInfo>> servers = new LinkedHashMap<>();
     for (int i = 0; i < numServers; i++) {
       int numRegions = mockCluster[i];
       ServerAndLoad sal = randomServer(0);

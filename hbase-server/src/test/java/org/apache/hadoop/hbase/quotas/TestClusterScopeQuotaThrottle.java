@@ -75,9 +75,6 @@ public class TestClusterScopeQuotaThrottle {
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
-    // disable stream slow monitor check, as in this test we inject our own EnvironmentEdge
-    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.async.wal.min.slow.detect.count",
-      Integer.MAX_VALUE);
     TEST_UTIL.startMiniCluster(2);
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
     QuotaCache.TEST_FORCE_REFRESH = true;

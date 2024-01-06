@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.master.procedure.GlobalProcedureInterface;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
+import org.apache.hadoop.hbase.procedure2.ProcedureFutureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
@@ -43,8 +44,6 @@ import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration;
-import org.apache.hadoop.hbase.util.FutureUtils;
-import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -73,7 +72,7 @@ public class MigrateReplicationQueueFromZkToTableProcedure
 
   private List<String> disabledPeerIds;
 
-  private CompletableFuture<?> future;
+  private CompletableFuture<Void> future;
 
   private ExecutorService executor;
 
@@ -82,6 +81,14 @@ public class MigrateReplicationQueueFromZkToTableProcedure
   @Override
   public String getGlobalId() {
     return getClass().getSimpleName();
+  }
+
+  private CompletableFuture<Void> getFuture() {
+    return future;
+  }
+
+  private void setFuture(CompletableFuture<Void> f) {
+    future = f;
   }
 
   private ProcedureSuspendedException suspend(Configuration conf, LongConsumer backoffConsumer)
@@ -153,6 +160,12 @@ public class MigrateReplicationQueueFromZkToTableProcedure
     LOG.info("No pending peer procedures found, continue...");
   }
 
+  private void finishMigartion() {
+    shutdownExecutorService();
+    setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_WAIT_UPGRADING);
+    resetRetry();
+  }
+
   @Override
   protected Flow executeFromState(MasterProcedureEnv env,
     MigrateReplicationQueueFromZkToTableState state)
@@ -195,52 +208,23 @@ public class MigrateReplicationQueueFromZkToTableProcedure
         setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_MIGRATE);
         return Flow.HAS_MORE_STATE;
       case MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_MIGRATE:
-        if (future != null) {
-          // should have finished when we arrive here
-          assert future.isDone();
-          try {
-            future.get();
-          } catch (Exception e) {
-            future = null;
-            throw suspend(env.getMasterConfiguration(),
-              backoff -> LOG.warn("failed to migrate queue data, sleep {} secs and retry later",
-                backoff / 1000, e));
+        try {
+          if (
+            ProcedureFutureUtil.checkFuture(this, this::getFuture, this::setFuture,
+              this::finishMigartion)
+          ) {
+            return Flow.HAS_MORE_STATE;
           }
-          shutdownExecutorService();
-          setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_WAIT_UPGRADING);
-          resetRetry();
-          return Flow.HAS_MORE_STATE;
+          ProcedureFutureUtil.suspendIfNecessary(this, this::setFuture,
+            env.getReplicationPeerManager()
+              .migrateQueuesFromZk(env.getMasterServices().getZooKeeper(), getExecutorService()),
+            env, this::finishMigartion);
+        } catch (IOException e) {
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn("failed to migrate queue data, sleep {} secs and retry later",
+              backoff / 1000, e));
         }
-        future = env.getReplicationPeerManager()
-          .migrateQueuesFromZk(env.getMasterServices().getZooKeeper(), getExecutorService());
-        FutureUtils.addListener(future, (r, e) -> {
-          // should acquire procedure execution lock to make sure that the procedure executor has
-          // finished putting this procedure to the WAITING_TIMEOUT state, otherwise there could be
-          // race and cause unexpected result
-          IdLock procLock =
-            env.getMasterServices().getMasterProcedureExecutor().getProcExecutionLock();
-          IdLock.Entry lockEntry;
-          try {
-            lockEntry = procLock.getLockEntry(getProcId());
-          } catch (IOException ioe) {
-            LOG.error("Error while acquiring execution lock for procedure {}"
-              + " when trying to wake it up, aborting...", this, ioe);
-            env.getMasterServices().abort("Can not acquire procedure execution lock", e);
-            return;
-          }
-          try {
-            setTimeoutFailure(env);
-          } finally {
-            procLock.releaseLockEntry(lockEntry);
-          }
-        });
-        // here we set timeout to -1 so the ProcedureExecutor will not schedule a Timer for us
-        setTimeout(-1);
-        setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
-        // skip persistence is a must now since when restarting, if the procedure is in
-        // WAITING_TIMEOUT state and has -1 as timeout, it will block there forever...
-        skipPersistence();
-        throw new ProcedureSuspendedException();
+        return Flow.HAS_MORE_STATE;
       case MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_WAIT_UPGRADING:
         long rsWithLowerVersion =
           env.getMasterServices().getServerManager().getOnlineServers().values().stream()

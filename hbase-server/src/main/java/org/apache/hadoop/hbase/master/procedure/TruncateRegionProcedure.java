@@ -110,8 +110,8 @@ public class TruncateRegionProcedure
   private void deleteRegionFromFileSystem(final MasterProcedureEnv env) throws IOException {
     RegionStateNode regionNode =
       env.getAssignmentManager().getRegionStates().getRegionStateNode(getRegion());
+    regionNode.lock();
     try {
-      regionNode.lock();
       final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
       final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), getTableName());
       HRegionFileSystem.deleteRegionFromFileSystem(env.getMasterConfiguration(),

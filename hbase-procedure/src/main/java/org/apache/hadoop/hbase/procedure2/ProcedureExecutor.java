@@ -24,14 +24,19 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -117,6 +122,9 @@ public class ProcedureExecutor<TEnvironment> {
     protected volatile boolean killAfterStoreUpdate = false;
     protected volatile boolean toggleKillAfterStoreUpdate = false;
 
+    protected volatile boolean killBeforeStoreUpdateInRollback = false;
+    protected volatile boolean toggleKillBeforeStoreUpdateInRollback = false;
+
     protected boolean shouldKillBeforeStoreUpdate() {
       final boolean kill = this.killBeforeStoreUpdate;
       if (this.toggleKillBeforeStoreUpdate) {
@@ -147,6 +155,16 @@ public class ProcedureExecutor<TEnvironment> {
 
     protected boolean shouldKillAfterStoreUpdate(final boolean isSuspended) {
       return (isSuspended && !killIfSuspended) ? false : shouldKillAfterStoreUpdate();
+    }
+
+    protected boolean shouldKillBeforeStoreUpdateInRollback() {
+      final boolean kill = this.killBeforeStoreUpdateInRollback;
+      if (this.toggleKillBeforeStoreUpdateInRollback) {
+        this.killBeforeStoreUpdateInRollback = !kill;
+        LOG.warn("Toggle KILL before store update in rollback to: "
+          + this.killBeforeStoreUpdateInRollback);
+      }
+      return kill;
     }
   }
 
@@ -222,6 +240,12 @@ public class ProcedureExecutor<TEnvironment> {
    */
   private TimeoutExecutorThread<TEnvironment> workerMonitorExecutor;
 
+  private ExecutorService forceUpdateExecutor;
+
+  // A thread pool for executing some asynchronous tasks for procedures, you can find references to
+  // getAsyncTaskExecutor to see the usage
+  private ExecutorService asyncTaskExecutor;
+
   private int corePoolSize;
   private int maxPoolSize;
 
@@ -231,9 +255,6 @@ public class ProcedureExecutor<TEnvironment> {
    * Scheduler/Queue that contains runnable procedures.
    */
   private final ProcedureScheduler scheduler;
-
-  private final Executor forceUpdateExecutor = Executors.newSingleThreadExecutor(
-    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Force-Update-PEWorker-%d").build());
 
   private final AtomicLong lastProcId = new AtomicLong(-1);
   private final AtomicLong workerId = new AtomicLong(0);
@@ -302,19 +323,6 @@ public class ProcedureExecutor<TEnvironment> {
     this.conf = conf;
     this.checkOwnerSet = conf.getBoolean(CHECK_OWNER_SET_CONF_KEY, DEFAULT_CHECK_OWNER_SET);
     refreshConfiguration(conf);
-    store.registerListener(new ProcedureStoreListener() {
-
-      @Override
-      public void forceUpdate(long[] procIds) {
-        Arrays.stream(procIds).forEach(procId -> forceUpdateExecutor.execute(() -> {
-          try {
-            forceUpdateProcedure(procId);
-          } catch (IOException e) {
-            LOG.warn("Failed to force update procedure with pid={}", procId);
-          }
-        }));
-      }
-    });
   }
 
   private void load(final boolean abortOnCorruption) throws IOException {
@@ -394,6 +402,108 @@ public class ProcedureExecutor<TEnvironment> {
     });
   }
 
+  private void initializeStacks(ProcedureIterator procIter,
+    List<Procedure<TEnvironment>> runnableList, List<Procedure<TEnvironment>> failedList,
+    List<Procedure<TEnvironment>> waitingList, List<Procedure<TEnvironment>> waitingTimeoutList)
+    throws IOException {
+    procIter.reset();
+    while (procIter.hasNext()) {
+      if (procIter.isNextFinished()) {
+        procIter.skipNext();
+        continue;
+      }
+
+      @SuppressWarnings("unchecked")
+      Procedure<TEnvironment> proc = procIter.next();
+      assert !(proc.isFinished() && !proc.hasParent()) : "unexpected completed proc=" + proc;
+      LOG.debug("Loading {}", proc);
+      Long rootProcId = getRootProcedureId(proc);
+      // The orphan procedures will be passed to handleCorrupted, so add an assert here
+      assert rootProcId != null;
+
+      if (proc.hasParent()) {
+        Procedure<TEnvironment> parent = procedures.get(proc.getParentProcId());
+        if (parent != null && !proc.isFinished()) {
+          parent.incChildrenLatch();
+        }
+      }
+
+      RootProcedureState<TEnvironment> procStack = rollbackStack.get(rootProcId);
+      procStack.loadStack(proc);
+
+      proc.setRootProcId(rootProcId);
+      switch (proc.getState()) {
+        case RUNNABLE:
+          runnableList.add(proc);
+          break;
+        case WAITING:
+          waitingList.add(proc);
+          break;
+        case WAITING_TIMEOUT:
+          waitingTimeoutList.add(proc);
+          break;
+        case FAILED:
+          failedList.add(proc);
+          break;
+        case ROLLEDBACK:
+        case INITIALIZING:
+          String msg = "Unexpected " + proc.getState() + " state for " + proc;
+          LOG.error(msg);
+          throw new UnsupportedOperationException(msg);
+        default:
+          break;
+      }
+    }
+    rollbackStack.forEach((rootProcId, procStack) -> {
+      if (procStack.getSubproceduresStack() != null) {
+        // if we have already record some stack ids, it means we support rollback
+        procStack.setRollbackSupported(true);
+      } else {
+        // otherwise, test the root procedure to see if we support rollback
+        procStack.setRollbackSupported(procedures.get(rootProcId).isRollbackSupported());
+      }
+    });
+  }
+
+  private void processWaitingProcedures(List<Procedure<TEnvironment>> waitingList,
+    List<Procedure<TEnvironment>> runnableList) {
+    waitingList.forEach(proc -> {
+      if (!proc.hasChildren()) {
+        // Normally, WAITING procedures should be waken by its children. But, there is a case that,
+        // all the children are successful and before they can wake up their parent procedure, the
+        // master was killed. So, during recovering the procedures from ProcedureWal, its children
+        // are not loaded because of their SUCCESS state. So we need to continue to run this WAITING
+        // procedure. But before executing, we need to set its state to RUNNABLE, otherwise, a
+        // exception will throw:
+        // Preconditions.checkArgument(procedure.getState() == ProcedureState.RUNNABLE,
+        // "NOT RUNNABLE! " + procedure.toString());
+        proc.setState(ProcedureState.RUNNABLE);
+        runnableList.add(proc);
+      } else {
+        proc.afterReplay(getEnvironment());
+      }
+    });
+  }
+
+  private void processWaitingTimeoutProcedures(List<Procedure<TEnvironment>> waitingTimeoutList) {
+    waitingTimeoutList.forEach(proc -> {
+      proc.afterReplay(getEnvironment());
+      timeoutExecutor.add(proc);
+    });
+  }
+
+  private void pushProceduresAfterLoad(List<Procedure<TEnvironment>> runnableList,
+    List<Procedure<TEnvironment>> failedList) {
+    failedList.forEach(scheduler::addBack);
+    runnableList.forEach(p -> {
+      p.afterReplay(getEnvironment());
+      if (!p.hasParent()) {
+        sendProcedureLoadedNotification(p.getProcId());
+      }
+      scheduler.addBack(p);
+    });
+  }
+
   private void loadProcedures(ProcedureIterator procIter) throws IOException {
     // 1. Build the rollback stack
     int runnableCount = 0;
@@ -456,90 +566,20 @@ public class ProcedureExecutor<TEnvironment> {
     List<Procedure<TEnvironment>> failedList = new ArrayList<>(failedCount);
     List<Procedure<TEnvironment>> waitingList = new ArrayList<>(waitingCount);
     List<Procedure<TEnvironment>> waitingTimeoutList = new ArrayList<>(waitingTimeoutCount);
-    procIter.reset();
-    while (procIter.hasNext()) {
-      if (procIter.isNextFinished()) {
-        procIter.skipNext();
-        continue;
-      }
 
-      @SuppressWarnings("unchecked")
-      Procedure<TEnvironment> proc = procIter.next();
-      assert !(proc.isFinished() && !proc.hasParent()) : "unexpected completed proc=" + proc;
-      LOG.debug("Loading {}", proc);
-      Long rootProcId = getRootProcedureId(proc);
-      // The orphan procedures will be passed to handleCorrupted, so add an assert here
-      assert rootProcId != null;
-
-      if (proc.hasParent()) {
-        Procedure<TEnvironment> parent = procedures.get(proc.getParentProcId());
-        if (parent != null && !proc.isFinished()) {
-          parent.incChildrenLatch();
-        }
-      }
-
-      RootProcedureState<TEnvironment> procStack = rollbackStack.get(rootProcId);
-      procStack.loadStack(proc);
-
-      proc.setRootProcId(rootProcId);
-      switch (proc.getState()) {
-        case RUNNABLE:
-          runnableList.add(proc);
-          break;
-        case WAITING:
-          waitingList.add(proc);
-          break;
-        case WAITING_TIMEOUT:
-          waitingTimeoutList.add(proc);
-          break;
-        case FAILED:
-          failedList.add(proc);
-          break;
-        case ROLLEDBACK:
-        case INITIALIZING:
-          String msg = "Unexpected " + proc.getState() + " state for " + proc;
-          LOG.error(msg);
-          throw new UnsupportedOperationException(msg);
-        default:
-          break;
-      }
-    }
+    initializeStacks(procIter, runnableList, failedList, waitingList, waitingTimeoutList);
 
     // 3. Check the waiting procedures to see if some of them can be added to runnable.
-    waitingList.forEach(proc -> {
-      if (!proc.hasChildren()) {
-        // Normally, WAITING procedures should be waken by its children. But, there is a case that,
-        // all the children are successful and before they can wake up their parent procedure, the
-        // master was killed. So, during recovering the procedures from ProcedureWal, its children
-        // are not loaded because of their SUCCESS state. So we need to continue to run this WAITING
-        // procedure. But before executing, we need to set its state to RUNNABLE, otherwise, a
-        // exception will throw:
-        // Preconditions.checkArgument(procedure.getState() == ProcedureState.RUNNABLE,
-        // "NOT RUNNABLE! " + procedure.toString());
-        proc.setState(ProcedureState.RUNNABLE);
-        runnableList.add(proc);
-      } else {
-        proc.afterReplay(getEnvironment());
-      }
-    });
+    processWaitingProcedures(waitingList, runnableList);
+
     // 4. restore locks
     restoreLocks();
 
     // 5. Push the procedures to the timeout executor
-    waitingTimeoutList.forEach(proc -> {
-      proc.afterReplay(getEnvironment());
-      timeoutExecutor.add(proc);
-    });
+    processWaitingTimeoutProcedures(waitingTimeoutList);
 
     // 6. Push the procedure to the scheduler
-    failedList.forEach(scheduler::addBack);
-    runnableList.forEach(p -> {
-      p.afterReplay(getEnvironment());
-      if (!p.hasParent()) {
-        sendProcedureLoadedNotification(p.getProcId());
-      }
-      scheduler.addBack(p);
-    });
+    pushProceduresAfterLoad(runnableList, failedList);
     // After all procedures put into the queue, signal the worker threads.
     // Otherwise, there is a race condition. See HBASE-21364.
     scheduler.signalAll();
@@ -566,6 +606,36 @@ public class ProcedureExecutor<TEnvironment> {
     this.threadGroup = new ThreadGroup("PEWorkerGroup");
     this.timeoutExecutor = new TimeoutExecutorThread<>(this, threadGroup, "ProcExecTimeout");
     this.workerMonitorExecutor = new TimeoutExecutorThread<>(this, threadGroup, "WorkerMonitor");
+    ThreadFactory backingThreadFactory = new ThreadFactory() {
+
+      @Override
+      public Thread newThread(Runnable r) {
+        return new Thread(threadGroup, r);
+      }
+    };
+    int size = Math.max(2, Runtime.getRuntime().availableProcessors());
+    ThreadPoolExecutor executor =
+      new ThreadPoolExecutor(size, size, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<Runnable>(),
+        new ThreadFactoryBuilder().setDaemon(true)
+          .setNameFormat(getClass().getSimpleName() + "-Async-Task-Executor-%d")
+          .setThreadFactory(backingThreadFactory).build());
+    executor.allowCoreThreadTimeOut(true);
+    this.asyncTaskExecutor = executor;
+    forceUpdateExecutor = Executors.newFixedThreadPool(1, new ThreadFactoryBuilder().setDaemon(true)
+      .setNameFormat("Force-Update-PEWorker-%d").setThreadFactory(backingThreadFactory).build());
+    store.registerListener(new ProcedureStoreListener() {
+
+      @Override
+      public void forceUpdate(long[] procIds) {
+        Arrays.stream(procIds).forEach(procId -> forceUpdateExecutor.execute(() -> {
+          try {
+            forceUpdateProcedure(procId);
+          } catch (IOException e) {
+            LOG.warn("Failed to force update procedure with pid={}", procId);
+          }
+        }));
+      }
+    });
 
     // Create the workers
     workerId.set(0);
@@ -623,14 +693,16 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   public void stop() {
-    if (!running.getAndSet(false)) {
-      return;
-    }
-
+    // it is possible that we fail in init, while loading procedures, so we will not set running to
+    // true but we should have already started the ProcedureScheduler, and also the two
+    // ExecutorServices, so here we do not check running state, just stop them
+    running.set(false);
     LOG.info("Stopping");
     scheduler.stop();
     timeoutExecutor.sendStopSignal();
     workerMonitorExecutor.sendStopSignal();
+    forceUpdateExecutor.shutdown();
+    asyncTaskExecutor.shutdown();
   }
 
   public void join() {
@@ -645,14 +717,29 @@ public class ProcedureExecutor<TEnvironment> {
     for (WorkerThread worker : workerThreads) {
       worker.awaitTermination();
     }
+    try {
+      if (!forceUpdateExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+        LOG.warn("There are still pending tasks in forceUpdateExecutor");
+      }
+    } catch (InterruptedException e) {
+      LOG.warn("interrupted while waiting for forceUpdateExecutor termination", e);
+      Thread.currentThread().interrupt();
+    }
+    try {
+      if (!asyncTaskExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+        LOG.warn("There are still pending tasks in asyncTaskExecutor");
+      }
+    } catch (InterruptedException e) {
+      LOG.warn("interrupted while waiting for asyncTaskExecutor termination", e);
+      Thread.currentThread().interrupt();
+    }
 
     // Destroy the Thread Group for the executors
     // TODO: Fix. #join is not place to destroy resources.
     try {
       threadGroup.destroy();
     } catch (IllegalThreadStateException e) {
-      LOG.error("ThreadGroup {} contains running threads; {}: See STDOUT", this.threadGroup,
-        e.getMessage());
+      LOG.error("ThreadGroup {} contains running threads; {}: See STDOUT", this.threadGroup, e);
       // This dumps list of threads on STDOUT.
       this.threadGroup.list();
     }
@@ -1080,6 +1167,7 @@ public class ProcedureExecutor<TEnvironment> {
 
     // Create the rollback stack for the procedure
     RootProcedureState<TEnvironment> stack = new RootProcedureState<>();
+    stack.setRollbackSupported(proc.isRollbackSupported());
     rollbackStack.put(currentProcId, stack);
 
     // Submit the new subprocedures
@@ -1441,42 +1529,75 @@ public class ProcedureExecutor<TEnvironment> {
     }
   }
 
-  /**
-   * Execute the rollback of the full procedure stack. Once the procedure is rolledback, the
-   * root-procedure will be visible as finished to user, and the result will be the fatal exception.
-   */
-  private LockState executeRollback(long rootProcId, RootProcedureState<TEnvironment> procStack) {
-    Procedure<TEnvironment> rootProc = procedures.get(rootProcId);
-    RemoteProcedureException exception = rootProc.getException();
-    // TODO: This needs doc. The root proc doesn't have an exception. Maybe we are
-    // rolling back because the subprocedure does. Clarify.
-    if (exception == null) {
-      exception = procStack.getException();
-      rootProc.setFailure(exception);
-      store.update(rootProc);
+  // Returning null means we have already held the execution lock, so you do not need to get the
+  // lock entry for releasing
+  private IdLock.Entry getLockEntryForRollback(long procId) {
+    // Hold the execution lock if it is not held by us. The IdLock is not reentrant so we need
+    // this check, as the worker will hold the lock before executing a procedure. This is the only
+    // place where we may hold two procedure execution locks, and there is a fence in the
+    // RootProcedureState where we can make sure that only one worker can execute the rollback of
+    // a RootProcedureState, so there is no dead lock problem. And the lock here is necessary to
+    // prevent race between us and the force update thread.
+    if (!procExecutionLock.isHeldByCurrentThread(procId)) {
+      try {
+        return procExecutionLock.getLockEntry(procId);
+      } catch (IOException e) {
+        // can only happen if interrupted, so not a big deal to propagate it
+        throw new UncheckedIOException(e);
+      }
     }
+    return null;
+  }
 
+  private void executeUnexpectedRollback(Procedure<TEnvironment> rootProc,
+    RootProcedureState<TEnvironment> procStack) {
+    if (procStack.getSubprocs() != null) {
+      // comparing proc id in reverse order, so we will delete later procedures first, otherwise we
+      // may delete parent procedure first and if we fail in the middle of this operation, when
+      // loading we will find some orphan procedures
+      PriorityQueue<Procedure<TEnvironment>> pq =
+        new PriorityQueue<>(procStack.getSubprocs().size(),
+          Comparator.<Procedure<TEnvironment>> comparingLong(Procedure::getProcId).reversed());
+      pq.addAll(procStack.getSubprocs());
+      for (;;) {
+        Procedure<TEnvironment> subproc = pq.poll();
+        if (subproc == null) {
+          break;
+        }
+        if (!procedures.containsKey(subproc.getProcId())) {
+          // this means it has already been rolledback
+          continue;
+        }
+        IdLock.Entry lockEntry = getLockEntryForRollback(subproc.getProcId());
+        try {
+          cleanupAfterRollbackOneStep(subproc);
+          execCompletionCleanup(subproc);
+        } finally {
+          if (lockEntry != null) {
+            procExecutionLock.releaseLockEntry(lockEntry);
+          }
+        }
+      }
+    }
+    IdLock.Entry lockEntry = getLockEntryForRollback(rootProc.getProcId());
+    try {
+      cleanupAfterRollbackOneStep(rootProc);
+    } finally {
+      if (lockEntry != null) {
+        procExecutionLock.releaseLockEntry(lockEntry);
+      }
+    }
+  }
+
+  private LockState executeNormalRollback(Procedure<TEnvironment> rootProc,
+    RootProcedureState<TEnvironment> procStack) {
     List<Procedure<TEnvironment>> subprocStack = procStack.getSubproceduresStack();
     assert subprocStack != null : "Called rollback with no steps executed rootProc=" + rootProc;
 
     int stackTail = subprocStack.size();
     while (stackTail-- > 0) {
       Procedure<TEnvironment> proc = subprocStack.get(stackTail);
-      IdLock.Entry lockEntry = null;
-      // Hold the execution lock if it is not held by us. The IdLock is not reentrant so we need
-      // this check, as the worker will hold the lock before executing a procedure. This is the only
-      // place where we may hold two procedure execution locks, and there is a fence in the
-      // RootProcedureState where we can make sure that only one worker can execute the rollback of
-      // a RootProcedureState, so there is no dead lock problem. And the lock here is necessary to
-      // prevent race between us and the force update thread.
-      if (!procExecutionLock.isHeldByCurrentThread(proc.getProcId())) {
-        try {
-          lockEntry = procExecutionLock.getLockEntry(proc.getProcId());
-        } catch (IOException e) {
-          // can only happen if interrupted, so not a big deal to propagate it
-          throw new UncheckedIOException(e);
-        }
-      }
+      IdLock.Entry lockEntry = getLockEntryForRollback(proc.getProcId());
       try {
         // For the sub procedures which are successfully finished, we do not rollback them.
         // Typically, if we want to rollback a procedure, we first need to rollback it, and then
@@ -1526,15 +1647,59 @@ public class ProcedureExecutor<TEnvironment> {
         }
       }
     }
+    return LockState.LOCK_ACQUIRED;
+  }
 
-    // Finalize the procedure state
-    LOG.info("Rolled back {} exec-time={}", rootProc,
-      StringUtils.humanTimeDiff(rootProc.elapsedTime()));
-    procedureFinished(rootProc);
+  /**
+   * Execute the rollback of the full procedure stack. Once the procedure is rolledback, the
+   * root-procedure will be visible as finished to user, and the result will be the fatal exception.
+   */
+  private LockState executeRollback(long rootProcId, RootProcedureState<TEnvironment> procStack) {
+    Procedure<TEnvironment> rootProc = procedures.get(rootProcId);
+    RemoteProcedureException exception = rootProc.getException();
+    // TODO: This needs doc. The root proc doesn't have an exception. Maybe we are
+    // rolling back because the subprocedure does. Clarify.
+    if (exception == null) {
+      exception = procStack.getException();
+      rootProc.setFailure(exception);
+      store.update(rootProc);
+    }
+
+    if (procStack.isRollbackSupported()) {
+      LockState lockState = executeNormalRollback(rootProc, procStack);
+      if (lockState != LockState.LOCK_ACQUIRED) {
+        return lockState;
+      }
+    } else {
+      // the procedure does not support rollback, so typically we should not reach here, this
+      // usually means there are code bugs, let's just wait all the subprocedures to finish and then
+      // mark the root procedure as failure.
+      LOG.error(HBaseMarkers.FATAL,
+        "Root Procedure {} does not support rollback but the execution failed"
+          + " and try to rollback, code bug?",
+        rootProc, exception);
+      executeUnexpectedRollback(rootProc, procStack);
+    }
+
+    IdLock.Entry lockEntry = getLockEntryForRollback(rootProc.getProcId());
+    try {
+      // Finalize the procedure state
+      LOG.info("Rolled back {} exec-time={}", rootProc,
+        StringUtils.humanTimeDiff(rootProc.elapsedTime()));
+      procedureFinished(rootProc);
+    } finally {
+      if (lockEntry != null) {
+        procExecutionLock.releaseLockEntry(lockEntry);
+      }
+    }
+
     return LockState.LOCK_ACQUIRED;
   }
 
   private void cleanupAfterRollbackOneStep(Procedure<TEnvironment> proc) {
+    if (testing != null && testing.shouldKillBeforeStoreUpdateInRollback()) {
+      kill("TESTING: Kill BEFORE store update in rollback: " + proc);
+    }
     if (proc.removeStackIndex()) {
       if (!proc.isSuccess()) {
         proc.setState(ProcedureState.ROLLEDBACK);
@@ -1575,15 +1740,6 @@ public class ProcedureExecutor<TEnvironment> {
     } catch (Throwable e) {
       // Catch NullPointerExceptions or similar errors...
       LOG.error(HBaseMarkers.FATAL, "CODE-BUG: Uncaught runtime exception for " + proc, e);
-    }
-
-    // allows to kill the executor before something is stored to the wal.
-    // useful to test the procedure recovery.
-    if (testing != null && testing.shouldKillBeforeStoreUpdate()) {
-      String msg = "TESTING: Kill before store update";
-      LOG.debug(msg);
-      stop();
-      throw new RuntimeException(msg);
     }
 
     cleanupAfterRollbackOneStep(proc);
@@ -1714,8 +1870,20 @@ public class ProcedureExecutor<TEnvironment> {
       if (procedure.needPersistence()) {
         // Add the procedure to the stack
         // See HBASE-28210 on why we need synchronized here
+        boolean needUpdateStoreOutsideLock = false;
         synchronized (procStack) {
-          procStack.addRollbackStep(procedure);
+          if (procStack.addRollbackStep(procedure)) {
+            updateStoreOnExec(procStack, procedure, subprocs);
+          } else {
+            needUpdateStoreOutsideLock = true;
+          }
+        }
+        // this is an optimization if we do not need to maintain rollback step, as all subprocedures
+        // of the same root procedure share the same root procedure state, if we can only update
+        // store under the above lock, the sub procedures of the same root procedure can only be
+        // persistent sequentially, which will have a bad performance. See HBASE-28212 for more
+        // details.
+        if (needUpdateStoreOutsideLock) {
           updateStoreOnExec(procStack, procedure, subprocs);
         }
       }
@@ -1925,6 +2093,13 @@ public class ProcedureExecutor<TEnvironment> {
 
   public IdLock getProcExecutionLock() {
     return procExecutionLock;
+  }
+
+  /**
+   * Get a thread pool for executing some asynchronous tasks
+   */
+  public ExecutorService getAsyncTaskExecutor() {
+    return asyncTaskExecutor;
   }
 
   // ==========================================================================

@@ -83,6 +83,11 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
+  public float getCurrentRegionCacheRatio() {
+    return 0;
+  }
+
+  @Override
   public long getReadRequestCount() {
     return 105;
   }

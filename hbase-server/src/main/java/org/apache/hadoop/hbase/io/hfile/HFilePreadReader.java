@@ -23,8 +23,6 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketEntry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,17 +37,15 @@ public class HFilePreadReader extends HFileReaderImpl {
   public HFilePreadReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
-    final MutableBoolean fileAlreadyCached = new MutableBoolean(false);
-    Optional<BucketCache> bucketCacheOptional =
-      BucketCache.getBucketCacheFromCacheConfig(cacheConf);
-    bucketCacheOptional.flatMap(BucketCache::getFullyCachedFiles).ifPresent(fcf -> {
-      fileAlreadyCached.setValue(fcf.get(path.getName()) == null ? false : true);
+    final MutableBoolean shouldCache = new MutableBoolean(true);
+
+    cacheConf.getBlockCache().ifPresent(cache -> {
+      Optional<Boolean> result = cache.shouldCacheFile(path.getName());
+      shouldCache.setValue(result.isPresent() ? result.get().booleanValue() : true);
     });
+
     // Prefetch file blocks upon open if requested
-    if (
-      cacheConf.shouldPrefetchOnOpen() && cacheIfCompactionsOff()
-        && !fileAlreadyCached.booleanValue()
-    ) {
+    if (cacheConf.shouldPrefetchOnOpen() && cacheIfCompactionsOff() && shouldCache.booleanValue()) {
       PrefetchExecutor.request(path, new Runnable() {
         @Override
         public void run() {
@@ -70,34 +66,38 @@ public class HFilePreadReader extends HFileReaderImpl {
             }
             // Don't use BlockIterator here, because it's designed to read load-on-open section.
             long onDiskSizeOfNextBlock = -1;
+            // if we are here, block cache is present anyways
+            BlockCache cache = cacheConf.getBlockCache().get();
+            boolean interrupted = false;
+            int blockCount = 0;
+            int dataBlockCount = 0;
             while (offset < end) {
               if (Thread.interrupted()) {
                 break;
               }
-              // BucketCache can be persistent and resilient to restarts, so we check first if the
-              // block exists on its in-memory index, if so, we just update the offset and move on
-              // to the next block without actually going read all the way to the cache.
-              if (bucketCacheOptional.isPresent()) {
-                BucketCache cache = bucketCacheOptional.get();
-                if (cache.getBackingMapValidated().get()) {
-                  BlockCacheKey cacheKey = new BlockCacheKey(name, offset);
-                  BucketEntry entry = cache.getBackingMap().get(cacheKey);
-                  if (entry != null) {
-                    cacheKey = new BlockCacheKey(name, offset);
-                    entry = cache.getBackingMap().get(cacheKey);
-                    if (entry == null) {
-                      LOG.debug("No cache key {}, we'll read and cache it", cacheKey);
-                    } else {
-                      offset += entry.getOnDiskSizeWithHeader();
-                      LOG.debug(
-                        "Found cache key {}. Skipping prefetch, the block is already cached.",
-                        cacheKey);
-                      continue;
-                    }
-                  } else {
-                    LOG.debug("No entry in the backing map for cache key {}", cacheKey);
-                  }
+              // Some cache implementations can be persistent and resilient to restarts,
+              // so we check first if the block exists on its in-memory index, if so, we just
+              // update the offset and move on to the next block without actually going read all
+              // the way to the cache.
+              BlockCacheKey cacheKey = new BlockCacheKey(name, offset);
+              if (cache.isAlreadyCached(cacheKey).orElse(false)) {
+                // Right now, isAlreadyCached is only supported by BucketCache, which should
+                // always cache data blocks.
+                int size = cache.getBlockSize(cacheKey).orElse(0);
+                if (size > 0) {
+                  offset += size;
+                  LOG.debug("Found block of size {} for cache key {}. "
+                    + "Skipping prefetch, the block is already cached.", size, cacheKey);
+                  blockCount++;
+                  dataBlockCount++;
+                  continue;
+                } else {
+                  LOG.debug("Found block for cache key {}, but couldn't get its size. "
+                    + "Maybe the cache implementation doesn't support it? "
+                    + "We'll need to read the block from cache or file system. ", cacheKey);
                 }
+              } else {
+                LOG.debug("No entry in the backing map for cache key {}. ", cacheKey);
               }
               // Perhaps we got our block from cache? Unlikely as this may be, if it happens, then
               // the internal-to-hfileblock thread local which holds the overread that gets the
@@ -106,8 +106,20 @@ public class HFilePreadReader extends HFileReaderImpl {
               HFileBlock block = prefetchStreamReader.readBlock(offset, onDiskSizeOfNextBlock,
                 /* cacheBlock= */true, /* pread= */false, false, false, null, null, true);
               try {
+                if (!cacheConf.isInMemory() && !cache.blockFitsIntoTheCache(block).orElse(true)) {
+                  LOG.warn(
+                    "Interrupting prefetch for file {} because block {} of size {} "
+                      + "doesn't fit in the available cache space.",
+                    path, cacheKey, block.getOnDiskSizeWithHeader());
+                  interrupted = true;
+                  break;
+                }
                 onDiskSizeOfNextBlock = block.getNextBlockOnDiskSize();
                 offset += block.getOnDiskSizeWithHeader();
+                blockCount++;
+                if (block.getBlockType().isData()) {
+                  dataBlockCount++;
+                }
               } finally {
                 // Ideally here the readBlock won't find the block in cache. We call this
                 // readBlock so that block data is read from FS and cached in BC. we must call
@@ -115,8 +127,10 @@ public class HFilePreadReader extends HFileReaderImpl {
                 block.release();
               }
             }
-            final long fileSize = offset;
-            bucketCacheOptional.ifPresent(bc -> bc.fileCacheCompleted(path, fileSize));
+            if (!interrupted) {
+              cacheConf.getBlockCache().get().notifyFileCachingCompleted(path, blockCount,
+                dataBlockCount, offset);
+            }
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
             if (LOG.isTraceEnabled()) {

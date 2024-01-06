@@ -37,6 +37,14 @@
 # hbase hacking.
 include Java
 
+# Required to access JRuby-specific internal features, such as `JRuby.runtime`
+# Loading 'java' was automatically loading 'jruby' until JRuby 9.2.
+# But, it has changed since JRuby 9.3. JRuby 9.3+ needs loading 'jruby' explicitly.
+#
+# See also: https://github.com/jruby/jruby/issues/7221#issuecomment-1133646241
+#
+require 'jruby'
+
 # Some goodies for hirb. Should these be left up to the user's discretion?
 if $stdin.tty?
   require 'irb/completion'
@@ -104,7 +112,7 @@ opts = GetoptLong.new(
 opts.ordering = GetoptLong::REQUIRE_ORDER
 
 script2run = nil
-log_level = org.apache.logging.log4j.Level::ERROR
+log_level = 'ERROR'
 @shell_debug = false
 interactive = true
 full_backtrace = false
@@ -118,7 +126,7 @@ opts.each do |opt, arg|
   when D_ARG
     conf_from_cli = add_to_configuration(conf_from_cli, arg)
   when '--debug'
-    log_level = org.apache.logging.log4j.Level::DEBUG
+    log_level = 'DEBUG'
     full_backtrace = true
     @shell_debug = true
     puts 'Setting DEBUG log level...'
@@ -138,8 +146,8 @@ script2run = ARGV.shift unless ARGV.empty?
 ARGV.unshift('-d') if @shell_debug
 
 # Set logging level to avoid verboseness
-org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.zookeeper', log_level)
-org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.hadoop', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.zookeeper', log_level)
+org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop', log_level)
 
 # Require HBase now after setting log levels
 require 'hbase_constants'
@@ -165,14 +173,14 @@ def debug
   if @shell_debug
     @shell_debug = false
     conf.back_trace_limit = 0
-    log_level = org.apache.logging.log4j.Level::ERROR
+    log_level = 'ERROR'
   else
     @shell_debug = true
     conf.back_trace_limit = 100
-    log_level = org.apache.logging.log4j.Level::DEBUG
+    log_level = 'DEBUG'
   end
-  org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.zookeeper', log_level)
-  org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.hadoop', log_level)
+  org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.zookeeper', log_level)
+  org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop', log_level)
   debug?
 end
 
