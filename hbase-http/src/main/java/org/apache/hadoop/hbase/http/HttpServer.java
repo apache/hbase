@@ -144,6 +144,10 @@ public class HttpServer implements FilterContainer {
   static final String HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_SUFFIX = "signature.secret.file";
   public static final String HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_KEY =
     HTTP_AUTHENTICATION_PREFIX + HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_SUFFIX;
+  static final String HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_SUFFIX =
+    "kerberos.endpoint.whitelist";
+  public static final String HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_KEY =
+    HTTP_SPNEGO_AUTHENTICATION_PREFIX + HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_SUFFIX;
   public static final String HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY =
     HTTP_SPNEGO_AUTHENTICATION_PREFIX + "admin.users";
   public static final String HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY =
@@ -152,6 +156,9 @@ public class HttpServer implements FilterContainer {
     "hbase.security.authentication.ui.config.protected";
   public static final String HTTP_UI_NO_CACHE_ENABLE_KEY = "hbase.http.filter.no-store.enable";
   public static final boolean HTTP_PRIVILEGED_CONF_DEFAULT = false;
+  public static final String HTTP_PRIVILEGED_METRICS_KEY =
+    "hbase.security.authentication.ui.metrics.protected";
+  public static final boolean HTTP_PRIVILEGED_METRICS_DEFAULT = true;
 
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
@@ -850,8 +857,13 @@ public class HttpServer implements FilterContainer {
         ServletConfig servletConfig = METRIC_SERVLETS.get(enabledServlet);
         if (servletConfig != null) {
           Class<?> clz = Class.forName(servletConfig.getClazz());
-          addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
-            clz.asSubclass(HttpServlet.class));
+          if (conf.getBoolean(HTTP_PRIVILEGED_METRICS_KEY, HTTP_PRIVILEGED_METRICS_DEFAULT)) {
+            addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
+              clz.asSubclass(HttpServlet.class));
+          } else {
+            addUnprivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
+              clz.asSubclass(HttpServlet.class));
+          }
         }
       } catch (Exception e) {
         /* shouldn't be fatal, so warn the user about it */
@@ -1129,7 +1141,7 @@ public class HttpServer implements FilterContainer {
   private void initSpnego(Configuration conf, String hostName, String usernameConfKey,
     String keytabConfKey, String kerberosNameRuleKey, String signatureSecretKeyFileKey)
     throws IOException {
-    Map<String, String> params = new HashMap<>();
+    Map<String, String> params = conf.getPropsWithPrefix(HTTP_SPNEGO_AUTHENTICATION_PREFIX);
     String principalInConf = getOrEmptyString(conf, usernameConfKey);
     if (!principalInConf.isEmpty()) {
       params.put(HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_SUFFIX,
@@ -1146,6 +1158,11 @@ public class HttpServer implements FilterContainer {
     String signatureSecretKeyFile = getOrEmptyString(conf, signatureSecretKeyFileKey);
     if (!signatureSecretKeyFile.isEmpty()) {
       params.put(HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_SUFFIX, signatureSecretKeyFile);
+    }
+    String endpointWhitelist =
+      getOrEmptyString(conf, HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_KEY);
+    if (!endpointWhitelist.isEmpty()) {
+      params.put(HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_SUFFIX, endpointWhitelist);
     }
     params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
 

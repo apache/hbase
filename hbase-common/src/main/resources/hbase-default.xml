@@ -1632,6 +1632,26 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
+    <name>hbase.security.authentication.ui.metrics.protected</name>
+    <value>true</value>
+    <description>
+      Controls whether or not metrics endpoints are allowed only for admin.
+      If true, only users listed on "hbase.security.authentication.spnego.admin.users"
+      or users in group listed on "hbase.security.authentication.spnego.admin.groups"
+      are allowed to access metrics endpoints. (e.g. /jmx, /metrics, /prometheus)
+    </description>
+  </property>
+  <property>
+    <name>hbase.security.authentication.spnego.kerberos.endpoint.whitelist</name>
+    <value></value>
+    <description>
+      Controls whether or not secure authentication is enabled for conf, metrics endpoints.
+      (e.g. /conf, /jmx, /metrics, /prometheus)
+      It is valid only when "hbase.security.authentication.ui.config.protected" (for /conf),
+      "hbase.security.authentication.ui.metrics.protected" (for /jmx, /metrics, /prometheus) is false.
+    </description>
+  </property>
+  <property>
     <name>hbase.rest.filter.classes</name>
     <value>org.apache.hadoop.hbase.rest.filter.GzipFilter</value>
     <description>
