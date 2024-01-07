@@ -68,9 +68,7 @@
               <exclude>org.hamcrest:hamcrest-core</exclude>
               <exclude>org.mockito:mockito-core</exclude>
               <!-- Exclude transitive dependencies of tomcat-jasper, not needed at runtime -->
-              <exclude>org.apache.tomcat:tomcat-servlet-api</exclude>
               <exclude>org.apache.tomcat:tomcat-juli</exclude>
-              <exclude>org.apache.tomcat:tomcat-jsp-api</exclude>
               <exclude>org.apache.tomcat:tomcat-api</exclude>
               <exclude>org.apache.tomcat:tomcat-util-scan</exclude>
               <exclude>org.apache.tomcat:tomcat-util</exclude>
