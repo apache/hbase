@@ -2114,4 +2114,22 @@ public class MasterCoprocessorHost
       }
     });
   }
+
+  public void preUpdateConfiguration(Configuration preReloadConf) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preUpdateMasterConfiguration(this, preReloadConf);
+      }
+    });
+  }
+
+  public void postUpdateConfiguration(Configuration postReloadConf) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postUpdateMasterConfiguration(this, postReloadConf);
+      }
+    });
+  }
 }

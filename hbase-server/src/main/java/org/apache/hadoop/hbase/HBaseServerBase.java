@@ -46,16 +46,19 @@ import org.apache.hadoop.hbase.client.ConnectionRegistryEndpoint;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ShutdownHook;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
@@ -184,14 +187,14 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   protected final NettyEventLoopGroupConfig eventLoopGroupConfig;
 
-  /**
-   * If running on Windows, do windows-specific setup.
-   */
-  private static void setupWindows(final Configuration conf, ConfigurationManager cm) {
+  private void setupSignalHandlers() {
     if (!SystemUtils.IS_OS_WINDOWS) {
       HBasePlatformDependent.handle("HUP", (number, name) -> {
-        conf.reloadConfiguration();
-        cm.notifyAllObservers(conf);
+        try {
+          updateConfiguration();
+        } catch (IOException e) {
+          LOG.error("Problem while reloading configuration", e);
+        }
       });
     }
   }
@@ -276,7 +279,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
         new ZKWatcher(conf, getProcessName() + ":" + addr.getPort(), this, canCreateBaseZNode());
 
       this.configurationManager = new ConfigurationManager();
-      setupWindows(conf, configurationManager);
+      setupSignalHandlers();
 
       initializeFileSystem();
 
@@ -614,17 +617,39 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   /**
    * Reload the configuration from disk.
    */
-  public void updateConfiguration() {
+  public void updateConfiguration() throws IOException {
     LOG.info("Reloading the configuration from disk.");
     // Reload the configuration from disk.
+    preUpdateConfiguration();
     conf.reloadConfiguration();
     configurationManager.notifyAllObservers(conf);
+    postUpdateConfiguration();
+  }
+
+  private void preUpdateConfiguration() throws IOException {
+    CoprocessorHost<?, ?> coprocessorHost = getCoprocessorHost();
+    if (coprocessorHost instanceof RegionServerCoprocessorHost) {
+      ((RegionServerCoprocessorHost) coprocessorHost).preUpdateConfiguration(conf);
+    } else if (coprocessorHost instanceof MasterCoprocessorHost) {
+      ((MasterCoprocessorHost) coprocessorHost).preUpdateConfiguration(conf);
+    }
+  }
+
+  private void postUpdateConfiguration() throws IOException {
+    CoprocessorHost<?, ?> coprocessorHost = getCoprocessorHost();
+    if (coprocessorHost instanceof RegionServerCoprocessorHost) {
+      ((RegionServerCoprocessorHost) coprocessorHost).postUpdateConfiguration(conf);
+    } else if (coprocessorHost instanceof MasterCoprocessorHost) {
+      ((MasterCoprocessorHost) coprocessorHost).postUpdateConfiguration(conf);
+    }
   }
 
   @Override
   public String toString() {
     return getServerName().toString();
   }
+
+  protected abstract CoprocessorHost<?, ?> getCoprocessorHost();
 
   protected abstract boolean canCreateBaseZNode();
 

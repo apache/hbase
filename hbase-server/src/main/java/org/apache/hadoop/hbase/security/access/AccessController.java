@@ -2576,4 +2576,27 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     accessChecker.requirePermission(getActiveUser(ctx), "updateRSGroupConfig", null,
       Permission.Action.ADMIN);
   }
+
+  @Override
+  public void preClearRegionBlockCache(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+    throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "clearRegionBlockCache", null,
+      Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preUpdateRegionServerConfiguration(
+    ObserverContext<RegionServerCoprocessorEnvironment> ctx, Configuration preReloadConf)
+    throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "updateConfiguration", null,
+      Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preUpdateMasterConfiguration(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    Configuration preReloadConf) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "updateConfiguration", null,
+      Permission.Action.ADMIN);
+  }
+
 }
