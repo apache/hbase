@@ -3087,6 +3087,41 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
+  public void testUpdateMasterConfiguration() throws Exception {
+    AccessTestAction action = () -> {
+      ACCESS_CONTROLLER.preUpdateMasterConfiguration(ObserverContextImpl.createAndPrepare(CP_ENV),
+        null);
+      return null;
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
+  public void testUpdateRegionServerConfiguration() throws Exception {
+    AccessTestAction action = () -> {
+      ACCESS_CONTROLLER
+        .preUpdateRegionServerConfiguration(ObserverContextImpl.createAndPrepare(RSCP_ENV), null);
+      return null;
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
+  public void testClearRegionBlockCache() throws Exception {
+    AccessTestAction action = () -> {
+      ACCESS_CONTROLLER.preClearRegionBlockCache(ObserverContextImpl.createAndPrepare(RSCP_ENV));
+      return null;
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
   public void testTransitSyncReplicationPeerState() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override

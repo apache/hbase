@@ -724,6 +724,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return rpcServices;
   }
 
+  @Override
+  protected MasterCoprocessorHost getCoprocessorHost() {
+    return getMasterCoprocessorHost();
+  }
+
   public boolean balanceSwitch(final boolean b) throws IOException {
     return getMasterRpcServices().switchBalancer(b, BalanceSwitchMode.ASYNC);
   }

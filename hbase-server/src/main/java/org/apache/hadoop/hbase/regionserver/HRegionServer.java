@@ -588,6 +588,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   @Override
+  protected RegionServerCoprocessorHost getCoprocessorHost() {
+    return getRegionServerCoprocessorHost();
+  }
+
+  @Override
   protected boolean canCreateBaseZNode() {
     return !clusterMode();
   }
