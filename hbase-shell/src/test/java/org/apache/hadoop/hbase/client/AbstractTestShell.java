@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -42,6 +43,8 @@ public abstract class AbstractTestShell {
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected final static ScriptingContainer jruby = new ScriptingContainer();
+
+  protected static boolean erasureCodingSupported = false;
 
   protected static void setUpConfig() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -103,9 +106,12 @@ public abstract class AbstractTestShell {
     // Start mini cluster
     // 3 datanodes needed for erasure coding checks
     TEST_UTIL.startMiniCluster(3);
-    DistributedFileSystem dfs =
-      (DistributedFileSystem) FileSystem.get(TEST_UTIL.getConfiguration());
-    dfs.enableErasureCodingPolicy("XOR-2-1-1024k");
+    try {
+      ErasureCodingUtils.enablePolicy(FileSystem.get(TEST_UTIL.getConfiguration()), "XOR-2-1-1024k");
+      erasureCodingSupported = true;
+    } catch (UnsupportedOperationException e) {
+      LOG.info("Current hadoop version does not support erasure coding, only validation tests will run.");
+    }
 
     setUpJRubyRuntime();
   }

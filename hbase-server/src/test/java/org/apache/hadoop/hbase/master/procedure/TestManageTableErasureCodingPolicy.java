@@ -21,9 +21,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assume.*;
 
 import java.io.IOException;
 import java.util.function.Function;
@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -50,8 +51,8 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -77,6 +78,7 @@ public class TestManageTableErasureCodingPolicy {
   private static final TableDescriptor EC_TABLE_DESC =
     TableDescriptorBuilder.newBuilder(EC_TABLE).setErasureCodingPolicy("XOR-2-1-1024k")
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+  private static boolean erasureCodingSupported;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -85,11 +87,23 @@ public class TestManageTableErasureCodingPolicy {
     UTIL.startMiniDFSCluster(3); // 3 necessary for XOR-2-1-1024k
     UTIL.startMiniCluster(1);
     DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(UTIL.getConfiguration());
-    fs.enableErasureCodingPolicy("XOR-2-1-1024k");
-    fs.enableErasureCodingPolicy("RS-6-3-1024k");
+
+    erasureCodingSupported = enableErasureCoding(fs);
+
     Table table = UTIL.createTable(NON_EC_TABLE_DESC, null);
     UTIL.loadTable(table, FAMILY);
     UTIL.flush();
+  }
+
+  private static boolean enableErasureCoding(DistributedFileSystem fs) throws IOException {
+    try {
+      ErasureCodingUtils.enablePolicy(fs, "XOR-2-1-1024k");
+      ErasureCodingUtils.enablePolicy(fs, "RS-6-3-1024k");
+      return true;
+    } catch (UnsupportedOperationException e) {
+      LOG.info("Current hadoop version does not support erasure coding, only validation tests will run.");
+      return false;
+    }
   }
 
   @AfterClass
@@ -154,6 +168,7 @@ public class TestManageTableErasureCodingPolicy {
 
   @Test
   public void testCreateTableErasureCodingSync() throws IOException {
+    assumeTrue(erasureCodingSupported);
     try (Admin admin = UTIL.getAdmin()) {
       recreateTable(admin, EC_TABLE_DESC);
       UTIL.flush(EC_TABLE);
@@ -175,7 +190,8 @@ public class TestManageTableErasureCodingPolicy {
   }
 
   @Test
-  public void testModifyTableErasureCodingSync() throws IOException, InterruptedException {
+  public void testModifyTableErasureCodingSync() throws IOException {
+    assumeTrue(erasureCodingSupported);
     try (Admin admin = UTIL.getAdmin()) {
       Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
       DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(UTIL.getConfiguration());
@@ -233,6 +249,7 @@ public class TestManageTableErasureCodingPolicy {
 
   @Test
   public void testRestoreSnapshot() throws IOException {
+    assumeTrue(erasureCodingSupported);
     String snapshotName = "testRestoreSnapshot_snap";
     TableName tableName = TableName.valueOf("testRestoreSnapshot_tbl");
     try (Admin admin = UTIL.getAdmin()) {
@@ -291,12 +308,11 @@ public class TestManageTableErasureCodingPolicy {
 
   private void checkPolicy(DistributedFileSystem dfs, Path path, String expectedPolicy)
     throws IOException {
-    ErasureCodingPolicy policy = dfs.getErasureCodingPolicy(path);
+    String policy = ErasureCodingUtils.getPolicyNameForPath(dfs, path);
     if (expectedPolicy == null) {
       assertThat("policy for " + path, policy, nullValue());
     } else {
-      assertThat("policy for " + path, policy, notNullValue());
-      assertThat("policy for " + path, policy.getName(), equalTo(expectedPolicy));
+      assertThat("policy for " + path, policy, equalTo(expectedPolicy));
     }
   }
 }

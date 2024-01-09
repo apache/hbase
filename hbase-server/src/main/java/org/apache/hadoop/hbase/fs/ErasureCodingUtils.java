@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.fs;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -31,8 +32,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,26 +86,59 @@ public final class ErasureCodingUtils {
     return currentTempDir;
   }
 
-  private static void checkAvailable(DistributedFileSystem dfs, String policy)
+  private static void checkAvailable(DistributedFileSystem dfs, String requestedPolicy)
     throws HBaseIOException {
-    Collection<ErasureCodingPolicyInfo> policies;
+    Collection<Object> policies;
+
     try {
-      policies = dfs.getAllErasureCodingPolicies();
+      policies = callDfsMethod(dfs, "getAllErasureCodingPolicies");
     } catch (IOException e) {
-      throw new HBaseIOException("Failed to check for Erasure Coding policy: " + policy, e);
+      throw new HBaseIOException("Failed to check for Erasure Coding policy: " + requestedPolicy, e);
     }
-    for (ErasureCodingPolicyInfo policyInfo : policies) {
-      if (policyInfo.getPolicy().getName().equals(policy)) {
-        if (!policyInfo.isEnabled()) {
-          throw new DoNotRetryIOException("Cannot set Erasure Coding policy: " + policy
-            + ". The policy must be enabled, but has state " + policyInfo.getState());
-        }
+    for (Object policyInfo : policies) {
+      if (checkPolicyMatch(policyInfo, requestedPolicy)) {
         return;
       }
     }
     throw new DoNotRetryIOException(
-      "Cannot set Erasure Coding policy: " + policy + ". Policy not found. Available policies are: "
-        + policies.stream().map(p -> p.getPolicy().getName()).collect(Collectors.joining(", ")));
+      "Cannot set Erasure Coding policy: " + requestedPolicy + ". Policy not found. Available policies are: "
+        + getPolicyNames(policies));
+  }
+
+  private static boolean checkPolicyMatch(Object policyInfo, String requestedPolicy)
+    throws DoNotRetryIOException {
+    try {
+      String policyName = getPolicyNameFromInfo(policyInfo);
+      if (requestedPolicy.equals(policyName)) {
+        boolean isEnabled = callObjectMethod(policyInfo, "isEnabled");
+        if (!isEnabled) {
+          throw new DoNotRetryIOException("Cannot set Erasure Coding policy: " + requestedPolicy + ". The policy must be enabled, but has state " + callObjectMethod(policyInfo,
+            "getState"));
+        }
+        return true;
+      }
+    } catch (DoNotRetryIOException e) {
+      throw e;
+    } catch (IOException e) {
+      throw new DoNotRetryIOException("Unable to check for match of Erasure Coding Policy " + policyInfo, e);
+    }
+    return false;
+  }
+
+  private static String getPolicyNameFromInfo(Object policyInfo) throws IOException {
+    Object policy = callObjectMethod(policyInfo, "getPolicy");
+    return callObjectMethod(policy, "getName");
+  }
+
+  private static String getPolicyNames(Collection<Object> policyInfos) {
+    return policyInfos.stream().map(p -> {
+      try {
+        return getPolicyNameFromInfo(p);
+      } catch (IOException e) {
+        LOG.warn("Could not extract policy name from {}", p, e);
+        return "unknown";
+      }
+    }).collect(Collectors.joining(", "));
   }
 
   /**
@@ -146,7 +180,7 @@ public final class ErasureCodingUtils {
    * Sets the EC policy on the path
    */
   public static void setPolicy(FileSystem fs, Path path, String policy) throws IOException {
-    getDfs(fs).setErasureCodingPolicy(path, policy);
+    callDfsMethod(getDfs(fs), "setErasureCodingPolicy", path, policy);
   }
 
   /**
@@ -156,11 +190,15 @@ public final class ErasureCodingUtils {
     throws IOException {
     DistributedFileSystem dfs = getDfs(fs);
     Path path = CommonFSUtils.getTableDir(rootDir, tableName);
-    if (dfs.getErasureCodingPolicy(path) == null) {
+    if (getPolicyNameForPath(dfs, path) == null) {
       LOG.warn("No EC policy set for path {}, nothing to unset", path);
       return;
     }
-    dfs.unsetErasureCodingPolicy(path);
+    callDfsMethod(dfs, "unsetErasureCodingPolicy", path);
+  }
+
+  public static void enablePolicy(FileSystem fs, String policy) throws IOException {
+    callDfsMethod(getDfs(fs), "enableErasureCodingPolicy", policy);
   }
 
   private static DistributedFileSystem getDfs(Configuration conf) throws HBaseIOException {
@@ -181,5 +219,44 @@ public final class ErasureCodingUtils {
           + fs.getClass().getSimpleName());
     }
     return (DistributedFileSystem) fs;
+  }
+
+  public static String getPolicyNameForPath(DistributedFileSystem dfs, Path path)
+    throws IOException {
+    Object policy = callDfsMethod(dfs, "getErasureCodingPolicy", path);
+    if (policy == null) {
+      return null;
+    }
+    return  callObjectMethod(policy, "getName");
+  }
+
+  private interface ThrowingObjectSupplier {
+    Object run() throws IOException;
+  }
+
+  private static <T> T callDfsMethod(DistributedFileSystem dfs, String name, Object... params)
+    throws IOException {
+    return callObjectMethod(dfs, name, params);
+  }
+
+  private static <T> T callObjectMethod(Object object, String name, Object... params)
+    throws IOException {
+    return unwrapInvocationException(() -> ReflectionUtils.invokeMethod(object, name, params));
+  }
+
+  private static <T> T unwrapInvocationException(ThrowingObjectSupplier runnable) throws IOException {
+    try {
+      return (T) runnable.run();
+    } catch (UnsupportedOperationException e) {
+      if (e.getCause() instanceof InvocationTargetException) {
+        Throwable cause = e.getCause().getCause();
+        if (cause instanceof IOException) {
+          throw (IOException) cause;
+        } else if (cause instanceof RuntimeException) {
+          throw (RuntimeException) cause;
+        }
+      }
+      throw e;
+    }
   }
 }
