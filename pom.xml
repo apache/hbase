@@ -720,8 +720,11 @@
       "-Djava.library.path=${hadoop.library.path};${java.library.path}"
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced
       -Dio.opentelemetry.context.enableStrictContext=true</hbase-surefire.cygwin-argLine>
+    <!-- Keep these options in sync with add_jdk11_jvm_flags() in bin/hbase.
+    Currently, all of these options are known to be required by HBase, and not the test cases -->
     <hbase-surefire.jdk11.flags>-Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true
       --add-modules jdk.unsupported
+      --add-opens java.base/java.io=ALL-UNNAMED
       --add-opens java.base/java.nio=ALL-UNNAMED
       --add-opens java.base/sun.nio.ch=ALL-UNNAMED
       --add-opens java.base/java.lang=ALL-UNNAMED
@@ -733,6 +736,8 @@
       --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED
       --add-exports java.base/sun.net.dns=ALL-UNNAMED
       --add-exports java.base/sun.net.util=ALL-UNNAMED</hbase-surefire.jdk11.flags>
+    <!-- java.base/jdk.internal.util.random=ALL-UNNAMED is required by the test code, so we do not
+    need this in bin/hbase -->
     <hbase-surefire.jdk17.flags>--add-opens java.base/jdk.internal.util.random=ALL-UNNAMED</hbase-surefire.jdk17.flags>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine} @{jacocoArgLine}</argLine>
