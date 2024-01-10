@@ -60,6 +60,9 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
+
 /**
  * Validate ImportTsv + LoadIncrementalHFiles on a distributed cluster.
  */
@@ -83,7 +86,10 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
       private static final long serialVersionUID = 1L;
       {
         byte[] family = Bytes.toBytes("d");
-        for (String line : simple_tsv.split("\n")) {
+        for (String line : Splitter.on('\n').split(simple_tsv)) {
+          if (Strings.isNullOrEmpty(line)) {
+            continue;
+          }
           String[] row = line.split("\t");
           byte[] key = Bytes.toBytes(row[0]);
           long ts = Long.parseLong(row[1]);
