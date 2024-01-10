@@ -240,6 +240,7 @@
       <artifactId>bcprov-jdk18on</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Required by tests using MiniMRCluster -->
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk18on</artifactId>
