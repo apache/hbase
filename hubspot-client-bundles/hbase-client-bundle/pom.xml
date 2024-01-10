@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.hubspot.hbase</groupId>
+    <artifactId>hubspot-client-bundles</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>hbase-client-bundle</artifactId>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-openssl</artifactId>
+    </dependency>
+    <!--
+    One main dependency: hbase-client. The rest pulled in transitively.
+    Additionally, need hbase-endpoint for AggregationClient. We need to make sure it
+    doesn't pull in any additional transitive dependencies.
+    -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-client</artifactId>
+      <exclusions>
+        <!-- these 2 compat modules are for metrics, but not used by the client metrics. -->
+        <exclusion>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-hadoop-compat</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-hadoop2-compat</artifactId>
+        </exclusion>
+        <!-- unnecessary or conflicting dependencies to exclude from the jar -->
+        <exclusion>
+          <groupId>commons-logging</groupId>
+          <artifactId>commons-logging</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.jruby.joni</groupId>
+          <artifactId>joni</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.jruby.jcodings</groupId>
+          <artifactId>jcodings</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-log4j12</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-endpoint</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>create-bundle-with-relocations</id>
+            <configuration>
+              <artifactSet>
+                <includes>
+                  <!-- The hbase dependencies required for all clients -->
+                  <include>org.apache.hbase:hbase-client</include>
+                  <include>org.apache.hbase:hbase-common</include>
+                  <include>org.apache.hbase:hbase-logging</include>
+                  <include>org.apache.hbase:hbase-protocol</include>
+                  <include>org.apache.hbase:hbase-protocol-shaded</include>
+                  <include>org.apache.hbase:hbase-openssl</include>
+                  <!--
+                  need to include a bunch of thirdparty deps, otherwise we'd need
+                  to manage those versions in parent-pom
+                  -->
+                  <include>org.apache.hbase.thirdparty:*</include>
+                  <!-- for AggregationClient. we filter to just client classes below -->
+                  <include>org.apache.hbase:hbase-endpoint</include>
+
+                  <!--
+                  following deps shaded in hubspot-client-bundles pom
+                  -->
+
+                  <include>com.google.protobuf:protobuf-java</include>
+                  <!--  For client metrics we need to include so the metrics package can be shaded to prevent issues with our parent pom -->
+                  <include>io.dropwizard.metrics:metrics-core</include>
+                  <!-- conflicts with hubspot managed version, so include it with shading -->
+                  <include>commons-io:commons-io</include>
+                </includes>
+              </artifactSet>
+              <filters>
+                <filter>
+                  <artifact>org.apache.hbase:hbase-endpoint</artifact>
+                  <includes>
+                    <include>org/apache/hadoop/hbase/client/coprocessor/**</include>
+                    <include>org/apache/hadoop/hbase/protobuf/generated/**</include>
+                  </includes>
+                </filter>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

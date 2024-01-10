@@ -1,0 +1,24 @@
+buildpack:
+  name: Blazar-Buildpack-Java
+
+env:
+  # Below variables are generated in prepare_environment.sh.
+  # The build environment requires environment variables to be explicitly defined before they may
+  # be modified by the `write-build-env-var` utilty script to persist changes to an environment variable
+  # throughout a build
+  REPO_NAME: ""
+  SET_VERSION: ""
+  HBASE_VERSION: ""
+  PKG_RELEASE: ""
+  FULL_BUILD_VERSION: ""
+  MAVEN_BUILD_ARGS: ""
+
+before:
+  - description: "Prepare build environment"
+    commands:
+      - $WORKSPACE/build-scripts/prepare_environment.sh
+
+depends:
+  - hbase
+provides:
+  - hubspot-client-bundles

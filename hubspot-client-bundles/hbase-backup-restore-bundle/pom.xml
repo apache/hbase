@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.hubspot.hbase</groupId>
+    <artifactId>hubspot-client-bundles</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>hbase-backup-restore-bundle</artifactId>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.hubspot.hbase</groupId>
+      <artifactId>hbase-client-bundle</artifactId>
+      <exclusions>
+        <!-- we bundle commons-io, but it also come through transitively. -->
+        <exclusion>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.hubspot.hbase</groupId>
+      <artifactId>hbase-mapreduce-bundle</artifactId>
+      <exclusions>
+        <!-- we bundle commons-io, but it also come through transitively. -->
+        <exclusion>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-backup</artifactId>
+      <exclusions>
+        <!-- we bundle commons-io, but it also come through transitively. -->
+        <exclusion>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
+        </exclusion>
+        <!-- Remove duplicated that come through the client and mapreduce bundles-->
+        <exclusion>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <!-- unnecessary or conflicting dependencies to exclude from the jar -->
+        <exclusion>
+          <groupId>commons-logging</groupId>
+          <artifactId>commons-logging</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>javax.servlet.jsp</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>javax.servlet</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.glassfish.web</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.jamon</groupId>
+          <artifactId>jamon-runtime</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.netty</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-log4j12</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>create-bundle-with-relocations</id>
+            <configuration>
+              <artifactSet>
+                <includes>
+                  <include>org.apache.hbase:*</include>
+
+                  <include>io.opentelemetry:opentelemetry-api</include>
+                  <include>io.opentelemetry:opentelemetry-context</include>
+                  <include>com.google.protobuf:protobuf-java</include>
+                  <include>io.dropwizard.metrics:metrics-core</include>
+                </includes>
+              </artifactSet>
+              <filters>
+                <filter>
+                  <artifact>org.apache.kerby:*</artifact>
+                  <excludes>
+                    <exclude>krb5-template.conf</exclude>
+                    <exclude>krb5_udp-template.conf</exclude>
+                    <exclude>ccache.txt</exclude>
+                    <exclude>keytab.txt</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
