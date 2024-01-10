@@ -1,0 +1,25 @@
+buildpack:
+  name: Blazar-Buildpack-Java-single-module
+
+env:
+  MAVEN_PHASE: "package assembly:single deploy"
+  HADOOP_DEP_VERSION: "3.3.6-hubspot-SNAPSHOT"
+  MAVEN_BUILD_ARGS: "-Phadoop-3.0 -Dhadoop.profile=3.0 -Dhadoop-three.version=$HADOOP_DEP_VERSION -Dgpg.skip=true -DskipTests -DdeployAtEnd -pl hbase-assembly -am -T1C"
+
+  # Below variables are generated in prepare_environment.sh.
+  # The build environment requires environment variables to be explicitly defined before they may
+  # be modified by the `write-build-env-var` utilty script to persist changes to an environment variable
+  # throughout a build
+  REPO_NAME: ""
+  SET_VERSION: ""
+  HBASE_VERSION: ""
+  PKG_RELEASE: ""
+  FULL_BUILD_VERSION: ""
+
+before:
+  - description: "Prepare build environment"
+    commands:
+      - $WORKSPACE/build-scripts/prepare_environment.sh
+
+provides:
+  - hbase

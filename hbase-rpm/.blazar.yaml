@@ -1,0 +1,30 @@
+buildpack:
+  name: Buildpack-RPMs
+
+env:
+  RPM_BUILD_COMMAND: ./build.sh
+   # Below variables are generated in prepare_environment.sh.
+  # The build environment requires environment variables to be explicitly defined before they may
+  # be modified by the `write-build-env-var` utilty script to persist changes to an environment variable
+  # throughout a build
+  REPO_NAME: ""
+  SET_VERSION: ""
+  HBASE_VERSION: ""
+  PKG_RELEASE: ""
+  FULL_BUILD_VERSION: ""
+  MAVEN_BUILD_ARGS: ""
+
+enableBuildTargets:
+  - almalinux9_amd64
+
+depends:
+  - hbase
+
+before:
+  - description: "Prepare build environment"
+    commands:
+      - $WORKSPACE/build-scripts/prepare_environment.sh
+
+stepActivation:
+  uploadRpms:
+    branchRegexes: ['.*']

@@ -1,0 +1,88 @@
+.\" Licensed to the Apache Software Foundation (ASF) under one or more
+.\" contributor license agreements.  See the NOTICE file distributed with
+.\" this work for additional information regarding copyright ownership.
+.\" The ASF licenses this file to You under the Apache License, Version 2.0
+.\" (the "License"); you may not use this file except in compliance with
+.\" the License.  You may obtain a copy of the License at
+.\"
+.\"     http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.\" Process this file with
+.\" groff -man -Tascii hbase.1
+.\"
+.TH hbase 1 "October 2010 " Linux "User Manuals"
+
+.SH NAME
+HBase \- HBase is the Hadoop database.
+
+.SH SYNOPSIS
+
+.B hbase
+\fICOMMAND\fR
+
+.SH DESCRIPTION
+
+HBase is the Hadoop database. Use it when you need random, realtime
+read/write access to your Big Data. This project's goal is the hosting
+of very large tables -- billions of rows X millions of columns -- atop
+clusters of commodity hardware.
+
+HBase is an open-source, distributed, versioned, column-oriented store
+modeled after Google's Bigtable: A Distributed Storage System for
+Structured Data by Chang et al. Just as Bigtable leverages the
+distributed data storage provided by the Google File System, HBase
+provides Bigtable-like capabilities on top of Hadoop.
+
+For more information about HBase, see http://hbase.apache.org.
+
+\fICOMMAND\fR may be one of the following:
+  shell            run the HBase shell
+  shell-tests      run the HBase shell tests
+  zkcli            run the ZooKeeper shell
+  master           run an HBase HMaster node
+  regionserver     run an HBase HRegionServer node
+  zookeeper        run a Zookeeper server
+  rest             run an HBase REST server
+  thrift           run an HBase Thrift server
+  avro             run an HBase Avro server
+  migrate          upgrade an hbase.rootdir
+  hbck             run the hbase 'fsck' tool
+ or
+  CLASSNAME        run the class named CLASSNAME
+
+Most commands print help when invoked w/o parameters or with --help.
+
+.SH ENVIRONMENT
+
+.IP JAVA_HOME
+The java implementation to use.  Overrides JAVA_HOME.
+
+.IP HBASE_CLASSPATH
+Extra Java CLASSPATH entries.
+
+.IP HBASE_HEAPSIZE
+The maximum amount of heap to use, in MB. Default is 1000.
+
+.IP HBASE_OPTS
+Extra Java runtime options.
+
+.IP HBASE_CONF_DIR
+Alternate conf dir. Default is ${HBASE_HOME}/conf.
+
+.IP HBASE_ROOT_LOGGER
+The root appender. Default is INFO,console
+
+.IP HIVE_OPT
+Extra Java runtime options.
+
+.IP HADOOP_HOME
+Optionally, the Hadoop home to run with.
+
+.SH COPYRIGHT
+Copyright (C) 2010 The Apache Software Foundation. All rights reserved.
