@@ -302,7 +302,7 @@ public class HTable implements Table {
   public ResultScanner getScanner(Scan scan) throws IOException {
     // Clone to avoid modifying user object from scan internals.
     // See https://issues.apache.org/jira/browse/HBASE-27402.
-    return getScannerInternal(scan, scan);
+    return getScannerInternal(new Scan(scan), scan);
   }
 
   private ResultScanner getScannerInternal(Scan scan, Scan scanForMetrics) throws IOException {
