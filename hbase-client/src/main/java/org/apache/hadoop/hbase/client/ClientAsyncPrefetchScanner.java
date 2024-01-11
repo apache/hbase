@@ -62,15 +62,15 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
   private final Condition notEmpty = lock.newCondition();
   private final Condition notFull = lock.newCondition();
 
-  public ClientAsyncPrefetchScanner(Configuration configuration, Scan scan, TableName name,
-    ClusterConnection connection, RpcRetryingCallerFactory rpcCallerFactory,
+  public ClientAsyncPrefetchScanner(Configuration configuration, Scan scan, Scan scanForMetrics,
+    TableName name, ClusterConnection connection, RpcRetryingCallerFactory rpcCallerFactory,
     RpcControllerFactory rpcControllerFactory, ExecutorService pool, int scanReadRpcTimeout,
     int scannerTimeout, int replicaCallTimeoutMicroSecondScan,
     ConnectionConfiguration connectionConfiguration, Map<String, byte[]> requestAttributes)
     throws IOException {
-    super(configuration, scan, name, connection, rpcCallerFactory, rpcControllerFactory, pool,
-      scanReadRpcTimeout, scannerTimeout, replicaCallTimeoutMicroSecondScan,
-      connectionConfiguration, requestAttributes);
+    super(configuration, scan, scanForMetrics, name, connection, rpcCallerFactory,
+      rpcControllerFactory, pool, scanReadRpcTimeout, scannerTimeout,
+      replicaCallTimeoutMicroSecondScan, connectionConfiguration, requestAttributes);
     exceptionsQueue = new ConcurrentLinkedQueue<>();
     final Context context = Context.current();
     final Runnable runnable = context.wrap(new PrefetchRunnable());

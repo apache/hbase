@@ -1049,10 +1049,11 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         final Span span = new TableOperationSpanBuilder(this)
           .setTableName(TableName.META_TABLE_NAME).setOperation(s).build();
         try (Scope ignored = span.makeCurrent();
-          ReversedClientScanner rcs = new ReversedClientScanner(conf, s, TableName.META_TABLE_NAME,
-            this, rpcCallerFactory, rpcControllerFactory, getMetaLookupPool(),
-            connectionConfig.getMetaReadRpcTimeout(), connectionConfig.getMetaScanTimeout(),
-            metaReplicaCallTimeoutScanInMicroSecond, connectionConfig, Collections.emptyMap())) {
+          ReversedClientScanner rcs =
+            new ReversedClientScanner(conf, s, s, TableName.META_TABLE_NAME, this, rpcCallerFactory,
+              rpcControllerFactory, getMetaLookupPool(), connectionConfig.getMetaReadRpcTimeout(),
+              connectionConfig.getMetaScanTimeout(), metaReplicaCallTimeoutScanInMicroSecond,
+              connectionConfig, Collections.emptyMap())) {
           boolean tableNotFound = true;
           for (;;) {
             Result regionInfoRow = rcs.next();
