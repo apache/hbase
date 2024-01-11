@@ -145,12 +145,10 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
       ToolRunner.run(new BulkLoadHFilesTool(getConf()), args));
 
     Table table = null;
-    Scan scan = new Scan() {
-      {
-        setCacheBlocks(false);
-        setCaching(1000);
-      }
-    };
+    Scan scan = new Scan();
+    scan.setCacheBlocks(false);
+    scan.setCaching(1000);
+
     try {
       table = util.getConnection().getTable(tableName);
       Iterator<Result> resultsIt = table.getScanner(scan).iterator();
