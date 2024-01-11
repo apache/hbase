@@ -81,7 +81,6 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-shaded-testing-util</artifactId>
-      <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
