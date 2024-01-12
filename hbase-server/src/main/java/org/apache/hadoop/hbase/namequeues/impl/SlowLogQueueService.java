@@ -124,6 +124,7 @@ public class SlowLogQueueService implements NamedQueueService {
     final String clientAddress = rpcLogDetails.getClientAddress();
     final long responseSize = rpcLogDetails.getResponseSize();
     final long blockBytesScanned = rpcLogDetails.getBlockBytesScanned();
+    final long fsReadTime = rpcLogDetails.getFsReadTime();
     final String className = rpcLogDetails.getClassName();
     final TooSlowLog.SlowLogPayload.Type type = getLogType(rpcLogDetails);
     if (type == null) {
@@ -168,7 +169,8 @@ public class SlowLogQueueService implements NamedQueueService {
       .setProcessingTime(processingTime).setQueueTime(qTime)
       .setRegionName(slowLogParams != null ? slowLogParams.getRegionName() : StringUtils.EMPTY)
       .setResponseSize(responseSize).setBlockBytesScanned(blockBytesScanned)
-      .setServerClass(className).setStartTime(startTime).setType(type).setUserName(userName)
+      .setFsReadTime(fsReadTime).setServerClass(className).setStartTime(startTime).setType(type)
+      .setUserName(userName)
       .addAllRequestAttribute(buildNameBytesPairs(rpcLogDetails.getRequestAttributes()))
       .addAllConnectionAttribute(buildNameBytesPairs(rpcLogDetails.getConnectionAttributes()));
     if (slowLogParams != null && slowLogParams.getScan() != null) {

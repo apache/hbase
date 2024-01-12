@@ -22,6 +22,7 @@ import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.Interns;
+import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -32,6 +33,7 @@ public class MetricsIOSourceImpl extends BaseSourceImpl implements MetricsIOSour
   private final MetricHistogram fsReadTimeHisto;
   private final MetricHistogram fsPReadTimeHisto;
   private final MetricHistogram fsWriteTimeHisto;
+  private final MutableFastCounter fsSlowReads;
 
   public MetricsIOSourceImpl(MetricsIOWrapper wrapper) {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, wrapper);
@@ -49,6 +51,7 @@ public class MetricsIOSourceImpl extends BaseSourceImpl implements MetricsIOSour
       getMetricsRegistry().newTimeHistogram(FS_PREAD_TIME_HISTO_KEY, FS_PREAD_TIME_HISTO_DESC);
     fsWriteTimeHisto =
       getMetricsRegistry().newTimeHistogram(FS_WRITE_HISTO_KEY, FS_WRITE_TIME_HISTO_DESC);
+    fsSlowReads = getMetricsRegistry().newCounter(SLOW_FS_READS_KEY, SLOW_FS_READS_DESC, 0L);
   }
 
   @Override
@@ -64,6 +67,11 @@ public class MetricsIOSourceImpl extends BaseSourceImpl implements MetricsIOSour
   @Override
   public void updateFsWriteTime(long t) {
     fsWriteTimeHisto.add(t);
+  }
+
+  @Override
+  public void incrSlowFsRead() {
+    fsSlowReads.incr();
   }
 
   @Override

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -195,6 +196,18 @@ public class TestServerSideScanMetricsFromClientSide {
     }
   }
 
+  @Test
+  public void testFsReadTimeMetric() throws Exception {
+    // write some new puts and flush, as an easy way to ensure the read blocks are not cached
+    // so that we go into the fs write code path
+    List<Put> puts = createPuts(ROWS, FAMILIES, QUALIFIERS, VALUE);
+    TABLE.put(puts);
+    TEST_UTIL.flush(TABLE_NAME);
+    Scan scan = new Scan();
+    scan.setScanMetricsEnabled(true);
+    testMetric(scan, ServerSideScanMetrics.FS_READ_TIME_METRIC_NAME, 0, CompareOperator.GREATER);
+  }
+
   private void testRowsSeenMetric(Scan baseScan) throws Exception {
     Scan scan;
     scan = new Scan(baseScan);
@@ -333,6 +346,11 @@ public class TestServerSideScanMetricsFromClientSide {
    * @throws Exception on unexpected failure
    */
   private void testMetric(Scan scan, String metricKey, long expectedValue) throws Exception {
+    testMetric(scan, metricKey, expectedValue, CompareOperator.EQUAL);
+  }
+
+  private void testMetric(Scan scan, String metricKey, long expectedValue,
+    CompareOperator compareOperator) throws Exception {
     assertTrue("Scan should be configured to record metrics", scan.isScanMetricsEnabled());
     ResultScanner scanner = TABLE.getScanner(scan);
     // Iterate through all the results
@@ -341,11 +359,17 @@ public class TestServerSideScanMetricsFromClientSide {
     }
     scanner.close();
     ScanMetrics metrics = scanner.getScanMetrics();
-    assertTrue("Metrics are null", metrics != null);
+    assertNotNull("Metrics are null", metrics);
     assertTrue("Metric : " + metricKey + " does not exist", metrics.hasCounter(metricKey));
     final long actualMetricValue = metrics.getCounter(metricKey).get();
-    assertEquals(
-      "Metric: " + metricKey + " Expected: " + expectedValue + " Actual: " + actualMetricValue,
-      expectedValue, actualMetricValue);
+    if (compareOperator == CompareOperator.EQUAL) {
+      assertEquals(
+        "Metric: " + metricKey + " Expected: " + expectedValue + " Actual: " + actualMetricValue,
+        expectedValue, actualMetricValue);
+    } else {
+      assertTrue(
+        "Metric: " + metricKey + " Expected: > " + expectedValue + " Actual: " + actualMetricValue,
+        actualMetricValue > expectedValue);
+    }
   }
 }

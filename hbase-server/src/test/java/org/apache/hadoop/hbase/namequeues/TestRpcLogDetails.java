@@ -80,7 +80,7 @@ public class TestRpcLogDetails {
     ProtobufUtil.mergeFrom(messageBuilder, cis, buffer.capacity());
     Message message = messageBuilder.build();
     RpcLogDetails rpcLogDetails =
-      new RpcLogDetails(getRpcCall(message), message, null, 0L, 0L, null, true, false);
+      new RpcLogDetails(getRpcCall(message), message, null, 0L, 0L, 0, null, true, false);
 
     // log's scan should be equal
     ClientProtos.Scan logScan = ((ClientProtos.ScanRequest) rpcLogDetails.getParam()).getScan();
@@ -257,6 +257,16 @@ public class TestRpcLogDetails {
 
       @Override
       public void incrementResponseExceptionSize(long exceptionSize) {
+      }
+
+      @Override
+      public void updateFsReadTime(long latencyMillis) {
+
+      }
+
+      @Override
+      public long getFsReadTime() {
+        return 0;
       }
     };
     return rpcCall;

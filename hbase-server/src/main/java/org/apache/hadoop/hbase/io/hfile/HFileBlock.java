@@ -1826,8 +1826,9 @@ public class HFileBlock implements Cacheable {
         int sizeWithoutChecksum = curBlock.getInt(Header.ON_DISK_DATA_SIZE_WITH_HEADER_INDEX);
         curBlock.limit(sizeWithoutChecksum);
         long duration = EnvironmentEdgeManager.currentTime() - startTime;
+        boolean tooSlow = this.readWarnTime >= 0 && duration > this.readWarnTime;
         if (updateMetrics) {
-          HFile.updateReadLatency(duration, pread);
+          HFile.updateReadLatency(duration, pread, tooSlow);
         }
         // The onDiskBlock will become the headerAndDataBuffer for this block.
         // If nextBlockOnDiskSizeWithHeader is not zero, the onDiskBlock already
@@ -1839,7 +1840,7 @@ public class HFileBlock implements Cacheable {
           hFileBlock.sanityCheckUncompressed();
         }
         LOG.trace("Read {} in {} ms", hFileBlock, duration);
-        if (!LOG.isTraceEnabled() && this.readWarnTime >= 0 && duration > this.readWarnTime) {
+        if (!LOG.isTraceEnabled() && tooSlow) {
           LOG.warn("Read Block Slow: read {} cost {} ms, threshold = {} ms", hFileBlock, duration,
             this.readWarnTime);
         }
