@@ -1751,6 +1751,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-netty-tcnative</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
         <artifactId>hbase-shaded-protobuf</artifactId>
         <version>${hbase-thirdparty.version}</version>
       </dependency>

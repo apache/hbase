@@ -62,6 +62,10 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-netty-tcnative</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
     </dependency>
