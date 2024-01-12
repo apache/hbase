@@ -707,7 +707,7 @@ public class HRegionServer extends Thread
       initializeFileSystem();
 
       this.configurationManager = new ConfigurationManager();
-      setupWindows(conf, configurationManager);
+      setupSignalHandlers();
 
       // Some unit tests don't need a cluster, so no zookeeper at all
       // Open connection to zookeeper and set primary watcher
@@ -772,14 +772,14 @@ public class HRegionServer extends Thread
     }
   }
 
-  /**
-   * If running on Windows, do windows-specific setup.
-   */
-  private static void setupWindows(final Configuration conf, ConfigurationManager cm) {
+  private void setupSignalHandlers() {
     if (!SystemUtils.IS_OS_WINDOWS) {
       HBasePlatformDependent.handle("HUP", (number, name) -> {
-        conf.reloadConfiguration();
-        cm.notifyAllObservers(conf);
+        try {
+          updateConfiguration();
+        } catch (IOException e) {
+          LOG.error("Problem while reloading configuration", e);
+        }
       });
     }
   }
@@ -3886,11 +3886,25 @@ public class HRegionServer extends Thread
   /**
    * Reload the configuration from disk.
    */
-  void updateConfiguration() {
+  void updateConfiguration() throws IOException {
     LOG.info("Reloading the configuration from disk.");
     // Reload the configuration from disk.
+    preUpdateConfiguration();
     conf.reloadConfiguration();
     configurationManager.notifyAllObservers(conf);
+    postUpdateConfiguration();
+  }
+
+  protected void preUpdateConfiguration() throws IOException {
+    if (rsHost != null) {
+      rsHost.preUpdateConfiguration(conf);
+    }
+  }
+
+  protected void postUpdateConfiguration() throws IOException {
+    if (rsHost != null) {
+      rsHost.postUpdateConfiguration(conf);
+    }
   }
 
   CacheEvictionStats clearRegionBlockCache(Region region) {
