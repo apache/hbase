@@ -21,6 +21,7 @@ import com.google.protobuf.Service;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SharedConnection;
 import org.apache.hadoop.hbase.client.Connection;
@@ -243,6 +244,42 @@ public class RegionServerCoprocessorHost
       @Override
       public void call(RegionServerObserver observer) throws IOException {
         observer.postExecuteProcedures(this);
+      }
+    });
+  }
+
+  public void preUpdateConfiguration(Configuration preReloadConf) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.preUpdateRegionServerConfiguration(this, preReloadConf);
+      }
+    });
+  }
+
+  public void postUpdateConfiguration(Configuration postReloadConf) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.postUpdateRegionServerConfiguration(this, postReloadConf);
+      }
+    });
+  }
+
+  public void preClearRegionBlockCache() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.preClearRegionBlockCache(this);
+      }
+    });
+  }
+
+  public void postClearRegionBlockCache(CacheEvictionStats stats) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.postClearRegionBlockCache(this, stats);
       }
     });
   }
