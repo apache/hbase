@@ -191,6 +191,8 @@ public class TestMasterObserver {
     private boolean postLockHeartbeatCalled;
     private boolean preMasterStoreFlushCalled;
     private boolean postMasterStoreFlushCalled;
+    private boolean preUpdateMasterConfigurationCalled;
+    private boolean postUpdateMasterConfigurationCalled;
 
     public void resetStates() {
       preCreateTableRegionInfosCalled = false;
@@ -284,6 +286,8 @@ public class TestMasterObserver {
       postLockHeartbeatCalled = false;
       preMasterStoreFlushCalled = false;
       postMasterStoreFlushCalled = false;
+      preUpdateMasterConfigurationCalled = false;
+      postUpdateMasterConfigurationCalled = false;
     }
 
     @Override
@@ -1261,6 +1265,17 @@ public class TestMasterObserver {
       throws IOException {
     }
 
+    @Override
+    public void preUpdateMasterConfiguration(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Configuration preReloadConf) throws IOException {
+      preUpdateMasterConfigurationCalled = true;
+    }
+
+    @Override
+    public void postUpdateMasterConfiguration(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Configuration postReloadConf) throws IOException {
+      postUpdateMasterConfigurationCalled = true;
+    }
   }
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -1708,6 +1723,24 @@ public class TestMasterObserver {
 
       assertTrue("Master store flush called", cp.preMasterStoreFlushCalled);
       assertTrue("Master store flush called", cp.postMasterStoreFlushCalled);
+    }
+  }
+
+  @Test
+  public void testUpdateConfiguration() throws Exception {
+    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
+    MasterCoprocessorHost host = master.getMasterCoprocessorHost();
+    CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
+    cp.resetStates();
+    assertFalse("No update configuration call", cp.preUpdateMasterConfigurationCalled);
+    assertFalse("No update configuration call", cp.postUpdateMasterConfigurationCalled);
+
+    try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
+      Admin admin = connection.getAdmin()) {
+      admin.updateConfiguration();
+
+      assertTrue("Update configuration called", cp.preUpdateMasterConfigurationCalled);
+      assertTrue("Update configuration called", cp.postUpdateMasterConfigurationCalled);
     }
   }
 }

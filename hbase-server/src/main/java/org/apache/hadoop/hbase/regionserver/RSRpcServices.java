@@ -3844,19 +3844,26 @@ public class RSRpcServices
   @Override
   public ClearRegionBlockCacheResponse clearRegionBlockCache(RpcController controller,
     ClearRegionBlockCacheRequest request) throws ServiceException {
-    rpcPreCheck("clearRegionBlockCache");
-    ClearRegionBlockCacheResponse.Builder builder = ClearRegionBlockCacheResponse.newBuilder();
-    CacheEvictionStatsBuilder stats = CacheEvictionStats.builder();
-    List<HRegion> regions = getRegions(request.getRegionList(), stats);
-    for (HRegion region : regions) {
-      try {
-        stats = stats.append(this.regionServer.clearRegionBlockCache(region));
-      } catch (Exception e) {
-        stats.addException(region.getRegionInfo().getRegionName(), e);
+
+    try {
+      rpcPreCheck("clearRegionBlockCache");
+      ClearRegionBlockCacheResponse.Builder builder = ClearRegionBlockCacheResponse.newBuilder();
+      CacheEvictionStatsBuilder stats = CacheEvictionStats.builder();
+      regionServer.getRegionServerCoprocessorHost().preClearRegionBlockCache();
+      List<HRegion> regions = getRegions(request.getRegionList(), stats);
+      for (HRegion region : regions) {
+        try {
+          stats = stats.append(this.regionServer.clearRegionBlockCache(region));
+        } catch (Exception e) {
+          stats.addException(region.getRegionInfo().getRegionName(), e);
+        }
       }
+      stats.withMaxCacheSize(regionServer.getBlockCache().map(BlockCache::getMaxSize).orElse(0L));
+      regionServer.getRegionServerCoprocessorHost().postClearRegionBlockCache(stats.build());
+      return builder.setStats(ProtobufUtil.toCacheEvictionStats(stats.build())).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
     }
-    stats.withMaxCacheSize(regionServer.getBlockCache().map(BlockCache::getMaxSize).orElse(0L));
-    return builder.setStats(ProtobufUtil.toCacheEvictionStats(stats.build())).build();
   }
 
   private void executeOpenRegionProcedures(OpenRegionRequest request,

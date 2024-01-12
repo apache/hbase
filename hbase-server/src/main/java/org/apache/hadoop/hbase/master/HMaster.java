@@ -551,6 +551,20 @@ public class HMaster extends HRegionServer implements MasterServices {
     configurationManager.registerObserver(this);
   }
 
+  @Override
+  protected void preUpdateConfiguration() throws IOException {
+    if (cpHost != null) {
+      cpHost.preUpdateConfiguration(conf);
+    }
+  }
+
+  @Override
+  protected void postUpdateConfiguration() throws IOException {
+    if (cpHost != null) {
+      cpHost.postUpdateConfiguration(conf);
+    }
+  }
+
   // Main run loop. Calls through to the regionserver run loop AFTER becoming active Master; will
   // block in here until then.
   @Override
