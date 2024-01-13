@@ -758,6 +758,7 @@
     <module>hbase-asyncfs</module>
     <module>hbase-logging</module>
     <module>hbase-compression</module>
+    <module>hbase-extensions</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -1329,6 +1330,11 @@
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-compression-zstd</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-openssl</artifactId>
         <version>${project.version}</version>
       </dependency>
       <!-- General dependencies -->
