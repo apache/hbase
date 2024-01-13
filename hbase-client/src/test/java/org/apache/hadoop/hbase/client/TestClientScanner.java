@@ -110,7 +110,7 @@ public class TestClientScanner {
       ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
       RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout,
       ConnectionConfiguration connectionConfig) throws IOException {
-      super(conf, scan, tableName, connection, rpcFactory, controllerFactory, pool,
+      super(conf, scan, scan, tableName, connection, rpcFactory, controllerFactory, pool,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT,
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, primaryOperationTimeout,
         connectionConfig, Collections.emptyMap());

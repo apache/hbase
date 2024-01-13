@@ -300,6 +300,12 @@ public class HTable implements Table {
    */
   @Override
   public ResultScanner getScanner(Scan scan) throws IOException {
+    // Clone to avoid modifying user object from scan internals.
+    // See https://issues.apache.org/jira/browse/HBASE-27402.
+    return getScannerInternal(new Scan(scan), scan);
+  }
+
+  private ResultScanner getScannerInternal(Scan scan, Scan scanForMetrics) throws IOException {
     final Span span =
       new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(scan).build();
     try (Scope ignored = span.makeCurrent()) {
@@ -319,18 +325,18 @@ public class HTable implements Table {
       final int replicaTimeout = connConfiguration.getReplicaCallTimeoutMicroSecondScan();
 
       if (scan.isReversed()) {
-        return new ReversedClientScanner(getConfiguration(), scan, getName(), connection,
-          rpcCallerFactory, rpcControllerFactory, pool, scanReadRpcTimeout, scanTimeout,
+        return new ReversedClientScanner(getConfiguration(), scan, scanForMetrics, getName(),
+          connection, rpcCallerFactory, rpcControllerFactory, pool, scanReadRpcTimeout, scanTimeout,
           replicaTimeout, connConfiguration, requestAttributes);
       } else {
         if (async) {
-          return new ClientAsyncPrefetchScanner(getConfiguration(), scan, getName(), connection,
-            rpcCallerFactory, rpcControllerFactory, pool, scanReadRpcTimeout, scanTimeout,
-            replicaTimeout, connConfiguration, requestAttributes);
+          return new ClientAsyncPrefetchScanner(getConfiguration(), scan, scanForMetrics, getName(),
+            connection, rpcCallerFactory, rpcControllerFactory, pool, scanReadRpcTimeout,
+            scanTimeout, replicaTimeout, connConfiguration, requestAttributes);
         } else {
-          return new ClientSimpleScanner(getConfiguration(), scan, getName(), connection,
-            rpcCallerFactory, rpcControllerFactory, pool, scanReadRpcTimeout, scanTimeout,
-            replicaTimeout, connConfiguration, requestAttributes);
+          return new ClientSimpleScanner(getConfiguration(), scan, scanForMetrics, getName(),
+            connection, rpcCallerFactory, rpcControllerFactory, pool, scanReadRpcTimeout,
+            scanTimeout, replicaTimeout, connConfiguration, requestAttributes);
         }
       }
     }
@@ -344,7 +350,7 @@ public class HTable implements Table {
   public ResultScanner getScanner(byte[] family) throws IOException {
     Scan scan = new Scan();
     scan.addFamily(family);
-    return getScanner(scan);
+    return getScannerInternal(scan, scan);
   }
 
   /**
@@ -355,7 +361,7 @@ public class HTable implements Table {
   public ResultScanner getScanner(byte[] family, byte[] qualifier) throws IOException {
     Scan scan = new Scan();
     scan.addColumn(family, qualifier);
-    return getScanner(scan);
+    return getScannerInternal(scan, scan);
   }
 
   @Override
