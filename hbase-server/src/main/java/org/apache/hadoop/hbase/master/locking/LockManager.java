@@ -110,8 +110,8 @@ public final class LockManager {
 
     /**
      * Acquire the lock within a wait time.
-     * @param timeoutMs The maximum time (in milliseconds) to wait for the lock, Long#MAX_VALUE or
-     *                  negative value to wait indefinitely
+     * @param timeoutMs The maximum time (in milliseconds) to wait for the lock, 0 to wait
+     *                  indefinitely
      * @return True if the lock was acquired, false if waiting time elapsed before the lock was
      *         acquired
      * @throws InterruptedException If the thread is interrupted while waiting to acquire the lock
@@ -141,7 +141,7 @@ public final class LockManager {
       master.getMasterProcedureExecutor().submitProcedure(proc);
 
       long deadline =
-        (timeoutMs >= 0) ? EnvironmentEdgeManager.currentTime() + timeoutMs : Long.MAX_VALUE;
+        (timeoutMs > 0) ? EnvironmentEdgeManager.currentTime() + timeoutMs : Long.MAX_VALUE;
       while (deadline >= EnvironmentEdgeManager.currentTime() && !proc.isLocked()) {
         try {
           lockAcquireLatch.await(deadline - EnvironmentEdgeManager.currentTime(),

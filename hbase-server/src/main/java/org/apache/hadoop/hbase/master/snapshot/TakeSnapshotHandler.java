@@ -89,10 +89,10 @@ public abstract class TakeSnapshotHandler extends EventHandler
   protected final SnapshotManifest snapshotManifest;
   protected final SnapshotManager snapshotManager;
   /**
-   * Snapshot creation requires table lock. If any region of the table is in transition,
-   * table lock cannot be acquired by LockProcedure and hence snapshot creation could hang for
-   * potentially very long time. This timeout will ensure snapshot creation fails-fast by waiting
-   * for only given timeout.
+   * Snapshot creation requires table lock. If any region of the table is in transition, table lock
+   * cannot be acquired by LockProcedure and hence snapshot creation could hang for potentially very
+   * long time. This timeout will ensure snapshot creation fails-fast by waiting for only given
+   * timeout.
    */
   private final long lockAcquireTimeoutMs;
 

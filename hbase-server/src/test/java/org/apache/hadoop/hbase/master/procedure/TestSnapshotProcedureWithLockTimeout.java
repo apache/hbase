@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -72,7 +73,7 @@ public class TestSnapshotProcedureWithLockTimeout {
     TEST_UTIL = new HBaseTestingUtil();
     Configuration config = TEST_UTIL.getConfiguration();
     config.setInt("hbase.snapshot.remote.verify.threshold", 1);
-    config.setLong(TakeSnapshotHandler.HBASE_SNAPSHOT_MASTER_LOCK_ACQUIRE_TIMEOUT, 0L);
+    config.setLong(TakeSnapshotHandler.HBASE_SNAPSHOT_MASTER_LOCK_ACQUIRE_TIMEOUT, 1L);
     TEST_UTIL.startMiniCluster(3);
     master = TEST_UTIL.getHBaseCluster().getMaster();
     TABLE_NAME = TableName.valueOf(Bytes.toBytes("TestSnapshotProcedureWithLockTimeout"));
@@ -94,8 +95,24 @@ public class TestSnapshotProcedureWithLockTimeout {
 
   @Test
   public void testTakeZkCoordinatedSnapshot() throws Exception {
+    for (int i = 0; i < 10; i++) {
+      try {
+        // Verify that snapshot creation is not possible because lock could not be
+        // acquired on time. This can be flaky behavior because even though we provide 1ms
+        // as lock timeout, it could still be fast enough and eventually lead to successful
+        // snapshot creation. If that happens, retry again.
+        testTakeZkCoordinatedSnapshot(i);
+        break;
+      } catch (AssertionError e) {
+        LOG.error("Error because of faster lock acquisition. retrying....", e);
+      }
+      assertNotEquals("Retries exhausted", 9, i);
+    }
+  }
+
+  private void testTakeZkCoordinatedSnapshot(int i) throws Exception {
     SnapshotDescription snapshotOnSameTable =
-      new SnapshotDescription(SNAPSHOT_NAME, TABLE_NAME, SnapshotType.SKIPFLUSH);
+      new SnapshotDescription(SNAPSHOT_NAME + i, TABLE_NAME, SnapshotType.SKIPFLUSH);
     SnapshotProtos.SnapshotDescription snapshotOnSameTableProto =
       ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotOnSameTable);
     Thread second = new Thread("zk-snapshot") {
@@ -118,7 +135,7 @@ public class TestSnapshotProcedureWithLockTimeout {
       throw new AssertionError("should not have created snapshot " + snapshotOnSameTableProto);
     } catch (AssertionError e) {
       LOG.error("Assertion error..", e);
-      assertTrue(e.getMessage().contains("target snapshot directory")
+      assertTrue(e.getMessage() != null && e.getMessage().contains("target snapshot directory")
         && e.getMessage().contains("doesn't exist."));
     }
 
