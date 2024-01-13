@@ -35,15 +35,15 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ClientSimpleScanner extends ClientScanner {
-  public ClientSimpleScanner(Configuration configuration, Scan scan, TableName name,
-    ClusterConnection connection, RpcRetryingCallerFactory rpcCallerFactory,
+  public ClientSimpleScanner(Configuration configuration, Scan scan, Scan scanForMetrics,
+    TableName name, ClusterConnection connection, RpcRetryingCallerFactory rpcCallerFactory,
     RpcControllerFactory rpcControllerFactory, ExecutorService pool, int scanReadRpcTimeout,
     int scannerTimeout, int replicaCallTimeoutMicroSecondScan,
     ConnectionConfiguration connectionConfiguration, Map<String, byte[]> requestAttributes)
     throws IOException {
-    super(configuration, scan, name, connection, rpcCallerFactory, rpcControllerFactory, pool,
-      scanReadRpcTimeout, scannerTimeout, replicaCallTimeoutMicroSecondScan,
-      connectionConfiguration, requestAttributes);
+    super(configuration, scan, scanForMetrics, name, connection, rpcCallerFactory,
+      rpcControllerFactory, pool, scanReadRpcTimeout, scannerTimeout,
+      replicaCallTimeoutMicroSecondScan, connectionConfiguration, requestAttributes);
   }
 
   @Override

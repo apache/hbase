@@ -61,6 +61,12 @@ public abstract class ClientScanner extends AbstractClientScanner {
   private static final Logger LOG = LoggerFactory.getLogger(ClientScanner.class);
 
   protected final Scan scan;
+  // We clone the original client Scan to avoid modifying user object from scan internals.
+  // The below scanForMetrics is the client's object, which we mutate only for returning
+  // ScanMetrics.
+  // See https://issues.apache.org/jira/browse/HBASE-27402.
+  private final Scan scanForMetrics;
+
   protected boolean closed = false;
   // Current region scanner is against. Gets cleared if current region goes
   // wonky: e.g. if it splits on us.
@@ -101,12 +107,13 @@ public abstract class ClientScanner extends AbstractClientScanner {
    * @param tableName  The table that we wish to scan
    * @param connection Connection identifying the cluster
    */
-  public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
-    ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
+  public ClientScanner(final Configuration conf, final Scan scan, final Scan scanForMetrics,
+    final TableName tableName, ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
     RpcControllerFactory controllerFactory, ExecutorService pool, int scanReadRpcTimeout,
     int scannerTimeout, int primaryOperationTimeout,
     ConnectionConfiguration connectionConfiguration, Map<String, byte[]> requestAttributes)
     throws IOException {
+    this.scanForMetrics = scanForMetrics;
     if (LOG.isTraceEnabled()) {
       LOG.trace(
         "Scan table=" + tableName + ", startRow=" + Bytes.toStringBinary(scan.getStartRow()));
@@ -294,7 +301,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     // As we have claimed in the comment of Scan.getScanMetrics, this relies on that user will not
     // call ResultScanner.getScanMetrics and reset the ScanMetrics. Otherwise the metrics published
     // to Scan will be messed up.
-    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA,
+    scanForMetrics.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA,
       ProtobufUtil.toScanMetrics(scanMetrics, false).toByteArray());
     scanMetricsPublished = true;
   }

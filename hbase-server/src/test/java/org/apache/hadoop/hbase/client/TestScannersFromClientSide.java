@@ -167,6 +167,25 @@ public class TestScannersFromClientSide {
     TEST_UTIL.startMiniCluster(builder.build());
   }
 
+  @Test
+  public void testScanImmutable() throws IOException {
+    TableName tableName = name.getTableName();
+    Table table = TEST_UTIL.createTable(tableName, FAMILY);
+    TEST_UTIL.loadRandomRows(table, FAMILY, 100, 100);
+
+    Scan scan = new Scan().setCaching(-1).setMvccReadPoint(-1).setScanMetricsEnabled(true);
+
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      scanner.next(1000);
+    }
+    // these 2 should be unchanged
+    assertEquals(-1, scan.getCaching());
+    assertEquals(-1, scan.getMvccReadPoint());
+    // scan metrics should be populated
+    assertNotNull(scan.getScanMetrics());
+    assertEquals(scan.getScanMetrics().countOfRegions.get(), 1);
+  }
+
   /**
    * Test from client side for batch of scan
    */
