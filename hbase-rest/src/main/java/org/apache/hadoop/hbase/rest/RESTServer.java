@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.lang.management.ManagementFactory;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.http.ClickjackingPreventionFilter;
 import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
@@ -83,6 +85,7 @@ import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class RESTServer implements Constants {
   static Logger LOG = LoggerFactory.getLogger("RESTServer");
+  public static final String REST_SERVER = "rest";
 
   static final String REST_CSRF_ENABLED_KEY = "hbase.rest.csrf.enabled";
   static final boolean REST_CSRF_ENABLED_DEFAULT = false;
@@ -112,6 +115,7 @@ public class RESTServer implements Constants {
   private final UserProvider userProvider;
   private Server server;
   private InfoServer infoServer;
+  private ServerName serverName;
 
   public RESTServer(Configuration conf) {
     RESTServer.conf = conf;
@@ -163,8 +167,7 @@ public class RESTServer implements Constants {
     loginServerPrincipal(UserProvider userProvider, Configuration conf) throws Exception {
     Class<? extends ServletContainer> containerClass = ServletContainer.class;
     if (userProvider.isHadoopSecurityEnabled() && userProvider.isHBaseSecurityEnabled()) {
-      String machineName = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-        conf.get(REST_DNS_INTERFACE, "default"), conf.get(REST_DNS_NAMESERVER, "default")));
+      String machineName = getHostName(conf);
       String keytabFilename = conf.get(REST_KEYTAB_FILE);
       Preconditions.checkArgument(keytabFilename != null && !keytabFilename.isEmpty(),
         REST_KEYTAB_FILE + " should be set if security is enabled");
@@ -402,14 +405,24 @@ public class RESTServer implements Constants {
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);
     if (port >= 0) {
-      conf.setLong("startcode", EnvironmentEdgeManager.currentTime());
-      String a = conf.get("hbase.rest.info.bindAddress", "0.0.0.0");
-      this.infoServer = new InfoServer("rest", a, port, false, conf);
+      final long startCode = EnvironmentEdgeManager.currentTime();
+      conf.setLong("startcode", startCode);
+      this.serverName = ServerName.valueOf(getHostName(conf), servicePort, startCode);
+
+      String addr = conf.get("hbase.rest.info.bindAddress", "0.0.0.0");
+      this.infoServer = new InfoServer(REST_SERVER, addr, port, false, conf);
+      this.infoServer.addPrivilegedServlet("dump", "/dump", RESTDumpServlet.class);
+      this.infoServer.setAttribute(REST_SERVER, this);
       this.infoServer.setAttribute("hbase.conf", conf);
       this.infoServer.start();
     }
     // start server
     server.start();
+  }
+
+  private static String getHostName(Configuration conf) throws UnknownHostException {
+    return Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+      conf.get(REST_DNS_INTERFACE, "default"), conf.get(REST_DNS_NAMESERVER, "default")));
   }
 
   public synchronized void join() throws Exception {
@@ -419,7 +432,19 @@ public class RESTServer implements Constants {
     server.join();
   }
 
+  private void stopInfoServer() {
+    if (this.infoServer != null) {
+      LOG.info("Stop info server");
+      try {
+        this.infoServer.stop();
+      } catch (Exception e) {
+        LOG.error("Failed to stop infoServer", e);
+      }
+    }
+  }
+
   public synchronized void stop() throws Exception {
+    stopInfoServer();
     if (server == null) {
       throw new IllegalStateException("Server is not running");
     }
@@ -441,6 +466,10 @@ public class RESTServer implements Constants {
       throw new IllegalStateException("InfoServer is not running");
     }
     return infoServer.getPort();
+  }
+
+  public ServerName getServerName() {
+    return serverName;
   }
 
   public Configuration getConf() {
