@@ -501,6 +501,7 @@
     <module>hbase-logging</module>
     <module>hbase-compression</module>
     <module>hbase-backup</module>
+    <module>hbase-extensions</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -1090,6 +1091,11 @@
         <artifactId>hbase-compression-zstd</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-openssl</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <!-- General dependencies -->
       <dependency>
         <groupId>com.github.stephenc.findbugs</groupId>
@@ -1506,6 +1512,11 @@
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
         <artifactId>hbase-shaded-netty</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-netty-tcnative</artifactId>
         <version>${hbase-thirdparty.version}</version>
       </dependency>
       <dependency>
