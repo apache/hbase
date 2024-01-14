@@ -45,27 +45,27 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        3.0.0-alpha-4
+        3.0.0-beta-1
       </td>
       <td style="test-align: left">
-        2023/06/07
+        2024/01/14
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/3.0.0-alpha-4/api_compare_2.0.0_to_3.0.0-alpha-4RC0.html">3.0.0-alpha-4 vs 2.0.0</a>
+        <a href="https://downloads.apache.org/hbase/3.0.0-beta-1/api_compare_2.0.0_to_3.0.0-beta-1RC0.html">3.0.0-beta-1 vs 2.0.0</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/3.0.0-alpha-4/CHANGES.md">Changes</a>
+        <a href="https://downloads.apache.org/hbase/3.0.0-beta-1/CHANGES.md">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/3.0.0-alpha-4/RELEASENOTES.md">Release Notes</a>
+        <a href="https://downloads.apache.org/hbase/3.0.0-beta-1/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/3.0.0-alpha-4/hbase-3.0.0-alpha-4-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/3.0.0-alpha-4/hbase-3.0.0-alpha-4-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/3.0.0-alpha-4/hbase-3.0.0-alpha-4-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/3.0.0-alpha-4/hbase-3.0.0-alpha-4-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/3.0.0-alpha-4/hbase-3.0.0-alpha-4-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/3.0.0-alpha-4/hbase-3.0.0-alpha-4-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/3.0.0-alpha-4/hbase-3.0.0-alpha-4-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/3.0.0-alpha-4/hbase-3.0.0-alpha-4-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/3.0.0-alpha-4/hbase-3.0.0-alpha-4-client-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/3.0.0-beta-1/hbase-3.0.0-beta-1-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/3.0.0-beta-1/hbase-3.0.0-beta-1-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/3.0.0-beta-1/hbase-3.0.0-beta-1-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/3.0.0-beta-1/hbase-3.0.0-beta-1-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/3.0.0-beta-1/hbase-3.0.0-beta-1-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/3.0.0-beta-1/hbase-3.0.0-beta-1-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/3.0.0-beta-1/hbase-3.0.0-beta-1-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/3.0.0-beta-1/hbase-3.0.0-beta-1-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/3.0.0-beta-1/hbase-3.0.0-beta-1-client-bin.tar.gz.asc">asc</a>)
       </td>
       <td>
-        Testing only, not production ready
+        Feature freeze, passed a 10B ITBLL run, use with caution
       </td>
     </tr>
     <tr>
