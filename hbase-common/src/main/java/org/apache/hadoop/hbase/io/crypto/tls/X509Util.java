@@ -299,8 +299,8 @@ public final class X509Util {
    * Adds SslProvider.OPENSSL if OpenSsl is available and enabled. In order to make it available,
    * one must ensure that a properly shaded netty-tcnative is on the classpath. Properly shaded
    * means relocated to be prefixed with "org.apache.hbase.thirdparty" like the rest of the netty
-   * classes. We make available org.apache.hbase:hbase-openssl as a convenience module which
-   * one can use to pull in a shaded netty-tcnative statically linked against boringssl.
+   * classes. We make available org.apache.hbase:hbase-openssl as a convenience module which one can
+   * use to pull in a shaded netty-tcnative statically linked against boringssl.
    */
   private static boolean configureOpenSslIfAvailable(SslContextBuilder sslContextBuilder,
     Configuration conf) {

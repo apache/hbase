@@ -36,14 +36,6 @@
     <module>hbase-openssl</module>
   </modules>
 
-  <dependencies>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-resource-bundle</artifactId>
-      <optional>true</optional>
-    </dependency>
-  </dependencies>
-
   <build>
     <pluginManagement>
       <plugins>
