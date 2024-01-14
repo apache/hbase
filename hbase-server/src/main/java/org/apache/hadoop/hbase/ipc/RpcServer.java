@@ -443,7 +443,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       int totalTime = (int) (endTime - receiveTime);
       if (LOG.isTraceEnabled()) {
         LOG.trace(
-          "{}, response: {}, receiveTime: {}, queueTime: {}, processingTime: {}, totalTime: {}, fsReadTime: {}",
+          "{}, response: {}, receiveTime: {}, queueTime: {}, processingTime: {}, "
+            + "totalTime: {}, fsReadTime: {}",
           CurCall.get().toString(), TextFormat.shortDebugString(result),
           CurCall.get().getReceiveTime(), qTime, processingTime, totalTime,
           CurCall.get().getFsReadTime());
