@@ -109,14 +109,15 @@ public class TestNettyTLSIPCFileWatcher {
   @BeforeClass
   public static void setUpBeforeClass() throws IOException {
     Security.addProvider(new BouncyCastleProvider());
-    File dir = new File(UTIL.getDataTestDir(TestNettyTlsIPC.class.getSimpleName()).toString())
-      .getCanonicalFile();
+    File dir =
+      new File(UTIL.getDataTestDir(TestNettyTLSIPCFileWatcher.class.getSimpleName()).toString())
+        .getCanonicalFile();
     FileUtils.forceMkdir(dir);
     // server must enable tls
     CONF.setBoolean(X509Util.HBASE_SERVER_NETTY_TLS_ENABLED, true);
     PROVIDER = new X509TestContextProvider(CONF, dir);
     EVENT_LOOP_GROUP_CONFIG =
-      NettyEventLoopGroupConfig.setup(CONF, TestNettyTlsIPC.class.getSimpleName());
+      NettyEventLoopGroupConfig.setup(CONF, TestNettyTLSIPCFileWatcher.class.getSimpleName());
     SERVER = mock(HBaseServerBase.class);
     when(SERVER.getEventLoopGroupConfig()).thenReturn(EVENT_LOOP_GROUP_CONFIG);
   }

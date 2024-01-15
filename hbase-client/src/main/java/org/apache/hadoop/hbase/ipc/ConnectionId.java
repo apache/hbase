@@ -27,7 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * uniquely identified by &lt;remoteAddress, ticket, serviceName&gt;
  */
 @InterfaceAudience.Private
-class ConnectionId {
+public class ConnectionId {
   private static final int PRIME = 16777619;
   final User ticket;
   final String serviceName;

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.security;
+package org.apache.hadoop.hbase.ipc;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -37,13 +37,6 @@ import org.apache.hadoop.hbase.io.crypto.tls.X509KeyType;
 import org.apache.hadoop.hbase.io.crypto.tls.X509TestContext;
 import org.apache.hadoop.hbase.io.crypto.tls.X509TestContextProvider;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
-import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
-import org.apache.hadoop.hbase.ipc.AbstractTestIPC;
-import org.apache.hadoop.hbase.ipc.FailingNettyRpcServer;
-import org.apache.hadoop.hbase.ipc.NettyRpcClient;
-import org.apache.hadoop.hbase.ipc.NettyRpcServer;
-import org.apache.hadoop.hbase.ipc.RpcScheduler;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
@@ -192,5 +185,16 @@ public class TestNettyTlsIPC extends AbstractTestIPC {
     List<BlockingServiceAndInterface> services, InetSocketAddress bindAddress, Configuration conf,
     RpcScheduler scheduler) throws IOException {
     return new FailingNettyRpcServer(SERVER, name, services, bindAddress, conf, scheduler);
+  }
+
+  @Override
+  protected AbstractRpcClient<?> createBadAuthRpcClient(Configuration conf) {
+    return new NettyRpcClient(conf) {
+
+      @Override
+      protected NettyRpcConnection createConnection(ConnectionId remoteId) throws IOException {
+        return new BadAuthNettyRpcConnection(this, remoteId);
+      }
+    };
   }
 }
