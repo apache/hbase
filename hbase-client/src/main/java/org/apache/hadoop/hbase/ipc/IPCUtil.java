@@ -169,8 +169,8 @@ class IPCUtil {
     }
     // try our best to check for sub classes of FatalConnectionException
     try {
-      return e.getExceptionClassName() != null && FatalConnectionException.class
-        .isAssignableFrom(Class.forName(e.getExceptionClassName()));
+      return e.getExceptionClassName() != null && FatalConnectionException.class.isAssignableFrom(
+        Class.forName(e.getExceptionClassName(), false, IPCUtil.class.getClassLoader()));
       // Class.forName may throw ExceptionInInitializerError so we have to catch Throwable here
     } catch (Throwable t) {
       LOG.debug("Can not get class object for {}", e.getExceptionClassName(), t);
