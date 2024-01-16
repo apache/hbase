@@ -471,38 +471,75 @@ public final class ByteBufferUtils {
     }
   }
 
-  private interface ByteVisitor {
-    byte get();
-  }
-
-  private static long readVLong(ByteVisitor visitor) {
-    byte firstByte = visitor.get();
+  /**
+   * Similar to {@link WritableUtils#readVLong(java.io.DataInput)} but reads from a
+   * {@link ByteBuff}.
+   */
+  public static long readVLong(ByteBuff buf) {
+    byte firstByte = buf.get();
     int len = WritableUtils.decodeVIntSize(firstByte);
     if (len == 1) {
       return firstByte;
+    } else {
+      int remaining = len - 1;
+      long i = 0;
+      int offsetFromPos = 0;
+      if (remaining >= Bytes.SIZEOF_INT) {
+        // The int read has to be converted to unsigned long so the & op
+        i = (buf.getIntAfterPosition(offsetFromPos) & 0x00000000ffffffffL);
+        remaining -= Bytes.SIZEOF_INT;
+        offsetFromPos += Bytes.SIZEOF_INT;
+      }
+      if (remaining >= Bytes.SIZEOF_SHORT) {
+        short s = buf.getShortAfterPosition(offsetFromPos);
+        i = i << 16;
+        i = i | (s & 0xFFFF);
+        remaining -= Bytes.SIZEOF_SHORT;
+        offsetFromPos += Bytes.SIZEOF_SHORT;
+      }
+      for (int idx = 0; idx < remaining; idx++) {
+        byte b = buf.getByteAfterPosition(offsetFromPos + idx);
+        i = i << 8;
+        i = i | (b & 0xFF);
+      }
+      buf.skip(len - 1);
+      return WritableUtils.isNegativeVInt(firstByte) ? ~i : i;
     }
-    long i = 0;
-    for (int idx = 0; idx < len - 1; idx++) {
-      byte b = visitor.get();
-      i = i << 8;
-      i = i | (b & 0xFF);
-    }
-    return (WritableUtils.isNegativeVInt(firstByte) ? (i ^ -1L) : i);
   }
 
   /**
    * Similar to {@link WritableUtils#readVLong(DataInput)} but reads from a {@link ByteBuffer}.
    */
-  public static long readVLong(ByteBuffer in) {
-    return readVLong(in::get);
-  }
-
-  /**
-   * Similar to {@link WritableUtils#readVLong(java.io.DataInput)} but reads from a
-   * {@link ByteBuff}.
-   */
-  public static long readVLong(ByteBuff in) {
-    return readVLong(in::get);
+  public static long readVLong(ByteBuffer buf) {
+    byte firstByte = buf.get();
+    int len = WritableUtils.decodeVIntSize(firstByte);
+    if (len == 1) {
+      return firstByte;
+    } else {
+      int remaining = len - 1;
+      long i = 0;
+      int offsetFromPos = 0;
+      if (remaining >= Bytes.SIZEOF_INT) {
+        // The int read has to be converted to unsigned long so the & op
+        i = (buf.getInt(buf.position() + offsetFromPos) & 0x00000000ffffffffL);
+        remaining -= Bytes.SIZEOF_INT;
+        offsetFromPos += Bytes.SIZEOF_INT;
+      }
+      if (remaining >= Bytes.SIZEOF_SHORT) {
+        short s = buf.getShort(buf.position() + offsetFromPos);
+        i = i << 16;
+        i = i | (s & 0xFFFF);
+        remaining -= Bytes.SIZEOF_SHORT;
+        offsetFromPos += Bytes.SIZEOF_SHORT;
+      }
+      for (int idx = 0; idx < remaining; idx++) {
+        byte b = buf.get(buf.position() + offsetFromPos + idx);
+        i = i << 8;
+        i = i | (b & 0xFF);
+      }
+      buf.position(buf.position() + len - 1);
+      return WritableUtils.isNegativeVInt(firstByte) ? ~i : i;
+    }
   }
 
   /**
