@@ -120,10 +120,6 @@
     <pluginManagement>
       <plugins>
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-source-plugin</artifactId>
-        </plugin>
-        <plugin>
           <!--Make it so assembly:single does nothing in here-->
           <artifactId>maven-assembly-plugin</artifactId>
           <configuration>
@@ -144,11 +140,6 @@
       </plugins>
     </pluginManagement>
     <plugins>
-      <!-- Make a jar and put the sources in the jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-      </plugin>
       <!-- Testing plugins -->
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
