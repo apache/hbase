@@ -32,8 +32,14 @@
   <description>Common functionality for HBase</description>
 
   <properties>
-    <hubspot.build.version>${project.version}</hubspot.build.version>
+    <!--
+    During build, one can override this property if they want to influence the
+    version stamped in the generated Version.java and hbase-default.xml. This has
+    implications for various version-related guardrails so care should be taken.
+    -->
+    <versioninfo.version>${project.version}</versioninfo.version>
   </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -213,7 +219,7 @@
             <phase>process-resources</phase>
             <configuration>
               <target>
-                <replace file="${project.build.outputDirectory}/hbase-default.xml" token="@@@VERSION@@@" value="${hubspot.build.version}"/>
+                <replace file="${project.build.outputDirectory}/hbase-default.xml" token="@@@VERSION@@@" value="${versioninfo.version}"/>
               </target>
             </configuration>
           </execution>
@@ -229,7 +235,7 @@
                 <property location="${project.build.directory}/generated-sources" name="generated.sources"/>
 
                 <exec executable="bash" failonerror="true">
-                  <arg line="${basedir}/src/saveVersion.sh ${hubspot.build.version} ${generated.sources}/java"/>
+                  <arg line="${basedir}/src/saveVersion.sh ${versioninfo.version} ${generated.sources}/java"/>
                 </exec>
               </target>
             </configuration>
