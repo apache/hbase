@@ -46,6 +46,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
@@ -179,6 +180,23 @@ public class TestByteBufferUtils {
       ByteBufferUtils.writeVLong(b, l);
       b.flip();
       assertEquals(l, ByteBufferUtils.readVLong(b));
+      b.flip();
+      assertEquals(l, ByteBufferUtils.readVLong(ByteBuff.wrap(b)));
+    }
+  }
+
+  @Test
+  public void testReadWriteConsecutiveVLong() {
+    for (long l : testNumbers) {
+      ByteBuffer b = ByteBuffer.allocate(2 * MAX_VLONG_LENGTH);
+      ByteBufferUtils.writeVLong(b, l);
+      ByteBufferUtils.writeVLong(b, l - 4);
+      b.flip();
+      assertEquals(l, ByteBufferUtils.readVLong(b));
+      assertEquals(l - 4, ByteBufferUtils.readVLong(b));
+      b.flip();
+      assertEquals(l, ByteBufferUtils.readVLong(ByteBuff.wrap(b)));
+      assertEquals(l - 4, ByteBufferUtils.readVLong(ByteBuff.wrap(b)));
     }
   }
 
