@@ -18,9 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.IPCUtil.buildRequestHeader;
-import static org.apache.hadoop.hbase.ipc.IPCUtil.createRemoteException;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.getTotalSizeWhenWrittenDelimited;
-import static org.apache.hadoop.hbase.ipc.IPCUtil.isFatalConnectionException;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.setCancelled;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.write;
 
@@ -69,8 +67,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message.Builder;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.PooledByteBufAllocator;
 
@@ -711,6 +709,25 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       // Read the header
       ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(in);
       int id = responseHeader.getCallId();
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("got response header " + TextFormat.shortDebugString(responseHeader)
+          + ", totalSize: " + totalSize + " bytes");
+      }
+      RemoteException remoteExc;
+      if (responseHeader.hasException()) {
+        ExceptionResponse exceptionResponse = responseHeader.getException();
+        remoteExc = IPCUtil.createRemoteException(exceptionResponse);
+        if (IPCUtil.isFatalConnectionException(exceptionResponse)) {
+          // Here we will cleanup all calls so do not need to fall back, just return.
+          synchronized (this) {
+            closeConn(remoteExc);
+          }
+          return;
+        }
+      } else {
+        remoteExc = null;
+      }
+
       call = calls.remove(id); // call.done have to be set before leaving this method
       expectedCall = (call != null && !call.isDone());
       if (!expectedCall) {
@@ -721,46 +738,34 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         // this connection.
         int readSoFar = getTotalSizeWhenWrittenDelimited(responseHeader);
         int whatIsLeftToRead = totalSize - readSoFar;
+        LOG.debug("Unknown callId: " + id + ", skipping over this response of " + whatIsLeftToRead
+          + " bytes");
         IOUtils.skipFully(in, whatIsLeftToRead);
         if (call != null) {
           call.callStats.setResponseSizeBytes(totalSize);
-          call.callStats
-            .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
         }
         return;
       }
-      if (responseHeader.hasException()) {
-        ExceptionResponse exceptionResponse = responseHeader.getException();
-        RemoteException re = createRemoteException(exceptionResponse);
-        call.setException(re);
-        call.callStats.setResponseSizeBytes(totalSize);
-        call.callStats
-          .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
-        if (isFatalConnectionException(exceptionResponse)) {
-          synchronized (this) {
-            closeConn(re);
-          }
-        }
-      } else {
-        Message value = null;
-        if (call.responseDefaultType != null) {
-          Builder builder = call.responseDefaultType.newBuilderForType();
-          ProtobufUtil.mergeDelimitedFrom(builder, in);
-          value = builder.build();
-        }
-        CellScanner cellBlockScanner = null;
-        if (responseHeader.hasCellBlockMeta()) {
-          int size = responseHeader.getCellBlockMeta().getLength();
-          byte[] cellBlock = new byte[size];
-          IOUtils.readFully(this.in, cellBlock, 0, cellBlock.length);
-          cellBlockScanner = this.rpcClient.cellBlockBuilder.createCellScanner(this.codec,
-            this.compressor, cellBlock);
-        }
-        call.setResponse(value, cellBlockScanner);
-        call.callStats.setResponseSizeBytes(totalSize);
-        call.callStats
-          .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
+      call.callStats.setResponseSizeBytes(totalSize);
+      if (remoteExc != null) {
+        call.setException(remoteExc);
+        return;
       }
+      Message value = null;
+      if (call.responseDefaultType != null) {
+        Message.Builder builder = call.responseDefaultType.newBuilderForType();
+        ProtobufUtil.mergeDelimitedFrom(builder, in);
+        value = builder.build();
+      }
+      CellScanner cellBlockScanner = null;
+      if (responseHeader.hasCellBlockMeta()) {
+        int size = responseHeader.getCellBlockMeta().getLength();
+        byte[] cellBlock = new byte[size];
+        IOUtils.readFully(this.in, cellBlock, 0, cellBlock.length);
+        cellBlockScanner =
+          this.rpcClient.cellBlockBuilder.createCellScanner(this.codec, this.compressor, cellBlock);
+      }
+      call.setResponse(value, cellBlockScanner);
     } catch (IOException e) {
       if (expectedCall) {
         call.setException(e);

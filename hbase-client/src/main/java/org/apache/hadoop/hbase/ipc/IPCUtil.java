@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
@@ -55,6 +57,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
  */
 @InterfaceAudience.Private
 class IPCUtil {
+
+  private static final Logger LOG = LoggerFactory.getLogger(IPCUtil.class);
 
   /**
    * Write out header, param, and cell block if there is one.
@@ -145,8 +149,19 @@ class IPCUtil {
   }
 
   /** Returns True if the exception is a fatal connection exception. */
-  static boolean isFatalConnectionException(final ExceptionResponse e) {
-    return e.getExceptionClassName().equals(FatalConnectionException.class.getName());
+  static boolean isFatalConnectionException(ExceptionResponse e) {
+    if (e.getExceptionClassName().equals(FatalConnectionException.class.getName())) {
+      return true;
+    }
+    // try our best to check for sub classes of FatalConnectionException
+    try {
+      return e.getExceptionClassName() != null && FatalConnectionException.class.isAssignableFrom(
+        Class.forName(e.getExceptionClassName(), false, IPCUtil.class.getClassLoader()));
+      // Class.forName may throw ExceptionInInitializerError so we have to catch Throwable here
+    } catch (Throwable t) {
+      LOG.debug("Can not get class object for {}", e.getExceptionClassName(), t);
+      return false;
+    }
   }
 
   static IOException toIOE(Throwable t) {

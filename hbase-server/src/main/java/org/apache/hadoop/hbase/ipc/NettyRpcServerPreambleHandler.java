@@ -34,6 +34,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
 class NettyRpcServerPreambleHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
   private final NettyRpcServer rpcServer;
+  private boolean processPreambleError;
 
   public NettyRpcServerPreambleHandler(NettyRpcServer rpcServer) {
     this.rpcServer = rpcServer;
@@ -41,11 +42,19 @@ class NettyRpcServerPreambleHandler extends SimpleChannelInboundHandler<ByteBuf>
 
   @Override
   protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    if (processPreambleError) {
+      // if we failed to process preamble, we will close the connection immediately, but it is
+      // possible that we have already received some bytes after the 'preamble' so when closing, the
+      // netty framework will still pass them here. So we set a flag here to just skip processing
+      // these broken messages.
+      return;
+    }
     NettyServerRpcConnection conn = createNettyServerRpcConnection(ctx.channel());
     ByteBuffer buf = ByteBuffer.allocate(msg.readableBytes());
     msg.readBytes(buf);
     buf.flip();
     if (!conn.processPreamble(buf)) {
+      processPreambleError = true;
       conn.close();
       return;
     }

@@ -107,4 +107,24 @@ public class TestBlockingIPC extends AbstractTestIPC {
     Configuration conf, RpcScheduler scheduler) throws IOException {
     return new TestFailingRpcServer(server, name, services, bindAddress, conf, scheduler);
   }
+
+  @Override
+  protected AbstractRpcClient<?> createBadAuthRpcClient(Configuration conf) {
+    return new BlockingRpcClient(conf) {
+
+      @Override
+      protected BlockingRpcConnection createConnection(ConnectionId remoteId) throws IOException {
+        return new BlockingRpcConnection(this, remoteId) {
+          @Override
+          protected byte[] getConnectionHeaderPreamble() {
+            byte[] header = super.getConnectionHeaderPreamble();
+            // set an invalid auth code
+            header[header.length - 1] = -10;
+            return header;
+          }
+        };
+      }
+
+    };
+  }
 }

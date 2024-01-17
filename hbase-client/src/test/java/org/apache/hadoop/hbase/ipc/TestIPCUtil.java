@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -43,6 +44,8 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.io.netty.channel.DefaultEventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 
 @Category({ ClientTests.class, SmallTests.class })
 public class TestIPCUtil {
@@ -158,5 +161,24 @@ public class TestIPCUtil {
     } finally {
       eventLoop.shutdownGracefully();
     }
+  }
+
+  @Test
+  public void testIsFatalConnectionException() {
+    // intentionally not reference the class object directly, so here we will not load the class, to
+    // make sure that in isFatalConnectionException, we can use initialized = false when calling
+    // Class.forName
+    ExceptionResponse resp = ExceptionResponse.newBuilder()
+      .setExceptionClassName("org.apache.hadoop.hbase.ipc.DummyFatalConnectionException").build();
+    assertTrue(IPCUtil.isFatalConnectionException(resp));
+
+    resp = ExceptionResponse.newBuilder()
+      .setExceptionClassName("org.apache.hadoop.hbase.ipc.DummyException").build();
+    assertFalse(IPCUtil.isFatalConnectionException(resp));
+
+    // class not found
+    resp = ExceptionResponse.newBuilder()
+      .setExceptionClassName("org.apache.hadoop.hbase.ipc.WhatEver").build();
+    assertFalse(IPCUtil.isFatalConnectionException(resp));
   }
 }
