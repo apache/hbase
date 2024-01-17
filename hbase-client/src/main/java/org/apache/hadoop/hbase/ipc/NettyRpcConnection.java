@@ -79,7 +79,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHea
  * @since 2.0.0
  */
 @InterfaceAudience.Private
-public class NettyRpcConnection extends RpcConnection {
+class NettyRpcConnection extends RpcConnection {
 
   private static final Logger LOG = LoggerFactory.getLogger(NettyRpcConnection.class);
 
