@@ -146,4 +146,15 @@ public class TestNettyIPC extends AbstractTestIPC {
     Configuration conf, RpcScheduler scheduler) throws IOException {
     return new FailingNettyRpcServer(null, name, services, bindAddress, conf, scheduler);
   }
+
+  @Override
+  protected AbstractRpcClient<?> createBadAuthRpcClient(Configuration conf) {
+    return new NettyRpcClient(conf) {
+
+      @Override
+      protected NettyRpcConnection createConnection(ConnectionId remoteId) throws IOException {
+        return new BadAuthNettyRpcConnection(this, remoteId);
+      }
+    };
+  }
 }
