@@ -97,7 +97,7 @@ public class TestSaslTlsIPC extends AbstractTestSecureIPC {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Security.addProvider(new BouncyCastleProvider());
-    File dir = new File(TEST_UTIL.getDataTestDir(TestNettyTlsIPC.class.getSimpleName()).toString())
+    File dir = new File(TEST_UTIL.getDataTestDir(TestSaslTlsIPC.class.getSimpleName()).toString())
       .getCanonicalFile();
     FileUtils.forceMkdir(dir);
     initKDCAndConf();

@@ -109,8 +109,9 @@ public class TestNettyTLSIPCFileWatcher {
   @BeforeClass
   public static void setUpBeforeClass() throws IOException {
     Security.addProvider(new BouncyCastleProvider());
-    File dir = new File(UTIL.getDataTestDir(TestNettyTlsIPC.class.getSimpleName()).toString())
-      .getCanonicalFile();
+    File dir =
+      new File(UTIL.getDataTestDir(TestNettyTLSIPCFileWatcher.class.getSimpleName()).toString())
+        .getCanonicalFile();
     FileUtils.forceMkdir(dir);
     // server must enable tls
     CONF.setBoolean(X509Util.HBASE_SERVER_NETTY_TLS_ENABLED, true);

@@ -145,7 +145,8 @@ abstract class RpcConnection {
     }
   }
 
-  protected final byte[] getConnectionHeaderPreamble() {
+  // will be overridden in tests
+  protected byte[] getConnectionHeaderPreamble() {
     // Assemble the preamble up in a buffer first and then send it. Writing individual elements,
     // they are getting sent across piecemeal according to wireshark and then server is messing
     // up the reading on occasion (the passed in stream is not buffered yet).
