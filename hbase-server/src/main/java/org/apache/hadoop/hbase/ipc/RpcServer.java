@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -880,5 +881,11 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   protected boolean needAuthorization() {
     return authorize;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public List<BlockingServiceAndInterface> getServices() {
+    return services;
   }
 }
