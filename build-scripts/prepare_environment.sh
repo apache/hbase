@@ -10,26 +10,12 @@
 set -ex
 printenv
 
-if [ $1 = "cdh5" ]; then
-  HADOOP_DEP_VERSION="2.6.0-cdh5.16.2"
-  VERSION_ARGS="-Phadoop-2.0 -Dhadoop-two.version=$HADOOP_DEP_VERSION"
-else
-  HADOOP_DEP_VERSION="3.3.1"
-  VERSION_ARGS="-Phadoop-3.0 -Dhadoop.profile=3.0 -Dhadoop-three.version=$HADOOP_DEP_VERSION"
-fi
-
 # We base the expected main branch and resulting maven version for clients on the hbase minor version
 # The reason for this is hbase re-branches for each minor release (2.4, 2.5, 2.6, etc). At each re-branch
 # the histories diverge. So we'll need to create our own fork of each new minor release branch.
 # The convention is a fork named "hubspot-$minorVersion", and the maven coordinates "$minorVersion-hubspot-SNAPSHOT"
 MINOR_VERSION="2.5"
 MAIN_BRANCH="hubspot-${MINOR_VERSION}"
-
-# If we bump our hadoop build version, we should bump this as well
-# At some point it would be good to more closely link this to our hadoop build, but that can only happen
-# once we update our apache-hadoop build to do a full maven. At which point we can probably change this to
-# like 3.0-hubspot-SNAPSHOT and leave it at that.
-MAVEN_ARGS="$VERSION_ARGS -Dgpg.skip=true -DskipTests=true"
 
 #
 # Validate inputs from blazar
@@ -78,10 +64,12 @@ echo "Git branch $GIT_BRANCH. Detecting appropriate version override and RPM rel
 RELEASE="hs"
 
 if [[ "$GIT_BRANCH" = "$MAIN_BRANCH" ]]; then
-    MAVEN_VERSION="${MINOR_VERSION}-hubspot-SNAPSHOT"
+    SET_VERSION="${MINOR_VERSION}-hubspot-SNAPSHOT"
+    YUM_REPO_UPLOAD_OVERRIDE_CENTOS_8="8_hs-hbase"
 elif [[ "$GIT_BRANCH" != "hubspot" ]]; then
-    MAVEN_VERSION="${MINOR_VERSION}-${GIT_BRANCH}-SNAPSHOT"
+    SET_VERSION="${MINOR_VERSION}-${GIT_BRANCH}-SNAPSHOT"
     RELEASE="${RELEASE}~${GIT_BRANCH//[^[:alnum:]]/_}"
+    YUM_REPO_UPLOAD_OVERRIDE_CENTOS_8="8_hs-hbase-develop"
 else
     echo "Invalid git branch $GIT_BRANCH"
     exit 1
@@ -90,16 +78,14 @@ fi
 RELEASE="${RELEASE}.${BUILD_NUMBER}"
 FULL_BUILD_VERSION="${HBASE_VERSION}-${RELEASE}"
 
-# Add into MAVEN_ARGS because we added this property in hbase-common/pom.xml so we
-# could accurately reflect the full build version in the UI and elsewhere.
-MAVEN_ARGS="$MAVEN_ARGS -Dhubspot.build.version=$HBASE_VERSION"
-
-write-build-env-var MAVEN_ARGS "$MAVEN_ARGS"
-write-build-env-var SET_VERSION "$MAVEN_VERSION"
+# SET_VERSION is not the most intuitive name, but it's required for set-maven-versions script
+write-build-env-var SET_VERSION "$SET_VERSION"
 write-build-env-var HBASE_VERSION "$HBASE_VERSION"
 write-build-env-var PKG_RELEASE "$RELEASE"
 write-build-env-var FULL_BUILD_VERSION "$FULL_BUILD_VERSION"
+write-build-env-var YUM_REPO_UPLOAD_OVERRIDE_CENTOS_8 "$YUM_REPO_UPLOAD_OVERRIDE_CENTOS_8"
 
 echo "Building HBase version $HBASE_VERSION"
-echo "Will use maven version $MAVEN_VERSION"
+echo "Will deploy to nexus with version $SET_VERSION"
+echo "Will create rpm with version $FULL_BUILD_VERSION"
 echo "Will run maven with extra args $MAVEN_ARGS"

@@ -1,8 +1,11 @@
 buildpack:
-  name: Blazar-Buildpack-Java
+  name: Blazar-Buildpack-RPM
 
 env:
-  # Below variables are generated in prepare_environment.sh.
+  RPM_BUILD_COMMAND: ./build.sh
+  DISABLE_CENTOS_6_RPMS: "true"
+  ENABLE_CENTOS_8_RPMS: "true"
+   # Below variables are generated in prepare_environment.sh.
   # The build environment requires environment variables to be explicitly defined before they may
   # be modified by the `write-build-env-var` utilty script to persist changes to an environment variable
   # throughout a build
@@ -12,13 +15,14 @@ env:
   PKG_RELEASE: ""
   FULL_BUILD_VERSION: ""
 
+depends:
+  - hbase
+
 before:
   - description: "Prepare build environment"
     commands:
       - $WORKSPACE/build-scripts/prepare_environment.sh
 
-depends:
-  - hubspot-client-bundles
-  - hbase-client-bundle
-provides:
-  - hbase-mapreduce-bundle
+stepActivation:
+  uploadRpms:
+    branchRegexes: ['.*']

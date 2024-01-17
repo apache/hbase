@@ -1,19 +1,16 @@
 buildpack:
-  name: Blazar-Buildpack-Java
+  name: Blazar-Buildpack-Java-single-module
 
-# Note: this blazar yaml has been copied to all of the maven submodules (EXCEPT hbase-assembly) so
-# that they can be properly configured. If you make changes to this, you will need to make sure all
-# submodules are also updated accordingly. If you added a new submodule, you'll need to make sure
-# it gets a copy of this .blazar.yaml. In either case, use copy_blazar_yaml.sh to copy to all
-# subdirs containing a pom.xml.
-# Make sure to also check hbase-assembly/.blazar.yaml to see if any changes should be added there as well.
-# Prefer making changes to prepare_environment.sh instead, if possible.
-
-# The build environment requires environment variables to be explicitly defined before they may
-# be modified by the `write-build-env-var` utilty script to persist changes to an environment variable
-# throughout a build
 env:
-  MAVEN_ARGS: ""
+  MAVEN_PHASE: "package assembly:single deploy"
+  HADOOP_DEP_VERSION: "3.3.6-hubspot-SNAPSHOT"
+  MAVEN_ARGS: "-Phadoop-3.0 -Dhadoop.profile=3.0 -Dhadoop-three.version=$HADOOP_DEP_VERSION -Dgpg.skip=true -DskipTests -DdeployAtEnd -pl hbase-assembly -am"
+
+  # Below variables are generated in prepare_environment.sh.
+  # The build environment requires environment variables to be explicitly defined before they may
+  # be modified by the `write-build-env-var` utilty script to persist changes to an environment variable
+  # throughout a build
+  YUM_REPO_UPLOAD_OVERRIDE_CENTOS_8: ""
   SET_VERSION: ""
   HBASE_VERSION: ""
   PKG_RELEASE: ""
@@ -23,3 +20,6 @@ before:
   - description: "Prepare build environment"
     commands:
       - $WORKSPACE/build-scripts/prepare_environment.sh
+
+provides:
+  - hbase

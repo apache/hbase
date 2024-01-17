@@ -45,7 +45,7 @@ OPTS=$(getopt \
   -l 'bin-dir:' \
   -l 'examples-dir:' \
   -l 'conf-dir:' \
-  -l 'mvn-target-dir:' -- "$@")
+  -l 'input-tar:' -- "$@")
 
 if [ $? != 0 ] ; then
     usage
@@ -57,8 +57,8 @@ while true ; do
         --prefix)
         PREFIX=$2 ; shift 2
         ;;
-        --mvn-target-dir)
-        MVN_TARGET_DIR=$2 ; shift 2
+        --input-tar)
+        INPUT_TAR=$2 ; shift 2
         ;;
         --doc-dir)
         DOC_DIR=$2 ; shift 2
@@ -86,7 +86,7 @@ while true ; do
     esac
 done
 
-for var in PREFIX MVN_TARGET_DIR ; do
+for var in PREFIX INPUT_TAR ; do
   if [ -z "$(eval "echo \$$var")" ]; then
     echo Missing param: $var
     usage
@@ -111,7 +111,7 @@ if [ -z "$version_part" ]; then
   version_part=$HBASE_VERSION
 fi
 
-tar -C $EXTRACT_DIR --strip-components=1 -xzf $MVN_TARGET_DIR/hbase-$version_part-bin.tar.gz
+tar -C $EXTRACT_DIR --strip-components=1 -xzf $INPUT_TAR
 
 # we do not need the shaded clients in our rpm. they bloat the size and cause classpath issues for hbck2.
 rm -rf $EXTRACT_DIR/lib/shaded-clients
@@ -136,10 +136,9 @@ else
   echo "Doc generation is currently disabled in our RPM build. If this is an issue, it should be possible to enable them with some work. See https://git.hubteam.com/HubSpot/apache-hbase/blob/hubspot-2/rpm/sources/do-component-build#L17-L24 for details." > $PREFIX/$DOC_DIR/README.txt
 fi
 
-#cp -a $EXTRACT_DIR/hbase-webapps $PREFIX/$LIB_DIR
-
 cp -a $EXTRACT_DIR/conf $PREFIX/$CONF_DIR
 cp -a $EXTRACT_DIR/bin/* $PREFIX/$BIN_DIR
+
 # Purge scripts that don't work with packages
 for file in rolling-restart.sh graceful_stop.sh local-regionservers.sh \
             master-backup.sh regionservers.sh zookeepers.sh hbase-daemons.sh \
@@ -147,8 +146,6 @@ for file in rolling-restart.sh graceful_stop.sh local-regionservers.sh \
   rm -f $PREFIX/$BIN_DIR/$file
 done
 
-cp $EXTRACT_DIR/../hbase-thrift/src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift $PREFIX/$THRIFT_DIR/hbase1.thrift
-cp $EXTRACT_DIR/../hbase-thrift/src/main/resources/org/apache/hadoop/hbase/thrift2/hbase.thrift $PREFIX/$THRIFT_DIR/hbase2.thrift
 
 ln -s $ETC_DIR/conf $PREFIX/$LIB_DIR/conf
 

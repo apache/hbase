@@ -6,7 +6,6 @@
     <groupId>com.hubspot.hbase</groupId>
     <artifactId>hubspot-client-bundles</artifactId>
     <version>${revision}</version>
-    <relativePath>..</relativePath>
   </parent>
 
   <artifactId>hbase-client-bundle</artifactId>

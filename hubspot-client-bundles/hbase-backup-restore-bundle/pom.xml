@@ -6,7 +6,6 @@
     <groupId>com.hubspot.hbase</groupId>
     <artifactId>hubspot-client-bundles</artifactId>
     <version>${revision}</version>
-    <relativePath>..</relativePath>
   </parent>
 
   <artifactId>hbase-backup-restore-bundle</artifactId>
@@ -19,10 +18,6 @@
     <dependency>
       <groupId>com.hubspot.hbase</groupId>
       <artifactId>hbase-mapreduce-bundle</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-protocol-shaded</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -58,10 +53,6 @@
           <artifactId>slf4j-log4j12</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-common</artifactId>
     </dependency>
   </dependencies>
 
