@@ -262,6 +262,7 @@
               <th>Region Server</th>
               <th>ReadRequests</th>
               <th>WriteRequests</th>
+              <th>Uncompressed StoreFileSize</th>
               <th>StorefileSize</th>
               <th>Num.Storefiles</th>
               <th>MemSize</th>
@@ -291,6 +292,7 @@
                   String hostAndPort = "";
                   String readReq = "N/A";
                   String writeReq = "N/A";
+                  String fileSizeUncompressed = ZEROMB;
                   String fileSize = ZEROMB;
                   String fileCount = "N/A";
                   String memSize = ZEROMB;
@@ -308,6 +310,10 @@
                         if (rSize > 0) {
                           fileSize = StringUtils.byteDesc((long) rSize);
                         }
+                        double rSizeUncompressed = load.getUncompressedStoreFileSize().get(Size.Unit.BYTE);
+                        if (rSizeUncompressed > 0) {
+                          fileSizeUncompressed = StringUtils.byteDesc((long) rSizeUncompressed);
+                        }
                         fileCount = String.format("%,1d", load.getStoreFileCount());
                         double mSize = load.getMemStoreSize().get(Size.Unit.BYTE);
                         if (mSize > 0) {
@@ -322,6 +328,7 @@
               <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
               <td><%= readReq%></td>
               <td><%= writeReq%></td>
+              <td><%= fileSizeUncompressed%></td>
               <td><%= fileSize%></td>
               <td><%= fileCount%></td>
               <td><%= memSize%></td>
@@ -785,6 +792,7 @@
     <%
       long totalReadReq = 0;
       long totalWriteReq = 0;
+      long totalSizeUncompressed = 0;
       long totalSize = 0;
       long totalStoreFileCount = 0;
       long totalMemSize = 0;
@@ -795,6 +803,7 @@
       long totalBlocksLocalWithSsdWeight = 0;
       String totalCompactionProgress = "";
       String totalMemSizeStr = ZEROMB;
+      String totalSizeUncompressedStr = ZEROMB;
       String totalSizeStr = ZEROMB;
       String totalLocality = "";
       String totalLocalityForSsd = "";
@@ -817,6 +826,7 @@
             if (regionMetrics != null) {
               totalReadReq += regionMetrics.getReadRequestCount();
               totalWriteReq += regionMetrics.getWriteRequestCount();
+              totalSizeUncompressed += regionMetrics.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE);
               totalSize += regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
               totalStoreFileCount += regionMetrics.getStoreFileCount();
               totalMemSize += regionMetrics.getMemStoreSize().get(Size.Unit.MEGABYTE);
@@ -841,6 +851,9 @@
       }
       if (totalSize > 0) {
         totalSizeStr = StringUtils.byteDesc(totalSize*1024l*1024);
+      }
+      if (totalSizeUncompressed > 0){
+        totalSizeUncompressedStr = StringUtils.byteDesc(totalSizeUncompressed*1024l*1024);
       }
       if (totalMemSize > 0) {
         totalMemSizeStr = StringUtils.byteDesc(totalMemSize*1024l*1024);
@@ -878,6 +891,7 @@
               <th>Region Server</th>
               <th>ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)</th>
               <th>WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)</th>
+              <th>Uncompressed StoreFileSize<br>(<%= totalSizeUncompressedStr %>)</th>
               <th>StorefileSize<br>(<%= totalSizeStr %>)</th>
               <th>Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)</th>
               <th>MemSize<br>(<%= totalMemSizeStr %>)</th>
@@ -908,6 +922,7 @@
                 RegionMetrics load = hriEntry.getValue();
                 String readReq = "N/A";
                 String writeReq = "N/A";
+                String regionSizeUncompressed = ZEROMB;
                 String regionSize = ZEROMB;
                 String fileCount = "N/A";
                 String memSize = ZEROMB;
@@ -918,6 +933,10 @@
                   double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
                   if (rSize > 0) {
                     regionSize = StringUtils.byteDesc((long)rSize);
+                  }
+                  double rSizeUncompressed = load.getUncompressedStoreFileSize().get(Size.Unit.BYTE);
+                  if (rSizeUncompressed > 0) {
+                    regionSizeUncompressed = StringUtils.byteDesc((long)rSizeUncompressed);
                   }
                   fileCount = String.format("%,1d", load.getStoreFileCount());
                   double mSize = load.getMemStoreSize().get(Size.Unit.BYTE);
@@ -964,6 +983,7 @@
               %>
               <td><%= readReq%></td>
               <td><%= writeReq%></td>
+              <td><%= regionSizeUncompressed%></td>
               <td><%= regionSize%></td>
               <td><%= fileCount%></td>
               <td><%= memSize%></td>
