@@ -22,6 +22,7 @@ import java.lang.reflect.Constructor;
 import java.net.InetAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
+import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -812,6 +813,11 @@ public class TestNamedQueueRecorder {
       @Override
       public Optional<User> getRequestUser() {
         return getUser(userName);
+      }
+
+      @Override
+      public Optional<X509Certificate> getClientCertificate() {
+        return Optional.empty();
       }
 
       @Override

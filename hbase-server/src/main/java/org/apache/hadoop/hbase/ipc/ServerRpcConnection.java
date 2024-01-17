@@ -31,6 +31,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
+import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -133,6 +134,8 @@ abstract class ServerRpcConnection implements Closeable {
   protected User user = null;
   protected UserGroupInformation ugi = null;
   protected SaslServerAuthenticationProviders saslProviders = null;
+  // volatile because this gets set after this object is constructed, when TLS handshake finishes
+  protected volatile X509Certificate clientCertificate = null;
 
   public ServerRpcConnection(RpcServer rpcServer) {
     this.rpcServer = rpcServer;

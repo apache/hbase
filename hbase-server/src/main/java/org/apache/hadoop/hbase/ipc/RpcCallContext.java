@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.net.InetAddress;
+import java.security.cert.X509Certificate;
 import java.util.Optional;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -59,6 +60,13 @@ public interface RpcCallContext {
   default Optional<String> getRequestUserName() {
     return getRequestUser().map(User::getShortName);
   }
+
+  /**
+   * Returns the TLS certificate that the client presented to this HBase server when making its
+   * connection. TLS is orthogonal to Kerberos, so this is unrelated to
+   * {@link this#getRequestUser()}. Both, one, or neither, may be present.
+   */
+  Optional<X509Certificate> getClientCertificate();
 
   /** Returns Address of remote client in this call */
   InetAddress getRemoteAddress();
