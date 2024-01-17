@@ -29,9 +29,11 @@ import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlocking
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newStub;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -53,6 +55,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -535,6 +538,26 @@ public abstract class AbstractTestIPC {
       assertFalse("no spans provided", traceRule.getSpans().isEmpty());
       assertThat(traceRule.getSpans(), everyItem(allOf(hasStatusWithCode(StatusCode.ERROR),
         hasTraceId(traceRule.getSpans().iterator().next().getTraceId()))));
+    }
+  }
+
+  protected abstract AbstractRpcClient<?> createBadAuthRpcClient(Configuration conf);
+
+  @Test
+  public void testBadPreambleHeader() throws IOException, ServiceException {
+    Configuration clientConf = new Configuration(CONF);
+    RpcServer rpcServer = createRpcServer(null, "testRpcServer", Collections.emptyList(),
+      new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
+    try (AbstractRpcClient<?> client = createBadAuthRpcClient(clientConf)) {
+      rpcServer.start();
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
+      ServiceException se = assertThrows(ServiceException.class,
+        () -> stub.echo(null, EchoRequestProto.newBuilder().setMessage("hello").build()));
+      IOException ioe = ProtobufUtil.handleRemoteException(se);
+      assertThat(ioe, instanceOf(BadAuthException.class));
+      assertThat(ioe.getMessage(), containsString("authName=unknown"));
+    } finally {
+      rpcServer.stop();
     }
   }
 }
