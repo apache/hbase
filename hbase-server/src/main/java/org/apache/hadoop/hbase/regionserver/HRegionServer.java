@@ -876,7 +876,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
           } else {
             boolean allUserRegionsOffline = areAllUserRegionsOffline();
             if (allUserRegionsOffline) {
-              // Set stopped if no more write requests tp meta tables
+              // Set stopped if no more write requests to meta tables
               // since last time we went around the loop. Any open
               // meta regions will be closed on our way out.
               if (oldRequestCount == getWriteRequestCount()) {
