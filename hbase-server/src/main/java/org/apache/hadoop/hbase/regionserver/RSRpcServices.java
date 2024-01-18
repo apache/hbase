@@ -393,8 +393,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
 
   /**
    * Services launched in RSRpcServices. By default they are on but you can use the below booleans
-   * to selectively enable/disable either Admin or Client Service (Rare is the case where you would
-   * ever turn off one or the other).
+   * to selectively enable/disable these services (Rare is the case where you would ever turn off
+   * one or the other).
    */
   public static final String REGIONSERVER_ADMIN_SERVICE_CONFIG =
     "hbase.regionserver.admin.executorService";
@@ -402,6 +402,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
     "hbase.regionserver.client.executorService";
   public static final String REGIONSERVER_CLIENT_META_SERVICE_CONFIG =
     "hbase.regionserver.client.meta.executorService";
+  public static final String REGIONSERVER_BOOTSTRAP_NODES_SERVICE_CONFIG =
+    "hbase.regionserver.bootstrap.nodes.executorService";
 
   /**
    * An Rpc callback for closing a RegionScanner.
@@ -1553,6 +1555,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
     boolean client = getConfiguration().getBoolean(REGIONSERVER_CLIENT_SERVICE_CONFIG, true);
     boolean clientMeta =
       getConfiguration().getBoolean(REGIONSERVER_CLIENT_META_SERVICE_CONFIG, true);
+    boolean bootstrapNodes =
+      getConfiguration().getBoolean(REGIONSERVER_BOOTSTRAP_NODES_SERVICE_CONFIG, true);
     List<BlockingServiceAndInterface> bssi = new ArrayList<>();
     if (client) {
       bssi.add(new BlockingServiceAndInterface(ClientService.newReflectiveBlockingService(this),
@@ -1565,6 +1569,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
     if (clientMeta) {
       bssi.add(new BlockingServiceAndInterface(ClientMetaService.newReflectiveBlockingService(this),
         ClientMetaService.BlockingInterface.class));
+    }
+    if (bootstrapNodes) {
+      bssi.add(
+        new BlockingServiceAndInterface(BootstrapNodeService.newReflectiveBlockingService(this),
+          BootstrapNodeService.BlockingInterface.class));
     }
     return new ImmutableList.Builder<BlockingServiceAndInterface>().addAll(bssi).build();
   }
