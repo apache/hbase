@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import static org.hamcrest.MatcherAssert.*;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertNotNull;
 
 import java.util.Set;
