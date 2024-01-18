@@ -2,7 +2,6 @@ buildpack:
   name: Blazar-Buildpack-Java
 
 env:
-  MERCEDES_MAVEN_EXTENSION_EXTVER: 1.0-js-multi-module-publish-SNAPSHOT 
   # Below variables are generated in prepare_environment.sh.
   # The build environment requires environment variables to be explicitly defined before they may
   # be modified by the `write-build-env-var` utilty script to persist changes to an environment variable
