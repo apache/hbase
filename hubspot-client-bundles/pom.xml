@@ -16,6 +16,9 @@
 
   <properties>
     <shade.prefix>org.apache.hadoop.hbase.shaded</shade.prefix>
+    <!-- This is the hubspot shaded version of ZK. We added it here so that we don't pull in
+    unexpected netty dependencies. This is problematic with the shade plugin because it flattens
+    the dependency tree, so those dependencies become direct dependencies of the bundle. -->
     <zookeeper.version>3.6.3-shaded-SNAPSHOT</zookeeper.version>
   </properties>
 
@@ -62,6 +65,10 @@
         <!-- we repeat the same exclusions here in each of the below modules -->
         <exclusions>
           <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-reload4j</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
           </exclusion>
@@ -96,6 +103,10 @@
         <artifactId>hbase-server</artifactId>
         <version>${project.version}</version>
         <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-reload4j</artifactId>
+          </exclusion>
           <exclusion>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
@@ -132,6 +143,10 @@
         <version>${project.version}</version>
         <exclusions>
           <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-reload4j</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
           </exclusion>
@@ -167,6 +182,10 @@
         <version>${project.version}</version>
         <exclusions>
           <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-reload4j</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
           </exclusion>
@@ -201,6 +220,10 @@
         <artifactId>hbase-backup</artifactId>
         <version>${project.version}</version>
         <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-reload4j</artifactId>
+          </exclusion>
           <exclusion>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
