@@ -17,6 +17,17 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+
+/**
+ * Users of the hbase.region.server.rpc.scheduler.factory.class customization config can return an
+ * implementation which extends this class in order to minimize impact of breaking interface
+ * changes.
+ */
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
+@InterfaceStability.Evolving
 public class DelegatingRpcScheduler extends RpcScheduler {
   protected RpcScheduler delegate;
 
