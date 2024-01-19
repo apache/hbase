@@ -81,8 +81,9 @@ public class StorefileRefresherChore extends ScheduledChore {
   @Override
   protected void chore() {
     for (Region r : regionServer.getOnlineRegionsLocalContext()) {
-      if (!r.isReadOnly()) {
-        // skip checking for this region if it can accept writes
+      if (!r.isReadOnly() || r.getTableDescriptor().isReadOnly()) {
+        // skip checking for this region if it can accept writes or the contents of this table can
+        // not be modified
         continue;
       }
       // don't refresh unless enabled for all files, or it the meta region
