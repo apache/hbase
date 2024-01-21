@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_TIMEOUT_KEY;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CancellationException;
@@ -139,8 +142,8 @@ public abstract class TakeSnapshotHandler extends EventHandler
       "Taking " + snapshot.getType() + " snapshot on table: " + snapshotTable, false, true);
     this.snapshotManifest =
       SnapshotManifest.create(conf, rootFs, workingDir, snapshot, monitor, status);
-    this.lockAcquireTimeoutMs =
-      conf.getLong(HBASE_SNAPSHOT_MASTER_LOCK_ACQUIRE_TIMEOUT, 60 * 1000L);
+    this.lockAcquireTimeoutMs = conf.getLong(HBASE_SNAPSHOT_MASTER_LOCK_ACQUIRE_TIMEOUT,
+      conf.getLong(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT));
   }
 
   private TableDescriptor loadTableDescriptor() throws IOException {
