@@ -21,7 +21,6 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -142,12 +141,12 @@ public class TestSnapshotProcedureWithLockTimeout {
       ) {
         LOG.debug("Expected behaviour - snapshot could not be created");
       } else {
-        throw new UncheckedIOException(new IOException(e));
+        throw new IOException(e);
       }
     }
 
     if (snapshotCreated) {
-      throw new UncheckedIOException(new IOException("Snapshot created successfully"));
+      throw new IOException("Snapshot created successfully");
     }
 
     // ensure all scheduled procedures are successfully completed
