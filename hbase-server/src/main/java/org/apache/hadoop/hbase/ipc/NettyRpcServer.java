@@ -25,8 +25,11 @@ import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.TLS_CONFIG_REVERSE_
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -46,6 +49,7 @@ import org.apache.hadoop.hbase.util.NettyUnsafeUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.util.LazyX509Certificate;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -172,10 +176,10 @@ public class NettyRpcServer extends RpcServer {
           ChannelPipeline pipeline = ch.pipeline();
           FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
           preambleDecoder.setSingleDecode(true);
-          if (conf.getBoolean(HBASE_SERVER_NETTY_TLS_ENABLED, false)) {
-            initSSL(pipeline, conf.getBoolean(HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, true));
-          }
           NettyServerRpcConnection conn = createNettyServerRpcConnection(ch);
+          if (conf.getBoolean(HBASE_SERVER_NETTY_TLS_ENABLED, false)) {
+            initSSL(pipeline, conn, conf.getBoolean(HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, true));
+          }
           pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder)
             .addLast(new NettyRpcServerPreambleHandler(NettyRpcServer.this, conn))
             // We need NettyRpcServerResponseEncoder here because NettyRpcServerPreambleHandler may
@@ -401,7 +405,7 @@ public class NettyRpcServer extends RpcServer {
     return call(fakeCall, status);
   }
 
-  private void initSSL(ChannelPipeline p, boolean supportPlaintext)
+  private void initSSL(ChannelPipeline p, NettyServerRpcConnection conn, boolean supportPlaintext)
     throws X509Exception, IOException {
     SslContext nettySslContext = getSslContext();
 
@@ -435,6 +439,26 @@ public class NettyRpcServer extends RpcServer {
 
       sslHandler.setWrapDataSize(
         conf.getInt(HBASE_SERVER_NETTY_TLS_WRAP_SIZE, DEFAULT_HBASE_SERVER_NETTY_TLS_WRAP_SIZE));
+
+      sslHandler.handshakeFuture().addListener(future -> {
+        try {
+          Certificate[] certificates = sslHandler.engine().getSession().getPeerCertificates();
+          if (certificates.length > 0) {
+            X509Certificate certificate = (X509Certificate) certificates[0];
+            // Hack to work around https://github.com/netty/netty/issues/13796, remove once HBase uses Netty 4.1.107.Final or later
+            if (certificate instanceof LazyX509Certificate) {
+              Method method = certificate.getClass().getDeclaredMethod("unwrap");
+              method.setAccessible(true);
+              certificate = (X509Certificate) method.invoke(certificate);
+            }
+            conn.clientCertificate = certificate;
+          } else {
+            LOG.debug("No client certificate found for peer {}", remoteAddress);
+          }
+        } catch (Exception e) {
+          LOG.debug("Failure getting peer certificate for {}", remoteAddress, e);
+        }
+      });
 
       p.addLast("ssl", sslHandler);
       LOG.debug("SSL handler added for channel: {}", p.channel());
