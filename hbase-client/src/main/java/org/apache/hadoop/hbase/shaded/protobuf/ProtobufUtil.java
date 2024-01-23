@@ -3462,6 +3462,7 @@ public final class ProtobufUtil {
         .setQueueTime(slowLogPayload.getQueueTime()).setRegionName(slowLogPayload.getRegionName())
         .setResponseSize(slowLogPayload.getResponseSize())
         .setBlockBytesScanned(slowLogPayload.getBlockBytesScanned())
+        .setFsReadTime(slowLogPayload.getFsReadTime())
         .setServerClass(slowLogPayload.getServerClass()).setStartTime(slowLogPayload.getStartTime())
         .setUserName(slowLogPayload.getUserName())
         .setRequestAttributes(convertNameBytesPairsToMap(slowLogPayload.getRequestAttributeList()))

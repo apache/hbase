@@ -499,6 +499,7 @@ struct TOnlineLogRecord {
   13: required i32 multiServiceCalls
   14: optional string regionName
   15: optional i64 blockBytesScanned
+  16: optional i64 fsReadTime
 }
 
 //
