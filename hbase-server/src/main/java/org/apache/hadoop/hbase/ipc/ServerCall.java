@@ -79,6 +79,8 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   protected long startTime;
   protected final long deadline;// the deadline to handle this call, if exceed we can drop it.
 
+  protected CallQueueType callQueueType;
+
   protected final ByteBuffAllocator bbAllocator;
 
   protected final CellBlockBuilder cellBlockBuilder;
@@ -145,6 +147,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     this.cellBlockBuilder = cellBlockBuilder;
     this.reqCleanup = reqCleanup;
     this.span = Span.current();
+    this.callQueueType = CallQueueType.DEFAULT;
   }
 
   /**
@@ -566,5 +569,15 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   @Override
   public synchronized BufferChain getResponse() {
     return response;
+  }
+
+  @Override
+  public CallQueueType getQueueType() {
+    return callQueueType;
+  }
+
+  @Override
+  public void setQueueType(CallQueueType type) {
+    this.callQueueType = type;
   }
 }
