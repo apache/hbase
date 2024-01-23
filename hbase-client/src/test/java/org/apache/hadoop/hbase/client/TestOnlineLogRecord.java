@@ -46,15 +46,15 @@ public class TestOnlineLogRecord {
     scan.withStopRow(Bytes.toBytes(456));
     String expectedOutput = "{\n" + "  \"startTime\": 1,\n" + "  \"processingTime\": 2,\n"
       + "  \"queueTime\": 3,\n" + "  \"responseSize\": 4,\n" + "  \"blockBytesScanned\": 5,\n"
-      + "  \"multiGetsCount\": 6,\n" + "  \"multiMutationsCount\": 7,\n" + "  \"scan\": {\n"
-      + "    \"startRow\": \"\\\\x00\\\\x00\\\\x00{\",\n"
+      + "  \"fsReadTime\": 6,\n" + "  \"multiGetsCount\": 6,\n" + "  \"multiMutationsCount\": 7,\n"
+      + "  \"scan\": {\n" + "    \"startRow\": \"\\\\x00\\\\x00\\\\x00{\",\n"
       + "    \"stopRow\": \"\\\\x00\\\\x00\\\\x01\\\\xC8\",\n" + "    \"batch\": -1,\n"
       + "    \"cacheBlocks\": true,\n" + "    \"totalColumns\": 0,\n"
       + "    \"maxResultSize\": -1,\n" + "    \"families\": {},\n" + "    \"caching\": -1,\n"
       + "    \"maxVersions\": 1,\n" + "    \"timeRange\": [\n" + "      0,\n"
       + "      9223372036854775807\n" + "    ]\n" + "  }\n" + "}";
-    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null,
-      6, 7, 0, scan, Collections.emptyMap(), Collections.emptyMap());
+    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, 6, null, null, null, null, null, null,
+      null, 6, 7, 0, scan, Collections.emptyMap(), Collections.emptyMap());
     String actualOutput = o.toJsonPrettyPrint();
     System.out.println(actualOutput);
     Assert.assertEquals(actualOutput, expectedOutput);
@@ -67,8 +67,8 @@ public class TestOnlineLogRecord {
     Set<String> expectedOutputs =
       ImmutableSet.<String> builder().add("requestAttributes").add("\"r\": \"1\"")
         .add("\"2\": \"\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\"").build();
-    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null,
-      6, 7, 0, null, requestAttributes, Collections.emptyMap());
+    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, 6, null, null, null, null, null, null,
+      null, 6, 7, 0, null, requestAttributes, Collections.emptyMap());
     String actualOutput = o.toJsonPrettyPrint();
     System.out.println(actualOutput);
     expectedOutputs.forEach(expected -> Assert.assertTrue(actualOutput.contains(expected)));
@@ -76,8 +76,8 @@ public class TestOnlineLogRecord {
 
   @Test
   public void itOmitsEmptyRequestAttributes() {
-    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null,
-      6, 7, 0, null, Collections.emptyMap(), Collections.emptyMap());
+    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, 6, null, null, null, null, null, null,
+      null, 6, 7, 0, null, Collections.emptyMap(), Collections.emptyMap());
     String actualOutput = o.toJsonPrettyPrint();
     System.out.println(actualOutput);
     Assert.assertFalse(actualOutput.contains("requestAttributes"));
@@ -90,8 +90,8 @@ public class TestOnlineLogRecord {
     Set<String> expectedOutputs =
       ImmutableSet.<String> builder().add("connectionAttributes").add("\"c\": \"1\"")
         .add("\"2\": \"\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\"").build();
-    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null,
-      6, 7, 0, null, Collections.emptyMap(), connectionAttributes);
+    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, 6, null, null, null, null, null, null,
+      null, 6, 7, 0, null, Collections.emptyMap(), connectionAttributes);
     String actualOutput = o.toJsonPrettyPrint();
     System.out.println(actualOutput);
     expectedOutputs.forEach(expected -> Assert.assertTrue(actualOutput.contains(expected)));
@@ -99,8 +99,8 @@ public class TestOnlineLogRecord {
 
   @Test
   public void itOmitsEmptyConnectionAttributes() {
-    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null,
-      6, 7, 0, null, Collections.emptyMap(), Collections.emptyMap());
+    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, 6, null, null, null, null, null, null,
+      null, 6, 7, 0, null, Collections.emptyMap(), Collections.emptyMap());
     String actualOutput = o.toJsonPrettyPrint();
     System.out.println(actualOutput);
     Assert.assertFalse(actualOutput.contains("connectionAttributes"));

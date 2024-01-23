@@ -132,4 +132,8 @@ public interface RpcCall extends RpcCallContext {
 
   /** Returns A short string format of this call without possibly lengthy params */
   String toShortString();
+
+  void updateFsReadTime(long latencyMillis);
+
+  long getFsReadTime();
 }

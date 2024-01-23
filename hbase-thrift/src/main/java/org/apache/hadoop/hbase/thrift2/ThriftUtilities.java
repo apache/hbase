@@ -1651,6 +1651,7 @@ public class ThriftUtilities {
       tOnlineLogRecord.setRegionName(slowLogRecord.getRegionName());
       tOnlineLogRecord.setResponseSize(slowLogRecord.getResponseSize());
       tOnlineLogRecord.setBlockBytesScanned(slowLogRecord.getBlockBytesScanned());
+      tOnlineLogRecord.setFsReadTime(slowLogRecord.getFsReadTime());
       tOnlineLogRecord.setServerClass(slowLogRecord.getServerClass());
       tOnlineLogRecord.setStartTime(slowLogRecord.getStartTime());
       tOnlineLogRecord.setUserName(slowLogRecord.getUserName());

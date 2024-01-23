@@ -3485,6 +3485,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
           // from block size progress before writing into the response
           scannerContext.getMetrics().countOfBlockBytesScanned
             .set(scannerContext.getBlockSizeProgress());
+          if (rpcCall != null) {
+            scannerContext.getMetrics().fsReadTime.set(rpcCall.getFsReadTime());
+          }
           Map<String, Long> metrics = scannerContext.getMetrics().getMetricsMap();
           ScanMetrics.Builder metricBuilder = ScanMetrics.newBuilder();
           NameInt64Pair.Builder pairBuilder = NameInt64Pair.newBuilder();
