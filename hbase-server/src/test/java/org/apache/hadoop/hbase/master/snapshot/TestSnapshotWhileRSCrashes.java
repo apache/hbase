@@ -70,7 +70,7 @@ public class TestSnapshotWhileRSCrashes {
     String snName = "sn";
     MasterLock lock = UTIL.getMiniHBaseCluster().getMaster().getLockManager().createMasterLock(NAME,
       LockType.EXCLUSIVE, "for testing");
-    lock.acquire();
+    lock.tryAcquire(0);
     Thread t = new Thread(() -> {
       try {
         UTIL.getAdmin().snapshot(snName, NAME);

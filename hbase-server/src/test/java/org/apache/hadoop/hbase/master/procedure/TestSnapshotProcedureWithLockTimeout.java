@@ -23,7 +23,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
@@ -61,7 +61,7 @@ public class TestSnapshotProcedureWithLockTimeout {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSnapshotProcedureWithLockTimeout.class);
 
-  private static HBaseTestingUtil TEST_UTIL;
+  private static HBaseTestingUtility TEST_UTIL;
   private HMaster master;
   private TableName TABLE_NAME;
   private byte[] CF;
@@ -69,7 +69,7 @@ public class TestSnapshotProcedureWithLockTimeout {
 
   @Before
   public void setup() throws Exception {
-    TEST_UTIL = new HBaseTestingUtil();
+    TEST_UTIL = new HBaseTestingUtility();
     Configuration config = TEST_UTIL.getConfiguration();
     config.setInt("hbase.snapshot.remote.verify.threshold", 1);
     config.setLong(TakeSnapshotHandler.HBASE_SNAPSHOT_MASTER_LOCK_ACQUIRE_TIMEOUT, 1L);
