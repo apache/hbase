@@ -269,8 +269,9 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * being set.
    * @param policy the policy to set, or null to disable erasure coding
    */
-  public void setErasureCodingPolicy(final String policy) {
+  public HTableDescriptor setErasureCodingPolicy(final String policy) {
     getDelegateeForModification().setErasureCodingPolicy(policy);
+    return this;
   }
 
   /**

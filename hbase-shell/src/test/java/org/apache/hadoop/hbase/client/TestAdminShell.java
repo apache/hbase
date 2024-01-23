@@ -17,14 +17,21 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Collections;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ ClientTests.class, LargeTests.class })
 public class TestAdminShell extends AbstractTestShell {
+  private static final Logger LOG = LoggerFactory.getLogger(TestAdminShell.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -33,5 +40,27 @@ public class TestAdminShell extends AbstractTestShell {
   @Override
   protected String getIncludeList() {
     return "admin_test.rb";
+  }
+
+  protected static boolean erasureCodingSupported = false;
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    setUpConfig();
+
+    // Start mini cluster
+    // 3 datanodes needed for erasure coding checks
+    TEST_UTIL.startMiniCluster(3);
+    try {
+      ErasureCodingUtils.enablePolicy(FileSystem.get(TEST_UTIL.getConfiguration()),
+        "XOR-2-1-1024k");
+      erasureCodingSupported = true;
+    } catch (UnsupportedOperationException e) {
+      LOG.info(
+        "Current hadoop version does not support erasure coding, only validation tests will run.");
+    }
+
+    // we'll use this extra variable to trigger some differences in the tests
+    setUpJRubyRuntime(Collections.singletonMap("@erasureCodingSupported", erasureCodingSupported));
   }
 }

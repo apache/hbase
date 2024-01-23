@@ -19,16 +19,15 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 import org.junit.AfterClass;
@@ -43,8 +42,6 @@ public abstract class AbstractTestShell {
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected final static ScriptingContainer jruby = new ScriptingContainer();
-
-  protected static boolean erasureCodingSupported = false;
 
   protected static void setUpConfig() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -65,11 +62,18 @@ public abstract class AbstractTestShell {
   }
 
   protected static void setUpJRubyRuntime() {
+    setUpJRubyRuntime(Collections.emptyMap());
+  }
+
+  protected static void setUpJRubyRuntime(Map<String, Object> extraVars) {
     LOG.debug("Configure jruby runtime, cluster set to {}", TEST_UTIL);
     List<String> loadPaths = new ArrayList<>(2);
     loadPaths.add("src/test/ruby");
     jruby.setLoadPaths(loadPaths);
     jruby.put("$TEST_CLUSTER", TEST_UTIL);
+    for (Map.Entry<String, Object> entry : extraVars.entrySet()) {
+      jruby.put(entry.getKey(), entry.getValue());
+    }
     System.setProperty("jruby.jit.logging.verbose", "true");
     System.setProperty("jruby.jit.logging", "true");
     System.setProperty("jruby.native.verbose", "true");
@@ -104,14 +108,7 @@ public abstract class AbstractTestShell {
     setUpConfig();
 
     // Start mini cluster
-    // 3 datanodes needed for erasure coding checks
-    TEST_UTIL.startMiniCluster(3);
-    try {
-      ErasureCodingUtils.enablePolicy(FileSystem.get(TEST_UTIL.getConfiguration()), "XOR-2-1-1024k");
-      erasureCodingSupported = true;
-    } catch (UnsupportedOperationException e) {
-      LOG.info("Current hadoop version does not support erasure coding, only validation tests will run.");
-    }
+    TEST_UTIL.startMiniCluster(1);
 
     setUpJRubyRuntime();
   }

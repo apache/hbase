@@ -93,16 +93,16 @@ public final class ErasureCodingUtils {
     try {
       policies = callDfsMethod(dfs, "getAllErasureCodingPolicies");
     } catch (IOException e) {
-      throw new HBaseIOException("Failed to check for Erasure Coding policy: " + requestedPolicy, e);
+      throw new HBaseIOException("Failed to check for Erasure Coding policy: " + requestedPolicy,
+        e);
     }
     for (Object policyInfo : policies) {
       if (checkPolicyMatch(policyInfo, requestedPolicy)) {
         return;
       }
     }
-    throw new DoNotRetryIOException(
-      "Cannot set Erasure Coding policy: " + requestedPolicy + ". Policy not found. Available policies are: "
-        + getPolicyNames(policies));
+    throw new DoNotRetryIOException("Cannot set Erasure Coding policy: " + requestedPolicy
+      + ". Policy not found. Available policies are: " + getPolicyNames(policies));
   }
 
   private static boolean checkPolicyMatch(Object policyInfo, String requestedPolicy)
@@ -112,15 +112,17 @@ public final class ErasureCodingUtils {
       if (requestedPolicy.equals(policyName)) {
         boolean isEnabled = callObjectMethod(policyInfo, "isEnabled");
         if (!isEnabled) {
-          throw new DoNotRetryIOException("Cannot set Erasure Coding policy: " + requestedPolicy + ". The policy must be enabled, but has state " + callObjectMethod(policyInfo,
-            "getState"));
+          throw new DoNotRetryIOException("Cannot set Erasure Coding policy: " + requestedPolicy
+            + ". The policy must be enabled, but has state "
+            + callObjectMethod(policyInfo, "getState"));
         }
         return true;
       }
     } catch (DoNotRetryIOException e) {
       throw e;
     } catch (IOException e) {
-      throw new DoNotRetryIOException("Unable to check for match of Erasure Coding Policy " + policyInfo, e);
+      throw new DoNotRetryIOException(
+        "Unable to check for match of Erasure Coding Policy " + policyInfo, e);
     }
     return false;
   }
@@ -227,7 +229,7 @@ public final class ErasureCodingUtils {
     if (policy == null) {
       return null;
     }
-    return  callObjectMethod(policy, "getName");
+    return callObjectMethod(policy, "getName");
   }
 
   private interface ThrowingObjectSupplier {
@@ -244,7 +246,8 @@ public final class ErasureCodingUtils {
     return unwrapInvocationException(() -> ReflectionUtils.invokeMethod(object, name, params));
   }
 
-  private static <T> T unwrapInvocationException(ThrowingObjectSupplier runnable) throws IOException {
+  private static <T> T unwrapInvocationException(ThrowingObjectSupplier runnable)
+    throws IOException {
     try {
       return (T) runnable.run();
     } catch (UnsupportedOperationException e) {

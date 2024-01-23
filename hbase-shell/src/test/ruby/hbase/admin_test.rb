@@ -468,7 +468,6 @@ module Hbase
       drop_test_table(@create_test_name)
       command(:create, @create_test_name, 'a', 'b', 'MAX_FILESIZE' => 12345678,
               OWNER => '987654321',
-              ERASURE_CODING_POLICY => 'XOR-2-1-1024k',
               PRIORITY => '77',
               FLUSH_POLICY => 'org.apache.hadoop.hbase.regionserver.FlushAllLargeStoresPolicy',
               REGION_MEMSTORE_REPLICATION => 'TRUE',
@@ -479,7 +478,6 @@ module Hbase
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
       assert_match(/12345678/, admin.describe(@create_test_name))
       assert_match(/987654321/, admin.describe(@create_test_name))
-      assert_match(/XOR-2-1-1024k/, admin.describe(@create_test_name))
       assert_match(/77/, admin.describe(@create_test_name))
       assert_match(/'COMPACTION_ENABLED' => 'false'/, admin.describe(@create_test_name))
       assert_match(/'SPLIT_ENABLED' => 'false'/, admin.describe(@create_test_name))
@@ -959,26 +957,35 @@ module Hbase
       assert_match(/12345678/, admin.describe(@test_name))
     end
 
-    define_test 'alter should be able to change EC policy' do
-      command(:alter, @test_name, METHOD => 'table_att', 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
-      assert_match(/XOR-2-1-1024k/, admin.describe(@test_name))
-    end
+    if @erasureCodingSupported
+      define_test "create should be able to set table EC options" do
+        drop_test_table(@create_test_name)
+        command(:create, @create_test_name, 'a', 'b',ERASURE_CODING_POLICY => 'XOR-2-1-1024k')
+        assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
+        assert_match(/XOR-2-1-1024k/, admin.describe(@create_test_name))
+      end
 
-    define_test 'alter should be able to remove EC policy' do
-      command(:alter, @test_name, METHOD => 'table_att', 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
-      command(:alter, @test_name, METHOD => 'table_att_unset', NAME => 'ERASURE_CODING_POLICY')
-      assert_not_match(/ERASURE_CODING_POLICY/, admin.describe(@test_name))
-    end
+      define_test 'alter should be able to change EC policy' do
+        command(:alter, @test_name, METHOD => 'table_att', 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
+        assert_match(/XOR-2-1-1024k/, admin.describe(@test_name))
+      end
 
-    define_test 'alter should be able to change EC POLICY w/o table_att' do
-      command(:alter, @test_name, 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
-      assert_match(/XOR-2-1-1024k/, admin.describe(@test_name))
-    end
+      define_test 'alter should be able to remove EC policy' do
+        command(:alter, @test_name, METHOD => 'table_att', 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
+        command(:alter, @test_name, METHOD => 'table_att_unset', NAME => 'ERASURE_CODING_POLICY')
+        assert_not_match(/ERASURE_CODING_POLICY/, admin.describe(@test_name))
+      end
 
-    define_test 'alter should be able to remove EC POLICY w/o table_att' do
-      command(:alter, @test_name, 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
-      command(:alter, @test_name, 'ERASURE_CODING_POLICY' => nil)
-      assert_not_match(/ERASURE_CODING_POLICY/, admin.describe(@test_name))
+      define_test 'alter should be able to change EC POLICY w/o table_att' do
+        command(:alter, @test_name, 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
+        assert_match(/XOR-2-1-1024k/, admin.describe(@test_name))
+      end
+
+      define_test 'alter should be able to remove EC POLICY w/o table_att' do
+        command(:alter, @test_name, 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
+        command(:alter, @test_name, 'ERASURE_CODING_POLICY' => nil)
+        assert_not_match(/ERASURE_CODING_POLICY/, admin.describe(@test_name))
+      end
     end
 
     define_test "alter should be able to change coprocessor attributes" do

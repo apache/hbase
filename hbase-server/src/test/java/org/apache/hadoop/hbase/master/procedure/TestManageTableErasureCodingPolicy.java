@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.junit.AfterClass;
-import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -101,7 +100,8 @@ public class TestManageTableErasureCodingPolicy {
       ErasureCodingUtils.enablePolicy(fs, "RS-6-3-1024k");
       return true;
     } catch (UnsupportedOperationException e) {
-      LOG.info("Current hadoop version does not support erasure coding, only validation tests will run.");
+      LOG.info(
+        "Current hadoop version does not support erasure coding, only validation tests will run.");
       return false;
     }
   }
@@ -142,8 +142,8 @@ public class TestManageTableErasureCodingPolicy {
           TableDescriptorBuilder.newBuilder(desc).setErasureCodingPolicy("foo").build());
       }
     });
-    assertThat(thrown.getMessage(),
-      containsString("Cannot set Erasure Coding policy: foo. Policy not found"));
+    assertPolicyValidationException(thrown.getMessage(),
+      "Cannot set Erasure Coding policy: foo. Policy not found");
 
     thrown = assertThrows(HBaseIOException.class, () -> {
       try (Admin admin = UTIL.getAdmin()) {
@@ -152,8 +152,8 @@ public class TestManageTableErasureCodingPolicy {
           TableDescriptorBuilder.newBuilder(desc).setErasureCodingPolicy("RS-10-4-1024k").build());
       }
     });
-    assertThat(thrown.getMessage(), containsString(
-      "Cannot set Erasure Coding policy: RS-10-4-1024k. The policy must be enabled"));
+    assertPolicyValidationException(thrown.getMessage(),
+      "Cannot set Erasure Coding policy: RS-10-4-1024k. The policy must be enabled");
 
     // RS-6-3-1024k requires at least 6 datanodes, so should fail write test
     thrown = assertThrows(HBaseIOException.class, () -> {
@@ -163,7 +163,15 @@ public class TestManageTableErasureCodingPolicy {
           TableDescriptorBuilder.newBuilder(desc).setErasureCodingPolicy("RS-6-3-1024k").build());
       }
     });
-    assertThat(thrown.getMessage(), containsString("Failed write test for EC policy"));
+    assertPolicyValidationException(thrown.getMessage(), "Failed write test for EC policy");
+  }
+
+  private void assertPolicyValidationException(String message, String expected) {
+    if (erasureCodingSupported) {
+      assertThat(message, containsString(expected));
+    } else {
+      assertThat(message, containsString("Cannot find specified method"));
+    }
   }
 
   @Test
