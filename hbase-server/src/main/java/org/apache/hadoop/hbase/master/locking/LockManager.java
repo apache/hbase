@@ -109,15 +109,6 @@ public final class LockManager {
     }
 
     /**
-     * Acquire the lock, waiting indefinitely until the lock is released or the thread is
-     * interrupted.
-     * @throws InterruptedException If current thread is interrupted while waiting for the lock
-     */
-    public boolean acquire() throws InterruptedException {
-      return tryAcquire(0);
-    }
-
-    /**
      * Acquire the lock within a wait time.
      * @param timeoutMs The maximum time (in milliseconds) to wait for the lock, 0 to wait
      *                  indefinitely
