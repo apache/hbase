@@ -84,6 +84,12 @@ write-build-env-var HBASE_VERSION "$HBASE_VERSION"
 write-build-env-var PKG_RELEASE "$RELEASE"
 write-build-env-var FULL_BUILD_VERSION "$FULL_BUILD_VERSION"
 write-build-env-var YUM_REPO_UPLOAD_OVERRIDE_CENTOS_8 "$YUM_REPO_UPLOAD_OVERRIDE_CENTOS_8"
+# Adding this value as versioninfo.version ensures we have the same value as would normally
+# show up in a non-hubspot hbase build. Otherwise due to set-maven-versions we'd end up
+# with 2.6-hubspot-SNAPSHOT which is not very useful as a point of reference.
+# Another option would be to pass in our FULL_BUILD_VERSION but that might cause some funniness
+# with the expectations in VersionInfo.compareVersion().
+write-build-env-var MAVEN_ARGS "$MAVEN_ARGS -Dversioninfo.version=$HBASE_VERSION"
 
 echo "Building HBase version $HBASE_VERSION"
 echo "Will deploy to nexus with version $SET_VERSION"
