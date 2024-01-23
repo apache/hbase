@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_TIMEOUT_KEY;
+
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
@@ -25,6 +28,7 @@ import java.util.concurrent.CancellationException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -67,6 +71,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 public abstract class TakeSnapshotHandler extends EventHandler
   implements SnapshotSentinel, ForeignExceptionSnare {
   private static final Logger LOG = LoggerFactory.getLogger(TakeSnapshotHandler.class);
+  public static final String HBASE_SNAPSHOT_MASTER_LOCK_ACQUIRE_TIMEOUT =
+    "hbase.snapshot.master.lock.acquire.timeout";
 
   private volatile boolean finished;
 
@@ -87,6 +93,13 @@ public abstract class TakeSnapshotHandler extends EventHandler
   protected final TableName snapshotTable;
   protected final SnapshotManifest snapshotManifest;
   protected final SnapshotManager snapshotManager;
+  /**
+   * Snapshot creation requires table lock. If any region of the table is in transition, table lock
+   * cannot be acquired by LockProcedure and hence snapshot creation could hang for potentially very
+   * long time. This timeout will ensure snapshot creation fails-fast by waiting for only given
+   * timeout.
+   */
+  private final long lockAcquireTimeoutMs;
 
   protected TableDescriptor htd;
 
@@ -131,6 +144,8 @@ public abstract class TakeSnapshotHandler extends EventHandler
       "Taking " + snapshot.getType() + " snapshot on table: " + snapshotTable, false, true);
     this.snapshotManifest =
       SnapshotManifest.create(conf, rootFs, workingDir, snapshot, monitor, status);
+    this.lockAcquireTimeoutMs = conf.getLong(HBASE_SNAPSHOT_MASTER_LOCK_ACQUIRE_TIMEOUT,
+      conf.getLong(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT));
   }
 
   private TableDescriptor loadTableDescriptor() throws IOException {
@@ -149,12 +164,16 @@ public abstract class TakeSnapshotHandler extends EventHandler
   public TakeSnapshotHandler prepare() throws Exception {
     super.prepare();
     // after this, you should ensure to release this lock in case of exceptions
-    this.tableLock.acquire();
-    try {
-      this.htd = loadTableDescriptor(); // check that .tableinfo is present
-    } catch (Exception e) {
-      this.tableLock.release();
-      throw e;
+    if (this.tableLock.tryAcquire(this.lockAcquireTimeoutMs)) {
+      try {
+        this.htd = loadTableDescriptor(); // check that .tableinfo is present
+      } catch (Exception e) {
+        this.tableLock.release();
+        throw e;
+      }
+    } else {
+      LOG.error("Master lock could not be acquired in {} ms", lockAcquireTimeoutMs);
+      throw new DoNotRetryIOException("Master lock could not be acquired");
     }
     return this;
   }
@@ -178,7 +197,12 @@ public abstract class TakeSnapshotHandler extends EventHandler
         tableLockToRelease = master.getLockManager().createMasterLock(snapshotTable,
           LockType.SHARED, this.getClass().getName() + ": take snapshot " + snapshot.getName());
         tableLock.release();
-        tableLockToRelease.acquire();
+        boolean isTableLockAcquired = tableLockToRelease.tryAcquire(this.lockAcquireTimeoutMs);
+        if (!isTableLockAcquired) {
+          LOG.error("Could not acquire shared lock on table {} in {} ms", snapshotTable,
+            lockAcquireTimeoutMs);
+          throw new IOException("Could not acquire shared lock on table " + snapshotTable);
+        }
       }
       // If regions move after this meta scan, the region specific snapshot should fail, triggering
       // an external exception that gets captured here.
