@@ -91,7 +91,7 @@ pipeline {
                   rm -rf "${YETUS_DIR}"
                   "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
                       --working-dir "${WORKSPACE}/downloads-yetus" \
-                      --keys 'https://www.apache.org/dist/yetus/KEYS' \
+                      --keys 'https://downloads.apache.org/yetus/KEYS' \
                       --verify-tar-gz \
                       "${WORKSPACE}/yetus-${YETUS_RELEASE}-bin.tar.gz" \
                       "yetus/${YETUS_RELEASE}/apache-yetus-${YETUS_RELEASE}-bin.tar.gz"
@@ -138,7 +138,7 @@ pipeline {
               echo "Ensure we have a copy of Hadoop ${HADOOP2_VERSION}"
               "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
                   --working-dir "${WORKSPACE}/downloads-hadoop-2" \
-                  --keys 'http://www.apache.org/dist/hadoop/common/KEYS' \
+                  --keys 'https://downloads.apache.org/hadoop/common/KEYS' \
                   --verify-tar-gz \
                   "${WORKSPACE}/hadoop-${HADOOP2_VERSION}-bin.tar.gz" \
                   "hadoop/common/hadoop-${HADOOP2_VERSION}/hadoop-${HADOOP2_VERSION}.tar.gz"
@@ -166,7 +166,7 @@ pipeline {
               echo "Ensure we have a copy of Hadoop ${HADOOP3_VERSION}"
               "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
                   --working-dir "${WORKSPACE}/downloads-hadoop-3" \
-                  --keys 'http://www.apache.org/dist/hadoop/common/KEYS' \
+                  --keys 'https://downloads.apache.org/hadoop/common/KEYS' \
                   --verify-tar-gz \
                   "${WORKSPACE}/hadoop-${HADOOP3_VERSION}-bin.tar.gz" \
                   "hadoop/common/hadoop-${HADOOP3_VERSION}/hadoop-${HADOOP3_VERSION}.tar.gz"
