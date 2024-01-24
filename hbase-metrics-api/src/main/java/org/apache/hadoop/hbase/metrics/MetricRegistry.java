@@ -98,7 +98,7 @@ public interface MetricRegistry extends MetricSet {
 
   /**
    * Removes the metric with the given name only if it is registered to the provided metric.
-   * @param name the name of the metric
+   * @param name   the name of the metric
    * @param metric the metric expected to be registered to the given name
    * @return true if the metric is removed.
    */
