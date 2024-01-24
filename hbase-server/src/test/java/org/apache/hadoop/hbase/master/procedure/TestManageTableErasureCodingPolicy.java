@@ -23,7 +23,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assume.*;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.IOException;
 import java.util.function.Function;

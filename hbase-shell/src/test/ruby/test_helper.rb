@@ -169,7 +169,7 @@ module Hbase
       error = assert_raise do
         block.call
       end
-      assert_match(eval("/" + message + "/"), error.message)
+      assert_match(eval('/' + message + '/'), error.message)
     end
   end
 end
