@@ -277,7 +277,7 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
       }
 
       @Override
-      public Optional<X509Certificate> getClientCertificate() {
+      public Optional<X509Certificate[]> getClientCertificateChain() {
         return Optional.empty();
       }
 

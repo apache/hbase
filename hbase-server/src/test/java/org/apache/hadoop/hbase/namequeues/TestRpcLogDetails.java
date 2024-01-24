@@ -215,7 +215,7 @@ public class TestRpcLogDetails {
       }
 
       @Override
-      public Optional<X509Certificate> getClientCertificate() {
+      public Optional<X509Certificate[]> getClientCertificateChain() {
         return Optional.empty();
       }
 

@@ -96,7 +96,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
 
   protected final User user;
   protected final InetAddress remoteAddress;
-  protected final X509Certificate clientCertificate;
+  protected final X509Certificate[] clientCertificateChain;
   protected RpcCallback rpcCallback;
 
   private long responseCellSize = 0;
@@ -136,11 +136,11 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     if (connection != null) {
       this.user = connection.user;
       this.retryImmediatelySupported = connection.retryImmediatelySupported;
-      this.clientCertificate = connection.clientCertificate;
+      this.clientCertificateChain = connection.clientCertificateChain;
     } else {
       this.user = null;
       this.retryImmediatelySupported = false;
-      this.clientCertificate = null;
+      this.clientCertificateChain = null;
     }
     this.remoteAddress = remoteAddress;
     this.timeout = timeout;
@@ -503,8 +503,8 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   }
 
   @Override
-  public Optional<X509Certificate> getClientCertificate() {
-    return Optional.ofNullable(clientCertificate);
+  public Optional<X509Certificate[]> getClientCertificateChain() {
+    return Optional.ofNullable(clientCertificateChain);
   }
 
   @Override

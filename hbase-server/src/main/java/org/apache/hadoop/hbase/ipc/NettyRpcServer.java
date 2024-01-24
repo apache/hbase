@@ -32,6 +32,7 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.net.ssl.SSLPeerUnverifiedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HBaseServerBase;
@@ -418,13 +419,22 @@ public class NettyRpcServer extends RpcServer {
       sslHandler.handshakeFuture().addListener(future -> {
         try {
           Certificate[] certificates = sslHandler.engine().getSession().getPeerCertificates();
-          if (certificates.length > 0) {
-            conn.clientCertificate = (X509Certificate) certificates[0];
-          } else {
-            LOG.debug("No client certificate found for peer {}", remoteAddress);
+          if (certificates != null && certificates.length > 0) {
+            conn.clientCertificateChain = (X509Certificate[]) certificates;
+          } else if (sslHandler.engine().getNeedClientAuth()) {
+            LOG.error(
+              "Could not get peer certificate on TLS connection from {}, although one is required",
+              remoteAddress);
+          }
+        } catch (SSLPeerUnverifiedException e) {
+          if (sslHandler.engine().getNeedClientAuth()) {
+            LOG.error(
+              "Could not get peer certificate on TLS connection from {}, although one is required",
+              remoteAddress, e);
           }
         } catch (Exception e) {
-          LOG.debug("Failure getting peer certificate for {}", remoteAddress, e);
+          LOG.error("Unexpected error getting peer certificate for TLS connection from {}",
+            remoteAddress, e);
         }
       });
 
