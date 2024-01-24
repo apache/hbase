@@ -61,6 +61,7 @@ public class TestAdminShell extends AbstractTestShell {
     }
 
     // we'll use this extra variable to trigger some differences in the tests
-    setUpJRubyRuntime(Collections.singletonMap("@erasureCodingSupported", erasureCodingSupported));
+    setUpJRubyRuntime(
+      Collections.singletonMap("$ERASURE_CODING_SUPPORTED", erasureCodingSupported));
   }
 }
