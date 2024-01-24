@@ -35,6 +35,9 @@ public interface OperationQuota {
     SCAN
   }
 
+  String USE_BLOCK_BYTES_SCANNED_KEY = "hbase.quota.use.block.bytes.scanned";
+  boolean USE_BLOCK_BYTES_SCANNED_DEFAULT = false;
+
   /**
    * Checks if it is possible to execute the specified operation. The quota will be estimated based
    * on the number of operations to perform and the average size accumulated during time.
@@ -66,6 +69,13 @@ public interface OperationQuota {
    * mutation average size for the next time.
    */
   void addMutation(Mutation mutation);
+
+  /**
+   * Add the block bytes scanned for the given call. This may be used to calculate the exact quota,
+   * and can be a better representation of workload than result sizes. Set
+   * {@link #USE_BLOCK_BYTES_SCANNED_KEY} to true to prefer this metric over result size.
+   */
+  void addBlockBytesScanned(long blockBytesScanned);
 
   /** Returns the number of bytes available to read to avoid exceeding the quota */
   long getReadAvailable();

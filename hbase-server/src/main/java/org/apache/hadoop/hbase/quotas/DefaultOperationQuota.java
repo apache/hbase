@@ -49,9 +49,16 @@ public class DefaultOperationQuota implements OperationQuota {
   protected long readDiff = 0;
   protected long writeCapacityUnitDiff = 0;
   protected long readCapacityUnitDiff = 0;
+  private long blockBytesScanned = 0;
+  private boolean useBlockBytesScanned;
+  private long blockSizeBytes;
 
-  public DefaultOperationQuota(final Configuration conf, final QuotaLimiter... limiters) {
+  public DefaultOperationQuota(final Configuration conf, final int blockSizeBytes,
+    final QuotaLimiter... limiters) {
     this(conf, Arrays.asList(limiters));
+    this.useBlockBytesScanned =
+      conf.getBoolean(OperationQuota.USE_BLOCK_BYTES_SCANNED_KEY, USE_BLOCK_BYTES_SCANNED_DEFAULT);
+    this.blockSizeBytes = blockSizeBytes;
   }
 
   /**
@@ -94,8 +101,15 @@ public class DefaultOperationQuota implements OperationQuota {
   public void close() {
     // Adjust the quota consumed for the specified operation
     writeDiff = operationSize[OperationType.MUTATE.ordinal()] - writeConsumed;
-    readDiff = operationSize[OperationType.GET.ordinal()]
-      + operationSize[OperationType.SCAN.ordinal()] - readConsumed;
+
+    if (useBlockBytesScanned) {
+      readDiff = blockBytesScanned - readConsumed;
+    } else {
+      long resultSize =
+        operationSize[OperationType.GET.ordinal()] + operationSize[OperationType.SCAN.ordinal()];
+      readDiff = resultSize - readConsumed;
+    }
+
     writeCapacityUnitDiff =
       calculateWriteCapacityUnitDiff(operationSize[OperationType.MUTATE.ordinal()], writeConsumed);
     readCapacityUnitDiff = calculateReadCapacityUnitDiff(
@@ -132,6 +146,11 @@ public class DefaultOperationQuota implements OperationQuota {
     operationSize[OperationType.MUTATE.ordinal()] += QuotaUtil.calculateMutationSize(mutation);
   }
 
+  @Override
+  public void addBlockBytesScanned(long blockBytesScanned) {
+    this.blockBytesScanned += blockBytesScanned;
+  }
+
   /**
    * Update estimate quota(read/write size/capacityUnits) which will be consumed
    * @param numWrites the number of write requests
@@ -139,9 +158,16 @@ public class DefaultOperationQuota implements OperationQuota {
    * @param numScans  the number of scan requests
    */
   protected void updateEstimateConsumeQuota(int numWrites, int numReads, int numScans) {
-    writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);
-    readConsumed = estimateConsume(OperationType.GET, numReads, 100);
-    readConsumed += estimateConsume(OperationType.SCAN, numScans, 1000);
+    if (useBlockBytesScanned) {
+      writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);
+      // assume 1 block required for reads. this is probably a low estimate, which is okay
+      readConsumed = numReads > 0 ? blockSizeBytes : 0;
+      readConsumed += numScans > 0 ? blockSizeBytes : 0;
+    } else {
+      writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);
+      readConsumed = estimateConsume(OperationType.GET, numReads, 100);
+      readConsumed += estimateConsume(OperationType.SCAN, numScans, 1000);
+    }
 
     writeCapacityUnitConsumed = calculateWriteCapacityUnit(writeConsumed);
     readCapacityUnitConsumed = calculateReadCapacityUnit(readConsumed);
