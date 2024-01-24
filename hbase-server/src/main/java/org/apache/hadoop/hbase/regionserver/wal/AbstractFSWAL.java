@@ -259,8 +259,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   protected final long blocksize;
 
   /*
-   * If more than this many logs, force flush of oldest region to the oldest edit goes to disk. If too
-   * many and we crash, then will take forever replaying. Keep the number of logs tidy.
+   * If more than this many logs, force flush of oldest region to the oldest edit goes to disk. If
+   * too many and we crash, then will take forever replaying. Keep the number of logs tidy.
    */
   protected final int maxLogs;
 
@@ -807,7 +807,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * If the number of un-archived WAL files ('live' WALs) is greater than maximum allowed, check the
    * first (oldest) WAL, and return those regions which should be flushed so that it can be
    * let-go/'archived'.
-   * @return stores of regions (encodedRegionNames) to flush in order to archive the oldest WAL file.
+   * @return stores of regions (encodedRegionNames) to flush in order to archive the oldest WAL file
    */
   Map<byte[], List<byte[]>> findRegionsToForceFlush() throws IOException {
     Map<byte[], List<byte[]>> regions = null;
@@ -1467,8 +1467,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   // return whether we have successfully set readyForRolling to true.
   private boolean trySetReadyForRolling() {
     // Check without holding lock first. Usually we will just return here.
-    // waitingRoll is volatile and unacedEntries is only accessed inside event loop, so it is safe to
-    // check them outside the consumeLock.
+    // waitingRoll is volatile and unacedEntries is only accessed inside event loop, so it is safe
+    // to check them outside the consumeLock.
     if (!waitingRoll(epochAndState) || !unackedAppends.isEmpty()) {
       return false;
     }
