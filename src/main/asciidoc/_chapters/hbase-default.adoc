@@ -1949,6 +1949,36 @@ If the DFSClient configuration
 `simple`
 
 
+[[hbase.security.authentication.ui.metrics.protected]]
+*`hbase.security.authentication.ui.metrics.protected`*::
++
+.Description
+
+      Controls whether or not metrics endpoints are allowed only for admin.
+      If true, only users listed on "hbase.security.authentication.spnego.admin.users"
+      or users in group listed on "hbase.security.authentication.spnego.admin.groups"
+      are allowed to access metrics endpoints. (e.g. /jmx, /metrics, /prometheus)
+
++
+.Default
+`true`
+
+
+[[hbase.security.authentication.spnego.kerberos.endpoint.whitelist]]
+*`hbase.security.authentication.spnego.kerberos.endpoint.whitelist`*::
++
+.Description
+
+      Controls whether or not secure authentication is enabled for conf, metrics endpoints.
+      (e.g. /conf, /jmx, /metrics, /prometheus)
+      It is valid only when "hbase.security.authentication.ui.config.protected" (for /conf),
+      "hbase.security.authentication.ui.metrics.protected" (for /jmx, /metrics, /prometheus) is false.
+
++
+.Default
+``
+
+
 [[hbase.rest.filter.classes]]
 *`hbase.rest.filter.classes`*::
 +

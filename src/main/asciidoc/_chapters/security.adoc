@@ -101,7 +101,10 @@ for RPCs (e.g `hbase.security.authentication` = `kerberos`).
 <property>
   <name>hbase.security.authentication</name>
   <value>kerberos</value>
-  <description>The Kerberos keytab file to use for SPNEGO authentication by the web server.</description>
+  <description>
+    Controls whether or not secure authentication is enabled for HBase.
+    Possible values are 'simple' (no authentication), and 'kerberos'.
+  </description>
 </property>
 ----
 
@@ -134,6 +137,15 @@ A number of properties exist to configure SPNEGO authentication for the web serv
   <description>Optional, a file whose contents will be used as a secret to sign the HTTP cookies
   as a part of the SPNEGO authentication handshake. If this is not provided, Java's `Random` library
   will be used for the secret.</description>
+</property>
+<property>
+  <name>hbase.security.authentication.spnego.kerberos.endpoint.whitelist</name>
+  <description>
+    Controls whether or not secure authentication is enabled for conf, metrics endpoints.
+    (e.g. /conf, /jmx, /metrics, /prometheus)
+    It is valid only when "hbase.security.authentication.ui.config.protected" (for /conf),
+    "hbase.security.authentication.ui.metrics.protected" (for /jmx, /metrics, /prometheus) is false.
+  </description>
 </property>
 ----
 
@@ -271,6 +283,17 @@ Users who wish to change this would set the following in their hbase-site.xml:
 <property>
   <name>hbase.security.authentication.ui.config.protected</name>
   <value>true</value>
+</property>
+----
+
+Metrics endpoints (like /jmx, /metrics, /prometheus specified in "hbase.http.metrics.servlets") are
+only allowed to admins by default.
+To allow any authenticated user to access metrics endpoints, set the following in their hbase-site.xml:
+[source,xml]
+----
+<property>
+  <name>hbase.security.authentication.ui.metrics.protected</name>
+  <value>false</value>
 </property>
 ----
 

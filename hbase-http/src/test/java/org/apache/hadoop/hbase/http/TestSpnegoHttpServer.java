@@ -157,6 +157,11 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
     conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY, serverPrincipal);
     conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY, serverKeytab.getAbsolutePath());
 
+    // To test disabled kerberos authentication for specific metric endpoint
+    conf.set(HttpServer.HTTP_PRIVILEGED_METRICS_KEY, "false");
+    conf.set(HttpServer.METRIC_SERVLETS_CONF_KEY, "jmx,prometheus");
+    conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_KEY, "/prometheus");
+
     return conf;
   }
 
@@ -233,5 +238,16 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
     customServer.addUnprivilegedServlet("echo", "/echo", EchoServlet.class);
     customServer.addJerseyResourcePackage(JerseyResource.class.getPackage().getName(), "/jersey/*");
     customServer.start();
+  }
+
+  @Test
+  public void testEndpointWhitelist() throws IOException {
+    URL url = new URL(getServerURL(server), "/jmx");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
+    // FIXME: hadoop >= 3.4.0 (or hadoop with HADOOP-18666) is needed to test with below lines.
+    // url = new URL(getServerURL(server), "/prometheus");
+    // conn = (HttpURLConnection) url.openConnection();
+    // assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
   }
 }
