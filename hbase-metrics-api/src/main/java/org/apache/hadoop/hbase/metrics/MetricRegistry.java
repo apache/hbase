@@ -97,6 +97,14 @@ public interface MetricRegistry extends MetricSet {
   boolean remove(String name);
 
   /**
+   * Removes the metric with the given name only if it is registered to the provided metric.
+   * @param name   the name of the metric
+   * @param metric the metric expected to be registered to the given name
+   * @return true if the metric is removed.
+   */
+  boolean remove(String name, Metric metric);
+
+  /**
    * Return the MetricRegistryInfo object for this registry.
    * @return MetricRegistryInfo describing the registry.
    */
