@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.metrics.impl;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -140,5 +141,23 @@ public class TestMetricRegistryImpl {
     assertEquals(counter, metrics.get("mycounter"));
     assertEquals(gauge, metrics.get("mygauge"));
     assertEquals(timer, metrics.get("mytimer"));
+  }
+
+  @Test
+  public void testRemove() {
+    CounterImpl counter1 = new CounterImpl();
+    CounterImpl counter2 = new CounterImpl();
+    registry.register("mycounter", counter1);
+
+    boolean removed = registry.remove("mycounter", counter2);
+    Optional<Metric> metric = registry.get("mycounter");
+    assertFalse(removed);
+    assertTrue(metric.isPresent());
+    assertEquals(metric.get(), counter1);
+
+    removed = registry.remove("mycounter");
+    metric = registry.get("mycounter");
+    assertTrue(removed);
+    assertFalse(metric.isPresent());
   }
 }
