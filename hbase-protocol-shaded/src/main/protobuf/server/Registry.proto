@@ -106,3 +106,20 @@ service ClientMetaService {
    */
   rpc GetBootstrapNodes(GetBootstrapNodesRequest) returns (GetBootstrapNodesResponse);
 }
+
+message GetConnectionRegistryRequest {
+}
+
+/**
+ * For returning connection registry information to client, like cluster id
+ */
+message GetConnectionRegistryResponse {
+  required string cluster_id = 1;
+}
+
+/**
+ * Just a fake rpc service for getting connection registry information
+ */
+service ConnectionRegistryService {
+  rpc GetConnectionRegistry(GetConnectionRegistryRequest) returns(GetConnectionRegistryResponse);
+}

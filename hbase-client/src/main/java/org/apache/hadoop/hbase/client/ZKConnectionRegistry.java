@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -60,7 +61,8 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   private final ZNodePaths znodePaths;
 
-  ZKConnectionRegistry(Configuration conf) {
+  // User not used, but for rpc based registry we need it
+  ZKConnectionRegistry(Configuration conf, User user) {
     this.znodePaths = new ZNodePaths(conf);
     this.zk = new ReadOnlyZKClient(conf);
   }

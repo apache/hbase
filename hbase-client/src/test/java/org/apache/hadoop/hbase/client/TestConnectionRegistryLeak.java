@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -49,8 +50,8 @@ public class TestConnectionRegistryLeak {
 
     private boolean closed = false;
 
-    public ConnectionRegistryForTest(Configuration conf) {
-      super(conf);
+    public ConnectionRegistryForTest(Configuration conf, User user) {
+      super(conf, user);
       CREATED.add(this);
     }
 

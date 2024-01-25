@@ -104,7 +104,7 @@ class NettyRpcConnection extends RpcConnection {
   NettyRpcConnection(NettyRpcClient rpcClient, ConnectionId remoteId) throws IOException {
     super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
       rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor,
-      rpcClient.metrics, rpcClient.connectionAttributes);
+      rpcClient.cellBlockBuilder, rpcClient.metrics, rpcClient.connectionAttributes);
     this.rpcClient = rpcClient;
     this.eventLoop = rpcClient.group.next();
     byte[] connectionHeaderPreamble = getConnectionHeaderPreamble();
@@ -274,6 +274,12 @@ class NettyRpcConnection extends RpcConnection {
     });
   }
 
+  private void getConnectionRegistry(Channel ch) throws IOException {
+    established(ch);
+    NettyFutureUtils.safeWriteAndFlush(ch,
+      Unpooled.directBuffer(6).writeBytes(RpcClient.REGISTRY_PREAMBLE_HEADER));
+  }
+
   private void connect() throws UnknownHostException {
     assert eventLoop.inEventLoop();
     LOG.trace("Connecting to {}", remoteId.getAddress());
@@ -303,12 +309,16 @@ class NettyRpcConnection extends RpcConnection {
       .addListener(new ChannelFutureListener() {
 
         private void succeed(Channel ch) throws IOException {
-          ch.writeAndFlush(connectionHeaderPreamble.retainedDuplicate());
+          if (connectionRegistryCall != null) {
+            getConnectionRegistry(ch);
+            return;
+          }
+          NettyFutureUtils.safeWriteAndFlush(ch, connectionHeaderPreamble.retainedDuplicate());
           if (useSasl) {
             saslNegotiate(ch);
           } else {
             // send the connection header to server
-            ch.write(connectionHeaderWithLength.retainedDuplicate());
+            NettyFutureUtils.safeWrite(ch, connectionHeaderWithLength.retainedDuplicate());
             established(ch);
           }
         }
@@ -317,6 +327,9 @@ class NettyRpcConnection extends RpcConnection {
           IOException ex = toIOE(error);
           LOG.warn("Exception encountered while connecting to the server " + remoteId.getAddress(),
             ex);
+          if (connectionRegistryCall != null) {
+            connectionRegistryCall.setException(ex);
+          }
           failInit(ch, ex);
           rpcClient.failedServers.addToFailedServers(remoteId.getAddress(), error);
         }
@@ -346,6 +359,13 @@ class NettyRpcConnection extends RpcConnection {
 
   private void sendRequest0(Call call, HBaseRpcController hrc) throws IOException {
     assert eventLoop.inEventLoop();
+    if (call.isConnectionRegistryCall()) {
+      connectionRegistryCall = call;
+      // For get connection registry call, we will send a special preamble header to get the
+      // response, instead of sending a real rpc call. See HBASE-25051
+      connect();
+      return;
+    }
     if (reloginInProgress) {
       throw new IOException(RpcConnectionConstants.RELOGIN_IS_IN_PROGRESS);
     }

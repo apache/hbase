@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -26,8 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class GssSaslAuthenticationProvider extends BuiltInSaslAuthenticationProvider {
 
-  public static final SaslAuthMethod SASL_AUTH_METHOD =
-    new SaslAuthMethod("KERBEROS", (byte) 81, "GSSAPI", AuthenticationMethod.KERBEROS);
+  public static final SaslAuthMethod SASL_AUTH_METHOD = createSaslAuthMethod(AuthMethod.KERBEROS);
 
   @Override
   public SaslAuthMethod getSaslAuthMethod() {

@@ -63,7 +63,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.ServerChannel;
 import org.apache.hbase.thirdparty.io.netty.channel.WriteBufferWaterMark;
 import org.apache.hbase.thirdparty.io.netty.channel.group.ChannelGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.group.DefaultChannelGroup;
-import org.apache.hbase.thirdparty.io.netty.handler.codec.FixedLengthFrameDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.OptionalSslHandler;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslHandler;
@@ -167,13 +166,15 @@ public class NettyRpcServer extends RpcServer {
           ch.config().setWriteBufferWaterMark(writeBufferWaterMark);
           ch.config().setAllocator(channelAllocator);
           ChannelPipeline pipeline = ch.pipeline();
-          FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
-          preambleDecoder.setSingleDecode(true);
+
           NettyServerRpcConnection conn = createNettyServerRpcConnection(ch);
+
           if (conf.getBoolean(HBASE_SERVER_NETTY_TLS_ENABLED, false)) {
             initSSL(pipeline, conn, conf.getBoolean(HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, true));
           }
-          pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder)
+          pipeline
+            .addLast(NettyRpcServerPreambleHandler.DECODER_NAME,
+              NettyRpcServerPreambleHandler.createDecoder())
             .addLast(new NettyRpcServerPreambleHandler(NettyRpcServer.this, conn))
             // We need NettyRpcServerResponseEncoder here because NettyRpcServerPreambleHandler may
             // send RpcResponse to client.

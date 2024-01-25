@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -92,13 +93,14 @@ public class TestAsyncRegionLocatorTracing {
         ServerName.valueOf("127.0.0.2", 12345, EnvironmentEdgeManager.currentTime())),
       new HRegionLocation(RegionReplicaUtil.getRegionInfoForReplica(metaRegionInfo, 2),
         ServerName.valueOf("127.0.0.3", 12345, EnvironmentEdgeManager.currentTime())));
-    conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF) {
+    User user = UserProvider.instantiate(CONF).getCurrent();
+    conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF, user) {
 
       @Override
       public CompletableFuture<RegionLocations> getMetaRegionLocations() {
         return CompletableFuture.completedFuture(locs);
       }
-    }, "test", null, UserProvider.instantiate(CONF).getCurrent());
+    }, "test", null, user);
   }
 
   @After
