@@ -206,7 +206,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       for (T conn : connections.values()) {
         // Remove connection if it has not been chosen by anyone for more than maxIdleTime, and the
         // connection itself has already shutdown. The latter check is because we may still
-        // have some pending calls on connection so we should not shutdown the connection outside.
+        // have some pending calls on connection, so we should not shut down the connection outside.
         // The connection itself will disconnect if there is no pending call for maxIdleTime.
         if (conn.getLastTouched() < closeBeforeTime && !conn.isActive()) {
           if (LOG.isTraceEnabled()) {

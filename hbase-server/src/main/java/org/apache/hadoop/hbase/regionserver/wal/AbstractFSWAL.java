@@ -224,8 +224,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   protected final long blocksize;
 
   /*
-   * If more than this many logs, force flush of oldest region to oldest edit goes to disk. If too
-   * many and we crash, then will take forever replaying. Keep the number of logs tidy.
+   * If more than this many logs, force flush of oldest region to the oldest edit goes to disk. If
+   * too many and we crash, then will take forever replaying. Keep the number of logs tidy.
    */
   protected final int maxLogs;
 
@@ -299,12 +299,12 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
     /**
      * The log file size. Notice that the size may not be accurate if we do asynchronous close in
-     * sub classes.
+     * subclasses.
      */
     private final long logSize;
 
     /**
-     * If we do asynchronous close in sub classes, it is possible that when adding WALProps to the
+     * If we do asynchronous close in subclasses, it is possible that when adding WALProps to the
      * rolled map, the file is not closed yet, so in cleanOldLogs we should not archive this file,
      * for safety.
      */
@@ -683,7 +683,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * If the number of un-archived WAL files ('live' WALs) is greater than maximum allowed, check the
    * first (oldest) WAL, and return those regions which should be flushed so that it can be
    * let-go/'archived'.
-   * @return stores of regions (encodedRegionNames) to flush in order to archive oldest WAL file.
+   * @return stores of regions (encodedRegionNames) to flush in order to archive the oldest WAL file
    */
   Map<byte[], List<byte[]>> findRegionsToForceFlush() throws IOException {
     Map<byte[], List<byte[]>> regions = null;
@@ -734,7 +734,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    */
   private synchronized void cleanOldLogs() {
     List<Pair<Path, Long>> logsToArchive = null;
-    // For each log file, look at its Map of regions to highest sequence id; if all sequence ids
+    // For each log file, look at its Map of regions to the highest sequence id; if all sequence ids
     // are older than what is currently in memory, the WAL can be GC'd.
     for (Map.Entry<Path, WALProps> e : this.walFile2Props.entrySet()) {
       if (!e.getValue().closed) {
@@ -905,7 +905,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       try {
         Path oldPath = getOldPath();
         Path newPath = getNewPath();
-        // Any exception from here on is catastrophic, non-recoverable so we currently abort.
+        // Any exception from here on is catastrophic, non-recoverable, so we currently abort.
         W nextWriter = this.createWriterInstance(newPath);
         tellListenersAboutPreLogRoll(oldPath, newPath);
         // NewPath could be equal to oldPath if replaceWriter fails.
@@ -924,7 +924,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
           regionsToFlush = findRegionsToForceFlush();
         }
       } catch (CommonFSUtils.StreamLacksCapabilityException exception) {
-        // If the underlying FileSystem can't do what we ask, treat as IO failure so
+        // If the underlying FileSystem can't do what we ask, treat as IO failure, so
         // we'll abort.
         throw new IOException(
           "Underlying FileSystem can't meet stream requirements. See RS log " + "for details.",
@@ -1012,10 +1012,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         throw new IOException(e.getCause());
       }
     } finally {
-      // in shutdown we may call cleanOldLogs so shutdown this executor in the end.
-      // In sync replication implementation, we may shutdown a WAL without shutting down the whole
-      // region server, if we shutdown this executor earlier we may get reject execution exception
-      // and abort the region server
+      // in shutdown, we may call cleanOldLogs so shutdown this executor in the end.
+      // In sync replication implementation, we may shut down a WAL without shutting down the whole
+      // region server, if we shut down this executor earlier we may get reject execution exception
       logArchiveExecutor.shutdown();
     }
     // we also need to wait logArchive to finish if we want to a graceful shutdown as we may still
@@ -1269,12 +1268,12 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * have its region edit/sequence id assigned else it messes up our unification of mvcc and
    * sequenceid. On return <code>key</code> will have the region edit/sequence id filled in.
    * <p/>
-   * NOTE: This append, at a time that is usually after this call returns, starts an mvcc
+   * NOTE: This appends, at a time that is usually after this call returns, starts a mvcc
    * transaction by calling 'begin' wherein which we assign this update a sequenceid. At assignment
    * time, we stamp all the passed in Cells inside WALEdit with their sequenceId. You must
    * 'complete' the transaction this mvcc transaction by calling
    * MultiVersionConcurrencyControl#complete(...) or a variant otherwise mvcc will get stuck. Do it
-   * in the finally of a try/finally block within which this append lives and any subsequent
+   * in the finally of a try/finally block within which this appends lives and any subsequent
    * operations like sync or update of memstore, etc. Get the WriteEntry to pass mvcc out of the
    * passed in WALKey <code>walKey</code> parameter. Be warned that the WriteEntry is not
    * immediately available on return from this method. It WILL be available subsequent to a sync of
@@ -1304,7 +1303,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * Notice that you need to clear the {@link #rollRequested} flag in this method, as the new writer
    * will begin to work before returning from this method. If we clear the flag after returning from
    * this call, we may miss a roll request. The implementation class should choose a proper place to
-   * clear the {@link #rollRequested} flag so we do not miss a roll request, typically before you
+   * clear the {@link #rollRequested} flag, so we do not miss a roll request, typically before you
    * start writing to the new writer.
    */
   protected abstract void doReplaceWriter(Path oldPath, Path newPath, W nextWriter)
@@ -1406,7 +1405,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   /**
-   * Pass one or more log file names and it will either dump out a text version on
+   * Pass one or more log file names, and it will either dump out a text version on
    * <code>stdout</code> or split the specified log files.
    */
   public static void main(String[] args) throws IOException {
