@@ -324,7 +324,7 @@ redirect_and_run "${working_dir}/hadoop_cluster_smoke" \
     "${hadoop_exec}" --config "${working_dir}/hbase-conf/" fs -ls -R /
 
 echo "Starting up HBase"
-HBASE_CONF_DIR="${working_dir}/hbase-conf/" "${component_install}/bin/start-hbase.sh"
+HBASE_CONF_DIR="${working_dir}/hbase-conf/" HBASE_LOG_DIR="${working_dir}" "${component_install}/bin/start-hbase.sh"
 
 sleep_time=2
 until "${component_install}/bin/hbase" --config "${working_dir}/hbase-conf/" shell --noninteractive >"${working_dir}/waiting_hbase_startup.log" 2>&1 <<EOF
