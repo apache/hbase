@@ -52,7 +52,7 @@ public abstract class AbstractPeerProcedure<TState> extends AbstractPeerNoLockPr
   // The sleep interval when waiting table to be enabled or disabled.
   protected static final int SLEEP_INTERVAL_MS = 1000;
 
-  // used to keep compatible with old client where we can only returns after updateStorage.
+  // used to keep compatible with old client where we can only return after updateStorage.
   protected ProcedurePrepareLatch latch;
 
   protected AbstractPeerProcedure() {
