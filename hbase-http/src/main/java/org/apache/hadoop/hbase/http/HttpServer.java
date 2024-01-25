@@ -171,7 +171,9 @@ public class HttpServer implements FilterContainer {
       .put("jmx",
         new ServletConfig("jmx", "/jmx", "org.apache.hadoop.hbase.http.jmx.JMXJsonServlet"))
       .put("metrics",
-        new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet"))
+        // MetricsServlet is deprecated in hadoop 2.8 and removed in 3.0. We shouldn't expect it,
+        // so pass false so that we don't create a noisy warn during instantiation.
+        new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet", false))
       .put("prometheus", new ServletConfig("prometheus", "/prometheus",
         "org.apache.hadoop.hbase.http.prometheus.PrometheusHadoopServlet"))
       .build();
@@ -846,16 +848,19 @@ public class HttpServer implements FilterContainer {
     /* register metrics servlets */
     String[] enabledServlets = conf.getStrings(METRIC_SERVLETS_CONF_KEY, METRICS_SERVLETS_DEFAULT);
     for (String enabledServlet : enabledServlets) {
-      try {
-        ServletConfig servletConfig = METRIC_SERVLETS.get(enabledServlet);
-        if (servletConfig != null) {
+      ServletConfig servletConfig = METRIC_SERVLETS.get(enabledServlet);
+      if (servletConfig != null) {
+        try {
           Class<?> clz = Class.forName(servletConfig.getClazz());
           addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
             clz.asSubclass(HttpServlet.class));
+        } catch (Exception e) {
+          if (servletConfig.isExpected()) {
+            // metrics are not critical to read/write, so an exception here shouldn't be fatal
+            // if the class was expected we should warn though
+            LOG.warn("Couldn't register the servlet " + enabledServlet, e);
+          }
         }
-      } catch (Exception e) {
-        /* shouldn't be fatal, so warn the user about it */
-        LOG.warn("Couldn't register the servlet " + enabledServlet, e);
       }
     }
   }
