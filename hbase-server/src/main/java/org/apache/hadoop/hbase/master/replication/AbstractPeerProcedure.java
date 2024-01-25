@@ -36,7 +36,7 @@ public abstract class AbstractPeerProcedure<TState>
 
   protected String peerId;
 
-  // used to keep compatible with old client where we can only returns after updateStorage.
+  // used to keep compatible with old client where we can only return after updateStorage.
   protected ProcedurePrepareLatch latch;
 
   protected AbstractPeerProcedure() {
