@@ -158,9 +158,9 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   private final Supplier<Boolean> hasConsumerTask;
 
   private static final int MAX_EPOCH = 0x3FFFFFFF;
-  // the lowest bit is waitingRoll, which means new writer is created and we are waiting for old
+  // the lowest bit is waitingRoll, which means new writer is created, and we are waiting for old
   // writer to be closed.
-  // the second lowest bit is writerBroken which means the current writer is broken and rollWriter
+  // the second-lowest bit is writerBroken which means the current writer is broken and rollWriter
   // is needed.
   // all other bits are the epoch number of the current writer, this is used to detect whether the
   // writer is still the one when you issue the sync.
@@ -280,8 +280,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   // return whether we have successfully set readyForRolling to true.
   private boolean trySetReadyForRolling() {
     // Check without holding lock first. Usually we will just return here.
-    // waitingRoll is volatile and unacedEntries is only accessed inside event loop so it is safe to
-    // check them outside the consumeLock.
+    // waitingRoll is volatile and unacedEntries is only accessed inside event loop, so it is safe
+    // to check them outside the consumeLock.
     if (!waitingRoll(epochAndState) || !unackedAppends.isEmpty()) {
       return false;
     }
@@ -342,13 +342,13 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     // changed, i.e, we have already rolled the writer, or the writer is already broken, we should
     // just skip here, to avoid mess up the state or accidentally release some WAL entries and
     // cause data corruption.
-    // The syncCompleted call is on the critical write path so we should try our best to make it
+    // The syncCompleted call is on the critical write path, so we should try our best to make it
     // fast. So here we do not hold consumeLock, for increasing performance. It is safe because
     // there are only 3 possible situations:
     // 1. For normal case, the only place where we change epochAndState is when rolling the writer.
     // Before rolling actually happen, we will only change the state to waitingRoll which is another
     // bit than writerBroken, and when we actually change the epoch, we can make sure that there is
-    // no out going sync request. So we will always pass the check here and there is no problem.
+    // no outgoing sync request. So we will always pass the check here and there is no problem.
     // 2. The writer is broken, but we have not called syncFailed yet. In this case, since
     // syncFailed and syncCompleted are executed in the same thread, we will just face the same
     // situation with #1.
@@ -552,7 +552,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
     if (writer.getLength() == fileLengthAtLastSync) {
       // we haven't written anything out, just advance the highestSyncedSequence since we may only
-      // stamped some region sequence id.
+      // stamp some region sequence id.
       if (unackedAppends.isEmpty()) {
         highestSyncedTxid.set(highestProcessedAppendTxid);
         finishSync(false);
@@ -560,7 +560,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       }
       return;
     }
-    // reach here means that we have some unsynced data but haven't reached the batch size yet
+    // reach here means that we have some unsynced data but haven't reached the batch size yet,
     // but we will not issue a sync directly here even if there are sync requests because we may
     // have some new data in the ringbuffer, so let's just return here and delay the decision of
     // whether to issue a sync in the caller method.
