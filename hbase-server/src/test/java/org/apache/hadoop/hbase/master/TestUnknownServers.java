@@ -41,7 +41,7 @@ public class TestUnknownServers {
 
   private static HBaseTestingUtility UTIL;
   private static Admin ADMIN;
-  private final static int SLAVES = 2;
+  private final static int SLAVES = 1;
   private static boolean IS_UNKNOWN_SERVER = true;
 
   @BeforeClass
