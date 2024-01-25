@@ -236,7 +236,7 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   // ==========================================================================
 
   /**
-   * Wake up all of the given events. Note that we first take scheduler lock and then wakeInternal()
+   * Wake up all the given events. Note that we first take scheduler lock and then wakeInternal()
    * synchronizes on the event. Access should remain package-private. Use ProcedureEvent class to
    * wake/suspend events.
    * @param events the list of events to wake

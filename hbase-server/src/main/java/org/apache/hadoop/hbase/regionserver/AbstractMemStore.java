@@ -157,7 +157,7 @@ public abstract class AbstractMemStore implements MemStore {
     Cell toAdd = maybeCloneWithAllocator(currentActive, cell, false);
     boolean mslabUsed = (toAdd != cell);
     // This cell data is backed by the same byte[] where we read request in RPC(See
-    // HBASE-15180). By default MSLAB is ON and we might have copied cell to MSLAB area. If
+    // HBASE-15180). By default, MSLAB is ON and we might have copied cell to MSLAB area. If
     // not we must do below deep copy. Or else we will keep referring to the bigger chunk of
     // memory and prevent it from getting GCed.
     // Copy to MSLAB would not have happened if
