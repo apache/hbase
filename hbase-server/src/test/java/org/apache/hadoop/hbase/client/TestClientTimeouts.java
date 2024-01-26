@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
@@ -41,7 +40,6 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -72,9 +70,6 @@ public class TestClientTimeouts {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(SLAVES);
-    // Set the custom RPC client with random timeouts as the client
-    TEST_UTIL.getConfiguration().set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY,
-      RandomTimeoutRpcClient.class.getName());
   }
 
   /**
@@ -85,53 +80,39 @@ public class TestClientTimeouts {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  private Connection createConnection() {
+    // Ensure the HBaseAdmin uses a new connection by changing Configuration.
+    Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
+    // Set the custom RPC client with random timeouts as the client
+    conf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY,
+      RandomTimeoutRpcClient.class.getName());
+    conf.set(HConstants.HBASE_CLIENT_INSTANCE_ID, String.valueOf(-1));
+    for (;;) {
+      try {
+        return ConnectionFactory.createConnection(conf);
+      } catch (IOException e) {
+        // since we randomly throw SocketTimeoutException, it is possible that we fail when creating
+        // the Connection, but this is not what we want to test here, so just ignore it and try
+        // again
+      }
+    }
+  }
+
   /**
    * Test that a client that fails an RPC to the master retries properly and doesn't throw any
    * unexpected exceptions.
    */
   @Test
   public void testAdminTimeout() throws Exception {
-    boolean lastFailed = false;
-    int initialInvocations = RandomTimeoutBlockingRpcChannel.invokations.get();
-    RandomTimeoutRpcClient rpcClient = (RandomTimeoutRpcClient) RpcClientFactory
-      .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
-
-    try {
-      for (int i = 0; i < 5 || (lastFailed && i < 100); ++i) {
-        lastFailed = false;
-        // Ensure the HBaseAdmin uses a new connection by changing Configuration.
-        Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
-        conf.set(HConstants.HBASE_CLIENT_INSTANCE_ID, String.valueOf(-1));
-        Admin admin = null;
-        Connection connection = null;
-        try {
-          connection = ConnectionFactory.createConnection(conf);
-          admin = connection.getAdmin();
-          // run some admin commands
-          HBaseAdmin.available(conf);
-          admin.setBalancerRunning(false, false);
-        } catch (MasterNotRunningException ex) {
-          // Since we are randomly throwing SocketTimeoutExceptions, it is possible to get
-          // a MasterNotRunningException. It's a bug if we get other exceptions.
-          lastFailed = true;
-        } finally {
-          if (admin != null) {
-            admin.close();
-            if (admin.getConnection().isClosed()) {
-              rpcClient = (RandomTimeoutRpcClient) RpcClientFactory
-                .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
-            }
-          }
-          if (connection != null) {
-            connection.close();
-          }
-        }
+    try (Connection conn = createConnection(); Admin admin = conn.getAdmin()) {
+      int initialInvocations = invokations.get();
+      boolean balanceEnabled = admin.isBalancerEnabled();
+      for (int i = 0; i < 5; i++) {
+        assertEquals(balanceEnabled, admin.balancerSwitch(!balanceEnabled, false));
+        balanceEnabled = !balanceEnabled;
       }
       // Ensure the RandomTimeoutRpcEngine is actually being used.
-      assertFalse(lastFailed);
-      assertTrue(RandomTimeoutBlockingRpcChannel.invokations.get() > initialInvocations);
-    } finally {
-      rpcClient.close();
+      assertTrue(invokations.get() > initialInvocations);
     }
   }
 
@@ -156,14 +137,14 @@ public class TestClientTimeouts {
     }
   }
 
+  private static final double CHANCE_OF_TIMEOUT = 0.3;
+  private static AtomicInteger invokations = new AtomicInteger();
+
   /**
    * Blocking rpc channel that goes via hbase rpc.
    */
   static class RandomTimeoutBlockingRpcChannel
     extends AbstractRpcClient.BlockingRpcChannelImplementation {
-    private static final Random RANDOM = new Random(EnvironmentEdgeManager.currentTime());
-    public static final double CHANCE_OF_TIMEOUT = 0.3;
-    private static AtomicInteger invokations = new AtomicInteger();
 
     RandomTimeoutBlockingRpcChannel(final BlockingRpcClient rpcClient, final ServerName sn,
       final User ticket, final int rpcTimeout) {
@@ -174,7 +155,7 @@ public class TestClientTimeouts {
     public Message callBlockingMethod(MethodDescriptor md, RpcController controller, Message param,
       Message returnType) throws ServiceException {
       invokations.getAndIncrement();
-      if (RANDOM.nextFloat() < CHANCE_OF_TIMEOUT) {
+      if (ThreadLocalRandom.current().nextFloat() < CHANCE_OF_TIMEOUT) {
         // throw a ServiceException, becuase that is the only exception type that
         // {@link ProtobufRpcEngine} throws. If this RpcEngine is used with a different
         // "actual" type, this may not properly mimic the underlying RpcEngine.
@@ -194,10 +175,8 @@ public class TestClientTimeouts {
     @Override
     public void callMethod(MethodDescriptor md, RpcController controller, Message param,
       Message returnType, RpcCallback<Message> done) {
-      RandomTimeoutBlockingRpcChannel.invokations.getAndIncrement();
-      if (
-        ThreadLocalRandom.current().nextFloat() < RandomTimeoutBlockingRpcChannel.CHANCE_OF_TIMEOUT
-      ) {
+      invokations.getAndIncrement();
+      if (ThreadLocalRandom.current().nextFloat() < CHANCE_OF_TIMEOUT) {
         // throw a ServiceException, because that is the only exception type that
         // {@link ProtobufRpcEngine} throws. If this RpcEngine is used with a different
         // "actual" type, this may not properly mimic the underlying RpcEngine.
