@@ -1919,13 +1919,12 @@ public class HRegionServer extends Thread
 
     @Override
     protected void chore() {
-      for (Region r : this.instance.onlineRegions.values()) {
+      for (HRegion hr : this.instance.onlineRegions.values()) {
         // If region is read only or compaction is disabled at table level, there's no need to
         // iterate through region's stores
-        if (r == null || r.isReadOnly() || !r.getTableDescriptor().isCompactionEnabled()) {
+        if (hr == null || hr.isReadOnly() || !hr.getTableDescriptor().isCompactionEnabled()) {
           continue;
         }
-        HRegion hr = (HRegion) r;
         for (HStore s : hr.stores.values()) {
           try {
             long multiplier = s.getCompactionCheckMultiplier();
@@ -1953,7 +1952,7 @@ public class HRegionServer extends Thread
               }
             }
           } catch (IOException e) {
-            LOG.warn("Failed major compaction check on " + r, e);
+            LOG.warn("Failed major compaction check on " + hr, e);
           }
         }
       }
