@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -154,6 +155,43 @@ public class TestPrefetch {
     }, cacheConfig);
     assertEquals(totalCompletedBefore + queueBefore,
       poolExecutor.getCompletedTaskCount() + poolExecutor.getQueue().size());
+  }
+
+  @Test
+  public void testPrefetchHeapUsageAboveThreshold() throws Exception {
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).setPrefetchBlocksOnOpen(true)
+        .setBlockCacheEnabled(true).build();
+    HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
+    Configuration newConf = new Configuration(conf);
+    newConf.setDouble(CacheConfig.PREFETCH_HEAP_USAGE_THRESHOLD, 0.1);
+    CacheConfig cacheConfig =
+      new CacheConfig(newConf, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
+    Path storeFile = writeStoreFile("testPrefetchHeapUsageAboveThreshold", meta, cacheConfig);
+    MutableInt cachedCount = new MutableInt(0);
+    MutableInt unCachedCount = new MutableInt(0);
+    readStoreFile(storeFile, (r, o) -> {
+      HFileBlock block = null;
+      try {
+        block = r.readBlock(o, -1, false, true, false, true, null, null);
+      } catch (IOException e) {
+        fail(e.getMessage());
+      }
+      return block;
+    }, (key, block) -> {
+      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      if (
+        block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
+          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
+      ) {
+        if (isCached) {
+          cachedCount.increment();
+        } else {
+          unCachedCount.increment();
+        }
+      }
+    }, cacheConfig);
+    assertTrue(unCachedCount.compareTo(cachedCount) > 0);
   }
 
   @Test

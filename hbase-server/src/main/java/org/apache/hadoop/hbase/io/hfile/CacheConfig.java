@@ -99,6 +99,12 @@ public class CacheConfig {
   public static final String BUCKETCACHE_PERSIST_INTERVAL_KEY =
     "hbase.bucketcache.persist.intervalinmillis";
 
+  /**
+   * Configuration key to set the heap usage threshold limit once prefetch threads should be
+   * interrupted.
+   */
+  public static final String PREFETCH_HEAP_USAGE_THRESHOLD = "hbase.rs.prefetchheapusage";
+
   // Defaults
   public static final boolean DEFAULT_CACHE_DATA_ON_READ = true;
   public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = false;
@@ -111,6 +117,7 @@ public class CacheConfig {
   public static final boolean DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE = false;
   public static final boolean DROP_BEHIND_CACHE_COMPACTION_DEFAULT = true;
   public static final long DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD = Long.MAX_VALUE;
+  public static final double DEFAULT_PREFETCH_HEAP_USAGE_THRESHOLD = 1d;
 
   /**
    * Whether blocks should be cached on read (default is on if there is a cache but this can be
@@ -157,6 +164,8 @@ public class CacheConfig {
 
   private final ByteBuffAllocator byteBuffAllocator;
 
+  private final double heapUsageThreshold;
+
   /**
    * Create a cache configuration using the specified configuration object and defaults for family
    * level settings. Only use if no column family context.
@@ -201,6 +210,8 @@ public class CacheConfig {
     this.cacheCompactedDataOnWrite =
       conf.getBoolean(CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE);
     this.cacheCompactedDataOnWriteThreshold = getCacheCompactedBlocksOnWriteThreshold(conf);
+    this.heapUsageThreshold =
+      conf.getDouble(PREFETCH_HEAP_USAGE_THRESHOLD, DEFAULT_PREFETCH_HEAP_USAGE_THRESHOLD);
     this.blockCache = blockCache;
     this.byteBuffAllocator = byteBuffAllocator;
   }
@@ -222,6 +233,7 @@ public class CacheConfig {
     this.dropBehindCompaction = cacheConf.dropBehindCompaction;
     this.blockCache = cacheConf.blockCache;
     this.byteBuffAllocator = cacheConf.byteBuffAllocator;
+    this.heapUsageThreshold = cacheConf.heapUsageThreshold;
   }
 
   private CacheConfig() {
@@ -237,6 +249,7 @@ public class CacheConfig {
     this.dropBehindCompaction = false;
     this.blockCache = null;
     this.byteBuffAllocator = ByteBuffAllocator.HEAP;
+    this.heapUsageThreshold = DEFAULT_PREFETCH_HEAP_USAGE_THRESHOLD;
   }
 
   /**
@@ -387,6 +400,17 @@ public class CacheConfig {
   }
 
   /**
+   * Checks if the current heap usage is below the threshold configured by
+   * "hbase.rs.prefetchheapusage" (0.8 by default).
+   */
+  public boolean isHeapUsageBelowThreshold() {
+    double total = Runtime.getRuntime().maxMemory();
+    double available = Runtime.getRuntime().freeMemory();
+    double usedRatio = 1d - (available / total);
+    return heapUsageThreshold > usedRatio;
+  }
+
+  /**
    * If we make sure the block could not be cached, we will not acquire the lock otherwise we will
    * acquire lock
    */
@@ -411,6 +435,10 @@ public class CacheConfig {
 
   public ByteBuffAllocator getByteBuffAllocator() {
     return this.byteBuffAllocator;
+  }
+
+  public double getHeapUsageThreshold() {
+    return heapUsageThreshold;
   }
 
   private long getCacheCompactedBlocksOnWriteThreshold(Configuration conf) {

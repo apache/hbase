@@ -86,9 +86,10 @@ public class TestBucketCachePersister {
     return conf;
   }
 
-  public BucketCache setupBucketCache(Configuration conf) throws IOException {
-    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-      constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
+  public BucketCache setupBucketCache(Configuration conf, String persistentCacheFile)
+    throws IOException {
+    BucketCache bucketCache = new BucketCache("file:" + testDir + "/" + persistentCacheFile,
+      capacitySize, constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
       testDir + "/bucket.persistence", 60 * 1000, conf);
     return bucketCache;
   }
@@ -103,7 +104,7 @@ public class TestBucketCachePersister {
   public void testPrefetchPersistenceCrash() throws Exception {
     long bucketCachePersistInterval = 3000;
     Configuration conf = setupBucketCacheConfig(bucketCachePersistInterval);
-    BucketCache bucketCache = setupBucketCache(conf);
+    BucketCache bucketCache = setupBucketCache(conf, "testPrefetchPersistenceCrash");
     CacheConfig cacheConf = new CacheConfig(conf, bucketCache);
     FileSystem fs = HFileSystem.get(conf);
     // Load Cache
@@ -121,7 +122,7 @@ public class TestBucketCachePersister {
   public void testPrefetchPersistenceCrashNegative() throws Exception {
     long bucketCachePersistInterval = Long.MAX_VALUE;
     Configuration conf = setupBucketCacheConfig(bucketCachePersistInterval);
-    BucketCache bucketCache = setupBucketCache(conf);
+    BucketCache bucketCache = setupBucketCache(conf, "testPrefetchPersistenceCrashNegative");
     CacheConfig cacheConf = new CacheConfig(conf, bucketCache);
     FileSystem fs = HFileSystem.get(conf);
     // Load Cache
@@ -134,7 +135,7 @@ public class TestBucketCachePersister {
   @Test
   public void testPrefetchListUponBlockEviction() throws Exception {
     Configuration conf = setupBucketCacheConfig(200);
-    BucketCache bucketCache = setupBucketCache(conf);
+    BucketCache bucketCache = setupBucketCache(conf, "testPrefetchListUponBlockEviction");
     CacheConfig cacheConf = new CacheConfig(conf, bucketCache);
     FileSystem fs = HFileSystem.get(conf);
     // Load Blocks in cache
@@ -156,7 +157,8 @@ public class TestBucketCachePersister {
   @Test
   public void testPrefetchBlockEvictionWhilePrefetchRunning() throws Exception {
     Configuration conf = setupBucketCacheConfig(200);
-    BucketCache bucketCache = setupBucketCache(conf);
+    BucketCache bucketCache =
+      setupBucketCache(conf, "testPrefetchBlockEvictionWhilePrefetchRunning");
     CacheConfig cacheConf = new CacheConfig(conf, bucketCache);
     FileSystem fs = HFileSystem.get(conf);
     // Load Blocks in cache
