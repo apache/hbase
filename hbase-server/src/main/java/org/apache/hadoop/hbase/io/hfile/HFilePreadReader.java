@@ -106,13 +106,23 @@ public class HFilePreadReader extends HFileReaderImpl {
               HFileBlock block = prefetchStreamReader.readBlock(offset, onDiskSizeOfNextBlock,
                 /* cacheBlock= */true, /* pread= */false, false, false, null, null, true);
               try {
-                if (!cacheConf.isInMemory() && !cache.blockFitsIntoTheCache(block).orElse(true)) {
-                  LOG.warn(
-                    "Interrupting prefetch for file {} because block {} of size {} "
-                      + "doesn't fit in the available cache space.",
-                    path, cacheKey, block.getOnDiskSizeWithHeader());
-                  interrupted = true;
-                  break;
+                if (!cacheConf.isInMemory()) {
+                  if (!cache.blockFitsIntoTheCache(block).orElse(true)) {
+                    LOG.warn(
+                      "Interrupting prefetch for file {} because block {} of size {} "
+                        + "doesn't fit in the available cache space.",
+                      path, cacheKey, block.getOnDiskSizeWithHeader());
+                    interrupted = true;
+                    break;
+                  }
+                  if (!cacheConf.isHeapUsageBelowThreshold()) {
+                    LOG.warn(
+                      "Interrupting prefetch because heap usage is above the threshold: {} "
+                        + "configured via {}",
+                      cacheConf.getHeapUsageThreshold(), CacheConfig.PREFETCH_HEAP_USAGE_THRESHOLD);
+                    interrupted = true;
+                    break;
+                  }
                 }
                 onDiskSizeOfNextBlock = block.getNextBlockOnDiskSize();
                 offset += block.getOnDiskSizeWithHeader();
