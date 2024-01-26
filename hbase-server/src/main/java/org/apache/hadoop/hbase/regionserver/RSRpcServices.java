@@ -3653,7 +3653,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       }
 
       quota.addScanResult(results);
-      quota.addBlockBytesScanned(rpcCall.getBlockBytesScanned());
+      if (rpcCall != null) {
+        quota.addBlockBytesScanned(rpcCall.getBlockBytesScanned());
+      }
       addResults(builder, results, (HBaseRpcController) controller,
         RegionReplicaUtil.isDefaultReplica(region.getRegionInfo()),
         isClientCellBlockSupport(rpcCall));

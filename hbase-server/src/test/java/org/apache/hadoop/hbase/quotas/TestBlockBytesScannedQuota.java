@@ -195,9 +195,9 @@ public class TestBlockBytesScannedQuota {
     assertEquals(100, doMultiGets(100, 10, rowCount, FAMILY, QUALIFIER, table));
     assertEquals(100, doMultiGets(100, 10, rowCount, FAMILY, QUALIFIER, table));
 
-    // Add 100 block/min limit
+    // Add ~100 block/min limit
     admin.setQuota(QuotaSettingsFactory.throttleUser(userName, ThrottleType.REQUEST_SIZE,
-      Math.round(100 * blockSize), TimeUnit.MINUTES));
+      Math.round(100.1 * blockSize), TimeUnit.MINUTES));
     triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
 
     // should execute approximately 10 batches of 10 requests
