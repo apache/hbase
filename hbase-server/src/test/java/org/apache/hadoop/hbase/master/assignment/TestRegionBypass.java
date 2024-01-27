@@ -125,7 +125,7 @@ public class TestRegionBypass {
       .getMasterProcedureExecutor().getActiveProcIds().isEmpty());
     // Now assign with the override flag.
     for (RegionInfo ri : regions) {
-      TEST_UTIL.getHbck().assigns(Arrays.<String> asList(ri.getEncodedName()), true);
+      TEST_UTIL.getHbck().assigns(Arrays.<String> asList(ri.getEncodedName()), true, true);
     }
     TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getHBaseCluster().getMaster()
       .getMasterProcedureExecutor().getActiveProcIds().isEmpty());

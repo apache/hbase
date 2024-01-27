@@ -62,19 +62,26 @@ public interface Hbck extends Abortable, Closeable {
    * good if many Regions to online -- and it will schedule the assigns even in the case where
    * Master is initializing (as long as the ProcedureExecutor is up). Does NOT call Coprocessor
    * hooks.
-   * @param override           You need to add the override for case where a region has previously
-   *                           been bypassed. When a Procedure has been bypassed, a Procedure will
-   *                           have completed but no other Procedure will be able to make progress
-   *                           on the target entity (intentionally). This override flag will
-   *                           override this fencing mechanism.
+   * @param override           You need to add override for unset of the procedure from
+   *                           RegionStateNode without byPassing preTransitCheck
+   * @param force              You need to add force for case where a region has previously been
+   *                           bypassed. When a Procedure has been bypassed, a Procedure will have
+   *                           completed but no other Procedure will be able to make progress on the
+   *                           target entity (intentionally). Skips preTransitCheck only when
+   *                           selected along with override option
    * @param encodedRegionNames Region encoded names; e.g. 1588230740 is the hard-coded encoding for
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example
    *                           of what a random user-space encoded Region name looks like.
    */
-  List<Long> assigns(List<String> encodedRegionNames, boolean override) throws IOException;
+  List<Long> assigns(List<String> encodedRegionNames, boolean override, boolean force)
+    throws IOException;
+
+  default List<Long> assigns(List<String> encodedRegionNames, boolean override) throws IOException {
+    return assigns(encodedRegionNames, override, true);
+  }
 
   default List<Long> assigns(List<String> encodedRegionNames) throws IOException {
-    return assigns(encodedRegionNames, false);
+    return assigns(encodedRegionNames, false, false);
   }
 
   /**
@@ -82,19 +89,27 @@ public interface Hbck extends Abortable, Closeable {
    * at a time -- good if many Regions to offline -- and it will schedule the assigns even in the
    * case where Master is initializing (as long as the ProcedureExecutor is up). Does NOT call
    * Coprocessor hooks.
-   * @param override           You need to add the override for case where a region has previously
-   *                           been bypassed. When a Procedure has been bypassed, a Procedure will
-   *                           have completed but no other Procedure will be able to make progress
-   *                           on the target entity (intentionally). This override flag will
-   *                           override this fencing mechanism.
+   * @param override           You need to add override for unset of the procedure from
+   *                           RegionStateNode without byPassing preTransitCheck
+   * @param force              You need to add force for case where a region has previously been
+   *                           bypassed. When a Procedure has been bypassed, a Procedure will have
+   *                           completed but no other Procedure will be able to make progress on the
+   *                           target entity (intentionally). Skips preTransitCheck only when
+   *                           selected along with override option
    * @param encodedRegionNames Region encoded names; e.g. 1588230740 is the hard-coded encoding for
    *                           hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an example
    *                           of what a random user-space encoded Region name looks like.
    */
-  List<Long> unassigns(List<String> encodedRegionNames, boolean override) throws IOException;
+  List<Long> unassigns(List<String> encodedRegionNames, boolean override, boolean force)
+    throws IOException;
+
+  default List<Long> unassigns(List<String> encodedRegionNames, boolean override)
+    throws IOException {
+    return unassigns(encodedRegionNames, override, true);
+  }
 
   default List<Long> unassigns(List<String> encodedRegionNames) throws IOException {
-    return unassigns(encodedRegionNames, false);
+    return unassigns(encodedRegionNames, false, true);
   }
 
   /**
