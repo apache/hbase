@@ -150,7 +150,7 @@ public class TestBlockBytesScannedQuota {
     assertEquals(100, doScans(100, table));
     assertEquals(100, doScans(100, table));
 
-    // Add ~3 block/min limit. This should support >0 scans
+    // Add ~3 block/min limit. This should support >1 scans
     admin.setQuota(QuotaSettingsFactory.throttleUser(userName, ThrottleType.REQUEST_SIZE,
       Math.round(3.1 * blockSize), TimeUnit.MINUTES));
     triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
@@ -180,7 +180,7 @@ public class TestBlockBytesScannedQuota {
     TEST_UTIL.flush(TABLE_NAME);
 
     // Add 1 block/min limit.
-    // This should only allow 1 multiget per minute, because we estimate 1 block per scan
+    // This should only allow 1 multiget per minute, because we estimate 1 block per multiget
     admin.setQuota(QuotaSettingsFactory.throttleUser(userName, ThrottleType.REQUEST_SIZE, blockSize,
       TimeUnit.MINUTES));
     triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
