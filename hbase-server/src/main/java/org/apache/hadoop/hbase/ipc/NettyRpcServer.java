@@ -420,20 +420,24 @@ public class NettyRpcServer extends RpcServer {
         try {
           Certificate[] certificates = sslHandler.engine().getSession().getPeerCertificates();
           if (certificates != null && certificates.length > 0) {
-            conn.clientCertificateChain = (X509Certificate[]) certificates;
+            X509Certificate[] x509Certificates = new X509Certificate[certificates.length];
+            for (int i = 0; i < x509Certificates.length; i++) {
+              x509Certificates[i] = (X509Certificate) certificates[i];
+            }
+            conn.clientCertificateChain = x509Certificates;
           } else if (sslHandler.engine().getNeedClientAuth()) {
-            LOG.error(
+            LOG.debug(
               "Could not get peer certificate on TLS connection from {}, although one is required",
               remoteAddress);
           }
         } catch (SSLPeerUnverifiedException e) {
           if (sslHandler.engine().getNeedClientAuth()) {
-            LOG.error(
+            LOG.debug(
               "Could not get peer certificate on TLS connection from {}, although one is required",
               remoteAddress, e);
           }
         } catch (Exception e) {
-          LOG.error("Unexpected error getting peer certificate for TLS connection from {}",
+          LOG.debug("Unexpected error getting peer certificate for TLS connection from {}",
             remoteAddress, e);
         }
       });
