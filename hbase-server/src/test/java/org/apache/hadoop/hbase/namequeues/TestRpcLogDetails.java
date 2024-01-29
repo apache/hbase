@@ -24,6 +24,7 @@ import static org.junit.Assert.assertFalse;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
@@ -211,6 +212,11 @@ public class TestRpcLogDetails {
       @Override
       public Optional<User> getRequestUser() {
         return null;
+      }
+
+      @Override
+      public Optional<X509Certificate[]> getClientCertificateChain() {
+        return Optional.empty();
       }
 
       @Override
