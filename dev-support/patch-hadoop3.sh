@@ -19,6 +19,6 @@
 
 hadoop_dir=$1
 
-sed -i "s/HADOOP_TOOLS_DIR=\${HADOOP_TOOLS_DIR:-\"share\/hadoop\/tools\"}/HADOOP_TOOLS_DIR=\${HADOOP_TOOLS_DIR:-\"\$HADOOP_TOOLS_HOME\/share\/hadoop\/tools\"}/g" $1/libexec/hadoop-functions.sh
-sed -i "/hadoop_add_classpath \"\${junitjar}\"/a mockitojar=\$(echo \"\${HADOOP_TOOLS_LIB_JARS_DIR}\"\/mockito-core-[0-9]*.jar)\nhadoop_add_classpath \"\${mockitojar}\"" $1/bin/mapred
-curl https://repo1.maven.org/maven2/org/mockito/mockito-core/2.28.2/mockito-core-2.28.2.jar -o $1/share/hadoop/tools/lib/mockito-core-2.28.2.jar
+sed -i "s/HADOOP_TOOLS_DIR=\${HADOOP_TOOLS_DIR:-\"share\/hadoop\/tools\"}/HADOOP_TOOLS_DIR=\${HADOOP_TOOLS_DIR:-\"\$HADOOP_TOOLS_HOME\/share\/hadoop\/tools\"}/g" "$hadoop_dir/libexec/hadoop-functions.sh"
+sed -i "/hadoop_add_classpath \"\${junitjar}\"/a mockitojar=\$(echo \"\${HADOOP_TOOLS_LIB_JARS_DIR}\"\/mockito-core-[0-9]*.jar)\nhadoop_add_classpath \"\${mockitojar}\"" "$hadoop_dir/bin/mapred"
+curl https://repo1.maven.org/maven2/org/mockito/mockito-core/2.28.2/mockito-core-2.28.2.jar -o "$hadoop_dir/share/hadoop/tools/lib/mockito-core-2.28.2.jar"
