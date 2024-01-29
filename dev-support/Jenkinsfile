@@ -726,6 +726,8 @@ pipeline {
               echo "Attempting to use run an instance on top of Hadoop 3."
               artifact=$(ls -1 "${WORKSPACE}"/hadoop-3*.tar.gz | head -n 1)
               tar --strip-components=1 -xzf "${artifact}" -C "hadoop-3"
+              # we need to patch some files otherwise minicluster will fail to start, see MAPREDUCE-7471
+              ${BASEDIR}/dev-support/patch-hadoop3.sh hadoop-3
               if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
                   --single-process \
                   --working-dir output-integration/hadoop-3 \
