@@ -661,6 +661,9 @@ pipeline {
               rm -rf "hadoop-3" && mkdir "hadoop-3"
               rm -rf ".m2-for-repo" && mkdir ".m2-for-repo"
               rm -rf ".m2-for-src" && mkdir ".m2-for-src"
+              # remove old hadoop tarballs in workspace
+              rm -rf hadoop-2*.tar.gz
+              rm -rf hadoop-3*.tar.gz
               echo "(x) {color:red}-1 source release artifact{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-srctarball/commentfile
               echo "(x) {color:red}-1 client integration test{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-integration/commentfile
             '''
@@ -726,6 +729,8 @@ pipeline {
               echo "Attempting to use run an instance on top of Hadoop 3."
               artifact=$(ls -1 "${WORKSPACE}"/hadoop-3*.tar.gz | head -n 1)
               tar --strip-components=1 -xzf "${artifact}" -C "hadoop-3"
+              # we need to patch some files otherwise minicluster will fail to start, see MAPREDUCE-7471
+              ${BASEDIR}/dev-support/patch-hadoop3.sh hadoop-3
               if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
                   --single-process \
                   --working-dir output-integration/hadoop-3 \
