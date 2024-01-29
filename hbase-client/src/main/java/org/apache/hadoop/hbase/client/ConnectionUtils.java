@@ -665,7 +665,7 @@ public final class ConnectionUtils {
     }
   }
 
-  static boolean isUnexpectedPreambleHeaderException(IOException e) {
+  public static boolean isUnexpectedPreambleHeaderException(IOException e) {
     if (!(e instanceof RemoteException)) {
       return false;
     }

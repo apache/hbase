@@ -145,7 +145,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
         return count;
       case CONTINUE:
         // wait for the next preamble header
-        preambleBuffer.reset();
+        preambleBuffer.clear();
         return count;
       case CLOSE:
         return -1;

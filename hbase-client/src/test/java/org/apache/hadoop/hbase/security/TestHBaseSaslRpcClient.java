@@ -53,10 +53,8 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,9 +78,6 @@ public class TestHBaseSaslRpcClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHBaseSaslRpcClient.class);
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   @Test
   public void testSaslClientUsesGivenRpcProtection() throws Exception {
     Token<? extends TokenIdentifier> token =
@@ -90,8 +85,7 @@ public class TestHBaseSaslRpcClient {
     DigestSaslClientAuthenticationProvider provider = new DigestSaslClientAuthenticationProvider();
     for (SaslUtil.QualityOfProtection qop : SaslUtil.QualityOfProtection.values()) {
       String negotiatedQop = new HBaseSaslRpcClient(HBaseConfiguration.create(), provider, token,
-        Mockito.mock(InetAddress.class), Mockito.mock(SecurityInfo.class), false, qop.name(),
-        false) {
+        Mockito.mock(InetAddress.class), "", false, qop.name(), false) {
         public String getQop() {
           return saslProps.get(Sasl.QOP);
         }
@@ -192,14 +186,14 @@ public class TestHBaseSaslRpcClient {
     DigestSaslClientAuthenticationProvider provider = new DigestSaslClientAuthenticationProvider() {
       @Override
       public SaslClient createClient(Configuration conf, InetAddress serverAddress,
-        SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
+        String serverPrincipal, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
         Map<String, String> saslProps) {
         return Mockito.mock(SaslClient.class);
       }
     };
     HBaseSaslRpcClient rpcClient = new HBaseSaslRpcClient(HBaseConfiguration.create(), provider,
-      createTokenMockWithCredentials(principal, password), Mockito.mock(InetAddress.class),
-      Mockito.mock(SecurityInfo.class), false);
+      createTokenMockWithCredentials(principal, password), Mockito.mock(InetAddress.class), "",
+      false);
 
     try {
       rpcClient.getInputStream();
@@ -224,14 +218,14 @@ public class TestHBaseSaslRpcClient {
         new DigestSaslClientAuthenticationProvider() {
           @Override
           public SaslClient createClient(Configuration conf, InetAddress serverAddress,
-            SecurityInfo securityInfo, Token<? extends TokenIdentifier> token,
-            boolean fallbackAllowed, Map<String, String> saslProps) {
+            String serverPrincipal, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
+            Map<String, String> saslProps) {
             return null;
           }
         };
       new HBaseSaslRpcClient(HBaseConfiguration.create(), provider,
-        createTokenMockWithCredentials(principal, password), Mockito.mock(InetAddress.class),
-        Mockito.mock(SecurityInfo.class), false);
+        createTokenMockWithCredentials(principal, password), Mockito.mock(InetAddress.class), "",
+        false);
       return false;
     } catch (IOException ex) {
       return true;
@@ -254,8 +248,8 @@ public class TestHBaseSaslRpcClient {
     try {
       rpcClient = new HBaseSaslRpcClient(HBaseConfiguration.create(),
         new DigestSaslClientAuthenticationProvider(),
-        createTokenMockWithCredentials(principal, password), Mockito.mock(InetAddress.class),
-        Mockito.mock(SecurityInfo.class), false);
+        createTokenMockWithCredentials(principal, password), Mockito.mock(InetAddress.class), "",
+        false);
     } catch (Exception ex) {
       LOG.error(ex.getMessage(), ex);
     }
@@ -275,7 +269,7 @@ public class TestHBaseSaslRpcClient {
   private HBaseSaslRpcClient createSaslRpcClientForKerberos() throws IOException {
     return new HBaseSaslRpcClient(HBaseConfiguration.create(),
       new GssSaslClientAuthenticationProvider(), createTokenMock(), Mockito.mock(InetAddress.class),
-      Mockito.mock(SecurityInfo.class), false);
+      "", false);
   }
 
   private Token<? extends TokenIdentifier> createTokenMockWithCredentials(String principal,
@@ -291,7 +285,7 @@ public class TestHBaseSaslRpcClient {
   private HBaseSaslRpcClient createSaslRpcClientSimple() throws IOException {
     return new HBaseSaslRpcClient(HBaseConfiguration.create(),
       new SimpleSaslClientAuthenticationProvider(), createTokenMock(),
-      Mockito.mock(InetAddress.class), Mockito.mock(SecurityInfo.class), false);
+      Mockito.mock(InetAddress.class), "", false);
   }
 
   @SuppressWarnings("unchecked")
