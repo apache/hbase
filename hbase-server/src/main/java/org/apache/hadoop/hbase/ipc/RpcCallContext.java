@@ -62,11 +62,11 @@ public interface RpcCallContext {
   }
 
   /**
-   * Returns the TLS certificate that the client presented to this HBase server when making its
+   * Returns the TLS certificate(s) that the client presented to this HBase server when making its
    * connection. TLS is orthogonal to Kerberos, so this is unrelated to
-   * {@link this#getRequestUser()}. Both, one, or neither, may be present.
+   * {@link RpcCallContext#getRequestUser()}. Both, one, or neither may be present.
    */
-  Optional<X509Certificate> getClientCertificate();
+  Optional<X509Certificate[]> getClientCertificateChain();
 
   /** Returns Address of remote client in this call */
   InetAddress getRemoteAddress();

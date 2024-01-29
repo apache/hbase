@@ -134,8 +134,7 @@ abstract class ServerRpcConnection implements Closeable {
   protected User user = null;
   protected UserGroupInformation ugi = null;
   protected SaslServerAuthenticationProviders saslProviders = null;
-  // volatile because this gets set after this object is constructed, when TLS handshake finishes
-  protected volatile X509Certificate clientCertificate = null;
+  protected X509Certificate[] clientCertificateChain = null;
 
   public ServerRpcConnection(RpcServer rpcServer) {
     this.rpcServer = rpcServer;

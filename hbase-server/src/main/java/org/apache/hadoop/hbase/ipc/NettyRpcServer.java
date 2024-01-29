@@ -33,6 +33,7 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.net.ssl.SSLPeerUnverifiedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -443,20 +444,30 @@ public class NettyRpcServer extends RpcServer {
       sslHandler.handshakeFuture().addListener(future -> {
         try {
           Certificate[] certificates = sslHandler.engine().getSession().getPeerCertificates();
-          if (certificates.length > 0) {
-            X509Certificate certificate = (X509Certificate) certificates[0];
+          if (certificates != null && certificates.length > 0) {
             // Hack to work around https://github.com/netty/netty/issues/13796, remove once HBase uses Netty 4.1.107.Final or later
-            if (certificate instanceof LazyX509Certificate) {
-              Method method = certificate.getClass().getDeclaredMethod("unwrap");
-              method.setAccessible(true);
-              certificate = (X509Certificate) method.invoke(certificate);
+            for (int i=0; i < certificates.length; i++) {
+              if (certificates[i] instanceof LazyX509Certificate) {
+                Method method = LazyX509Certificate.class.getDeclaredMethod("unwrap");
+                method.setAccessible(true);
+                certificates[i] = (X509Certificate) method.invoke(certificates[i]);
+              }
             }
-            conn.clientCertificate = certificate;
-          } else {
-            LOG.debug("No client certificate found for peer {}", remoteAddress);
+            conn.clientCertificateChain = (X509Certificate[]) certificates;
+          } else if (sslHandler.engine().getNeedClientAuth()) {
+            LOG.error(
+              "Could not get peer certificate on TLS connection from {}, although one is required",
+              remoteAddress);
+          }
+        } catch (SSLPeerUnverifiedException e) {
+          if (sslHandler.engine().getNeedClientAuth()) {
+            LOG.error(
+              "Could not get peer certificate on TLS connection from {}, although one is required",
+              remoteAddress, e);
           }
         } catch (Exception e) {
-          LOG.debug("Failure getting peer certificate for {}", remoteAddress, e);
+          LOG.error("Unexpected error getting peer certificate for TLS connection from {}",
+            remoteAddress, e);
         }
       });
 
