@@ -143,10 +143,11 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * instances, though we may return a shared immutable object as an internal optimization.
    */
   public static ServerName valueOf(final String serverName) {
-    String[] splits = serverName.split(",");
-    String hostname = splits[0];
-    int port = Integer.parseInt(splits[1]);
-    long startCode = splits.length < 3 ? NON_STARTCODE : Long.parseLong(splits[2]);
+    int firstSep = serverName.indexOf(SERVERNAME_SEPARATOR);
+    int lastSep = serverName.lastIndexOf(SERVERNAME_SEPARATOR);
+    String hostname = serverName.substring(0, firstSep);
+    int port = Integer.parseInt(serverName.substring(firstSep + 1, lastSep));
+    long startCode = Long.parseLong(serverName.substring(lastSep + 1));
     return valueOf(hostname, port, startCode);
   }
 
