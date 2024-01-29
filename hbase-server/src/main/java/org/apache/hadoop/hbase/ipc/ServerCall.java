@@ -23,6 +23,7 @@ import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -95,6 +96,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
 
   protected final User user;
   protected final InetAddress remoteAddress;
+  protected final X509Certificate[] clientCertificateChain;
   protected RpcCallback rpcCallback;
 
   private long responseCellSize = 0;
@@ -135,9 +137,11 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     if (connection != null) {
       this.user = connection.user;
       this.retryImmediatelySupported = connection.retryImmediatelySupported;
+      this.clientCertificateChain = connection.clientCertificateChain;
     } else {
       this.user = null;
       this.retryImmediatelySupported = false;
+      this.clientCertificateChain = null;
     }
     this.remoteAddress = remoteAddress;
     this.timeout = timeout;
@@ -497,6 +501,11 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   @Override
   public Optional<User> getRequestUser() {
     return Optional.ofNullable(user);
+  }
+
+  @Override
+  public Optional<X509Certificate[]> getClientCertificateChain() {
+    return Optional.ofNullable(clientCertificateChain);
   }
 
   @Override
