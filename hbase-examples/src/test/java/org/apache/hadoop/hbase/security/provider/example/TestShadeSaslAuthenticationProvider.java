@@ -212,21 +212,23 @@ public class TestShadeSaslAuthenticationProvider {
   @Test
   public void testPositiveAuthentication() throws Exception {
     final Configuration clientConf = new Configuration(CONF);
-    try (Connection conn = ConnectionFactory.createConnection(clientConf)) {
+    try (Connection conn1 = ConnectionFactory.createConnection(clientConf)) {
       UserGroupInformation user1 =
         UserGroupInformation.createUserForTesting("user1", new String[0]);
-      user1.addToken(ShadeClientTokenUtil.obtainToken(conn, "user1", USER1_PASSWORD));
+      user1.addToken(ShadeClientTokenUtil.obtainToken(conn1, "user1", USER1_PASSWORD));
       user1.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          try (Table t = conn.getTable(tableName)) {
-            Result r = t.get(new Get(Bytes.toBytes("r1")));
-            assertNotNull(r);
-            assertFalse("Should have read a non-empty Result", r.isEmpty());
-            final Cell cell = r.getColumnLatestCell(Bytes.toBytes("f1"), Bytes.toBytes("q1"));
-            assertTrue("Unexpected value", CellUtil.matchingValue(cell, Bytes.toBytes("1")));
+          try (Connection conn = ConnectionFactory.createConnection(clientConf)) {
+            try (Table t = conn.getTable(tableName)) {
+              Result r = t.get(new Get(Bytes.toBytes("r1")));
+              assertNotNull(r);
+              assertFalse("Should have read a non-empty Result", r.isEmpty());
+              final Cell cell = r.getColumnLatestCell(Bytes.toBytes("f1"), Bytes.toBytes("q1"));
+              assertTrue("Unexpected value", CellUtil.matchingValue(cell, Bytes.toBytes("1")));
 
-            return null;
+              return null;
+            }
           }
         }
       });
