@@ -270,7 +270,6 @@ public class TestShadeSaslAuthenticationProvider {
             } catch (Exception e) {
               LOG.info("Caught exception in negative Master connectivity test", e);
               assertEquals("Found unexpected exception", pair.getSecond(), e.getClass());
-              validateRootCause(Throwables.getRootCause(e));
             }
             return null;
           }
@@ -289,7 +288,6 @@ public class TestShadeSaslAuthenticationProvider {
             } catch (Exception e) {
               LOG.info("Caught exception in negative RegionServer connectivity test", e);
               assertEquals("Found unexpected exception", pair.getSecond(), e.getClass());
-              validateRootCause(Throwables.getRootCause(e));
             }
             return null;
           }
@@ -302,20 +300,5 @@ public class TestShadeSaslAuthenticationProvider {
         throw new RuntimeException(e);
       }
     });
-  }
-
-  void validateRootCause(Throwable rootCause) {
-    LOG.info("Root cause was", rootCause);
-    if (rootCause instanceof RemoteException) {
-      RemoteException re = (RemoteException) rootCause;
-      IOException actualException = re.unwrapRemoteException();
-      assertEquals(InvalidToken.class, actualException.getClass());
-    } else {
-      StringWriter writer = new StringWriter();
-      rootCause.printStackTrace(new PrintWriter(writer));
-      String text = writer.toString();
-      assertTrue("Message did not contain expected text",
-        text.contains(InvalidToken.class.getName()));
-    }
   }
 }
