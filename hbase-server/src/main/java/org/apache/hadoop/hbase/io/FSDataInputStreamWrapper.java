@@ -40,8 +40,6 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
  */
 @InterfaceAudience.Private
 public class FSDataInputStreamWrapper implements Closeable {
-  private static final Logger LOG = LoggerFactory.getLogger(FSDataInputStreamWrapper.class);
-  private static final boolean isLogTraceEnabled = LOG.isTraceEnabled();
 
   private final HFileSystem hfs;
   private final Path path;
@@ -93,9 +91,6 @@ public class FSDataInputStreamWrapper implements Closeable {
     long totalShortCircuitBytesRead;
     long totalZeroCopyBytesRead;
   }
-
-  private Boolean instanceOfCanUnbuffer = null;
-  private CanUnbuffer unbuffer = null;
 
   protected Path readerPath;
 
@@ -314,37 +309,12 @@ public class FSDataInputStreamWrapper implements Closeable {
    * stream, the current socket will be closed and a new socket will be opened to serve the
    * requests.
    */
-  @SuppressWarnings({ "rawtypes" })
   public void unbuffer() {
+    // todo: it may make sense to always unbuffer both streams. we'd need to carefully
+    // research the usages to know if that is safe. for now just do the current.
     FSDataInputStream stream = this.getStream(this.shouldUseHBaseChecksum());
     if (stream != null) {
-      InputStream wrappedStream = stream.getWrappedStream();
-      // CanUnbuffer interface was added as part of HDFS-7694 and the fix is available in Hadoop
-      // 2.6.4+ and 2.7.1+ versions only so check whether the stream object implements the
-      // CanUnbuffer interface or not and based on that call the unbuffer api.
-      final Class<? extends InputStream> streamClass = wrappedStream.getClass();
-      if (this.instanceOfCanUnbuffer == null) {
-        // To ensure we compute whether the stream is instance of CanUnbuffer only once.
-        this.instanceOfCanUnbuffer = false;
-        if (wrappedStream instanceof CanUnbuffer) {
-          this.unbuffer = (CanUnbuffer) wrappedStream;
-          this.instanceOfCanUnbuffer = true;
-        }
-      }
-      if (this.instanceOfCanUnbuffer) {
-        try {
-          this.unbuffer.unbuffer();
-        } catch (UnsupportedOperationException e) {
-          if (isLogTraceEnabled) {
-            LOG.trace("Failed to invoke 'unbuffer' method in class " + streamClass
-              + " . So there may be the stream does not support unbuffering.", e);
-          }
-        }
-      } else {
-        if (isLogTraceEnabled) {
-          LOG.trace("Failed to find 'unbuffer' method in class " + streamClass);
-        }
-      }
+      stream.unbuffer();
     }
   }
 
