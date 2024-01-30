@@ -439,30 +439,38 @@ public class NettyRpcServer extends RpcServer {
       sslHandler.setWrapDataSize(
         conf.getInt(HBASE_SERVER_NETTY_TLS_WRAP_SIZE, DEFAULT_HBASE_SERVER_NETTY_TLS_WRAP_SIZE));
 
-      sslHandler.handshakeFuture().addListener(future -> {
-        try {
-          Certificate[] certificates = sslHandler.engine().getSession().getPeerCertificates();
-          if (certificates != null && certificates.length > 0) {
-            conn.clientCertificateChain = (X509Certificate[]) certificates;
-          } else if (sslHandler.engine().getNeedClientAuth()) {
-            LOG.error(
-              "Could not get peer certificate on TLS connection from {}, although one is required",
-              remoteAddress);
-          }
-        } catch (SSLPeerUnverifiedException e) {
-          if (sslHandler.engine().getNeedClientAuth()) {
-            LOG.error(
-              "Could not get peer certificate on TLS connection from {}, although one is required",
-              remoteAddress, e);
-          }
-        } catch (Exception e) {
-          LOG.error("Unexpected error getting peer certificate for TLS connection from {}",
-            remoteAddress, e);
-        }
-      });
+      sslHandler.handshakeFuture()
+        .addListener(future -> sslHandshakeCompleteHandler(conn, sslHandler, remoteAddress));
 
       p.addLast("ssl", sslHandler);
       LOG.debug("SSL handler added for channel: {}", p.channel());
+    }
+  }
+
+  static void sslHandshakeCompleteHandler(NettyServerRpcConnection conn, SslHandler sslHandler,
+    SocketAddress remoteAddress) {
+    try {
+      Certificate[] certificates = sslHandler.engine().getSession().getPeerCertificates();
+      if (certificates != null && certificates.length > 0) {
+        X509Certificate[] x509Certificates = new X509Certificate[certificates.length];
+        for (int i = 0; i < x509Certificates.length; i++) {
+          x509Certificates[i] = (X509Certificate) certificates[i];
+        }
+        conn.clientCertificateChain = x509Certificates;
+      } else if (sslHandler.engine().getNeedClientAuth()) {
+        LOG.debug(
+          "Could not get peer certificate on TLS connection from {}, although one is required",
+          remoteAddress);
+      }
+    } catch (SSLPeerUnverifiedException e) {
+      if (sslHandler.engine().getNeedClientAuth()) {
+        LOG.debug(
+          "Could not get peer certificate on TLS connection from {}, although one is required",
+          remoteAddress, e);
+      }
+    } catch (Exception e) {
+      LOG.debug("Unexpected error getting peer certificate for TLS connection from {}",
+        remoteAddress, e);
     }
   }
 
