@@ -661,6 +661,9 @@ pipeline {
               rm -rf "hadoop-3" && mkdir "hadoop-3"
               rm -rf ".m2-for-repo" && mkdir ".m2-for-repo"
               rm -rf ".m2-for-src" && mkdir ".m2-for-src"
+              # remove old hadoop tarballs in workspace
+              rm -rf hadoop-2*.tar.gz
+              rm -rf hadoop-3*.tar.gz
               echo "(x) {color:red}-1 source release artifact{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-srctarball/commentfile
               echo "(x) {color:red}-1 client integration test{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-integration/commentfile
             '''
