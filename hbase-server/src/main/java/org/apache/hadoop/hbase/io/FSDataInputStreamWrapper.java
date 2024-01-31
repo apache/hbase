@@ -320,6 +320,7 @@ public class FSDataInputStreamWrapper implements Closeable {
 
   // For tests
   void setShouldUseHBaseChecksum() {
-    useHBaseChecksumConfigured = useHBaseChecksum = true;
+    useHBaseChecksumConfigured = true;
+    useHBaseChecksum = true;
   }
 }
