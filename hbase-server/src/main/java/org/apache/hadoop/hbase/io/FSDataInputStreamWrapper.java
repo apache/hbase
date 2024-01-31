@@ -317,4 +317,9 @@ public class FSDataInputStreamWrapper implements Closeable {
   public Path getReaderPath() {
     return readerPath;
   }
+
+  // For tests
+  void setShouldUseHBaseChecksum() {
+    useHBaseChecksumConfigured = useHBaseChecksum = true;
+  }
 }
