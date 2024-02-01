@@ -11,7 +11,7 @@ env:
   HBASE_VERSION: ""
   PKG_RELEASE: ""
   FULL_BUILD_VERSION: ""
-  MAVEN_ARGS: ""
+  MAVEN_BUILD_ARGS: ""
 
 before:
   - description: "Prepare build environment"

@@ -89,9 +89,9 @@ write-build-env-var YUM_REPO_UPLOAD_OVERRIDE_CENTOS_8 "$YUM_REPO_UPLOAD_OVERRIDE
 # with 2.6-hubspot-SNAPSHOT which is not very useful as a point of reference.
 # Another option would be to pass in our FULL_BUILD_VERSION but that might cause some funniness
 # with the expectations in VersionInfo.compareVersion().
-write-build-env-var MAVEN_ARGS "$MAVEN_ARGS -Dversioninfo.version=$HBASE_VERSION"
+write-build-env-var MAVEN_BUILD_ARGS "$MAVEN_BUILD_ARGS -Dversioninfo.version=$HBASE_VERSION"
 
 echo "Building HBase version $HBASE_VERSION"
 echo "Will deploy to nexus with version $SET_VERSION"
 echo "Will create rpm with version $FULL_BUILD_VERSION"
-echo "Will run maven with extra args $MAVEN_ARGS"
+echo "Will run maven with extra args $MAVEN_BUILD_ARGS"
