@@ -110,7 +110,7 @@ class NettyHBaseSaslRpcServerHandler extends SimpleChannelInboundHandler<ByteBuf
     rpcServer.metrics.authenticationFailure();
     String clientIP = this.toString();
     // attempting user could be null
-    RpcServer.AUDITLOG.warn("{} {}: {}", RpcServer.AUTH_FAILED_FOR, clientIP,
+    RpcServer.AUDITLOG.warn("{}{}: {}", RpcServer.AUTH_FAILED_FOR, clientIP,
       conn.saslServer != null ? conn.saslServer.getAttemptingUser() : "Unknown");
     NettyFutureUtils.safeClose(ctx);
   }

@@ -83,18 +83,12 @@ public abstract class AbstractHBaseSaslRpcClient {
     }
   }
 
-  /**
-   * Computes the initial response a client sends to a server to begin the SASL challenge/response
-   * handshake. If the client's SASL mechanism does not have an initial response, an empty token
-   * will be returned without querying the evaluateChallenge method, as an authentication processing
-   * must be started by client.
-   * @return The client's initial response to send the server (which may be empty).
-   */
   public byte[] getInitialResponse() throws SaslException {
     if (saslClient.hasInitialResponse()) {
       return saslClient.evaluateChallenge(EMPTY_TOKEN);
+    } else {
+      return EMPTY_TOKEN;
     }
-    return EMPTY_TOKEN;
   }
 
   public boolean isComplete() {
