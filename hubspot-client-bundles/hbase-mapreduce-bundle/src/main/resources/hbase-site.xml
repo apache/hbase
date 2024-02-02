@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <!-- HBase clients that wish to read zstd HFiles must use the
+         same codec that wrote them on the RegionServers.
+         Compression.java reads its codec choice from HBaseConfiguration.create(),
+         so this setting must be supplied on the classpath, not programmatically. -->
+    <name>hbase.io.compress.zstd.codec</name>
+    <value>org.apache.hadoop.hbase.io.compress.zstd.ZstdCodec</value>
+  </property>
+</configuration>
