@@ -70,13 +70,6 @@ public interface OperationQuota {
    */
   void addMutation(Mutation mutation);
 
-  /**
-   * Add the block bytes scanned for the given call. This may be used to calculate the exact quota,
-   * and can be a better representation of workload than result sizes. Set
-   * {@link #USE_BLOCK_BYTES_SCANNED_KEY} to true to prefer this metric over result size.
-   */
-  void addBlockBytesScanned(long blockBytesScanned);
-
   /** Returns the number of bytes available to read to avoid exceeding the quota */
   long getReadAvailable();
 }

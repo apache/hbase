@@ -65,11 +65,6 @@ class NoopOperationQuota implements OperationQuota {
   }
 
   @Override
-  public void addBlockBytesScanned(long blockBytesScanned) {
-    // no-op
-  }
-
-  @Override
   public long getReadAvailable() {
     return Long.MAX_VALUE;
   }

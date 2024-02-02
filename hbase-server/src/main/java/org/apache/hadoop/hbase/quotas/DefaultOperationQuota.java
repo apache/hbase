@@ -22,6 +22,8 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -49,7 +51,6 @@ public class DefaultOperationQuota implements OperationQuota {
   protected long readDiff = 0;
   protected long writeCapacityUnitDiff = 0;
   protected long readCapacityUnitDiff = 0;
-  private long blockBytesScanned = 0;
   private boolean useBlockBytesScanned;
   private long blockSizeBytes;
 
@@ -102,11 +103,13 @@ public class DefaultOperationQuota implements OperationQuota {
     // Adjust the quota consumed for the specified operation
     writeDiff = operationSize[OperationType.MUTATE.ordinal()] - writeConsumed;
 
+    long resultSize =
+      operationSize[OperationType.GET.ordinal()] + operationSize[OperationType.SCAN.ordinal()];
     if (useBlockBytesScanned) {
-      readDiff = blockBytesScanned - readConsumed;
+      long blockBytesScanned =
+        RpcServer.getCurrentCall().map(RpcCall::getBlockBytesScanned).orElse(0L);
+      readDiff = Math.max(blockBytesScanned, resultSize) - readConsumed;
     } else {
-      long resultSize =
-        operationSize[OperationType.GET.ordinal()] + operationSize[OperationType.SCAN.ordinal()];
       readDiff = resultSize - readConsumed;
     }
 
@@ -144,11 +147,6 @@ public class DefaultOperationQuota implements OperationQuota {
   @Override
   public void addMutation(final Mutation mutation) {
     operationSize[OperationType.MUTATE.ordinal()] += QuotaUtil.calculateMutationSize(mutation);
-  }
-
-  @Override
-  public void addBlockBytesScanned(long blockBytesScanned) {
-    this.blockBytesScanned += blockBytesScanned;
   }
 
   /**
