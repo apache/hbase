@@ -101,8 +101,11 @@ class ConnectionRegistryRpcStubHolder implements Closeable {
     return builder.build();
   }
 
-  private void fetchClusterIdAndCreateStubs() {
-    addr2StubFuture = new CompletableFuture<>();
+  private CompletableFuture<ImmutableMap<ServerName, ClientMetaService.Interface>>
+    fetchClusterIdAndCreateStubs() {
+    CompletableFuture<ImmutableMap<ServerName, ClientMetaService.Interface>> future =
+      new CompletableFuture<>();
+    addr2StubFuture = future;
     FutureUtils.addListener(
       new ClusterIdFetcher(noAuthConf, user, rpcControllerFactory, bootstrapNodes).fetchClusterId(),
       (clusterId, error) -> {
@@ -120,6 +123,11 @@ class ConnectionRegistryRpcStubHolder implements Closeable {
           addr2StubFuture = null;
         }
       });
+    // here we must use the local variable future instead of addr2StubFuture, as the above listener
+    // could be executed directly in the same thread(if the future completes quick enough), since
+    // the synchronized lock is reentrant, it could set addr2StubFuture to null in the end, so when
+    // arriving here the addr2StubFuture could be null.
+    return future;
   }
 
   CompletableFuture<ImmutableMap<ServerName, ClientMetaService.Interface>> getStubs() {
@@ -135,8 +143,7 @@ class ConnectionRegistryRpcStubHolder implements Closeable {
       if (addr2StubFuture != null) {
         return addr2StubFuture;
       }
-      fetchClusterIdAndCreateStubs();
-      return addr2StubFuture;
+      return fetchClusterIdAndCreateStubs();
     }
   }
 
