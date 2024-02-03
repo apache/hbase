@@ -156,13 +156,13 @@ public class DefaultOperationQuota implements OperationQuota {
    * @param numScans  the number of scan requests
    */
   protected void updateEstimateConsumeQuota(int numWrites, int numReads, int numScans) {
+    writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);
+
     if (useBlockBytesScanned) {
-      writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);
       // assume 1 block required for reads. this is probably a low estimate, which is okay
       readConsumed = numReads > 0 ? blockSizeBytes : 0;
       readConsumed += numScans > 0 ? blockSizeBytes : 0;
     } else {
-      writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);
       readConsumed = estimateConsume(OperationType.GET, numReads, 100);
       readConsumed += estimateConsume(OperationType.SCAN, numScans, 1000);
     }
