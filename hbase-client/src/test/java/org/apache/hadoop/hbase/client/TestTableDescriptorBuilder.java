@@ -365,9 +365,8 @@ public class TestTableDescriptorBuilder {
       .setMemStoreFlushSize("256MB").setErasureCodingPolicy("RS-6-3-1024k").build();
     assertEquals(
       "'testStringCustomizedValues', " + "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL', "
-        + "MAX_FILESIZE => '10737942528 B (10GB 512KB)', "
-        + "MEMSTORE_FLUSHSIZE => '268435456 B (256MB)', "
-        + "METADATA => {'ERASURE_CODING_POLICY' => 'RS-6-3-1024k'}}}, "
+        + "ERASURE_CODING_POLICY => 'RS-6-3-1024k', MAX_FILESIZE => '10737942528 B (10GB 512KB)', "
+        + "MEMSTORE_FLUSHSIZE => '268435456 B (256MB)'}}, "
         + "{NAME => 'cf', BLOCKSIZE => '131072 B (128KB)'}",
       htd.toStringCustomizedValues());
   }
