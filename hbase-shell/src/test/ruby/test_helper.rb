@@ -164,6 +164,13 @@ module Hbase
         $stdout = old_stdout
       end
     end
+
+    def assert_raise_message_contains(message, &block)
+      error = assert_raise do
+        block.call
+      end
+      assert_match(eval('/' + message + '/'), error.message)
+    end
   end
 end
 

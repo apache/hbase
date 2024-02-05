@@ -412,7 +412,7 @@ module Hbase
 
     define_test 'clear slowlog responses should work' do
       output = capture_stdout { command(:clear_slowlog_responses, nil) }
-      assert(output.include?('Cleared Slowlog responses from 0/1 RegionServers'))
+      assert(output.include?('Cleared Slowlog responses from 0/3 RegionServers'))
     end
 
     #-------------------------------------------------------------------------------
@@ -514,6 +514,22 @@ module Hbase
       assert_match(/'COMPACTION_ENABLED' => 'false'/, admin.describe(@create_test_name))
       assert_match(/'SPLIT_ENABLED' => 'false'/, admin.describe(@create_test_name))
       assert_match(/'MERGE_ENABLED' => 'false'/, admin.describe(@create_test_name))
+    end
+
+    if $ERASURE_CODING_SUPPORTED
+      define_test 'create should be able to set table EC options' do
+        drop_test_table(@create_test_name)
+        command(:create, @create_test_name, 'a', 'b', ERASURE_CODING_POLICY => 'XOR-2-1-1024k')
+        assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
+        assert_match(/XOR-2-1-1024k/, admin.describe(@create_test_name))
+      end
+    else
+      define_test 'should raise error creating EC table' do
+        drop_test_table(@create_test_name)
+        assert_raise_message_contains 'Cannot find specified method' do
+          command(:create, @create_test_name, 'a', 'b',ERASURE_CODING_POLICY => 'XOR-2-1-1024k')
+        end
+      end
     end
 
     #-------------------------------------------------------------------------------
@@ -955,6 +971,46 @@ module Hbase
     define_test "alter should be able to change table options w/o table_att" do
       command(:alter, @test_name, 'MAX_FILESIZE' => 12345678)
       assert_match(/12345678/, admin.describe(@test_name))
+    end
+
+    if $ERASURE_CODING_SUPPORTED
+      define_test 'alter should be able to change EC policy' do
+        command(:alter, @test_name,
+            METHOD => 'table_att', 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
+        assert_match(/XOR-2-1-1024k/, admin.describe(@test_name))
+      end
+
+      define_test 'alter should be able to remove EC policy' do
+        command(:alter, @test_name,
+            METHOD => 'table_att', 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
+        command(:alter, @test_name,
+            METHOD => 'table_att_unset', NAME => 'ERASURE_CODING_POLICY')
+        assert_not_match(/ERASURE_CODING_POLICY/, admin.describe(@test_name))
+      end
+
+      define_test 'alter should be able to change EC POLICY w/o table_att' do
+        command(:alter, @test_name, 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
+        assert_match(/XOR-2-1-1024k/, admin.describe(@test_name))
+      end
+
+      define_test 'alter should be able to remove EC POLICY w/o table_att' do
+        command(:alter, @test_name, 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
+        command(:alter, @test_name, 'ERASURE_CODING_POLICY' => nil)
+        assert_not_match(/ERASURE_CODING_POLICY/, admin.describe(@test_name))
+      end
+    else
+      define_test 'should raise error changing EC policy' do
+        assert_raise_message_contains 'Cannot find specified method' do
+          command(:alter, @test_name,
+            METHOD => 'table_att', 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
+        end
+      end
+
+      define_test 'should raise error changing EC policy w/o table_att' do
+        assert_raise_message_contains 'Cannot find specified method' do
+          command(:alter, @test_name, 'ERASURE_CODING_POLICY' => 'XOR-2-1-1024k')
+        end
+      end
     end
 
     define_test "alter should be able to change coprocessor attributes" do

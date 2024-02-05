@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -60,11 +62,18 @@ public abstract class AbstractTestShell {
   }
 
   protected static void setUpJRubyRuntime() {
+    setUpJRubyRuntime(Collections.emptyMap());
+  }
+
+  protected static void setUpJRubyRuntime(Map<String, Object> extraVars) {
     LOG.debug("Configure jruby runtime, cluster set to {}", TEST_UTIL);
     List<String> loadPaths = new ArrayList<>(2);
     loadPaths.add("src/test/ruby");
     jruby.setLoadPaths(loadPaths);
     jruby.put("$TEST_CLUSTER", TEST_UTIL);
+    for (Map.Entry<String, Object> entry : extraVars.entrySet()) {
+      jruby.put(entry.getKey(), entry.getValue());
+    }
     System.setProperty("jruby.jit.logging.verbose", "true");
     System.setProperty("jruby.jit.logging", "true");
     System.setProperty("jruby.native.verbose", "true");
