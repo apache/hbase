@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -93,7 +94,18 @@ abstract class RpcConnection {
     MetricsConnection metrics, Map<String, byte[]> connectionAttributes) throws IOException {
     this.timeoutTimer = timeoutTimer;
     this.codec = codec;
-    this.compressor = compressor;
+    if (compressor != null) {
+      // Only enable compression for remote rpcs.
+      InetSocketAddress remoteAddr = Address.toSocketAddress(remoteId.getAddress());
+      if (!remoteAddr.isUnresolved() && Addressing.isLocalAddress(remoteAddr.getAddress())) {
+          this.compressor = null;
+      } else {
+        this.compressor = compressor;
+      }
+    } else {
+      this.compressor = null;
+    }
+
     this.conf = conf;
     this.metrics = metrics;
     this.connectionAttributes = connectionAttributes;
