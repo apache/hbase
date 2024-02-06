@@ -454,7 +454,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     }
   }
 
-  private static Address createAddr(ServerName sn) {
+  static Address createAddr(ServerName sn) {
     return Address.fromParts(sn.getHostname(), sn.getPort());
   }
 

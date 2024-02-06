@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -93,8 +94,9 @@ public class TestTableRpcPriority {
     Configuration conf = HBaseConfiguration.create();
 
     ExecutorService executorService = Executors.newCachedThreadPool();
-    conn = new ConnectionImplementation(conf, executorService,
-      UserProvider.instantiate(conf).getCurrent(), new DoNothingConnectionRegistry(conf)) {
+    User user = UserProvider.instantiate(conf).getCurrent();
+    conn = new ConnectionImplementation(conf, executorService, user,
+      new DoNothingConnectionRegistry(conf, user)) {
 
       @Override
       public ClientProtos.ClientService.BlockingInterface getClient(ServerName serverName)

@@ -24,6 +24,8 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -45,8 +47,8 @@ public class TestAsyncMetaRegionLocatorFailFast {
 
   private static final class FaultyConnectionRegistry extends DoNothingConnectionRegistry {
 
-    public FaultyConnectionRegistry(Configuration conf) {
-      super(conf);
+    public FaultyConnectionRegistry(Configuration conf, User user) {
+      super(conf, user);
     }
 
     @Override
@@ -56,8 +58,9 @@ public class TestAsyncMetaRegionLocatorFailFast {
   }
 
   @BeforeClass
-  public static void setUp() {
-    LOCATOR = new AsyncMetaRegionLocator(new FaultyConnectionRegistry(CONF));
+  public static void setUp() throws IOException {
+    LOCATOR = new AsyncMetaRegionLocator(
+      new FaultyConnectionRegistry(CONF, UserProvider.instantiate(CONF).getCurrent()));
   }
 
   @Test(expected = DoNotRetryIOException.class)

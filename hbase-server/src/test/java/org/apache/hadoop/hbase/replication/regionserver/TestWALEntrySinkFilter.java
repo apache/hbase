@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -49,8 +50,8 @@ import org.apache.hadoop.hbase.client.AsyncTableRegionLocator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionRegistry;
+import org.apache.hadoop.hbase.client.DoNothingConnectionRegistry;
 import org.apache.hadoop.hbase.client.DummyAsyncTable;
-import org.apache.hadoop.hbase.client.DummyConnectionRegistry;
 import org.apache.hadoop.hbase.client.Hbck;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.ScanResultConsumer;
@@ -115,8 +116,8 @@ public class TestWALEntrySinkFilter {
   public void testWALEntryFilter() throws IOException {
     Configuration conf = HBaseConfiguration.create();
     // Make it so our filter is instantiated on construction of ReplicationSink.
-    conf.setClass(DummyConnectionRegistry.REGISTRY_IMPL_CONF_KEY, DevNullConnectionRegistry.class,
-      DummyConnectionRegistry.class);
+    conf.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+      DevNullConnectionRegistry.class, ConnectionRegistry.class);
     conf.setClass(WALEntrySinkFilter.WAL_ENTRY_FILTER_KEY,
       IfTimeIsGreaterThanBOUNDARYWALEntrySinkFilterImpl.class, WALEntrySinkFilter.class);
     conf.setClass(ConnectionFactory.HBASE_CLIENT_ASYNC_CONNECTION_IMPL,
@@ -198,9 +199,10 @@ public class TestWALEntrySinkFilter {
     }
   }
 
-  public static class DevNullConnectionRegistry extends DummyConnectionRegistry {
+  public static class DevNullConnectionRegistry extends DoNothingConnectionRegistry {
 
-    public DevNullConnectionRegistry(Configuration conf) {
+    public DevNullConnectionRegistry(Configuration conf, User user) {
+      super(conf, user);
     }
 
     @Override

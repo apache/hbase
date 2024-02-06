@@ -83,7 +83,7 @@ public class TestZKConnectionRegistry {
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     HBaseTestingUtility.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
-    REGISTRY = new ZKConnectionRegistry(TEST_UTIL.getConfiguration());
+    REGISTRY = new ZKConnectionRegistry(TEST_UTIL.getConfiguration(), null);
   }
 
   @AfterClass
@@ -117,7 +117,7 @@ public class TestZKConnectionRegistry {
     try (ReadOnlyZKClient zk1 = REGISTRY.getZKClient()) {
       Configuration otherConf = new Configuration(TEST_UTIL.getConfiguration());
       otherConf.set(HConstants.ZOOKEEPER_QUORUM, MiniZooKeeperCluster.HOST);
-      try (ZKConnectionRegistry otherRegistry = new ZKConnectionRegistry(otherConf)) {
+      try (ZKConnectionRegistry otherRegistry = new ZKConnectionRegistry(otherConf, null)) {
         ReadOnlyZKClient zk2 = otherRegistry.getZKClient();
         assertNotSame("Using a different configuration / quorum should result in "
           + "different backing zk connection.", zk1, zk2);
@@ -134,7 +134,7 @@ public class TestZKConnectionRegistry {
   public void testNoMetaAvailable() throws InterruptedException {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set("zookeeper.znode.metaserver", "whatever");
-    try (ZKConnectionRegistry registry = new ZKConnectionRegistry(conf)) {
+    try (ZKConnectionRegistry registry = new ZKConnectionRegistry(conf, null)) {
       try {
         registry.getMetaRegionLocations().get();
         fail("Should have failed since we set an incorrect meta znode prefix");
@@ -175,7 +175,7 @@ public class TestZKConnectionRegistry {
       ZKUtil.createSetData(zkw, zkw.getZNodePaths().getZNodeForReplica(3), data);
       List<String> znodes = zkw.getMetaReplicaNodes();
       assertEquals(2, znodes.size());
-      try (ZKConnectionRegistry registry = new ZKConnectionRegistry(conf)) {
+      try (ZKConnectionRegistry registry = new ZKConnectionRegistry(conf, null)) {
         CompletableFuture<RegionLocations> cf = registry.getMetaRegionLocations();
         RegionLocations locations = cf.get(60, TimeUnit.SECONDS);
         assertEquals(2, locations.numNonNullElements());

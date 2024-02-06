@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
+import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -34,5 +35,10 @@ public abstract class BuiltInSaslAuthenticationProvider implements SaslAuthentic
   @Override
   public String getTokenKind() {
     return AUTH_TOKEN_TYPE;
+  }
+
+  protected static SaslAuthMethod createSaslAuthMethod(AuthMethod authMethod) {
+    return new SaslAuthMethod(authMethod.name(), authMethod.code, authMethod.mechanismName,
+      authMethod.authenticationMethod);
   }
 }

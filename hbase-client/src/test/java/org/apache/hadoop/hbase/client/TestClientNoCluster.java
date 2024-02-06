@@ -138,8 +138,8 @@ public class TestClientNoCluster extends Configured implements Tool {
   static class SimpleRegistry extends DoNothingConnectionRegistry {
     final ServerName META_HOST = META_SERVERNAME;
 
-    public SimpleRegistry(Configuration conf) {
-      super(conf);
+    public SimpleRegistry(Configuration conf, User user) {
+      super(conf, user);
     }
 
     @Override

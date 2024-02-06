@@ -34,6 +34,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ConnectionRegistryService;
 
 /** A call waiting for a value. */
 @InterfaceAudience.Private
@@ -155,5 +156,9 @@ class Call {
 
   public long getStartTime() {
     return this.callStats.getStartTime();
+  }
+
+  public boolean isConnectionRegistryCall() {
+    return md.getService().equals(ConnectionRegistryService.getDescriptor());
   }
 }

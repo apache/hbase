@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.IPCUtil.buildRequestHeader;
-import static org.apache.hadoop.hbase.ipc.IPCUtil.getTotalSizeWhenWrittenDelimited;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.setCancelled;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.write;
 
@@ -44,7 +43,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
@@ -65,19 +63,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
-import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.PooledByteBufAllocator;
 
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeader;
 
 /**
  * Thread that reads responses and notifies callers. Each connection owns a socket connected to a
@@ -226,7 +219,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   BlockingRpcConnection(BlockingRpcClient rpcClient, ConnectionId remoteId) throws IOException {
     super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
       rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor,
-      rpcClient.metrics, rpcClient.connectionAttributes);
+      rpcClient.cellBlockBuilder, rpcClient.metrics, rpcClient.connectionAttributes);
     this.rpcClient = rpcClient;
     this.connectionHeaderPreamble = getConnectionHeaderPreamble();
     ConnectionHeader header = getConnectionHeader();
@@ -482,6 +475,15 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     });
   }
 
+  private void getConnectionRegistry(OutputStream outStream) throws IOException {
+    outStream.write(RpcClient.REGISTRY_PREAMBLE_HEADER);
+  }
+
+  private void createStreams(InputStream inStream, OutputStream outStream) {
+    this.in = new DataInputStream(new BufferedInputStream(inStream));
+    this.out = new DataOutputStream(new BufferedOutputStream(outStream));
+  }
+
   private void setupIOstreams() throws IOException {
     if (socket != null) {
       // The connection is already available. Perfect.
@@ -509,6 +511,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         InputStream inStream = NetUtils.getInputStream(socket);
         // This creates a socket with a write timeout. This timeout cannot be changed.
         OutputStream outStream = NetUtils.getOutputStream(socket, this.rpcClient.writeTO);
+        if (connectionRegistryCall != null) {
+          getConnectionRegistry(outStream);
+          createStreams(inStream, outStream);
+          break;
+        }
         // Write out the preamble -- MAGIC, version, and auth to use.
         writeConnectionHeaderPreamble(outStream);
         if (useSasl) {
@@ -541,13 +548,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
             // reconnecting because regionserver may change its sasl config after restart.
           }
         }
-        this.in = new DataInputStream(new BufferedInputStream(inStream));
-        this.out = new DataOutputStream(new BufferedOutputStream(outStream));
+        createStreams(inStream, outStream);
         // Now write out the connection header
         writeConnectionHeader();
         // process the response from server for connection header if necessary
         processResponseForConnectionHeader();
-
         break;
       }
     } catch (Throwable t) {
@@ -658,7 +663,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         cellBlockMeta = null;
       }
       RequestHeader requestHeader = buildRequestHeader(call, cellBlockMeta);
-
+      if (call.isConnectionRegistryCall()) {
+        connectionRegistryCall = call;
+      }
       setupIOstreams();
 
       // Now we're going to write the call. We take the lock, then check that the connection
@@ -693,83 +700,19 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
    * Receive a response. Because only one receiver, so no synchronization on in.
    */
   private void readResponse() {
-    Call call = null;
-    boolean expectedCall = false;
     try {
-      // See HBaseServer.Call.setResponse for where we write out the response.
-      // Total size of the response. Unused. But have to read it in anyways.
-      int totalSize = in.readInt();
-
-      // Read the header
-      ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(in);
-      int id = responseHeader.getCallId();
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("got response header " + TextFormat.shortDebugString(responseHeader)
-          + ", totalSize: " + totalSize + " bytes");
-      }
-      RemoteException remoteExc;
-      if (responseHeader.hasException()) {
-        ExceptionResponse exceptionResponse = responseHeader.getException();
-        remoteExc = IPCUtil.createRemoteException(exceptionResponse);
-        if (IPCUtil.isFatalConnectionException(exceptionResponse)) {
-          // Here we will cleanup all calls so do not need to fall back, just return.
-          synchronized (this) {
-            closeConn(remoteExc);
-          }
-          return;
+      readResponse(in, calls, remoteExc -> {
+        synchronized (this) {
+          closeConn(remoteExc);
         }
-      } else {
-        remoteExc = null;
-      }
-
-      call = calls.remove(id); // call.done have to be set before leaving this method
-      expectedCall = (call != null && !call.isDone());
-      if (!expectedCall) {
-        // So we got a response for which we have no corresponding 'call' here on the client-side.
-        // We probably timed out waiting, cleaned up all references, and now the server decides
-        // to return a response. There is nothing we can do w/ the response at this stage. Clean
-        // out the wire of the response so its out of the way and we can get other responses on
-        // this connection.
-        int readSoFar = getTotalSizeWhenWrittenDelimited(responseHeader);
-        int whatIsLeftToRead = totalSize - readSoFar;
-        LOG.debug("Unknown callId: " + id + ", skipping over this response of " + whatIsLeftToRead
-          + " bytes");
-        IOUtils.skipFully(in, whatIsLeftToRead);
-        if (call != null) {
-          call.callStats.setResponseSizeBytes(totalSize);
-        }
-        return;
-      }
-      call.callStats.setResponseSizeBytes(totalSize);
-      if (remoteExc != null) {
-        call.setException(remoteExc);
-        return;
-      }
-      Message value = null;
-      if (call.responseDefaultType != null) {
-        Message.Builder builder = call.responseDefaultType.newBuilderForType();
-        ProtobufUtil.mergeDelimitedFrom(builder, in);
-        value = builder.build();
-      }
-      CellScanner cellBlockScanner = null;
-      if (responseHeader.hasCellBlockMeta()) {
-        int size = responseHeader.getCellBlockMeta().getLength();
-        byte[] cellBlock = new byte[size];
-        IOUtils.readFully(this.in, cellBlock, 0, cellBlock.length);
-        cellBlockScanner =
-          this.rpcClient.cellBlockBuilder.createCellScanner(this.codec, this.compressor, cellBlock);
-      }
-      call.setResponse(value, cellBlockScanner);
+      });
     } catch (IOException e) {
-      if (expectedCall) {
-        call.setException(e);
-      }
       if (e instanceof SocketTimeoutException) {
         // Clean up open calls but don't treat this as a fatal condition,
         // since we expect certain responses to not make it by the specified
         // {@link ConnectionId#rpcTimeout}.
         if (LOG.isTraceEnabled()) {
-          LOG.trace("ignored ex for call {}", call, e);
+          LOG.trace("ignored", e);
         }
       } else {
         synchronized (this) {
@@ -777,7 +720,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
           // this connection. It's possible that before getting to this point, a new connection was
           // created. In that case, it doesn't help and can actually hurt to close again here.
           if (isCurrentThreadExpected()) {
-            LOG.debug("Closing connection after error in call {}", call, e);
+            LOG.debug("Closing connection after error", e);
             closeConn(e);
           }
         }

@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -513,8 +514,8 @@ public class TestAsyncProcess {
   static class MyConnectionImpl extends ConnectionImplementation {
     public static class TestRegistry extends DoNothingConnectionRegistry {
 
-      public TestRegistry(Configuration conf) {
-        super(conf);
+      public TestRegistry(Configuration conf, User user) {
+        super(conf, user);
       }
 
       @Override

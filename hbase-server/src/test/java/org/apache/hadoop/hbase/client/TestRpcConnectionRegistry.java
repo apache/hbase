@@ -17,22 +17,29 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.BootstrapNodeManager;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
@@ -43,6 +50,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ MediumTests.class, ClientTests.class })
@@ -74,7 +82,7 @@ public class TestRpcConnectionRegistry {
 
   @Before
   public void setUp() throws IOException {
-    registry = new RpcConnectionRegistry(UTIL.getConfiguration());
+    registry = new RpcConnectionRegistry(UTIL.getConfiguration(), User.getCurrent());
   }
 
   @After
@@ -94,9 +102,20 @@ public class TestRpcConnectionRegistry {
   @Test
   public void testRegistryRPCs() throws Exception {
     HMaster activeMaster = UTIL.getHBaseCluster().getMaster();
-    // sleep 3 seconds, since our initial delay is 1 second, we should have refreshed the endpoints
-    Thread.sleep(3000);
-    assertThat(registry.getParsedServers(),
+    // should only contains the active master
+    Set<ServerName> initialParsedServers = registry.getParsedServers();
+    assertThat(initialParsedServers, hasSize(1));
+    // no start code in configuration
+    assertThat(initialParsedServers,
+      hasItem(ServerName.valueOf(activeMaster.getServerName().getHostname(),
+        activeMaster.getServerName().getPort(), -1)));
+    // Since our initial delay is 1 second, finally we should have refreshed the endpoints
+    UTIL.waitFor(5000, () -> registry.getParsedServers()
+      .contains(activeMaster.getServerManager().getOnlineServersList().get(0)));
+    Set<ServerName> parsedServers = registry.getParsedServers();
+    assertThat(parsedServers,
+      hasSize(activeMaster.getServerManager().getOnlineServersList().size()));
+    assertThat(parsedServers,
       hasItems(activeMaster.getServerManager().getOnlineServersList().toArray(new ServerName[0])));
 
     // Add wait on all replicas being assigned before proceeding w/ test. Failed on occasion
@@ -116,5 +135,33 @@ public class TestRpcConnectionRegistry {
     // test that the node count config works
     setMaxNodeCount(1);
     UTIL.waitFor(10000, () -> registry.getParsedServers().size() == 1);
+  }
+
+  /**
+   * Make sure that we can create the RpcClient when there are broken servers in the bootstrap nodes
+   */
+  @Test
+  public void testBrokenBootstrapNodes() throws Exception {
+    Configuration conf = new Configuration(UTIL.getConfiguration());
+    String currentMasterAddrs = Preconditions.checkNotNull(conf.get(HConstants.MASTER_ADDRS_KEY));
+    HMaster activeMaster = UTIL.getHBaseCluster().getMaster();
+    String clusterId = activeMaster.getClusterId();
+    // Add a non-working master
+    ServerName badServer = ServerName.valueOf("localhost", 1234, -1);
+    conf.set(RpcConnectionRegistry.BOOTSTRAP_NODES, badServer.toShortString());
+    // only a bad server, the request should fail
+    try (RpcConnectionRegistry reg = new RpcConnectionRegistry(conf, User.getCurrent())) {
+      assertThrows(IOException.class, () -> reg.getParsedServers());
+    }
+
+    conf.set(RpcConnectionRegistry.BOOTSTRAP_NODES,
+      badServer.toShortString() + ", " + currentMasterAddrs);
+    // we will choose bootstrap node randomly so here we need to test it multiple times to make sure
+    // that we can skip the broken node
+    for (int i = 0; i < 10; i++) {
+      try (RpcConnectionRegistry reg = new RpcConnectionRegistry(conf, User.getCurrent())) {
+        assertEquals(clusterId, reg.getClusterId().get());
+      }
+    }
   }
 }

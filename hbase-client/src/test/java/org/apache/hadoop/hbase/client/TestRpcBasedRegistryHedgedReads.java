@@ -58,7 +58,9 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ConnectionRegistryService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClusterIdResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetConnectionRegistryResponse;
 
 @Category({ ClientTests.class, SmallTests.class })
 public class TestRpcBasedRegistryHedgedReads {
@@ -132,6 +134,12 @@ public class TestRpcBasedRegistryHedgedReads {
     @Override
     public void callMethod(MethodDescriptor method, RpcController controller, Message request,
       Message responsePrototype, RpcCallback<Message> done) {
+      if (method.getService().equals(ConnectionRegistryService.getDescriptor())) {
+        // this is for setting up the rpc client
+        done.run(
+          GetConnectionRegistryResponse.newBuilder().setClusterId(RESP.getClusterId()).build());
+        return;
+      }
       if (!method.getName().equals("GetClusterId")) {
         // On RPC failures, MasterRegistry internally runs getMasters() RPC to keep the master list
         // fresh. We do not want to intercept those RPCs here and double count.
@@ -155,9 +163,9 @@ public class TestRpcBasedRegistryHedgedReads {
   private AbstractRpcBasedConnectionRegistry createRegistry(int hedged) throws IOException {
     Configuration conf = UTIL.getConfiguration();
     conf.setInt(HEDGED_REQS_FANOUT_CONFIG_NAME, hedged);
-    return new AbstractRpcBasedConnectionRegistry(conf, HEDGED_REQS_FANOUT_CONFIG_NAME,
-      INITIAL_DELAY_SECS_CONFIG_NAME, REFRESH_INTERVAL_SECS_CONFIG_NAME,
-      MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME) {
+    return new AbstractRpcBasedConnectionRegistry(conf, User.getCurrent(),
+      HEDGED_REQS_FANOUT_CONFIG_NAME, INITIAL_DELAY_SECS_CONFIG_NAME,
+      REFRESH_INTERVAL_SECS_CONFIG_NAME, MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME) {
 
       @Override
       protected Set<ServerName> getBootstrapNodes(Configuration conf) throws IOException {
