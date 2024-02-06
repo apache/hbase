@@ -109,7 +109,9 @@ public class DualFileWriter extends AbstractMultiFileWriter {
       if (
         deleteFamilyVersion.getTimestamp() == cell.getTimestamp()
           && (!newVersionBehavior || cell.getSequenceId() < deleteFamilyVersion.getSequenceId())
-      ) return true;
+      ) {
+        return true;
+      }
     }
     return false;
   }
@@ -125,7 +127,9 @@ public class DualFileWriter extends AbstractMultiFileWriter {
       if (
         deleteColumnVersion.getTimestamp() == cell.getTimestamp()
           && (!newVersionBehavior || cell.getSequenceId() < deleteColumnVersion.getSequenceId())
-      ) return true;
+      ) {
+        return true;
+      }
     }
     return false;
   }
