@@ -83,14 +83,18 @@ public class QuotaUtil extends QuotaTableUtil {
    * explicitly permitted by a persisted quota. All of these defaults use TimeUnit.SECONDS and
    * QuotaScope.MACHINE.
    */
-  public static final String QUOTA_DEFAULT_USER_MACHINE_READ_SIZE =
-    "hbase.quota.default.user.machine.read.size";
   public static final String QUOTA_DEFAULT_USER_MACHINE_READ_NUM =
     "hbase.quota.default.user.machine.read.num";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_READ_SIZE =
+    "hbase.quota.default.user.machine.read.size";
   public static final String QUOTA_DEFAULT_USER_MACHINE_REQUEST_NUM =
-    "hbase.quota.default.user.machine.req.num";
+    "hbase.quota.default.user.machine.request.num";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_REQUEST_SIZE =
+    "hbase.quota.default.user.machine.request.size";
   public static final String QUOTA_DEFAULT_USER_MACHINE_WRITE_NUM =
     "hbase.quota.default.user.machine.write.num";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_WRITE_SIZE =
+    "hbase.quota.default.user.machine.write.size";
 
   /** Table descriptor for Quota internal table */
   public static final TableDescriptor QUOTA_TABLE_DESC =
@@ -347,14 +351,18 @@ public class QuotaUtil extends QuotaTableUtil {
   protected static UserQuotaState buildDefaultUserQuotaState(Configuration conf) {
     QuotaProtos.Throttle.Builder throttleBuilder = QuotaProtos.Throttle.newBuilder();
 
-    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_READ_SIZE)
-      .ifPresent(throttleBuilder::setReadSize);
     buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_READ_NUM)
       .ifPresent(throttleBuilder::setReadNum);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_READ_SIZE)
+      .ifPresent(throttleBuilder::setReadSize);
     buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_REQUEST_NUM)
       .ifPresent(throttleBuilder::setReqNum);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_REQUEST_SIZE)
+      .ifPresent(throttleBuilder::setReqSize);
     buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_WRITE_NUM)
       .ifPresent(throttleBuilder::setWriteNum);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_WRITE_SIZE)
+      .ifPresent(throttleBuilder::setWriteSize);
 
     UserQuotaState state = new UserQuotaState();
     QuotaProtos.Quotas defaultQuotas =
