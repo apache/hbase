@@ -110,7 +110,7 @@ module Shell
     def exit(ret = 0)
       # Non-deamon Netty threadpool in ZK ClientCnxnSocketNetty cannot be shut down otherwise
       begin
-        self.hbase.shutdown
+        hbase.shutdown
       rescue Exception
       end
       @exit_code = ret
