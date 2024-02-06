@@ -2438,7 +2438,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       byte[] row = generateRow(i);
       Delete delete = new Delete(row);
       for (int family = 0; family < opts.families; family++) {
-        byte familyName[] = Bytes.toBytes(FAMILY_NAME_BASE + family);
+        byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
         delete.addFamily(familyName);
       }
       delete.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
