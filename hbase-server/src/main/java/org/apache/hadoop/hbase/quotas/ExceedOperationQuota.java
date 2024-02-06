@@ -40,9 +40,9 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
   private static final Logger LOG = LoggerFactory.getLogger(ExceedOperationQuota.class);
   private QuotaLimiter regionServerLimiter;
 
-  public ExceedOperationQuota(final Configuration conf, QuotaLimiter regionServerLimiter,
-    final QuotaLimiter... limiters) {
-    super(conf, limiters);
+  public ExceedOperationQuota(final Configuration conf, int blockSizeBytes,
+    QuotaLimiter regionServerLimiter, final QuotaLimiter... limiters) {
+    super(conf, blockSizeBytes, limiters);
     this.regionServerLimiter = regionServerLimiter;
   }
 
