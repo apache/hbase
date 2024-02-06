@@ -34,6 +34,7 @@ import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -42,8 +43,10 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 import io.opentelemetry.api.common.AttributeKey;
@@ -63,12 +66,18 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseServerBase;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MatcherPredicate;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.hamcrest.Matcher;
 import org.junit.Rule;
@@ -78,6 +87,8 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
@@ -88,6 +99,9 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.PauseReq
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.Interface;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ConnectionRegistryService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetConnectionRegistryRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetConnectionRegistryResponse;
 
 /**
  * Some basic ipc tests.
@@ -105,9 +119,14 @@ public abstract class AbstractTestIPC {
     CONF.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, SimpleRpcServer.class.getName());
   }
 
-  protected abstract RpcServer createRpcServer(final String name,
-    final List<BlockingServiceAndInterface> services, final InetSocketAddress bindAddress,
-    Configuration conf, RpcScheduler scheduler) throws IOException;
+  protected abstract RpcServer createRpcServer(Server server, String name,
+    List<BlockingServiceAndInterface> services, InetSocketAddress bindAddress, Configuration conf,
+    RpcScheduler scheduler) throws IOException;
+
+  private RpcServer createRpcServer(String name, List<BlockingServiceAndInterface> services,
+    InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler) throws IOException {
+    return createRpcServer(null, name, services, bindAddress, conf, scheduler);
+  }
 
   protected abstract AbstractRpcClient<?> createRpcClientNoCodec(Configuration conf);
 
@@ -566,6 +585,64 @@ public abstract class AbstractTestIPC {
       assertThat(ioe.getMessage(), containsString("authName=unknown"));
     } finally {
       rpcServer.stop();
+    }
+  }
+
+  /**
+   * Testcase for getting connection registry information through connection preamble header, see
+   * HBASE-25051 for more details.
+   */
+  @Test
+  public void testGetConnectionRegistry() throws IOException, ServiceException {
+    Configuration clientConf = new Configuration(CONF);
+    String clusterId = "test_cluster_id";
+    HBaseServerBase<?> server = mock(HBaseServerBase.class);
+    when(server.getClusterId()).thenReturn(clusterId);
+    // do not need any services
+    RpcServer rpcServer = createRpcServer(server, "testRpcServer", Collections.emptyList(),
+      new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
+    try (AbstractRpcClient<?> client = createRpcClient(clientConf)) {
+      rpcServer.start();
+      InetSocketAddress addr = rpcServer.getListenerAddress();
+      BlockingRpcChannel channel =
+        client.createBlockingRpcChannel(ServerName.valueOf(addr.getHostName(), addr.getPort(),
+          EnvironmentEdgeManager.currentTime()), User.getCurrent(), 0);
+      ConnectionRegistryService.BlockingInterface stub =
+        ConnectionRegistryService.newBlockingStub(channel);
+      GetConnectionRegistryResponse resp =
+        stub.getConnectionRegistry(null, GetConnectionRegistryRequest.getDefaultInstance());
+      assertEquals(clusterId, resp.getClusterId());
+    }
+  }
+
+  /**
+   * Test server does not support getting connection registry information through connection
+   * preamble header, i.e, a new client connecting to an old server. We simulate this by using a
+   * Server without implementing the ConnectionRegistryEndpoint interface.
+   */
+  @Test
+  public void testGetConnectionRegistryError() throws IOException, ServiceException {
+    Configuration clientConf = new Configuration(CONF);
+    // do not need any services
+    RpcServer rpcServer = createRpcServer("testRpcServer", Collections.emptyList(),
+      new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
+    try (AbstractRpcClient<?> client = createRpcClient(clientConf)) {
+      rpcServer.start();
+      InetSocketAddress addr = rpcServer.getListenerAddress();
+      RpcChannel channel = client.createRpcChannel(ServerName.valueOf(addr.getHostName(),
+        addr.getPort(), EnvironmentEdgeManager.currentTime()), User.getCurrent(), 0);
+      ConnectionRegistryService.Interface stub = ConnectionRegistryService.newStub(channel);
+      HBaseRpcController pcrc = new HBaseRpcControllerImpl();
+      BlockingRpcCallback<GetConnectionRegistryResponse> done = new BlockingRpcCallback<>();
+      stub.getConnectionRegistry(pcrc, GetConnectionRegistryRequest.getDefaultInstance(), done);
+      // should have failed so no response
+      assertNull(done.get());
+      assertTrue(pcrc.failed());
+      // should be a FatalConnectionException
+      assertThat(pcrc.getFailed(), instanceOf(RemoteException.class));
+      assertEquals(FatalConnectionException.class.getName(),
+        ((RemoteException) pcrc.getFailed()).getClassName());
+      assertThat(pcrc.getFailed().getMessage(), startsWith("Expected HEADER="));
     }
   }
 }

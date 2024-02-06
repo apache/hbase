@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
@@ -103,10 +104,10 @@ public class TestNettyIPC extends AbstractTestIPC {
   }
 
   @Override
-  protected RpcServer createRpcServer(String name,
+  protected RpcServer createRpcServer(Server server, String name,
     List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
     Configuration conf, RpcScheduler scheduler) throws IOException {
-    return new NettyRpcServer(null, name, services, bindAddress, conf, scheduler, true);
+    return new NettyRpcServer(server, name, services, bindAddress, conf, scheduler, true);
   }
 
   @Override

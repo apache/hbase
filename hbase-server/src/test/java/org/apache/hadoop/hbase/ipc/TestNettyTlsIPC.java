@@ -31,6 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseServerBase;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.client.ConnectionRegistryEndpoint;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.crypto.tls.KeyStoreFileType;
 import org.apache.hadoop.hbase.io.crypto.tls.X509KeyType;
@@ -64,8 +66,6 @@ public class TestNettyTlsIPC extends AbstractTestIPC {
   private static X509TestContextProvider PROVIDER;
 
   private static NettyEventLoopGroupConfig EVENT_LOOP_GROUP_CONFIG;
-
-  private static HBaseServerBase<?> SERVER;
 
   @Parameterized.Parameter(0)
   public X509KeyType caKeyType;
@@ -115,8 +115,6 @@ public class TestNettyTlsIPC extends AbstractTestIPC {
     PROVIDER = new X509TestContextProvider(CONF, dir);
     EVENT_LOOP_GROUP_CONFIG =
       NettyEventLoopGroupConfig.setup(CONF, TestNettyTlsIPC.class.getSimpleName());
-    SERVER = mock(HBaseServerBase.class);
-    when(SERVER.getEventLoopGroupConfig()).thenReturn(EVENT_LOOP_GROUP_CONFIG);
   }
 
   @AfterClass
@@ -147,9 +145,16 @@ public class TestNettyTlsIPC extends AbstractTestIPC {
   }
 
   @Override
-  protected RpcServer createRpcServer(String name, List<BlockingServiceAndInterface> services,
-    InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler) throws IOException {
-    return new NettyRpcServer(SERVER, name, services, bindAddress, conf, scheduler, true);
+  protected RpcServer createRpcServer(Server server, String name,
+    List<BlockingServiceAndInterface> services, InetSocketAddress bindAddress, Configuration conf,
+    RpcScheduler scheduler) throws IOException {
+    HBaseServerBase<?> mockServer = mock(HBaseServerBase.class);
+    when(mockServer.getEventLoopGroupConfig()).thenReturn(EVENT_LOOP_GROUP_CONFIG);
+    if (server instanceof ConnectionRegistryEndpoint) {
+      String clusterId = ((ConnectionRegistryEndpoint) server).getClusterId();
+      when(mockServer.getClusterId()).thenReturn(clusterId);
+    }
+    return new NettyRpcServer(mockServer, name, services, bindAddress, conf, scheduler, true);
   }
 
   @Override
@@ -184,7 +189,9 @@ public class TestNettyTlsIPC extends AbstractTestIPC {
   protected RpcServer createTestFailingRpcServer(String name,
     List<BlockingServiceAndInterface> services, InetSocketAddress bindAddress, Configuration conf,
     RpcScheduler scheduler) throws IOException {
-    return new FailingNettyRpcServer(SERVER, name, services, bindAddress, conf, scheduler);
+    HBaseServerBase<?> mockServer = mock(HBaseServerBase.class);
+    when(mockServer.getEventLoopGroupConfig()).thenReturn(EVENT_LOOP_GROUP_CONFIG);
+    return new FailingNettyRpcServer(mockServer, name, services, bindAddress, conf, scheduler);
   }
 
   @Override

@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.RegionReplicaTestHelper.Locator;
 import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.trace.OpenTelemetryClassRule;
@@ -106,7 +107,8 @@ public class TestAsyncMetaRegionLocator {
       testUtil = miniClusterRule.getTestingUtility();
       HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, 3);
       testUtil.waitUntilNoRegionsInTransition();
-      registry = ConnectionRegistryFactory.getRegistry(testUtil.getConfiguration());
+      registry =
+        ConnectionRegistryFactory.getRegistry(testUtil.getConfiguration(), User.getCurrent());
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(testUtil, registry);
       admin.balancerSwitch(false).get();
       locator = new AsyncMetaRegionLocator(registry);

@@ -15,29 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase.util;
 
-import static org.apache.hadoop.hbase.HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
+import java.io.IOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Factory class to get the instance of configured connection registry.
+ * A supplier that throws IOException when get.
  */
 @InterfaceAudience.Private
-final class ConnectionRegistryFactory {
-
-  private ConnectionRegistryFactory() {
-  }
-
-  /** Returns The connection registry implementation to use. */
-  static ConnectionRegistry getRegistry(Configuration conf, User user) {
-    Class<? extends ConnectionRegistry> clazz =
-      conf.getClass(CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, RpcConnectionRegistry.class,
-        ConnectionRegistry.class);
-    return ReflectionUtils.newInstance(clazz, conf, user);
-  }
+@FunctionalInterface
+public interface IOExceptionSupplier<V> {
+  V get() throws IOException;
 }
