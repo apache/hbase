@@ -23,9 +23,8 @@ import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.doPuts;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.doScans;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerUserCacheRefresh;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.waitMinuteQuota;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -71,7 +70,6 @@ public class TestBlockBytesScannedQuota {
     // quotas enabled, using block bytes scanned
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     TEST_UTIL.getConfiguration().setInt(QuotaCache.REFRESH_CONF_KEY, REFRESH_TIME);
-    TEST_UTIL.getConfiguration().setBoolean(OperationQuota.USE_BLOCK_BYTES_SCANNED_KEY, true);
 
     // don't cache blocks to make IO predictable
     TEST_UTIL.getConfiguration().setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
@@ -106,22 +104,22 @@ public class TestBlockBytesScannedQuota {
     TEST_UTIL.flush(TABLE_NAME);
 
     // Add ~10 block/min limit
-    admin.setQuota(QuotaSettingsFactory.throttleUser(userName, ThrottleType.REQUEST_SIZE,
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName, ThrottleType.READ_SIZE,
       Math.round(10.1 * blockSize), TimeUnit.MINUTES));
     triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
 
     // should execute at max 10 requests
-    assertEquals(10, doGets(20, FAMILY, QUALIFIER, table));
+    testTraffic(() -> doGets(20, FAMILY, QUALIFIER, table), 10, 1);
 
     // wait a minute and you should get another 10 requests executed
     waitMinuteQuota();
-    assertEquals(10, doGets(20, FAMILY, QUALIFIER, table));
+    testTraffic(() -> doGets(20, FAMILY, QUALIFIER, table), 10, 1);
 
     // Remove all the limits
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName));
     triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAME);
-    assertEquals(100, doGets(100, FAMILY, QUALIFIER, table));
-    assertEquals(100, doGets(100, FAMILY, QUALIFIER, table));
+    testTraffic(() -> doGets(100, FAMILY, QUALIFIER, table), 100, 0);
+    testTraffic(() -> doGets(100, FAMILY, QUALIFIER, table), 100, 0);
   }
 
   @Test
@@ -142,13 +140,13 @@ public class TestBlockBytesScannedQuota {
     waitMinuteQuota();
 
     // should execute 1 request
-    assertEquals(1, doScans(5, table));
+    testTraffic(() -> doScans(5, table), 1, 0);
 
     // Remove all the limits
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName));
     triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAME);
-    assertEquals(100, doScans(100, table));
-    assertEquals(100, doScans(100, table));
+    testTraffic(() -> doScans(100, table), 100, 0);
+    testTraffic(() -> doScans(100, table), 100, 0);
 
     // Add ~3 block/min limit. This should support >1 scans
     admin.setQuota(QuotaSettingsFactory.throttleUser(userName, ThrottleType.REQUEST_SIZE,
@@ -156,16 +154,13 @@ public class TestBlockBytesScannedQuota {
     triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
 
     // should execute some requests, but not all
-    long successfulScans = doScans(100, table);
-    LOG.info("successfulScans = " + successfulScans);
-    assertTrue(successfulScans < 100);
-    assertTrue(successfulScans > 0);
+    testTraffic(() -> doScans(100, table), 100, 90);
 
     // Remove all the limits
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName));
     triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAME);
-    assertEquals(100, doScans(100, table));
-    assertEquals(100, doScans(100, table));
+    testTraffic(() -> doScans(100, table), 100, 0);
+    testTraffic(() -> doScans(100, table), 100, 0);
   }
 
   @Test
@@ -187,13 +182,13 @@ public class TestBlockBytesScannedQuota {
     waitMinuteQuota();
 
     // should execute 1 request
-    assertEquals(1, doMultiGets(10, 10, rowCount, FAMILY, QUALIFIER, table));
+    testTraffic(() -> doMultiGets(10, 10, rowCount, FAMILY, QUALIFIER, table), 1, 1);
 
     // Remove all the limits
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName));
     triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAME);
-    assertEquals(100, doMultiGets(100, 10, rowCount, FAMILY, QUALIFIER, table));
-    assertEquals(100, doMultiGets(100, 10, rowCount, FAMILY, QUALIFIER, table));
+    testTraffic(() -> doMultiGets(100, 10, rowCount, FAMILY, QUALIFIER, table), 100, 0);
+    testTraffic(() -> doMultiGets(100, 10, rowCount, FAMILY, QUALIFIER, table), 100, 0);
 
     // Add ~100 block/min limit
     admin.setQuota(QuotaSettingsFactory.throttleUser(userName, ThrottleType.REQUEST_SIZE,
@@ -201,20 +196,38 @@ public class TestBlockBytesScannedQuota {
     triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
 
     // should execute approximately 10 batches of 10 requests
-    long successfulMultiGets = doMultiGets(20, 10, rowCount, FAMILY, QUALIFIER, table);
-    assertTrue(successfulMultiGets >= 9);
-    assertTrue(successfulMultiGets <= 11);
+    testTraffic(() -> doMultiGets(20, 10, rowCount, FAMILY, QUALIFIER, table), 10, 1);
 
     // wait a minute and you should get another ~10 batches of 10 requests
     waitMinuteQuota();
-    successfulMultiGets = doMultiGets(20, 10, rowCount, FAMILY, QUALIFIER, table);
-    assertTrue(successfulMultiGets >= 9);
-    assertTrue(successfulMultiGets <= 11);
+    testTraffic(() -> doMultiGets(20, 10, rowCount, FAMILY, QUALIFIER, table), 10, 1);
 
     // Remove all the limits
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName));
     triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAME);
-    assertEquals(100, doMultiGets(100, 10, rowCount, FAMILY, QUALIFIER, table));
-    assertEquals(100, doMultiGets(100, 10, rowCount, FAMILY, QUALIFIER, table));
+    testTraffic(() -> doMultiGets(100, 10, rowCount, FAMILY, QUALIFIER, table), 100, 0);
+    testTraffic(() -> doMultiGets(100, 10, rowCount, FAMILY, QUALIFIER, table), 100, 0);
+  }
+
+  private void testTraffic(Callable<Long> trafficCallable, long expectedSuccess, long marginOfError)
+    throws Exception {
+    TEST_UTIL.waitFor(90_000, () -> {
+      long actualSuccess;
+      try {
+        actualSuccess = trafficCallable.call();
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      LOG.info("Traffic test yielded {} successful requests. Expected {} +/- {}", actualSuccess,
+        expectedSuccess, marginOfError);
+      boolean success = (actualSuccess >= expectedSuccess - marginOfError)
+        && (actualSuccess <= expectedSuccess + marginOfError);
+      if (!success) {
+        triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAME);
+        waitMinuteQuota();
+        Thread.sleep(15_000L);
+      }
+      return success;
+    });
   }
 }

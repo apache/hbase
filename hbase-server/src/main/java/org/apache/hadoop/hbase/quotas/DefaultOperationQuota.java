@@ -51,14 +51,14 @@ public class DefaultOperationQuota implements OperationQuota {
   protected long readDiff = 0;
   protected long writeCapacityUnitDiff = 0;
   protected long readCapacityUnitDiff = 0;
-  private boolean useBlockBytesScanned;
+  private boolean useResultSizeBytes;
   private long blockSizeBytes;
 
   public DefaultOperationQuota(final Configuration conf, final int blockSizeBytes,
     final QuotaLimiter... limiters) {
     this(conf, Arrays.asList(limiters));
-    this.useBlockBytesScanned =
-      conf.getBoolean(OperationQuota.USE_BLOCK_BYTES_SCANNED_KEY, USE_BLOCK_BYTES_SCANNED_DEFAULT);
+    this.useResultSizeBytes =
+      conf.getBoolean(OperationQuota.USE_RESULT_SIZE_BYTES, USE_RESULT_SIZE_BYTES_DEFAULT);
     this.blockSizeBytes = blockSizeBytes;
   }
 
@@ -105,12 +105,12 @@ public class DefaultOperationQuota implements OperationQuota {
 
     long resultSize =
       operationSize[OperationType.GET.ordinal()] + operationSize[OperationType.SCAN.ordinal()];
-    if (useBlockBytesScanned) {
+    if (useResultSizeBytes) {
+      readDiff = resultSize - readConsumed;
+    } else {
       long blockBytesScanned =
         RpcServer.getCurrentCall().map(RpcCall::getBlockBytesScanned).orElse(0L);
       readDiff = Math.max(blockBytesScanned, resultSize) - readConsumed;
-    } else {
-      readDiff = resultSize - readConsumed;
     }
 
     writeCapacityUnitDiff =
@@ -158,13 +158,13 @@ public class DefaultOperationQuota implements OperationQuota {
   protected void updateEstimateConsumeQuota(int numWrites, int numReads, int numScans) {
     writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);
 
-    if (useBlockBytesScanned) {
+    if (useResultSizeBytes) {
+      readConsumed = estimateConsume(OperationType.GET, numReads, 100);
+      readConsumed += estimateConsume(OperationType.SCAN, numScans, 1000);
+    } else {
       // assume 1 block required for reads. this is probably a low estimate, which is okay
       readConsumed = numReads > 0 ? blockSizeBytes : 0;
       readConsumed += numScans > 0 ? blockSizeBytes : 0;
-    } else {
-      readConsumed = estimateConsume(OperationType.GET, numReads, 100);
-      readConsumed += estimateConsume(OperationType.SCAN, numScans, 1000);
     }
 
     writeCapacityUnitConsumed = calculateWriteCapacityUnit(writeConsumed);

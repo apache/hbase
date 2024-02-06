@@ -35,8 +35,15 @@ public interface OperationQuota {
     SCAN
   }
 
-  String USE_BLOCK_BYTES_SCANNED_KEY = "hbase.quota.use.block.bytes.scanned";
-  boolean USE_BLOCK_BYTES_SCANNED_DEFAULT = false;
+  /**
+   * If false, the default, then IO based throttles will consume read availability based on the
+   * block bytes scanned by the given request. If true then IO based throttles will use result size
+   * rather than block bytes scanned. Using block bytes scanned should be preferable to using result
+   * size, because otherwise access patterns like heavily filtered scans may be able to produce a
+   * significant and effectively un-throttled workload.
+   */
+  String USE_RESULT_SIZE_BYTES = "hbase.quota.use.result.size.bytes";
+  boolean USE_RESULT_SIZE_BYTES_DEFAULT = false;
 
   /**
    * Checks if it is possible to execute the specified operation. The quota will be estimated based
