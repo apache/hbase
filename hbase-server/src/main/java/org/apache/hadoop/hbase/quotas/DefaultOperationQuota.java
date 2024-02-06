@@ -22,6 +22,8 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -49,9 +51,15 @@ public class DefaultOperationQuota implements OperationQuota {
   protected long readDiff = 0;
   protected long writeCapacityUnitDiff = 0;
   protected long readCapacityUnitDiff = 0;
+  private boolean useResultSizeBytes;
+  private long blockSizeBytes;
 
-  public DefaultOperationQuota(final Configuration conf, final QuotaLimiter... limiters) {
+  public DefaultOperationQuota(final Configuration conf, final int blockSizeBytes,
+    final QuotaLimiter... limiters) {
     this(conf, Arrays.asList(limiters));
+    this.useResultSizeBytes =
+      conf.getBoolean(OperationQuota.USE_RESULT_SIZE_BYTES, USE_RESULT_SIZE_BYTES_DEFAULT);
+    this.blockSizeBytes = blockSizeBytes;
   }
 
   /**
@@ -94,8 +102,17 @@ public class DefaultOperationQuota implements OperationQuota {
   public void close() {
     // Adjust the quota consumed for the specified operation
     writeDiff = operationSize[OperationType.MUTATE.ordinal()] - writeConsumed;
-    readDiff = operationSize[OperationType.GET.ordinal()]
-      + operationSize[OperationType.SCAN.ordinal()] - readConsumed;
+
+    long resultSize =
+      operationSize[OperationType.GET.ordinal()] + operationSize[OperationType.SCAN.ordinal()];
+    if (useResultSizeBytes) {
+      readDiff = resultSize - readConsumed;
+    } else {
+      long blockBytesScanned =
+        RpcServer.getCurrentCall().map(RpcCall::getBlockBytesScanned).orElse(0L);
+      readDiff = Math.max(blockBytesScanned, resultSize) - readConsumed;
+    }
+
     writeCapacityUnitDiff =
       calculateWriteCapacityUnitDiff(operationSize[OperationType.MUTATE.ordinal()], writeConsumed);
     readCapacityUnitDiff = calculateReadCapacityUnitDiff(
@@ -140,8 +157,15 @@ public class DefaultOperationQuota implements OperationQuota {
    */
   protected void updateEstimateConsumeQuota(int numWrites, int numReads, int numScans) {
     writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);
-    readConsumed = estimateConsume(OperationType.GET, numReads, 100);
-    readConsumed += estimateConsume(OperationType.SCAN, numScans, 1000);
+
+    if (useResultSizeBytes) {
+      readConsumed = estimateConsume(OperationType.GET, numReads, 100);
+      readConsumed += estimateConsume(OperationType.SCAN, numScans, 1000);
+    } else {
+      // assume 1 block required for reads. this is probably a low estimate, which is okay
+      readConsumed = numReads > 0 ? blockSizeBytes : 0;
+      readConsumed += numScans > 0 ? blockSizeBytes : 0;
+    }
 
     writeCapacityUnitConsumed = calculateWriteCapacityUnit(writeConsumed);
     readCapacityUnitConsumed = calculateReadCapacityUnit(readConsumed);
