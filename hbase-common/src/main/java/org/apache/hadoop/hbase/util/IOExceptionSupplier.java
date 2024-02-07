@@ -15,21 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.security.provider;
+package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.security.AuthMethod;
+import java.io.IOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Base client for client/server implementations for the "SIMPLE" HBase auth'n method.
+ * A supplier that throws IOException when get.
  */
 @InterfaceAudience.Private
-public class SimpleSaslAuthenticationProvider extends BuiltInSaslAuthenticationProvider {
-
-  public static final SaslAuthMethod SASL_AUTH_METHOD = createSaslAuthMethod(AuthMethod.SIMPLE);
-
-  @Override
-  public SaslAuthMethod getSaslAuthMethod() {
-    return SASL_AUTH_METHOD;
-  }
+@FunctionalInterface
+public interface IOExceptionSupplier<V> {
+  V get() throws IOException;
 }

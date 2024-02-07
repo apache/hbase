@@ -39,14 +39,6 @@ public class ConcurrentMapUtils {
   }
 
   /**
-   * A supplier that throws IOException when get.
-   */
-  @FunctionalInterface
-  public interface IOExceptionSupplier<V> {
-    V get() throws IOException;
-  }
-
-  /**
    * In HBASE-16648 we found that ConcurrentHashMap.get is much faster than computeIfAbsent if the
    * value already exists. So here we copy the implementation of
    * {@link ConcurrentMap#computeIfAbsent(Object, java.util.function.Function)}. It uses get and

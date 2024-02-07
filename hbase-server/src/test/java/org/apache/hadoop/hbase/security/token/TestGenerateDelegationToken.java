@@ -21,28 +21,31 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.NettyRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
+import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.AuthenticationService;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
@@ -90,24 +93,58 @@ public class TestGenerateDelegationToken extends SecureTestCluster {
       rpcClientImpl);
   }
 
-  @Test
-  public void test() throws Exception {
-    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-      Table table = conn.getTable(TableName.META_TABLE_NAME)) {
-      CoprocessorRpcChannel rpcChannel = table.coprocessorService(HConstants.EMPTY_START_ROW);
-      AuthenticationProtos.AuthenticationService.BlockingInterface service =
-        AuthenticationProtos.AuthenticationService.newBlockingStub(rpcChannel);
-      WhoAmIResponse response = service.whoAmI(null, WhoAmIRequest.getDefaultInstance());
+  private void testToken() throws Exception {
+    try (AsyncConnection conn =
+      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+      AsyncTable<?> table = conn.getTable(TableName.META_TABLE_NAME);
+      WhoAmIResponse response =
+        table.<AuthenticationService.Interface, WhoAmIResponse> coprocessorService(
+          AuthenticationService::newStub,
+          (s, c, r) -> s.whoAmI(c, WhoAmIRequest.getDefaultInstance(), r),
+          HConstants.EMPTY_START_ROW).get();
       assertEquals(USERNAME, response.getUsername());
       assertEquals(AuthenticationMethod.TOKEN.name(), response.getAuthMethod());
-      try {
-        service.getAuthenticationToken(null, GetAuthenticationTokenRequest.getDefaultInstance());
-      } catch (ServiceException e) {
-        IOException ioe = ProtobufUtil.getRemoteException(e);
-        assertThat(ioe, instanceOf(AccessDeniedException.class));
-        assertThat(ioe.getMessage(),
-          containsString("Token generation only allowed for Kerberos authenticated clients"));
-      }
+      IOException ioe =
+        assertThrows(IOException.class,
+          () -> FutureUtils.get(table.<AuthenticationService.Interface,
+            GetAuthenticationTokenResponse> coprocessorService(AuthenticationService::newStub,
+              (s, c, r) -> s.getAuthenticationToken(c,
+                GetAuthenticationTokenRequest.getDefaultInstance(), r),
+              HConstants.EMPTY_START_ROW)));
+      assertThat(ioe, instanceOf(AccessDeniedException.class));
+      assertThat(ioe.getMessage(),
+        containsString("Token generation only allowed for Kerberos authenticated clients"));
     }
+
+  }
+
+  /**
+   * Confirm that we will use delegation token first if token and kerberos tickets are both present
+   */
+  @Test
+  public void testTokenFirst() throws Exception {
+    testToken();
+  }
+
+  /**
+   * Confirm that we can connect to cluster successfully when there is only token present, i.e, no
+   * kerberos ticket
+   */
+  @Test
+  public void testOnlyToken() throws Exception {
+    User user =
+      User.createUserForTesting(TEST_UTIL.getConfiguration(), "no_krb_user", new String[0]);
+    for (Token<? extends TokenIdentifier> token : User.getCurrent().getUGI().getCredentials()
+      .getAllTokens()) {
+      user.getUGI().addToken(token);
+    }
+    user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
+
+      @Override
+      public Void run() throws Exception {
+        testToken();
+        return null;
+      }
+    });
   }
 }

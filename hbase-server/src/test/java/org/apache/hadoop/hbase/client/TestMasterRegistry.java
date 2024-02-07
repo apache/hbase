@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -38,6 +37,7 @@ import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
@@ -85,45 +85,39 @@ public class TestMasterRegistry {
    * Makes sure the master registry parses the master end points in the configuration correctly.
    */
   @Test
-  public void testMasterAddressParsing() throws IOException {
+  public void testMasterAddressParsing() throws Exception {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     int numMasters = 10;
     conf.set(HConstants.MASTER_ADDRS_KEY, generateDummyMastersList(numMasters));
-    try (MasterRegistry registry = new MasterRegistry(conf)) {
-      List<ServerName> parsedMasters = new ArrayList<>(registry.getParsedServers());
-      // Half of them would be without a port, duplicates are removed.
-      assertEquals(numMasters / 2 + 1, parsedMasters.size());
-      // Sort in the increasing order of port numbers.
-      Collections.sort(parsedMasters, Comparator.comparingInt(ServerName::getPort));
-      for (int i = 0; i < parsedMasters.size(); i++) {
-        ServerName sn = parsedMasters.get(i);
-        assertEquals("localhost", sn.getHostname());
-        if (i == parsedMasters.size() - 1) {
-          // Last entry should be the one with default port.
-          assertEquals(HConstants.DEFAULT_MASTER_PORT, sn.getPort());
-        } else {
-          assertEquals(1000 + (2 * i), sn.getPort());
-        }
+    List<ServerName> parsedMasters = new ArrayList<>(MasterRegistry.parseMasterAddrs(conf));
+    // Half of them would be without a port, duplicates are removed.
+    assertEquals(numMasters / 2 + 1, parsedMasters.size());
+    // Sort in the increasing order of port numbers.
+    Collections.sort(parsedMasters, Comparator.comparingInt(ServerName::getPort));
+    for (int i = 0; i < parsedMasters.size(); i++) {
+      ServerName sn = parsedMasters.get(i);
+      assertEquals("localhost", sn.getHostname());
+      if (i == parsedMasters.size() - 1) {
+        // Last entry should be the one with default port.
+        assertEquals(HConstants.DEFAULT_MASTER_PORT, sn.getPort());
+      } else {
+        assertEquals(1000 + (2 * i), sn.getPort());
       }
     }
   }
 
   @Test
-  public void testMasterPortDefaults() throws IOException {
+  public void testMasterPortDefaults() throws Exception {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set(HConstants.MASTER_ADDRS_KEY, "localhost");
-    try (MasterRegistry registry = new MasterRegistry(conf)) {
-      List<ServerName> parsedMasters = new ArrayList<>(registry.getParsedServers());
-      ServerName sn = parsedMasters.get(0);
-      assertEquals(HConstants.DEFAULT_MASTER_PORT, sn.getPort());
-    }
+    List<ServerName> parsedMasters = new ArrayList<>(MasterRegistry.parseMasterAddrs(conf));
+    ServerName sn = parsedMasters.get(0);
+    assertEquals(HConstants.DEFAULT_MASTER_PORT, sn.getPort());
     final int CUSTOM_MASTER_PORT = 9999;
     conf.setInt(HConstants.MASTER_PORT, CUSTOM_MASTER_PORT);
-    try (MasterRegistry registry = new MasterRegistry(conf)) {
-      List<ServerName> parsedMasters = new ArrayList<>(registry.getParsedServers());
-      ServerName sn = parsedMasters.get(0);
-      assertEquals(CUSTOM_MASTER_PORT, sn.getPort());
-    }
+    parsedMasters = new ArrayList<>(MasterRegistry.parseMasterAddrs(conf));
+    sn = parsedMasters.get(0);
+    assertEquals(CUSTOM_MASTER_PORT, sn.getPort());
   }
 
   @Test
@@ -134,7 +128,7 @@ public class TestMasterRegistry {
       activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get().size();
     for (int numHedgedReqs = 1; numHedgedReqs <= size; numHedgedReqs++) {
       conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
-      try (MasterRegistry registry = new MasterRegistry(conf)) {
+      try (MasterRegistry registry = new MasterRegistry(conf, User.getCurrent())) {
         // Add wait on all replicas being assigned before proceeding w/ test. Failed on occasion
         // because not all replicas had made it up before test started.
         RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, registry);
@@ -168,7 +162,7 @@ public class TestMasterRegistry {
     conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, 4);
     // Do not limit the number of refreshes during the test run.
     conf.setLong(MasterRegistry.MASTER_REGISTRY_MIN_SECS_BETWEEN_REFRESHES, 0);
-    try (MasterRegistry registry = new MasterRegistry(conf)) {
+    try (MasterRegistry registry = new MasterRegistry(conf, User.getCurrent())) {
       final Set<ServerName> masters = registry.getParsedServers();
       assertTrue(masters.contains(badServer));
       // Make a registry RPC, this should trigger a refresh since one of the hedged RPC fails.

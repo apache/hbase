@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.hamcrest.Matcher;
 import org.junit.Before;
@@ -114,7 +115,7 @@ public class TestTracingBase {
 
   static class RegistryForTracingTest implements ConnectionRegistry {
 
-    public RegistryForTracingTest(Configuration conf) {
+    public RegistryForTracingTest(Configuration conf, User user) {
     }
 
     @Override
