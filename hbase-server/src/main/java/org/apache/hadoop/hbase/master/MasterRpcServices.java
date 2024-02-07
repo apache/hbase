@@ -2279,10 +2279,11 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       List<ServerName> servers = request.getServerNameList().stream()
         .map(pbServer -> ProtobufUtil.toServerName(pbServer)).collect(Collectors.toList());
       boolean offload = request.getOffload();
+      boolean matchHostNameOnly = request.getMatchHostNameOnly();
       if (server.cpHost != null) {
         server.cpHost.preDecommissionRegionServers(servers, offload);
       }
-      server.decommissionRegionServers(servers, offload);
+      server.decommissionRegionServers(servers, offload, matchHostNameOnly);
       if (server.cpHost != null) {
         server.cpHost.postDecommissionRegionServers(servers, offload);
       }
