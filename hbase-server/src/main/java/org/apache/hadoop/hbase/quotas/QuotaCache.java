@@ -139,7 +139,8 @@ public class QuotaCache implements Stoppable {
    * @return the quota info associated to specified user
    */
   public UserQuotaState getUserQuotaState(final UserGroupInformation ugi) {
-    return computeIfAbsent(userQuotaCache, getQuotaUserName(ugi), UserQuotaState::new,
+    return computeIfAbsent(userQuotaCache, getQuotaUserName(ugi),
+      () -> QuotaUtil.buildDefaultUserQuotaState(rsServices.getConfiguration()),
       this::triggerCacheRefresh);
   }
 
