@@ -46,9 +46,11 @@ public class Lz4Codec implements Configurable, CompressionCodec {
   public static final String LZ4_BUFFER_SIZE_KEY = "hbase.io.compress.lz4.buffersize";
 
   private Configuration conf;
+  private int bufferSize;
 
   public Lz4Codec() {
     conf = new Configuration();
+    bufferSize = getBufferSize(conf);
   }
 
   @Override
@@ -59,6 +61,7 @@ public class Lz4Codec implements Configurable, CompressionCodec {
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+    this.bufferSize = getBufferSize(conf);
   }
 
   @Override
@@ -79,7 +82,7 @@ public class Lz4Codec implements Configurable, CompressionCodec {
   @Override
   public CompressionInputStream createInputStream(InputStream in, Decompressor d)
     throws IOException {
-    return new BlockDecompressorStream(in, d, getBufferSize(conf));
+    return new BlockDecompressorStream(in, d, bufferSize);
   }
 
   @Override
@@ -90,7 +93,6 @@ public class Lz4Codec implements Configurable, CompressionCodec {
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out, Compressor c)
     throws IOException {
-    int bufferSize = getBufferSize(conf);
     return new BlockCompressorStream(out, c, bufferSize,
       CompressionUtil.compressionOverhead(bufferSize));
   }
