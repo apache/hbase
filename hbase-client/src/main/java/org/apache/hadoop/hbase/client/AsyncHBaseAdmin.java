@@ -636,6 +636,12 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> decommissionRegionServers(List<ServerName> servers,
+    boolean offload, boolean matchHostNameOnly) {
+    return wrap(rawAdmin.decommissionRegionServers(servers, offload, matchHostNameOnly));
+  }
+
+  @Override
   public CompletableFuture<List<ServerName>> listDecommissionedRegionServers() {
     return wrap(rawAdmin.listDecommissionedRegionServers());
   }

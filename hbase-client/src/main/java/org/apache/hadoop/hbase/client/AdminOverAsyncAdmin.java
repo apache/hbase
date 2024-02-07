@@ -930,6 +930,12 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void decommissionRegionServers(List<ServerName> servers, boolean offload, boolean matchHostNameOnly)
+    throws IOException {
+    get(admin.decommissionRegionServers(servers, offload, matchHostNameOnly));
+  }
+
+  @Override
   public List<ServerName> listDecommissionedRegionServers() throws IOException {
     return get(admin.listDecommissionedRegionServers());
   }

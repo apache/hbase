@@ -1146,6 +1146,9 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Void> decommissionRegionServers(List<ServerName> servers, boolean offload);
 
+  CompletableFuture<Void> decommissionRegionServers(List<ServerName> servers, boolean offload,
+    boolean matchHostNameOnly);
+
   /**
    * List region servers marked as decommissioned, which can not be assigned regions.
    * @return List of decommissioned region servers wrapped by {@link CompletableFuture}

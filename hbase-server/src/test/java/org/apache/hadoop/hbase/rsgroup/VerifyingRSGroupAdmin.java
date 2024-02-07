@@ -715,6 +715,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.decommissionRegionServers(servers, offload);
   }
 
+  public void decommissionRegionServers(List<ServerName> servers, boolean offload, boolean matchHostNameOnly)
+    throws IOException {
+    admin.decommissionRegionServers(servers, offload, matchHostNameOnly);
+  }
+
   public List<ServerName> listDecommissionedRegionServers() throws IOException {
     return admin.listDecommissionedRegionServers();
   }
