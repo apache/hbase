@@ -54,6 +54,8 @@ public interface RpcClient extends Closeable {
   // The client in 0.99+ does not ping the server.
   int PING_CALL_ID = -1;
 
+  byte[] REGISTRY_PREAMBLE_HEADER = new byte[] { 'R', 'e', 'g', 'i', 's', 't' };
+
   /**
    * Creates a "channel" that can be used by a blocking protobuf service. Useful setting up protobuf
    * blocking stubs.

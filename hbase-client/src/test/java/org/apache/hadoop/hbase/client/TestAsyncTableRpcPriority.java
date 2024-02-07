@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -160,37 +161,38 @@ public class TestAsyncTableRpcPriority {
         return null;
       }
     }).when(stub).get(any(HBaseRpcController.class), any(GetRequest.class), any());
-    conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF), "test",
-      UserProvider.instantiate(CONF).getCurrent()) {
+    User user = UserProvider.instantiate(CONF).getCurrent();
+    conn =
+      new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF, user), "test", user) {
 
-      @Override
-      AsyncRegionLocator getLocator() {
-        AsyncRegionLocator locator = mock(AsyncRegionLocator.class);
-        Answer<CompletableFuture<HRegionLocation>> answer =
-          new Answer<CompletableFuture<HRegionLocation>>() {
+        @Override
+        AsyncRegionLocator getLocator() {
+          AsyncRegionLocator locator = mock(AsyncRegionLocator.class);
+          Answer<CompletableFuture<HRegionLocation>> answer =
+            new Answer<CompletableFuture<HRegionLocation>>() {
 
-            @Override
-            public CompletableFuture<HRegionLocation> answer(InvocationOnMock invocation)
-              throws Throwable {
-              TableName tableName = invocation.getArgument(0);
-              RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
-              ServerName serverName = ServerName.valueOf("rs", 16010, 12345);
-              HRegionLocation loc = new HRegionLocation(info, serverName);
-              return CompletableFuture.completedFuture(loc);
-            }
-          };
-        doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
-          any(RegionLocateType.class), anyLong());
-        doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
-          anyInt(), any(RegionLocateType.class), anyLong());
-        return locator;
-      }
+              @Override
+              public CompletableFuture<HRegionLocation> answer(InvocationOnMock invocation)
+                throws Throwable {
+                TableName tableName = invocation.getArgument(0);
+                RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
+                ServerName serverName = ServerName.valueOf("rs", 16010, 12345);
+                HRegionLocation loc = new HRegionLocation(info, serverName);
+                return CompletableFuture.completedFuture(loc);
+              }
+            };
+          doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
+            any(RegionLocateType.class), anyLong());
+          doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
+            anyInt(), any(RegionLocateType.class), anyLong());
+          return locator;
+        }
 
-      @Override
-      ClientService.Interface getRegionServerStub(ServerName serverName) throws IOException {
-        return stub;
-      }
-    };
+        @Override
+        ClientService.Interface getRegionServerStub(ServerName serverName) throws IOException {
+          return stub;
+        }
+      };
   }
 
   private HBaseRpcController assertPriority(int priority) {

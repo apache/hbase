@@ -56,6 +56,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.NotSslRecordException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ClientMetaService;
+
 /**
  * A simple UT to make sure that we do not leak the SslExceptions to netty's TailContext, where it
  * will generate a confusing WARN message.
@@ -149,11 +151,12 @@ public class TestTLSHandshadeFailure {
       Address.fromParts("127.0.0.1", server.getLocalPort()));
     NettyRpcConnection conn = client.createConnection(id);
     BlockingRpcCallback<Call> done = new BlockingRpcCallback<>();
-    Call call =
-      new Call(1, null, null, null, null, 0, 0, Collections.emptyMap(), done, new CallStats());
+    Call call = new Call(1, ClientMetaService.getDescriptor().getMethods().get(0), null, null, null,
+      0, 0, Collections.emptyMap(), done, new CallStats());
     HBaseRpcController hrc = new HBaseRpcControllerImpl();
     conn.sendRequest(call, hrc);
     done.get();
+    call.error.printStackTrace();
     assertThat(call.error, instanceOf(NotSslRecordException.class));
     Waiter.waitFor(conf, 5000, () -> msg.get() != null);
     verify(mockAppender).append(any());

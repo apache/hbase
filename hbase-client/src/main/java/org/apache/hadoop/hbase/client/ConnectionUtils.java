@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.ipc.FatalConnectionException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -622,5 +623,14 @@ public final class ConnectionUtils {
       optMetrics.ifPresent(
         metrics -> ResultStatsUtil.updateStats(metrics, serverName, regionName, regionLoadStats));
     });
+  }
+
+  static boolean isUnexpectedPreambleHeaderException(IOException e) {
+    if (!(e instanceof RemoteException)) {
+      return false;
+    }
+    RemoteException re = (RemoteException) e;
+    return FatalConnectionException.class.getName().equals(re.getClassName())
+      && re.getMessage().startsWith("Expected HEADER=");
   }
 }

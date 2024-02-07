@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.regionserver.BootstrapNodeManager;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.AfterClass;
@@ -65,7 +66,7 @@ public class TestBootstrapNodeUpdate {
     conf.setLong(RpcConnectionRegistry.PERIODIC_REFRESH_INTERVAL_SECS, 1);
     conf.setLong(RpcConnectionRegistry.MIN_SECS_BETWEEN_REFRESHES, 1);
     UTIL.startMiniCluster(3);
-    REGISTRY = new RpcConnectionRegistry(conf);
+    REGISTRY = new RpcConnectionRegistry(conf, UserProvider.instantiate(conf).getCurrent());
   }
 
   @AfterClass

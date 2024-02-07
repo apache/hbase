@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -62,15 +63,15 @@ public class TestAsyncConnectionTracing {
 
   @Before
   public void setUp() throws IOException {
-    ConnectionRegistry registry = new DoNothingConnectionRegistry(CONF) {
+    User user = UserProvider.instantiate(CONF).getCurrent();
+    ConnectionRegistry registry = new DoNothingConnectionRegistry(CONF, user) {
 
       @Override
       public CompletableFuture<ServerName> getActiveMaster() {
         return CompletableFuture.completedFuture(masterServer);
       }
     };
-    conn =
-      new AsyncConnectionImpl(CONF, registry, "test", UserProvider.instantiate(CONF).getCurrent());
+    conn = new AsyncConnectionImpl(CONF, registry, "test", user);
   }
 
   @After

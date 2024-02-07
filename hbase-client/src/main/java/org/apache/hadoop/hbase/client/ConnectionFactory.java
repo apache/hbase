@@ -310,7 +310,7 @@ public class ConnectionFactory {
     final User user, Map<String, byte[]> connectionAttributes) {
     return TraceUtil.tracedFuture(() -> {
       CompletableFuture<AsyncConnection> future = new CompletableFuture<>();
-      ConnectionRegistry registry = ConnectionRegistryFactory.getRegistry(conf);
+      ConnectionRegistry registry = ConnectionRegistryFactory.getRegistry(conf, user);
       addListener(registry.getClusterId(), (clusterId, error) -> {
         if (error != null) {
           registry.close();
