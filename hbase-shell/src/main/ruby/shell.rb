@@ -108,6 +108,11 @@ module Shell
     # exit the interactive shell and save that this
     # happend via a call to exit
     def exit(ret = 0)
+      # Non-deamon Netty threadpool in ZK ClientCnxnSocketNetty cannot be shut down otherwise
+      begin
+        hbase.shutdown
+      rescue Exception
+      end
       @exit_code = ret
       IRB.irb_exit(IRB.CurrentContext.irb, ret)
     end
