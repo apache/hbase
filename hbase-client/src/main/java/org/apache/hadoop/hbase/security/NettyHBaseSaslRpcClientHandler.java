@@ -145,6 +145,12 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
       // Mechanisms which have multiple steps will not return true on `SaslClient#isComplete()`
       // until the handshake has fully completed. Mechanisms which only send a single buffer may
       // return true on `isComplete()` after that initial response is calculated.
+
+      // HBASE-28337 We still want to check if the SaslClient completed the handshake, because
+      // there are certain mechs like PLAIN which doesn't have a server response after the
+      // initial authentication request. We cannot remove this tryComplete(), otherwise mechs
+      // like PLAIN will fail with call timeout.
+      tryComplete(ctx);
     } catch (Exception e) {
       // the exception thrown by handlerAdded will not be passed to the exceptionCaught below
       // because netty will remove a handler if handlerAdded throws an exception.
