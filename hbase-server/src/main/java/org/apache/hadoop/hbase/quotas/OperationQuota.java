@@ -32,7 +32,8 @@ public interface OperationQuota {
   public enum OperationType {
     MUTATE,
     GET,
-    SCAN
+    SCAN,
+    CHECK_AND_MUTATE
   }
 
   /**

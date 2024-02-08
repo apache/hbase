@@ -157,21 +157,22 @@ public class RegionServerRpcQuotaManager {
   /**
    * Check the quota for the current (rpc-context) user. Returns the OperationQuota used to get the
    * available quota and to report the data/usage of the operation.
-   * @param region   the region where the operation will be performed
-   * @param type     the operation type
-   * @param isAtomic whether the given operation is atomic
+   * @param region the region where the operation will be performed
+   * @param type   the operation type
    * @return the OperationQuota
    * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
-  public OperationQuota checkQuota(final Region region, final OperationQuota.OperationType type,
-    boolean isAtomic) throws IOException, RpcThrottlingException {
+  public OperationQuota checkQuota(final Region region, final OperationQuota.OperationType type)
+    throws IOException, RpcThrottlingException {
     switch (type) {
       case SCAN:
         return checkQuota(region, 0, 0, 1);
       case GET:
         return checkQuota(region, 0, 1, 0);
       case MUTATE:
-        return checkQuota(region, 1, isAtomic ? 1 : 0, 0);
+        return checkQuota(region, 1, 0, 0);
+      case CHECK_AND_MUTATE:
+        return checkQuota(region, 1, 1, 0);
     }
     throw new RuntimeException("Invalid operation type: " + type);
   }
@@ -179,24 +180,22 @@ public class RegionServerRpcQuotaManager {
   /**
    * Check the quota for the current (rpc-context) user. Returns the OperationQuota used to get the
    * available quota and to report the data/usage of the operation.
-   * @param region   the region where the operation will be performed
-   * @param actions  the "multi" actions to perform
-   * @param isAtomic whether the RegionAction is atomic
+   * @param region       the region where the operation will be performed
+   * @param actions      the "multi" actions to perform
+   * @param hasCondition whether the RegionAction has a condition
    * @return the OperationQuota
    * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
   public OperationQuota checkQuota(final Region region, final List<ClientProtos.Action> actions,
-    boolean isAtomic) throws IOException, RpcThrottlingException {
+    boolean hasCondition) throws IOException, RpcThrottlingException {
     int numWrites = 0;
     int numReads = 0;
     for (final ClientProtos.Action action : actions) {
       if (action.hasMutation()) {
         numWrites++;
-        ClientProtos.MutationProto.MutationType mutationType = action.getMutation().getMutateType();
-        if (
-          isAtomic || mutationType == ClientProtos.MutationProto.MutationType.APPEND
-            || mutationType == ClientProtos.MutationProto.MutationType.INCREMENT
-        ) {
+        OperationQuota.OperationType operationType =
+          QuotaUtil.getQuotaOperationType(action, hasCondition);
+        if (operationType == OperationQuota.OperationType.CHECK_AND_MUTATE) {
           numReads++;
         }
       } else if (action.hasGet()) {

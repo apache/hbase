@@ -85,7 +85,23 @@ public class TestAtomicReadQuota {
   }
 
   @Test
-  public void testRowMutationsCountedAgainstReadCapacity() throws Exception {
+  public void testConditionalRowMutationsCountedAgainstReadCapacity() throws Exception {
+    setupQuota();
+
+    byte[] row = Bytes.toBytes(UUID.randomUUID().toString());
+    Increment inc = new Increment(row);
+    inc.addColumn(FAMILY, Bytes.toBytes("doot"), 1);
+    Put put = new Put(row);
+    put.addColumn(FAMILY, Bytes.toBytes("doot"), Bytes.toBytes("v"));
+
+    RowMutations rowMutations = new RowMutations(row);
+    rowMutations.add(inc);
+    rowMutations.add(put);
+    testThrottle(table -> table.mutateRow(rowMutations));
+  }
+
+  @Test
+  public void testNonConditionalRowMutationsOmittedFromReadCapacity() throws Exception {
     setupQuota();
 
     byte[] row = Bytes.toBytes(UUID.randomUUID().toString());
@@ -94,7 +110,11 @@ public class TestAtomicReadQuota {
 
     RowMutations rowMutations = new RowMutations(row);
     rowMutations.add(put);
-    testThrottle(table -> table.mutateRow(rowMutations));
+    try (Table table = getTable()) {
+      for (int i = 0; i < 100; i++) {
+        table.mutateRow(rowMutations);
+      }
+    }
   }
 
   @Test

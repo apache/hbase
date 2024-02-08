@@ -2462,7 +2462,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       }
       Boolean existence = null;
       Result r = null;
-      quota = getRpcQuotaManager().checkQuota(region, OperationQuota.OperationType.GET, false);
+      quota = getRpcQuotaManager().checkQuota(region, OperationQuota.OperationType.GET);
 
       Get clientGet = ProtobufUtil.toGet(get);
       if (get.getExistenceOnly() && region.getCoprocessorHost() != null) {
@@ -2680,7 +2680,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       try {
         region = getRegion(regionSpecifier);
         quota = getRpcQuotaManager().checkQuota(region, regionAction.getActionList(),
-          regionAction.getAtomic());
+          regionAction.hasCondition());
       } catch (IOException e) {
         failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner, e);
         return responseBuilder.build();
@@ -2743,7 +2743,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       try {
         region = getRegion(regionSpecifier);
         quota = getRpcQuotaManager().checkQuota(region, regionAction.getActionList(),
-          regionAction.getAtomic());
+          regionAction.hasCondition());
       } catch (IOException e) {
         failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner, e);
         continue; // For this region it's a failure.
@@ -2926,11 +2926,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         server.getMemStoreFlusher().reclaimMemStoreMemory();
       }
       long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
-      MutationType mutationType = mutation.getMutateType();
-      boolean isAtomic = request.hasCondition() || mutationType == MutationType.INCREMENT
-        || mutationType == MutationType.APPEND;
-      quota =
-        getRpcQuotaManager().checkQuota(region, OperationQuota.OperationType.MUTATE, isAtomic);
+      OperationQuota.OperationType operationType = QuotaUtil.getQuotaOperationType(request);
+      quota = getRpcQuotaManager().checkQuota(region, operationType);
       ActivePolicyEnforcement spaceQuotaEnforcement =
         getSpaceQuotaManager().getActiveEnforcements();
 
@@ -3589,7 +3586,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     }
     OperationQuota quota;
     try {
-      quota = getRpcQuotaManager().checkQuota(region, OperationQuota.OperationType.SCAN, false);
+      quota = getRpcQuotaManager().checkQuota(region, OperationQuota.OperationType.SCAN);
     } catch (IOException e) {
       addScannerLeaseBack(lease);
       throw new ServiceException(e);

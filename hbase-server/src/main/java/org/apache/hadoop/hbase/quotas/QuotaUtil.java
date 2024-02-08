@@ -51,6 +51,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TimeUnit;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.QuotaScope;
@@ -175,6 +176,37 @@ public class QuotaUtil extends QuotaTableUtil {
   public static void deleteRegionServerQuota(final Connection connection, final String regionServer)
     throws IOException {
     deleteQuotas(connection, getRegionServerRowKey(regionServer));
+  }
+
+  public static OperationQuota.OperationType getQuotaOperationType(ClientProtos.Action action,
+    boolean hasCondition) {
+    if (action.hasMutation() && hasCondition) {
+      return OperationQuota.OperationType.CHECK_AND_MUTATE;
+    } else if (action.hasMutation()) {
+      ClientProtos.MutationProto.MutationType mutationType = action.getMutation().getMutateType();
+      if (
+        mutationType == ClientProtos.MutationProto.MutationType.APPEND
+          || mutationType == ClientProtos.MutationProto.MutationType.INCREMENT
+      ) {
+        return OperationQuota.OperationType.CHECK_AND_MUTATE;
+      }
+      return OperationQuota.OperationType.MUTATE;
+    }
+    return OperationQuota.OperationType.GET;
+  }
+
+  public static OperationQuota.OperationType
+    getQuotaOperationType(ClientProtos.MutateRequest mutateRequest) {
+    ClientProtos.MutationProto.MutationType mutationType =
+      mutateRequest.getMutation().getMutateType();
+    if (
+      mutateRequest.hasCondition() || mutationType == ClientProtos.MutationProto.MutationType.APPEND
+        || mutationType == ClientProtos.MutationProto.MutationType.INCREMENT
+    ) {
+      return OperationQuota.OperationType.CHECK_AND_MUTATE;
+    } else {
+      return OperationQuota.OperationType.MUTATE;
+    }
   }
 
   protected static void switchExceedThrottleQuota(final Connection connection,
