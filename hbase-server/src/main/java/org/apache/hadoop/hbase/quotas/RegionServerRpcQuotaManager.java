@@ -181,7 +181,7 @@ public class RegionServerRpcQuotaManager {
    * available quota and to report the data/usage of the operation.
    * @param region   the region where the operation will be performed
    * @param actions  the "multi" actions to perform
-   * @param isAtomic whether the given operation is atomic
+   * @param isAtomic whether the RegionAction is atomic
    * @return the OperationQuota
    * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
@@ -192,7 +192,11 @@ public class RegionServerRpcQuotaManager {
     for (final ClientProtos.Action action : actions) {
       if (action.hasMutation()) {
         numWrites++;
-        if (isAtomic) {
+        ClientProtos.MutationProto.MutationType mutationType = action.getMutation().getMutateType();
+        if (
+          isAtomic || mutationType == ClientProtos.MutationProto.MutationType.APPEND
+            || mutationType == ClientProtos.MutationProto.MutationType.INCREMENT
+        ) {
           numReads++;
         }
       } else if (action.hasGet()) {
