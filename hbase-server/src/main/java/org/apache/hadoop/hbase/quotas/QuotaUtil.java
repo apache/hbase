@@ -180,33 +180,27 @@ public class QuotaUtil extends QuotaTableUtil {
 
   public static OperationQuota.OperationType getQuotaOperationType(ClientProtos.Action action,
     boolean hasCondition) {
-    if (action.hasMutation() && hasCondition) {
-      return OperationQuota.OperationType.CHECK_AND_MUTATE;
-    } else if (action.hasMutation()) {
-      ClientProtos.MutationProto.MutationType mutationType = action.getMutation().getMutateType();
-      if (
-        mutationType == ClientProtos.MutationProto.MutationType.APPEND
-          || mutationType == ClientProtos.MutationProto.MutationType.INCREMENT
-      ) {
-        return OperationQuota.OperationType.CHECK_AND_MUTATE;
-      }
-      return OperationQuota.OperationType.MUTATE;
+    if (action.hasMutation()) {
+      return getQuotaOperationType(action.getMutation(), hasCondition);
     }
     return OperationQuota.OperationType.GET;
   }
 
   public static OperationQuota.OperationType
     getQuotaOperationType(ClientProtos.MutateRequest mutateRequest) {
-    ClientProtos.MutationProto.MutationType mutationType =
-      mutateRequest.getMutation().getMutateType();
+    return getQuotaOperationType(mutateRequest.getMutation(), mutateRequest.hasCondition());
+  }
+
+  private static OperationQuota.OperationType
+    getQuotaOperationType(ClientProtos.MutationProto mutationProto, boolean hasCondition) {
+    ClientProtos.MutationProto.MutationType mutationType = mutationProto.getMutateType();
     if (
-      mutateRequest.hasCondition() || mutationType == ClientProtos.MutationProto.MutationType.APPEND
+      hasCondition || mutationType == ClientProtos.MutationProto.MutationType.APPEND
         || mutationType == ClientProtos.MutationProto.MutationType.INCREMENT
     ) {
       return OperationQuota.OperationType.CHECK_AND_MUTATE;
-    } else {
-      return OperationQuota.OperationType.MUTATE;
     }
+    return OperationQuota.OperationType.MUTATE;
   }
 
   protected static void switchExceedThrottleQuota(final Connection connection,
