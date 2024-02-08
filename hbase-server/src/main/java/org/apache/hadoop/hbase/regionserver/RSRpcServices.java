@@ -2679,7 +2679,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
 
       try {
         region = getRegion(regionSpecifier);
-        quota = getRpcQuotaManager().checkQuota(region, regionAction.getActionList());
+        quota = getRpcQuotaManager().checkQuota(region, regionAction.getActionList(),
+          regionAction.hasCondition());
       } catch (IOException e) {
         failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner, e);
         return responseBuilder.build();
@@ -2741,7 +2742,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
 
       try {
         region = getRegion(regionSpecifier);
-        quota = getRpcQuotaManager().checkQuota(region, regionAction.getActionList());
+        quota = getRpcQuotaManager().checkQuota(region, regionAction.getActionList(),
+          regionAction.hasCondition());
       } catch (IOException e) {
         failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner, e);
         continue; // For this region it's a failure.
@@ -2924,7 +2926,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         server.getMemStoreFlusher().reclaimMemStoreMemory();
       }
       long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
-      quota = getRpcQuotaManager().checkQuota(region, OperationQuota.OperationType.MUTATE);
+      OperationQuota.OperationType operationType = QuotaUtil.getQuotaOperationType(request);
+      quota = getRpcQuotaManager().checkQuota(region, operationType);
       ActivePolicyEnforcement spaceQuotaEnforcement =
         getSpaceQuotaManager().getActiveEnforcements();
 

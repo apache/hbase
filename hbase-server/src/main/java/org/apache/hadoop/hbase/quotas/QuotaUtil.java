@@ -51,6 +51,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TimeUnit;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.QuotaScope;
@@ -175,6 +176,31 @@ public class QuotaUtil extends QuotaTableUtil {
   public static void deleteRegionServerQuota(final Connection connection, final String regionServer)
     throws IOException {
     deleteQuotas(connection, getRegionServerRowKey(regionServer));
+  }
+
+  public static OperationQuota.OperationType getQuotaOperationType(ClientProtos.Action action,
+    boolean hasCondition) {
+    if (action.hasMutation()) {
+      return getQuotaOperationType(action.getMutation(), hasCondition);
+    }
+    return OperationQuota.OperationType.GET;
+  }
+
+  public static OperationQuota.OperationType
+    getQuotaOperationType(ClientProtos.MutateRequest mutateRequest) {
+    return getQuotaOperationType(mutateRequest.getMutation(), mutateRequest.hasCondition());
+  }
+
+  private static OperationQuota.OperationType
+    getQuotaOperationType(ClientProtos.MutationProto mutationProto, boolean hasCondition) {
+    ClientProtos.MutationProto.MutationType mutationType = mutationProto.getMutateType();
+    if (
+      hasCondition || mutationType == ClientProtos.MutationProto.MutationType.APPEND
+        || mutationType == ClientProtos.MutationProto.MutationType.INCREMENT
+    ) {
+      return OperationQuota.OperationType.CHECK_AND_MUTATE;
+    }
+    return OperationQuota.OperationType.MUTATE;
   }
 
   protected static void switchExceedThrottleQuota(final Connection connection,
