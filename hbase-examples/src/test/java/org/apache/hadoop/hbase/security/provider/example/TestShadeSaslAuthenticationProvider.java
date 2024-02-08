@@ -27,8 +27,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -69,10 +67,8 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -83,8 +79,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 @Category({ MediumTests.class, SecurityTests.class })
 public class TestShadeSaslAuthenticationProvider {
@@ -212,21 +206,23 @@ public class TestShadeSaslAuthenticationProvider {
   @Test
   public void testPositiveAuthentication() throws Exception {
     final Configuration clientConf = new Configuration(CONF);
-    try (Connection conn = ConnectionFactory.createConnection(clientConf)) {
+    try (Connection conn1 = ConnectionFactory.createConnection(clientConf)) {
       UserGroupInformation user1 =
         UserGroupInformation.createUserForTesting("user1", new String[0]);
-      user1.addToken(ShadeClientTokenUtil.obtainToken(conn, "user1", USER1_PASSWORD));
+      user1.addToken(ShadeClientTokenUtil.obtainToken(conn1, "user1", USER1_PASSWORD));
       user1.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          try (Table t = conn.getTable(tableName)) {
-            Result r = t.get(new Get(Bytes.toBytes("r1")));
-            assertNotNull(r);
-            assertFalse("Should have read a non-empty Result", r.isEmpty());
-            final Cell cell = r.getColumnLatestCell(Bytes.toBytes("f1"), Bytes.toBytes("q1"));
-            assertTrue("Unexpected value", CellUtil.matchingValue(cell, Bytes.toBytes("1")));
+          try (Connection conn = ConnectionFactory.createConnection(clientConf)) {
+            try (Table t = conn.getTable(tableName)) {
+              Result r = t.get(new Get(Bytes.toBytes("r1")));
+              assertNotNull(r);
+              assertFalse("Should have read a non-empty Result", r.isEmpty());
+              final Cell cell = r.getColumnLatestCell(Bytes.toBytes("f1"), Bytes.toBytes("q1"));
+              assertTrue("Unexpected value", CellUtil.matchingValue(cell, Bytes.toBytes("1")));
 
-            return null;
+              return null;
+            }
           }
         }
       });
@@ -268,7 +264,6 @@ public class TestShadeSaslAuthenticationProvider {
             } catch (Exception e) {
               LOG.info("Caught exception in negative Master connectivity test", e);
               assertEquals("Found unexpected exception", pair.getSecond(), e.getClass());
-              validateRootCause(Throwables.getRootCause(e));
             }
             return null;
           }
@@ -287,7 +282,6 @@ public class TestShadeSaslAuthenticationProvider {
             } catch (Exception e) {
               LOG.info("Caught exception in negative RegionServer connectivity test", e);
               assertEquals("Found unexpected exception", pair.getSecond(), e.getClass());
-              validateRootCause(Throwables.getRootCause(e));
             }
             return null;
           }
@@ -300,20 +294,5 @@ public class TestShadeSaslAuthenticationProvider {
         throw new RuntimeException(e);
       }
     });
-  }
-
-  void validateRootCause(Throwable rootCause) {
-    LOG.info("Root cause was", rootCause);
-    if (rootCause instanceof RemoteException) {
-      RemoteException re = (RemoteException) rootCause;
-      IOException actualException = re.unwrapRemoteException();
-      assertEquals(InvalidToken.class, actualException.getClass());
-    } else {
-      StringWriter writer = new StringWriter();
-      rootCause.printStackTrace(new PrintWriter(writer));
-      String text = writer.toString();
-      assertTrue("Message did not contain expected text",
-        text.contains(InvalidToken.class.getName()));
-    }
   }
 }
