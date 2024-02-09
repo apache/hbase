@@ -293,6 +293,7 @@ import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.DrainedZNodeServerData;
 
 /**
  * HMaster is the "master server" for HBase. An HBase cluster has one active master. If many masters
@@ -4028,7 +4029,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     for (ServerName server : servers) {
       try {
         String node = ZNodePaths.joinZNode(parentZnode, server.getServerName());
-        ZKUtil.createAndFailSilent(getZooKeeper(), node, matchHostNameOnly);
+        // Encode whether the host should be decommissioned regardless of port + startcode or not
+        // in the znode's data
+        byte[] data = DrainedZNodeServerData.newBuilder().setMatchHostNameOnly(matchHostNameOnly)
+          .build().toByteArray();
+        // Create a node with binary data
+        ZKUtil.createAndFailSilent(getZooKeeper(), node, data);
       } catch (KeeperException ke) {
         throw new HBaseIOException(
           this.zooKeeper.prefix("Unable to decommission '" + server.getServerName() + "'."), ke);
