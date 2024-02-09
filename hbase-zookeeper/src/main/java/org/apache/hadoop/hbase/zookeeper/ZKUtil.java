@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.DrainedZNodeServerData;
 
 /**
  * Internal HBase utility class for ZooKeeper.
@@ -746,12 +747,35 @@ public final class ZKUtil {
   /**
    * Creates the specified node, iff the node does not exist. Does not set a watch and fails
    * silently if the node already exists. The node created is persistent and open access.
+   * The node will contain a byte array of data that denotes that the host shouldn't be
+   * drained all the time and that the full servername (with port and startcode) should
+   * be matched when recommissioning it.
    * @param zkw   zk reference
    * @param znode path of node
    * @throws KeeperException if unexpected zookeeper exception
    */
   public static void createAndFailSilent(ZKWatcher zkw, String znode) throws KeeperException {
-    createAndFailSilent(zkw, znode, new byte[0]);
+    createAndFailSilent(zkw, znode, false);
+  }
+
+  /**
+   * Creates the specified node, iff the node does not exist. Does not set a watch and fails
+   * silently if the node already exists. The node created is persistent and open access.
+   * The node will contain a byte array of data that denotes whether host should or shouldn't be
+   * considered drained, if it's `true` then the host will be rejected from rejoining the cluster
+   * regardless of port and startcode; otherwise, any other full servername with a different port,
+   * startcode or both will be able to join and this unique servername will still be considered
+   * drained.
+   * @param zkw   zk reference
+   * @param znode path of node
+   * @param matchHostNameOnly whether hostname should be always considered drained or not
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static void createAndFailSilent(ZKWatcher zkw, String znode, boolean matchHostNameOnly)
+    throws KeeperException {
+    byte[] data = DrainedZNodeServerData.newBuilder().setMatchHostNameOnly(matchHostNameOnly)
+      .build().toByteArray();
+    createAndFailSilent(zkw, znode, data);
   }
 
   /**

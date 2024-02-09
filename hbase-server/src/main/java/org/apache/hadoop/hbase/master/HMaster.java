@@ -4028,7 +4028,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     for (ServerName server : servers) {
       try {
         String node = ZNodePaths.joinZNode(parentZnode, server.getServerName());
-        ZKUtil.createAndFailSilent(getZooKeeper(), node);
+        ZKUtil.createAndFailSilent(getZooKeeper(), node, matchHostNameOnly);
       } catch (KeeperException ke) {
         throw new HBaseIOException(
           this.zooKeeper.prefix("Unable to decommission '" + server.getServerName() + "'."), ke);

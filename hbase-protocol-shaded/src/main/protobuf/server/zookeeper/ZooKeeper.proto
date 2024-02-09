@@ -107,3 +107,7 @@ message DeprecatedTableState {
 message SwitchState {
   optional bool enabled = 1;
 }
+
+message DrainedZNodeServerData {
+  optional bool match_host_name_only = 1 [default = false];
+}
