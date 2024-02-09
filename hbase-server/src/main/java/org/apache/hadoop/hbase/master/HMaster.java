@@ -4021,8 +4021,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   public void decommissionRegionServers(final List<ServerName> servers, final boolean offload,
-    final boolean matchHostNameOnly)
-    throws IOException {
+    final boolean matchHostNameOnly) throws IOException {
     List<ServerName> serversAdded = new ArrayList<>(servers.size());
     // Place the decommission marker first.
     String parentZnode = getZooKeeper().getZNodePaths().drainingZNode;

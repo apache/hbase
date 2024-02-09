@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.NavigableSet;
-import java.util.TreeSet;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
@@ -51,7 +51,7 @@ public class DrainingServerTracker extends ZKListener {
   private static final Logger LOG = LoggerFactory.getLogger(DrainingServerTracker.class);
 
   private ServerManager serverManager;
-  private final NavigableSet<ServerName> drainingServers = new TreeSet<>();
+  private final NavigableMap<String, ServerName> drainingServers = new TreeMap<>();
   private Abortable abortable;
 
   public DrainingServerTracker(ZKWatcher watcher, Abortable abortable,
@@ -72,14 +72,21 @@ public class DrainingServerTracker extends ZKListener {
     serverManager.registerListener(new ServerListener() {
       @Override
       public void serverAdded(ServerName sn) {
-        if (drainingServers.contains(sn)) {
+        if (isServerInDrainedList(sn)) {
           serverManager.addServerToDrainList(sn);
         }
       }
     });
     List<String> servers =
       ZKUtil.listChildrenAndWatchThem(watcher, watcher.getZNodePaths().drainingZNode);
-    add(servers);
+    if (servers != null) {
+      add(servers);
+    }
+  }
+
+  private boolean isServerInDrainedList(ServerName sn) {
+    return drainingServers.containsKey(sn.getHostname())
+      || drainingServers.containsKey(sn.getServerName());
   }
 
   private void add(final List<String> servers) throws IOException {
@@ -87,17 +94,21 @@ public class DrainingServerTracker extends ZKListener {
       this.drainingServers.clear();
       for (String n : servers) {
         final ServerName sn = ServerName.valueOf(ZKUtil.getNodeName(n));
-        this.drainingServers.add(sn);
+        this.drainingServers.put(n, sn);
         this.serverManager.addServerToDrainList(sn);
-        LOG.info("Draining RS node created, adding to list [" + sn + "]");
-
+        LOG.info("Draining RS node created, adding to list [{}]", sn);
       }
     }
   }
 
   private void remove(final ServerName sn) {
     synchronized (this.drainingServers) {
-      this.drainingServers.remove(sn);
+      if (drainingServers.containsKey(sn.getHostname())) {
+        this.drainingServers.remove(sn.getHostname());
+      } else {
+        this.drainingServers.remove(sn.getServerName());
+      }
+      // TODO: refactor the removeServerFromDrainList method below
       this.serverManager.removeServerFromDrainList(sn);
     }
   }

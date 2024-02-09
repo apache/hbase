@@ -2270,12 +2270,14 @@ public interface Admin extends Abortable, Closeable {
    * them. Optionally unload the regions on the servers. If there are multiple servers to be
    * decommissioned, decommissioning them at the same time can prevent wasteful region movements.
    * Region unloading is asynchronous.
-   * @param servers The list of servers to decommission.
-   * @param offload True to offload the regions from the decommissioned servers
-   * @param matchHostNameOnly True to prevent the hostname from ever joining again, regardless of startTime
+   * @param servers           The list of servers to decommission.
+   * @param offload           True to offload the regions from the decommissioned servers
+   * @param matchHostNameOnly True to prevent the hostname from ever joining again, regardless of
+   *                          startTime
    * @throws IOException if a remote or network exception occurs
    */
-  void decommissionRegionServers(List<ServerName> servers, boolean offload, boolean matchHostNameOnly) throws IOException;
+  void decommissionRegionServers(List<ServerName> servers, boolean offload,
+    boolean matchHostNameOnly) throws IOException;
 
   /**
    * List region servers marked as decommissioned, which can not be assigned regions.

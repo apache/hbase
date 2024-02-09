@@ -1562,10 +1562,11 @@ public final class RequestConverter {
       .addAllServerName(toProtoServerNames(servers)).setOffload(offload).build();
   }
 
-  public static DecommissionRegionServersRequest
-  buildDecommissionRegionServersRequest(List<ServerName> servers, boolean offload, boolean matchHostNameOnly) {
+  public static DecommissionRegionServersRequest buildDecommissionRegionServersRequest(
+    List<ServerName> servers, boolean offload, boolean matchHostNameOnly) {
     return DecommissionRegionServersRequest.newBuilder()
-      .addAllServerName(toProtoServerNames(servers)).setOffload(offload).setMatchHostNameOnly(matchHostNameOnly).build();
+      .addAllServerName(toProtoServerNames(servers)).setOffload(offload)
+      .setMatchHostNameOnly(matchHostNameOnly).build();
   }
 
   public static RecommissionRegionServerRequest

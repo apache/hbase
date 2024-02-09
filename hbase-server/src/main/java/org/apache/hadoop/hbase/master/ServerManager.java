@@ -649,10 +649,9 @@ public class ServerManager {
   public synchronized boolean removeServerFromDrainList(final ServerName sn) {
     // Warn if the server (sn) is not online. ServerName is of the form:
     // <hostname> , <port> , <startcode>
-
     if (!this.isServerOnline(sn)) {
-      LOG.warn("Server " + sn + " is not currently online. "
-        + "Removing from draining list anyway, as requested.");
+      LOG.warn(
+        "Server {} is not currently online. Removing from draining list anyway, as requested.", sn);
     }
     // Remove the server from the draining servers lists.
     return this.drainingServers.remove(sn);
@@ -667,18 +666,18 @@ public class ServerManager {
     // <hostname> , <port> , <startcode>
 
     if (!this.isServerOnline(sn)) {
-      LOG.warn("Server " + sn + " is not currently online. "
-        + "Ignoring request to add it to draining list.");
+      LOG.warn("Server {} is not currently online. Ignoring request to add it to draining list.",
+        sn);
       return false;
     }
     // Add the server to the draining servers lists, if it's not already in
     // it.
     if (this.drainingServers.contains(sn)) {
-      LOG.warn("Server " + sn + " is already in the draining server list."
-        + "Ignoring request to add it again.");
+      LOG.warn("Server {} is already in the draining server list.Ignoring request to add it again.",
+        sn);
       return true;
     }
-    LOG.info("Server " + sn + " added to draining server list.");
+    LOG.info("Server {} added to draining server list.", sn);
     return this.drainingServers.add(sn);
   }
 

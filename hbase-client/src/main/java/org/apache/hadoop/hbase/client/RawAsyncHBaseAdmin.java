@@ -2523,10 +2523,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return this.<Void> newMasterCaller()
       .action((controller, stub) -> this.<DecommissionRegionServersRequest,
         DecommissionRegionServersResponse, Void> call(controller, stub,
-        RequestConverter.buildDecommissionRegionServersRequest(servers, offload, matchHostNameOnly),
-        (s, c, req, done) -> s.decommissionRegionServers(c, req, done), resp -> null))
+          RequestConverter.buildDecommissionRegionServersRequest(servers, offload,
+            matchHostNameOnly),
+          (s, c, req, done) -> s.decommissionRegionServers(c, req, done), resp -> null))
       .call();
   }
+
   @Override
   public CompletableFuture<List<ServerName>> listDecommissionedRegionServers() {
     return this.<List<ServerName>> newMasterCaller()

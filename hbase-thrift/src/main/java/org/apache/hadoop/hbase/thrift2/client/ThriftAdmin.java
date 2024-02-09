@@ -1072,7 +1072,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void decommissionRegionServers(List<ServerName> servers, boolean offload, boolean matchHostNameOnly) {
+  public void decommissionRegionServers(List<ServerName> servers, boolean offload,
+    boolean matchHostNameOnly) {
     throw new NotImplementedException("decommissionRegionServers not supported in ThriftAdmin");
   }
 
