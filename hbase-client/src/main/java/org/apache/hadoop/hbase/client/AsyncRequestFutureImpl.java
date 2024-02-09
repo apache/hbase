@@ -850,8 +850,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     }
 
     long remainingTime = getRemainingTime();
-    // 1 is a special value meaning exceeded and 0 means no timeout
-    if (remainingTime > 1 && backOffTime > remainingTime) {
+    // 1 is a special value meaning exceeded and 0 means no timeout.
+    // throw if timeout already exceeded, or if backoff is larger than non-zero remaining
+    if (remainingTime == 1 || (remainingTime > 0 && backOffTime > remainingTime)) {
       OperationTimeoutExceededException ex = new OperationTimeoutExceededException(
         "Backoff time of " + backOffTime + "ms would exceed operation timeout");
       for (Action actionToFail : toReplay) {
