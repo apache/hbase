@@ -108,11 +108,6 @@ module Shell
     # exit the interactive shell and save that this
     # happend via a call to exit
     def exit(ret = 0)
-      # Non-deamon Netty threadpool in ZK ClientCnxnSocketNetty cannot be shut down otherwise
-      begin
-        hbase.shutdown
-      rescue Exception
-      end
       @exit_code = ret
       IRB.irb_exit(IRB.CurrentContext.irb, ret)
     end
@@ -323,6 +318,13 @@ For more on the HBase Shell, see http://hbase.apache.org/book.html
       hbase_receiver.send :define_singleton_method, :exit, lambda { |rc = 0|
         @shell.exit(rc)
       }
+      at_exit do
+        # Non-deamon Netty threadpool in ZK ClientCnxnSocketNetty cannot be shut down otherwise
+        begin
+          hbase.shutdown
+        rescue Exception
+        end
+      end
       ::IRB::WorkSpace.new(hbase_receiver.get_binding)
     end
 
