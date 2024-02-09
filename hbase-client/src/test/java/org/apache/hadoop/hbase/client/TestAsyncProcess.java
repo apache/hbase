@@ -1753,20 +1753,21 @@ public class TestAsyncProcess {
 
   private void testRetryPauseWhenServerIsOverloaded(HBaseServerException exception)
     throws IOException {
-    Configuration conf = new Configuration(CONF);
+    Configuration testConf = new Configuration(CONF);
     long specialPause = 500L;
-    conf.setLong(ConnectionConfiguration.HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED, specialPause);
-    testRetryPause(conf, specialPause, exception);
+    testConf.setLong(ConnectionConfiguration.HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED,
+      specialPause);
+    testRetryPause(testConf, specialPause, exception);
   }
 
-  private void testRetryPause(Configuration conf, long expectedPause, HBaseIOException exception)
-    throws IOException {
+  private void testRetryPause(Configuration testConf, long expectedPause,
+    HBaseIOException exception) throws IOException {
 
     final int retries = 1;
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
+    testConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
 
-    ClusterConnection conn = new MyConnectionImpl(conf);
-    AsyncProcessWithFailure ap = new AsyncProcessWithFailure(conn, conf, exception);
+    ClusterConnection conn = new MyConnectionImpl(testConf);
+    AsyncProcessWithFailure ap = new AsyncProcessWithFailure(conn, testConf, exception);
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
 
@@ -1796,8 +1797,8 @@ public class TestAsyncProcess {
 
     // check and confirm normal IOE will use the normal pause
     final long normalPause =
-      conf.getLong(HConstants.HBASE_CLIENT_PAUSE, HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
-    ap = new AsyncProcessWithFailure(conn, conf, new IOException());
+      testConf.getLong(HConstants.HBASE_CLIENT_PAUSE, HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    ap = new AsyncProcessWithFailure(conn, testConf, new IOException());
     bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
     Assert.assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
@@ -1823,17 +1824,17 @@ public class TestAsyncProcess {
 
   @Test
   public void testFastFailIfBackoffGreaterThanRemaining() throws IOException {
-    Configuration conf = new Configuration(CONF);
-    conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 100);
+    Configuration testConf = new Configuration(CONF);
+    testConf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 100);
     long waitInterval = 500L;
     HBaseIOException exception = new RpcThrottlingException(
       RpcThrottlingException.Type.NumReadRequestsExceeded, waitInterval, "For test");
 
     final int retries = 1;
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
+    testConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
 
-    ClusterConnection conn = new MyConnectionImpl(conf);
-    AsyncProcessWithFailure ap = new AsyncProcessWithFailure(conn, conf, exception);
+    ClusterConnection conn = new MyConnectionImpl(testConf);
+    AsyncProcessWithFailure ap = new AsyncProcessWithFailure(conn, testConf, exception);
     BufferedMutatorParams bufferParam =
       createBufferedMutatorParams(ap, DUMMY_TABLE).operationTimeout(100);
     BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
