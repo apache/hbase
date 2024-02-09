@@ -417,6 +417,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * timeout against the appropriate tracker, or returns false if no tracker.
    */
   private boolean isOperationTimeoutExceeded() {
+    // return value of 1 is special to mean exceeded, to differentiate from 0
+    // which is no timeout. see implementation of RetryingTimeTracker.getRemainingTime
     return getRemainingTime() == 1;
   }
 
@@ -433,8 +435,6 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     // no-op if already started, this is just to ensure it was initialized (usually true)
     currentTracker.start();
 
-    // return value of 1 is special to mean exceeded, to differentiate from 0
-    // which is no timeout. see implementation of getRemainingTime
     return currentTracker.getRemainingTime(operationTimeout);
   }
 
@@ -850,7 +850,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     }
 
     long remainingTime = getRemainingTime();
-    if (remainingTime > 0 && backOffTime > remainingTime) {
+    // 1 is a special value meaning exceeded and 0 means no timeout
+    if (remainingTime > 1 && backOffTime > remainingTime) {
       OperationTimeoutExceededException ex = new OperationTimeoutExceededException(
         "Backoff time of " + backOffTime + "ms would exceed operation timeout");
       for (Action actionToFail : toReplay) {
