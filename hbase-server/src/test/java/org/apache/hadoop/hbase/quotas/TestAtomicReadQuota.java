@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
@@ -66,6 +67,9 @@ public class TestAtomicReadQuota {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 1);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_PAUSE, 1);
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     TEST_UTIL.getConfiguration().setInt(QuotaCache.REFRESH_CONF_KEY, 1000);
     TEST_UTIL.startMiniCluster(1);
@@ -181,7 +185,7 @@ public class TestAtomicReadQuota {
     incs.add(inc);
 
     testThrottle(table -> {
-      Object[] results = new Object[] {};
+      Object[] results = new Object[incs.size()];
       table.batch(incs, results);
       return results;
     });
@@ -206,16 +210,22 @@ public class TestAtomicReadQuota {
     try (Table table = getTable()) {
       // we have a read quota configured, so this should fail
       TEST_UTIL.waitFor(60_000, () -> {
+        boolean success;
+        Exception ex;
         try {
           request.run(table);
           return false;
+        } catch (RetriesExhaustedWithDetailsException e) {
+          success = e.getCauses().stream().allMatch(t -> t instanceof RpcThrottlingException);
+          ex = e;
         } catch (Exception e) {
-          boolean success = e.getCause() instanceof RpcThrottlingException;
-          if (!success) {
-            LOG.error("Unexpected exception", e);
-          }
-          return success;
+          success = e.getCause() instanceof RpcThrottlingException;
+          ex = e;
         }
+        if (!success) {
+          LOG.error("Unexpected exception", ex);
+        }
+        return success;
       });
     } finally {
       cleanupQuota();
@@ -223,8 +233,6 @@ public class TestAtomicReadQuota {
   }
 
   private Table getTable() throws IOException {
-    TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 100);
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     return TEST_UTIL.getConnection().getTableBuilder(TABLE_NAME, null).setOperationTimeout(250)
       .build();
   }
