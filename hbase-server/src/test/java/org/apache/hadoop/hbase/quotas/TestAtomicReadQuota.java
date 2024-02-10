@@ -216,7 +216,8 @@ public class TestAtomicReadQuota {
           request.run(table);
           return false;
         } catch (RetriesExhaustedWithDetailsException e) {
-          success = e.getCauses().stream().allMatch(t -> t instanceof RpcThrottlingException);
+          success = e.getCauses().stream().allMatch(t -> t instanceof RpcThrottlingException
+            || t.getCause() instanceof RpcThrottlingException);
           ex = e;
         } catch (Exception e) {
           success = e.getCause() instanceof RpcThrottlingException;

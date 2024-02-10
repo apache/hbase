@@ -854,7 +854,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     // throw if timeout already exceeded, or if backoff is larger than non-zero remaining
     if (remainingTime == 1 || (remainingTime > 0 && backOffTime > remainingTime)) {
       OperationTimeoutExceededException ex = new OperationTimeoutExceededException(
-        "Backoff time of " + backOffTime + "ms would exceed operation timeout");
+        "Backoff time of " + backOffTime + "ms would exceed operation timeout", throwable);
       for (Action actionToFail : toReplay) {
         manageError(actionToFail.getOriginalIndex(), actionToFail.getAction(),
           Retry.NO_NOT_RETRIABLE, ex, null);
