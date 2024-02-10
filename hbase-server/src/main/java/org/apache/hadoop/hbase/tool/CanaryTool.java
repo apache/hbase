@@ -510,19 +510,38 @@ public class CanaryTool implements Tool, Canary {
 
     private Void readColumnFamily(Table table, ColumnFamilyDescriptor column) {
       byte[] startKey = null;
-      Get get = null;
       Scan scan = null;
       ResultScanner rs = null;
       StopWatch stopWatch = new StopWatch();
       startKey = region.getStartKey();
       // Can't do a get on empty start row so do a Scan of first element if any instead.
       if (startKey.length > 0) {
-        get = new Get(startKey);
+        Get get = new Get(startKey);
         get.setCacheBlocks(false);
         get.setFilter(new FirstKeyOnlyFilter());
         get.addFamily(column.getName());
+        // Converting get object to scan to enable RAW SCAN.
+        // This will work for all the regions of the HBase tables except first region of the table.
+        scan = new Scan(get);
+        scan.setRaw(rawScanEnabled);
       } else {
         scan = new Scan();
+        // In case of first region of the HBase Table, we do not have start-key for the region.
+        // For Region Canary, we only need scan a single row/cell in the region to make sure that
+        // region is accessible.
+        //
+        // When HBase table has more than 1 empty regions at start of the row-key space, Canary will
+        // create multiple scan object to find first available row in the table by scanning all the
+        // regions in sequence until it can find first available row.
+        //
+        // This could result in multiple millions of scans based on the size of table and number of
+        // empty regions in sequence. In test environment, A table no data and 1000 empty regions,
+        // Single canary run was creating close to half million to 1 million scans to successfully
+        // do canary run for the table.
+        //
+        // Since First region of the table doesn't have any start key, We should set End Key as
+        // stop row and set inclusive=false to limit scan to single region only.
+        scan.withStopRow(region.getEndKey(), false);
         LOG.debug("rawScan {} for {}", rawScanEnabled, region.getTable());
         scan.setRaw(rawScanEnabled);
         scan.setCaching(1);
@@ -536,12 +555,8 @@ public class CanaryTool implements Tool, Canary {
         column.getNameAsString(), Bytes.toStringBinary(startKey));
       try {
         stopWatch.start();
-        if (startKey.length > 0) {
-          table.get(get);
-        } else {
-          rs = table.getScanner(scan);
-          rs.next();
-        }
+        rs = table.getScanner(scan);
+        rs.next();
         stopWatch.stop();
         this.readWriteLatency.add(stopWatch.getTime());
         sink.publishReadTiming(serverName, region, column, stopWatch.getTime());
