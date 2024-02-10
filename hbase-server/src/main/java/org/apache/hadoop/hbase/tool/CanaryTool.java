@@ -527,7 +527,7 @@ public class CanaryTool implements Tool, Canary {
       } else {
         scan = new Scan();
         // In case of first region of the HBase Table, we do not have start-key for the region.
-        // For Region Canary, we only need scan a single row/cell in the region to make sure that
+        // For Region Canary, we only need to scan a single row/cell in the region to make sure that
         // region is accessible.
         //
         // When HBase table has more than 1 empty regions at start of the row-key space, Canary will
@@ -535,12 +535,18 @@ public class CanaryTool implements Tool, Canary {
         // regions in sequence until it can find first available row.
         //
         // This could result in multiple millions of scans based on the size of table and number of
-        // empty regions in sequence. In test environment, A table no data and 1000 empty regions,
-        // Single canary run was creating close to half million to 1 million scans to successfully
-        // do canary run for the table.
+        // empty regions in sequence. In test environment, A table with no data and 1100 empty
+        // regions, Single canary run was creating close to half million to 1 million scans to
+        // successfully do canary run for the table.
         //
         // Since First region of the table doesn't have any start key, We should set End Key as
         // stop row and set inclusive=false to limit scan to single region only.
+        //
+        // TODO : In future, we can streamline Canary behaviour for all the regions by doing scan
+        // with startRow inclusive and stopRow exclusive instead of different behaviour for First
+        // Region of the table and rest of the region of the table. This way implementation is
+        // simplified. As of now this change has been kept minimal to avoid any unnecessary
+        // perf impact.
         scan.withStopRow(region.getEndKey(), false);
         LOG.debug("rawScan {} for {}", rawScanEnabled, region.getTable());
         scan.setRaw(rawScanEnabled);
