@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -66,6 +67,7 @@ import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1738,16 +1740,30 @@ public class TestAsyncProcess {
     testRetryPauseWhenServerIsOverloaded(new CallDroppedException());
   }
 
+  @Test
+  public void testRetryPauseForRpcThrottling() throws IOException {
+    long waitInterval = 500L;
+    testRetryPause(new Configuration(CONF), waitInterval, new RpcThrottlingException(
+      RpcThrottlingException.Type.NumReadRequestsExceeded, waitInterval, "For test"));
+  }
+
   private void testRetryPauseWhenServerIsOverloaded(HBaseServerException exception)
     throws IOException {
-    Configuration conf = new Configuration(CONF);
-    final long specialPause = 500L;
-    final int retries = 1;
-    conf.setLong(ConnectionConfiguration.HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED, specialPause);
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
+    Configuration testConf = new Configuration(CONF);
+    long specialPause = 500L;
+    testConf.setLong(ConnectionConfiguration.HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED,
+      specialPause);
+    testRetryPause(testConf, specialPause, exception);
+  }
 
-    ClusterConnection conn = new MyConnectionImpl(conf);
-    AsyncProcessWithFailure ap = new AsyncProcessWithFailure(conn, conf, exception);
+  private void testRetryPause(Configuration testConf, long expectedPause,
+    HBaseIOException exception) throws IOException {
+
+    final int retries = 1;
+    testConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
+
+    ClusterConnection conn = new MyConnectionImpl(testConf);
+    AsyncProcessWithFailure ap = new AsyncProcessWithFailure(conn, testConf, exception);
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
 
@@ -1767,9 +1783,9 @@ public class TestAsyncProcess {
     long actualSleep = EnvironmentEdgeManager.currentTime() - startTime;
     long expectedSleep = 0L;
     for (int i = 0; i < retries; i++) {
-      expectedSleep += ConnectionUtils.getPauseTime(specialPause, i);
+      expectedSleep += ConnectionUtils.getPauseTime(expectedPause, i);
       // Prevent jitter in ConcurrentMapUtils#getPauseTime to affect result
-      actualSleep += (long) (specialPause * 0.01f);
+      actualSleep += (long) (expectedPause * 0.01f);
     }
     LOG.debug("Expected to sleep " + expectedSleep + "ms, actually slept " + actualSleep + "ms");
     Assert.assertTrue("Expected to sleep " + expectedSleep + " but actually " + actualSleep + "ms",
@@ -1777,8 +1793,8 @@ public class TestAsyncProcess {
 
     // check and confirm normal IOE will use the normal pause
     final long normalPause =
-      conf.getLong(HConstants.HBASE_CLIENT_PAUSE, HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
-    ap = new AsyncProcessWithFailure(conn, conf, new IOException());
+      testConf.getLong(HConstants.HBASE_CLIENT_PAUSE, HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    ap = new AsyncProcessWithFailure(conn, testConf, new IOException());
     bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
     Assert.assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
@@ -1800,6 +1816,38 @@ public class TestAsyncProcess {
     expectedSleep += normalPause;
     LOG.debug("Expected to sleep " + expectedSleep + "ms, actually slept " + actualSleep + "ms");
     Assert.assertTrue("Slept for too long: " + actualSleep + "ms", actualSleep <= expectedSleep);
+  }
+
+  @Test
+  public void testFastFailIfBackoffGreaterThanRemaining() throws IOException {
+    Configuration testConf = new Configuration(CONF);
+    testConf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 100);
+    long waitInterval = 500L;
+    HBaseIOException exception = new RpcThrottlingException(
+      RpcThrottlingException.Type.NumReadRequestsExceeded, waitInterval, "For test");
+
+    final int retries = 1;
+    testConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
+
+    ClusterConnection conn = new MyConnectionImpl(testConf);
+    AsyncProcessWithFailure ap = new AsyncProcessWithFailure(conn, testConf, exception);
+    BufferedMutatorParams bufferParam =
+      createBufferedMutatorParams(ap, DUMMY_TABLE).operationTimeout(100);
+    BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
+
+    Assert.assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
+
+    Put p = createPut(1, true);
+    mutator.mutate(p);
+
+    try {
+      mutator.flush();
+      Assert.fail();
+    } catch (RetriesExhaustedWithDetailsException expected) {
+      assertEquals(1, expected.getNumExceptions());
+      assertTrue(expected.getCause(0) instanceof OperationTimeoutExceededException);
+      assertTrue(expected.getCause(0).getMessage().startsWith("Backoff"));
+    }
   }
 
   /**
