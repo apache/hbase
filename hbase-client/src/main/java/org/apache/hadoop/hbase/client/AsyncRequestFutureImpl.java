@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -416,21 +417,25 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * timeout against the appropriate tracker, or returns false if no tracker.
    */
   private boolean isOperationTimeoutExceeded() {
+    // return value of 1 is special to mean exceeded, to differentiate from 0
+    // which is no timeout. see implementation of RetryingTimeTracker.getRemainingTime
+    return getRemainingTime() == 1;
+  }
+
+  private long getRemainingTime() {
     RetryingTimeTracker currentTracker;
     if (tracker != null) {
       currentTracker = tracker;
     } else if (currentCallable != null && currentCallable.getTracker() != null) {
       currentTracker = currentCallable.getTracker();
     } else {
-      return false;
+      return 0;
     }
 
     // no-op if already started, this is just to ensure it was initialized (usually true)
     currentTracker.start();
 
-    // return value of 1 is special to mean exceeded, to differentiate from 0
-    // which is no timeout. see implementation of getRemainingTime
-    return currentTracker.getRemainingTime(operationTimeout) == 1;
+    return currentTracker.getRemainingTime(operationTimeout);
   }
 
   /**
@@ -820,6 +825,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     long backOffTime;
     if (retryImmediately) {
       backOffTime = 0;
+    } else if (throwable instanceof RpcThrottlingException) {
+      backOffTime = ((RpcThrottlingException) throwable).getWaitInterval();
     } else if (HBaseServerException.isServerOverloaded(throwable)) {
       // Give a special check when encountering an exception indicating the server is overloaded.
       // see #HBASE-17114 and HBASE-26807
@@ -840,6 +847,19 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       // logs, as errors are to be expected when a region moves, splits and so on
       LOG.info(createLog(numAttempt, failureCount, toReplay.size(), oldServer, throwable,
         backOffTime, true, null, -1, -1));
+    }
+
+    long remainingTime = getRemainingTime();
+    // 1 is a special value meaning exceeded and 0 means no timeout.
+    // throw if timeout already exceeded, or if backoff is larger than non-zero remaining
+    if (remainingTime == 1 || (remainingTime > 0 && backOffTime > remainingTime)) {
+      OperationTimeoutExceededException ex = new OperationTimeoutExceededException(
+        "Backoff time of " + backOffTime + "ms would exceed operation timeout", throwable);
+      for (Action actionToFail : toReplay) {
+        manageError(actionToFail.getOriginalIndex(), actionToFail.getAction(),
+          Retry.NO_NOT_RETRIABLE, ex, null);
+      }
+      return;
     }
 
     try {
