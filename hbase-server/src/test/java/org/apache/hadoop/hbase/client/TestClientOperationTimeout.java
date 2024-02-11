@@ -44,6 +44,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.function.ThrowingRunnable;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -161,8 +162,9 @@ public class TestClientOperationTimeout {
   }
 
   /**
-   * Tests that a batch mutate and batch get on a table throws {@link SocketTimeoutException} when
-   * the operation takes longer than 'hbase.client.operation.timeout'.
+   * Tests that a batch mutate and batch get on a table throws {@link SocketTimeoutException} or
+   * {@link OperationTimeoutExceededException} when the operation takes longer than
+   * 'hbase.client.operation.timeout'.
    */
   @Test
   public void testMultiTimeout() {
@@ -174,12 +176,7 @@ public class TestClientOperationTimeout {
     List<Put> puts = new ArrayList<>();
     puts.add(put1);
     puts.add(put2);
-    try {
-      TABLE.batch(puts, new Object[2]);
-      Assert.fail("should not reach here");
-    } catch (Exception e) {
-      Assert.assertTrue(e instanceof SocketTimeoutException);
-    }
+    assertMultiException(() -> TABLE.batch(puts, new Object[2]));
 
     Get get1 = new Get(ROW);
     get1.addColumn(FAMILY, QUALIFIER);
@@ -189,11 +186,27 @@ public class TestClientOperationTimeout {
     List<Get> gets = new ArrayList<>();
     gets.add(get1);
     gets.add(get2);
-    try {
-      TABLE.batch(gets, new Object[2]);
-      Assert.fail("should not reach here");
-    } catch (Exception e) {
-      Assert.assertTrue(e instanceof SocketTimeoutException);
+    assertMultiException(() -> TABLE.batch(gets, new Object[2]));
+  }
+
+  /**
+   * AsyncProcess has an overall waitUntilDone with a timeout, and if all callables dont finish by
+   * then it throws a SocketTimeoutException. The callables themselves also try to honor the
+   * operation timeout and result in OperationTimeoutExceededException (wrapped in
+   * RetriesExhausted). The latter is the more user-friendly exception because it contains details
+   * about which server has issues, etc. For now we need to account for both because it's sort of a
+   * race to see which timeout exceeds first. Maybe we can replace the waitUntilDone behavior with
+   * an interrupt in the future so we can further unify.
+   */
+  private void assertMultiException(ThrowingRunnable runnable) {
+    IOException e = Assert.assertThrows(IOException.class, runnable);
+    if (e instanceof SocketTimeoutException) {
+      return;
+    }
+    Assert.assertTrue("Expected SocketTimeoutException or RetriesExhaustedWithDetailsException"
+      + " but was " + e.getClass(), e instanceof RetriesExhaustedWithDetailsException);
+    for (Throwable cause : ((RetriesExhaustedWithDetailsException) e).getCauses()) {
+      Assert.assertEquals(OperationTimeoutExceededException.class, cause.getClass());
     }
   }
 
