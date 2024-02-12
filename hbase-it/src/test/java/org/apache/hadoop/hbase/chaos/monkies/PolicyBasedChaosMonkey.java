@@ -86,7 +86,6 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
     return Executors.newFixedThreadPool(size, new ThreadFactoryBuilder().setDaemon(false)
       .setNameFormat("ChaosMonkey-%d").setUncaughtExceptionHandler((t, e) -> {
         LOG.error("Uncaught exception in thread {}", t.getName(), e);
-        throw new RuntimeException(e);
       }).build());
   }
 
