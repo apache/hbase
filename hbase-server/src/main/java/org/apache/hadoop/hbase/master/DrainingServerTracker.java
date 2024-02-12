@@ -77,7 +77,7 @@ public class DrainingServerTracker extends ZKListener {
     serverManager.registerListener(new ServerListener() {
       @Override
       public void serverAdded(ServerName sn) {
-        if (isServerInDrainedList(sn)) {
+        if (drainingServers.contains(sn)) {
           serverManager.addServerToDrainList(sn);
         }
       }
@@ -90,11 +90,7 @@ public class DrainingServerTracker extends ZKListener {
       add(servers);
     }
   }
-
-  private boolean isServerInDrainedList(ServerName sn) {
-    return drainingServers.contains(sn);
-  }
-
+  
   private void add(final List<String> servers) throws IOException {
     synchronized (this.drainingServers) {
       // Clear all servers from the draining list that shouldn't stay drained. Information about
