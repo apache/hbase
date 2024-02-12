@@ -874,6 +874,7 @@ public final class ZKUtil {
     try {
       zkw.getRecoverableZooKeeper().delete(delete.getPath(), delete.getVersion());
     } catch (KeeperException.NoNodeException nne) {
+      // no-op
     } catch (InterruptedException ie) {
       zkw.interruptedException(ie);
     }
