@@ -97,6 +97,8 @@ public class RollingBatchSuspendResumeRsAction extends Action {
             suspendRs(server);
           } catch (Shell.ExitCodeException e) {
             LOG.warn("Problem suspending but presume successful; code={}", e.getExitCode(), e);
+          } catch (Exception e) {
+            LOG.warn("Problem suspending but presume successful", e);
           }
           suspendedServers.add(server);
           break;
@@ -106,6 +108,8 @@ public class RollingBatchSuspendResumeRsAction extends Action {
             resumeRs(server);
           } catch (Shell.ExitCodeException e) {
             LOG.info("Problem resuming, will retry; code={}", e.getExitCode(), e);
+          } catch (Exception e) {
+            LOG.warn("Problem resulting, will retry", e);
           }
           break;
       }
