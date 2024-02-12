@@ -58,14 +58,14 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
     assertEquals(TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size(),
       clusterRegionServers.size());
 
-    HashMap<ServerName, List<RegionInfo>> serversToDecommssion = new HashMap<>();
+    HashMap<ServerName, List<RegionInfo>> serversToDecommission = new HashMap<>();
     // Get a server that has regions. We will decommission one of the servers,
     // leaving one online.
     int i;
     for (i = 0; i < clusterRegionServers.size(); i++) {
       List<RegionInfo> regionsOnServer = admin.getRegions(clusterRegionServers.get(i)).get();
-      if (regionsOnServer.size() > 0) {
-        serversToDecommssion.put(clusterRegionServers.get(i), regionsOnServer);
+      if (!regionsOnServer.isEmpty()) {
+        serversToDecommission.put(clusterRegionServers.get(i), regionsOnServer);
         break;
       }
     }
@@ -74,13 +74,13 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
     ServerName remainingServer = clusterRegionServers.get(0);
 
     // Decommission
-    admin.decommissionRegionServers(new ArrayList<ServerName>(serversToDecommssion.keySet()), true)
+    admin.decommissionRegionServers(new ArrayList<ServerName>(serversToDecommission.keySet()), true)
       .get();
     assertEquals(1, admin.listDecommissionedRegionServers().get().size());
 
     // Verify the regions have been off the decommissioned servers, all on the remaining server.
-    for (ServerName server : serversToDecommssion.keySet()) {
-      for (RegionInfo region : serversToDecommssion.get(server)) {
+    for (ServerName server : serversToDecommission.keySet()) {
+      for (RegionInfo region : serversToDecommission.get(server)) {
         TEST_UTIL.assertRegionOnServer(region, remainingServer, 10000);
       }
     }
@@ -91,17 +91,78 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
     TEST_UTIL.waitUntilNoRegionsInTransition(10000);
 
     // Recommission and load regions
-    for (ServerName server : serversToDecommssion.keySet()) {
-      List<byte[]> encodedRegionNames = serversToDecommssion.get(server).stream()
-        .map(region -> region.getEncodedNameAsBytes()).collect(Collectors.toList());
+    for (ServerName server : serversToDecommission.keySet()) {
+      List<byte[]> encodedRegionNames = serversToDecommission.get(server).stream()
+        .map(RegionInfo::getEncodedNameAsBytes).collect(Collectors.toList());
       admin.recommissionRegionServer(server, encodedRegionNames).get();
     }
     assertTrue(admin.listDecommissionedRegionServers().get().isEmpty());
     // Verify the regions have been moved to the recommissioned servers
-    for (ServerName server : serversToDecommssion.keySet()) {
-      for (RegionInfo region : serversToDecommssion.get(server)) {
+    for (ServerName server : serversToDecommission.keySet()) {
+      for (RegionInfo region : serversToDecommission.get(server)) {
         TEST_UTIL.assertRegionOnServer(region, server, 10000);
       }
+    }
+  }
+
+  @Test
+  public void testAsyncDecommissionRegionServersHostsPermanently() throws Exception {
+    admin.balancerSwitch(false, true);
+    List<ServerName> decommissionedRegionServers = admin.listDecommissionedRegionServers().get();
+    assertTrue(decommissionedRegionServers.isEmpty());
+
+    TEST_UTIL.createMultiRegionTable(tableName, FAMILY, 4);
+
+    ArrayList<ServerName> clusterRegionServers = new ArrayList<>(admin
+      .getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).get().getLiveServerMetrics().keySet());
+
+    assertEquals(TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size(),
+      clusterRegionServers.size());
+
+    HashMap<ServerName, List<RegionInfo>> serversToDecommission = new HashMap<>();
+    // Get a server that has regions. We will decommission one of the servers,
+    // leaving one online.
+    int i;
+    for (i = 0; i < clusterRegionServers.size(); i++) {
+      List<RegionInfo> regionsOnServer = admin.getRegions(clusterRegionServers.get(i)).get();
+      if (!regionsOnServer.isEmpty()) {
+        serversToDecommission.put(clusterRegionServers.get(i), regionsOnServer);
+        break;
+      }
+    }
+
+    clusterRegionServers.remove(i);
+    ServerName remainingServer = clusterRegionServers.get(0);
+
+    // Decommission the server permanently, setting the `matchHostNameOnly` argument to `true`
+    boolean matchHostNameOnly = true;
+    admin.decommissionRegionServers(new ArrayList<ServerName>(serversToDecommission.keySet()), true,
+      matchHostNameOnly).get();
+    assertEquals(1, admin.listDecommissionedRegionServers().get().size());
+
+    // Verify the regions have been off the decommissioned servers, all on the remaining server.
+    for (ServerName server : serversToDecommission.keySet()) {
+      for (RegionInfo region : serversToDecommission.get(server)) {
+        TEST_UTIL.assertRegionOnServer(region, remainingServer, 10000);
+      }
+    }
+
+    // Maybe the TRSP is still not finished at master side, since the reportRegionTransition just
+    // updates the procedure store, and we still need to wake up the procedure and execute it in the
+    // procedure executor, which is asynchronous
+    TEST_UTIL.waitUntilNoRegionsInTransition(10000);
+
+    // Try to recommission the server and assert that the server is still decommissioned
+    for (ServerName server : serversToDecommission.keySet()) {
+      List<byte[]> encodedRegionNames = serversToDecommission.get(server).stream()
+        .map(RegionInfo::getEncodedNameAsBytes).collect(Collectors.toList());
+      admin.recommissionRegionServer(server, encodedRegionNames).get();
+    }
+    assertEquals(1, admin.listDecommissionedRegionServers().get().size());
+
+    // Verify that the still decommissioned servers have no regions
+    for (ServerName server : serversToDecommission.keySet()) {
+      assertTrue(serversToDecommission.get(server).isEmpty());
     }
   }
 }

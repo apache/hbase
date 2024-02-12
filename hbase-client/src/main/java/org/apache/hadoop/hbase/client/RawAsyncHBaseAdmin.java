@@ -2509,12 +2509,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> decommissionRegionServers(List<ServerName> servers,
     boolean offload) {
-    return this.<Void> newMasterCaller()
-      .action((controller, stub) -> this.<DecommissionRegionServersRequest,
-        DecommissionRegionServersResponse, Void> call(controller, stub,
-          RequestConverter.buildDecommissionRegionServersRequest(servers, offload),
-          (s, c, req, done) -> s.decommissionRegionServers(c, req, done), resp -> null))
-      .call();
+    // By default, when we decommission a RegionServer we don't mark the hostname as permanently
+    // decommissioned and instead mark the server location (host + port + startCode) as such
+    boolean matchHostNameOnly = false;
+
+    return this.decommissionRegionServers(servers, offload, matchHostNameOnly);
   }
 
   @Override

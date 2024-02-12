@@ -1558,8 +1558,7 @@ public final class RequestConverter {
 
   public static DecommissionRegionServersRequest
     buildDecommissionRegionServersRequest(List<ServerName> servers, boolean offload) {
-    return DecommissionRegionServersRequest.newBuilder()
-      .addAllServerName(toProtoServerNames(servers)).setOffload(offload).build();
+    return RequestConverter.buildDecommissionRegionServersRequest(servers, offload, false);
   }
 
   public static DecommissionRegionServersRequest buildDecommissionRegionServersRequest(

@@ -90,7 +90,7 @@ public class DrainingServerTracker extends ZKListener {
       add(servers);
     }
   }
-  
+
   private void add(final List<String> servers) throws IOException {
     synchronized (this.drainingServers) {
       // Clear all servers from the draining list that shouldn't stay drained. Information about
