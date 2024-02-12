@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY;
-import static org.apache.hadoop.hbase.io.hfile.PrefetchExecutor.*;
+import static org.apache.hadoop.hbase.io.hfile.PrefetchExecutor.PREFETCH_DELAY;
 import static org.apache.hadoop.hbase.regionserver.CompactSplit.HBASE_REGION_SERVER_ENABLE_COMPACTION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
@@ -69,12 +69,14 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.TestHStoreFile;
+import org.apache.hadoop.hbase.regionserver.PrefetchExecutorNotifier;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -86,6 +88,7 @@ import org.slf4j.LoggerFactory;
 @Category({ IOTests.class, MediumTests.class })
 public class TestPrefetch {
   private static final Logger LOG = LoggerFactory.getLogger(TestPrefetch.class);
+  protected PrefetchExecutorNotifier prefetchExecutorNotifier;
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -96,6 +99,11 @@ public class TestPrefetch {
   private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
   private static final int DATA_BLOCK_SIZE = 2048;
   private static final int NUM_KV = 1000;
+
+  private long startTime;
+  private long endTime;
+  private boolean measureTiming;
+
 
   private Configuration conf;
   private CacheConfig cacheConf;
@@ -108,10 +116,19 @@ public class TestPrefetch {
   @Before
   public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
+    long var = conf.getInt(PREFETCH_DELAY, 1000);
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     fs = HFileSystem.get(conf);
     blockCache = BlockCacheFactory.createBlockCache(conf);
     cacheConf = new CacheConfig(conf, blockCache);
+    prefetchExecutorNotifier = new PrefetchExecutorNotifier(conf);
+    resetTiming();
+  }
+
+  @After
+  public void resetPrefetchDelay() throws IOException {
+    conf.setInt(PREFETCH_DELAY, 1000);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
   }
 
   @Test
@@ -296,11 +313,13 @@ public class TestPrefetch {
     throws Exception {
     // Open the file
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
+    startTimer();
 
     while (!reader.prefetchComplete()) {
       // Sleep for a bit
       Thread.sleep(1000);
     }
+    endTimer();
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       HFileBlock block = readFunction.apply(reader, offset);
@@ -339,40 +358,43 @@ public class TestPrefetch {
 
   @Test
   public void testOnConfigurationChange() {
-    // change PREFETCH_DELAY_ENABLE_KEY from false to true
     conf.setInt(PREFETCH_DELAY, 40000);
-    PrefetchExecutor.loadConfiguration(conf);
-    assertTrue(getPrefetchDelay() == 40000);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
+    assertEquals(prefetchExecutorNotifier.getPrefetchDelay(), 40000);
 
     // restore
     conf.setInt(PREFETCH_DELAY, 30000);
-    PrefetchExecutor.loadConfiguration(conf);
-    assertTrue(getPrefetchDelay() == 30000);
-
+    prefetchExecutorNotifier.onConfigurationChange(conf);
+    assertEquals(prefetchExecutorNotifier.getPrefetchDelay(), 30000);
   }
 
   @Test
   public void testPrefetchWithDelay() throws Exception {
-    conf.setInt(PREFETCH_DELAY, 40000);
-    PrefetchExecutor.loadConfiguration(conf);
+    conf.setInt(PREFETCH_DELAY, 60000);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
+    long totalCompletedBefore = PrefetchExecutor.getPrefetchFutures().size();
 
     HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
       .withBlockSize(DATA_BLOCK_SIZE).build();
     Path storeFile = writeStoreFile("TestPrefetchWithDelay", context);
+    setComputeTiming();
     readStoreFile(storeFile);
-    assertTrue(getPrefetchDelay() == 40000);
+    assertTrue("Elapsed Time {} | Computed Prefetch Delay {}"
+        + getElapsedTime() + prefetchExecutorNotifier.getComputedPrefetchDelay(),
+      getElapsedTime() >= prefetchExecutorNotifier.getComputedPrefetchDelay()
+      );
+    resetTiming();
   }
 
   @Test
   public void testPrefetchWithDefaultDelay() throws Exception {
-    conf.setInt(PREFETCH_DELAY, 1000);
-    PrefetchExecutor.loadConfiguration(conf);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
 
     HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
       .withBlockSize(DATA_BLOCK_SIZE).build();
     Path storeFile = writeStoreFile("TestPrefetchWithDelay", context);
     readStoreFile(storeFile);
-    assertTrue(getPrefetchDelay() == 1000);
+    assertEquals(prefetchExecutorNotifier.getPrefetchDelay(), 1000);
   }
 
   @Test
@@ -529,4 +551,28 @@ public class TestPrefetch {
     }
   }
 
+  private void resetTiming() {
+    startTime = 0;
+    endTime = 0;
+    measureTiming = false;
+  }
+
+  private void startTimer() {
+    if (measureTiming) {
+      startTime = System.currentTimeMillis();
+    }
+  }
+
+  private void endTimer() {
+    if (measureTiming && startTime > 0)
+    endTime = System.currentTimeMillis();
+  }
+
+  private long getElapsedTime() {
+    return endTime - startTime;
+  }
+
+  private void setComputeTiming() {
+    measureTiming = true;
+  }
 }

@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
@@ -31,8 +33,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.conf.ConfigurationManager;
-import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -40,7 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public final class PrefetchExecutor implements PropagatingConfigurationObserver {
+public final class PrefetchExecutor{
 
   private static final Logger LOG = LoggerFactory.getLogger(PrefetchExecutor.class);
   /** Wait time in miliseconds before executing prefetch */
@@ -48,9 +48,11 @@ public final class PrefetchExecutor implements PropagatingConfigurationObserver 
   public static final String PREFETCH_DELAY_VARIATION = "hbase.hfile.prefetch.delay.variation";
 
   /** Futures for tracking block prefetch activity */
-  private static final Map<Path, Future<?>> prefetchFutures = new ConcurrentSkipListMap<>();
+  public static final Map<Path, Future<?>> prefetchFutures = new ConcurrentSkipListMap<>();
+  /** Runnables for resetting the prefetch activity */
+  public static final Map<Path, Runnable> prefetchRunnable = new ConcurrentSkipListMap<>();
   /** Executor pool shared among all HFiles for block prefetch */
-  private static final ScheduledExecutorService prefetchExecutorPool;
+  public static final ScheduledExecutorService prefetchExecutorPool;
   /** Delay before beginning prefetch */
   private static int prefetchDelayMillis;
   /** Variation in prefetch delay times, to mitigate stampedes */
@@ -83,7 +85,10 @@ public final class PrefetchExecutor implements PropagatingConfigurationObserver 
       + Path.SEPARATOR_CHAR + ")|(" + Path.SEPARATOR_CHAR
       + HConstants.HREGION_COMPACTIONDIR_NAME.replace(".", "\\.") + Path.SEPARATOR_CHAR + ")");
 
-  public static void request(Path path, Runnable runnable) {
+  // For tests. Contains computed prefetch delay
+  private static long computedPrefetchDelay;
+
+  public static void request(Path path, boolean isInterrupted, Runnable runnable) {
     if (!prefetchPathExclude.matcher(path.toString()).find()) {
       long delay;
       if (prefetchDelayMillis > 0) {
@@ -94,14 +99,19 @@ public final class PrefetchExecutor implements PropagatingConfigurationObserver 
         delay = 0;
       }
       try {
+        computedPrefetchDelay = delay;
         LOG.debug("Prefetch requested for {}, delay={} ms", path, delay);
         final Runnable tracedRunnable =
           TraceUtil.tracedRunnable(runnable, "PrefetchExecutor.request");
         final Future<?> future =
           prefetchExecutorPool.schedule(tracedRunnable, delay, TimeUnit.MILLISECONDS);
-        prefetchFutures.put(path, future);
+        if (!isInterrupted) {
+          prefetchFutures.put(path, future);
+          prefetchRunnable.put(path, runnable);
+        }
       } catch (RejectedExecutionException e) {
         prefetchFutures.remove(path);
+        prefetchRunnable.remove(path);
         LOG.warn("Prefetch request rejected for {}", path);
       }
     }
@@ -109,6 +119,7 @@ public final class PrefetchExecutor implements PropagatingConfigurationObserver 
 
   public static void complete(Path path) {
     prefetchFutures.remove(path);
+    prefetchRunnable.remove(path);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Prefetch completed for {}", path.getName());
     }
@@ -120,6 +131,16 @@ public final class PrefetchExecutor implements PropagatingConfigurationObserver 
       // ok to race with other cancellation attempts
       future.cancel(true);
       prefetchFutures.remove(path);
+      prefetchRunnable.remove(path);
+      LOG.debug("Prefetch cancelled for {}", path);
+    }
+  }
+
+  public static void interrupt(Path path) {
+    Future<?> future = prefetchFutures.get(path);
+    if (future != null) {
+      // ok to race with other cancellation attempts
+      future.cancel(true);
       LOG.debug("Prefetch cancelled for {}", path);
     }
   }
@@ -132,32 +153,44 @@ public final class PrefetchExecutor implements PropagatingConfigurationObserver 
     return true;
   }
 
-  private PrefetchExecutor() {
+  /* Visible for testing only */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  static ScheduledExecutorService getExecutorPool() {
+    return prefetchExecutorPool;
   }
 
   /* Visible for testing only */
-  static ScheduledExecutorService getExecutorPool() {
-    return prefetchExecutorPool;
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public static long getComputedPrefetchDelay() {return computedPrefetchDelay;}
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  static Map<Path, Future<?>> getPrefetchFutures() {
+    return prefetchFutures;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  static Map<Path, Runnable> getPrefetchRunnable() {
+    return prefetchRunnable;
   }
 
   public static int getPrefetchDelay() {
     return prefetchDelayMillis;
   }
 
-  @Override
-  public void onConfigurationChange(Configuration conf) {
-    PrefetchExecutor.loadConfiguration(conf);
-  }
-
-  @Override
-  public void registerChildren(ConfigurationManager manager) {
-  }
-
-  @Override
-  public void deregisterChildren(ConfigurationManager manager) {
-  }
-
   public static void loadConfiguration(Configuration conf) {
     prefetchDelayMillis = conf.getInt(PREFETCH_DELAY, 1000);
+    prefetchFutures.forEach((k, v) -> {
+      // Do not cancel the task which is about to complete
+      ScheduledFuture sf = (ScheduledFuture) prefetchFutures.get(k);
+      if (sf.getDelay(TimeUnit.MILLISECONDS) > prefetchDelayMillis) {
+        interrupt(k);
+        request(k, true, prefetchRunnable.get(k));
+      }
+      LOG.debug("Reset called on Prefetch of file {} with delay {}", k, prefetchDelayMillis);
+    });
   }
 }
