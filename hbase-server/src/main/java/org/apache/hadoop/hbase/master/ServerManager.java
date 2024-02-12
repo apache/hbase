@@ -94,10 +94,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * <p>
  * If a sever is known not to be running any more, it is called dead. The dead server needs to be
  * handled by a ServerShutdownHandler. If the handler is not enabled yet, the server can't be
- * handled right away so it is queued up. After the handler is enabled, the server will be submitted
- * to a handler to handle. However, the handler may be just partially enabled. If so, the server
- * cannot be fully processed, and be queued up for further processing. A server is fully processed
- * only after the handler is fully enabled and has completed the handling.
+ * handled right away, so it is queued up. After the handler is enabled, the server will be
+ * submitted to a handler to handle. However, the handler may be just partially enabled. If so, the
+ * server cannot be fully processed, and be queued up for further processing. A server is fully
+ * processed only after the handler is fully enabled and has completed the handling.
  */
 @InterfaceAudience.Private
 public class ServerManager {

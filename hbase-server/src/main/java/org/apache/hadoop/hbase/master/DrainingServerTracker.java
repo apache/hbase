@@ -19,17 +19,22 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.NavigableMap;
-import java.util.TreeMap;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.DrainedZNodeServerData;
 
 /**
  * Tracks the list of draining region servers via ZK.
@@ -51,7 +56,7 @@ public class DrainingServerTracker extends ZKListener {
   private static final Logger LOG = LoggerFactory.getLogger(DrainingServerTracker.class);
 
   private ServerManager serverManager;
-  private final NavigableMap<String, ServerName> drainingServers = new TreeMap<>();
+  private final NavigableSet<ServerName> drainingServers = new TreeSet<>();
   private Abortable abortable;
 
   public DrainingServerTracker(ZKWatcher watcher, Abortable abortable,
@@ -77,24 +82,28 @@ public class DrainingServerTracker extends ZKListener {
         }
       }
     });
+
     List<String> servers =
       ZKUtil.listChildrenAndWatchThem(watcher, watcher.getZNodePaths().drainingZNode);
+
     if (servers != null) {
       add(servers);
     }
   }
 
   private boolean isServerInDrainedList(ServerName sn) {
-    return drainingServers.containsKey(sn.getHostname())
-      || drainingServers.containsKey(sn.getServerName());
+    return drainingServers.contains(sn);
   }
 
   private void add(final List<String> servers) throws IOException {
     synchronized (this.drainingServers) {
-      this.drainingServers.clear();
+      // Clear all servers from the draining list that shouldn't stay drained. Information about
+      // whether a server should stay drained or not is added to the ZNode by the HMaster
+      this.drainingServers.removeIf(sn -> !shouldServerStayDrained(sn));
+
       for (String n : servers) {
         final ServerName sn = ServerName.valueOf(ZKUtil.getNodeName(n));
-        this.drainingServers.put(n, sn);
+        this.drainingServers.add(sn);
         this.serverManager.addServerToDrainList(sn);
         LOG.info("Draining RS node created, adding to list [{}]", sn);
       }
@@ -103,21 +112,40 @@ public class DrainingServerTracker extends ZKListener {
 
   private void remove(final ServerName sn) {
     synchronized (this.drainingServers) {
-      if (drainingServers.containsKey(sn.getHostname())) {
-        this.drainingServers.remove(sn.getHostname());
-      } else {
-        this.drainingServers.remove(sn.getServerName());
+      if (shouldServerStayDrained(sn)) {
+        LOG.info(
+          "Refusing to remove drained RS {} from the list, it's marked as permanently drained", sn);
+        return;
       }
-      // TODO: refactor the removeServerFromDrainList method below
+      this.drainingServers.remove(sn);
       this.serverManager.removeServerFromDrainList(sn);
+      LOG.info("Successfully removed drained RS {} from the list", sn);
     }
+  }
+
+  private boolean shouldServerStayDrained(final ServerName sn) {
+    boolean shouldBePermanentlyDecommissioned = false;
+    String parentZnode = this.watcher.getZNodePaths().drainingZNode;
+    String node = ZNodePaths.joinZNode(parentZnode, sn.getServerName());
+
+    try {
+      byte[] rawData = ZKUtil.getData(this.watcher, node);
+      // Check if the data is present for backwards compatibility, some nodes may not have it
+      if (rawData != null && rawData.length > 0) {
+        DrainedZNodeServerData znodeData = DrainedZNodeServerData.parseFrom(rawData);
+        shouldBePermanentlyDecommissioned = znodeData.getMatchHostNameOnly();
+      }
+    } catch (InterruptedException | KeeperException | InvalidProtocolBufferException e) {
+      // pass
+    }
+    return shouldBePermanentlyDecommissioned;
   }
 
   @Override
   public void nodeDeleted(final String path) {
     if (path.startsWith(watcher.getZNodePaths().drainingZNode)) {
       final ServerName sn = ServerName.valueOf(ZKUtil.getNodeName(path));
-      LOG.info("Draining RS node deleted, removing from list [" + sn + "]");
+      LOG.info("Draining RS node deleted, removing from list [{}]", sn);
       remove(sn);
     }
   }
@@ -128,10 +156,11 @@ public class DrainingServerTracker extends ZKListener {
       try {
         final List<String> newNodes =
           ZKUtil.listChildrenAndWatchThem(watcher, watcher.getZNodePaths().drainingZNode);
-        add(newNodes);
-      } catch (KeeperException e) {
-        abortable.abort("Unexpected zk exception getting RS nodes", e);
-      } catch (IOException e) {
+
+        if (newNodes != null) {
+          add(newNodes);
+        }
+      } catch (KeeperException | IOException e) {
         abortable.abort("Unexpected zk exception getting RS nodes", e);
       }
     }

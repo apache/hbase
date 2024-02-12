@@ -282,6 +282,7 @@ import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.gson.JsonParseException;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
@@ -4029,8 +4030,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     for (ServerName server : servers) {
       try {
         String node = ZNodePaths.joinZNode(parentZnode, server.getServerName());
-        // Encode whether the host should be decommissioned regardless of port + startcode or not
-        // in the znode's data
+        // Encode whether the host should be decommissioned permanently regardless of its
+        // port + startCode combination or not in the znode's data
+        if (matchHostNameOnly) {
+          LOG.info("Marking the host of '{}' as permanently decommissioned in ZooKeeper",
+            server.getServerName());
+        }
         byte[] data = DrainedZNodeServerData.newBuilder().setMatchHostNameOnly(matchHostNameOnly)
           .build().toByteArray();
         // Create a node with binary data
@@ -4079,8 +4084,31 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // Remove the server from decommissioned (draining) server list.
     String parentZnode = getZooKeeper().getZNodePaths().drainingZNode;
     String node = ZNodePaths.joinZNode(parentZnode, server.getServerName());
+    boolean shouldBePermanentlyDecommissioned = false;
+
+    // Get the binary data in the node and check whether the hostname is marked as
+    // permanently decommissioned or not
     try {
-      ZKUtil.deleteNodeFailSilent(getZooKeeper(), node);
+      byte[] rawData = ZKUtil.getData(getZooKeeper(), node);
+
+      // Check if the data is present for backwards compatibility, some nodes may not have it
+      if (rawData != null && rawData.length > 0) {
+        DrainedZNodeServerData znodeData = DrainedZNodeServerData.parseFrom(rawData);
+        shouldBePermanentlyDecommissioned = znodeData.getMatchHostNameOnly();
+      }
+    } catch (InterruptedException | KeeperException | InvalidProtocolBufferException e) {
+      throw new HBaseIOException(this.zooKeeper.prefix("Unable to recommission "
+        + server.getServerName() + ", was unable to read the node's data"), e);
+    }
+
+    try {
+      if (shouldBePermanentlyDecommissioned) {
+        LOG.info("Skipping recommissioning of server {} because it was marked as permanently"
+          + " decommissioned in ZooKeeper", server.getServerName());
+        return;
+      } else {
+        ZKUtil.deleteNodeFailSilent(getZooKeeper(), node);
+      }
     } catch (KeeperException ke) {
       throw new HBaseIOException(
         this.zooKeeper.prefix("Unable to recommission '" + server.getServerName() + "'."), ke);
@@ -4103,8 +4131,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       }
       RegionInfo hri = regionState.getRegion();
       if (server.equals(regionState.getServerName())) {
-        LOG.info("Skipping move of region " + hri.getRegionNameAsString()
-          + " because region already assigned to the same server " + server + ".");
+        LOG.info(
+          "Skipping move of region {} because region already assigned to the same server {}.",
+          hri.getRegionNameAsString(), server);
         continue;
       }
       RegionPlan rp = new RegionPlan(hri, regionState.getServerName(), server);
