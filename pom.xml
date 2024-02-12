@@ -739,7 +739,9 @@
       --add-exports java.base/sun.net.util=ALL-UNNAMED</hbase-surefire.jdk11.flags>
     <!-- java.base/jdk.internal.util.random=ALL-UNNAMED is required by the test code, so we do not
     need this in bin/hbase -->
-    <hbase-surefire.jdk17.flags>--add-opens java.base/jdk.internal.util.random=ALL-UNNAMED</hbase-surefire.jdk17.flags>
+    <hbase-surefire.jdk17.flags>--add-opens java.base/jdk.internal.util.random=ALL-UNNAMED
+      --add-opens java.base/sun.security.x509=ALL-UNNAMED
+      --add-opens java.base/sun.security.util=ALL-UNNAMED</hbase-surefire.jdk17.flags>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine} @{jacocoArgLine}</argLine>
     <extra.enforcer.version>1.5.1</extra.enforcer.version>
