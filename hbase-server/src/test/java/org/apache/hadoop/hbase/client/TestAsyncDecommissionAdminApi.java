@@ -20,16 +20,24 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.zookeeper.KeeperException;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -106,7 +114,7 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
   }
 
   @Test
-  public void testAsyncDecommissionRegionServersHostsPermanently() throws Exception {
+  public void testAsyncDecommissionRegionServersByHostNamesPermanently() throws Exception {
     admin.balancerSwitch(false, true);
     List<ServerName> decommissionedRegionServers = admin.listDecommissionedRegionServers().get();
     assertTrue(decommissionedRegionServers.isEmpty());
@@ -136,7 +144,7 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
 
     // Decommission the server permanently, setting the `matchHostNameOnly` argument to `true`
     boolean matchHostNameOnly = true;
-    admin.decommissionRegionServers(new ArrayList<ServerName>(serversToDecommission.keySet()), true,
+    admin.decommissionRegionServers(new ArrayList<>(serversToDecommission.keySet()), true,
       matchHostNameOnly).get();
     assertEquals(1, admin.listDecommissionedRegionServers().get().size());
 
@@ -153,16 +161,43 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
     TEST_UTIL.waitUntilNoRegionsInTransition(10000);
 
     // Try to recommission the server and assert that the server is still decommissioned
+    recommissionRegionServers(serversToDecommission);
+    assertEquals(1, admin.listDecommissionedRegionServers().get().size());
+
+    // Verify that the regions still belong to the remainingServer and not the decommissioned ones
     for (ServerName server : serversToDecommission.keySet()) {
-      List<byte[]> encodedRegionNames = serversToDecommission.get(server).stream()
+      for (RegionInfo region : serversToDecommission.get(server)) {
+        TEST_UTIL.assertRegionOnServer(region, remainingServer, 10000);
+      }
+    }
+
+    // Clean-up ZooKeeper's state and recommission all servers for the next parameterized test run
+    removeServersBinaryData(serversToDecommission.keySet());
+    recommissionRegionServers(serversToDecommission);
+  }
+
+  private void
+  recommissionRegionServers(HashMap<ServerName, List<RegionInfo>> decommissionedServers)
+    throws ExecutionException, InterruptedException {
+    for (ServerName server : decommissionedServers.keySet()) {
+      List<byte[]> encodedRegionNames = decommissionedServers.get(server).stream()
         .map(RegionInfo::getEncodedNameAsBytes).collect(Collectors.toList());
       admin.recommissionRegionServer(server, encodedRegionNames).get();
     }
-    assertEquals(1, admin.listDecommissionedRegionServers().get().size());
+  }
 
-    // Verify that the still decommissioned servers have no regions
-    for (ServerName server : serversToDecommission.keySet()) {
-      assertTrue(serversToDecommission.get(server).isEmpty());
+  private void removeServersBinaryData(Set<ServerName> decommissionedServers) throws IOException {
+    ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
+    for (ServerName serverName : decommissionedServers) {
+      String znodePath =
+        ZNodePaths.joinZNode(zkw.getZNodePaths().drainingZNode, serverName.getServerName());
+      byte[] newData = ZooKeeperProtos.DrainedZNodeServerData.newBuilder()
+        .setMatchHostNameOnly(false).build().toByteArray();
+      try {
+        ZKUtil.setData(zkw, znodePath, newData);
+      } catch (KeeperException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 }

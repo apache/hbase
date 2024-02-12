@@ -27,12 +27,18 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -68,6 +74,70 @@ public class TestAdmin4 extends TestAdminBase {
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     assertEquals(-1, ZKUtil.checkExists(zkw,
       ZNodePaths.joinZNode(zkw.getZNodePaths().drainingZNode, serverName.getServerName())));
+  }
+
+  /**
+   * TestCase for HBASE-28342
+   */
+  @Test
+  public void testDecommissionRegionServersPermanently() throws Exception {
+    List<ServerName> decommissionedRegionServers = ADMIN.listDecommissionedRegionServers();
+    assertTrue(decommissionedRegionServers.isEmpty());
+
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.createMultiRegionTable(tableName, Bytes.toBytes("f"), 6);
+
+    ArrayList<ServerName> clusterRegionServers =
+      new ArrayList<>(ADMIN.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.LIVE_SERVERS))
+        .getLiveServerMetrics().keySet());
+
+    assertEquals(3, clusterRegionServers.size());
+
+    HashMap<ServerName, List<RegionInfo>> serversToDecommission = new HashMap<>();
+    // Get a server that has meta online. We will decommission two of the servers,
+    // leaving one online.
+    int i;
+    for (i = 0; i < clusterRegionServers.size(); i++) {
+      List<RegionInfo> regionsOnServer = ADMIN.getRegions(clusterRegionServers.get(i));
+      if (
+        ADMIN.getRegions(clusterRegionServers.get(i)).stream().anyMatch(RegionInfo::isMetaRegion)
+      ) {
+        serversToDecommission.put(clusterRegionServers.get(i), regionsOnServer);
+        break;
+      }
+    }
+
+    clusterRegionServers.remove(i);
+    // Get another server to decommission.
+    serversToDecommission.put(clusterRegionServers.get(0),
+      ADMIN.getRegions(clusterRegionServers.get(0)));
+
+    ServerName remainingServer = clusterRegionServers.get(1);
+
+    // Decommission the servers with `matchHostNameOnly` set to `true` so that the hostnames are
+    // always maintained as decommissioned/drained
+    boolean matchHostNameOnly = true;
+    ADMIN.decommissionRegionServers(new ArrayList<ServerName>(serversToDecommission.keySet()), true,
+      matchHostNameOnly);
+    assertEquals(2, ADMIN.listDecommissionedRegionServers().size());
+
+    // Verify the regions have been off the decommissioned servers, all on the one
+    // remaining server.
+    for (ServerName server : serversToDecommission.keySet()) {
+      for (RegionInfo region : serversToDecommission.get(server)) {
+        TEST_UTIL.assertRegionOnServer(region, remainingServer, 10000);
+      }
+    }
+
+    // Try to recommission the servers and assert that they remain decommissioned
+    // No regions should be loaded on them
+    for (ServerName server : serversToDecommission.keySet()) {
+      List<byte[]> encodedRegionNames = serversToDecommission.get(server).stream()
+        .map(RegionInfo::getEncodedNameAsBytes).collect(Collectors.toList());
+      ADMIN.recommissionRegionServer(server, encodedRegionNames);
+    }
+    // Assert that the number of decommissioned servers is still 2!
+    assertEquals(2, ADMIN.listDecommissionedRegionServers().size());
   }
 
   @Test
