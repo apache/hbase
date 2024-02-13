@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -43,6 +42,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
 @RunWith(Parameterized.class)
 @Category({ ClientTests.class, MediumTests.class })
@@ -177,8 +178,8 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
   }
 
   private void
-  recommissionRegionServers(HashMap<ServerName, List<RegionInfo>> decommissionedServers)
-    throws ExecutionException, InterruptedException {
+    recommissionRegionServers(HashMap<ServerName, List<RegionInfo>> decommissionedServers)
+      throws ExecutionException, InterruptedException {
     for (ServerName server : decommissionedServers.keySet()) {
       List<byte[]> encodedRegionNames = decommissionedServers.get(server).stream()
         .map(RegionInfo::getEncodedNameAsBytes).collect(Collectors.toList());

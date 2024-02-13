@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.DrainedZNodeServerData;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -44,6 +43,8 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.DrainedZNodeServerData;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAdmin4 extends TestAdminBase {
@@ -132,7 +133,8 @@ public class TestAdmin4 extends TestAdminBase {
     // Assert that the number of decommissioned servers is still 2!
     assertEquals(2, ADMIN.listDecommissionedRegionServers().size());
 
-    // Verify that all regions are still on the remainingServer and not on the decommissioned servers
+    // Verify that all regions are still on the remainingServer and not on the decommissioned
+    // servers
     for (ServerName server : serversToDecommission.keySet()) {
       for (RegionInfo region : serversToDecommission.get(server)) {
         TEST_UTIL.assertRegionOnServer(region, remainingServer, 10000);
@@ -148,7 +150,8 @@ public class TestAdmin4 extends TestAdminBase {
    * TestCase for HBASE-28342
    */
   @Test
-  public void testAsyncDecommissionRegionServersSetsHostNameMatchAsFalseInZooKeeper() throws Exception {
+  public void testAsyncDecommissionRegionServersSetsHostNameMatchDataFalseInZooKeeperAsExpected()
+    throws Exception {
     assertTrue(ADMIN.listDecommissionedRegionServers().isEmpty());
 
     ArrayList<ServerName> clusterRegionServers =
@@ -167,9 +170,8 @@ public class TestAdmin4 extends TestAdminBase {
 
     // Read the node's data in ZooKeeper and assert that it was set as expected
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
-    String znodePath =ZNodePaths.joinZNode(
-      zkw.getZNodePaths().drainingZNode, decommissionedRegionServer.getServerName()
-    );
+    String znodePath = ZNodePaths.joinZNode(zkw.getZNodePaths().drainingZNode,
+      decommissionedRegionServer.getServerName());
     DrainedZNodeServerData data = DrainedZNodeServerData.parseFrom(ZKUtil.getData(zkw, znodePath));
     assertEquals(expectedMatchHostNameOnly, data.getMatchHostNameOnly());
 
@@ -182,7 +184,8 @@ public class TestAdmin4 extends TestAdminBase {
    * TestCase for HBASE-28342
    */
   @Test
-  public void testAsyncDecommissionRegionServersSetsHostNameMatchAsTrueInZooKeeper() throws Exception {
+  public void testAsyncDecommissionRegionServersSetsHostNameMatchToTrueInZooKeeperAsExpected()
+    throws Exception {
     assertTrue(ADMIN.listDecommissionedRegionServers().isEmpty());
 
     ArrayList<ServerName> clusterRegionServers =
@@ -201,9 +204,8 @@ public class TestAdmin4 extends TestAdminBase {
 
     // Read the node's data in ZooKeeper and assert that it was set as expected
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
-    String znodePath =ZNodePaths.joinZNode(
-      zkw.getZNodePaths().drainingZNode, decommissionedRegionServer.getServerName()
-    );
+    String znodePath = ZNodePaths.joinZNode(zkw.getZNodePaths().drainingZNode,
+      decommissionedRegionServer.getServerName());
     DrainedZNodeServerData data = DrainedZNodeServerData.parseFrom(ZKUtil.getData(zkw, znodePath));
     assertEquals(expectedMatchHostNameOnly, data.getMatchHostNameOnly());
 
@@ -233,9 +235,8 @@ public class TestAdmin4 extends TestAdminBase {
     }
   }
 
-  private void
-  recommissionRegionServers(HashMap<ServerName, List<RegionInfo>> decommissionedServers)
-    throws IOException {
+  private void recommissionRegionServers(
+    HashMap<ServerName, List<RegionInfo>> decommissionedServers) throws IOException {
     for (ServerName server : decommissionedServers.keySet()) {
       List<byte[]> encodedRegionNames = decommissionedServers.get(server).stream()
         .map(RegionInfo::getEncodedNameAsBytes).collect(Collectors.toList());
@@ -243,13 +244,14 @@ public class TestAdmin4 extends TestAdminBase {
     }
   }
 
-  private void markZnodeAsRecommissionable(Set<ServerName> decommissionedServers) throws IOException {
+  private void markZnodeAsRecommissionable(Set<ServerName> decommissionedServers)
+    throws IOException {
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     for (ServerName serverName : decommissionedServers) {
       String znodePath =
         ZNodePaths.joinZNode(zkw.getZNodePaths().drainingZNode, serverName.getServerName());
-      byte[] newData = DrainedZNodeServerData.newBuilder()
-        .setMatchHostNameOnly(false).build().toByteArray();
+      byte[] newData =
+        DrainedZNodeServerData.newBuilder().setMatchHostNameOnly(false).build().toByteArray();
       try {
         ZKUtil.setData(zkw, znodePath, newData);
       } catch (KeeperException e) {
