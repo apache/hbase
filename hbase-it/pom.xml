@@ -112,19 +112,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-testing-util</artifactId>
-      <exclusions>
-        <!--This dependency pulls in hadoop-minicluster
-             which pulls in the below. It messes up
-             this build at assembly time. See HBASE-22029-->
-        <exclusion>
-          <groupId>com.sun.jersey</groupId>
-          <artifactId>jersey-core</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-endpoint</artifactId>
     </dependency>
     <dependency>
@@ -398,6 +385,13 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minikdc</artifactId>
         </dependency>
+        <!-- ITs using MiniMRYarnCluster fail with NCDFE, so adding this here. We are not having
+        same exclusions as in hadoop-3 profile, as for hadoop-3 it runs fine even with exclusions.
+        See HBASE-28311 for details. -->
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-testing-util</artifactId>
+        </dependency>
       </dependencies>
       <build>
         <plugins>
@@ -461,6 +455,19 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minikdc</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-testing-util</artifactId>
+          <exclusions>
+            <!--This dependency pulls in hadoop-minicluster
+                 which pulls in the below. It messes up
+                 this build at assembly time. See HBASE-22029-->
+            <exclusion>
+              <groupId>com.sun.jersey</groupId>
+              <artifactId>jersey-core</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
       </dependencies>
       <build>
