@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY;
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_ENABLE_DUAL_FILE_WRITER;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -143,6 +146,15 @@ public class CompactionConfiguration {
       conf.getLong(HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY, storeConfigInfo.getMemStoreFlushSize());
     minFilesToCompact = Math.max(2, conf.getInt(HBASE_HSTORE_COMPACTION_MIN_KEY,
       conf.getInt(HBASE_HSTORE_COMPACTION_MIN_KEY_OLD, 3)));
+    if (
+      conf.getBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY,
+        DEFAULT_ENABLE_DUAL_FILE_WRITER)
+    ) {
+      // If DualFileWriter is enabled, we bump up the min value by one as DualFileWriter compacts
+      // files into two files, live and historical, instead of one. This also eliminates infinite
+      // re-compaction when the min value is set to 2
+      minFilesToCompact += 1;
+    }
     maxFilesToCompact = conf.getInt(HBASE_HSTORE_COMPACTION_MAX_KEY, 10);
     compactionRatio = conf.getFloat(HBASE_HSTORE_COMPACTION_RATIO_KEY, 1.2F);
     offPeakCompactionRatio = conf.getFloat(HBASE_HSTORE_COMPACTION_RATIO_OFFPEAK_KEY, 5.0F);
