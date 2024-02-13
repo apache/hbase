@@ -26,18 +26,14 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.DrainedZNodeServerData;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -144,8 +140,77 @@ public class TestAdmin4 extends TestAdminBase {
     }
 
     // Cleanup ZooKeeper's state and recommission all servers for the rest of tests
-    removeServersBinaryData(serversToDecommission.keySet());
+    markZnodeAsRecommissionable(serversToDecommission.keySet());
     recommissionRegionServers(serversToDecommission);
+  }
+
+  /**
+   * TestCase for HBASE-28342
+   */
+  @Test
+  public void testAsyncDecommissionRegionServersSetsHostNameMatchAsFalseInZooKeeper() throws Exception {
+    assertTrue(ADMIN.listDecommissionedRegionServers().isEmpty());
+
+    ArrayList<ServerName> clusterRegionServers =
+      new ArrayList<>(ADMIN.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.LIVE_SERVERS))
+        .getLiveServerMetrics().keySet());
+
+    ServerName decommissionedRegionServer = clusterRegionServers.get(0);
+    clusterRegionServers.remove(0);
+
+    // Decommission the servers with `matchHostNameOnly` set to `false` so that the hostnames are
+    // not always considered as decommissioned/drained
+    boolean expectedMatchHostNameOnly = false;
+    ADMIN.decommissionRegionServers(Collections.singletonList(decommissionedRegionServer), true,
+      expectedMatchHostNameOnly);
+    assertEquals(1, ADMIN.listDecommissionedRegionServers().size());
+
+    // Read the node's data in ZooKeeper and assert that it was set as expected
+    ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
+    String znodePath =ZNodePaths.joinZNode(
+      zkw.getZNodePaths().drainingZNode, decommissionedRegionServer.getServerName()
+    );
+    DrainedZNodeServerData data = DrainedZNodeServerData.parseFrom(ZKUtil.getData(zkw, znodePath));
+    assertEquals(expectedMatchHostNameOnly, data.getMatchHostNameOnly());
+
+    // Recommission the server
+    ADMIN.recommissionRegionServer(decommissionedRegionServer, new ArrayList<>());
+    assertEquals(0, ADMIN.listDecommissionedRegionServers().size());
+  }
+
+  /**
+   * TestCase for HBASE-28342
+   */
+  @Test
+  public void testAsyncDecommissionRegionServersSetsHostNameMatchAsTrueInZooKeeper() throws Exception {
+    assertTrue(ADMIN.listDecommissionedRegionServers().isEmpty());
+
+    ArrayList<ServerName> clusterRegionServers =
+      new ArrayList<>(ADMIN.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.LIVE_SERVERS))
+        .getLiveServerMetrics().keySet());
+
+    ServerName decommissionedRegionServer = clusterRegionServers.get(0);
+    clusterRegionServers.remove(0);
+
+    // Decommission the servers with `matchHostNameOnly` set to `true` so that the hostnames are
+    // always considered as decommissioned/drained
+    boolean expectedMatchHostNameOnly = true;
+    ADMIN.decommissionRegionServers(Collections.singletonList(decommissionedRegionServer), true,
+      expectedMatchHostNameOnly);
+    assertEquals(1, ADMIN.listDecommissionedRegionServers().size());
+
+    // Read the node's data in ZooKeeper and assert that it was set as expected
+    ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
+    String znodePath =ZNodePaths.joinZNode(
+      zkw.getZNodePaths().drainingZNode, decommissionedRegionServer.getServerName()
+    );
+    DrainedZNodeServerData data = DrainedZNodeServerData.parseFrom(ZKUtil.getData(zkw, znodePath));
+    assertEquals(expectedMatchHostNameOnly, data.getMatchHostNameOnly());
+
+    // Reset the node's data in ZooKeeper in order to be able to recommission the server
+    markZnodeAsRecommissionable(Collections.singleton(decommissionedRegionServer));
+    ADMIN.recommissionRegionServer(decommissionedRegionServer, new ArrayList<>());
+    assertEquals(0, ADMIN.listDecommissionedRegionServers().size());
   }
 
   @Test
@@ -178,12 +243,12 @@ public class TestAdmin4 extends TestAdminBase {
     }
   }
 
-  private void removeServersBinaryData(Set<ServerName> decommissionedServers) throws IOException {
+  private void markZnodeAsRecommissionable(Set<ServerName> decommissionedServers) throws IOException {
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     for (ServerName serverName : decommissionedServers) {
       String znodePath =
         ZNodePaths.joinZNode(zkw.getZNodePaths().drainingZNode, serverName.getServerName());
-      byte[] newData = ZooKeeperProtos.DrainedZNodeServerData.newBuilder()
+      byte[] newData = DrainedZNodeServerData.newBuilder()
         .setMatchHostNameOnly(false).build().toByteArray();
       try {
         ZKUtil.setData(zkw, znodePath, newData);
