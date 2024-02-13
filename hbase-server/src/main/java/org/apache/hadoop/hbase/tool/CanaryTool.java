@@ -670,14 +670,16 @@ public class CanaryTool implements Tool, Canary {
     private String serverName;
     private RegionInfo region;
     private RegionServerStdOutSink sink;
+    private Boolean rawScanEnabled;
     private AtomicLong successes;
 
     RegionServerTask(Connection connection, String serverName, RegionInfo region,
-      RegionServerStdOutSink sink, AtomicLong successes) {
+      RegionServerStdOutSink sink, Boolean rawScanEnabled, AtomicLong successes) {
       this.connection = connection;
       this.serverName = serverName;
       this.region = region;
       this.sink = sink;
+      this.rawScanEnabled = rawScanEnabled;
       this.successes = successes;
     }
 
@@ -702,22 +704,35 @@ public class CanaryTool implements Tool, Canary {
           get = new Get(startKey);
           get.setCacheBlocks(false);
           get.setFilter(new FirstKeyOnlyFilter());
-          stopWatch.start();
-          table.get(get);
-          stopWatch.stop();
+          // Converting get object to scan to enable RAW SCAN.
+          // This will work for all the regions of the HBase tables except first region.
+          scan = new Scan(get);
+
         } else {
           scan = new Scan();
+          // In case of first region of the HBase Table, we do not have start-key for the region.
+          // For Region Canary, we only need scan a single row/cell in the region to make sure that
+          // region is accessible.
+          //
+          // When HBase table has more than 1 empty regions at start of the row-key space, Canary
+          // will create multiple scan object to find first available row in the table by scanning
+          // all the regions in sequence until it can find first available row.
+          //
+          // Since First region of the table doesn't have any start key, We should set End Key as
+          // stop row and set inclusive=false to limit scan to first region only.
+          scan.withStopRow(region.getEndKey(), false);
           scan.setCacheBlocks(false);
           scan.setFilter(new FirstKeyOnlyFilter());
           scan.setCaching(1);
           scan.setMaxResultSize(1L);
           scan.setOneRowLimit();
-          stopWatch.start();
-          ResultScanner s = table.getScanner(scan);
-          s.next();
-          s.close();
-          stopWatch.stop();
         }
+        scan.setRaw(rawScanEnabled);
+        stopWatch.start();
+        ResultScanner s = table.getScanner(scan);
+        s.next();
+        s.close();
+        stopWatch.stop();
         successes.incrementAndGet();
         sink.publishReadTiming(tableName.getNameAsString(), serverName, stopWatch.getTime());
       } catch (TableNotFoundException tnfe) {
@@ -1778,6 +1793,7 @@ public class CanaryTool implements Tool, Canary {
    * A monitor for regionserver mode
    */
   private static class RegionServerMonitor extends Monitor {
+    private boolean rawScanEnabled;
     private boolean allRegions;
 
     public RegionServerMonitor(Connection connection, String[] monitorTargets, boolean useRegExp,
@@ -1785,6 +1801,8 @@ public class CanaryTool implements Tool, Canary {
       long allowedFailures) {
       super(connection, monitorTargets, useRegExp, sink, executor, treatFailureAsError,
         allowedFailures);
+      Configuration conf = connection.getConfiguration();
+      this.rawScanEnabled = conf.getBoolean(HConstants.HBASE_CANARY_READ_RAW_SCAN_KEY, false);
       this.allRegions = allRegions;
     }
 
@@ -1857,14 +1875,14 @@ public class CanaryTool implements Tool, Canary {
         } else if (this.allRegions) {
           for (RegionInfo region : entry.getValue()) {
             tasks.add(new RegionServerTask(this.connection, serverName, region, regionServerSink,
-              successes));
+              this.rawScanEnabled, successes));
           }
         } else {
           // random select a region if flag not set
           RegionInfo region =
             entry.getValue().get(ThreadLocalRandom.current().nextInt(entry.getValue().size()));
-          tasks.add(
-            new RegionServerTask(this.connection, serverName, region, regionServerSink, successes));
+          tasks.add(new RegionServerTask(this.connection, serverName, region, regionServerSink,
+            this.rawScanEnabled, successes));
         }
       }
       try {
