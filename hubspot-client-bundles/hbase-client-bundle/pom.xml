@@ -98,6 +98,8 @@
                   <include>com.google.protobuf:protobuf-java</include>
                   <!--  For client metrics we need to include so the metrics package can be shaded to prevent issues with our parent pom -->
                   <include>io.dropwizard.metrics:metrics-core</include>
+                  <!-- conflicts with hubspot managed version, so include it with shading -->
+                  <include>commons-io:commons-io</include>
                 </includes>
               </artifactSet>
               <filters>

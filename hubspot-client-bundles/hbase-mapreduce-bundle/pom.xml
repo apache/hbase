@@ -15,6 +15,13 @@
     <dependency>
       <groupId>com.hubspot.hbase</groupId>
       <artifactId>hbase-client-bundle</artifactId>
+      <exclusions>
+        <!-- we bundle commons-io, but it also come through transitively. -->
+        <exclusion>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -73,6 +80,11 @@
         <exclusion>
           <groupId>commons-logging</groupId>
           <artifactId>commons-logging</artifactId>
+        </exclusion>
+        <!-- this one is included in the client bundle, shaded -->
+        <exclusion>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
         </exclusion>
         <exclusion>
           <groupId>com.sun.jersey</groupId>
@@ -150,6 +162,11 @@
           <groupId>commons-logging</groupId>
           <artifactId>commons-logging</artifactId>
         </exclusion>
+        <!-- this one is included in the client bundle, shaded -->
+        <exclusion>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
+        </exclusion>
         <exclusion>
           <groupId>javax.servlet.jsp</groupId>
           <artifactId>*</artifactId>
@@ -191,6 +208,11 @@
         <exclusion>
           <groupId>org.apache.hbase</groupId>
           <artifactId>*</artifactId>
+        </exclusion>
+        <!-- this one is included in the client bundle, shaded -->
+        <exclusion>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

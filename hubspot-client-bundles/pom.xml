@@ -381,6 +381,10 @@
                     <pattern>com.codahale.metrics</pattern>
                     <shadedPattern>${shade.prefix}.com.codahale.metrics</shadedPattern>
                   </relocation>
+                  <relocation>
+                    <pattern>org.apache.commons.io</pattern>
+                    <shadedPattern>${shade.prefix}.org.apache.commons.io</shadedPattern>
+                  </relocation>
                 </relocations>
                 <filters>
                   <filter>
