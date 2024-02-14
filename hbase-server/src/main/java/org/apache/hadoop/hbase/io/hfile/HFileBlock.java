@@ -697,7 +697,7 @@ public class HFileBlock implements Cacheable {
    * when block is returned to the cache.
    * @return the offset of this block in the file it was read from
    */
-  long getOffset() {
+  public long getOffset() {
     if (offset < 0) {
       throw new IllegalStateException("HFile block offset not initialized properly");
     }

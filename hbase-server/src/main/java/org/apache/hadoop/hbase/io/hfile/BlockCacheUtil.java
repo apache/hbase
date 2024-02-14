@@ -25,7 +25,9 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -35,6 +37,7 @@ import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.TypeAdapter;
 import org.apache.hbase.thirdparty.com.google.gson.stream.JsonReader;
 import org.apache.hbase.thirdparty.com.google.gson.stream.JsonWriter;
+import static org.apache.hadoop.hbase.io.hfile.HFileBlock.FILL_HEADER;
 
 /**
  * Utilty for aggregating counts in CachedBlocks and toString/toJSON CachedBlocks and BlockCaches.
@@ -238,11 +241,42 @@ public class BlockCacheUtil {
     }
   }
 
+
+
   private static final int DEFAULT_MAX = 1000000;
 
   public static int getMaxCachedBlocksByFile(Configuration conf) {
     return conf == null ? DEFAULT_MAX : conf.getInt("hbase.ui.blockcache.by.file.max", DEFAULT_MAX);
   }
+
+  public  static HFileBlock getBlockForCaching(CacheConfig cacheConf, HFileBlock block) {
+    HFileContext newContext = new HFileContextBuilder().withBlockSize(block.getHFileContext().getBlocksize())
+      .withBytesPerCheckSum(0).withChecksumType(ChecksumType.NULL) // no checksums in cached data
+      .withCompression(block.getHFileContext().getCompression())
+      .withDataBlockEncoding(block.getHFileContext().getDataBlockEncoding())
+      .withHBaseCheckSum(block.getHFileContext().isUseHBaseChecksum())
+      .withCompressTags(block.getHFileContext().isCompressTags())
+      .withIncludesMvcc(block.getHFileContext().isIncludesMvcc())
+      .withIncludesTags(block.getHFileContext().isIncludesTags())
+      .withColumnFamily(block.getHFileContext().getColumnFamily()).withTableName(block.getHFileContext().getTableName())
+      .build();
+    // Build the HFileBlock.
+    HFileBlockBuilder builder = new HFileBlockBuilder();
+    ByteBuff buff = block.getBufferReadOnly();
+    // Calculate how many bytes we need for checksum on the tail of the block.
+    int numBytes = (int) ChecksumUtil.numBytes(block.getOnDiskDataSizeWithHeader(),
+      block.getHFileContext().getBytesPerChecksum());
+    return builder.withBlockType(block.getBlockType())
+      .withOnDiskSizeWithoutHeader(block.getOnDiskSizeWithoutHeader())
+      .withUncompressedSizeWithoutHeader(block.getUncompressedSizeWithoutHeader())
+      .withPrevBlockOffset(block.getPrevBlockOffset()).withByteBuff(buff)
+      .withFillHeader(FILL_HEADER)
+      .withOffset(block.getOffset()).withNextBlockOnDiskSize(-1)
+      .withOnDiskDataSizeWithHeader(block.getOnDiskDataSizeWithHeader() + numBytes)
+      .withHFileContext(newContext).withByteBuffAllocator(cacheConf.getByteBuffAllocator())
+      .withShared(!buff.hasArray()).build();
+  }
+
 
   /**
    * Use one of these to keep a running account of cached blocks by file. Throw it away when done.

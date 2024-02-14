@@ -51,6 +51,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -76,6 +77,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
@@ -215,6 +217,8 @@ public class BucketCache implements BlockCache, HeapSize {
   // reset after a successful read/write.
   private volatile long ioErrorStartTime = -1;
 
+  private Configuration conf;
+
   /**
    * A ReentrantReadWriteLock to lock on a particular block identified by offset. The purpose of
    * this is to avoid freeing the block which is being read.
@@ -291,6 +295,7 @@ public class BucketCache implements BlockCache, HeapSize {
     } else {
       this.offsetLock = new IdReadWriteLockWithObjectPool<>(ReferenceType.SOFT);
     }
+    this.conf = conf;
     this.algorithm = conf.get(FILE_VERIFY_ALGORITHM, DEFAULT_FILE_VERIFY_ALGORITHM);
     this.ioEngine = getIOEngineFromName(ioEngineName, capacity, persistencePath);
     this.writerThreads = new WriterThread[writerThreadNum];
@@ -560,6 +565,20 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
+  public BucketEntry getBlockForReference(BlockCacheKey key) {
+    BucketEntry foundEntry = null;
+    String referredFileName = null;
+    if (StoreFileInfo.isReference(key.getHfileName())) {
+      referredFileName = StoreFileInfo.getReferredToRegionAndFile(key.getHfileName()).getSecond();
+    }
+    if (referredFileName != null) {
+      BlockCacheKey convertedCacheKey = new BlockCacheKey(referredFileName, key.getOffset());
+      foundEntry = backingMap.get(convertedCacheKey);
+      LOG.info("Got a link/ref: {}. Related cacheKey: {}. Found entry: {}",
+        key.getHfileName(), convertedCacheKey, foundEntry);
+    }
+    return foundEntry;
+  }
   /**
    * Get the buffer of the block with the specified key.
    * @param key                block's cache key
@@ -583,6 +602,9 @@ public class BucketCache implements BlockCache, HeapSize {
       return re.getData();
     }
     BucketEntry bucketEntry = backingMap.get(key);
+    if (bucketEntry == null) {
+      bucketEntry = getBlockForReference(key);
+    }
     if (bucketEntry != null) {
       long start = System.nanoTime();
       ReentrantReadWriteLock lock = offsetLock.getLock(bucketEntry.offset());
@@ -591,7 +613,7 @@ public class BucketCache implements BlockCache, HeapSize {
         // We can not read here even if backingMap does contain the given key because its offset
         // maybe changed. If we lock BlockCacheKey instead of offset, then we can only check
         // existence here.
-        if (bucketEntry.equals(backingMap.get(key))) {
+        if (bucketEntry.equals(backingMap.get(key)) || bucketEntry.equals(getBlockForReference(key))) {
           // Read the block from IOEngine based on the bucketEntry's offset and length, NOTICE: the
           // block will use the refCnt of bucketEntry, which means if two HFileBlock mapping to
           // the same BucketEntry, then all of the three will share the same refCnt.
@@ -1658,8 +1680,13 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public int evictBlocksByHfileName(String hfileName) {
+    return evictBlocksRangeByHfileName(hfileName, 0, Long.MAX_VALUE);
+  }
+  @Override
+  public int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
     fileNotFullyCached(hfileName);
-    Set<BlockCacheKey> keySet = getAllCacheKeysForFile(hfileName);
+    Set<BlockCacheKey> keySet = getAllCacheKeysForFile(hfileName, initOffset, endOffset);
+    LOG.info("found {} blocks for file {}, starting offset: {}, end offset: {}", keySet.size(), hfileName, initOffset, endOffset);
     int numEvicted = 0;
     for (BlockCacheKey key : keySet) {
       if (evictBlock(key)) {
@@ -1668,10 +1695,9 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     return numEvicted;
   }
-
-  private Set<BlockCacheKey> getAllCacheKeysForFile(String hfileName) {
-    return blocksByHFile.subSet(new BlockCacheKey(hfileName, Long.MIN_VALUE), true,
-      new BlockCacheKey(hfileName, Long.MAX_VALUE), true);
+  private Set<BlockCacheKey> getAllCacheKeysForFile(String hfileName, long init, long end) {
+    return blocksByHFile.subSet(new BlockCacheKey(hfileName, init), true,
+      new BlockCacheKey(hfileName, end), true);
   }
 
   /**
@@ -2081,25 +2107,20 @@ public class BucketCache implements BlockCache, HeapSize {
     try {
       final MutableInt count = new MutableInt();
       LOG.debug("iterating over {} entries in the backing map", backingMap.size());
-      backingMap.entrySet().stream().forEach(entry -> {
-        if (
-          entry.getKey().getHfileName().equals(fileName.getName())
-            && entry.getKey().getBlockType().equals(BlockType.DATA)
-        ) {
-          long offsetToLock = entry.getValue().offset();
-          LOG.debug("found block {} in the backing map. Acquiring read lock for offset {}",
-            entry.getKey(), offsetToLock);
-          ReentrantReadWriteLock lock = offsetLock.getLock(offsetToLock);
-          lock.readLock().lock();
-          locks.add(lock);
-          // rechecks the given key is still there (no eviction happened before the lock acquired)
-          if (backingMap.containsKey(entry.getKey())) {
-            count.increment();
-          } else {
-            lock.readLock().unlock();
-            locks.remove(lock);
-            LOG.debug("found block {}, but when locked and tried to count, it was gone.");
-          }
+      Set<BlockCacheKey> result = getAllCacheKeysForFile(fileName.getName(), 0, Long.MAX_VALUE);
+      if(result.isEmpty() && StoreFileInfo.isReference(fileName)) {
+        result = getAllCacheKeysForFile(
+          StoreFileInfo.getReferredToRegionAndFile(fileName.getName()).getSecond(),
+          0, Long.MAX_VALUE);
+      }
+      result.stream().forEach(entry -> {
+        LOG.debug("found block for file {} in the backing map. Acquiring read lock for offset {}",
+          fileName.getName(), entry.getOffset());
+        ReentrantReadWriteLock lock = offsetLock.getLock(entry.getOffset());
+        lock.readLock().lock();
+        locks.add(lock);
+        if (backingMap.containsKey(entry)) {
+          count.increment();
         }
       });
       int metaCount = totalBlockCount - dataBlockCount;
@@ -2122,7 +2143,7 @@ public class BucketCache implements BlockCache, HeapSize {
           Thread.sleep(100);
           notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
         } else
-          if ((getAllCacheKeysForFile(fileName.getName()).size() - metaCount) == dataBlockCount) {
+          if ((getAllCacheKeysForFile(fileName.getName(),0, Long.MAX_VALUE).size() - metaCount) == dataBlockCount) {
             LOG.debug("We counted {} data blocks, expected was {}, there was no more pending in "
               + "the cache write queue but we now found that total cached blocks for file {} "
               + "is equal to data block count.", count, dataBlockCount, fileName.getName());
@@ -2157,14 +2178,16 @@ public class BucketCache implements BlockCache, HeapSize {
 
   @Override
   public Optional<Boolean> isAlreadyCached(BlockCacheKey key) {
-    return Optional.of(getBackingMap().containsKey(key));
+    boolean foundKey = backingMap.containsKey(key);
+    return Optional.of(foundKey ? true : getBlockForReference(key) != null);
   }
 
   @Override
   public Optional<Integer> getBlockSize(BlockCacheKey key) {
     BucketEntry entry = backingMap.get(key);
     if (entry == null) {
-      return Optional.empty();
+      entry = getBlockForReference(key);
+      return entry == null ? Optional.empty() : Optional.of(entry.getOnDiskSizeWithHeader());
     } else {
       return Optional.of(entry.getOnDiskSizeWithHeader());
     }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -249,5 +250,9 @@ public interface BlockCache extends Iterable<CachedBlock> {
    */
   default Optional<Map<String, Long>> getRegionCachedInfo() {
     return Optional.empty();
+  }
+
+  default int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
+    return 0;
   }
 }
