@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
@@ -100,7 +102,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * only after the handler is fully enabled and has completed the handling.
  */
 @InterfaceAudience.Private
-public class ServerManager {
+public class ServerManager implements ConfigurationObserver {
   public static final String WAIT_ON_REGIONSERVERS_MAXTOSTART =
     "hbase.master.wait.on.regionservers.maxtostart";
 
@@ -172,6 +174,9 @@ public class ServerManager {
   /** Listeners that are called on server events. */
   private List<ServerListener> listeners = new CopyOnWriteArrayList<>();
 
+  /** Configured value of HConstants.REJECT_DECOMMISSIONED_HOSTS_KEY */
+  private volatile boolean rejectDecommissionedHostsConfig;
+
   /**
    * Constructor.
    */
@@ -183,6 +188,35 @@ public class ServerManager {
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
     persistFlushedSequenceId =
       c.getBoolean(PERSIST_FLUSHEDSEQUENCEID, PERSIST_FLUSHEDSEQUENCEID_DEFAULT);
+    rejectDecommissionedHostsConfig = getRejectDecommissionedHostsConfig(c);
+  }
+
+  /**
+   * Implementation of the ConfigurationObserver interface. We are interested in live-loading the
+   * configuration value of HConstants.REJECT_DECOMMISSIONED_HOSTS_KEY
+   * @param conf Server configuration instance
+   */
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    final boolean newValue = getRejectDecommissionedHostsConfig(conf);
+    if (rejectDecommissionedHostsConfig == newValue) {
+      // no-op
+      return;
+    }
+
+    LOG.info("Config Reload for RejectDecommissionedHosts. previous value: {}, new value: {}",
+      rejectDecommissionedHostsConfig, newValue);
+
+    rejectDecommissionedHostsConfig = newValue;
+  }
+
+  /**
+   * Reads the value of HConstants.REJECT_DECOMMISSIONED_HOSTS_KEY from the config and returns it
+   * @param conf Configuration instance of the Master
+   */
+  public boolean getRejectDecommissionedHostsConfig(Configuration conf) {
+    return conf.getBoolean(HConstants.REJECT_DECOMMISSIONED_HOSTS_KEY,
+      HConstants.REJECT_DECOMMISSIONED_HOSTS_DEFAULT);
   }
 
   /**
@@ -227,11 +261,14 @@ public class ServerManager {
     final String hostname =
       request.hasUseThisHostnameInstead() ? request.getUseThisHostnameInstead() : isaHostName;
     ServerName sn = ServerName.valueOf(hostname, request.getPort(), request.getServerStartCode());
+
+    // Check if the host should be rejected based on it's decommissioned status
+    checkRejectableDecommissionedStatus(sn);
+
     checkClockSkew(sn, request.getServerCurrentTime());
     checkIsDead(sn, "STARTUP");
     if (!checkAndRecordNewServer(sn, ServerMetricsBuilder.of(sn, versionNumber, version))) {
-      LOG.warn(
-        "THIS SHOULD NOT HAPPEN, RegionServerStartup" + " could not record the server: " + sn);
+      LOG.warn("THIS SHOULD NOT HAPPEN, RegionServerStartup could not record the server: {}", sn);
     }
     storage.started(sn);
     return sn;
@@ -291,6 +328,36 @@ public class ServerManager {
       }
     }
     updateLastFlushedSequenceIds(sn, sl);
+  }
+
+  /**
+   * Checks if the Master is configured to reject decommissioned hosts or not. When it's configured
+   * to do so, any RegionServer trying to join the cluster will have it's host checked against the
+   * list of hosts of currently decommissioned servers and potentially get prevented from reporting
+   * for duty; otherwise, we do nothing and we let them pass to the next check. See HBASE-28342 for
+   * details.
+   * @param sn The ServerName to check for
+   * @throws HostIsConsideredDecommissionedException if the Master is configured to reject
+   *                                                 decommissioned hosts and this host exists in
+   *                                                 the list of the decommissioned servers
+   */
+  private void checkRejectableDecommissionedStatus(ServerName sn)
+    throws HostIsConsideredDecommissionedException {
+    // If the Master is not configured to reject decommissioned hosts, return early.
+    if (!rejectDecommissionedHostsConfig) {
+      return;
+    }
+
+    // Look for a match for the hostname in the list of decommissioned servers
+    for (ServerName server : getDrainingServersList()) {
+      if (Objects.equals(server.getHostname(), sn.getHostname())) {
+        // Found a match and master is configured to reject decommissioned hosts, throw exception!
+        LOG.warn("Rejecting RegionServer {} from reporting for duty because Master is configured "
+          + "to reject decommissioned hosts and this host was marked as such in the past.", sn);
+        throw new HostIsConsideredDecommissionedException(
+          "Master is configured to reject decommissioned hosts");
+      }
+    }
   }
 
   /**

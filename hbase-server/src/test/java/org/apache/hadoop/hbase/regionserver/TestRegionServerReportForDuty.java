@@ -22,6 +22,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
@@ -239,6 +241,136 @@ public class TestRegionServerReportForDuty {
     }, 1000, TimeUnit.MILLISECONDS);
 
     waitForClusterOnline(master);
+  }
+
+  /**
+   * Tests that the RegionServer's reportForDuty gets rejected by the master when the master is
+   * configured to reject decommissioned hosts and when there is a match for the joining
+   * RegionServer in the list of decommissioned servers. Test case for HBASE-28342.
+   */
+  @Test
+  public void testReportForDutyGetsRejectedByMasterWhenConfiguredToRejectDecommissionedHosts()
+    throws Exception {
+    // Start a master and wait for it to become the active/primary master.
+    // Use a random unique port
+    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtil.randomFreePort());
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 1);
+
+    // Set the cluster to reject decommissioned hosts
+    cluster.getConfiguration().setBoolean(HConstants.REJECT_DECOMMISSIONED_HOSTS_KEY, true);
+
+    master = cluster.addMaster();
+    rs = cluster.addRegionServer();
+    LOG.debug("Starting master: " + master.getMaster().getServerName());
+    master.start();
+    rs.start();
+    waitForClusterOnline(master);
+
+    assertEquals(0, master.getMaster().listDecommissionedRegionServers().size());
+    assertEquals(0, master.getMaster().getServerManager().getDrainingServersList().size());
+    assertEquals(1, master.getMaster().getServerManager().getOnlineServers().size());
+
+    // Decommission the region server and tries to re-add it
+    List<ServerName> serversToDecommission = new ArrayList<ServerName>();
+    serversToDecommission.add(rs.getRegionServer().getServerName());
+    master.getMaster().decommissionRegionServers(serversToDecommission, true);
+
+    // Assert that the server is now decommissioned
+    ServerName decommissionedServer = master.getMaster().listDecommissionedRegionServers().get(0);
+    assertEquals(1, master.getMaster().listDecommissionedRegionServers().size());
+    assertEquals(1, master.getMaster().getServerManager().getDrainingServersList().size());
+    assertEquals(1, master.getMaster().getServerManager().getOnlineServers().size());
+    assertEquals(rs.getRegionServer().getServerName().toString(),
+      decommissionedServer.getServerName());
+
+    // Create a second region server
+    cluster.getConfiguration().set(HConstants.REGION_SERVER_IMPL, MyRegionServer.class.getName());
+    rs2 = cluster.addRegionServer();
+    rs2.start();
+    waitForSecondRsStarted();
+
+    // Assert that the number of decommissioned and live hosts didn't change and that the hostname
+    // of rs2 matches that of the decommissioned server
+    String rs2HostName = rs2.getRegionServer().getServerName().getHostname();
+    assertEquals(1, master.getMaster().listDecommissionedRegionServers().size());
+    assertEquals(1, master.getMaster().getServerManager().getDrainingServersList().size());
+    assertEquals(1, master.getMaster().getServerManager().getOnlineServers().size());
+    assertEquals(rs2HostName, decommissionedServer.getHostname());
+  }
+
+  /**
+   * Tests that the RegionServer's reportForDuty gets accepted by the master when the master is not
+   * configured to reject decommissioned hosts, even when there is a match for the joining
+   * RegionServer in the list of decommissioned servers. Test case for HBASE-28342.
+   */
+  @Test
+  public void testReportForDutyGetsAcceptedByMasterWhenNotConfiguredToRejectDecommissionedHosts()
+    throws Exception {
+    // Start a master and wait for it to become the active/primary master.
+    // Use a random unique port
+    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtil.randomFreePort());
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 1);
+
+    // Set the cluster to not reject decommissioned hosts (default behavior)
+    cluster.getConfiguration().setBoolean(HConstants.REJECT_DECOMMISSIONED_HOSTS_KEY, false);
+
+    master = cluster.addMaster();
+    rs = cluster.addRegionServer();
+    LOG.debug("Starting master: " + master.getMaster().getServerName());
+    master.start();
+    rs.start();
+    waitForClusterOnline(master);
+
+    assertEquals(0, master.getMaster().listDecommissionedRegionServers().size());
+    assertEquals(0, master.getMaster().getServerManager().getDrainingServersList().size());
+    assertEquals(1, master.getMaster().getServerManager().getOnlineServers().size());
+
+    // Decommission the region server and tries to re-add it
+    List<ServerName> serversToDecommission = new ArrayList<>();
+    serversToDecommission.add(rs.getRegionServer().getServerName());
+    master.getMaster().decommissionRegionServers(serversToDecommission, true);
+
+    // Assert that the server is now decommissioned
+    ServerName decommissionedServer = master.getMaster().listDecommissionedRegionServers().get(0);
+    assertEquals(1, master.getMaster().listDecommissionedRegionServers().size());
+    assertEquals(1, master.getMaster().getServerManager().getDrainingServersList().size());
+    assertEquals(1, master.getMaster().getServerManager().getOnlineServers().size());
+    assertEquals(rs.getRegionServer().getServerName().toString(),
+      decommissionedServer.getServerName());
+
+    // Create a second region server and try adding both region servers to it, it should succeed
+    cluster.getConfiguration().set(HConstants.REGION_SERVER_IMPL, MyRegionServer.class.getName());
+    rs2 = cluster.addRegionServer();
+    rs2.start();
+    waitForSecondRsStarted();
+
+    master.getMaster().stop("Stopping master");
+
+    // Start a new master and use another random unique port
+    // Also let it wait for exactly 2 region severs to report in
+    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtil.randomFreePort());
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 2);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 2);
+    backupMaster = cluster.addMaster();
+    LOG.debug("Starting new master: " + backupMaster.getMaster().getServerName());
+    backupMaster.start();
+
+    waitForClusterOnline(backupMaster);
+
+    // Assert that the backup master has become active.
+    assertTrue(backupMaster.getMaster().isActiveMaster());
+    assertTrue(backupMaster.getMaster().isInitialized());
+
+    // Assert that the number of decommissioned hosts is the same and that the live and online hosts
+    // did in fact change and rs2 is now part of the cluster even though there is a match for its
+    // hostname in the list of decommissioned servers
+    String rs2HostName = rs2.getRegionServer().getServerName().getHostname();
+    assertEquals(1, backupMaster.getMaster().listDecommissionedRegionServers().size());
+    assertEquals(1, backupMaster.getMaster().getServerManager().getDrainingServersList().size());
+    assertEquals(2, backupMaster.getMaster().getServerManager().getOnlineServers().size());
+    assertEquals(rs2HostName, decommissionedServer.getHostname());
   }
 
   /**
