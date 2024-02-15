@@ -390,7 +390,7 @@ public class QuotaUtil extends QuotaTableUtil {
     buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_WRITE_SIZE)
       .ifPresent(throttleBuilder::setWriteSize);
 
-    UserQuotaState state = new UserQuotaState();
+    UserQuotaState state = new UserQuotaState(EnvironmentEdgeManager.currentTime());
     QuotaProtos.Quotas defaultQuotas =
       QuotaProtos.Quotas.newBuilder().setThrottle(throttleBuilder.build()).build();
     state.setQuotas(defaultQuotas);
