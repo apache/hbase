@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.Set;
 import org.apache.commons.validator.routines.InetAddressValidator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -29,7 +28,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 /**
  * Utility methods for reading, and building the ZooKeeper configuration. The order and priority for
@@ -41,12 +39,6 @@ public final class ZKConfig {
 
   private static final String VARIABLE_START = "${";
   private static final String ZOOKEEPER_JAVA_PROPERTY_PREFIX = "zookeeper.";
-
-  /** Supported ZooKeeper client TLS properties */
-  static final Set<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES =
-    ImmutableSet.of("client.secure", "clientCnxnSocket", "ssl.keyStore.location",
-      "ssl.keyStore.password", "ssl.keyStore.passwordPath", "ssl.trustStore.location",
-      "ssl.trustStore.password", "ssl.trustStore.passwordPath");
 
   private ZKConfig() {
   }
@@ -62,16 +54,12 @@ public final class ZKConfig {
   }
 
   /**
-   * Make a Properties object holding ZooKeeper config. Parses the corresponding config options from
-   * the HBase XML configs and generates the appropriate ZooKeeper properties.
-   * @param conf Configuration to read from.
-   * @return Properties holding mappings representing ZooKeeper config file.
+   * Directly map all the hbase.zookeeper.property.KEY properties. Synchronize on conf so no loading
+   * of configs while we iterate
    */
-  private static Properties makeZKPropsFromHbaseConfig(Configuration conf) {
+  private static Properties extractZKPropsFromHBaseConfig(final Configuration conf) {
     Properties zkProperties = new Properties();
 
-    // Directly map all of the hbase.zookeeper.property.KEY properties.
-    // Synchronize on conf so no loading of configs while we iterate
     synchronized (conf) {
       for (Entry<String, String> entry : conf) {
         String key = entry.getKey();
@@ -86,6 +74,18 @@ public final class ZKConfig {
         }
       }
     }
+
+    return zkProperties;
+  }
+
+  /**
+   * Make a Properties object holding ZooKeeper config. Parses the corresponding config options from
+   * the HBase XML configs and generates the appropriate ZooKeeper properties.
+   * @param conf Configuration to read from.
+   * @return Properties holding mappings representing ZooKeeper config file.
+   */
+  private static Properties makeZKPropsFromHbaseConfig(Configuration conf) {
+    Properties zkProperties = extractZKPropsFromHBaseConfig(conf);
 
     // If clientPort is not set, assign the default.
     if (zkProperties.getProperty(HConstants.CLIENT_PORT_STR) == null) {
@@ -343,24 +343,12 @@ public final class ZKConfig {
   }
 
   private static void setZooKeeperClientSystemProperties(String prefix, Configuration conf) {
-    synchronized (conf) {
-      for (Entry<String, String> entry : conf) {
-        String key = entry.getKey();
-        if (!key.startsWith(prefix)) {
-          continue;
-        }
-        String zkKey = key.substring(prefix.length());
-        if (!ZOOKEEPER_CLIENT_TLS_PROPERTIES.contains(zkKey)) {
-          continue;
-        }
-        String value = entry.getValue();
-        // If the value has variables substitutions, need to do a get.
-        if (value.contains(VARIABLE_START)) {
-          value = conf.get(key);
-        }
-        if (System.getProperty(ZOOKEEPER_JAVA_PROPERTY_PREFIX + zkKey) == null) {
-          System.setProperty(ZOOKEEPER_JAVA_PROPERTY_PREFIX + zkKey, value);
-        }
+    Properties zkProperties = extractZKPropsFromHBaseConfig(conf);
+    for (Entry<Object, Object> entry : zkProperties.entrySet()) {
+      String key = entry.getKey().toString().trim();
+      String value = entry.getValue().toString().trim();
+      if (System.getProperty(ZOOKEEPER_JAVA_PROPERTY_PREFIX + key) == null) {
+        System.setProperty(ZOOKEEPER_JAVA_PROPERTY_PREFIX + key, value);
       }
     }
   }

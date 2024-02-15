@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import static org.apache.hadoop.hbase.zookeeper.ZKConfig.ZOOKEEPER_CLIENT_TLS_PROPERTIES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Properties;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -33,12 +33,20 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+
 @Category({ MiscTests.class, SmallTests.class })
 public class TestZKConfig {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestZKConfig.class);
+
+  /** Supported ZooKeeper client TLS properties */
+  private static final Set<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES = ImmutableSet.of(
+    "client.secure", "clientCnxnSocket", "ssl.keyStore.location", "ssl.keyStore.password",
+    "ssl.keyStore.passwordPath", "ssl.keyStore.type", "ssl.trustStore.location",
+    "ssl.trustStore.password", "ssl.trustStore.passwordPath", "ssl.trustStore.type");
 
   @Test
   public void testZKConfigLoading() throws Exception {
@@ -131,6 +139,21 @@ public class TestZKConfig {
       assertEquals("Invalid or unset system property: " + zkprop, p, System.getProperty(zkprop));
       System.clearProperty(zkprop);
     }
+  }
+
+  @Test
+  public void testZooKeeperPropertiesDoesntOverwriteSystem() {
+    // Arrange
+    System.setProperty("zookeeper.a.b.c", "foo");
+    Configuration conf = HBaseConfiguration.create();
+    conf.set(HConstants.ZK_CFG_PROPERTY_PREFIX + "a.b.c", "bar");
+
+    // Act
+    ZKConfig.getZKQuorumServersString(conf);
+
+    // Assert
+    assertEquals("foo", System.getProperty("zookeeper.a.b.c"));
+    System.clearProperty("zookeeper.a.b.c");
   }
 
   private void testKey(String ensemble, int port, String znode) throws IOException {
