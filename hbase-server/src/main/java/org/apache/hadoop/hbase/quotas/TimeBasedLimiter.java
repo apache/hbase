@@ -141,43 +141,47 @@ public class TimeBasedLimiter implements QuotaLimiter {
   public void checkQuota(long writeReqs, long estimateWriteSize, long readReqs,
     long estimateReadSize, long estimateWriteCapacityUnit, long estimateReadCapacityUnit)
     throws RpcThrottlingException {
-    if (!reqsLimiter.canExecute(writeReqs + readReqs)) {
-      RpcThrottlingException.throwNumRequestsExceeded(reqsLimiter.waitInterval());
+    long waitInterval = reqsLimiter.canExecute(writeReqs + readReqs);
+    if (waitInterval > 0) {
+      RpcThrottlingException.throwNumRequestsExceeded(waitInterval);
     }
-    if (!reqSizeLimiter.canExecute(estimateWriteSize + estimateReadSize)) {
-      RpcThrottlingException.throwRequestSizeExceeded(
-        reqSizeLimiter.waitInterval(estimateWriteSize + estimateReadSize));
+    waitInterval = reqSizeLimiter.canExecute(estimateWriteSize + estimateReadSize);
+    if (waitInterval > 0) {
+      RpcThrottlingException.throwRequestSizeExceeded(waitInterval);
     }
-    if (!reqCapacityUnitLimiter.canExecute(estimateWriteCapacityUnit + estimateReadCapacityUnit)) {
-      RpcThrottlingException.throwRequestCapacityUnitExceeded(
-        reqCapacityUnitLimiter.waitInterval(estimateWriteCapacityUnit + estimateReadCapacityUnit));
+    waitInterval =
+      reqCapacityUnitLimiter.canExecute(estimateWriteCapacityUnit + estimateReadCapacityUnit);
+    if (waitInterval > 0) {
+      RpcThrottlingException.throwRequestCapacityUnitExceeded(waitInterval);
     }
 
     if (estimateWriteSize > 0) {
-      if (!writeReqsLimiter.canExecute(writeReqs)) {
-        RpcThrottlingException.throwNumWriteRequestsExceeded(writeReqsLimiter.waitInterval());
+      waitInterval = writeReqsLimiter.canExecute(writeReqs);
+      if (waitInterval > 0) {
+        RpcThrottlingException.throwNumWriteRequestsExceeded(waitInterval);
       }
-      if (!writeSizeLimiter.canExecute(estimateWriteSize)) {
-        RpcThrottlingException
-          .throwWriteSizeExceeded(writeSizeLimiter.waitInterval(estimateWriteSize));
+      waitInterval = writeSizeLimiter.canExecute(estimateWriteSize);
+      if (waitInterval > 0) {
+        RpcThrottlingException.throwWriteSizeExceeded(waitInterval);
       }
-      if (!writeCapacityUnitLimiter.canExecute(estimateWriteCapacityUnit)) {
-        RpcThrottlingException.throwWriteCapacityUnitExceeded(
-          writeCapacityUnitLimiter.waitInterval(estimateWriteCapacityUnit));
+      waitInterval = writeCapacityUnitLimiter.canExecute(estimateWriteCapacityUnit);
+      if (waitInterval > 0) {
+        RpcThrottlingException.throwWriteCapacityUnitExceeded(waitInterval);
       }
     }
 
     if (estimateReadSize > 0) {
-      if (!readReqsLimiter.canExecute(readReqs)) {
-        RpcThrottlingException.throwNumReadRequestsExceeded(readReqsLimiter.waitInterval());
+      waitInterval = readReqsLimiter.canExecute(readReqs);
+      if (waitInterval > 0) {
+        RpcThrottlingException.throwNumReadRequestsExceeded(waitInterval);
       }
-      if (!readSizeLimiter.canExecute(estimateReadSize)) {
-        RpcThrottlingException
-          .throwReadSizeExceeded(readSizeLimiter.waitInterval(estimateReadSize));
+      waitInterval = readSizeLimiter.canExecute(estimateReadSize);
+      if (waitInterval > 0) {
+        RpcThrottlingException.throwReadSizeExceeded(waitInterval);
       }
-      if (!readCapacityUnitLimiter.canExecute(estimateReadCapacityUnit)) {
-        RpcThrottlingException.throwReadCapacityUnitExceeded(
-          readCapacityUnitLimiter.waitInterval(estimateReadCapacityUnit));
+      waitInterval = readCapacityUnitLimiter.canExecute(estimateReadCapacityUnit);
+      if (waitInterval > 0) {
+        RpcThrottlingException.throwReadCapacityUnitExceeded(waitInterval);
       }
     }
   }

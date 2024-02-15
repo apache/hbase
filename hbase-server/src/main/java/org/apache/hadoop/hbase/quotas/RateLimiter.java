@@ -135,10 +135,24 @@ public abstract class RateLimiter {
 
   /**
    * Is there at least one resource available to allow execution?
-   * @return true if there is at least one resource available, otherwise false
+   * @return the waitInterval to backoff, or 0 if execution is allowed
    */
-  public boolean canExecute() {
+  public long canExecute() {
     return canExecute(1);
+  }
+
+  /**
+   * Are there enough available resources to allow execution?
+   * @param amount the number of required resources, a non-negative number
+   * @return the waitInterval to backoff, or 0 if execution is allowed
+   */
+  public synchronized long canExecute(final long amount) {
+    assert amount >= 0;
+    long waitInterval = waitInterval(amount);
+    if (isAvailable(amount) || waitInterval == 0) {
+      return 0;
+    }
+    return waitInterval;
   }
 
   /**
@@ -146,7 +160,7 @@ public abstract class RateLimiter {
    * @param amount the number of required resources, a non-negative number
    * @return true if there are enough available resources, otherwise false
    */
-  public synchronized boolean canExecute(final long amount) {
+  private synchronized boolean isAvailable(final long amount) {
     if (isBypass()) {
       return true;
     }
