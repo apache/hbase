@@ -148,11 +148,10 @@ public abstract class RateLimiter {
    */
   public synchronized long canExecute(final long amount) {
     assert amount >= 0;
-    long waitInterval = waitInterval(amount);
-    if (isAvailable(amount) || waitInterval == 0) {
-      return 0;
+    if (!isAvailable(amount)) {
+      return waitInterval(amount);
     }
-    return waitInterval;
+    return 0;
   }
 
   /**
