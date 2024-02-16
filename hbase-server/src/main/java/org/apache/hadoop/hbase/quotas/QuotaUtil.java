@@ -334,8 +334,7 @@ public class QuotaUtil extends QuotaTableUtil {
       String user = getUserFromRowKey(key);
 
       if (results[i].isEmpty()) {
-        userQuotas.put(user, buildDefaultUserQuotaState(connection.getConfiguration(),
-          EnvironmentEdgeManager.currentTime()));
+        userQuotas.put(user, buildDefaultUserQuotaState(connection.getConfiguration(), nowTs));
         continue;
       }
 
