@@ -1532,9 +1532,20 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       Verify verify = new Verify();
       verify.setConf(getConf());
-      int retCode = verify.run(iterationOutput, numReducers);
-      if (retCode > 0) {
-        throw new RuntimeException("Verify.run failed with return code: " + retCode);
+
+      int retries = getConf().getInt("hbase.itbll.verify.retries", 1);
+
+      while (true) {
+        int retCode = verify.run(iterationOutput, numReducers);
+        if (retCode > 0) {
+          if (retries-- > 0) {
+            LOG.warn("Verify.run failed with return code: {}. Will retry", retries);
+          } else {
+            throw new RuntimeException("Verify.run failed with return code: " + retCode);
+          }
+        } else {
+          break;
+        }
       }
 
       if (!verify.verify(expectedNumNodes)) {
