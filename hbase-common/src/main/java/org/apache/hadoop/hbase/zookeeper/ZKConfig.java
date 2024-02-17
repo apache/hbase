@@ -20,13 +20,10 @@ package org.apache.hadoop.hbase.zookeeper;
 import java.io.IOException;
 import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 /**
  * Utility methods for reading, and building the ZooKeeper configuration. The order and priority for
