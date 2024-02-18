@@ -24,17 +24,22 @@ import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getPrincipalFo
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.loginKerberosPrincipal;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.setSecuredConfiguration;
 import static org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders.SELECTOR_KEY;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.either;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
@@ -44,12 +49,13 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
+import org.apache.hadoop.hbase.ipc.FallbackDisallowedException;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
-import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.security.provider.AuthenticationProviderSelector;
 import org.apache.hadoop.hbase.security.provider.BuiltInProviderSelector;
 import org.apache.hadoop.hbase.security.provider.SaslAuthMethod;
@@ -95,6 +101,7 @@ public class AbstractTestSecureIPC {
     // set a smaller timeout and retry to speed up tests
     TEST_UTIL.getConfiguration().setInt(RpcClient.SOCKET_TIMEOUT_READ, 2000);
     TEST_UTIL.getConfiguration().setInt("hbase.security.relogin.maxretries", 1);
+    TEST_UTIL.getConfiguration().setInt("hbase.security.relogin.maxbackoff", 100);
   }
 
   protected static void stopKDC() throws InterruptedException {
@@ -237,7 +244,7 @@ public class AbstractTestSecureIPC {
   }
 
   @Test
-  public void testRpcFallbackToSimpleAuth() throws Exception {
+  public void testRpcServerFallbackToSimpleAuth() throws Exception {
     String clientUsername = "testuser";
     UserGroupInformation clientUgi =
       UserGroupInformation.createUserForTesting(clientUsername, new String[] { clientUsername });
@@ -252,6 +259,56 @@ public class AbstractTestSecureIPC {
     callRpcService(User.create(clientUgi));
   }
 
+  @Test
+  public void testRpcServerDisallowFallbackToSimpleAuth() throws Exception {
+    String clientUsername = "testuser";
+    UserGroupInformation clientUgi =
+      UserGroupInformation.createUserForTesting(clientUsername, new String[] { clientUsername });
+
+    // check that the client user is insecure
+    assertNotSame(ugi, clientUgi);
+    assertEquals(AuthenticationMethod.SIMPLE, clientUgi.getAuthenticationMethod());
+    assertEquals(clientUsername, clientUgi.getUserName());
+
+    clientConf.set(User.HBASE_SECURITY_CONF_KEY, "simple");
+    serverConf.setBoolean(RpcServer.FALLBACK_TO_INSECURE_CLIENT_AUTH, false);
+    IOException error =
+      assertThrows(IOException.class, () -> callRpcService(User.create(clientUgi)));
+    assertThat(error,
+      either(instanceOf(EOFException.class)).or(instanceOf(ConnectionClosedException.class)));
+  }
+
+  @Test
+  public void testRpcClientFallbackToSimpleAuth() throws Exception {
+    String serverUsername = "testuser";
+    UserGroupInformation serverUgi =
+      UserGroupInformation.createUserForTesting(serverUsername, new String[] { serverUsername });
+    // check that the server user is insecure
+    assertNotSame(ugi, serverUgi);
+    assertEquals(AuthenticationMethod.SIMPLE, serverUgi.getAuthenticationMethod());
+    assertEquals(serverUsername, serverUgi.getUserName());
+
+    serverConf.set(User.HBASE_SECURITY_CONF_KEY, "simple");
+    clientConf.setBoolean(RpcClient.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY, true);
+    callRpcService(User.create(serverUgi), User.create(ugi));
+  }
+
+  @Test
+  public void testRpcClientDisallowFallbackToSimpleAuth() throws Exception {
+    String serverUsername = "testuser";
+    UserGroupInformation serverUgi =
+      UserGroupInformation.createUserForTesting(serverUsername, new String[] { serverUsername });
+    // check that the server user is insecure
+    assertNotSame(ugi, serverUgi);
+    assertEquals(AuthenticationMethod.SIMPLE, serverUgi.getAuthenticationMethod());
+    assertEquals(serverUsername, serverUgi.getUserName());
+
+    serverConf.set(User.HBASE_SECURITY_CONF_KEY, "simple");
+    clientConf.setBoolean(RpcClient.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY, false);
+    assertThrows(FallbackDisallowedException.class,
+      () -> callRpcService(User.create(serverUgi), User.create(ugi)));
+  }
+
   private void setRpcProtection(String clientProtection, String serverProtection) {
     clientConf.set("hbase.rpc.protection", clientProtection);
     serverConf.set("hbase.rpc.protection", serverProtection);
@@ -263,25 +320,25 @@ public class AbstractTestSecureIPC {
   @Test
   public void testSaslWithCommonQop() throws Exception {
     setRpcProtection("privacy,authentication", "authentication");
-    callRpcService(User.create(ugi));
+    callRpcService();
 
     setRpcProtection("authentication", "privacy,authentication");
-    callRpcService(User.create(ugi));
+    callRpcService();
 
     setRpcProtection("integrity,authentication", "privacy,authentication");
-    callRpcService(User.create(ugi));
+    callRpcService();
 
     setRpcProtection("integrity,authentication", "integrity,authentication");
-    callRpcService(User.create(ugi));
+    callRpcService();
 
     setRpcProtection("privacy,authentication", "privacy,authentication");
-    callRpcService(User.create(ugi));
+    callRpcService();
   }
 
   @Test
   public void testSaslNoCommonQop() throws Exception {
     setRpcProtection("integrity", "privacy");
-    SaslException se = assertThrows(SaslException.class, () -> callRpcService(User.create(ugi)));
+    SaslException se = assertThrows(SaslException.class, () -> callRpcService());
     assertEquals("No common protection layer between client and server", se.getMessage());
   }
 
@@ -292,7 +349,7 @@ public class AbstractTestSecureIPC {
   public void testSaslWithCryptoAES() throws Exception {
     setRpcProtection("privacy", "privacy");
     setCryptoAES("true", "true");
-    callRpcService(User.create(ugi));
+    callRpcService();
   }
 
   /**
@@ -303,11 +360,11 @@ public class AbstractTestSecureIPC {
     setRpcProtection("privacy", "privacy");
 
     setCryptoAES("false", "true");
-    callRpcService(User.create(ugi));
+    callRpcService();
 
     setCryptoAES("true", "false");
     try {
-      callRpcService(User.create(ugi));
+      callRpcService();
       fail("The exception should be thrown out for the rpc timeout.");
     } catch (Exception e) {
       // ignore the expected exception
@@ -323,7 +380,7 @@ public class AbstractTestSecureIPC {
    * Sets up a RPC Server and a Client. Does a RPC checks the result. If an exception is thrown from
    * the stub, this function will throw root cause of that exception.
    */
-  private void callRpcService(User clientUser) throws Exception {
+  private void callRpcService(User serverUser, User clientUser) throws Exception {
     SecurityInfo securityInfoMock = Mockito.mock(SecurityInfo.class);
     Mockito.when(securityInfoMock.getServerPrincipal())
       .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
@@ -331,10 +388,12 @@ public class AbstractTestSecureIPC {
 
     InetSocketAddress isa = new InetSocketAddress(HOST, 0);
 
-    RpcServerInterface rpcServer = RpcServerFactory.createRpcServer(null, "AbstractTestSecureIPC",
-      Lists
-        .newArrayList(new RpcServer.BlockingServiceAndInterface((BlockingService) SERVICE, null)),
-      isa, serverConf, new FifoRpcScheduler(serverConf, 1));
+    RpcServer rpcServer = serverUser.getUGI()
+      .doAs((PrivilegedExceptionAction<
+        RpcServer>) () -> RpcServerFactory.createRpcServer(null, "AbstractTestSecureIPC",
+          Lists.newArrayList(
+            new RpcServer.BlockingServiceAndInterface((BlockingService) SERVICE, null)),
+          isa, serverConf, new FifoRpcScheduler(serverConf, 1)));
     rpcServer.start();
     try (RpcClient rpcClient =
       RpcClientFactory.createClient(clientConf, HConstants.DEFAULT_CLUSTER_ID.toString())) {
@@ -362,6 +421,14 @@ public class AbstractTestSecureIPC {
     } finally {
       rpcServer.stop();
     }
+  }
+
+  private void callRpcService(User clientUser) throws Exception {
+    callRpcService(User.create(ugi), clientUser);
+  }
+
+  private void callRpcService() throws Exception {
+    callRpcService(User.create(ugi));
   }
 
   public static class TestThread extends Thread {
