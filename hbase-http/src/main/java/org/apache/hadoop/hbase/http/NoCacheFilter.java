@@ -31,15 +31,28 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class NoCacheFilter implements Filter {
+
+  /**
+   * Constant for the configuration property that indicates no-store cache control is enabled.
+   */
+  public static final String NO_STORE = "no-store.enable";
+
+  private boolean noStoreEnabled = false;
+
   @Override
   public void init(FilterConfig filterConfig) throws ServletException {
+    this.noStoreEnabled = Boolean.valueOf(filterConfig.getInitParameter(NO_STORE));
   }
 
   @Override
   public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
     throws IOException, ServletException {
     HttpServletResponse httpRes = (HttpServletResponse) res;
-    httpRes.setHeader("Cache-Control", "no-cache");
+    StringBuilder header = new StringBuilder("no-cache");
+    if (noStoreEnabled) {
+      header.append(", no-store, max-age=0");
+    }
+    httpRes.setHeader("Cache-Control", header.toString());
     long now = EnvironmentEdgeManager.currentTime();
     httpRes.addDateHeader("Expires", now);
     httpRes.addDateHeader("Date", now);

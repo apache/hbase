@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.http.conf.ConfServlet;
 import org.apache.hadoop.hbase.http.log.LogLevel;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -149,6 +150,7 @@ public class HttpServer implements FilterContainer {
     HTTP_SPNEGO_AUTHENTICATION_PREFIX + "admin.groups";
   public static final String HTTP_PRIVILEGED_CONF_KEY =
     "hbase.security.authentication.ui.config.protected";
+  public static final String HTTP_UI_NO_CACHE_ENABLE_KEY = "hbase.http.filter.no-store.enable";
   public static final boolean HTTP_PRIVILEGED_CONF_DEFAULT = false;
 
   // The ServletContext attribute where the daemon Configuration
@@ -690,7 +692,7 @@ public class HttpServer implements FilterContainer {
     ctx.getServletContext().setAttribute(org.apache.hadoop.http.HttpServer2.CONF_CONTEXT_ATTRIBUTE,
       conf);
     ctx.getServletContext().setAttribute(ADMINS_ACL, adminsAcl);
-    addNoCacheFilter(ctx);
+    addNoCacheFilter(ctx, conf);
     return ctx;
   }
 
@@ -712,9 +714,16 @@ public class HttpServer implements FilterContainer {
     return gzipHandler;
   }
 
-  private static void addNoCacheFilter(WebAppContext ctxt) {
-    defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(),
-      Collections.<String, String> emptyMap(), new String[] { "/*" });
+  private static void addNoCacheFilter(ServletContextHandler ctxt, Configuration conf) {
+    if (conf.getBoolean(HTTP_UI_NO_CACHE_ENABLE_KEY, false)) {
+      Map<String, String> filterConfig =
+        AuthenticationFilterInitializer.getFilterConfigMap(conf, "hbase.http.filter.");
+      defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(), filterConfig,
+        new String[] { "/*" });
+    } else {
+      defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(),
+        Collections.<String, String> emptyMap(), new String[] { "/*" });
+    }
   }
 
   /** Get an array of FilterConfiguration specified in the conf */
@@ -755,6 +764,7 @@ public class HttpServer implements FilterContainer {
         conf.getBoolean(ServerConfigurationKeys.HBASE_JETTY_LOGS_SERVE_ALIASES,
           ServerConfigurationKeys.DEFAULT_HBASE_JETTY_LOGS_SERVE_ALIASES));
       setContextAttributes(logContext, conf);
+      addNoCacheFilter(logContext, conf);
       defaultContexts.put(logContext, true);
     }
     // set up the context for "/static/*"
