@@ -23,12 +23,10 @@ import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Simple rate limiter. Usage Example: // At this point you have a unlimited resource limiter
- * RateLimiter limiter = new AverageIntervalRateLimiter(); or new FixedIntervalRateLimiter();
- * limiter.set(10, TimeUnit.SECONDS); // set 10 resources/sec while (true) { // call canExecute
- * before performing resource consuming operation bool canExecute = limiter.canExecute(); // If
- * there are no available resources, wait until one is available if (!canExecute)
- * Thread.sleep(limiter.waitInterval()); // ...execute the work and consume the resource...
- * limiter.consume(); }
+ * RateLimiter limiter = new AverageIntervalRateLimiter(); // or new FixedIntervalRateLimiter();
+ * limiter.set(10, TimeUnit.SECONDS); // set 10 resources/sec while (limiter.getWaitIntervalMs > 0)
+ * { // wait until waitInterval == 0 Thread.sleep(limiter.getWaitIntervalMs()); } // ...execute the
+ * work and consume the resource... limiter.consume();
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -137,8 +135,8 @@ public abstract class RateLimiter {
    * Is there at least one resource available to allow execution?
    * @return the waitInterval to backoff, or 0 if execution is allowed
    */
-  public long canExecute() {
-    return canExecute(1);
+  public long getWaitIntervalMs() {
+    return getWaitIntervalMs(1);
   }
 
   /**
@@ -146,7 +144,7 @@ public abstract class RateLimiter {
    * @param amount the number of required resources, a non-negative number
    * @return the waitInterval to backoff, or 0 if execution is allowed
    */
-  public synchronized long canExecute(final long amount) {
+  public synchronized long getWaitIntervalMs(final long amount) {
     assert amount >= 0;
     if (!isAvailable(amount)) {
       return waitInterval(amount);
@@ -159,7 +157,7 @@ public abstract class RateLimiter {
    * @param amount the number of required resources, a non-negative number
    * @return true if there are enough available resources, otherwise false
    */
-  private synchronized boolean isAvailable(final long amount) {
+  private boolean isAvailable(final long amount) {
     if (isBypass()) {
       return true;
     }

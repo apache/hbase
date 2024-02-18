@@ -131,8 +131,12 @@ public class DefaultOperationQuota implements OperationQuota {
 
   @Override
   public long getReadAvailable() {
-    // at this point we've grabbed some quota, so we should use at least that
-    return Math.max(readAvailable, readConsumed);
+    return readAvailable;
+  }
+
+  @Override
+  public long getReadConsumed() {
+    return readConsumed;
   }
 
   @Override
