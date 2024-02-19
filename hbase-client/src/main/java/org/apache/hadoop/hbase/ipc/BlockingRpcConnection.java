@@ -539,6 +539,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
             // fall back to simple auth because server told us so.
             // do not change authMethod and useSasl here, we should start from secure when
             // reconnecting because regionserver may change its sasl config after restart.
+            saslRpcClient = null;
           }
         }
         this.in = new DataInputStream(new BufferedInputStream(inStream));
