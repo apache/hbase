@@ -995,11 +995,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               nonFaimilies, tableName.getNameAsString());
           future.completeExceptionally(new NoSuchColumnFamilyException(noSuchFamiliesMsg));
         } else {
-          FlushTableRequest request = RequestConverter.buildFlushTableRequest(tableName, columnFamilies,
-            ng.getNonceGroup(), ng.newNonce());
-          CompletableFuture<Void> procFuture = this.<FlushTableRequest, FlushTableResponse> procedureCall(
-            tableName, request, (s, c, req, done) -> s.flushTable(c, req, done),
-            (resp) -> resp.getProcId(), new FlushTableProcedureBiConsumer(tableName));
+          FlushTableRequest request = RequestConverter.buildFlushTableRequest(tableName,
+            columnFamilies, ng.getNonceGroup(), ng.newNonce());
+          CompletableFuture<Void> procFuture =
+            this.<FlushTableRequest, FlushTableResponse> procedureCall(tableName, request,
+              (s, c, req, done) -> s.flushTable(c, req, done), (resp) -> resp.getProcId(),
+              new FlushTableProcedureBiConsumer(tableName));
           addListener(procFuture, (ret, error2) -> {
             if (error2 != null) {
               if (
