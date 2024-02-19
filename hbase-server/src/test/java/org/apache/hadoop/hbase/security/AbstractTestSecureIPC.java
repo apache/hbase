@@ -274,8 +274,11 @@ public class AbstractTestSecureIPC {
     serverConf.setBoolean(RpcServer.FALLBACK_TO_INSECURE_CLIENT_AUTH, false);
     IOException error =
       assertThrows(IOException.class, () -> callRpcService(User.create(clientUgi)));
-    assertThat(error,
-      either(instanceOf(EOFException.class)).or(instanceOf(ConnectionClosedException.class)));
+    // server just closes the connection, so we could get broken pipe, or EOF, or connection closed
+    if (error.getMessage() == null || !error.getMessage().contains("Broken pipe")) {
+      assertThat(error,
+        either(instanceOf(EOFException.class)).or(instanceOf(ConnectionClosedException.class)));
+    }
   }
 
   @Test
