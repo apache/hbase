@@ -334,7 +334,7 @@ public class QuotaUtil extends QuotaTableUtil {
       String user = getUserFromRowKey(key);
 
       if (results[i].isEmpty()) {
-        userQuotas.put(user, buildDefaultUserQuotaState(connection.getConfiguration()));
+        userQuotas.put(user, buildDefaultUserQuotaState(connection.getConfiguration(), nowTs));
         continue;
       }
 
@@ -374,7 +374,7 @@ public class QuotaUtil extends QuotaTableUtil {
     return userQuotas;
   }
 
-  protected static UserQuotaState buildDefaultUserQuotaState(Configuration conf) {
+  protected static UserQuotaState buildDefaultUserQuotaState(Configuration conf, long nowTs) {
     QuotaProtos.Throttle.Builder throttleBuilder = QuotaProtos.Throttle.newBuilder();
 
     buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_READ_NUM)
@@ -390,7 +390,7 @@ public class QuotaUtil extends QuotaTableUtil {
     buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_WRITE_SIZE)
       .ifPresent(throttleBuilder::setWriteSize);
 
-    UserQuotaState state = new UserQuotaState();
+    UserQuotaState state = new UserQuotaState(nowTs);
     QuotaProtos.Quotas defaultQuotas =
       QuotaProtos.Quotas.newBuilder().setThrottle(throttleBuilder.build()).build();
     state.setQuotas(defaultQuotas);
