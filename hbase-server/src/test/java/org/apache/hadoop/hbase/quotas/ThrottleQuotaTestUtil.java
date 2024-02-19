@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.Set;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
@@ -281,6 +283,16 @@ public final class ThrottleQuotaTestUtil {
       LOG.debug(Objects.toString(quotaCache.getUserQuotaCache()));
       LOG.debug(Objects.toString(quotaCache.getRegionServerQuotaCache()));
     }
+  }
+
+  static Set<QuotaCache> getQuotaCaches(HBaseTestingUtil testUtil) {
+    Set<QuotaCache> quotaCaches = new HashSet<>();
+    for (RegionServerThread rst : testUtil.getMiniHBaseCluster().getRegionServerThreads()) {
+      RegionServerRpcQuotaManager quotaManager =
+        rst.getRegionServer().getRegionServerRpcQuotaManager();
+      quotaCaches.add(quotaManager.getQuotaCache());
+    }
+    return quotaCaches;
   }
 
   static void waitMinuteQuota() {
