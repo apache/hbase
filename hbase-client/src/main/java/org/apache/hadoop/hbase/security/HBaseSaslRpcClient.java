@@ -32,6 +32,7 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
+import org.apache.hadoop.hbase.ipc.FallbackDisallowedException;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -107,12 +108,9 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
         int len = inStream.readInt();
         if (len == SaslUtil.SWITCH_TO_SIMPLE_AUTH) {
           if (!fallbackAllowed) {
-            throw new IOException("Server asks us to fall back to SIMPLE auth, "
-              + "but this client is configured to only allow secure connections.");
+            throw new FallbackDisallowedException();
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Server asks us to fall back to simple auth.");
-          }
+          LOG.debug("Server asks us to fall back to simple auth.");
           dispose();
           return false;
         }
