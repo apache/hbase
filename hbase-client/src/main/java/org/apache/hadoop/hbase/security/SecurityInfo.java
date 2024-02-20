@@ -94,11 +94,11 @@ public class SecurityInfo {
   }
 
   /**
-   * Since 2.5.8 and 2.6.0, will be removed in 3.0.0. Use {@link #getServerPrincipals()} instead.
-   * <p>
    * Although this class is IA.Private, we leak this class in
    * {@code SaslClientAuthenticationProvider}, so need to align with the deprecation cycle for that
    * class.
+   * @deprecated Since 2.5.8 and 2.6.0, will be removed in 4.0.0. Use {@link #getServerPrincipals()}
+   *             instead.
    */
   @Deprecated
   public String getServerPrincipal() {
