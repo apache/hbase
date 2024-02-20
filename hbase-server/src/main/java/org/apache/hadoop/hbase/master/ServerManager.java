@@ -337,12 +337,14 @@ public class ServerManager implements ConfigurationObserver {
    * for duty; otherwise, we do nothing and we let them pass to the next check. See HBASE-28342 for
    * details.
    * @param sn The ServerName to check for
-   * @throws HostIsConsideredDecommissionedException if the Master is configured to reject
-   *                                                 decommissioned hosts and this host exists in
-   *                                                 the list of the decommissioned servers
+   * @throws DecommissionedHostRejectedException if the Master is configured to reject
+   *                                             decommissioned hosts and this host exists in the
+   *                                             list of the decommissioned servers
    */
   private void checkRejectableDecommissionedStatus(ServerName sn)
-    throws HostIsConsideredDecommissionedException {
+    throws DecommissionedHostRejectedException {
+    LOG.info("Checking decommissioned status of RegionServer {}", sn.getServerName());
+
     // If the Master is not configured to reject decommissioned hosts, return early.
     if (!rejectDecommissionedHostsConfig) {
       return;
@@ -352,10 +354,14 @@ public class ServerManager implements ConfigurationObserver {
     for (ServerName server : getDrainingServersList()) {
       if (Objects.equals(server.getHostname(), sn.getHostname())) {
         // Found a match and master is configured to reject decommissioned hosts, throw exception!
-        LOG.warn("Rejecting RegionServer {} from reporting for duty because Master is configured "
-          + "to reject decommissioned hosts and this host was marked as such in the past.", sn);
-        throw new HostIsConsideredDecommissionedException(
-          "Master is configured to reject decommissioned hosts");
+        LOG.warn(
+          "Rejecting RegionServer {} from reporting for duty because Master is configured "
+            + "to reject decommissioned hosts and this host was marked as such in the past.",
+          sn.getServerName());
+        throw new DecommissionedHostRejectedException(String.format(
+          "Host %s exists in the list of decommissioned servers and Master is configured to "
+            + "reject decommissioned hosts",
+          sn.getHostname()));
       }
     }
   }

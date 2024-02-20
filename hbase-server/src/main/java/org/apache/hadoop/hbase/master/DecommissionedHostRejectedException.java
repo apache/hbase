@@ -21,8 +21,8 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class HostIsConsideredDecommissionedException extends HBaseIOException {
-  public HostIsConsideredDecommissionedException(String message) {
+public class DecommissionedHostRejectedException extends HBaseIOException {
+  public DecommissionedHostRejectedException(String message) {
     super(message);
   }
 }

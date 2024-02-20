@@ -120,7 +120,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
-import org.apache.hadoop.hbase.master.HostIsConsideredDecommissionedException;
+import org.apache.hadoop.hbase.master.DecommissionedHostRejectedException;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.RSMobFileCleanerChore;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -2665,7 +2665,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         LOG.error(HBaseMarkers.FATAL, "Master rejected startup because clock is out of sync", ioe);
         // Re-throw IOE will cause RS to abort
         throw ioe;
-      } else if (ioe instanceof HostIsConsideredDecommissionedException) {
+      } else if (ioe instanceof DecommissionedHostRejectedException) {
         LOG.error(HBaseMarkers.FATAL,
           "Master rejected startup because the host is considered decommissioned", ioe);
         // Re-throw IOE will cause RS to abort
