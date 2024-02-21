@@ -17,11 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +39,7 @@ import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.master.DecommissionedHostRejectedException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -262,35 +267,51 @@ public class TestRegionServerReportForDuty {
 
     master = cluster.addMaster();
     rs = cluster.addRegionServer();
-    LOG.debug("Starting master: " + master.getMaster().getServerName());
     master.start();
     rs.start();
     waitForClusterOnline(master);
 
-    assertEquals(0, master.getMaster().listDecommissionedRegionServers().size());
-    assertEquals(0, master.getMaster().getServerManager().getDrainingServersList().size());
-    assertEquals(1, master.getMaster().getServerManager().getOnlineServers().size());
+    // Add a second decommissioned region server to the cluster, wait for it to fail reportForDuty
+    LogCapturer capturer =
+      new LogCapturer((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+        .getLogger(HRegionServer.class));
 
-    // Decommission the 1st rs
-    master.getMaster().decommissionRegionServers(
-      Collections.singletonList(rs.getRegionServer().getServerName()), false);
-
-    // Create a second region server
-    cluster.getConfiguration().set(HConstants.REGION_SERVER_IMPL, MyRegionServer.class.getName());
     rs2 = cluster.addRegionServer();
+    master.getMaster().decommissionRegionServers(
+      Collections.singletonList(rs2.getRegionServer().getServerName()), false);
     rs2.start();
 
-    // Assert that the number of decommissioned and live hosts didn't change and that rs2 is aborted
-    String rs2HostName = rs2.getRegionServer().getServerName().getHostname();
-    String decommissionedHostName =
-      master.getMaster().listDecommissionedRegionServers().get(0).getHostname();
-    assertEquals(1, master.getMaster().listDecommissionedRegionServers().size());
-    assertEquals(1, master.getMaster().getServerManager().getDrainingServersList().size());
-    assertEquals(1, master.getMaster().getServerManager().getOnlineServers().size());
-    assertTrue(master.getMaster().getServerManager().getOnlineServers()
-      .containsKey(rs.getRegionServer().getServerName()));
-    assertEquals(rs2HostName, decommissionedHostName);
-    testUtil.waitFor(10000, new MatcherPredicate<>(rs2.getRegionServer()::isAborted, is(false)));
+    // Assert that the second regionserver has aborted
+    testUtil.waitFor(TimeUnit.SECONDS.toMillis(90),
+      new MatcherPredicate<>(() -> rs2.getRegionServer().isAborted(), is(true)));
+
+    // Assert that the log messages for DecommissionedHostRejectedException exist in the logs
+    capturer.stopCapturing();
+
+    assertThat(capturer.getOutput(),
+      containsString("Master rejected startup because the host is considered decommissioned"));
+
+    /**
+     * Assert that the following log message occurred (one line):
+     * "org.apache.hadoop.hbase.master.DecommissionedHostRejectedException:
+     * org.apache.hadoop.hbase.master.DecommissionedHostRejectedException: Host localhost exists in
+     * the list of decommissioned servers and Master is configured to reject decommissioned hosts"
+     */
+    assertThat(Arrays.asList(capturer.getOutput().split("\n")),
+      hasItem(allOf(containsString(DecommissionedHostRejectedException.class.getSimpleName()),
+        containsString(DecommissionedHostRejectedException.class.getSimpleName()),
+        containsString("Host " + rs2.getRegionServer().getServerName().getHostname()
+          + " exists in the list of decommissioned servers and Master is configured to reject"
+          + " decommissioned hosts"))));
+
+    assertThat(Arrays.asList(capturer.getOutput().split("\n")),
+      hasItem(
+        allOf(containsString("ABORTING region server " + rs2.getRegionServer().getServerName()),
+          containsString("Unhandled"),
+          containsString(DecommissionedHostRejectedException.class.getSimpleName()),
+          containsString("Host " + rs2.getRegionServer().getServerName().getHostname()
+            + " exists in the list of decommissioned servers and Master is configured to reject"
+            + " decommissioned hosts"))));
   }
 
   /**
