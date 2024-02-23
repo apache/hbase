@@ -14,15 +14,39 @@
     <dependency>
       <groupId>com.hubspot.hbase</groupId>
       <artifactId>hbase-client-bundle</artifactId>
+      <exclusions>
+        <!-- we bundle commons-io, but it also come through transitively. -->
+        <exclusion>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.hubspot.hbase</groupId>
       <artifactId>hbase-mapreduce-bundle</artifactId>
+      <exclusions>
+        <!-- we bundle commons-io, but it also come through transitively. -->
+        <exclusion>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-backup</artifactId>
       <exclusions>
+        <!-- we bundle commons-io, but it also come through transitively. -->
+        <exclusion>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
+        </exclusion>
+        <!-- Remove duplicated that come through the client and mapreduce bundles-->
+        <exclusion>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
         <!-- unnecessary or conflicting dependencies to exclude from the jar -->
         <exclusion>
           <groupId>commons-logging</groupId>
