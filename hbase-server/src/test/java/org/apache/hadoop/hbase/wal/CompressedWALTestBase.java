@@ -36,9 +36,13 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("checkstyle:innerassignment")
-public class CompressedWALTestBase {
+public abstract class CompressedWALTestBase {
+  private static final Logger LOG = LoggerFactory.getLogger(CompressedWALTestBase.class);
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -67,14 +71,36 @@ public class CompressedWALTestBase {
     Arrays.fill(VALUE, off, (off += 1597), (byte) 'Q');
   }
 
-  public void doTest(TableName tableName) throws Exception {
+  @Test
+  public void test() throws Exception {
+    testForSize(1000);
+  }
+
+  @Test
+  public void testLarge() throws Exception {
+    testForSize(1024 * 1024);
+  }
+
+  private void testForSize(int size) throws Exception {
+    TableName tableName = TableName.valueOf(getClass().getSimpleName() + "_testForSize_" + size);
+    doTest(tableName, size);
+  }
+
+  public void doTest(TableName tableName, int valueSize) throws Exception {
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     scopes.put(tableName.getName(), 0);
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
     final int total = 1000;
     final byte[] row = Bytes.toBytes("row");
     final byte[] family = Bytes.toBytes("family");
-    final byte[] value = VALUE;
+    final byte[] value = new byte[valueSize];
+
+    int offset = 0;
+    while (offset + VALUE.length < value.length) {
+      System.arraycopy(VALUE, 0, value, offset, VALUE.length);
+      offset += VALUE.length;
+    }
+
     final WALFactory wals =
       new WALFactory(TEST_UTIL.getConfiguration(), tableName.getNameAsString());
 
