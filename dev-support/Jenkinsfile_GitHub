@@ -493,6 +493,8 @@ pipeline {
                         SKIP_ERRORPRONE = true
                     }
                     when {
+                        branch 'master'
+                        branch 'branch-3'
                         // this will return true if the pipeline is building a change request, such as a GitHub pull request.
                         changeRequest()
                     }
