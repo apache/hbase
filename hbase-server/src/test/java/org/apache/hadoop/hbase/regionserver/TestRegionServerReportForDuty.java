@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
@@ -30,9 +35,11 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.master.DecommissionedHostRejectedException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -239,6 +246,72 @@ public class TestRegionServerReportForDuty {
     }, 1000, TimeUnit.MILLISECONDS);
 
     waitForClusterOnline(master);
+  }
+
+  /**
+   * Tests that the RegionServer's reportForDuty gets rejected by the master when the master is
+   * configured to reject decommissioned hosts and when there is a match for the joining
+   * RegionServer in the list of decommissioned servers. Test case for HBASE-28342.
+   */
+  @Test
+  public void testReportForDutyGetsRejectedByMasterWhenConfiguredToRejectDecommissionedHosts()
+    throws Exception {
+    // Start a master and wait for it to become the active/primary master.
+    // Use a random unique port
+    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtil.randomFreePort());
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 1);
+
+    // Set the cluster to reject decommissioned hosts
+    cluster.getConfiguration().setBoolean(HConstants.REJECT_DECOMMISSIONED_HOSTS_KEY, true);
+
+    master = cluster.addMaster();
+    rs = cluster.addRegionServer();
+    master.start();
+    rs.start();
+    waitForClusterOnline(master);
+
+    // Add a second decommissioned region server to the cluster, wait for it to fail reportForDuty
+    LogCapturer capturer =
+      new LogCapturer((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+        .getLogger(HRegionServer.class));
+
+    rs2 = cluster.addRegionServer();
+    master.getMaster().decommissionRegionServers(
+      Collections.singletonList(rs2.getRegionServer().getServerName()), false);
+    rs2.start();
+
+    // Assert that the second regionserver has aborted
+    testUtil.waitFor(TimeUnit.SECONDS.toMillis(90),
+      new MatcherPredicate<>(() -> rs2.getRegionServer().isAborted(), is(true)));
+
+    // Assert that the log messages for DecommissionedHostRejectedException exist in the logs
+    capturer.stopCapturing();
+
+    assertThat(capturer.getOutput(),
+      containsString("Master rejected startup because the host is considered decommissioned"));
+
+    /**
+     * Assert that the following log message occurred (one line):
+     * "org.apache.hadoop.hbase.master.DecommissionedHostRejectedException:
+     * org.apache.hadoop.hbase.master.DecommissionedHostRejectedException: Host localhost exists in
+     * the list of decommissioned servers and Master is configured to reject decommissioned hosts"
+     */
+    assertThat(Arrays.asList(capturer.getOutput().split("\n")),
+      hasItem(allOf(containsString(DecommissionedHostRejectedException.class.getSimpleName()),
+        containsString(DecommissionedHostRejectedException.class.getSimpleName()),
+        containsString("Host " + rs2.getRegionServer().getServerName().getHostname()
+          + " exists in the list of decommissioned servers and Master is configured to reject"
+          + " decommissioned hosts"))));
+
+    assertThat(Arrays.asList(capturer.getOutput().split("\n")),
+      hasItem(
+        allOf(containsString("ABORTING region server " + rs2.getRegionServer().getServerName()),
+          containsString("Unhandled"),
+          containsString(DecommissionedHostRejectedException.class.getSimpleName()),
+          containsString("Host " + rs2.getRegionServer().getServerName().getHostname()
+            + " exists in the list of decommissioned servers and Master is configured to reject"
+            + " decommissioned hosts"))));
   }
 
   /**
