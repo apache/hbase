@@ -22,7 +22,6 @@ import static org.junit.Assume.assumeTrue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -31,10 +30,7 @@ import org.apache.hadoop.hbase.wal.CompressedWALTestBase;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestWALCompressionSnappy extends CompressedWALTestBase {
@@ -42,9 +38,6 @@ public class TestWALCompressionSnappy extends CompressedWALTestBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestWALCompressionSnappy.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -61,12 +54,6 @@ public class TestWALCompressionSnappy extends CompressedWALTestBase {
   @AfterClass
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @Test
-  public void test() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName().replaceAll("[^a-zA-Z0-9]", "_"));
-    doTest(tableName);
   }
 
 }
