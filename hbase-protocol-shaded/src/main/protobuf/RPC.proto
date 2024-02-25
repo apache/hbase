@@ -159,3 +159,7 @@ message ResponseHeader {
   // If present, then an encoded data block follows.
   optional CellBlockMeta cell_block_meta = 3;
 }
+
+message SecurityPreamableResponse {
+  required string server_principal = 1;
+}

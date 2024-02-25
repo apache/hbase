@@ -68,14 +68,14 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
    */
   public NettyHBaseSaslRpcClientHandler(Promise<Boolean> saslPromise, UserGroupInformation ugi,
     SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
-    InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed, Configuration conf)
+    InetAddress serverAddr, String serverPrincipal, boolean fallbackAllowed, Configuration conf)
     throws IOException {
     this.saslPromise = saslPromise;
     this.ugi = ugi;
     this.conf = conf;
     this.provider = provider;
     this.saslRpcClient = new NettyHBaseSaslRpcClient(conf, provider, token, serverAddr,
-      securityInfo, fallbackAllowed, conf.get("hbase.rpc.protection",
+      serverPrincipal, fallbackAllowed, conf.get("hbase.rpc.protection",
         SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
   }
 

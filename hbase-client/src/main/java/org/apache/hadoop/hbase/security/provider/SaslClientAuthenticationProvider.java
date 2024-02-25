@@ -23,6 +23,7 @@ import java.util.Map;
 import javax.security.sasl.SaslClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Kind;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -45,11 +46,33 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformati
 public interface SaslClientAuthenticationProvider extends SaslAuthenticationProvider {
 
   /**
-   * Creates the SASL client instance for this auth'n method.
+   * Creates the SASL client instance for this authentication method.
+   * @deprecated Since 2.5.8 and 2.6.0. In our own code will not call this method any more,
+   *             customized authentication method should implement
+   *             {@link #createClient(Configuration, InetAddress, String, Token, boolean, Map)}
+   *             instead. Will be removed in 4.0.0.
    */
-  SaslClient createClient(Configuration conf, InetAddress serverAddr, SecurityInfo securityInfo,
-    Token<? extends TokenIdentifier> token, boolean fallbackAllowed, Map<String, String> saslProps)
-    throws IOException;
+  @Deprecated
+  default SaslClient createClient(Configuration conf, InetAddress serverAddr,
+    SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
+    Map<String, String> saslProps) throws IOException {
+    throw new UnsupportedOperationException("should not be used any more");
+  }
+
+  /**
+   * Create the SASL client instance for this authentication method.
+   * <p>
+   * The default implementation is create a fake {@link SecurityInfo} and call the above method, for
+   * keeping compatible with old customized authentication method
+   */
+  default SaslClient createClient(Configuration conf, InetAddress serverAddr,
+    String serverPrincipal, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
+    Map<String, String> saslProps) throws IOException {
+    String principalKey = "hbase.fake.kerberos.principal";
+    conf.set(principalKey, serverPrincipal);
+    return createClient(conf, serverAddr, new SecurityInfo(principalKey, Kind.HBASE_AUTH_TOKEN),
+      token, fallbackAllowed, saslProps);
+  }
 
   /**
    * Constructs a {@link UserInformation} from the given {@link UserGroupInformation}

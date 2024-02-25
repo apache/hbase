@@ -45,38 +45,38 @@ public abstract class AbstractHBaseSaslRpcClient {
 
   /**
    * Create a HBaseSaslRpcClient for an authentication method
-   * @param conf            the configuration object
-   * @param provider        the authentication provider
-   * @param token           token to use if needed by the authentication method
-   * @param serverAddr      the address of the hbase service
-   * @param securityInfo    the security details for the remote hbase service
-   * @param fallbackAllowed does the client allow fallback to simple authentication
+   * @param conf             the configuration object
+   * @param provider         the authentication provider
+   * @param token            token to use if needed by the authentication method
+   * @param serverAddr       the address of the hbase service
+   * @param servicePrincipal the service principal to use if needed by the authentication method
+   * @param fallbackAllowed  does the client allow fallback to simple authentication
    */
   protected AbstractHBaseSaslRpcClient(Configuration conf,
     SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
-    InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed) throws IOException {
-    this(conf, provider, token, serverAddr, securityInfo, fallbackAllowed, "authentication");
+    InetAddress serverAddr, String servicePrincipal, boolean fallbackAllowed) throws IOException {
+    this(conf, provider, token, serverAddr, servicePrincipal, fallbackAllowed, "authentication");
   }
 
   /**
    * Create a HBaseSaslRpcClient for an authentication method
-   * @param conf            configuration object
-   * @param provider        the authentication provider
-   * @param token           token to use if needed by the authentication method
-   * @param serverAddr      the address of the hbase service
-   * @param securityInfo    the security details for the remote hbase service
-   * @param fallbackAllowed does the client allow fallback to simple authentication
-   * @param rpcProtection   the protection level ("authentication", "integrity" or "privacy")
+   * @param conf             configuration object
+   * @param provider         the authentication provider
+   * @param token            token to use if needed by the authentication method
+   * @param serverAddr       the address of the hbase service
+   * @param servicePrincipal the service principal to use if needed by the authentication method
+   * @param fallbackAllowed  does the client allow fallback to simple authentication
+   * @param rpcProtection    the protection level ("authentication", "integrity" or "privacy")
    */
   protected AbstractHBaseSaslRpcClient(Configuration conf,
     SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
-    InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed,
-    String rpcProtection) throws IOException {
+    InetAddress serverAddr, String servicePrincipal, boolean fallbackAllowed, String rpcProtection)
+    throws IOException {
     this.fallbackAllowed = fallbackAllowed;
     saslProps = SaslUtil.initSaslProperties(rpcProtection);
 
     saslClient =
-      provider.createClient(conf, serverAddr, securityInfo, token, fallbackAllowed, saslProps);
+      provider.createClient(conf, serverAddr, servicePrincipal, token, fallbackAllowed, saslProps);
     if (saslClient == null) {
       throw new IOException(
         "Authentication provider " + provider.getClass() + " returned a null SaslClient");

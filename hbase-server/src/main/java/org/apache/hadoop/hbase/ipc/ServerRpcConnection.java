@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.SecurityPreamableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetConnectionRegistryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TracingProtos.RPCTInfo;
@@ -695,6 +696,13 @@ abstract class ServerRpcConnection implements Closeable {
     doRespond(getErrorResponse(msg, e));
   }
 
+  private void doPreambleResponse(Message resp) throws IOException {
+    ResponseHeader header = ResponseHeader.newBuilder().setCallId(-1).build();
+    ByteBuffer buf = ServerCall.createHeaderAndMessageBytes(resp, header, 0, null);
+    BufferChain bufChain = new BufferChain(buf);
+    doRespond(() -> bufChain);
+  }
+
   private boolean doConnectionRegistryResponse() throws IOException {
     if (!(rpcServer.server instanceof HRegionServer)) {
       // should be in tests or some scenarios where we should not reach here
@@ -710,11 +718,20 @@ abstract class ServerRpcConnection implements Closeable {
     }
     GetConnectionRegistryResponse resp =
       GetConnectionRegistryResponse.newBuilder().setClusterId(clusterId).build();
-    ResponseHeader header = ResponseHeader.newBuilder().setCallId(-1).build();
-    ByteBuffer buf = ServerCall.createHeaderAndMessageBytes(resp, header, 0, null);
-    BufferChain bufChain = new BufferChain(buf);
-    doRespond(() -> bufChain);
+    doPreambleResponse(resp);
     return true;
+  }
+
+  private void doSecurityPreambleResponse() throws IOException {
+    if (rpcServer.isSecurityEnabled) {
+      SecurityPreamableResponse resp = SecurityPreamableResponse.newBuilder()
+        .setServerPrincipal(rpcServer.serverPrincipal).build();
+      doPreambleResponse(resp);
+    } else {
+      // security is not enabled, do not need a principal when connecting, throw a special exception
+      // to let client know it should just use simple authentication
+      doRespond(getErrorResponse("security is not enabled", new SecurityNotEnabledException()));
+    }
   }
 
   protected final void callCleanupIfNeeded() {
@@ -737,6 +754,13 @@ abstract class ServerRpcConnection implements Closeable {
         RpcClient.REGISTRY_PREAMBLE_HEADER, 0, 6) && doConnectionRegistryResponse()
     ) {
       return PreambleResponse.CLOSE;
+    }
+    if (
+      ByteBufferUtils.equals(preambleBuffer, preambleBuffer.position(), 6,
+        RpcClient.SECURITY_PREAMBLE_HEADER, 0, 6)
+    ) {
+      doSecurityPreambleResponse();
+      return PreambleResponse.CONTINUE;
     }
     if (!ByteBufferUtils.equals(preambleBuffer, preambleBuffer.position(), 4, RPC_HEADER, 0, 4)) {
       doBadPreambleHandling(
