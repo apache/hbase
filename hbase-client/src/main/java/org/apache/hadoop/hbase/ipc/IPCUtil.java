@@ -178,6 +178,11 @@ class IPCUtil {
     }
   }
 
+  static boolean isSecurityNotEnabledException(IOException e) {
+    return e instanceof RemoteException
+      && SecurityNotEnabledException.class.getName().equals(((RemoteException) e).getClassName());
+  }
+
   static IOException toIOE(Throwable t) {
     if (t instanceof IOException) {
       return (IOException) t;
