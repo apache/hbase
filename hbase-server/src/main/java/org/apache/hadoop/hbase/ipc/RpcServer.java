@@ -67,6 +67,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
@@ -117,6 +118,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     LoggerFactory.getLogger("SecurityLogger." + Server.class.getName());
   protected SecretManager<TokenIdentifier> secretManager;
   protected final Map<String, String> saslProps;
+  protected final String serverPrincipal;
 
   protected ServiceAuthorizationManager authManager;
 
@@ -211,7 +213,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   protected final RpcScheduler scheduler;
 
-  protected UserProvider userProvider;
+  protected final UserProvider userProvider;
 
   protected final ByteBuffAllocator bbAllocator;
 
@@ -300,8 +302,11 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     if (isSecurityEnabled) {
       saslProps = SaslUtil.initSaslProperties(conf.get("hbase.rpc.protection",
         QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)));
+      serverPrincipal = Preconditions.checkNotNull(userProvider.getCurrentUserName(),
+        "can not get current user name when security is enabled");
     } else {
       saslProps = Collections.emptyMap();
+      serverPrincipal = HConstants.EMPTY_STRING;
     }
 
     this.isOnlineLogProviderEnabled = getIsOnlineLogProviderEnabled(conf);

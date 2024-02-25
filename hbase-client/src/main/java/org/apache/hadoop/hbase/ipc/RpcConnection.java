@@ -21,17 +21,26 @@ import java.io.DataInput;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import javax.security.sasl.SaslException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.security.AuthMethod;
+import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
@@ -40,6 +49,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -47,6 +57,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
@@ -58,6 +69,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.SecurityPreamableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 
 /**
@@ -99,6 +111,12 @@ abstract class RpcConnection {
   protected long lastTouched;
 
   protected SaslClientAuthenticationProvider provider;
+
+  // Record the server principal which we have successfully authenticated with the remote server
+  // this is used to save the extra round trip with server when there are multiple candidate server
+  // principals for a given rpc service, like ClientMetaService.
+  // See HBASE-28321 for more details.
+  private String lastSucceededServerPrincipal;
 
   protected RpcConnection(Configuration conf, HashedWheelTimer timeoutTimer, ConnectionId remoteId,
     String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor,
@@ -221,6 +239,96 @@ abstract class RpcConnection {
     return remoteAddr;
   }
 
+  private static boolean useCanonicalHostname(Configuration conf) {
+    return !conf.getBoolean(
+      SecurityConstants.UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS,
+      SecurityConstants.DEFAULT_UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS);
+  }
+
+  private static String getHostnameForServerPrincipal(Configuration conf, InetAddress addr) {
+    final String hostname;
+    if (useCanonicalHostname(conf)) {
+      hostname = addr.getCanonicalHostName();
+      if (hostname.equals(addr.getHostAddress())) {
+        LOG.warn("Canonical hostname for SASL principal is the same with IP address: " + hostname
+          + ", " + addr.getHostName() + ". Check DNS configuration or consider "
+          + SecurityConstants.UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS + "=true");
+      }
+    } else {
+      hostname = addr.getHostName();
+    }
+
+    return hostname.toLowerCase();
+  }
+
+  private static String getServerPrincipal(Configuration conf, String serverKey, InetAddress server)
+    throws IOException {
+    String hostname = getHostnameForServerPrincipal(conf, server);
+    return SecurityUtil.getServerPrincipal(conf.get(serverKey), hostname);
+  }
+
+  protected final boolean isKerberosAuth() {
+    return provider.getSaslAuthMethod().getCode() == AuthMethod.KERBEROS.code;
+  }
+
+  protected final Set<String> getServerPrincipals() throws IOException {
+    // for authentication method other than kerberos, we do not need to know the server principal
+    if (!isKerberosAuth()) {
+      return Collections.singleton(HConstants.EMPTY_STRING);
+    }
+    // if we have successfully authenticated last time, just return the server principal we use last
+    // time
+    if (lastSucceededServerPrincipal != null) {
+      return Collections.singleton(lastSucceededServerPrincipal);
+    }
+    InetAddress server =
+      new InetSocketAddress(remoteId.address.getHostName(), remoteId.address.getPort())
+        .getAddress();
+    // Even if we have multiple config key in security info, it is still possible that we configured
+    // the same principal for them, so here we use a Set
+    Set<String> serverPrincipals = new TreeSet<>();
+    for (String serverPrincipalKey : securityInfo.getServerPrincipals()) {
+      serverPrincipals.add(getServerPrincipal(conf, serverPrincipalKey, server));
+    }
+    return serverPrincipals;
+  }
+
+  protected final <T> T randomSelect(Collection<T> c) {
+    int select = ThreadLocalRandom.current().nextInt(c.size());
+    int index = 0;
+    for (T t : c) {
+      if (index == select) {
+        return t;
+      }
+      index++;
+    }
+    return null;
+  }
+
+  protected final String chooseServerPrincipal(Set<String> candidates, Call securityPreambleCall)
+    throws SaslException {
+    String principal =
+      ((SecurityPreamableResponse) securityPreambleCall.response).getServerPrincipal();
+    if (!candidates.contains(principal)) {
+      // this means the server returns principal which is not in our candidates, it could be a
+      // malicious server, stop connecting
+      throw new SaslException(remoteId.address + " tells us to use server principal " + principal
+        + " which is not expected, should be one of " + candidates);
+    }
+    return principal;
+  }
+
+  protected final void saslNegotiationDone(String serverPrincipal, boolean succeed) {
+    LOG.debug("sasl negotiation done with serverPrincipal = {}, succeed = {}", serverPrincipal,
+      succeed);
+    if (succeed) {
+      this.lastSucceededServerPrincipal = serverPrincipal;
+    } else {
+      // clear the recorded principal if authentication failed
+      this.lastSucceededServerPrincipal = null;
+    }
+  }
+
   protected abstract void callTimeout(Call call);
 
   public ConnectionId remoteId() {
@@ -252,7 +360,10 @@ abstract class RpcConnection {
    */
   public abstract void cleanupConnection();
 
-  protected Call connectionRegistryCall;
+  protected final Call createSecurityPreambleCall(RpcCallback<Call> callback) {
+    return new Call(-1, null, null, null, SecurityPreamableResponse.getDefaultInstance(), 0, 0,
+      Collections.emptyMap(), callback, MetricsConnection.newCallStats());
+  }
 
   private <T extends InputStream & DataInput> void finishCall(ResponseHeader responseHeader, T in,
     Call call) throws IOException {
@@ -286,7 +397,7 @@ abstract class RpcConnection {
   }
 
   <T extends InputStream & DataInput> void readResponse(T in, Map<Integer, Call> id2Call,
-    Consumer<RemoteException> fatalConnectionErrorConsumer) throws IOException {
+    Call preambleCall, Consumer<RemoteException> fatalConnectionErrorConsumer) throws IOException {
     int totalSize = in.readInt();
     ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(in);
     int id = responseHeader.getCallId();
@@ -301,9 +412,8 @@ abstract class RpcConnection {
       if (IPCUtil.isFatalConnectionException(exceptionResponse)) {
         // Here we will cleanup all calls so do not need to fall back, just return.
         fatalConnectionErrorConsumer.accept(remoteExc);
-        if (connectionRegistryCall != null) {
-          connectionRegistryCall.setException(remoteExc);
-          connectionRegistryCall = null;
+        if (preambleCall != null) {
+          preambleCall.setException(remoteExc);
         }
         return;
       }
@@ -311,10 +421,19 @@ abstract class RpcConnection {
       remoteExc = null;
     }
     if (id < 0) {
-      if (connectionRegistryCall != null) {
-        LOG.debug("process connection registry call");
-        finishCall(responseHeader, in, connectionRegistryCall);
-        connectionRegistryCall = null;
+      LOG.debug("process preamble call response with response type {}",
+        preambleCall != null
+          ? preambleCall.responseDefaultType.getDescriptorForType().getName()
+          : "null");
+      if (preambleCall == null) {
+        // fall through so later we will skip this response
+        LOG.warn("Got a negative call id {} but there is no preamble call", id);
+      } else {
+        if (remoteExc != null) {
+          preambleCall.setException(remoteExc);
+        } else {
+          finishCall(responseHeader, in, preambleCall);
+        }
         return;
       }
     }

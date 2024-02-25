@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
@@ -540,6 +541,12 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   @Override
   public RpcChannel createRpcChannel(ServerName sn, User user, int rpcTimeout) {
     return new RpcChannelImplementation(this, createAddr(sn), user, rpcTimeout);
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  PoolMap<ConnectionId, T> getConnections() {
+    return connections;
   }
 
   private static class AbstractRpcChannel {
