@@ -633,8 +633,9 @@ pipeline {
 
         stage ('yetus jdk17 hadoop3 checks') {
           when {
-              branch 'master'
-              branch 'branch-3'
+            anyOf {
+              branch 'master';branch 'branch-3'
+            }
           }
           agent {
             node {
