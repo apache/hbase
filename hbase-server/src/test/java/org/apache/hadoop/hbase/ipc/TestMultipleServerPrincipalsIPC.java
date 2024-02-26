@@ -124,10 +124,16 @@ public class TestMultipleServerPrincipalsIPC {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
-    SERVER_PRINCIPAL = "server/" + HOST + "@" + KDC.getRealm();
-    SERVER_PRINCIPAL2 = "server2/" + HOST + "@" + KDC.getRealm();
+    SERVER_PRINCIPAL = "server/" + HOST;
+    SERVER_PRINCIPAL2 = "server2/" + HOST;
     CLIENT_PRINCIPAL = "client";
     KDC.createPrincipal(KEYTAB_FILE, CLIENT_PRINCIPAL, SERVER_PRINCIPAL, SERVER_PRINCIPAL2);
+    // we need to use the full principal as we will compare them in this form in RpcConnection
+    // but for hadoop2's MiniKDC implementation, the createPrincipal method will always append realm
+    // at the end of the principal passed in, so we can not append the realm before calling
+    // KDC.createPrincipal
+    SERVER_PRINCIPAL += "@" + KDC.getRealm();
+    SERVER_PRINCIPAL2 += "@" + KDC.getRealm();
     setSecuredConfiguration(TEST_UTIL.getConfiguration());
     TEST_UTIL.getConfiguration().setInt("hbase.security.relogin.maxbackoff", 1);
     TEST_UTIL.getConfiguration().setInt("hbase.security.relogin.maxretries", 0);
