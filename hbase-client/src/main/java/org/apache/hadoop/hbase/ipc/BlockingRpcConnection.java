@@ -37,12 +37,14 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayDeque;
 import java.util.Locale;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
@@ -352,13 +354,13 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     }
   }
 
-  private boolean setupSaslConnection(final InputStream in2, final OutputStream out2)
-    throws IOException {
+  private boolean setupSaslConnection(final InputStream in2, final OutputStream out2,
+    String serverPrincipal) throws IOException {
     if (this.metrics != null) {
       this.metrics.incrNsLookups();
     }
     saslRpcClient = new HBaseSaslRpcClient(this.rpcClient.conf, provider, token,
-      socket.getInetAddress(), securityInfo, this.rpcClient.fallbackAllowed,
+      socket.getInetAddress(), serverPrincipal, this.rpcClient.fallbackAllowed,
       this.rpcClient.conf.get("hbase.rpc.protection",
         QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)),
       this.rpcClient.conf.getBoolean(CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT));
@@ -379,7 +381,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
    * </p>
    */
   private void handleSaslConnectionFailure(final int currRetries, final int maxRetries,
-    final Exception ex, final UserGroupInformation user) throws IOException, InterruptedException {
+    final Exception ex, final UserGroupInformation user, final String serverPrincipal)
+    throws IOException, InterruptedException {
     closeSocket();
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
@@ -419,17 +422,22 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
           Thread.sleep(ThreadLocalRandom.current().nextInt(reloginMaxBackoff) + 1);
           return null;
         } else {
-          String msg =
-            "Failed to initiate connection for " + UserGroupInformation.getLoginUser().getUserName()
-              + " to " + securityInfo.getServerPrincipal();
+          String msg = "Failed to initiate connection for "
+            + UserGroupInformation.getLoginUser().getUserName() + " to " + serverPrincipal;
           throw new IOException(msg, ex);
         }
       }
     });
   }
 
-  private void getConnectionRegistry(OutputStream outStream) throws IOException {
+  private void getConnectionRegistry(InputStream inStream, OutputStream outStream,
+    Call connectionRegistryCall) throws IOException {
     outStream.write(RpcClient.REGISTRY_PREAMBLE_HEADER);
+    readResponse(new DataInputStream(inStream), calls, connectionRegistryCall, remoteExc -> {
+      synchronized (this) {
+        closeConn(remoteExc);
+      }
+    });
   }
 
   private void createStreams(InputStream inStream, OutputStream outStream) {
@@ -437,7 +445,52 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     this.out = new DataOutputStream(new BufferedOutputStream(outStream));
   }
 
-  private void setupIOstreams() throws IOException {
+  // choose the server principal to use
+  private String chooseServerPrincipal(InputStream inStream, OutputStream outStream)
+    throws IOException {
+    Set<String> serverPrincipals = getServerPrincipals();
+    if (serverPrincipals.size() == 1) {
+      return serverPrincipals.iterator().next();
+    }
+    // this means we use kerberos authentication and there are multiple server principal candidates,
+    // in this way we need to send a special preamble header to get server principal from server
+    Call securityPreambleCall = createSecurityPreambleCall(r -> {
+    });
+    outStream.write(RpcClient.SECURITY_PREAMBLE_HEADER);
+    readResponse(new DataInputStream(inStream), calls, securityPreambleCall, remoteExc -> {
+      synchronized (this) {
+        closeConn(remoteExc);
+      }
+    });
+    if (securityPreambleCall.error != null) {
+      LOG.debug("Error when trying to do a security preamble call to {}", remoteId.address,
+        securityPreambleCall.error);
+      if (ConnectionUtils.isUnexpectedPreambleHeaderException(securityPreambleCall.error)) {
+        // this means we are connecting to an old server which does not support the security
+        // preamble call, so we should fallback to randomly select a principal to use
+        // TODO: find a way to reconnect without failing all the pending calls, for now, when we
+        // reach here, shutdown should have already been scheduled
+        throw securityPreambleCall.error;
+      }
+      if (IPCUtil.isSecurityNotEnabledException(securityPreambleCall.error)) {
+        // server tells us security is not enabled, then we should check whether fallback to
+        // simple is allowed, if so we just go without security, otherwise we should fail the
+        // negotiation immediately
+        if (rpcClient.fallbackAllowed) {
+          // TODO: just change the preamble and skip the fallback to simple logic, for now, just
+          // select the first principal can finish the connection setup, but waste one client
+          // message
+          return serverPrincipals.iterator().next();
+        } else {
+          throw new FallbackDisallowedException();
+        }
+      }
+      return randomSelect(serverPrincipals);
+    }
+    return chooseServerPrincipal(serverPrincipals, securityPreambleCall);
+  }
+
+  private void setupIOstreams(Call connectionRegistryCall) throws IOException {
     if (socket != null) {
       // The connection is already available. Perfect.
       return;
@@ -465,32 +518,37 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         // This creates a socket with a write timeout. This timeout cannot be changed.
         OutputStream outStream = NetUtils.getOutputStream(socket, this.rpcClient.writeTO);
         if (connectionRegistryCall != null) {
-          getConnectionRegistry(outStream);
-          createStreams(inStream, outStream);
-          break;
+          getConnectionRegistry(inStream, outStream, connectionRegistryCall);
+          closeSocket();
+          return;
         }
-        // Write out the preamble -- MAGIC, version, and auth to use.
-        writeConnectionHeaderPreamble(outStream);
+
         if (useSasl) {
-          final InputStream in2 = inStream;
-          final OutputStream out2 = outStream;
           UserGroupInformation ticket = provider.getRealUser(remoteId.ticket);
           boolean continueSasl;
           if (ticket == null) {
             throw new FatalConnectionException("ticket/user is null");
           }
+          String serverPrincipal = chooseServerPrincipal(inStream, outStream);
+          // Write out the preamble -- MAGIC, version, and auth to use.
+          writeConnectionHeaderPreamble(outStream);
           try {
+            final InputStream in2 = inStream;
+            final OutputStream out2 = outStream;
             continueSasl = ticket.doAs(new PrivilegedExceptionAction<Boolean>() {
               @Override
               public Boolean run() throws IOException {
-                return setupSaslConnection(in2, out2);
+                return setupSaslConnection(in2, out2, serverPrincipal);
               }
             });
           } catch (Exception ex) {
             ExceptionUtil.rethrowIfInterrupt(ex);
-            handleSaslConnectionFailure(numRetries++, reloginMaxRetries, ex, ticket);
+            saslNegotiationDone(serverPrincipal, false);
+            handleSaslConnectionFailure(numRetries++, reloginMaxRetries, ex, ticket,
+              serverPrincipal);
             continue;
           }
+          saslNegotiationDone(serverPrincipal, true);
           if (continueSasl) {
             // Sasl connect is successful. Let's set up Sasl i/o streams.
             inStream = saslRpcClient.getInputStream();
@@ -501,6 +559,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
             // reconnecting because regionserver may change its sasl config after restart.
             saslRpcClient = null;
           }
+        } else {
+          // Write out the preamble -- MAGIC, version, and auth to use.
+          writeConnectionHeaderPreamble(outStream);
         }
         createStreams(inStream, outStream);
         // Now write out the connection header
@@ -618,9 +679,10 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       }
       RequestHeader requestHeader = buildRequestHeader(call, cellBlockMeta);
       if (call.isConnectionRegistryCall()) {
-        connectionRegistryCall = call;
+        setupIOstreams(call);
+        return;
       }
-      setupIOstreams();
+      setupIOstreams(null);
 
       // Now we're going to write the call. We take the lock, then check that the connection
       // is still valid, and, if so we do the write to the socket. If the write fails, we don't
@@ -655,7 +717,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
    */
   private void readResponse() {
     try {
-      readResponse(in, calls, remoteExc -> {
+      readResponse(in, calls, null, remoteExc -> {
         synchronized (this) {
           closeConn(remoteExc);
         }

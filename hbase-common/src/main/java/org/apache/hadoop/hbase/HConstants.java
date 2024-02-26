@@ -1622,6 +1622,20 @@ public final class HConstants {
    */
   public final static boolean HBASE_SERVER_USEIP_ENABLED_DEFAULT = false;
 
+  /**
+   * Should the HMaster reject hosts of decommissioned RegionServers, bypass matching their port and
+   * startcode parts of their ServerName or not? When True, the HMaster will reject a RegionServer's
+   * request to `reportForDuty` if it's hostname exists in the list of decommissioned RegionServers
+   * it maintains internally. Added in HBASE-28342.
+   */
+  public final static String REJECT_DECOMMISSIONED_HOSTS_KEY =
+    "hbase.master.reject.decommissioned.hosts";
+
+  /**
+   * Default value of {@link #REJECT_DECOMMISSIONED_HOSTS_KEY}
+   */
+  public final static boolean REJECT_DECOMMISSIONED_HOSTS_DEFAULT = false;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

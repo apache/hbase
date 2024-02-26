@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AuthenticationProtos.TokenIdentifier.Kind;
@@ -51,7 +55,8 @@ public class SecurityInfo {
     infos.put(MasterProtos.HbckService.getDescriptor().getName(),
       new SecurityInfo(SecurityConstants.MASTER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
     infos.put(RegistryProtos.ClientMetaService.getDescriptor().getName(),
-      new SecurityInfo(SecurityConstants.MASTER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
+      new SecurityInfo(Kind.HBASE_AUTH_TOKEN, SecurityConstants.MASTER_KRB_PRINCIPAL,
+        SecurityConstants.REGIONSERVER_KRB_PRINCIPAL));
     infos.put(BootstrapNodeProtos.BootstrapNodeService.getDescriptor().getName(),
       new SecurityInfo(SecurityConstants.REGIONSERVER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
     infos.put(LockServiceProtos.LockService.getDescriptor().getName(),
@@ -75,16 +80,33 @@ public class SecurityInfo {
     return infos.get(serviceName);
   }
 
-  private final String serverPrincipal;
+  private final List<String> serverPrincipals;
   private final Kind tokenKind;
 
   public SecurityInfo(String serverPrincipal, Kind tokenKind) {
-    this.serverPrincipal = serverPrincipal;
-    this.tokenKind = tokenKind;
+    this(tokenKind, serverPrincipal);
   }
 
+  public SecurityInfo(Kind tokenKind, String... serverPrincipal) {
+    Preconditions.checkArgument(serverPrincipal.length > 0);
+    this.tokenKind = tokenKind;
+    this.serverPrincipals = Arrays.asList(serverPrincipal);
+  }
+
+  /**
+   * Although this class is IA.Private, we leak this class in
+   * {@code SaslClientAuthenticationProvider}, so need to align with the deprecation cycle for that
+   * class.
+   * @deprecated Since 2.5.8 and 2.6.0, will be removed in 4.0.0. Use {@link #getServerPrincipals()}
+   *             instead.
+   */
+  @Deprecated
   public String getServerPrincipal() {
-    return serverPrincipal;
+    return serverPrincipals.get(0);
+  }
+
+  public List<String> getServerPrincipals() {
+    return serverPrincipals;
   }
 
   public Kind getTokenKind() {
