@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -68,4 +70,14 @@ public interface LockStatus {
    * Get the number of procedures which hold the shared lock.
    */
   int getSharedLockCount();
+
+  default String describeLockStatus() {
+    ToStringBuilder builder = new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+      .append("exclusiveLock", hasExclusiveLock());
+    if (hasExclusiveLock()) {
+      builder.append("exclusiveLockProcIdOwner", getExclusiveLockProcIdOwner());
+    }
+    builder.append("sharedLockCount", getSharedLockCount());
+    return builder.build();
+  }
 }
