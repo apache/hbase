@@ -140,27 +140,41 @@ public class TestBlockBytesScannedQuota {
     waitMinuteQuota();
 
     // should execute 1 request
-    testTraffic(() -> doScans(5, table), 1, 0);
+    testTraffic(() -> doScans(5, table, 1), 1, 0);
 
     // Remove all the limits
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName));
     triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAME);
-    testTraffic(() -> doScans(100, table), 100, 0);
-    testTraffic(() -> doScans(100, table), 100, 0);
+    testTraffic(() -> doScans(100, table, 1), 100, 0);
+    testTraffic(() -> doScans(100, table, 1), 100, 0);
 
     // Add ~3 block/sec limit. This should support >1 scans
     admin.setQuota(QuotaSettingsFactory.throttleUser(userName, ThrottleType.REQUEST_SIZE,
       Math.round(3.1 * blockSize), TimeUnit.SECONDS));
     triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
+    waitMinuteQuota();
 
-    // should execute some requests, but not all
-    testTraffic(() -> doScans(100, table), 100, 90);
+    // Add 50 block/sec limit. This should support >1 scans
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName, ThrottleType.REQUEST_SIZE,
+      Math.round(50 * blockSize), TimeUnit.SECONDS));
+    triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
+    waitMinuteQuota();
+
+    // This will produce some throttling exceptions, but all/most should succeed within the timeout
+    testTraffic(() -> doScans(100, table, 1), 75, 25);
+    triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
+    waitMinuteQuota();
+
+    // With large caching, a big scan should succeed
+    testTraffic(() -> doScans(10_000, table, 10_000), 10_000, 0);
+    triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
+    waitMinuteQuota();
 
     // Remove all the limits
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName));
     triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAME);
-    testTraffic(() -> doScans(100, table), 100, 0);
-    testTraffic(() -> doScans(100, table), 100, 0);
+    testTraffic(() -> doScans(100, table, 1), 100, 0);
+    testTraffic(() -> doScans(100, table, 1), 100, 0);
   }
 
   @Test
@@ -223,9 +237,8 @@ public class TestBlockBytesScannedQuota {
       boolean success = (actualSuccess >= expectedSuccess - marginOfError)
         && (actualSuccess <= expectedSuccess + marginOfError);
       if (!success) {
-        triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAME);
+        triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
         waitMinuteQuota();
-        Thread.sleep(15_000L);
       }
       return success;
     });

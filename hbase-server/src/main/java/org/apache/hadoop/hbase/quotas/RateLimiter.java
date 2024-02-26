@@ -35,6 +35,7 @@ import org.apache.yetus.audience.InterfaceStability;
       + "are mostly synchronized...but to me it looks like they are totally synchronized")
 public abstract class RateLimiter {
   public static final String QUOTA_RATE_LIMITER_CONF_KEY = "hbase.quota.rate.limiter";
+  private static final long QUOTA_RATE_LIMITER_MINIMUM_WAIT_INTERVAL_MS = 100L;
   private long tunit = 1000; // Timeunit factor for translating to ms.
   private long limit = Long.MAX_VALUE; // The max value available resource units can be refilled to.
   private long avail = Long.MAX_VALUE; // Currently available resource units
@@ -217,7 +218,11 @@ public abstract class RateLimiter {
    */
   public synchronized long waitInterval(final long amount) {
     // TODO Handle over quota?
-    return (amount <= avail) ? 0 : getWaitInterval(getLimit(), avail, amount);
+    long waitInterval = (amount <= avail) ? 0 : getWaitInterval(getLimit(), avail, amount);
+    if (waitInterval > 0) {
+      return Math.max(waitInterval, QUOTA_RATE_LIMITER_MINIMUM_WAIT_INTERVAL_MS);
+    }
+    return waitInterval;
   }
 
   // These two method are for strictly testing purpose only

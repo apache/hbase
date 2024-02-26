@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DefaultOperationQuota implements OperationQuota {
@@ -80,21 +82,41 @@ public class DefaultOperationQuota implements OperationQuota {
   }
 
   @Override
-  public void checkQuota(int numWrites, int numReads, int numScans) throws RpcThrottlingException {
-    updateEstimateConsumeQuota(numWrites, numReads, numScans);
+  public void checkQuota(int numWrites, int numReads) throws RpcThrottlingException {
+    updateEstimateConsumeBatchQuota(numWrites, numReads);
 
     readAvailable = Long.MAX_VALUE;
     for (final QuotaLimiter limiter : limiters) {
       if (limiter.isBypass()) continue;
 
-      limiter.checkQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
+      limiter.checkQuota(numWrites, writeConsumed, numReads, readConsumed,
         writeCapacityUnitConsumed, readCapacityUnitConsumed);
       readAvailable = Math.min(readAvailable, limiter.getReadAvailable());
     }
 
     for (final QuotaLimiter limiter : limiters) {
-      limiter.grabQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
-        writeCapacityUnitConsumed, readCapacityUnitConsumed);
+      limiter.grabQuota(numWrites, writeConsumed, numReads, readConsumed, writeCapacityUnitConsumed,
+        readCapacityUnitConsumed);
+    }
+  }
+
+  @Override
+  public void checkScanQuota(ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
+    long maxBlockBytesScanned) throws RpcThrottlingException {
+    updateEstimateConsumeScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned);
+
+    readAvailable = Long.MAX_VALUE;
+    for (final QuotaLimiter limiter : limiters) {
+      if (limiter.isBypass()) continue;
+
+      limiter.checkQuota(0, writeConsumed, 1, readConsumed, writeCapacityUnitConsumed,
+        readCapacityUnitConsumed);
+      readAvailable = Math.min(readAvailable, limiter.getReadAvailable());
+    }
+
+    for (final QuotaLimiter limiter : limiters) {
+      limiter.grabQuota(0, writeConsumed, 1, readConsumed, writeCapacityUnitConsumed,
+        readCapacityUnitConsumed);
     }
   }
 
@@ -158,21 +180,57 @@ public class DefaultOperationQuota implements OperationQuota {
    * Update estimate quota(read/write size/capacityUnits) which will be consumed
    * @param numWrites the number of write requests
    * @param numReads  the number of read requests
-   * @param numScans  the number of scan requests
    */
-  protected void updateEstimateConsumeQuota(int numWrites, int numReads, int numScans) {
+  protected void updateEstimateConsumeBatchQuota(int numWrites, int numReads) {
     writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);
 
     if (useResultSizeBytes) {
       readConsumed = estimateConsume(OperationType.GET, numReads, 100);
-      readConsumed += estimateConsume(OperationType.SCAN, numScans, 1000);
     } else {
       // assume 1 block required for reads. this is probably a low estimate, which is okay
       readConsumed = numReads > 0 ? blockSizeBytes : 0;
-      readConsumed += numScans > 0 ? blockSizeBytes : 0;
     }
 
     writeCapacityUnitConsumed = calculateWriteCapacityUnit(writeConsumed);
+    readCapacityUnitConsumed = calculateReadCapacityUnit(readConsumed);
+  }
+
+  /**
+   * Update estimate quota(read/write size/capacityUnits) which will be consumed
+   * @param scanRequest          the scan to be executed
+   * @param maxScannerResultSize the maximum bytes to be returned by the scanner
+   * @param maxBlockBytesScanned the maximum bytes scanned in a single RPC call by the scanner
+   */
+  protected void updateEstimateConsumeScanQuota(ClientProtos.ScanRequest scanRequest,
+    long maxScannerResultSize, long maxBlockBytesScanned) {
+    if (useResultSizeBytes) {
+      readConsumed = estimateConsume(OperationType.GET, 1, 1000);
+    } else {
+      /*
+       * Estimating scan workload is more complicated, and if we severely underestimate workloads
+       * then throttled clients will exhaust retries too quickly, and could saturate the RPC layer.
+       * We have access to the ScanRequest's nextCallSeq number, the maxScannerResultSize, and the
+       * maxBlockBytesScanned by every relevant Scanner#next call. With these inputs we can make a
+       * more informed estimate about the scan's workload.
+       */
+      long estimate;
+      if (scanRequest.getNextCallSeq() == 0) {
+        // start scanners with an optimistic 1 block IO estimate
+        // it is better to underestimate a large scan in the beginning
+        // than to overestimate, and block, a small scan
+        estimate = blockSizeBytes;
+      } else {
+        // scanner result sizes will be limited by quota availability, regardless of
+        // maxScannerResultSize. This means that we cannot safely assume that a long-running
+        // scan with a small maxBlockBytesScanned would not prefer to pull down
+        // a larger payload. So we should estimate with the assumption that long-running scans
+        // are appropriately configured to approach their maxScannerResultSize per RPC call
+        estimate =
+          Math.min(maxScannerResultSize, scanRequest.getNextCallSeq() * maxBlockBytesScanned);
+      }
+      readConsumed = estimate;
+    }
+
     readCapacityUnitConsumed = calculateReadCapacityUnit(readConsumed);
   }
 

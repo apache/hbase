@@ -23,6 +23,8 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+
 /*
  * Internal class used to check and consume quota if exceed throttle quota is enabled. Exceed
  * throttle quota means, user can over consume user/namespace/table quota if region server has
@@ -47,40 +49,81 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
   }
 
   @Override
-  public void checkQuota(int numWrites, int numReads, int numScans) throws RpcThrottlingException {
+  public void checkQuota(int numWrites, int numReads) throws RpcThrottlingException {
     if (regionServerLimiter.isBypass()) {
       // If region server limiter is bypass, which means no region server quota is set, check and
       // throttle by all other quotas. In this condition, exceed throttle quota will not work.
       LOG.warn("Exceed throttle quota is enabled but no region server quotas found");
-      super.checkQuota(numWrites, numReads, numScans);
+      super.checkQuota(numWrites, numReads);
     } else {
       // 1. Update estimate quota which will be consumed
-      updateEstimateConsumeQuota(numWrites, numReads, numScans);
+      updateEstimateConsumeBatchQuota(numWrites, numReads);
       // 2. Check if region server limiter is enough. If not, throw RpcThrottlingException.
-      regionServerLimiter.checkQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
+      regionServerLimiter.checkQuota(numWrites, writeConsumed, numReads, readConsumed,
         writeCapacityUnitConsumed, readCapacityUnitConsumed);
       // 3. Check if other limiters are enough. If not, exceed other limiters because region server
       // limiter is enough.
       boolean exceed = false;
       try {
-        super.checkQuota(numWrites, numReads, numScans);
+        super.checkQuota(numWrites, numReads);
       } catch (RpcThrottlingException e) {
         exceed = true;
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Read/Write requests num exceeds quota: writes:{} reads:{} scan:{}, "
-            + "try use region server quota", numWrites, numReads, numScans);
+          LOG.debug("Read/Write requests num exceeds quota: writes:{} reads:{} scans:0, "
+            + "try use region server quota", numWrites, numReads);
         }
       }
       // 4. Region server limiter is enough and grab estimated consume quota.
       readAvailable = Math.max(readAvailable, regionServerLimiter.getReadAvailable());
-      regionServerLimiter.grabQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
+      regionServerLimiter.grabQuota(numWrites, writeConsumed, numReads, readConsumed,
         writeCapacityUnitConsumed, writeCapacityUnitConsumed);
       if (exceed) {
         // 5. Other quota limiter is exceeded and has not been grabbed (because throw
         // RpcThrottlingException in Step 3), so grab it.
         for (final QuotaLimiter limiter : limiters) {
-          limiter.grabQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
+          limiter.grabQuota(numWrites, writeConsumed, numReads, readConsumed,
             writeCapacityUnitConsumed, writeCapacityUnitConsumed);
+        }
+      }
+    }
+  }
+
+  @Override
+  public void checkScanQuota(ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
+    long maxBlockBytesScanned) throws RpcThrottlingException {
+    if (regionServerLimiter.isBypass()) {
+      // If region server limiter is bypass, which means no region server quota is set, check and
+      // throttle by all other quotas. In this condition, exceed throttle quota will not work.
+      LOG.warn("Exceed throttle quota is enabled but no region server quotas found");
+      super.checkScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned);
+    } else {
+      // 1. Update estimate quota which will be consumed
+      updateEstimateConsumeScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned);
+      // 2. Check if region server limiter is enough. If not, throw RpcThrottlingException.
+      regionServerLimiter.checkQuota(0, writeConsumed, 1, readConsumed, writeCapacityUnitConsumed,
+        readCapacityUnitConsumed);
+      // 3. Check if other limiters are enough. If not, exceed other limiters because region server
+      // limiter is enough.
+      boolean exceed = false;
+      try {
+        super.checkScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned);
+      } catch (RpcThrottlingException e) {
+        exceed = true;
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Read/Write requests num exceeds quota: writes:0 reads:0, scans:1, "
+            + "try use region server quota");
+        }
+      }
+      // 4. Region server limiter is enough and grab estimated consume quota.
+      readAvailable = Math.max(readAvailable, regionServerLimiter.getReadAvailable());
+      regionServerLimiter.grabQuota(0, writeConsumed, 1, readConsumed, writeCapacityUnitConsumed,
+        writeCapacityUnitConsumed);
+      if (exceed) {
+        // 5. Other quota limiter is exceeded and has not been grabbed (because throw
+        // RpcThrottlingException in Step 3), so grab it.
+        for (final QuotaLimiter limiter : limiters) {
+          limiter.grabQuota(0, writeConsumed, 1, readConsumed, writeCapacityUnitConsumed,
+            writeCapacityUnitConsumed);
         }
       }
     }

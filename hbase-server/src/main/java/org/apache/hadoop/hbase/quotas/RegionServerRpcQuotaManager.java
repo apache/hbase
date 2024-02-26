@@ -156,38 +156,77 @@ public class RegionServerRpcQuotaManager {
 
   /**
    * Check the quota for the current (rpc-context) user. Returns the OperationQuota used to get the
-   * available quota and to report the data/usage of the operation.
+   * available quota and to report the data/usage of the operation. This method is specific to scans
+   * because estimating a scan's workload is more complicated than estimating the workload of a
+   * get/put.
+   * @param region               the region where the operation will be performed
+   * @param scanRequest          the scan to be estimated against the quota
+   * @param maxScannerResultSize the maximum bytes to be returned by the scanner
+   * @param maxBlockBytesScanned the maximum bytes scanned in a single RPC call by the scanner
+   * @return the OperationQuota
+   * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
+   */
+  public OperationQuota checkScanQuota(final Region region,
+    final ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
+    long maxBlockBytesScanned) throws IOException, RpcThrottlingException {
+    Optional<User> user = RpcServer.getRequestUser();
+    UserGroupInformation ugi;
+    if (user.isPresent()) {
+      ugi = user.get().getUGI();
+    } else {
+      ugi = User.getCurrent().getUGI();
+    }
+    TableDescriptor tableDescriptor = region.getTableDescriptor();
+    TableName table = tableDescriptor.getTableName();
+
+    OperationQuota quota = getQuota(ugi, table, region.getMinBlockSizeBytes());
+    try {
+      quota.checkScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned);
+    } catch (RpcThrottlingException e) {
+      LOG.debug("Throttling exception for user=" + ugi.getUserName() + " table=" + table + " scan="
+        + scanRequest.getScannerId() + ": " + e.getMessage());
+      throw e;
+    }
+    return quota;
+  }
+
+  /**
+   * Check the quota for the current (rpc-context) user. Returns the OperationQuota used to get the
+   * available quota and to report the data/usage of the operation. This method does not support
+   * scans because estimating a scan's workload is more complicated than estimating the workload of
+   * a get/put.
    * @param region the region where the operation will be performed
    * @param type   the operation type
    * @return the OperationQuota
    * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
-  public OperationQuota checkQuota(final Region region, final OperationQuota.OperationType type)
-    throws IOException, RpcThrottlingException {
+  public OperationQuota checkBatchQuota(final Region region,
+    final OperationQuota.OperationType type) throws IOException, RpcThrottlingException {
     switch (type) {
-      case SCAN:
-        return checkQuota(region, 0, 0, 1);
       case GET:
-        return checkQuota(region, 0, 1, 0);
+        return this.checkBatchQuota(region, 0, 1);
       case MUTATE:
-        return checkQuota(region, 1, 0, 0);
+        return this.checkBatchQuota(region, 1, 0);
       case CHECK_AND_MUTATE:
-        return checkQuota(region, 1, 1, 0);
+        return this.checkBatchQuota(region, 1, 1);
     }
     throw new RuntimeException("Invalid operation type: " + type);
   }
 
   /**
    * Check the quota for the current (rpc-context) user. Returns the OperationQuota used to get the
-   * available quota and to report the data/usage of the operation.
+   * available quota and to report the data/usage of the operation. This method does not support
+   * scans because estimating a scan's workload is more complicated than estimating the workload of
+   * a get/put.
    * @param region       the region where the operation will be performed
    * @param actions      the "multi" actions to perform
    * @param hasCondition whether the RegionAction has a condition
    * @return the OperationQuota
    * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
-  public OperationQuota checkQuota(final Region region, final List<ClientProtos.Action> actions,
-    boolean hasCondition) throws IOException, RpcThrottlingException {
+  public OperationQuota checkBatchQuota(final Region region,
+    final List<ClientProtos.Action> actions, boolean hasCondition)
+    throws IOException, RpcThrottlingException {
     int numWrites = 0;
     int numReads = 0;
     for (final ClientProtos.Action action : actions) {
@@ -202,7 +241,7 @@ public class RegionServerRpcQuotaManager {
         numReads++;
       }
     }
-    return checkQuota(region, numWrites, numReads, 0);
+    return checkBatchQuota(region, numWrites, numReads);
   }
 
   /**
@@ -211,12 +250,11 @@ public class RegionServerRpcQuotaManager {
    * @param region    the region where the operation will be performed
    * @param numWrites number of writes to perform
    * @param numReads  number of short-reads to perform
-   * @param numScans  number of scan to perform
    * @return the OperationQuota
    * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
-  private OperationQuota checkQuota(final Region region, final int numWrites, final int numReads,
-    final int numScans) throws IOException, RpcThrottlingException {
+  private OperationQuota checkBatchQuota(final Region region, final int numWrites,
+    final int numReads) throws IOException, RpcThrottlingException {
     Optional<User> user = RpcServer.getRequestUser();
     UserGroupInformation ugi;
     if (user.isPresent()) {
@@ -229,11 +267,10 @@ public class RegionServerRpcQuotaManager {
 
     OperationQuota quota = getQuota(ugi, table, region.getMinBlockSizeBytes());
     try {
-      quota.checkQuota(numWrites, numReads, numScans);
+      quota.checkQuota(numWrites, numReads);
     } catch (RpcThrottlingException e) {
-      LOG.debug(
-        "Throttling exception for user=" + ugi.getUserName() + " table=" + table + " numWrites="
-          + numWrites + " numReads=" + numReads + " numScans=" + numScans + ": " + e.getMessage());
+      LOG.debug("Throttling exception for user=" + ugi.getUserName() + " table=" + table
+        + " numWrites=" + numWrites + " numReads=" + numReads + ": " + e.getMessage());
       throw e;
     }
     return quota;
