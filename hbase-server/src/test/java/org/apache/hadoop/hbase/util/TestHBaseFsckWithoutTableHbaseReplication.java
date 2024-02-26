@@ -23,7 +23,6 @@ import static org.junit.Assert.assertFalse;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -33,6 +32,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({ MiscTests.class, MediumTests.class })
 public class TestHBaseFsckWithoutTableHbaseReplication {
@@ -41,11 +41,18 @@ public class TestHBaseFsckWithoutTableHbaseReplication {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestHBaseFsckWithoutTableHbaseReplication.class);
 
+  @ClassRule
+  public static final TestName name = new TestName();
+
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
+  private static final TableName tableName =
+    TableName.valueOf("replication_" + name.getMethodName());
 
   @Before
   public void setUp() throws Exception {
     UTIL.getConfiguration().setBoolean("hbase.write.hbck1.lock.file", false);
+    UTIL.getConfiguration().set(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME,
+      tableName.getNameAsString());
     UTIL.startMiniCluster(1);
   }
 
@@ -56,11 +63,7 @@ public class TestHBaseFsckWithoutTableHbaseReplication {
 
   @Test
   public void test() throws Exception {
-    Admin admin = UTIL.getAdmin();
-    TableName tableName = TableName
-      .valueOf(UTIL.getConfiguration().get(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME,
-        ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME_DEFAULT.getNameAsString()));
-    assertFalse(admin.tableExists(tableName));
+    assertFalse(UTIL.getAdmin().tableExists(tableName));
     HBaseFsck hBaseFsck = HbckTestingUtil.doFsck(UTIL.getConfiguration(), true);
     assertEquals(0, hBaseFsck.getRetCode());
   }

@@ -800,12 +800,7 @@ public class HBaseFsck extends Configured implements Closeable {
       checkRegionBoundaries();
     }
 
-    TableName hbaseReplicationTable =
-      TableName.valueOf(getConf().get(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME,
-        ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME_DEFAULT.getNameAsString()));
-    if (admin.tableExists(hbaseReplicationTable)) {
-      checkAndFixReplication();
-    }
+    checkAndFixReplication();
 
     cleanReplicationBarrier();
 
@@ -2577,6 +2572,11 @@ public class HBaseFsck extends Configured implements Closeable {
 
   private void checkAndFixReplication() throws ReplicationException, IOException {
     ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
+
+    if (!checker.checkHasDataInQueues()) {
+      return;
+    }
+
     checker.checkUnDeletedQueues();
 
     if (checker.hasUnDeletedQueues() && this.fixReplication) {
