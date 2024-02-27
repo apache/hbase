@@ -33,6 +33,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 @InterfaceStability.Evolving
 public class DefaultOperationQuota implements OperationQuota {
 
+  // a single scan estimate can consume no more than this proportion of the limiter's limit
+  // this prevents a long-running scan from being estimated at, say, 100MB of IO against
+  // a <100MB/IO throttle (because this would never succeed)
+  private static final double MAX_SCAN_ESTIMATE_PROPORTIONAL_LIMIT_CONSUMPTION = 0.9;
+
   protected final List<QuotaLimiter> limiters;
   private final long writeCapacityUnit;
   private final long readCapacityUnit;
@@ -55,6 +60,7 @@ public class DefaultOperationQuota implements OperationQuota {
   protected long readCapacityUnitDiff = 0;
   private boolean useResultSizeBytes;
   private long blockSizeBytes;
+  private long maxScanEstimate;
 
   public DefaultOperationQuota(final Configuration conf, final int blockSizeBytes,
     final QuotaLimiter... limiters) {
@@ -62,6 +68,11 @@ public class DefaultOperationQuota implements OperationQuota {
     this.useResultSizeBytes =
       conf.getBoolean(OperationQuota.USE_RESULT_SIZE_BYTES, USE_RESULT_SIZE_BYTES_DEFAULT);
     this.blockSizeBytes = blockSizeBytes;
+    long readSizeLimit = Arrays.stream(limiters)
+        .mapToLong(QuotaLimiter::getReadLimit)
+        .min()
+        .orElse(Long.MAX_VALUE);
+    maxScanEstimate = Math.round(MAX_SCAN_ESTIMATE_PROPORTIONAL_LIMIT_CONSUMPTION * readSizeLimit);
   }
 
   /**
@@ -228,7 +239,7 @@ public class DefaultOperationQuota implements OperationQuota {
         estimate =
           Math.min(maxScannerResultSize, scanRequest.getNextCallSeq() * maxBlockBytesScanned);
       }
-      readConsumed = estimate;
+      readConsumed = Math.min(maxScanEstimate, estimate);
     }
 
     readCapacityUnitConsumed = calculateReadCapacityUnit(readConsumed);

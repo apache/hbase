@@ -244,6 +244,11 @@ public class TimeBasedLimiter implements QuotaLimiter {
   }
 
   @Override
+  public long getReadLimit() {
+    return Math.min(readSizeLimiter.getLimit(), reqSizeLimiter.getLimit());
+  }
+
+  @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
     builder.append("TimeBasedLimiter(");

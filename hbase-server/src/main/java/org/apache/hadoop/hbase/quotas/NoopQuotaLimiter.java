@@ -71,6 +71,11 @@ class NoopQuotaLimiter implements QuotaLimiter {
   }
 
   @Override
+  public long getReadLimit() {
+    return Long.MAX_VALUE;
+  }
+
+  @Override
   public String toString() {
     return "NoopQuotaLimiter";
   }
