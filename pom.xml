@@ -919,7 +919,7 @@
         databind] must be kept in sync with the version of jackson-jaxrs-json-provider shipped in
         hbase-thirdparty.
     -->
-    <hbase-thirdparty.version>4.1.6-28374-d2c399f-SNAPSHOT</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.6</hbase-thirdparty.version>
     <!-- Coverage properties -->
     <jacoco.version>0.8.8</jacoco.version>
     <jacocoArgLine/>
@@ -1834,6 +1834,13 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+  <repositories>
+    <repository>
+      <id>staging</id>
+      <name>staging</name>
+      <url>https://repository.apache.org/content/repositories/orgapachehbase-1533/</url>
+    </repository>
+  </repositories>
   <build>
     <!-- Plugin versions are inherited from ASF parent pom: https://maven.apache.org/pom/asf/
          For specific version use a property and define it in the parent pom.
