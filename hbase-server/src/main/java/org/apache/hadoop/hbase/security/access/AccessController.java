@@ -1204,6 +1204,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
+  public void preListDecommissionedRegionServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
+    requirePermission(ctx, "listDecommissionedRegionServers", Action.READ);
+  }
+
+  @Override
   public void preRecommissionRegionServer(ObserverContext<MasterCoprocessorEnvironment> ctx,
     ServerName server, List<byte[]> encodedRegionNames) throws IOException {
     requirePermission(ctx, "recommissionRegionServers", Action.ADMIN);
