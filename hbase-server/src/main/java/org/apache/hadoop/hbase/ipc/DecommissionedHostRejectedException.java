@@ -15,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public class DecommissionedHostRejectedException extends HBaseIOException {
   public DecommissionedHostRejectedException(String message) {
     super(message);
