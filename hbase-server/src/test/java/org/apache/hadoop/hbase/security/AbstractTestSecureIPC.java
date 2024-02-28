@@ -104,7 +104,7 @@ public class AbstractTestSecureIPC {
     TEST_UTIL.getConfiguration().setInt("hbase.security.relogin.maxbackoff", 100);
   }
 
-  protected static void stopKDC() throws InterruptedException {
+  protected static void stopKDC() {
     if (KDC != null) {
       KDC.stop();
     }
@@ -192,8 +192,8 @@ public class AbstractTestSecureIPC {
       return new SaslClientAuthenticationProvider() {
         @Override
         public SaslClient createClient(Configuration conf, InetAddress serverAddr,
-          SecurityInfo securityInfo, Token<? extends TokenIdentifier> token,
-          boolean fallbackAllowed, Map<String, String> saslProps) throws IOException {
+          String serverPrincipal, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
+          Map<String, String> saslProps) throws IOException {
           final String s = conf.get(CANONICAL_HOST_NAME_KEY);
           if (s != null) {
             try {
@@ -206,7 +206,7 @@ public class AbstractTestSecureIPC {
             }
           }
 
-          return delegate.createClient(conf, serverAddr, securityInfo, token, fallbackAllowed,
+          return delegate.createClient(conf, serverAddr, serverPrincipal, token, fallbackAllowed,
             saslProps);
         }
 
@@ -385,8 +385,8 @@ public class AbstractTestSecureIPC {
    */
   private void callRpcService(User serverUser, User clientUser) throws Exception {
     SecurityInfo securityInfoMock = Mockito.mock(SecurityInfo.class);
-    Mockito.when(securityInfoMock.getServerPrincipal())
-      .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
+    Mockito.when(securityInfoMock.getServerPrincipals())
+      .thenReturn(Collections.singletonList(HBaseKerberosUtils.KRB_PRINCIPAL));
     SecurityInfo.addInfo("TestProtobufRpcProto", securityInfoMock);
 
     InetSocketAddress isa = new InetSocketAddress(HOST, 0);
