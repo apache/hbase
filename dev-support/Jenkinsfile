@@ -657,6 +657,8 @@ pipeline {
               rm -rf "unpacked_src_tarball" && mkdir "unpacked_src_tarball"
               rm -rf "hbase-install" && mkdir "hbase-install"
               rm -rf "hbase-client" && mkdir "hbase-client"
+              rm -rf "hbase-hadoop3-install"
+              rm -rf "hbase-hadoop3-client"
               rm -rf "hadoop-2" && mkdir "hadoop-2"
               rm -rf "hadoop-3" && mkdir "hadoop-3"
               rm -rf ".m2-for-repo" && mkdir ".m2-for-repo"
@@ -691,14 +693,23 @@ pipeline {
             """
             echo "unpacking the hbase bin tarball into 'hbase-install' and the client tarball into 'hbase-client'"
             sh '''#!/bin/bash -e
-              if [ 2 -ne $(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | wc -l) ]; then
+              if [ 2 -ne $(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | grep -v hadoop3 | wc -l) ]; then
                 echo '(x) {color:red}-1 testing binary artifact{color}\n-- source tarball did not produce the expected binaries.' >>output-srctarball/commentfile
                 exit 1
               fi
-              install_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | sort | head -n 1)
+              install_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | grep -v client-bin | grep -v hadoop3)
               tar --strip-component=1 -xzf "${install_artifact}" -C "hbase-install"
-              client_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | sort | tail -n 1)
+              client_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-client-bin.tar.gz | grep -v hadoop3)
               tar --strip-component=1 -xzf "${client_artifact}" -C "hbase-client"
+              if [ 2 -eq $(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-hadoop3-*-bin.tar.gz | wc -l) ]; then
+                echo "hadoop3 artifacts available, unpacking the hbase hadoop3 bin tarball into 'hbase-hadoop3-install' and the client hadoop3 tarball into 'hbase-hadoop3-client'"
+                mkdir hbase-hadoop3-install
+                mkdir hbase-hadoop3-client
+                hadoop3_install_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-hadoop3-*-bin.tar.gz | grep -v client-bin)
+                tar --strip-component=1 -xzf "${hadoop3_install_artifact}" -C "hbase-hadoop3-install"
+                hadoop3_client_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-hadoop3-*-client-bin.tar.gz)
+                tar --strip-component=1 -xzf "${hadoop3_client_artifact}" -C "hbase-hadoop3-client"
+              fi
             '''
             unstash 'hadoop-2'
             sh '''#!/bin/bash -xe
@@ -731,11 +742,18 @@ pipeline {
               tar --strip-components=1 -xzf "${artifact}" -C "hadoop-3"
               # we need to patch some files otherwise minicluster will fail to start, see MAPREDUCE-7471
               ${BASEDIR}/dev-support/patch-hadoop3.sh hadoop-3
+              hbase_install_dir="hbase-install"
+              hbase_client_dir="hbase-client"
+              if [ -d "hbase-hadoop3-install" ]; then
+                echo "run hadoop3 client integration test against hbase hadoop3 binaries"
+                hbase_install_dir="hbase-hadoop3-install"
+                hbase_client_dir="hbase-hadoop3-client"
+              fi
               if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
                   --single-process \
                   --working-dir output-integration/hadoop-3 \
-                  --hbase-client-install hbase-client \
-                  hbase-install \
+                  --hbase-client-install ${hbase_client_dir} \
+                  ${hbase_install_dir} \
                   hadoop-3/bin/hadoop \
                   hadoop-3/share/hadoop/yarn/timelineservice \
                   hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
@@ -750,8 +768,8 @@ pipeline {
                   --single-process \
                   --hadoop-client-classpath hadoop-3/share/hadoop/client/hadoop-client-api-*.jar:hadoop-3/share/hadoop/client/hadoop-client-runtime-*.jar \
                   --working-dir output-integration/hadoop-3-shaded \
-                  --hbase-client-install hbase-client \
-                  hbase-install \
+                  --hbase-client-install ${hbase_client_dir} \
+                  ${hbase_install_dir} \
                   hadoop-3/bin/hadoop \
                   hadoop-3/share/hadoop/yarn/timelineservice \
                   hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \

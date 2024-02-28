@@ -16,7 +16,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
 function usage {
   echo "Usage: ${0} [options] /path/to/component/checkout"
   echo ""
@@ -169,20 +168,64 @@ else
   echo "Everything looks as expected."
 fi
 
+function get_hadoop3_version {
+  local version="$1"
+  if [[ "${version}" =~ -SNAPSHOT$ ]]; then
+    echo "${version/-SNAPSHOT/-hadoop3-SNAPSHOT}"
+  else
+    echo "${version}-hadoop3"
+  fi
+}
+
+function build_tarball {
+  local build_hadoop3=$1
+  local mvn_extra_args=""
+  local build_log="srctarball_install.log"
+  local tarball_glob="hbase-*-bin.tar.gz"
+  if [ $build_hadoop3 -ne 0 ]; then
+    local version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+    local hadoop3_version=$(get_hadoop3_version $version)
+    mvn_extra_args="-Drevision=${hadoop3_version} -Dhadoop.profile=3.0"
+    build_log="hadoop3_srctarball_install.log"
+    tarball_glob="hbase-*-hadoop3-*-bin.tar.gz"
+    echo "Follow the ref guide section on making a RC: Step 8 Build the hadoop3 binary tarball."
+  else
+    echo "Follow the ref guide section on making a RC: Step 8 Build the binary tarball."
+  fi
+  if mvn --threads=2 -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" ${mvn_extra_args} clean install \
+    assembly:single >"${working_dir}/${build_log}" 2>&1; then
+    for artifact in "${unpack_dir}"/hbase-assembly/target/${tarball_glob}; do
+      if [ -f "${artifact}" ]; then
+        # TODO check the layout of the binary artifact we just made.
+        echo "Building a binary tarball from the source tarball succeeded."
+        return 0
+      fi
+    done
+  fi
+
+  echo "Building a binary tarball from the source tarball failed. see ${working_dir}/${build_log} for details."
+  # Copy up the rat.txt to the working dir so available in build archive in case rat complaints.
+  # rat.txt can be under any module target dir... copy them all up renaming them to include parent dir as we go.
+  find ${unpack_dir} -name rat.txt -type f | while IFS= read -r NAME; do cp -v "$NAME" "${working_dir}/${NAME//\//_}"; done
+  return 1
+}
+
 cd "${unpack_dir}"
-echo "Follow the ref guide section on making a RC: Step 8 Build the binary tarball."
-if mvn --threads=2 -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" clean install \
-    assembly:single >"${working_dir}/srctarball_install.log" 2>&1; then
-  for artifact in "${unpack_dir}"/hbase-assembly/target/hbase-*-bin.tar.gz; do
-    if [ -f "${artifact}" ]; then
-      # TODO check the layout of the binary artifact we just made.
-      echo "Building a binary tarball from the source tarball succeeded."
-      exit 0
-    fi
-  done
+
+build_tarball 0
+if [ $? -ne 0 ]; then
+  exit 1
 fi
-echo "Building a binary tarball from the source tarball failed. see ${working_dir}/srctarball_install.log for details."
-# Copy up the rat.txt to the working dir so available in build archive in case rat complaints.
-# rat.txt can be under any module target dir... copy them all up renaming them to include parent dir as we go.
-find ${unpack_dir} -name rat.txt -type f | while IFS= read -r NAME; do cp -v "$NAME" "${working_dir}/${NAME//\//_}"; done
-exit 1
+
+mvn help:active-profiles | grep -q hadoop-3.0
+if [ $? -ne 0 ]; then
+  echo "The hadoop-3.0 profile is not activated by default, build a hadoop3 tarball."
+  # move the previous tarballs out, so it will not be cleaned while building against hadoop3
+  mv "${unpack_dir}"/hbase-assembly/target/hbase-*-bin.tar.gz "${unpack_dir}"/
+  build_tarball 1
+  if [ $? -ne 0 ]; then
+    exit 1
+  fi
+  # move tarballs back
+  mv "${unpack_dir}"/hbase-*-bin.tar.gz "${unpack_dir}"/hbase-assembly/target/
+fi
