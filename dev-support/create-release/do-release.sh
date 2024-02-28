@@ -17,6 +17,11 @@
 # limitations under the License.
 #
 
+# Turn on Bash command logging for debug mode
+if [ "$DEBUG" = "1" ]; then
+  set -x
+fi
+
 # Make a tmp dir into which we put files cleaned-up on exit.
 TMPDIR=$(mktemp -d)
 trap "rm -rf $TMPDIR" EXIT
