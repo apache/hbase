@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -88,7 +90,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * only after the handler is fully enabled and has completed the handling.
  */
 @InterfaceAudience.Private
-public class ServerManager {
+public class ServerManager implements ConfigurationObserver {
   public static final String WAIT_ON_REGIONSERVERS_MAXTOSTART =
     "hbase.master.wait.on.regionservers.maxtostart";
 
@@ -140,6 +142,9 @@ public class ServerManager {
   /** Listeners that are called on server events. */
   private List<ServerListener> listeners = new CopyOnWriteArrayList<>();
 
+  /** Configured value of HConstants.REJECT_DECOMMISSIONED_HOSTS_KEY */
+  private volatile boolean rejectDecommissionedHostsConfig;
+
   /**
    * Constructor.
    */
@@ -152,6 +157,35 @@ public class ServerManager {
     this.connection = master.getClusterConnection();
     this.rpcControllerFactory =
       this.connection == null ? null : connection.getRpcControllerFactory();
+    rejectDecommissionedHostsConfig = getRejectDecommissionedHostsConfig(c);
+  }
+
+  /**
+   * Implementation of the ConfigurationObserver interface. We are interested in live-loading the
+   * configuration value of HConstants.REJECT_DECOMMISSIONED_HOSTS_KEY
+   * @param conf Server configuration instance
+   */
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    final boolean newValue = getRejectDecommissionedHostsConfig(conf);
+    if (rejectDecommissionedHostsConfig == newValue) {
+      // no-op
+      return;
+    }
+
+    LOG.info("Config Reload for RejectDecommissionedHosts. previous value: {}, new value: {}",
+      rejectDecommissionedHostsConfig, newValue);
+
+    rejectDecommissionedHostsConfig = newValue;
+  }
+
+  /**
+   * Reads the value of HConstants.REJECT_DECOMMISSIONED_HOSTS_KEY from the config and returns it
+   * @param conf Configuration instance of the Master
+   */
+  public boolean getRejectDecommissionedHostsConfig(Configuration conf) {
+    return conf.getBoolean(HConstants.REJECT_DECOMMISSIONED_HOSTS_KEY,
+      HConstants.REJECT_DECOMMISSIONED_HOSTS_DEFAULT);
   }
 
   /**
@@ -196,11 +230,14 @@ public class ServerManager {
     final String hostname =
       request.hasUseThisHostnameInstead() ? request.getUseThisHostnameInstead() : isaHostName;
     ServerName sn = ServerName.valueOf(hostname, request.getPort(), request.getServerStartCode());
+
+    // Check if the host should be rejected based on it's decommissioned status
+    checkRejectableDecommissionedStatus(sn);
+
     checkClockSkew(sn, request.getServerCurrentTime());
     checkIsDead(sn, "STARTUP");
     if (!checkAndRecordNewServer(sn, ServerMetricsBuilder.of(sn, versionNumber, version))) {
-      LOG.warn(
-        "THIS SHOULD NOT HAPPEN, RegionServerStartup" + " could not record the server: " + sn);
+      LOG.warn("THIS SHOULD NOT HAPPEN, RegionServerStartup could not record the server: {}", sn);
     }
     storage.started(sn);
     return sn;
@@ -260,6 +297,42 @@ public class ServerManager {
       }
     }
     updateLastFlushedSequenceIds(sn, sl);
+  }
+
+  /**
+   * Checks if the Master is configured to reject decommissioned hosts or not. When it's configured
+   * to do so, any RegionServer trying to join the cluster will have it's host checked against the
+   * list of hosts of currently decommissioned servers and potentially get prevented from reporting
+   * for duty; otherwise, we do nothing and we let them pass to the next check. See HBASE-28342 for
+   * details.
+   * @param sn The ServerName to check for
+   * @throws DecommissionedHostRejectedException if the Master is configured to reject
+   *                                             decommissioned hosts and this host exists in the
+   *                                             list of the decommissioned servers
+   */
+  private void checkRejectableDecommissionedStatus(ServerName sn)
+    throws DecommissionedHostRejectedException {
+    LOG.info("Checking decommissioned status of RegionServer {}", sn.getServerName());
+
+    // If the Master is not configured to reject decommissioned hosts, return early.
+    if (!rejectDecommissionedHostsConfig) {
+      return;
+    }
+
+    // Look for a match for the hostname in the list of decommissioned servers
+    for (ServerName server : getDrainingServersList()) {
+      if (Objects.equals(server.getHostname(), sn.getHostname())) {
+        // Found a match and master is configured to reject decommissioned hosts, throw exception!
+        LOG.warn(
+          "Rejecting RegionServer {} from reporting for duty because Master is configured "
+            + "to reject decommissioned hosts and this host was marked as such in the past.",
+          sn.getServerName());
+        throw new DecommissionedHostRejectedException(String.format(
+          "Host %s exists in the list of decommissioned servers and Master is configured to "
+            + "reject decommissioned hosts",
+          sn.getHostname()));
+      }
+    }
   }
 
   /**
@@ -607,13 +680,8 @@ public class ServerManager {
    * Remove the server from the drain list.
    */
   public synchronized boolean removeServerFromDrainList(final ServerName sn) {
-    // Warn if the server (sn) is not online. ServerName is of the form:
-    // <hostname> , <port> , <startcode>
+    LOG.info("Removing server {} from the draining list.", sn);
 
-    if (!this.isServerOnline(sn)) {
-      LOG.warn("Server " + sn + " is not currently online. "
-        + "Removing from draining list anyway, as requested.");
-    }
     // Remove the server from the draining servers lists.
     return this.drainingServers.remove(sn);
   }
@@ -623,22 +691,23 @@ public class ServerManager {
    * @return True if the server is added or the server is already on the drain list.
    */
   public synchronized boolean addServerToDrainList(final ServerName sn) {
-    // Warn if the server (sn) is not online. ServerName is of the form:
-    // <hostname> , <port> , <startcode>
-
-    if (!this.isServerOnline(sn)) {
-      LOG.warn("Server " + sn + " is not currently online. "
-        + "Ignoring request to add it to draining list.");
+    // If master is not rejecting decommissioned hosts, warn if the server (sn) is not online.
+    // However, we want to add servers even if they're not online if the master is configured
+    // to reject decommissioned hosts
+    if (!rejectDecommissionedHostsConfig && !this.isServerOnline(sn)) {
+      LOG.warn("Server {} is not currently online. Ignoring request to add it to draining list.",
+        sn);
       return false;
     }
-    // Add the server to the draining servers lists, if it's not already in
-    // it.
+
+    // Add the server to the draining servers lists, if it's not already in it.
     if (this.drainingServers.contains(sn)) {
-      LOG.warn("Server " + sn + " is already in the draining server list."
-        + "Ignoring request to add it again.");
+      LOG.warn(
+        "Server {} is already in the draining server list. Ignoring request to add it again.", sn);
       return true;
     }
-    LOG.info("Server " + sn + " added to draining server list.");
+
+    LOG.info("Server {} added to draining server list.", sn);
     return this.drainingServers.add(sn);
   }
 
