@@ -31,7 +31,6 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.SaslUtil;
-import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -46,9 +45,9 @@ public class ShadeSaslClientAuthenticationProvider extends ShadeSaslAuthenticati
   implements SaslClientAuthenticationProvider {
 
   @Override
-  public SaslClient createClient(Configuration conf, InetAddress serverAddr,
-    SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
-    Map<String, String> saslProps) throws IOException {
+  public SaslClient createClient(Configuration conf, InetAddress serverAddr, String serverPrincipal,
+    Token<? extends TokenIdentifier> token, boolean fallbackAllowed, Map<String, String> saslProps)
+    throws IOException {
     return Sasl.createSaslClient(new String[] { getSaslAuthMethod().getSaslMechanism() }, null,
       null, SaslUtil.SASL_DEFAULT_REALM, saslProps, new ShadeSaslClientCallbackHandler(token));
   }

@@ -122,7 +122,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
 
   private void readResponse(ChannelHandlerContext ctx, ByteBuf buf) throws IOException {
     try {
-      conn.readResponse(new ByteBufInputStream(buf), id2Call,
+      conn.readResponse(new ByteBufInputStream(buf), id2Call, null,
         remoteExc -> exceptionCaught(ctx, remoteExc));
     } catch (IOException e) {
       // In netty, the decoding the frame based, when reaching here we have already read a full
