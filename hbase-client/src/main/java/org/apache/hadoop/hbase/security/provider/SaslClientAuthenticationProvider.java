@@ -47,8 +47,8 @@ public interface SaslClientAuthenticationProvider extends SaslAuthenticationProv
 
   /**
    * Creates the SASL client instance for this authentication method.
-   * @deprecated Since 2.5.8 and 2.6.0. In our own code will not call this method any more,
-   *             customized authentication method should implement
+   * @deprecated Since 2.6.0. In our own code will not call this method any more, customized
+   *             authentication method should implement
    *             {@link #createClient(Configuration, InetAddress, String, Token, boolean, Map)}
    *             instead. Will be removed in 4.0.0.
    */
