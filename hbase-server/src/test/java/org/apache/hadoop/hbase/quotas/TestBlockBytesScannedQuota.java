@@ -70,7 +70,8 @@ public class TestBlockBytesScannedQuota {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
       MAX_SCANNER_RESULT_SIZE);
-    TEST_UTIL.getConfiguration().setClass(RateLimiter.QUOTA_RATE_LIMITER_CONF_KEY, AverageIntervalRateLimiter.class, RateLimiter.class);
+    TEST_UTIL.getConfiguration().setClass(RateLimiter.QUOTA_RATE_LIMITER_CONF_KEY,
+      AverageIntervalRateLimiter.class, RateLimiter.class);
 
     // quotas enabled, using block bytes scanned
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
@@ -161,7 +162,7 @@ public class TestBlockBytesScannedQuota {
 
     // Add 50 block/sec limit. This should support >1 scans
     admin.setQuota(QuotaSettingsFactory.throttleUser(userName, ThrottleType.REQUEST_SIZE,
-      Math.round(50 * blockSize), TimeUnit.SECONDS));
+      Math.round(50.1 * blockSize), TimeUnit.SECONDS));
     triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
     waitMinuteQuota();
 
@@ -197,7 +198,8 @@ public class TestBlockBytesScannedQuota {
     // maxScannerResultSize (both larger than the 90MB limit). This test ensures that all
     // requests succeed, so the estimate never becomes large enough to cause read downtime
     long limit = 99 * 1024 * 1024;
-    assertTrue(limit <= MAX_SCANNER_RESULT_SIZE); // always true, but protecting against code changes
+    assertTrue(limit <= MAX_SCANNER_RESULT_SIZE); // always true, but protecting against code
+                                                  // changes
     admin.setQuota(QuotaSettingsFactory.throttleUser(userName, ThrottleType.REQUEST_SIZE, limit,
       TimeUnit.SECONDS));
     triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);

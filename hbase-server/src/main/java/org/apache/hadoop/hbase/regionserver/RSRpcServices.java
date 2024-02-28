@@ -453,7 +453,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       return nextCallSeq.compareAndSet(currentSeq, currentSeq + 1);
     }
 
-    long getMaxBlockBytesScanned() {
+    synchronized long getMaxBlockBytesScanned() {
       return maxBlockBytesScanned.get();
     }
 

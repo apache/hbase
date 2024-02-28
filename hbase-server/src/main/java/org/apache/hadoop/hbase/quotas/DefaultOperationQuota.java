@@ -68,10 +68,8 @@ public class DefaultOperationQuota implements OperationQuota {
     this.useResultSizeBytes =
       conf.getBoolean(OperationQuota.USE_RESULT_SIZE_BYTES, USE_RESULT_SIZE_BYTES_DEFAULT);
     this.blockSizeBytes = blockSizeBytes;
-    long readSizeLimit = Arrays.stream(limiters)
-        .mapToLong(QuotaLimiter::getReadLimit)
-        .min()
-        .orElse(Long.MAX_VALUE);
+    long readSizeLimit =
+      Arrays.stream(limiters).mapToLong(QuotaLimiter::getReadLimit).min().orElse(Long.MAX_VALUE);
     maxScanEstimate = Math.round(MAX_SCAN_ESTIMATE_PROPORTIONAL_LIMIT_CONSUMPTION * readSizeLimit);
   }
 
@@ -98,7 +96,9 @@ public class DefaultOperationQuota implements OperationQuota {
 
     readAvailable = Long.MAX_VALUE;
     for (final QuotaLimiter limiter : limiters) {
-      if (limiter.isBypass()) continue;
+      if (limiter.isBypass()) {
+        continue;
+      }
 
       limiter.checkQuota(numWrites, writeConsumed, numReads, readConsumed,
         writeCapacityUnitConsumed, readCapacityUnitConsumed);
@@ -118,7 +118,9 @@ public class DefaultOperationQuota implements OperationQuota {
 
     readAvailable = Long.MAX_VALUE;
     for (final QuotaLimiter limiter : limiters) {
-      if (limiter.isBypass()) continue;
+      if (limiter.isBypass()) {
+        continue;
+      }
 
       limiter.checkQuota(0, writeConsumed, 1, readConsumed, writeCapacityUnitConsumed,
         readCapacityUnitConsumed);
