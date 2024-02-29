@@ -52,7 +52,6 @@ public class RegionSizeCalculator {
   private final Map<byte[], Long> sizeMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   static final String ENABLE_REGIONSIZECALCULATOR = "hbase.regionsizecalculator.enable";
-  private static final long MEGABYTE = 1024L * 1024L;
 
   /**
    * Computes size of each region for table and given column families.
@@ -82,8 +81,8 @@ public class RegionSizeCalculator {
         regionLocator.getName())) {
 
         byte[] regionId = regionLoad.getRegionName();
-        long regionSizeBytes =
-          ((long) regionLoad.getStoreFileSize().get(Size.Unit.MEGABYTE)) * MEGABYTE;
+        long regionSizeBytes = (long) regionLoad.getMemStoreSize().get(Size.Unit.BYTE)
+          + (long) regionLoad.getStoreFileSize().get(Size.Unit.BYTE);
 
         sizeMap.put(regionId, regionSizeBytes);
 
