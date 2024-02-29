@@ -173,7 +173,8 @@ public class RestoreTablesClient {
     }
 
     if (dirList.isEmpty()) {
-      LOG.info("No incremental changes since full backup for '" + sTable + "', skipping incremental restore step.");
+      LOG.info("No incremental changes since full backup for '" + sTable
+        + "', skipping incremental restore step.");
       return;
     }
 
