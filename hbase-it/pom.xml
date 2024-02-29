@@ -37,6 +37,8 @@
     <integrationtest.include>**/IntegrationTest*.java</integrationtest.include>
     <!-- To Run Tests with a particular Xmx Value use -Dfailsafe.Xmx=XXXg -->
     <failsafe.Xmx>4g</failsafe.Xmx>
+    <failsafe.jdk8.flags>-XX:+CMSClassUnloadingEnabled</failsafe.jdk8.flags>
+    <failsafe.profile.overrides>${failsafe.jdk8.flags}</failsafe.profile.overrides>
     <!-- To run a single integration test, use -Dit.test=IntegrationTestXXX -->
   </properties>
 
@@ -293,7 +295,7 @@
                  I believe it is a failsafe bug, we may consider using surefire -->
           <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
           <argLine>-enableassertions -Xmx${failsafe.Xmx}
-                -Djava.security.egd=file:/dev/./urandom -XX:+CMSClassUnloadingEnabled
+	         -Djava.security.egd=file:/dev/./urandom ${failsafe.profile.overrides}
                 -verbose:gc -XX:+PrintCommandLineFlags  -XX:+PrintFlagsFinal @{jacocoArgLine}</argLine>
         </configuration>
       </plugin>
@@ -346,6 +348,10 @@
       <activation>
         <jdk>[1.11,)</jdk>
       </activation>
+      <properties>
+        <failsafe.profile.overrides>${hbase-surefire.jdk11.flags}</failsafe.profile.overrides>
+      </properties>
+
       <dependencies>
         <dependency>
           <groupId>com.sun.xml.ws</groupId>
