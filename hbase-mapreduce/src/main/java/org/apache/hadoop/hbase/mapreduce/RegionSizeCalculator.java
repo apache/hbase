@@ -21,8 +21,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -34,8 +36,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Computes size of each region for given table and given column families. The value is used by
@@ -96,12 +96,11 @@ public class RegionSizeCalculator {
   }
 
   private Set<ServerName> getRegionServersOfTable(RegionLocator regionLocator) throws IOException {
-
-    Set<ServerName> tableServers = Sets.newHashSet();
-    for (HRegionLocation regionLocation : regionLocator.getAllRegionLocations()) {
-      tableServers.add(regionLocation.getServerName());
-    }
-    return tableServers;
+    // The region locations could contain `null` ServerName instances if the region is currently
+    // in transition, we filter those out for now, which impacts the size calculation for these
+    // regions temporarily until the ServerName gets filled in later
+    return regionLocator.getAllRegionLocations().stream().map(HRegionLocation::getServerName)
+      .filter(Objects::nonNull).collect(Collectors.toSet());
   }
 
   boolean enabled(Configuration configuration) {
