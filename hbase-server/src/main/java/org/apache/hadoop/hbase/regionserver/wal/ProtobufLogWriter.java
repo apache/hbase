@@ -105,8 +105,13 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter implements FSHL
     FSDataOutputStreamBuilder<?, ?> builder = fs.createFile(path).overwrite(overwritable)
       .bufferSize(bufferSize).replication(replication).blockSize(blockSize);
     if (builder instanceof DistributedFileSystem.HdfsDataOutputStreamBuilder) {
-      this.output =
-        ((DistributedFileSystem.HdfsDataOutputStreamBuilder) builder).replicate().build();
+      DistributedFileSystem.HdfsDataOutputStreamBuilder dfsBuilder =
+        (DistributedFileSystem.HdfsDataOutputStreamBuilder) builder;
+      if (fs.getConf().getBoolean("hbase.regionserver.wal.avoid-local-writes", false)) {
+        dfsBuilder.replicate();
+      }
+      dfsBuilder.noLocalWrite();
+      this.output = dfsBuilder.build();
     } else {
       this.output = builder.build();
     }
