@@ -18,6 +18,84 @@
 -->
 # HBASE Changelog
 
+## Release 2.5.8 - 2024-03-08
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28313](https://issues.apache.org/jira/browse/HBASE-28313) | StorefileRefresherChore should not refresh readonly table |  Major | regionserver |
+| [HBASE-28398](https://issues.apache.org/jira/browse/HBASE-28398) | Make sure we close all the scanners in TestHRegion |  Major | test |
+| [HBASE-28356](https://issues.apache.org/jira/browse/HBASE-28356) | RegionServer Canary can should use Scan just like Region Canary with option to enable Raw Scan |  Minor | canary |
+| [HBASE-28357](https://issues.apache.org/jira/browse/HBASE-28357) | MoveWithAck#isSuccessfulScan for Region movement should use Region End Key for limiting scan to one region only. |  Minor | Region Assignment |
+| [HBASE-28332](https://issues.apache.org/jira/browse/HBASE-28332) | Type conversion is no need in method CompactionChecker.chore() |  Minor | Compaction |
+| [HBASE-28327](https://issues.apache.org/jira/browse/HBASE-28327) | Add remove(String key, Metric metric) method to MetricRegistry interface |  Major | metrics |
+| [HBASE-28271](https://issues.apache.org/jira/browse/HBASE-28271) | Infinite waiting on lock acquisition by snapshot can result in unresponsive master |  Major | . |
+| [HBASE-28319](https://issues.apache.org/jira/browse/HBASE-28319) | Expose DelegatingRpcScheduler as IA.LimitedPrivate |  Major | . |
+| [HBASE-28306](https://issues.apache.org/jira/browse/HBASE-28306) | Add property to customize Version information |  Major | . |
+| [HBASE-28256](https://issues.apache.org/jira/browse/HBASE-28256) | Enhance ByteBufferUtils.readVLong to read more bytes at a time |  Major | Performance |
+| [HBASE-20528](https://issues.apache.org/jira/browse/HBASE-20528) | Revise collections copying from iteration to built-in function |  Minor | . |
+| [HBASE-21243](https://issues.apache.org/jira/browse/HBASE-21243) | Correct java-doc for the method RpcServer.getRemoteAddress() |  Trivial | . |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28391](https://issues.apache.org/jira/browse/HBASE-28391) | Remove the need for ADMIN permissions for listDecommissionedRegionServers |  Major | Admin |
+| [HBASE-28390](https://issues.apache.org/jira/browse/HBASE-28390) | WAL value compression fails for cells with large values |  Major | . |
+| [HBASE-28377](https://issues.apache.org/jira/browse/HBASE-28377) | Fallback to simple is broken for blocking rpc client |  Major | IPC/RPC |
+| [HBASE-28311](https://issues.apache.org/jira/browse/HBASE-28311) | Few ITs (using MiniMRYarnCluster on hadoop-2) are failing due to NCDFE: com/sun/jersey/core/util/FeaturesAndProperties |  Major | integration tests, test |
+| [HBASE-28353](https://issues.apache.org/jira/browse/HBASE-28353) | Close HBase connection on implicit exit from HBase shell |  Major | shell |
+| [HBASE-28204](https://issues.apache.org/jira/browse/HBASE-28204) | Region Canary can take lot more time If any region (except the first region) starts with delete markers |  Major | canary |
+| [HBASE-28345](https://issues.apache.org/jira/browse/HBASE-28345) | Close HBase connection on exit from HBase Shell |  Major | shell |
+| [HBASE-26816](https://issues.apache.org/jira/browse/HBASE-26816) | Fix CME in ReplicationSourceManager |  Minor | Replication |
+| [HBASE-28330](https://issues.apache.org/jira/browse/HBASE-28330) | TestUnknownServers.testListUnknownServers is flaky in branch-2 |  Major | test |
+| [HBASE-28326](https://issues.apache.org/jira/browse/HBASE-28326) | All nightly jobs are failing |  Major | jenkins |
+| [HBASE-28324](https://issues.apache.org/jira/browse/HBASE-28324) | TestRegionNormalizerWorkQueue#testTake is flaky |  Major | test |
+| [HBASE-28312](https://issues.apache.org/jira/browse/HBASE-28312) | The bad auth exception can not be passed to client rpc calls properly |  Major | Client, IPC/RPC |
+| [HBASE-28287](https://issues.apache.org/jira/browse/HBASE-28287) | MOB HFiles are expired earlier than their reference data |  Major | mob |
+| [HBASE-28301](https://issues.apache.org/jira/browse/HBASE-28301) | IntegrationTestImportTsv fails with UnsupportedOperationException |  Minor | integration tests, test |
+| [HBASE-28297](https://issues.apache.org/jira/browse/HBASE-28297) | IntegrationTestImportTsv fails with ArrayIndexOfOutBounds |  Major | integration tests, test |
+| [HBASE-28261](https://issues.apache.org/jira/browse/HBASE-28261) | Sync jvm11 module flags from hbase-surefire.jdk11.flags to bin/hbase |  Trivial | . |
+| [HBASE-28259](https://issues.apache.org/jira/browse/HBASE-28259) | Add  java.base/java.io=ALL-UNNAMED open to jdk11\_jvm\_flags |  Trivial | java |
+| [HBASE-28224](https://issues.apache.org/jira/browse/HBASE-28224) | ClientSideRegionScanner appears not to shutdown MobFileCache |  Minor | Scanners |
+| [HBASE-28269](https://issues.apache.org/jira/browse/HBASE-28269) | Fix broken ruby scripts and clean up logging |  Major | jruby |
+| [HBASE-28262](https://issues.apache.org/jira/browse/HBASE-28262) | Fix spotless error on branch-2.5 |  Major | . |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28337](https://issues.apache.org/jira/browse/HBASE-28337) | Positive connection test in TestShadeSaslAuthenticationProvider runs with Kerberos instead of Shade authentication |  Major | . |
+| [HBASE-28274](https://issues.apache.org/jira/browse/HBASE-28274) | Flaky test: TestFanOutOneBlockAsyncDFSOutput (Part 2) |  Major | flakies, integration tests, test |
+| [HBASE-28275](https://issues.apache.org/jira/browse/HBASE-28275) | [Flaky test] Fix 'test\_list\_decommissioned\_regionservers' in TestAdminShell2.java |  Minor | flakies, test |
+| [HBASE-28254](https://issues.apache.org/jira/browse/HBASE-28254) | Flaky test: TestTableShell |  Major | flakies, integration tests |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28340](https://issues.apache.org/jira/browse/HBASE-28340) | Add trust/key store type to ZK TLS settings handled by HBase |  Major | Zookeeper |
+| [HBASE-28341](https://issues.apache.org/jira/browse/HBASE-28341) | [JDK17] Fix Failure TestLdapHttpServer |  Major | . |
+| [HBASE-28031](https://issues.apache.org/jira/browse/HBASE-28031) | TestClusterScopeQuotaThrottle is still failing with broken WAL writer |  Major | test |
+| [HBASE-28290](https://issues.apache.org/jira/browse/HBASE-28290) | Add 'TM' superscript to the index page title when generating javadoc |  Major | build, documentation |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28333](https://issues.apache.org/jira/browse/HBASE-28333) | Refactor TestClientTimeouts to make it more clear that what we want to test |  Major | Client, test |
+| [HBASE-28310](https://issues.apache.org/jira/browse/HBASE-28310) | Bump jinja2 from 3.1.2 to 3.1.3 in /dev-support/flaky-tests |  Major | dependabot, scripts, security, test |
+| [HBASE-28308](https://issues.apache.org/jira/browse/HBASE-28308) | Bump gitpython from 3.1.37 to 3.1.41 in /dev-support/flaky-tests |  Major | dependabot, scripts, security, test |
+| [HBASE-28304](https://issues.apache.org/jira/browse/HBASE-28304) | Add hbase-shaded-testing-util version to dependencyManagement |  Major | . |
+
+
 ## Release 2.5.7 - 2023-12-22
 
 

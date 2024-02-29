@@ -16,6 +16,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.5.8 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-28204](https://issues.apache.org/jira/browse/HBASE-28204) | *Major* | **Region Canary can take lot more time If any region (except the first region) starts with delete markers**
+
+Canary is using Scan for first region of the table and Get for rest of the region. RAW Scan was only enabled for first region of any table. If a region has high number of deleted rows for the first row of the key-space, then It can take really long time for Get to finish execution. 
+
+With this change, Region canary will use scan to validate that every region is accessible and also enables RAW Scan if it's enabled by the user.
+
+
+---
+
+* [HBASE-28319](https://issues.apache.org/jira/browse/HBASE-28319) | *Major* | **Expose DelegatingRpcScheduler as IA.LimitedPrivate**
+
+hbase-server now exposes a DelegatingRpcScheduler. Users who have been using hbase.region.server.rpc.scheduler.factory.class to override the default behavior of the built-in schedulers may find it beneficial to have their implementation extend this new class. This will insulate you from breaking interface changes down the line.
+
+
+---
+
+* [HBASE-28306](https://issues.apache.org/jira/browse/HBASE-28306) | *Major* | **Add property to customize Version information**
+
+Added a new build property -Dversioninfo.version which can be used to influence the generated Version.java class in custom build scenarios. The version specified will show up in the HMaster UI and also have implications on various version-related checks. This is an advanced usage property and it's recommended not to stray too far from the default format of major.minor.patch-suffix.
+
+
+
 # HBASE  2.5.7 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
