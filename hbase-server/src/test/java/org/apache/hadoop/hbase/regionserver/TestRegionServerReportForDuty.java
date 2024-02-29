@@ -38,8 +38,8 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ipc.DecommissionedHostRejectedException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.master.DecommissionedHostRejectedException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -305,9 +305,9 @@ public class TestRegionServerReportForDuty {
 
     /**
      * Assert that the following log message occurred (one line):
-     * "org.apache.hadoop.hbase.master.DecommissionedHostRejectedException:
-     * org.apache.hadoop.hbase.master.DecommissionedHostRejectedException: Host localhost exists in
-     * the list of decommissioned servers and Master is configured to reject decommissioned hosts"
+     * "org.apache.hadoop.hbase.ipc.DecommissionedHostRejectedException:
+     * org.apache.hadoop.hbase.ipc.DecommissionedHostRejectedException: Host localhost exists in the
+     * list of decommissioned servers and Master is configured to reject decommissioned hosts"
      */
     assertThat(Arrays.asList(capturer.getOutput().split("\n")),
       hasItem(allOf(containsString(DecommissionedHostRejectedException.class.getSimpleName()),
