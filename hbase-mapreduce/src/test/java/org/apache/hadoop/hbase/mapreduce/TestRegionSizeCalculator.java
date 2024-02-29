@@ -23,6 +23,8 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -36,6 +38,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -63,11 +66,12 @@ public class TestRegionSizeCalculator {
 
     RegionSizeCalculator calculator = new RegionSizeCalculator(regionLocator, admin);
 
-    assertEquals(123 * megabyte, calculator.getRegionSize("region1".getBytes()));
-    assertEquals(54321 * megabyte, calculator.getRegionSize("region2".getBytes()));
-    assertEquals(1232 * megabyte, calculator.getRegionSize("region3".getBytes()));
+    assertEquals(123 * megabyte, calculator.getRegionSize(Bytes.toBytes("region1")));
+    assertEquals(54321 * megabyte, calculator.getRegionSize(Bytes.toBytes("region2")));
+    assertEquals(1232 * megabyte, calculator.getRegionSize(Bytes.toBytes("region3")));
+
     // if regionCalculator does not know about a region, it should return 0
-    assertEquals(0 * megabyte, calculator.getRegionSize("otherTableRegion".getBytes()));
+    assertEquals(0, calculator.getRegionSize(Bytes.toBytes("otherTableRegion")));
 
     assertEquals(3, calculator.getRegionSizeMap().size());
   }
@@ -104,24 +108,37 @@ public class TestRegionSizeCalculator {
     // then disabled calculator.
     configuration.setBoolean(RegionSizeCalculator.ENABLE_REGIONSIZECALCULATOR, false);
     RegionSizeCalculator disabledCalculator = new RegionSizeCalculator(table, admin);
-    assertEquals(0 * megabyte, disabledCalculator.getRegionSize(regionName.getBytes()));
-
+    assertEquals(0, disabledCalculator.getRegionSize(Bytes.toBytes(regionName)));
     assertEquals(0, disabledCalculator.getRegionSizeMap().size());
+  }
+
+  @Test
+  public void testRegionWithNullServerName() throws Exception {
+    RegionLocator regionLocator =
+      mockRegionLocator(null, Collections.singletonList("someBigRegion"));
+    Admin admin = mockAdmin(mockRegion("someBigRegion", Integer.MAX_VALUE));
+    RegionSizeCalculator calculator = new RegionSizeCalculator(regionLocator, admin);
+    assertEquals(0, calculator.getRegionSize(Bytes.toBytes("someBigRegion")));
   }
 
   /**
    * Makes some table with given region names.
    */
   private RegionLocator mockRegionLocator(String... regionNames) throws IOException {
+    return mockRegionLocator(sn, Arrays.asList(regionNames));
+  }
+
+  private RegionLocator mockRegionLocator(ServerName serverName, List<String> regionNames)
+    throws IOException {
     RegionLocator mockedTable = Mockito.mock(RegionLocator.class);
     when(mockedTable.getName()).thenReturn(TableName.valueOf("sizeTestTable"));
-    List<HRegionLocation> regionLocations = new ArrayList<>(regionNames.length);
+    List<HRegionLocation> regionLocations = new ArrayList<>(regionNames.size());
     when(mockedTable.getAllRegionLocations()).thenReturn(regionLocations);
 
     for (String regionName : regionNames) {
       HRegionInfo info = Mockito.mock(HRegionInfo.class);
-      when(info.getRegionName()).thenReturn(regionName.getBytes());
-      regionLocations.add(new HRegionLocation(info, sn));
+      when(info.getRegionName()).thenReturn(Bytes.toBytes(regionName));
+      regionLocations.add(new HRegionLocation(info, serverName));
     }
 
     return mockedTable;
@@ -132,10 +149,7 @@ public class TestRegionSizeCalculator {
    */
   private Admin mockAdmin(RegionMetrics... regionLoadArray) throws Exception {
     Admin mockAdmin = Mockito.mock(Admin.class);
-    List<RegionMetrics> regionLoads = new ArrayList<>();
-    for (RegionMetrics regionLoad : regionLoadArray) {
-      regionLoads.add(regionLoad);
-    }
+    List<RegionMetrics> regionLoads = new ArrayList<>(Arrays.asList(regionLoadArray));
     when(mockAdmin.getConfiguration()).thenReturn(configuration);
     when(mockAdmin.getRegionMetrics(sn, TableName.valueOf("sizeTestTable")))
       .thenReturn(regionLoads);
