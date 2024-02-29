@@ -326,10 +326,11 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   private void load(final boolean abortOnCorruption) throws IOException {
-    Preconditions.checkArgument(completed.isEmpty(), "completed not empty");
-    Preconditions.checkArgument(rollbackStack.isEmpty(), "rollback state not empty");
-    Preconditions.checkArgument(procedures.isEmpty(), "procedure map not empty");
-    Preconditions.checkArgument(scheduler.size() == 0, "run queue not empty");
+    Preconditions.checkArgument(completed.isEmpty(), "completed not empty: %s", completed);
+    Preconditions.checkArgument(rollbackStack.isEmpty(), "rollback state not empty: %s",
+      rollbackStack);
+    Preconditions.checkArgument(procedures.isEmpty(), "procedure map not empty: %s", procedures);
+    Preconditions.checkArgument(scheduler.size() == 0, "scheduler queue not empty: %s", scheduler);
 
     store.load(new ProcedureStore.ProcedureLoader() {
       @Override
