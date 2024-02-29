@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -30,5 +32,11 @@ class RandomCandidateGenerator extends CandidateGenerator {
     int otherServer = pickOtherRandomServer(cluster, thisServer);
 
     return pickRandomRegions(cluster, thisServer, otherServer);
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).appendSuper(super.toString())
+      .build();
   }
 }
