@@ -82,8 +82,13 @@ public class TestStoreFileRefresherChore {
 
   private TableDescriptor getTableDesc(TableName tableName, int regionReplication,
     byte[]... families) {
-    TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
+    return getTableDesc(tableName, regionReplication, false, families);
+  }
+
+  private TableDescriptor getTableDesc(TableName tableName, int regionReplication, boolean readOnly,
+    byte[]... families) {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName)
+      .setRegionReplication(regionReplication).setReadOnly(readOnly);
     Arrays.stream(families).map(family -> ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setMaxVersions(Integer.MAX_VALUE).build()).forEachOrdered(builder::setColumnFamily);
     return builder.build();
@@ -235,5 +240,48 @@ public class TestStoreFileRefresherChore {
     } catch (IOException ex) {
       // expected
     }
+  }
+
+  @Test
+  public void testRefreshReadOnlyTable() throws IOException {
+    int period = 0;
+    byte[][] families = new byte[][] { Bytes.toBytes("cf") };
+    byte[] qf = Bytes.toBytes("cq");
+
+    HRegionServer regionServer = mock(HRegionServer.class);
+    List<HRegion> regions = new ArrayList<>();
+    when(regionServer.getOnlineRegionsLocalContext()).thenReturn(regions);
+    when(regionServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
+
+    TableDescriptor htd = getTableDesc(TableName.valueOf(name.getMethodName()), 2, families);
+    HRegion primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
+    HRegion replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
+    regions.add(primary);
+    regions.add(replica1);
+
+    StorefileRefresherChore chore =
+      new StorefileRefresherChore(period, false, regionServer, new StoppableImplementation());
+
+    // write some data to primary and flush
+    putData(primary, 0, 100, qf, families);
+    primary.flush(true);
+    verifyData(primary, 0, 100, qf, families);
+
+    verifyDataExpectFail(replica1, 0, 100, qf, families);
+    chore.chore();
+    verifyData(replica1, 0, 100, qf, families);
+
+    // write some data to primary and flush before refresh the store files for the replica
+    putData(primary, 100, 100, qf, families);
+    primary.flush(true);
+    verifyData(primary, 0, 200, qf, families);
+
+    // then the table is set to readonly
+    htd = getTableDesc(TableName.valueOf(name.getMethodName()), 2, true, families);
+    primary.setTableDescriptor(htd);
+    replica1.setTableDescriptor(htd);
+
+    chore.chore(); // we cannot refresh the store files
+    verifyDataExpectFail(replica1, 100, 100, qf, families);
   }
 }
