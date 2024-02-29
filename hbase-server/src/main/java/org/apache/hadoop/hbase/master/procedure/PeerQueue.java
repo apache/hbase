@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface.PeerOperationType;
 import org.apache.hadoop.hbase.procedure2.LockStatus;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -36,5 +38,11 @@ class PeerQueue extends Queue<String> {
 
   private static boolean requirePeerExclusiveLock(PeerProcedureInterface proc) {
     return proc.getPeerOperationType() != PeerOperationType.REFRESH;
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).appendSuper(super.toString())
+      .build();
   }
 }

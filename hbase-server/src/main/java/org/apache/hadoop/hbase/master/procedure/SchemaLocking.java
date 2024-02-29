@@ -22,6 +22,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
@@ -211,26 +214,19 @@ class SchemaLocking {
 
   @Override
   public String toString() {
-    return "serverLocks=" + filterUnlocked(this.serverLocks) + ", namespaceLocks="
-      + filterUnlocked(this.namespaceLocks) + ", tableLocks=" + filterUnlocked(this.tableLocks)
-      + ", regionLocks=" + filterUnlocked(this.regionLocks) + ", peerLocks="
-      + filterUnlocked(this.peerLocks) + ", metaLocks="
-      + filterUnlocked(ImmutableMap.of(TableName.META_TABLE_NAME, metaLock));
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+      .append("serverLocks", filterUnlocked(serverLocks))
+      .append("namespaceLocks", filterUnlocked(namespaceLocks))
+      .append("tableLocks", filterUnlocked(tableLocks))
+      .append("regionLocks", filterUnlocked(regionLocks))
+      .append("peerLocks", filterUnlocked(peerLocks))
+      .append("metaLocks", filterUnlocked(ImmutableMap.of(TableName.META_TABLE_NAME, metaLock)))
+      .build();
+
   }
 
   private String filterUnlocked(Map<?, LockAndQueue> locks) {
-    StringBuilder sb = new StringBuilder("{");
-    int initialLength = sb.length();
-    for (Map.Entry<?, LockAndQueue> entry : locks.entrySet()) {
-      if (!entry.getValue().isLocked()) {
-        continue;
-      }
-      if (sb.length() > initialLength) {
-        sb.append(", ");
-      }
-      sb.append("{").append(entry.getKey()).append("=").append(entry.getValue()).append("}");
-    }
-    sb.append("}");
-    return sb.toString();
+    return locks.entrySet().stream().filter(val -> !val.getValue().isLocked())
+      .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)).toString();
   }
 }
