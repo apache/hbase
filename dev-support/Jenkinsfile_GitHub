@@ -55,6 +55,7 @@ pipeline {
         WORKDIR_REL_GENERAL_CHECK = 'yetus-general-check'
         WORKDIR_REL_JDK8_HADOOP3_CHECK = 'yetus-jdk8-hadoop3-check'
         WORKDIR_REL_JDK11_HADOOP3_CHECK = 'yetus-jdk11-hadoop3-check'
+        WORKDIR_REL_JDK17_HADOOP3_CHECK = 'yetus-jdk17-hadoop3-check'
         ASF_NIGHTLIES = 'https://nightlies.apache.org'
         ASF_NIGHTLIES_BASE_ORI = "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}"
         ASF_NIGHTLIES_BASE = "${ASF_NIGHTLIES_BASE_ORI.replaceAll(' ', '%20')}"
@@ -444,6 +445,145 @@ pipeline {
                               reportDir: "${WORKDIR_REL}/${PATCH_REL}",
                               reportFiles: 'report.html',
                               reportName: 'PR JDK11 Hadoop3 Check Report'
+                            ]
+                        }
+                        // Jenkins pipeline jobs fill slaves on PRs without this :(
+                        cleanup() {
+                            script {
+                                sh label: 'Cleanup workspace', script: '''#!/bin/bash -e
+                                    # See YETUS-764
+                                    if [ -f "${PATCHDIR}/pidfile.txt" ]; then
+                                      echo "test-patch process appears to still be running: killing"
+                                      kill `cat "${PATCHDIR}/pidfile.txt"` || true
+                                      sleep 10
+                                    fi
+                                    if [ -f "${PATCHDIR}/cidfile.txt" ]; then
+                                      echo "test-patch container appears to still be running: killing"
+                                      docker kill `cat "${PATCHDIR}/cidfile.txt"` || true
+                                    fi
+                                    # See HADOOP-13951
+                                    chmod -R u+rxw "${WORKSPACE}"
+                                '''
+                                dir ("${WORKDIR}") {
+                                    deleteDir()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage ('yetus jdk17 hadoop3 checks') {
+                    agent {
+                        node {
+                            label 'hbase'
+                        }
+                    }
+                    environment {
+                        // customized per parallel stage
+                        PLUGINS = "${JDK_SPECIFIC_PLUGINS}"
+                        SET_JAVA_HOME = '/usr/lib/jvm/java-17'
+                        WORKDIR_REL = "${WORKDIR_REL_JDK17_HADOOP3_CHECK}"
+                        // identical for all parallel stages
+                        WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
+                        YETUSDIR = "${WORKDIR}/${YETUS_REL}"
+                        SOURCEDIR = "${WORKDIR}/${SRC_REL}"
+                        PATCHDIR = "${WORKDIR}/${PATCH_REL}"
+                        BUILD_URL_ARTIFACTS = "artifact/${WORKDIR_REL}/${PATCH_REL}"
+                        DOCKERFILE = "${WORKDIR}/${DOCKERFILE_REL}"
+                        YETUS_DRIVER = "${WORKDIR}/${YETUS_DRIVER_REL}"
+                        SKIP_ERRORPRONE = true
+                    }
+                    when {
+			allOf {
+                            // this will return true if the pipeline is building a change request, such as a GitHub pull request.
+                            changeRequest()
+                            expression { env.CHANGE_TARGET in ['master', 'branch-3'] }
+			}
+                    }
+                    steps {
+                        dir("${SOURCEDIR}") {
+                            checkout scm
+                        }
+                        dir("${YETUSDIR}") {
+                            checkout([
+                              $class           : 'GitSCM',
+                              branches         : [[name: "${YETUS_VERSION}"]],
+                              userRemoteConfigs: [[url: 'https://github.com/apache/yetus.git']]]
+                            )
+                        }
+                        dir("${WORKDIR}") {
+                            withCredentials([
+                              usernamePassword(
+                                credentialsId: 'apache-hbase-at-github.com',
+                                passwordVariable: 'GITHUB_PASSWORD',
+                                usernameVariable: 'GITHUB_USER'
+                              )]) {
+                                script {
+                                  def ret = sh(
+                                    label: 'test-patch',
+                                    returnStatus: true,
+                                    script: '''#!/bin/bash -e
+                                      hostname -a ; pwd ; ls -la
+                                      printenv 2>&1 | sort
+                                      echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
+                                      "${YETUS_DRIVER}"
+                                    '''
+                                  )
+                                  if (ret != 0) {
+                                    // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                                    // test output. See HBASE-26339 for more details.
+                                    currentBuild.result = 'UNSTABLE'
+                                  }
+                                }
+                            }
+                        }
+                    }
+                    post {
+                        always {
+                            junit testResults: "${WORKDIR_REL}/${SRC_REL}/**/target/**/TEST-*.xml",
+                              allowEmptyResults: true, skipPublishingChecks: true
+                            sh label: 'zip surefire reports', script: '''#!/bin/bash -e
+                                if [ -d "${PATCHDIR}/archiver" ]; then
+                                  count=$(find "${PATCHDIR}/archiver" -type f | wc -l)
+                                  if [[ 0 -ne ${count} ]]; then
+                                    echo "zipping ${count} archived files"
+                                    zip -q -m -r "${PATCHDIR}/test_logs.zip" "${PATCHDIR}/archiver"
+                                  else
+                                    echo "No archived files, skipping compressing."
+                                  fi
+                                else
+                                  echo "No archiver directory, skipping compressing."
+                                fi
+                            '''
+                            sshPublisher(publishers: [
+                              sshPublisherDesc(configName: 'Nightlies',
+                                transfers: [
+                                  sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                                    sourceFiles: "${env.WORKDIR_REL}/${env.PATCH_REL}/test_logs.zip"
+                                  )
+                                ]
+                              )
+                            ])
+                            // remove the big test logs zip file, store the nightlies url in test_logs.txt
+                            sh '''#!/bin/bash -e
+                            if [ -f "${PATCHDIR}/test_logs.zip" ]; then
+                              echo "Remove ${PATCHDIR}/test_logs.zip for saving space"
+                              rm -rf "${PATCHDIR}/test_logs.zip"
+                              python3 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
+                            else
+                              echo "No test_logs.zip, skipping"
+                            fi
+                            '''
+                            // Has to be relative to WORKSPACE.
+                            archiveArtifacts artifacts: "${WORKDIR_REL}/${PATCH_REL}/*", excludes: "${WORKDIR_REL}/${PATCH_REL}/precommit"
+                            archiveArtifacts artifacts: "${WORKDIR_REL}/${PATCH_REL}/**/*", excludes: "${WORKDIR_REL}/${PATCH_REL}/precommit/**/*"
+                            publishHTML target: [
+                              allowMissing: true,
+                              keepAll: true,
+                              alwaysLinkToLastBuild: true,
+                              // Has to be relative to WORKSPACE
+                              reportDir: "${WORKDIR_REL}/${PATCH_REL}",
+                              reportFiles: 'report.html',
+                              reportName: 'PR JDK17 Hadoop3 Check Report'
                             ]
                         }
                         // Jenkins pipeline jobs fill slaves on PRs without this :(
