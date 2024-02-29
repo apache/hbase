@@ -37,6 +37,7 @@ pipeline {
     OUTPUT_DIR_RELATIVE_JDK8_HADOOP2 = 'output-jdk8-hadoop2'
     OUTPUT_DIR_RELATIVE_JDK8_HADOOP3 = 'output-jdk8-hadoop3'
     OUTPUT_DIR_RELATIVE_JDK11_HADOOP3 = 'output-jdk11-hadoop3'
+    OUTPUT_DIR_RELATIVE_JDK17_HADOOP3 = 'output-jdk17-hadoop3'
 
     PROJECT = 'hbase'
     PROJECT_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
@@ -188,6 +189,7 @@ pipeline {
         stash name: 'jdk8-hadoop2-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}/doesn't-match"
         stash name: 'jdk8-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}/doesn't-match"
         stash name: 'jdk11-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}/doesn't-match"
+        stash name: 'jdk17-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}/doesn't-match"
         stash name: 'srctarball-result', allowEmpty: true, includes: "output-srctarball/doesn't-match"
       }
     }
@@ -628,6 +630,123 @@ pipeline {
             }
           }
         }
+
+        stage ('yetus jdk17 hadoop3 checks') {
+          when {
+            anyOf {
+              branch 'master';branch 'branch-3'
+            }
+          }
+          agent {
+            node {
+              label 'hbase'
+            }
+          }
+          environment {
+            BASEDIR = "${env.WORKSPACE}/component"
+            TESTS = "${env.DEEP_CHECKS}"
+            OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}"
+            OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}"
+            SET_JAVA_HOME = "/usr/lib/jvm/java-17"
+            // Activates hadoop 3.0 profile in maven runs.
+            HADOOP_PROFILE = '3.0'
+            SKIP_ERRORPRONE = true
+          }
+          steps {
+            // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              echo '(x) {color:red}-1 jdk17 hadoop3 checks{color}' >"${OUTPUT_DIR}/commentfile"
+              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
+            '''
+            unstash 'yetus'
+            dir('component') {
+              checkout scm
+            }
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+              "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+              echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+              ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
+            '''
+            script {
+              def ret = sh(
+                returnStatus: true,
+                script: '''#!/usr/bin/env bash
+                  set -e
+                  declare -i status=0
+                  if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                    echo '(/) {color:green}+1 jdk17 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                  else
+                    echo '(x) {color:red}-1 jdk17 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                    status=1
+                  fi
+                  echo "-- For more information [see jdk17 report|${BUILD_URL}JDK17_20Nightly_20Build_20Report_20_28Hadoop3_29/]" >> "${OUTPUT_DIR}/commentfile"
+                  exit "${status}"
+                '''
+              )
+              if (ret != 0) {
+                // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                // test output. See HBASE-26339 for more details.
+                currentBuild.result = 'UNSTABLE'
+              }
+            }
+          }
+          post {
+            always {
+              stash name: 'jdk17-hadoop3-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
+              junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
+              // zip surefire reports.
+              sh '''#!/bin/bash -e
+                if [ -d "${OUTPUT_DIR}/archiver" ]; then
+                  count=$(find "${OUTPUT_DIR}/archiver" -type f | wc -l)
+                  if [[ 0 -ne ${count} ]]; then
+                    echo "zipping ${count} archived files"
+                    zip -q -m -r "${OUTPUT_DIR}/test_logs.zip" "${OUTPUT_DIR}/archiver"
+                  else
+                    echo "No archived files, skipping compressing."
+                  fi
+                else
+                  echo "No archiver directory, skipping compressing."
+                fi
+              '''
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/test_logs.zip"
+                    )
+                  ]
+                )
+              ])
+              // remove the big test logs zip file, store the nightlies url in test_logs.html
+              sh '''#!/bin/bash -e
+                if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
+                  echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
+                  rm -rf "${OUTPUT_DIR}/test_logs.zip"
+                  python3 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
+                else
+                  echo "No test_logs.zip, skipping"
+                fi
+              '''
+              // Has to be relative to WORKSPACE.
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              publishHTML target: [
+                allowMissing         : true,
+                keepAll              : true,
+                alwaysLinkToLastBuild: true,
+                // Has to be relative to WORKSPACE.
+                reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
+                reportFiles          : 'console-report.html',
+                reportName           : 'JDK17 Nightly Build Report (Hadoop3)'
+              ]
+            }
+          }
+        }
+
         // This is meant to mimic what a release manager will do to create RCs.
         // See http://hbase.apache.org/book.html#maven.release
         // TODO (HBASE-23870): replace this with invocation of the release tool
