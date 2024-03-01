@@ -22,14 +22,17 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
@@ -128,12 +131,15 @@ public class TestCleanerChore {
     fs.create(file).close();
     assertTrue("test file didn't get created.", fs.exists(file));
     final AtomicBoolean fails = new AtomicBoolean(true);
+    CountDownLatch successSignal = new CountDownLatch(1);
     FilterFileSystem filtered = new FilterFileSystem(fs) {
       public FileStatus[] listStatus(Path f) throws IOException {
         if (fails.get()) {
           throw new IOException("whomp whomp.");
         }
-        return fs.listStatus(f);
+        FileStatus[] ret = fs.listStatus(f);
+        successSignal.countDown();
+        return ret;
       }
     };
 
@@ -144,7 +150,7 @@ public class TestCleanerChore {
       // trouble talking to the filesystem
       // and verify that it accurately reported the failure.
       CompletableFuture<Boolean> errorFuture = chore.triggerCleanerNow();
-      ExecutionException e = assertThrows(ExecutionException.class, () -> errorFuture.get());
+      ExecutionException e = assertThrows(ExecutionException.class, errorFuture::get);
       assertThat(e.getCause(), instanceOf(IOException.class));
       assertThat(e.getCause().getMessage(), containsString("whomp"));
 
@@ -154,16 +160,25 @@ public class TestCleanerChore {
 
       // filesystem is back
       fails.set(false);
-      for (;;) {
-        CompletableFuture<Boolean> succFuture = chore.triggerCleanerNow();
-        // the reset of the future is async, so it is possible that we get the previous future
-        // again.
-        if (succFuture != errorFuture) {
-          // verify that it accurately reported success.
-          assertTrue("chore should claim it succeeded.", succFuture.get());
+      CompletableFuture<Boolean> succFuture = chore.triggerCleanerNow();
+      // all invocations after the signal are expected to succeed. the future handle we have
+      // currently may or may succeed. an entire run might be scheduled between now and when we're
+      // signaled, so we cannot naively check equality of succFuture vs. errorFuture.
+      successSignal.await();
+      for (int i = 0; i < 5; i++) {
+        if (succFuture == null) {
+          succFuture = chore.triggerCleanerNow();
+        }
+        if (succFuture.isCompletedExceptionally()) {
+          succFuture = null;
+          Thread.sleep(TimeUnit.SECONDS.toMillis(5));
+        } else {
           break;
         }
       }
+      assertNotNull("chore future was null.", succFuture);
+      // verify that it accurately reported success.
+      assertTrue("chore should claim it succeeded.", succFuture.get());
       // verify everything is gone.
       assertFalse("file should have been destroyed.", fs.exists(file));
       assertFalse("directory should have been destroyed.", fs.exists(child));
