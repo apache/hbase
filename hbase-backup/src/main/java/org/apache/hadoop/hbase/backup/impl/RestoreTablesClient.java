@@ -173,7 +173,8 @@ public class RestoreTablesClient {
     }
 
     if (dirList.isEmpty()) {
-      LOG.warn("Nothing has changed, so there is no need to restore '" + sTable + "'");
+      LOG.info("No incremental changes since full backup for '" + sTable
+        + "', skipping incremental restore step.");
       return;
     }
 
