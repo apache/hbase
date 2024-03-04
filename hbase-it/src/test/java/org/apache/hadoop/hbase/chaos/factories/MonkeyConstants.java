@@ -45,6 +45,11 @@ public interface MonkeyConstants {
   String UNBALANCE_WAIT_AFTER_BALANCE_MS = "unbalance.action.wait.after.period";
   String UNBALANCE_KILL_META_RS = "unbalance.action.kill.meta.rs";
   String DECREASE_HFILE_SIZE_SLEEP_TIME = "decrease.hfile.size.sleep.time";
+  String RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME = "restart.random.rs.exception.sleep.time";
+  String RESTART_ACTIVE_NAMENODE_SLEEP_TIME = "restart.active.namenode.sleep.time";
+  String RESTART_RANDOM_DATANODE_SLEEP_TIME = "restart.random.datanode.sleep.time";
+  String RESTART_RANDOM_JOURNALNODE_SLEEP_TIME = "restart.random.journalnode.sleep.time";
+  String RESTART_RANDOM_ZKNODE_SLEEP_TIME = "restart.random.zknode.sleep.time";
   String GRACEFUL_RESTART_RS_SLEEP_TIME = "graceful.restart.rs.sleep.time";
   String ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME = "rolling.batch.suspend.rs.sleep.time";
   String ROLLING_BATCH_SUSPEND_RS_RATIO = "rolling.batch.suspend.rs.ratio";
@@ -92,6 +97,13 @@ public interface MonkeyConstants {
   long DEFAULT_UNBALANCE_WAIT_AFTER_BALANCE_MS = 5 * 1000;
   boolean DEFAULT_UNBALANCE_KILL_META_RS = true;
   long DEFAULT_DECREASE_HFILE_SIZE_SLEEP_TIME = 30 * 1000;
+
+  long DEFAULT_RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME = 60000;
+  long DEFAULT_RESTART_ACTIVE_NAMENODE_SLEEP_TIME = 60000;
+  long DEFAULT_RESTART_RANDOM_DATANODE_SLEEP_TIME = 60000;
+  long DEFAULT_RESTART_RANDOM_JOURNALNODE_SLEEP_TIME = 60000;
+  long DEFAULT_RESTART_RANDOM_ZKNODE_SLEEP_TIME = 60000;
+
   long DEFAULT_GRACEFUL_RESTART_RS_SLEEP_TIME = 5000;
   long DEFAULT_ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME = 30 * 1000;
   float DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO = 1.0f;
