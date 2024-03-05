@@ -184,8 +184,6 @@ public final class PrefetchExecutor{
     return prefetchRunnable;
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
   static boolean isPrefetchStarted() {
     AtomicBoolean prefetchStarted = new AtomicBoolean(false);
     for (Map.Entry<Path, Future<?>> entry : prefetchFutures.entrySet()) {
