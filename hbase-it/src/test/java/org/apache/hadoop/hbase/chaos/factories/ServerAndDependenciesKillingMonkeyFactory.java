@@ -87,9 +87,8 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
   }
 
   private void loadProperties() {
-    restartRandomRsExceptMetaSleepTime =
-      Long.parseLong(this.properties.getProperty(
-        MonkeyConstants.RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME,
+    restartRandomRsExceptMetaSleepTime = Long
+      .parseLong(this.properties.getProperty(MonkeyConstants.RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME,
         MonkeyConstants.DEFAULT_RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME + ""));
     restartActiveMasterSleepTime =
       Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_ACTIVE_MASTER_SLEEP_TIME,
@@ -97,17 +96,17 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
     rollingBatchRestartRSSleepTime = Long
       .parseLong(this.properties.getProperty(MonkeyConstants.ROLLING_BATCH_RESTART_RS_SLEEP_TIME,
         MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_SLEEP_TIME + ""));
-    restartActiveNameNodeSleepTime = Long
-      .parseLong(this.properties.getProperty(MonkeyConstants.RESTART_ACTIVE_NAMENODE_SLEEP_TIME,
+    restartActiveNameNodeSleepTime =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_ACTIVE_NAMENODE_SLEEP_TIME,
         MonkeyConstants.DEFAULT_RESTART_ACTIVE_NAMENODE_SLEEP_TIME + ""));
-    restartRandomDataNodeSleepTime = Long
-      .parseLong(this.properties.getProperty(MonkeyConstants.RESTART_RANDOM_DATANODE_SLEEP_TIME,
+    restartRandomDataNodeSleepTime =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_RANDOM_DATANODE_SLEEP_TIME,
         MonkeyConstants.DEFAULT_RESTART_RANDOM_DATANODE_SLEEP_TIME + ""));
     restartRandomJournalNodeSleepTime = Long
       .parseLong(this.properties.getProperty(MonkeyConstants.RESTART_RANDOM_JOURNALNODE_SLEEP_TIME,
         MonkeyConstants.DEFAULT_RESTART_RANDOM_JOURNALNODE_SLEEP_TIME + ""));
-    restartRandomZKNodeSleepTime = Long
-      .parseLong(this.properties.getProperty(MonkeyConstants.RESTART_RANDOM_ZKNODE_SLEEP_TIME,
+    restartRandomZKNodeSleepTime =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_RANDOM_ZKNODE_SLEEP_TIME,
         MonkeyConstants.DEFAULT_RESTART_RANDOM_ZKNODE_SLEEP_TIME + ""));
     gracefulRollingRestartTSSLeepTime =
       Long.parseLong(this.properties.getProperty(MonkeyConstants.GRACEFUL_RESTART_RS_SLEEP_TIME,
