@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.has
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY;
 import static org.apache.hadoop.hbase.io.hfile.PrefetchExecutor.PREFETCH_DELAY;
+import static org.apache.hadoop.hbase.io.hfile.PrefetchExecutor.getComputedPrefetchDelay;
 import static org.apache.hadoop.hbase.regionserver.CompactSplit.HBASE_REGION_SERVER_ENABLE_COMPACTION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
@@ -88,7 +89,6 @@ import org.slf4j.LoggerFactory;
 @Category({ IOTests.class, MediumTests.class })
 public class TestPrefetch {
   private static final Logger LOG = LoggerFactory.getLogger(TestPrefetch.class);
-  protected PrefetchExecutorNotifier prefetchExecutorNotifier;
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -116,19 +116,10 @@ public class TestPrefetch {
   @Before
   public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
-    long var = conf.getInt(PREFETCH_DELAY, 1000);
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     fs = HFileSystem.get(conf);
     blockCache = BlockCacheFactory.createBlockCache(conf);
     cacheConf = new CacheConfig(conf, blockCache);
-    prefetchExecutorNotifier = new PrefetchExecutorNotifier(conf);
-    resetTiming();
-  }
-
-  @After
-  public void resetPrefetchDelay() throws IOException {
-    conf.setInt(PREFETCH_DELAY, 1000);
-    prefetchExecutorNotifier.onConfigurationChange(conf);
   }
 
   @Test
@@ -318,6 +309,14 @@ public class TestPrefetch {
     while (!reader.prefetchComplete()) {
       // Sleep for a bit
       Thread.sleep(1000);
+      if (getComputeTiming()) {
+        // After task is scheduled and before the delay expires, prefetch should not start
+        // if prefetchFutures contains entry (which means it's not cancelled or completed)
+        // and wait time remaining is below delay expiry watermark, it can be deduced that
+        // the prefetch is not started yet.
+        assertFalse("Prefetch Should not start at this point", reader.prefetchStarted());
+        setComputeTiming(false);
+      }
     }
     endTimer();
     long offset = 0;
@@ -358,6 +357,7 @@ public class TestPrefetch {
 
   @Test
   public void testOnConfigurationChange() {
+    PrefetchExecutorNotifier prefetchExecutorNotifier = new PrefetchExecutorNotifier(conf);
     conf.setInt(PREFETCH_DELAY, 40000);
     prefetchExecutorNotifier.onConfigurationChange(conf);
     assertEquals(prefetchExecutorNotifier.getPrefetchDelay(), 40000);
@@ -366,35 +366,33 @@ public class TestPrefetch {
     conf.setInt(PREFETCH_DELAY, 30000);
     prefetchExecutorNotifier.onConfigurationChange(conf);
     assertEquals(prefetchExecutorNotifier.getPrefetchDelay(), 30000);
+
+    conf.setInt(PREFETCH_DELAY, 1000);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
   }
 
   @Test
   public void testPrefetchWithDelay() throws Exception {
+    PrefetchExecutorNotifier prefetchExecutorNotifier = new PrefetchExecutorNotifier(conf);
     conf.setInt(PREFETCH_DELAY, 60000);
     prefetchExecutorNotifier.onConfigurationChange(conf);
-    long totalCompletedBefore = PrefetchExecutor.getPrefetchFutures().size();
 
     HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
       .withBlockSize(DATA_BLOCK_SIZE).build();
     Path storeFile = writeStoreFile("TestPrefetchWithDelay", context);
-    setComputeTiming();
-    readStoreFile(storeFile);
-    assertTrue("Elapsed Time {} | Computed Prefetch Delay {}"
-        + getElapsedTime() + prefetchExecutorNotifier.getComputedPrefetchDelay(),
-      getElapsedTime() >= prefetchExecutorNotifier.getComputedPrefetchDelay()
-      );
+
     resetTiming();
-  }
+    setComputeTiming(true);
 
-  @Test
-  public void testPrefetchWithDefaultDelay() throws Exception {
-    prefetchExecutorNotifier.onConfigurationChange(conf);
-
-    HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
-      .withBlockSize(DATA_BLOCK_SIZE).build();
-    Path storeFile = writeStoreFile("TestPrefetchWithDelay", context);
     readStoreFile(storeFile);
-    assertEquals(prefetchExecutorNotifier.getPrefetchDelay(), 1000);
+    //We apply delay variation to the provided delay and used the computed delay while scheduling
+    //Using the computed delay for the comparison
+    assertTrue("Total execution time is not more than delay duration",
+      getElapsedTime() > PrefetchExecutor.getComputedPrefetchDelay());
+    resetTiming();
+
+    conf.setInt(PREFETCH_DELAY, 1000);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
   }
 
   @Test
@@ -564,7 +562,7 @@ public class TestPrefetch {
   }
 
   private void endTimer() {
-    if (measureTiming && startTime > 0)
+    if (startTime > 0)
     endTime = System.currentTimeMillis();
   }
 
@@ -572,7 +570,11 @@ public class TestPrefetch {
     return endTime - startTime;
   }
 
-  private void setComputeTiming() {
-    measureTiming = true;
+  private void setComputeTiming(boolean status) {
+    measureTiming = status;
+  }
+
+  private boolean getComputeTiming() {
+    return measureTiming;
   }
 }

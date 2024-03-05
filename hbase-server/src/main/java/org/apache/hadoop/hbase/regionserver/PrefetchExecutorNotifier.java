@@ -35,19 +35,10 @@ public final class PrefetchExecutorNotifier implements PropagatingConfigurationO
 
   /** Wait time in miliseconds before executing prefetch */
   public static final String PREFETCH_DELAY = "hbase.hfile.prefetch.delay";
-
-
-  private final HRegionServer server;
   private final Configuration conf;
-
-  PrefetchExecutorNotifier(Configuration conf, HRegionServer server) {
-    this.server = server;
-    this.conf = server.getConfiguration();
-  }
 
   // only for test
   public PrefetchExecutorNotifier(Configuration conf) {
-    this.server = null;
     this.conf = conf;
   }
 
@@ -58,7 +49,6 @@ public final class PrefetchExecutorNotifier implements PropagatingConfigurationO
   public void onConfigurationChange(Configuration newConf) {
     // Update prefetch delay in the prefetch executor class
     // interrupt and restart threads which have not started executing
-
     PrefetchExecutor.loadConfiguration(conf);
     LOG.info("Config hbase.hfile.prefetch.delay is changed to {}",
       conf.getInt(PREFETCH_DELAY, 1000));
@@ -83,5 +73,4 @@ public final class PrefetchExecutorNotifier implements PropagatingConfigurationO
   public int getPrefetchDelay() {
     return PrefetchExecutor.getPrefetchDelay();
   }
-  public long getComputedPrefetchDelay() { return PrefetchExecutor.getComputedPrefetchDelay();}
 }

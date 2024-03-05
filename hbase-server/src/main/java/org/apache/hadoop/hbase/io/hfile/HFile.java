@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -456,6 +457,8 @@ public final class HFile {
     HFileBlock.FSReader getUncachedBlockReader();
 
     boolean prefetchComplete();
+
+    boolean prefetchStarted();
 
     /**
      * To close the stream's socket. Note: This can be concurrently called from multiple threads and

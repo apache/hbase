@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -28,6 +29,8 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -88,7 +91,7 @@ public final class PrefetchExecutor{
   // For tests. Contains computed prefetch delay
   private static long computedPrefetchDelay;
 
-  public static void request(Path path, boolean isInterrupted, Runnable runnable) {
+  public static void request(Path path, Runnable runnable) {
     if (!prefetchPathExclude.matcher(path.toString()).find()) {
       long delay;
       if (prefetchDelayMillis > 0) {
@@ -105,10 +108,8 @@ public final class PrefetchExecutor{
           TraceUtil.tracedRunnable(runnable, "PrefetchExecutor.request");
         final Future<?> future =
           prefetchExecutorPool.schedule(tracedRunnable, delay, TimeUnit.MILLISECONDS);
-        if (!isInterrupted) {
           prefetchFutures.put(path, future);
           prefetchRunnable.put(path, runnable);
-        }
       } catch (RejectedExecutionException e) {
         prefetchFutures.remove(path);
         prefetchRunnable.remove(path);
@@ -139,10 +140,14 @@ public final class PrefetchExecutor{
   public static void interrupt(Path path) {
     Future<?> future = prefetchFutures.get(path);
     if (future != null) {
+      prefetchFutures.remove(path);
       // ok to race with other cancellation attempts
       future.cancel(true);
       LOG.debug("Prefetch cancelled for {}", path);
     }
+  }
+
+  private PrefetchExecutor() {
   }
 
   public static boolean isCompleted(Path path) {
@@ -161,7 +166,9 @@ public final class PrefetchExecutor{
   }
 
   /* Visible for testing only */
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+  @RestrictedApi(explanation = "Should only be called in tests. This is a non thread safe "
+    + "variable that would not yield accurate values when multiple readers created and "
+    + "calling PrefetchExecutor.request concurrently", link = "",
     allowedOnPath = ".*/src/test/.*")
   public static long getComputedPrefetchDelay() {return computedPrefetchDelay;}
 
@@ -177,6 +184,25 @@ public final class PrefetchExecutor{
     return prefetchRunnable;
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  static boolean isPrefetchStarted() {
+    AtomicBoolean prefetchStarted = new AtomicBoolean(false);
+    for (Map.Entry<Path, Future<?>> entry : prefetchFutures.entrySet()) {
+      Path k = entry.getKey();
+      Future<?> v = entry.getValue();
+      ScheduledFuture sf = (ScheduledFuture) prefetchFutures.get(k);
+      long waitTime = sf.getDelay(TimeUnit.MILLISECONDS);
+      LOG.info("Remaining wait time is : {}", waitTime);
+      if (waitTime < 0) {
+        //At this point prefetch is started
+        prefetchStarted.set(true);
+        break;
+      }
+    }
+    return prefetchStarted.get();
+  }
+
   public static int getPrefetchDelay() {
     return prefetchDelayMillis;
   }
@@ -188,7 +214,7 @@ public final class PrefetchExecutor{
       ScheduledFuture sf = (ScheduledFuture) prefetchFutures.get(k);
       if (sf.getDelay(TimeUnit.MILLISECONDS) > prefetchDelayMillis) {
         interrupt(k);
-        request(k, true, prefetchRunnable.get(k));
+        request(k, prefetchRunnable.get(k));
       }
       LOG.debug("Reset called on Prefetch of file {} with delay {}", k, prefetchDelayMillis);
     });
