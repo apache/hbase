@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.chaos.policies.CompositeSequentialPolicy;
 import org.apache.hadoop.hbase.chaos.policies.DoActionsOncePolicy;
 import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
-import static org.apache.hadoop.hbase.chaos.factories.MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD;
 
 /**
  * Creates ChaosMonkeys for doing server restart actions, but not flush / compact / snapshot kind of
@@ -89,7 +88,8 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
 
   private void loadProperties() {
     restartRandomRsExceptMetaSleepTime =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME,
+      Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME,
         MonkeyConstants.DEFAULT_RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME + ""));
     restartActiveMasterSleepTime =
       Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_ACTIVE_MASTER_SLEEP_TIME,

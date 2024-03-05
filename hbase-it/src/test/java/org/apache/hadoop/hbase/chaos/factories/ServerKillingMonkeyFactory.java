@@ -74,7 +74,8 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
 
   private void loadProperties() {
     restartRandomRsExceptMetaSleepTime =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME,
+      Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME,
         MonkeyConstants.DEFAULT_RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME + ""));
     restartActiveMasterSleepTime =
       Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_ACTIVE_MASTER_SLEEP_TIME,
