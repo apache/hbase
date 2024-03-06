@@ -25,6 +25,8 @@ import static org.apache.hadoop.hdfs.web.WebHdfsConstants.WEBHDFS_SCHEME;
 import static org.apache.hadoop.hdfs.web.WebHdfsConstants.WEBHDFS_TOKEN_KIND;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -49,6 +51,7 @@ public class FsDelegationToken {
   private boolean hasForwardedToken = false;
   private Token<?> userToken = null;
   private FileSystem fs = null;
+  private Map<String, String> customDelegationTokenIdentifierMapping;
 
   /*
    * @param renewer the account name that is allowed to renew the token.
@@ -68,12 +71,15 @@ public class FsDelegationToken {
   public void acquireDelegationToken(final FileSystem fs) throws IOException {
     String tokenKind;
     String scheme = fs.getUri().getScheme();
+    this.customDelegationTokenIdentifierMapping = parseInput(fs.getConf().get("hbase.dt.mapping", ""));
     if (SWEBHDFS_SCHEME.equalsIgnoreCase(scheme)) {
       tokenKind = SWEBHDFS_TOKEN_KIND.toString();
     } else if (WEBHDFS_SCHEME.equalsIgnoreCase(scheme)) {
       tokenKind = WEBHDFS_TOKEN_KIND.toString();
     } else if (HDFS_URI_SCHEME.equalsIgnoreCase(scheme)) {
       tokenKind = HDFS_DELEGATION_KIND.toString();
+    } else if (customDelegationTokenIdentifierMapping.containsKey(scheme)) {
+      tokenKind = customDelegationTokenIdentifierMapping.get(scheme);
     } else {
       LOG.warn("Unknown FS URI scheme: " + scheme);
       // Preserve default behavior
@@ -81,6 +87,18 @@ public class FsDelegationToken {
     }
 
     acquireDelegationToken(tokenKind, fs);
+  }
+
+  private static Map<String, String> parseInput(String input) {
+    Map<String, String> resultMap = new HashMap<>();
+    String[] pairs = input.split(";");
+    for (String pair : pairs) {
+      String[] keyValue = pair.split("=");
+      if (keyValue.length == 2) {
+        resultMap.put(keyValue[0], keyValue[1]);
+      }
+    }
+    return resultMap;
   }
 
   /**
