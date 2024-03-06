@@ -48,12 +48,12 @@ public final class AsyncFSOutputHelper {
    */
   public static AsyncFSOutput createOutput(FileSystem fs, Path f, boolean overwrite,
     boolean createParent, short replication, long blockSize, EventLoopGroup eventLoopGroup,
-    Class<? extends Channel> channelClass, StreamSlowMonitor monitor, boolean forWAL)
+    Class<? extends Channel> channelClass, StreamSlowMonitor monitor, boolean noLocalWrite)
     throws IOException, CommonFSUtils.StreamLacksCapabilityException {
     if (fs instanceof DistributedFileSystem) {
       return FanOutOneBlockAsyncDFSOutputHelper.createOutput((DistributedFileSystem) fs, f,
         overwrite, createParent, replication, blockSize, eventLoopGroup, channelClass, monitor,
-        forWAL);
+        noLocalWrite);
     }
     final FSDataOutputStream out;
     int bufferSize = fs.getConf().getInt(CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
