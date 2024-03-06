@@ -67,37 +67,41 @@ public class TestNettyTlsIPC extends AbstractTestIPC {
 
   private static NettyEventLoopGroupConfig EVENT_LOOP_GROUP_CONFIG;
 
-  @Parameterized.Parameter(0)
+  @Parameterized.Parameter(1)
   public X509KeyType caKeyType;
 
-  @Parameterized.Parameter(1)
+  @Parameterized.Parameter(2)
   public X509KeyType certKeyType;
 
-  @Parameterized.Parameter(2)
+  @Parameterized.Parameter(3)
   public char[] keyPassword;
 
-  @Parameterized.Parameter(3)
+  @Parameterized.Parameter(4)
   public boolean acceptPlainText;
 
-  @Parameterized.Parameter(4)
+  @Parameterized.Parameter(5)
   public boolean clientTlsEnabled;
 
   private X509TestContext x509TestContext;
 
+  // only netty rpc server supports TLS, so here we will only test NettyRpcServer
   @Parameterized.Parameters(
-      name = "{index}: caKeyType={0}, certKeyType={1}, keyPassword={2}, acceptPlainText={3},"
-        + " clientTlsEnabled={4}")
+      name = "{index}: rpcServerImpl={0}, caKeyType={1}, certKeyType={2}, keyPassword={3},"
+        + " acceptPlainText={4}, clientTlsEnabled={5}")
   public static List<Object[]> data() {
     List<Object[]> params = new ArrayList<>();
     for (X509KeyType caKeyType : X509KeyType.values()) {
       for (X509KeyType certKeyType : X509KeyType.values()) {
         for (char[] keyPassword : new char[][] { "".toCharArray(), "pa$$w0rd".toCharArray() }) {
           // do not accept plain text
-          params.add(new Object[] { caKeyType, certKeyType, keyPassword, false, true });
+          params.add(new Object[] { NettyRpcServer.class, caKeyType, certKeyType, keyPassword,
+            false, true });
           // support plain text and client enables tls
-          params.add(new Object[] { caKeyType, certKeyType, keyPassword, true, true });
+          params.add(
+            new Object[] { NettyRpcServer.class, caKeyType, certKeyType, keyPassword, true, true });
           // support plain text and client disables tls
-          params.add(new Object[] { caKeyType, certKeyType, keyPassword, true, false });
+          params.add(new Object[] { NettyRpcServer.class, caKeyType, certKeyType, keyPassword, true,
+            false });
         }
       }
     }
