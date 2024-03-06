@@ -139,7 +139,7 @@ public class TableNamespaceManager {
     }
     // the implementation is bit tricky
     // if there is already a disable namespace table procedure or the namespace table is already
-    // disabled, we are safe to read from meta table as the migration is already one. If not, since
+    // disabled, we are safe to read from meta table as the migration is already done. If not, since
     // we are part of the master initialization work, so we can make sure that when reaching here,
     // the master has not been marked as initialize yet. And DisableTableProcedure can only be
     // executed after master is initialized, so here we are safe to read from namespace table,
@@ -233,7 +233,7 @@ public class TableNamespaceManager {
     }
   }
 
-  public void setMigrationDown() {
+  public void setMigrationDone() {
     migrationDone = true;
   }
 

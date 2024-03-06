@@ -140,6 +140,6 @@ public class MigrateNamespaceTableProcedure
 
   @Override
   protected void completionCleanup(MasterProcedureEnv env) {
-    env.getMasterServices().getClusterSchema().getTableNamespaceManager().setMigrationDown();
+    env.getMasterServices().getClusterSchema().getTableNamespaceManager().setMigrationDone();
   }
 }
