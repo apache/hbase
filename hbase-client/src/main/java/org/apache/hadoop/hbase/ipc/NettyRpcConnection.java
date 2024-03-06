@@ -291,7 +291,7 @@ class NettyRpcConnection extends RpcConnection {
     });
   }
 
-  private void getConnectionRegistry(Channel ch, Call connectionRegistryCall) throws IOException {
+  private void getConnectionRegistry(Channel ch, Call connectionRegistryCall) {
     assert eventLoop.inEventLoop();
     PreambleCallHandler.setup(ch.pipeline(), rpcClient.readTO, this,
       RpcClient.REGISTRY_PREAMBLE_HEADER, connectionRegistryCall);
