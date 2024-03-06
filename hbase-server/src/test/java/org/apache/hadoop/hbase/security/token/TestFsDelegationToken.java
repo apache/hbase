@@ -88,6 +88,12 @@ public class TestFsDelegationToken {
     when(webhdfsToken.getKind()).thenReturn(WEBHDFS_TOKEN_KIND);
     when(swebhdfsToken.getKind()).thenReturn(SWEBHDFS_TOKEN_KIND);
     when(ofsToken.getKind()).thenReturn(OZONE_TOKEN_KIND);
+
+    Configuration conf = new Configuration();
+    when(fileSystem.getConf()).thenReturn(conf);
+    when(webHdfsFileSystem.getConf()).thenReturn(conf);
+    when(swebHdfsFileSystem.getConf()).thenReturn(conf);
+    when(rootedOzoneFileSystem.getConf()).thenReturn(conf);
   }
 
   @Test
@@ -127,9 +133,6 @@ public class TestFsDelegationToken {
 
   @Test
   public void acquireDelegationTokenByTokenKind_OzoneFileSystem() throws IOException {
-    Configuration conf = new Configuration();
-    conf.set("hbase.dt.mapping", "ofs=OzoneToken");
-    when(rootedOzoneFileSystem.getConf()).thenReturn(conf);
     fsDelegationToken.acquireDelegationToken(rootedOzoneFileSystem);
     assertEquals(fsDelegationToken.getUserToken().getKind(), OZONE_TOKEN_KIND);
   }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.security.token;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_FILESYSTEM_DELEGATION_TOKEN_MAPPING;
+import static org.apache.hadoop.hbase.HConstants.FILESYSTEM_DELEGATION_TOKEN_MAPPING;
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.HDFS_URI_SCHEME;
 import static org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier.HDFS_DELEGATION_KIND;
 import static org.apache.hadoop.hdfs.web.WebHdfsConstants.SWEBHDFS_SCHEME;
@@ -71,7 +73,8 @@ public class FsDelegationToken {
   public void acquireDelegationToken(final FileSystem fs) throws IOException {
     String tokenKind;
     String scheme = fs.getUri().getScheme();
-    this.customDelegationTokenIdentifierMapping = parseInput(fs.getConf().get("hbase.dt.mapping", ""));
+    this.customDelegationTokenIdentifierMapping = parseDelegationTokenMapping(fs.getConf().get(
+      FILESYSTEM_DELEGATION_TOKEN_MAPPING, DEFAULT_FILESYSTEM_DELEGATION_TOKEN_MAPPING));
     if (SWEBHDFS_SCHEME.equalsIgnoreCase(scheme)) {
       tokenKind = SWEBHDFS_TOKEN_KIND.toString();
     } else if (WEBHDFS_SCHEME.equalsIgnoreCase(scheme)) {
@@ -89,7 +92,7 @@ public class FsDelegationToken {
     acquireDelegationToken(tokenKind, fs);
   }
 
-  private static Map<String, String> parseInput(String input) {
+  private static Map<String, String> parseDelegationTokenMapping(String input) {
     Map<String, String> resultMap = new HashMap<>();
     String[] pairs = input.split(";");
     for (String pair : pairs) {
