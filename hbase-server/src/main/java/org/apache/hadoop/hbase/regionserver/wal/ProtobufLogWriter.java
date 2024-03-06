@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL.WAL_AVOID_LOCAL_WRITES_DEFAULT;
+import static org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL.WAL_AVOID_LOCAL_WRITES_KEY;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicLong;
@@ -108,7 +111,7 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter implements FSHL
       DistributedFileSystem.HdfsDataOutputStreamBuilder dfsBuilder =
         (DistributedFileSystem.HdfsDataOutputStreamBuilder) builder;
       dfsBuilder.replicate();
-      if (fs.getConf().getBoolean("hbase.regionserver.wal.avoid-local-writes", false)) {
+      if (fs.getConf().getBoolean(WAL_AVOID_LOCAL_WRITES_KEY, WAL_AVOID_LOCAL_WRITES_DEFAULT)) {
         dfsBuilder.noLocalWrite();
       }
       this.output = dfsBuilder.build();

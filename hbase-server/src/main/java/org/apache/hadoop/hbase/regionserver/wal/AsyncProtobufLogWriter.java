@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL.WAL_AVOID_LOCAL_WRITES_DEFAULT;
+import static org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL.WAL_AVOID_LOCAL_WRITES_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
@@ -180,8 +182,10 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
     short replication, long blockSize, StreamSlowMonitor monitor)
     throws IOException, StreamLacksCapabilityException {
+    boolean noLocalWrite =
+      fs.getConf().getBoolean(WAL_AVOID_LOCAL_WRITES_KEY, WAL_AVOID_LOCAL_WRITES_DEFAULT);
     this.output = AsyncFSOutputHelper.createOutput(fs, path, overwritable, false, replication,
-      blockSize, eventLoopGroup, channelClass, monitor);
+      blockSize, eventLoopGroup, channelClass, monitor, noLocalWrite);
     this.asyncOutputWrapper = new OutputStreamWrapper(output);
   }
 
