@@ -262,8 +262,8 @@ Information on non-Java clients and custom protocols is covered in <<external_ap
 
 [[client.masterregistry]]
 === Master Registry (new as of 2.3.0)
-Starting from 2.5.0, MasterRegistry is deprecated. RpcConnectionRegistry is the alternate. Please
-see <<client.rpcconnectionregistry>> for more details.
+Starting from 2.5.0, MasterRegistry is deprecated. It's functionality is completely superseded by
+the RpcConnectionRegistry. Please see <<client.rpcconnectionregistry>> for more details.
 
 Client internally works with a _connection registry_ to fetch the metadata needed by connections.
 This connection registry implementation is responsible for fetching the following metadata.
