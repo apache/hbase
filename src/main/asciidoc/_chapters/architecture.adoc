@@ -261,8 +261,10 @@ For region name, we only accept `byte[]` as the parameter type and it may be a f
 Information on non-Java clients and custom protocols is covered in <<external_apis>>
 
 [[client.masterregistry]]
-
 === Master Registry (new as of 2.3.0)
+Starting from 2.5.0, MasterRegistry is deprecated. RpcConnectionRegistry is the alternate. Please
+see <<client.rpcconnectionregistry>> for more details.
+
 Client internally works with a _connection registry_ to fetch the metadata needed by connections.
 This connection registry implementation is responsible for fetching the following metadata.
 
@@ -294,25 +296,29 @@ HMasters instead of ZooKeeper ensemble`
 To reduce hot-spotting on a single master, all the masters (active & stand-by) expose the needed
 service to fetch the connection metadata. This lets the client connect to any master (not just active).
 Both ZooKeeper-based and Master-based connection registry implementations are available in 2.3+. For
-2.3 and earlier, the ZooKeeper-based implementation remains the default configuration.
-The Master-based implementation becomes the default in 3.0.0.
+2.x and earlier, the ZooKeeper-based implementation remains the default configuration. For 3.0.0,
+RpcConnectionRegistry becomes the default configuration, as the alternate to MasterRegistry.
 
 Change the connection registry implementation by updating the value configured for
 `hbase.client.registry.impl`. To explicitly enable the ZooKeeper-based registry, use
 
 [source, xml]
+----
 <property>
     <name>hbase.client.registry.impl</name>
     <value>org.apache.hadoop.hbase.client.ZKConnectionRegistry</value>
- </property>
+</property>
+----
 
 To explicitly enable the Master-based registry, use
 
 [source, xml]
+----
 <property>
     <name>hbase.client.registry.impl</name>
     <value>org.apache.hadoop.hbase.client.MasterRegistry</value>
- </property>
+</property>
+----
 
 ==== MasterRegistry RPC hedging
 
@@ -338,14 +344,78 @@ management.
 For more implementation details, please refer to the https://github.com/apache/hbase/tree/master/dev-support/design-docs[design doc] and
 https://issues.apache.org/jira/browse/HBASE-18095[HBASE-18095].
 
+[[client.rpcconnectionregistry]]
+=== Rpc Connection Registry (new as of 2.5.0)
+As said in the <<client.masterregistry>> section, there are some disadvantages and limitations
+for MasterRegistry, especially that it puts master in the critical path of read/write operations.
+In order to address these problems, we introduced a more generic RpcConnectionRegistry.
+
+It is also rpc based, like MasterRegistry, with several differences
+
+. Region server also implements the necessary rpc service, so you can config any nodes in the cluster
+as bootstrap nodes, not only masters
+. Support refreshing bootstrap nodes, for spreading loads across the nodes in the cluster, and also
+remove the dead nodes in bootstrap nodes.
+
+To explicitly enable the Master-based registry, use
+
+[source, xml]
+----
+<property>
+    <name>hbase.client.registry.impl</name>
+    <value>org.apache.hadoop.hbase.client.RpcConnectionRegistry</value>
+</property>
+----
+
+To configure the bootstrap nodes, use
+[source, xml]
+----
+<property>
+    <name>hbase.client.bootstrap.servers</name>
+    <value>server1:16020,server2:16020,server3:16020</value>
+</property>
+----
+
+If not configured, we will fallback to use master addresses as the bootstrap nodes.
+
+RpcConnectionRegistry is available in 2.5+, and becomes the default client registry implementation in 3.0.0.
+
+==== RpcConnectionRegistry RPC hedging
+Hedged read is still supported, the configuration key is now _hbase.client.bootstrap.hedged.fanout_, and
+its default value is still 2.
+
+==== RpcConnectionRegistry bootstrap nodes refreshing
+There are basically two reasons for us to refresh the bootstrap nodes
+
+* Periodically. This is for spreading loads across the nodes in the cluster. There are two configurations
+  . _hbase.client.bootstrap.refresh_interval_secs_: the refresh interval in seconds, default 300. A value
+  less than or equal to zero means disable refreshing.
+  . _hbase.client.bootstrap.initial_refresh_delay_secs_: the initial refresh interval in seconds, the
+  default value is 1/10 of _hbase.client.bootstrap.refresh_interval_secs_. The reason why we want to
+  introduce a separated configuration for the delay for first refreshing is that, as end users could
+  configure any nodes in a cluster as the initial bootstrap nodes, it is possible that different end
+  users will configure the same machine which makes the machine over load. So we should have a shorter
+  delay for the initial refresh, to let users quickly switch to the bootstrap nodes we want them to
+  connect to.
+* When there is a connection error while requesting the nodes, we will refresh immediately, to remove
+the dead nodes. To avoid putting too much pressure to the cluster, there is a configuration
+_hbase.client.bootstrap.min_secs_between_refreshes_, to control the minimum interval between two
+refreshings. The default value is 60, but notice that, if you change
+_hbase.client.bootstrap.refresh_interval_secs_ to a small value, you need to make sure to also change
+_hbase.client.bootstrap.min_secs_between_refreshes_ to a value smaller than
+_hbase.client.bootstrap.refresh_interval_secs_, otherwise an IllegalArgumentException will be thrown.
+
+
 '''
-NOTE: (Advanced) In case of any issues with the master based registry, use the following
+NOTE: (Advanced) In case of any issues with the rpc/master based registry, use the following
 configuration to fallback to the ZooKeeper based connection registry implementation.
 [source, xml]
+----
 <property>
     <name>hbase.client.registry.impl</name>
     <value>org.apache.hadoop.hbase.client.ZKConnectionRegistry</value>
- </property>
+</property>
+----
 
 [[client.filter]]
 == Client Request Filters
