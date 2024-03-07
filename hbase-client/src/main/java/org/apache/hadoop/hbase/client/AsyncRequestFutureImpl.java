@@ -36,6 +36,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import org.apache.curator.shaded.com.google.common.base.Strings;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HConstants;
@@ -1253,42 +1254,31 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
 
   @Override
   public void waitUntilDone() throws InterruptedIOException {
+    long startTime = EnvironmentEdgeManager.currentTime();
     try {
       if (this.operationTimeout > 0) {
         // the worker thread maybe over by some exception without decrement the actionsInProgress,
         // then the guarantee of operationTimeout will be broken, so we should set cutoff to avoid
         // stuck here forever
-        long cutoff = (EnvironmentEdgeManager.currentTime() + this.operationTimeout) * 1000L;
+        long cutoff = (startTime + this.operationTimeout) * 1000L;
         if (!waitUntilDone(cutoff)) {
           String msg = "time out before the actionsInProgress changed to zero, with "
-            + actionsInProgress.get() + " remaining";
-          if (callsInProgress != null) {
-            Map<ServerName, Integer> serversInProgress = new HashMap<>(callsInProgress.size());
-            for (CancellableRegionServerCallable callable : callsInProgress) {
-              if (callable instanceof MultiServerCallable) {
-                MultiServerCallable multiServerCallable = (MultiServerCallable) callable;
-                int numAttempt = multiServerCallable.getNumAttempt();
-                serversInProgress.compute(multiServerCallable.getServerName(),
-                  (k, v) -> v == null ? numAttempt : Math.max(v, numAttempt));
-              }
-            }
+            + actionsInProgress.get() + " remaining" + getServersInProgress();
 
-            if (serversInProgress.size() > 0) {
-              msg += " on servers: " + serversInProgress.entrySet().stream()
-                .sorted(
-                  Comparator.<Map.Entry<ServerName, Integer>> comparingInt(Map.Entry::getValue)
-                    .reversed())
-                .map(entry -> entry.getKey() + "(" + entry.getValue() + " attempts)")
-                .collect(Collectors.joining(", "));
-            }
-          }
           throw new SocketTimeoutException(msg);
         }
       } else {
         waitUntilDone(Long.MAX_VALUE);
       }
     } catch (InterruptedException iex) {
-      throw new InterruptedIOException(iex.getMessage());
+      long duration = EnvironmentEdgeManager.currentTime() - startTime;
+      String message = "Interrupted after waiting " + duration + "ms of " + operationTimeout
+        + "ms operation timeout, with " + actionsInProgress.get() + " remaining"
+        + getServersInProgress();
+      if (!Strings.isNullOrEmpty(iex.getMessage())) {
+        message += ": " + iex.getMessage();
+      }
+      throw new InterruptedIOException(message);
     } finally {
       if (callsInProgress != null) {
         for (CancellableRegionServerCallable clb : callsInProgress) {
@@ -1296,6 +1286,29 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         }
       }
     }
+  }
+
+  private String getServersInProgress() {
+    if (callsInProgress != null) {
+      Map<ServerName, Integer> serversInProgress = new HashMap<>(callsInProgress.size());
+      for (CancellableRegionServerCallable callable : callsInProgress) {
+        if (callable instanceof MultiServerCallable) {
+          MultiServerCallable multiServerCallable = (MultiServerCallable) callable;
+          int numAttempt = multiServerCallable.getNumAttempt();
+          serversInProgress.compute(multiServerCallable.getServerName(),
+            (k, v) -> v == null ? numAttempt : Math.max(v, numAttempt));
+        }
+      }
+
+      if (serversInProgress.size() > 0) {
+        return " on servers: " + serversInProgress.entrySet().stream()
+          .sorted(Comparator.<Map.Entry<ServerName, Integer>> comparingInt(Map.Entry::getValue)
+            .reversed())
+          .map(entry -> entry.getKey() + "(" + entry.getValue() + " attempts)")
+          .collect(Collectors.joining(", "));
+      }
+    }
+    return "";
   }
 
   private boolean waitUntilDone(long cutoff) throws InterruptedException {
