@@ -68,4 +68,9 @@ class NoopOperationQuota implements OperationQuota {
   public long getReadAvailable() {
     return Long.MAX_VALUE;
   }
+
+  @Override
+  public long getReadConsumed() {
+    return 0L;
+  }
 }
