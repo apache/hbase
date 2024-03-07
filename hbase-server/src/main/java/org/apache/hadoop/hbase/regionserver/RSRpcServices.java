@@ -716,7 +716,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     // doNonAtomicBatchOp call. We should be staying aligned though the Put and Delete are
     // deferred/batched
     List<ClientProtos.Action> mutations = null;
-    long maxQuotaResultSize = Math.min(maxScannerResultSize, quota.getReadAvailable());
+    long maxQuotaResultSize = Math.min(maxScannerResultSize, quota.getMaxResultSize());
     IOException sizeIOE = null;
     ClientProtos.ResultOrException.Builder resultOrExceptionBuilder =
       ResultOrException.newBuilder();
@@ -3611,7 +3611,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     }
     RpcCall rpcCall = RpcServer.getCurrentCall().orElse(null);
     // now let's do the real scan.
-    long maxQuotaResultSize = Math.min(maxScannerResultSize, quota.getReadAvailable());
+    long maxQuotaResultSize = Math.min(maxScannerResultSize, quota.getMaxResultSize());
     RegionScanner scanner = rsh.s;
     // this is the limit of rows for this scan, if we the number of rows reach this value, we will
     // close the scanner.

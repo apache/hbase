@@ -80,4 +80,15 @@ public interface OperationQuota {
 
   /** Returns the number of bytes available to read to avoid exceeding the quota */
   long getReadAvailable();
+
+  /** Returns the number of bytes consumed from the quota by the operation */
+  long getReadConsumed();
+
+  /**
+   * Returns the maximum result size to be returned by the given operation. This is the greater of
+   * two numbers: the bytes available, or the bytes already consumed
+   */
+  default long getMaxResultSize() {
+    return Math.max(getReadAvailable(), getReadConsumed());
+  }
 }

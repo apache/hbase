@@ -135,6 +135,11 @@ public class DefaultOperationQuota implements OperationQuota {
   }
 
   @Override
+  public long getReadConsumed() {
+    return readConsumed;
+  }
+
+  @Override
   public void addGetResult(final Result result) {
     operationSize[OperationType.GET.ordinal()] += QuotaUtil.calculateResultSize(result);
   }
