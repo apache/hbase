@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.replication;
 
+import static org.apache.hadoop.fs.CommonPathCapabilities.FS_TRUNCATE;
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.getPeerRemoteWALDir;
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.getPeerReplayWALDir;
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.getPeerSnapshotWALDir;
@@ -157,6 +158,10 @@ public class SyncReplicationReplayWALManager {
         }
       }
     });
+    if (!this.fs.hasPathCapability(walRootDir, FS_TRUNCATE)) {
+      LOG.warn("File system " + fs.getScheme() + " path " + walRootDir +
+        " does not support truncate. Synchronous WAL may not function properly.");
+    }
   }
 
   public void registerPeer(String peerId) {
