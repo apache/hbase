@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -54,20 +55,37 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
 /**
  * Zookeeper based registry implementation.
+ * @deprecated As of 2.6.0, replaced by {@link RpcConnectionRegistry}, which is the default
+ *             connection mechanism as of 3.0.0. Expected to be removed in 4.0.0.
+ * @see <a href="https://issues.apache.org/jira/browse/HBASE-23324">HBASE-23324</a> and its parent
+ *      ticket for details.
  */
-@InterfaceAudience.Private
+@Deprecated
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 class ZKConnectionRegistry implements ConnectionRegistry {
 
   private static final Logger LOG = LoggerFactory.getLogger(ZKConnectionRegistry.class);
+
+  private static final Object WARN_LOCK = new Object();
+  private static volatile boolean NEEDS_LOG_WARN = true;
 
   private final ReadOnlyZKClient zk;
 
   private final ZNodePaths znodePaths;
 
   // User not used, but for rpc based registry we need it
-  ZKConnectionRegistry(Configuration conf, User user) {
+  ZKConnectionRegistry(Configuration conf, User ignored) {
     this.znodePaths = new ZNodePaths(conf);
     this.zk = new ReadOnlyZKClient(conf);
+    if (NEEDS_LOG_WARN) {
+      synchronized (WARN_LOCK) {
+        if (NEEDS_LOG_WARN) {
+          LOG.warn(
+            "ZKConnectionRegistry is deprecated. See https://hbase.apache.org/book.html#client.rpcconnectionregistry");
+          NEEDS_LOG_WARN = false;
+        }
+      }
+    }
   }
 
   private interface Converter<T> {
