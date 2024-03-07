@@ -23,6 +23,7 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +35,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HConstants;
@@ -51,6 +53,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 /**
  * The context, and return value, for a single submit/submitAll call. Note on how this class (one AP
@@ -195,7 +199,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       try {
         // setup the callable based on the actions, if we don't have one already from the request
         if (callable == null) {
-          callable = createCallable(server, tableName, multiAction);
+          callable = createCallable(server, tableName, multiAction, numAttempt);
         }
         RpcRetryingCaller<AbstractResponse> caller =
           asyncProcess.createCaller(callable, rpcTimeout);
@@ -387,10 +391,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     } else {
       this.replicaGetIndices = null;
     }
-    this.callsInProgress = !hasAnyReplicaGets
-      ? null
-      : Collections
-        .newSetFromMap(new ConcurrentHashMap<CancellableRegionServerCallable, Boolean>());
+    this.callsInProgress =
+      Collections.newSetFromMap(new ConcurrentHashMap<CancellableRegionServerCallable, Boolean>());
     this.asyncProcess = asyncProcess;
     this.errorsByServer = createServerErrorTracker();
     this.errors = new BatchErrors();
@@ -536,7 +538,12 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
 
   private void manageLocationError(Action action, Exception ex) {
     String msg =
-      "Cannot get replica " + action.getReplicaId() + " location for " + action.getAction();
+      "Cannot get replica " + action.getReplicaId() + " location for " + action.getAction() + ": ";
+    if (ex instanceof OperationTimeoutExceededException) {
+      msg += "Operation timeout exceeded.";
+    } else {
+      msg += ex == null ? "null cause" : ex.toString();
+    }
     LOG.error(msg);
     if (ex == null) {
       ex = new IOException(msg);
@@ -1276,20 +1283,31 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
 
   @Override
   public void waitUntilDone() throws InterruptedIOException {
+    long startTime = EnvironmentEdgeManager.currentTime();
     try {
       if (this.operationTimeout > 0) {
         // the worker thread maybe over by some exception without decrement the actionsInProgress,
         // then the guarantee of operationTimeout will be broken, so we should set cutoff to avoid
         // stuck here forever
-        long cutoff = (EnvironmentEdgeManager.currentTime() + this.operationTimeout) * 1000L;
+        long cutoff = (startTime + this.operationTimeout) * 1000L;
         if (!waitUntilDone(cutoff)) {
-          throw new SocketTimeoutException("time out before the actionsInProgress changed to zero");
+          String msg = "time out before the actionsInProgress changed to zero, with "
+            + actionsInProgress.get() + " remaining" + getServersInProgress();
+
+          throw new SocketTimeoutException(msg);
         }
       } else {
         waitUntilDone(Long.MAX_VALUE);
       }
     } catch (InterruptedException iex) {
-      throw new InterruptedIOException(iex.getMessage());
+      long duration = EnvironmentEdgeManager.currentTime() - startTime;
+      String message = "Interrupted after waiting " + duration + "ms of " + operationTimeout
+        + "ms operation timeout, with " + actionsInProgress.get() + " remaining"
+        + getServersInProgress();
+      if (!Strings.isNullOrEmpty(iex.getMessage())) {
+        message += ": " + iex.getMessage();
+      }
+      throw new InterruptedIOException(message);
     } finally {
       if (callsInProgress != null) {
         for (CancellableRegionServerCallable clb : callsInProgress) {
@@ -1297,6 +1315,29 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         }
       }
     }
+  }
+
+  private String getServersInProgress() {
+    if (callsInProgress != null) {
+      Map<ServerName, Integer> serversInProgress = new HashMap<>(callsInProgress.size());
+      for (CancellableRegionServerCallable callable : callsInProgress) {
+        if (callable instanceof MultiServerCallable) {
+          MultiServerCallable multiServerCallable = (MultiServerCallable) callable;
+          int numAttempt = multiServerCallable.getNumAttempt();
+          serversInProgress.compute(multiServerCallable.getServerName(),
+            (k, v) -> v == null ? numAttempt : Math.max(v, numAttempt));
+        }
+      }
+
+      if (serversInProgress.size() > 0) {
+        return " on servers: " + serversInProgress.entrySet().stream()
+          .sorted(Comparator.<Map.Entry<ServerName, Integer>> comparingInt(Map.Entry::getValue)
+            .reversed())
+          .map(entry -> entry.getKey() + "(" + entry.getValue() + " attempts)")
+          .collect(Collectors.joining(", "));
+      }
+    }
+    return "";
   }
 
   private boolean waitUntilDone(long cutoff) throws InterruptedException {
@@ -1365,10 +1406,10 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * Create a callable. Isolated to be easily overridden in the tests.
    */
   private MultiServerCallable createCallable(final ServerName server, TableName tableName,
-    final MultiAction multi) {
+    final MultiAction multi, int numAttempt) {
     return new MultiServerCallable(asyncProcess.connection, tableName, server, multi,
       asyncProcess.rpcFactory.newController(), rpcTimeout, tracker, multi.getPriority(),
-      requestAttributes);
+      requestAttributes, numAttempt);
   }
 
   private void updateResult(int index, Object result) {
