@@ -139,7 +139,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     "hbase.regionserver.wal.slowsync.roll.interval.ms";
   protected static final int DEFAULT_SLOW_SYNC_ROLL_INTERVAL_MS = 60 * 1000; // in ms, 1 minute
 
-  protected static final String WAL_SYNC_TIMEOUT_MS = "hbase.regionserver.wal.sync.timeout";
+  public static final String WAL_SYNC_TIMEOUT_MS = "hbase.regionserver.wal.sync.timeout";
   protected static final int DEFAULT_WAL_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // in ms, 5min
 
   public static final String WAL_ROLL_MULTIPLIER = "hbase.regionserver.logroll.multiplier";
@@ -871,7 +871,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         }
       }
     } catch (TimeoutIOException tioe) {
-      throw tioe;
+      throw new WALSyncTimeoutIOException(tioe);
     } catch (InterruptedException ie) {
       LOG.warn("Interrupted", ie);
       throw convertInterruptedExceptionToIOException(ie);
