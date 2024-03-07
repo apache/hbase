@@ -173,6 +173,12 @@ public class WALUtil {
       if (walKey.getWriteEntry() != null) {
         mvcc.complete(walKey.getWriteEntry());
       }
+      /**
+       * Here we do not abort the RegionServer for {@link WALSyncTimeoutIOException} as
+       * {@link HRegion#doWALAppend} does,because WAL Marker just records the internal state and
+       * seems it is no need to always abort the RegionServer when {@link WAL#sync} timeout,it is
+       * the internal state transition that determines whether RegionServer is aborted or not.
+       */
       throw ioe;
     }
     return walKey;

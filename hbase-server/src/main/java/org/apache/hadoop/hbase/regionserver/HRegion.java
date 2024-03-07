@@ -158,6 +158,7 @@ import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControl
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.hbase.regionserver.wal.WALSyncTimeoutIOException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
@@ -1372,7 +1373,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return this.fs.getRegionInfo();
   }
 
-  /** Returns Instance of {@link RegionServerServices} used by this HRegion. Can be null. */
+  /**
+   * Returns Instance of {@link RegionServerServices} used by this HRegion. Can be null.
+   */
   RegionServerServices getRegionServerServices() {
     return this.rsServices;
   }
@@ -3661,7 +3664,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * @param familyMap Map of Cells by family
      */
     protected void applyFamilyMapToMemStore(Map<byte[], List<Cell>> familyMap,
-      MemStoreSizing memstoreAccounting) throws IOException {
+      MemStoreSizing memstoreAccounting) {
       for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
         byte[] family = e.getKey();
         List<Cell> cells = e.getValue();
@@ -5083,7 +5086,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @see #applyToMemStore(HStore, Cell, MemStoreSizing)
    */
   private void applyToMemStore(HStore store, List<Cell> cells, boolean delta,
-    MemStoreSizing memstoreAccounting) throws IOException {
+    MemStoreSizing memstoreAccounting) {
     // Any change in how we update Store/MemStore needs to also be done in other applyToMemStore!!!!
     boolean upsert = delta && store.getColumnFamilyDescriptor().getMaxVersions() == 1;
     if (upsert) {
@@ -7886,6 +7889,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     } catch (IOException ioe) {
       if (walKey != null && walKey.getWriteEntry() != null) {
         mvcc.complete(walKey.getWriteEntry());
+      }
+
+      /**
+       * If {@link WAL#sync} get a timeout exception, the only correct way is to abort the region
+       * server, as the design of {@link WAL#sync}, is to succeed or die, there is no 'failure'. It
+       * is usually not a big deal is because we set a very large default value(5 minutes) for
+       * {@link AbstractFSWAL#WAL_SYNC_TIMEOUT_MS}, usually the WAL system will abort the region
+       * server if it can not finish the sync within 5 minutes.
+       */
+      if (ioe instanceof WALSyncTimeoutIOException) {
+        if (rsServices != null) {
+          rsServices.abort("WAL sync timeout,forcing server shutdown", ioe);
+        }
       }
       throw ioe;
     }
