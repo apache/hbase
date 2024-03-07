@@ -40,7 +40,6 @@
         <include>org.apache.hbase:hbase-client</include>
         <include>org.apache.hbase:hbase-common</include>
         <include>org.apache.hbase:hbase-endpoint</include>
-        <include>org.apache.hbase:hbase-examples</include>
         <include>org.apache.hbase:hbase-external-blockcache</include>
         <include>org.apache.hbase:hbase-hadoop-compat</include>
         <include>org.apache.hbase:hbase-http</include>
