@@ -267,7 +267,7 @@ public class RegionServerRpcQuotaManager {
 
     OperationQuota quota = getQuota(ugi, table, region.getMinBlockSizeBytes());
     try {
-      quota.checkQuota(numWrites, numReads);
+      quota.checkBatchQuota(numWrites, numReads);
     } catch (RpcThrottlingException e) {
       LOG.debug("Throttling exception for user=" + ugi.getUserName() + " table=" + table
         + " numWrites=" + numWrites + " numReads=" + numReads + ": " + e.getMessage());

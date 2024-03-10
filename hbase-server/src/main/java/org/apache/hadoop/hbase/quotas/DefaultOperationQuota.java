@@ -91,9 +91,19 @@ public class DefaultOperationQuota implements OperationQuota {
   }
 
   @Override
-  public void checkQuota(int numWrites, int numReads) throws RpcThrottlingException {
+  public void checkBatchQuota(int numWrites, int numReads) throws RpcThrottlingException {
     updateEstimateConsumeBatchQuota(numWrites, numReads);
+    checkQuota(numWrites, numReads);
+  }
 
+  @Override
+  public void checkScanQuota(ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
+    long maxBlockBytesScanned) throws RpcThrottlingException {
+    updateEstimateConsumeScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned);
+    checkQuota(0, 1);
+  }
+
+  private void checkQuota(long numWrites, long numReads) throws RpcThrottlingException {
     readAvailable = Long.MAX_VALUE;
     for (final QuotaLimiter limiter : limiters) {
       if (limiter.isBypass()) {
@@ -107,28 +117,6 @@ public class DefaultOperationQuota implements OperationQuota {
 
     for (final QuotaLimiter limiter : limiters) {
       limiter.grabQuota(numWrites, writeConsumed, numReads, readConsumed, writeCapacityUnitConsumed,
-        readCapacityUnitConsumed);
-    }
-  }
-
-  @Override
-  public void checkScanQuota(ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
-    long maxBlockBytesScanned) throws RpcThrottlingException {
-    updateEstimateConsumeScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned);
-
-    readAvailable = Long.MAX_VALUE;
-    for (final QuotaLimiter limiter : limiters) {
-      if (limiter.isBypass()) {
-        continue;
-      }
-
-      limiter.checkQuota(0, writeConsumed, 1, readConsumed, writeCapacityUnitConsumed,
-        readCapacityUnitConsumed);
-      readAvailable = Math.min(readAvailable, limiter.getReadAvailable());
-    }
-
-    for (final QuotaLimiter limiter : limiters) {
-      limiter.grabQuota(0, writeConsumed, 1, readConsumed, writeCapacityUnitConsumed,
         readCapacityUnitConsumed);
     }
   }
