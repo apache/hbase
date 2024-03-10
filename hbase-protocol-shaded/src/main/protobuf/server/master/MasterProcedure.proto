@@ -771,3 +771,12 @@ enum MigrateReplicationQueueFromZkToTableState {
 message MigrateReplicationQueueFromZkToTableStateData {
   repeated string disabled_peer_id = 1;
 }
+
+enum MigrateNamespaceTableProcedureState {
+  MIGRATE_NAMESPACE_TABLE_ADD_FAMILY = 1;
+  MIGRATE_NAMESPACE_TABLE_MIGRATE_DATA = 2;
+  MIGRATE_NAMESPACE_TABLE_DISABLE_TABLE = 3;
+}
+
+message MigrateNamespaceTableProcedureStateData {
+}

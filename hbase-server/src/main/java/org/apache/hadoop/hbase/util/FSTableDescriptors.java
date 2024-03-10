@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -168,16 +169,28 @@ public class FSTableDescriptors implements TableDescriptors {
       .setMaxVersions(
         conf.getInt(HConstants.HBASE_META_VERSIONS, HConstants.DEFAULT_HBASE_META_VERSIONS))
       .setInMemory(true).setBlocksize(8 * 1024).setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-      .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
-      .setBloomFilterType(BloomType.ROWCOL).build();
+      .setDataBlockEncoding(DataBlockEncoding.ROW_INDEX_V1).setBloomFilterType(BloomType.ROWCOL)
+      .build();
   }
 
   public static ColumnFamilyDescriptor getReplBarrierFamilyDescForMeta() {
     return ColumnFamilyDescriptorBuilder.newBuilder(HConstants.REPLICATION_BARRIER_FAMILY)
       .setMaxVersions(HConstants.ALL_VERSIONS).setInMemory(true)
       .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-      .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
-      .setBloomFilterType(BloomType.ROWCOL).build();
+      .setDataBlockEncoding(DataBlockEncoding.ROW_INDEX_V1).setBloomFilterType(BloomType.ROWCOL)
+      .build();
+  }
+
+  public static ColumnFamilyDescriptor getNamespaceFamilyDescForMeta(Configuration conf) {
+    return ColumnFamilyDescriptorBuilder.newBuilder(HConstants.NAMESPACE_FAMILY)
+      .setMaxVersions(
+        conf.getInt(HConstants.HBASE_META_VERSIONS, HConstants.DEFAULT_HBASE_META_VERSIONS))
+      .setInMemory(true)
+      .setBlocksize(
+        conf.getInt(HConstants.HBASE_META_BLOCK_SIZE, HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
+      .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+      .setDataBlockEncoding(DataBlockEncoding.ROW_INDEX_V1).setBloomFilterType(BloomType.ROWCOL)
+      .build();
   }
 
   private static TableDescriptorBuilder createMetaTableDescriptorBuilder(final Configuration conf)
@@ -193,20 +206,10 @@ public class FSTableDescriptors implements TableDescriptors {
         .setBlocksize(
           conf.getInt(HConstants.HBASE_META_BLOCK_SIZE, HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
         .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.ROWCOL)
-        .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
-        .build())
+        .setDataBlockEncoding(DataBlockEncoding.ROW_INDEX_V1).build())
       .setColumnFamily(getTableFamilyDescForMeta(conf))
       .setColumnFamily(getReplBarrierFamilyDescForMeta())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.NAMESPACE_FAMILY)
-        .setMaxVersions(
-          conf.getInt(HConstants.HBASE_META_VERSIONS, HConstants.DEFAULT_HBASE_META_VERSIONS))
-        .setInMemory(true)
-        .setBlocksize(
-          conf.getInt(HConstants.HBASE_META_BLOCK_SIZE, HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
-        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-        .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
-        .setBloomFilterType(BloomType.ROWCOL).build())
-      .setCoprocessor(
+      .setColumnFamily(getNamespaceFamilyDescForMeta(conf)).setCoprocessor(
         CoprocessorDescriptorBuilder.newBuilder(MultiRowMutationEndpoint.class.getName())
           .setPriority(Coprocessor.PRIORITY_SYSTEM).build());
   }
