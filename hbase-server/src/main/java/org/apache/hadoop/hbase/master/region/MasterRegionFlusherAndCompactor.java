@@ -147,7 +147,8 @@ class MasterRegionFlusherAndCompactor implements Closeable {
             archivedHFileSuffix);
         } else {
           LOG.warn(
-            "Archived dir {} dose not exist, there is no need to move archived hfiles from {} to global dir {} .",
+            "Archived dir {} dose not exist, there is no need to move archived hfiles from {} "
+              + "to global dir {} .",
             storeArchiveDir, storeArchiveDir, globalStoreArchiveDir);
         }
       } catch (IOException e) {

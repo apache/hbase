@@ -4673,10 +4673,11 @@ public class TestHRegion {
 
     FileSystem fs = region.getRegionFileSystem().getFileSystem();
     Configuration conf = region.getReadOnlyConfiguration();
-    Path store1ArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, region.getRegionInfo(), CF1);
+    RegionInfo regionInfo = region.getRegionInfo();
+    Path store1ArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, CF1);
     assertTrue(fs.exists(store1ArchiveDir));
     // The archived dir of CF2 does not exist because this column family has no data at all
-    Path store2ArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, region.getRegionInfo(), CF2);
+    Path store2ArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, CF2);
     assertFalse(fs.exists(store2ArchiveDir));
   }
 
