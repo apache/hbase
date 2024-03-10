@@ -1046,8 +1046,10 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
             break;
 
           case SUCCESS:
-            builder.addResultOrException(
-              getResultOrException(ClientProtos.Result.getDefaultInstance(), index));
+            ClientProtos.Result result = codes[i].getResult() == null
+              ? ClientProtos.Result.getDefaultInstance()
+              : ProtobufUtil.toResult(codes[i].getResult());
+            builder.addResultOrException(getResultOrException(result, index));
             break;
 
           case STORE_TOO_BUSY:
