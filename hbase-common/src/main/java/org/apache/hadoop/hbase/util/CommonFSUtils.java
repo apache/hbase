@@ -749,7 +749,7 @@ public final class CommonFSUtils {
       if (builderClass != null) {
         try {
           replicateMethod = builderClass.getMethod("replicate");
-          LOG.debug("Using builder API via reflection for DFS file creation.");
+          LOG.debug("Using builder API via reflection for DFS file creation replicate flag.");
         } catch (NoSuchMethodException e) {
           LOG.debug("Could not find replicate method on builder; will not set replicate when"
             + " creating output stream", e);
@@ -759,7 +759,7 @@ public final class CommonFSUtils {
       if (builderClass != null) {
         try {
           noLocalWriteMethod = builderClass.getMethod("noLocalWrite");
-          LOG.debug("Using builder API via reflection for DFS file creation.");
+          LOG.debug("Using builder API via reflection for DFS file creation noLocalWrite flag.");
         } catch (NoSuchMethodException e) {
           LOG.debug("Could not find noLocalWrite method on builder; will not set noLocalWrite when"
             + " creating output stream", e);
@@ -773,23 +773,26 @@ public final class CommonFSUtils {
     /**
      * Attempt to use builder API via reflection to call the replicate method on the given builder.
      */
-    static void apply(FSDataOutputStreamBuilder<?, ?> builder, boolean noLocalWrite) {
-      if (BUILDER != null && BUILDER.isAssignableFrom(builder.getClass())) {
-        if (REPLICATE != null) {
-          try {
-            REPLICATE.invoke(builder);
-          } catch (IllegalAccessException | InvocationTargetException e) {
-            // Should have caught this failure during initialization, so log full trace here
-            LOG.warn("Couldn't use reflection with builder API", e);
-          }
+    static void replicate(FSDataOutputStreamBuilder<?, ?> builder) {
+      if (BUILDER != null && REPLICATE != null && BUILDER.isAssignableFrom(builder.getClass())) {
+        try {
+          REPLICATE.invoke(builder);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+          // Should have caught this failure during initialization, so log full trace here
+          LOG.warn("Couldn't use reflection with builder API", e);
         }
-        if (NO_LOCAL_WRITE != null) {
-          try {
-            NO_LOCAL_WRITE.invoke(builder);
-          } catch (IllegalAccessException | InvocationTargetException e) {
-            // Should have caught this failure during initialization, so log full trace here
-            LOG.warn("Couldn't use reflection with builder API", e);
-          }
+      }
+    }
+
+    static void noLocalWrite(FSDataOutputStreamBuilder<?, ?> builder) {
+      if (
+        BUILDER != null && NO_LOCAL_WRITE != null && BUILDER.isAssignableFrom(builder.getClass())
+      ) {
+        try {
+          NO_LOCAL_WRITE.invoke(builder);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+          // Should have caught this failure during initialization, so log full trace here
+          LOG.warn("Couldn't use reflection with builder API", e);
         }
       }
     }
@@ -804,7 +807,7 @@ public final class CommonFSUtils {
   public static FSDataOutputStream createForWal(FileSystem fs, Path path, boolean overwrite)
     throws IOException {
     FSDataOutputStreamBuilder<?, ?> builder = fs.createFile(path).overwrite(overwrite);
-    DfsBuilderUtility.apply(builder, false);
+    DfsBuilderUtility.replicate(builder);
     return builder.build();
   }
 
@@ -822,7 +825,10 @@ public final class CommonFSUtils {
     if (isRecursive) {
       builder.recursive();
     }
-    DfsBuilderUtility.apply(builder, noLocalWrite);
+    DfsBuilderUtility.replicate(builder);
+    if (noLocalWrite) {
+      DfsBuilderUtility.noLocalWrite(builder);
+    }
     return builder.build();
   }
 
