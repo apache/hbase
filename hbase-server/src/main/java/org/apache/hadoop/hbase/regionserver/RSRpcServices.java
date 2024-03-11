@@ -429,7 +429,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     private boolean fullRegionScan;
     private final String clientIPAndPort;
     private final String userName;
-    private final AtomicLong maxBlockBytesScanned = new AtomicLong(0);
+    private volatile long maxBlockBytesScanned = 0;
+    private volatile long prevBlockBytesScanned = 0;
+    private volatile long prevBlockBytesScannedDifference = 0;
 
     RegionScannerHolder(RegionScanner s, HRegion r, RpcCallback closeCallBack,
       RpcCallback shippedCallback, boolean needCursor, boolean fullRegionScan,
@@ -453,12 +455,20 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       return nextCallSeq.compareAndSet(currentSeq, currentSeq + 1);
     }
 
-    synchronized long getMaxBlockBytesScanned() {
-      return maxBlockBytesScanned.get();
+    long getMaxBlockBytesScanned() {
+      return maxBlockBytesScanned;
     }
 
-    synchronized void setMaxBlockBytesScanned(long blockBytesScanned) {
-      maxBlockBytesScanned.set(Math.max(getMaxBlockBytesScanned(), blockBytesScanned));
+    long getPrevBlockBytesScannedDifference() {
+      return prevBlockBytesScannedDifference;
+    }
+
+    void updateBlockBytesScanned(long blockBytesScanned) {
+      prevBlockBytesScannedDifference = blockBytesScanned - prevBlockBytesScanned;
+      prevBlockBytesScanned = blockBytesScanned;
+      if (blockBytesScanned > maxBlockBytesScanned) {
+        maxBlockBytesScanned = blockBytesScanned;
+      }
     }
 
     // Should be called only when we need to print lease expired messages otherwise
@@ -3494,7 +3504,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       if (rpcCall != null) {
         responseCellSize = rpcCall.getResponseCellSize();
         blockBytesScanned = rpcCall.getBlockBytesScanned();
-        rsh.setMaxBlockBytesScanned(blockBytesScanned);
+        rsh.updateBlockBytesScanned(blockBytesScanned);
       }
       region.getMetrics().updateScan();
       final MetricsRegionServer metricsRegionServer = server.getMetrics();
@@ -3599,7 +3609,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     OperationQuota quota;
     try {
       quota = getRpcQuotaManager().checkScanQuota(region, request, maxScannerResultSize,
-        rsh.getMaxBlockBytesScanned());
+        rsh.getMaxBlockBytesScanned(), rsh.getPrevBlockBytesScannedDifference());
     } catch (IOException e) {
       addScannerLeaseBack(lease);
       throw new ServiceException(e);

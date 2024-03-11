@@ -61,14 +61,17 @@ public interface OperationQuota {
   /**
    * Checks if it is possible to execute the scan. The quota will be estimated based on the
    * composition of the scan.
-   * @param scanRequest          the given scan operation
-   * @param maxScannerResultSize the maximum bytes to be returned by the scanner
-   * @param maxBlockBytesScanned the maximum bytes scanned in a single RPC call by the scanner
+   * @param scanRequest                     the given scan operation
+   * @param maxScannerResultSize            the maximum bytes to be returned by the scanner
+   * @param maxBlockBytesScanned            the maximum bytes scanned in a single RPC call by the
+   *                                        scanner
+   * @param prevBlockBytesScannedDifference the difference between BBS of the previous two next
+   *                                        calls
    * @throws RpcThrottlingException if the operation cannot be performed because RPC quota is
    *                                exceeded.
    */
   void checkScanQuota(ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
-    long maxBlockBytesScanned) throws RpcThrottlingException;
+    long maxBlockBytesScanned, long prevBlockBytesScannedDifference) throws RpcThrottlingException;
 
   /** Cleanup method on operation completion */
   void close();

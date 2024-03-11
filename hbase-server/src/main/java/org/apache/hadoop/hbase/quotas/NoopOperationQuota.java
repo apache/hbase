@@ -48,7 +48,7 @@ class NoopOperationQuota implements OperationQuota {
 
   @Override
   public void checkScanQuota(ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
-    long maxBlockBytesScanned) throws RpcThrottlingException {
+    long maxBlockBytesScanned, long prevBlockBytesScannedDifference) throws RpcThrottlingException {
     // no-op
   }
 

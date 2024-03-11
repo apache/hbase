@@ -159,16 +159,20 @@ public class RegionServerRpcQuotaManager {
    * available quota and to report the data/usage of the operation. This method is specific to scans
    * because estimating a scan's workload is more complicated than estimating the workload of a
    * get/put.
-   * @param region               the region where the operation will be performed
-   * @param scanRequest          the scan to be estimated against the quota
-   * @param maxScannerResultSize the maximum bytes to be returned by the scanner
-   * @param maxBlockBytesScanned the maximum bytes scanned in a single RPC call by the scanner
+   * @param region                          the region where the operation will be performed
+   * @param scanRequest                     the scan to be estimated against the quota
+   * @param maxScannerResultSize            the maximum bytes to be returned by the scanner
+   * @param maxBlockBytesScanned            the maximum bytes scanned in a single RPC call by the
+   *                                        scanner
+   * @param prevBlockBytesScannedDifference the difference between BBS of the previous two next
+   *                                        calls
    * @return the OperationQuota
    * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
   public OperationQuota checkScanQuota(final Region region,
     final ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
-    long maxBlockBytesScanned) throws IOException, RpcThrottlingException {
+    long maxBlockBytesScanned, long prevBlockBytesScannedDifference)
+    throws IOException, RpcThrottlingException {
     Optional<User> user = RpcServer.getRequestUser();
     UserGroupInformation ugi;
     if (user.isPresent()) {
@@ -181,7 +185,8 @@ public class RegionServerRpcQuotaManager {
 
     OperationQuota quota = getQuota(ugi, table, region.getMinBlockSizeBytes());
     try {
-      quota.checkScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned);
+      quota.checkScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned,
+        prevBlockBytesScannedDifference);
     } catch (RpcThrottlingException e) {
       LOG.debug("Throttling exception for user=" + ugi.getUserName() + " table=" + table + " scan="
         + scanRequest.getScannerId() + ": " + e.getMessage());

@@ -98,8 +98,9 @@ public class DefaultOperationQuota implements OperationQuota {
 
   @Override
   public void checkScanQuota(ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
-    long maxBlockBytesScanned) throws RpcThrottlingException {
-    updateEstimateConsumeScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned);
+    long maxBlockBytesScanned, long prevBlockBytesScannedDifference) throws RpcThrottlingException {
+    updateEstimateConsumeScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned,
+      prevBlockBytesScannedDifference);
     checkQuota(0, 1);
   }
 
@@ -198,41 +199,50 @@ public class DefaultOperationQuota implements OperationQuota {
 
   /**
    * Update estimate quota(read/write size/capacityUnits) which will be consumed
-   * @param scanRequest          the scan to be executed
-   * @param maxScannerResultSize the maximum bytes to be returned by the scanner
-   * @param maxBlockBytesScanned the maximum bytes scanned in a single RPC call by the scanner
+   * @param scanRequest                     the scan to be executed
+   * @param maxScannerResultSize            the maximum bytes to be returned by the scanner
+   * @param maxBlockBytesScanned            the maximum bytes scanned in a single RPC call by the
+   *                                        scanner
+   * @param prevBlockBytesScannedDifference the difference between BBS of the previous two next
+   *                                        calls
    */
   protected void updateEstimateConsumeScanQuota(ClientProtos.ScanRequest scanRequest,
-    long maxScannerResultSize, long maxBlockBytesScanned) {
+    long maxScannerResultSize, long maxBlockBytesScanned, long prevBlockBytesScannedDifference) {
     if (useResultSizeBytes) {
-      readConsumed = estimateConsume(OperationType.GET, 1, 1000);
+      readConsumed = estimateConsume(OperationType.SCAN, 1, 1000);
     } else {
-      /*
-       * Estimating scan workload is more complicated, and if we severely underestimate workloads
-       * then throttled clients will exhaust retries too quickly, and could saturate the RPC layer.
-       * We have access to the ScanRequest's nextCallSeq number, the maxScannerResultSize, and the
-       * maxBlockBytesScanned by every relevant Scanner#next call. With these inputs we can make a
-       * more informed estimate about the scan's workload.
-       */
-      long estimate;
-      if (scanRequest.getNextCallSeq() == 0) {
-        // start scanners with an optimistic 1 block IO estimate
-        // it is better to underestimate a large scan in the beginning
-        // than to overestimate, and block, a small scan
-        estimate = blockSizeBytes;
-      } else {
-        // scanner result sizes will be limited by quota availability, regardless of
-        // maxScannerResultSize. This means that we cannot safely assume that a long-running
-        // scan with a small maxBlockBytesScanned would not prefer to pull down
-        // a larger payload. So we should estimate with the assumption that long-running scans
-        // are appropriately configured to approach their maxScannerResultSize per RPC call
-        estimate =
-          Math.min(maxScannerResultSize, scanRequest.getNextCallSeq() * maxBlockBytesScanned);
-      }
+      long estimate = getScanReadConsumeEstimate(blockSizeBytes, scanRequest.getNextCallSeq(),
+        maxScannerResultSize, maxBlockBytesScanned, prevBlockBytesScannedDifference);
       readConsumed = Math.min(maxScanEstimate, estimate);
     }
 
     readCapacityUnitConsumed = calculateReadCapacityUnit(readConsumed);
+  }
+
+  protected static long getScanReadConsumeEstimate(long blockSizeBytes, long nextCallSeq,
+    long maxScannerResultSize, long maxBlockBytesScanned, long prevBlockBytesScannedDifference) {
+    /*
+     * Estimating scan workload is more complicated, and if we severely underestimate workloads then
+     * throttled clients will exhaust retries too quickly, and could saturate the RPC layer
+     */
+    if (nextCallSeq == 0) {
+      // start scanners with an optimistic 1 block IO estimate
+      // it is better to underestimate a large scan in the beginning
+      // than to overestimate, and block, a small scan
+      return blockSizeBytes;
+    }
+
+    boolean isWorkloadGrowing = prevBlockBytesScannedDifference > blockSizeBytes;
+    if (isWorkloadGrowing) {
+      // if nextCallSeq > 0 and the workload is growing then our estimate
+      // should consider that the workload may continue to increase
+      return Math.min(maxScannerResultSize, nextCallSeq * maxBlockBytesScanned);
+    } else {
+      // if nextCallSeq > 0 and the workload is shrinking or flat
+      // then our workload has likely plateaued. We can just rely on the existing
+      // maxBlockBytesScanned as our estimate in this case.
+      return maxBlockBytesScanned;
+    }
   }
 
   private long estimateConsume(final OperationType type, int numReqs, long avgSize) {

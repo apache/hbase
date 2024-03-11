@@ -57,11 +57,11 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
 
   @Override
   public void checkScanQuota(ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
-    long maxBlockBytesScanned) throws RpcThrottlingException {
-    Runnable estimateQuota =
-      () -> updateEstimateConsumeScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned);
-    CheckQuotaRunnable checkQuota =
-      () -> super.checkScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned);
+    long maxBlockBytesScanned, long prevBlockBytesScannedDifference) throws RpcThrottlingException {
+    Runnable estimateQuota = () -> updateEstimateConsumeScanQuota(scanRequest, maxScannerResultSize,
+      maxBlockBytesScanned, prevBlockBytesScannedDifference);
+    CheckQuotaRunnable checkQuota = () -> super.checkScanQuota(scanRequest, maxScannerResultSize,
+      maxBlockBytesScanned, prevBlockBytesScannedDifference);
     checkQuota(estimateQuota, checkQuota, 0, 1);
   }
 
