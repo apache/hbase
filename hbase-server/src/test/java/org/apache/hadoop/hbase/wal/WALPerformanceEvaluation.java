@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
+import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.trace.TraceUtil;
@@ -266,6 +267,9 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     // Internal config. goes off number of threads; if more threads than handlers, stuff breaks.
     // In regionserver, number of handlers == number of threads.
     getConf().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, numThreads);
+    // We do not need memstore here, so disable memstore lab, otherwise we need to initialize
+    // ChunkCreator
+    getConf().setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
 
     if (rootRegionDir == null) {
       TEST_UTIL = new HBaseTestingUtility(getConf());

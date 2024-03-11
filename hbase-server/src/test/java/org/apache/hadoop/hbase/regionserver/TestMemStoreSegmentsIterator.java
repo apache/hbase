@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -58,18 +57,17 @@ public class TestMemStoreSegmentsIterator {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMemStoreSegmentsIterator.class);
 
-  protected static String TABLE = "test_mscsi";
-  protected static String FAMILY = "f";
-  protected static String COLUMN = "c";
-  protected static String ROOT_SUB_PATH = "testMemStoreSegmentsIterator";
-  protected static long LESS_THAN_INTEGER_MAX_VALUE_SEQ_ID = Long.valueOf(Integer.MAX_VALUE) - 1;
-  protected static long GREATER_THAN_INTEGER_MAX_VALUE_SEQ_ID = Long.valueOf(Integer.MAX_VALUE) + 1;
+  private static String TABLE = "test_mscsi";
+  private static String FAMILY = "f";
+  private static String COLUMN = "c";
+  private static String ROOT_SUB_PATH = "testMemStoreSegmentsIterator";
+  private static long LESS_THAN_INTEGER_MAX_VALUE_SEQ_ID = Long.valueOf(Integer.MAX_VALUE) - 1;
+  private static long GREATER_THAN_INTEGER_MAX_VALUE_SEQ_ID = Long.valueOf(Integer.MAX_VALUE) + 1;
 
-  protected CellComparator comparator;
-  protected int compactionKVMax;
-  protected WAL wal;
-  protected HRegion region;
-  protected HStore store;
+  private CellComparator comparator;
+  private int compactionKVMax;
+  private HRegion region;
+  private HStore store;
 
   @Before
   public void setup() throws IOException {
@@ -80,9 +78,8 @@ public class TestMemStoreSegmentsIterator {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(TableName.valueOf(TABLE), null, null, false);
     Path rootPath = hbaseUtility.getDataTestDir(ROOT_SUB_PATH);
-    this.wal = hbaseUtility.createWal(conf, rootPath, info);
-    this.region = HRegion.createHRegion(info, rootPath, conf, htd, this.wal, true);
-    this.store = new HStore(this.region, hcd, conf, false);
+    this.region = HBaseTestingUtility.createRegionAndWAL(info, rootPath, conf, htd);
+    this.store = region.getStore(hcd.getName());
     this.comparator = CellComparator.getInstance();
     this.compactionKVMax = HConstants.COMPACTION_KV_MAX_DEFAULT;
   }
@@ -144,21 +141,8 @@ public class TestMemStoreSegmentsIterator {
   @After
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
-    if (store != null) {
-      try {
-        store.close();
-      } catch (IOException e) {
-      }
-      store = null;
-    }
     if (region != null) {
-      region.close();
-      region = null;
-    }
-
-    if (wal != null) {
-      wal.close();
-      wal = null;
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 }
