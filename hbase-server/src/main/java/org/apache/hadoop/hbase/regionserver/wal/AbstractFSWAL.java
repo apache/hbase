@@ -143,6 +143,10 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   public static final String RING_BUFFER_SLOT_COUNT =
     "hbase.regionserver.wal.disruptor.event.count";
 
+  public static final String WAL_AVOID_LOCAL_WRITES_KEY =
+    "hbase.regionserver.wal.avoid-local-writes";
+  public static final boolean WAL_AVOID_LOCAL_WRITES_DEFAULT = false;
+
   /**
    * file system instance
    */

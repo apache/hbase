@@ -733,6 +733,7 @@ public final class CommonFSUtils {
   private static final class DfsBuilderUtility {
     private static final Class<?> BUILDER;
     private static final Method REPLICATE;
+    private static final Method NO_LOCAL_WRITE;
 
     static {
       String builderName =
@@ -754,8 +755,19 @@ public final class CommonFSUtils {
             + " creating output stream", e);
         }
       }
+      Method noLocalWriteMethod = null;
+      if (builderClass != null) {
+        try {
+          replicateMethod = builderClass.getMethod("noLocalWrite");
+          LOG.debug("Using builder API via reflection for DFS file creation.");
+        } catch (NoSuchMethodException e) {
+          LOG.debug("Could not find noLocalWrite method on builder; will not set replicate when"
+            + " creating output stream", e);
+        }
+      }
       BUILDER = builderClass;
       REPLICATE = replicateMethod;
+      NO_LOCAL_WRITE = noLocalWriteMethod;
     }
 
     /**
@@ -765,6 +777,23 @@ public final class CommonFSUtils {
       if (BUILDER != null && REPLICATE != null && BUILDER.isAssignableFrom(builder.getClass())) {
         try {
           REPLICATE.invoke(builder);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+          // Should have caught this failure during initialization, so log full trace here
+          LOG.warn("Couldn't use reflection with builder API", e);
+        }
+      }
+    }
+
+    /**
+     * Attempt to use builder API via reflection to call the noLocalWrite method on the given
+     * builder.
+     */
+    static void noLocalWrite(FSDataOutputStreamBuilder<?, ?> builder) {
+      if (
+        BUILDER != null && NO_LOCAL_WRITE != null && BUILDER.isAssignableFrom(builder.getClass())
+      ) {
+        try {
+          NO_LOCAL_WRITE.invoke(builder);
         } catch (IllegalAccessException | InvocationTargetException e) {
           // Should have caught this failure during initialization, so log full trace here
           LOG.warn("Couldn't use reflection with builder API", e);
@@ -793,7 +822,8 @@ public final class CommonFSUtils {
    * Will not attempt to enable replication when passed an HFileSystem.
    */
   public static FSDataOutputStream createForWal(FileSystem fs, Path path, boolean overwrite,
-    int bufferSize, short replication, long blockSize, boolean isRecursive) throws IOException {
+    int bufferSize, short replication, long blockSize, boolean isRecursive, boolean noLocalWrite)
+    throws IOException {
     // temporary for use while we work on upgrading clients to hadoop3
     if (fs.getConf().getBoolean("use.legacy.hdfs.create.methods", false)) {
       if (isRecursive) {
@@ -808,6 +838,9 @@ public final class CommonFSUtils {
       builder.recursive();
     }
     DfsBuilderUtility.replicate(builder);
+    if (noLocalWrite) {
+      DfsBuilderUtility.noLocalWrite(builder);
+    }
     return builder.build();
   }
 
