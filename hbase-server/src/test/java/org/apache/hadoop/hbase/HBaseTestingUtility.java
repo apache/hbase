@@ -2043,6 +2043,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public HRegion createLocalHRegion(RegionInfo info, Configuration conf, TableDescriptor desc,
     WAL wal) throws IOException {
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     return HRegion.createHRegion(info, getDataTestDir(), conf, desc, wal);
   }
 
@@ -2056,6 +2058,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public HRegion createLocalHRegion(HRegionInfo info, Configuration conf, HTableDescriptor desc,
     WAL wal) throws IOException {
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     return HRegion.createHRegion(info, getDataTestDir(), conf, desc, wal);
   }
 

@@ -375,6 +375,15 @@ public abstract class AbstractMemStore implements MemStore {
     return snapshot;
   }
 
+  @Override
+  public void close() {
+    // active should never be null
+    active.close();
+    // for snapshot, either it is empty, where we do not reference any real segment which contains a
+    // memstore lab, or it is during snapshot, where we will clear it when calling clearSnapshot, so
+    // we do not need to close it here
+  }
+
   /** Returns an ordered list of segments from most recent to oldest in memstore */
   protected abstract List<Segment> getSegments() throws IOException;
 

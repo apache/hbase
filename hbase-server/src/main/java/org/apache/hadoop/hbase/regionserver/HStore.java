@@ -720,6 +720,7 @@ public class HStore
   }
 
   private ImmutableCollection<HStoreFile> closeWithoutLock() throws IOException {
+    memstore.close();
     // Clear so metrics doesn't find them.
     ImmutableCollection<HStoreFile> result = storeEngine.getStoreFileManager().clearFiles();
     Collection<HStoreFile> compactedfiles = storeEngine.getStoreFileManager().clearCompactedFiles();
