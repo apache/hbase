@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL.WAL_AVOID_LOCAL_WRITES_DEFAULT;
+import static org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL.WAL_AVOID_LOCAL_WRITES_KEY;
 import static org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufWALReader.DEFAULT_WAL_TRAILER_WARN_SIZE;
 import static org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufWALReader.PB_WAL_COMPLETE_MAGIC;
 import static org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufWALReader.PB_WAL_MAGIC;
@@ -163,8 +165,10 @@ public abstract class AbstractProtobufLogWriter {
       int bufferSize = CommonFSUtils.getDefaultBufferSize(fs);
       short replication = (short) conf.getInt("hbase.regionserver.hlog.replication",
         CommonFSUtils.getDefaultReplication(fs, path));
+      boolean noLocalWrite =
+        conf.getBoolean(WAL_AVOID_LOCAL_WRITES_KEY, WAL_AVOID_LOCAL_WRITES_DEFAULT);
 
-      initOutput(fs, path, overwritable, bufferSize, replication, blocksize, monitor);
+      initOutput(fs, path, overwritable, bufferSize, replication, blocksize, monitor, noLocalWrite);
 
       boolean doTagCompress =
         doCompress && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
@@ -253,7 +257,7 @@ public abstract class AbstractProtobufLogWriter {
   }
 
   protected abstract void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-    short replication, long blockSize, StreamSlowMonitor monitor)
+    short replication, long blockSize, StreamSlowMonitor monitor, boolean noLocalWrite)
     throws IOException, StreamLacksCapabilityException;
 
   /**
