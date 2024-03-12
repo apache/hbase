@@ -98,7 +98,7 @@ public class TestFanOutOneBlockAsyncDFSOutputHang extends AsyncFSTestBase {
     Path f = new Path("/testHang");
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     OUT = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true, false, (short) 2,
-      FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR);
+      FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR, true);
   }
 
   @AfterClass
