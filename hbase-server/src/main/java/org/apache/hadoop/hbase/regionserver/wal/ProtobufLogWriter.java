@@ -98,10 +98,10 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter implements FSHL
 
   @Override
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-    short replication, long blockSize, StreamSlowMonitor monitor)
+    short replication, long blockSize, StreamSlowMonitor monitor, boolean noLocalWrite)
     throws IOException, StreamLacksCapabilityException {
-    this.output =
-      CommonFSUtils.createForWal(fs, path, overwritable, bufferSize, replication, blockSize, false);
+    this.output = CommonFSUtils.createForWal(fs, path, overwritable, bufferSize, replication,
+      blockSize, noLocalWrite, false);
     if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true)) {
       if (!output.hasCapability(StreamCapabilities.HFLUSH)) {
         throw new StreamLacksCapabilityException(StreamCapabilities.HFLUSH);
