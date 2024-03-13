@@ -23,6 +23,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+
 /**
  * Noop operation quota returned when no quota is associated to the user/table
  */
@@ -40,7 +42,13 @@ class NoopOperationQuota implements OperationQuota {
   }
 
   @Override
-  public void checkQuota(int numWrites, int numReads, int numScans) throws RpcThrottlingException {
+  public void checkBatchQuota(int numWrites, int numReads) throws RpcThrottlingException {
+    // no-op
+  }
+
+  @Override
+  public void checkScanQuota(ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
+    long maxBlockBytesScanned, long prevBlockBytesScannedDifference) throws RpcThrottlingException {
     // no-op
   }
 
