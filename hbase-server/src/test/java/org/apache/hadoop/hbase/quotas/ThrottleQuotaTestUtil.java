@@ -152,22 +152,21 @@ public final class ThrottleQuotaTestUtil {
     return opCount;
   }
 
-  static long doScans(int maxOps, Table table) {
+  static long doScans(int desiredRows, Table table, int caching) {
     int count = 0;
-    int caching = 100;
     try {
       Scan scan = new Scan();
       scan.setCaching(caching);
       scan.setCacheBlocks(false);
       ResultScanner scanner = table.getScanner(scan);
-      while (count < (maxOps * caching)) {
+      while (count < desiredRows) {
         scanner.next();
         count += 1;
       }
     } catch (IOException e) {
       LOG.error("scan failed after nRetries=" + count, e);
     }
-    return count / caching;
+    return count;
   }
 
   static void triggerUserCacheRefresh(HBaseTestingUtility testUtil, boolean bypass,
