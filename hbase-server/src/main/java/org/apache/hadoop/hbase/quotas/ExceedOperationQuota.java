@@ -52,7 +52,7 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
   public void checkBatchQuota(int numWrites, int numReads) throws RpcThrottlingException {
     Runnable estimateQuota = () -> updateEstimateConsumeBatchQuota(numWrites, numReads);
     CheckQuotaRunnable checkQuota = () -> super.checkBatchQuota(numWrites, numReads);
-    checkQuota(estimateQuota, checkQuota, numWrites, numReads);
+    checkQuota(estimateQuota, checkQuota, numWrites, numReads, 0);
   }
 
   @Override
@@ -62,11 +62,11 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
       maxBlockBytesScanned, prevBlockBytesScannedDifference);
     CheckQuotaRunnable checkQuota = () -> super.checkScanQuota(scanRequest, maxScannerResultSize,
       maxBlockBytesScanned, prevBlockBytesScannedDifference);
-    checkQuota(estimateQuota, checkQuota, 0, 1);
+    checkQuota(estimateQuota, checkQuota, 0, 0, 1);
   }
 
   private void checkQuota(Runnable estimateQuota, CheckQuotaRunnable checkQuota, int numWrites,
-    int numReads) throws RpcThrottlingException {
+    int numReads, int numScans) throws RpcThrottlingException {
     if (regionServerLimiter.isBypass()) {
       // If region server limiter is bypass, which means no region server quota is set, check and
       // throttle by all other quotas. In this condition, exceed throttle quota will not work.
@@ -76,7 +76,7 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
       // 1. Update estimate quota which will be consumed
       estimateQuota.run();
       // 2. Check if region server limiter is enough. If not, throw RpcThrottlingException.
-      regionServerLimiter.checkQuota(numWrites, writeConsumed, numReads, readConsumed,
+      regionServerLimiter.checkQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
         writeCapacityUnitConsumed, readCapacityUnitConsumed);
       // 3. Check if other limiters are enough. If not, exceed other limiters because region server
       // limiter is enough.
@@ -86,19 +86,19 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
       } catch (RpcThrottlingException e) {
         exceed = true;
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Read/Write requests num exceeds quota: writes:0 reads:0, scans:1, "
-            + "try use region server quota");
+          LOG.debug("Read/Write requests num exceeds quota: writes:{} reads:{}, scans:{}, "
+            + "try use region server quota", numWrites, numReads, numScans);
         }
       }
       // 4. Region server limiter is enough and grab estimated consume quota.
       readAvailable = Math.max(readAvailable, regionServerLimiter.getReadAvailable());
-      regionServerLimiter.grabQuota(numWrites, writeConsumed, numReads, readConsumed,
+      regionServerLimiter.grabQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
         writeCapacityUnitConsumed, writeCapacityUnitConsumed);
       if (exceed) {
         // 5. Other quota limiter is exceeded and has not been grabbed (because throw
         // RpcThrottlingException in Step 3), so grab it.
         for (final QuotaLimiter limiter : limiters) {
-          limiter.grabQuota(numWrites, writeConsumed, numReads, readConsumed,
+          limiter.grabQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
             writeCapacityUnitConsumed, writeCapacityUnitConsumed);
         }
       }
