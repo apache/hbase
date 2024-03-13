@@ -486,6 +486,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
     private boolean fullRegionScan;
     private final String clientIPAndPort;
     private final String userName;
+    private volatile long maxBlockBytesScanned = 0;
+    private volatile long prevBlockBytesScanned = 0;
+    private volatile long prevBlockBytesScannedDifference = 0;
 
     RegionScannerHolder(RegionScanner s, HRegion r, RpcCallback closeCallBack,
       RpcCallback shippedCallback, boolean needCursor, boolean fullRegionScan,
@@ -507,6 +510,22 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
     boolean incNextCallSeq(long currentSeq) {
       // Use CAS to prevent multiple scan request running on the same scanner.
       return nextCallSeq.compareAndSet(currentSeq, currentSeq + 1);
+    }
+
+    long getMaxBlockBytesScanned() {
+      return maxBlockBytesScanned;
+    }
+
+    long getPrevBlockBytesScannedDifference() {
+      return prevBlockBytesScannedDifference;
+    }
+
+    void updateBlockBytesScanned(long blockBytesScanned) {
+      prevBlockBytesScannedDifference = blockBytesScanned - prevBlockBytesScanned;
+      prevBlockBytesScanned = blockBytesScanned;
+      if (blockBytesScanned > maxBlockBytesScanned) {
+        maxBlockBytesScanned = blockBytesScanned;
+      }
     }
 
     // Should be called only when we need to print lease expired messages otherwise
@@ -2551,7 +2570,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
       }
       Boolean existence = null;
       Result r = null;
-      quota = getRpcQuotaManager().checkQuota(region, OperationQuota.OperationType.GET);
+      quota = getRpcQuotaManager().checkBatchQuota(region, OperationQuota.OperationType.GET);
 
       Get clientGet = ProtobufUtil.toGet(get);
       if (get.getExistenceOnly() && region.getCoprocessorHost() != null) {
@@ -2753,7 +2772,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
 
       try {
         region = getRegion(regionSpecifier);
-        quota = getRpcQuotaManager().checkQuota(region, regionAction.getActionList(),
+        quota = getRpcQuotaManager().checkBatchQuota(region, regionAction.getActionList(),
           regionAction.hasCondition());
       } catch (IOException e) {
         failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner, e);
@@ -2805,7 +2824,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
 
       try {
         region = getRegion(regionSpecifier);
-        quota = getRpcQuotaManager().checkQuota(region, regionAction.getActionList(),
+        quota = getRpcQuotaManager().checkBatchQuota(region, regionAction.getActionList(),
           regionAction.hasCondition());
       } catch (IOException e) {
         failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner, e);
@@ -2962,7 +2981,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
       }
       long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
       OperationQuota.OperationType operationType = QuotaUtil.getQuotaOperationType(request);
-      quota = getRpcQuotaManager().checkQuota(region, operationType);
+      quota = getRpcQuotaManager().checkBatchQuota(region, operationType);
       ActivePolicyEnforcement spaceQuotaEnforcement =
         getSpaceQuotaManager().getActiveEnforcements();
 
@@ -3515,6 +3534,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
       if (rpcCall != null) {
         responseCellSize = rpcCall.getResponseCellSize();
         blockBytesScanned = rpcCall.getBlockBytesScanned();
+        rsh.updateBlockBytesScanned(blockBytesScanned);
       }
       region.getMetrics().updateScanTime(end - before);
       final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
@@ -3618,7 +3638,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
     }
     OperationQuota quota;
     try {
-      quota = getRpcQuotaManager().checkQuota(region, OperationQuota.OperationType.SCAN);
+      quota = getRpcQuotaManager().checkScanQuota(region, request, maxScannerResultSize,
+        rsh.getMaxBlockBytesScanned(), rsh.getPrevBlockBytesScannedDifference());
     } catch (IOException e) {
       addScannerLeaseBack(lease);
       throw new ServiceException(e);
