@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY;
-import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_ENABLE_DUAL_FILE_WRITER;
+import static org.apache.hadoop.hbase.regionserver.StoreFileWriter.DEFAULT_ENABLE_HISTORICAL_COMPACTION_FILES;
+import static org.apache.hadoop.hbase.regionserver.StoreFileWriter.ENABLE_HISTORICAL_COMPACTION_FILES;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -45,7 +45,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
  * Default implementation of StoreFileManager. Not thread-safe.
  */
 @InterfaceAudience.Private
-public class DefaultStoreFileManager implements StoreFileManager {
+class DefaultStoreFileManager implements StoreFileManager {
   private static final Logger LOG = LoggerFactory.getLogger(DefaultStoreFileManager.class);
 
   private final CellComparator cellComparator;
@@ -61,14 +61,14 @@ public class DefaultStoreFileManager implements StoreFileManager {
    * List of store files that include the latest cells inside this store. This is an immutable list
    * that is atomically replaced when its contents change.
    */
-  private volatile ImmutableList<HStoreFile> liveVersionStoreFiles = ImmutableList.of();
+  private volatile ImmutableList<HStoreFile> liveStoreFiles = ImmutableList.of();
   /**
    * List of compacted files inside this store that needs to be excluded in reads because further
    * new reads will be using only the newly created files out of compaction. These compacted files
    * will be deleted/cleared once all the existing readers on these compacted files are done.
    */
   private volatile ImmutableList<HStoreFile> compactedfiles = ImmutableList.of();
-  private final boolean enableLiveVersionFiles;
+  private final boolean enableLiveFileTracking;
 
   public DefaultStoreFileManager(CellComparator cellComparator,
     Comparator<HStoreFile> storeFileComparator, Configuration conf,
@@ -78,27 +78,26 @@ public class DefaultStoreFileManager implements StoreFileManager {
     this.comConf = comConf;
     this.blockingFileCount =
       conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
-    this.enableLiveVersionFiles = conf.getBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY,
-      DEFAULT_ENABLE_DUAL_FILE_WRITER);
+    this.enableLiveFileTracking = conf.getBoolean(ENABLE_HISTORICAL_COMPACTION_FILES,
+      DEFAULT_ENABLE_HISTORICAL_COMPACTION_FILES);
   }
 
-  private List<HStoreFile> getLiveVersionFiles(Collection<HStoreFile> storeFiles)
-    throws IOException {
-    List<HStoreFile> hasLiveVersionFiles = new ArrayList<>(storeFiles.size());
+  private List<HStoreFile> getLiveFiles(Collection<HStoreFile> storeFiles) throws IOException {
+    List<HStoreFile> liveFiles = new ArrayList<>(storeFiles.size());
     for (HStoreFile file : storeFiles) {
       file.initReader();
-      if (file.hasLiveVersion()) {
-        hasLiveVersionFiles.add(file);
+      if (!file.isHistorical()) {
+        liveFiles.add(file);
       }
     }
-    return hasLiveVersionFiles;
+    return liveFiles;
   }
 
   @Override
   public void loadFiles(List<HStoreFile> storeFiles) throws IOException {
-    if (enableLiveVersionFiles) {
-      this.liveVersionStoreFiles =
-        ImmutableList.sortedCopyOf(getStoreFileComparator(), getLiveVersionFiles(storeFiles));
+    if (enableLiveFileTracking) {
+      this.liveStoreFiles =
+        ImmutableList.sortedCopyOf(getStoreFileComparator(), getLiveFiles(storeFiles));
     }
     this.storefiles = ImmutableList.sortedCopyOf(storeFileComparator, storeFiles);
   }
@@ -115,9 +114,9 @@ public class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public void insertNewFiles(Collection<HStoreFile> sfs) throws IOException {
-    if (enableLiveVersionFiles) {
-      this.liveVersionStoreFiles = ImmutableList.sortedCopyOf(getStoreFileComparator(),
-        Iterables.concat(this.liveVersionStoreFiles, getLiveVersionFiles(sfs)));
+    if (enableLiveFileTracking) {
+      this.liveStoreFiles = ImmutableList.sortedCopyOf(getStoreFileComparator(),
+        Iterables.concat(this.liveStoreFiles, getLiveFiles(sfs)));
     }
     this.storefiles =
       ImmutableList.sortedCopyOf(storeFileComparator, Iterables.concat(this.storefiles, sfs));
@@ -125,8 +124,8 @@ public class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public ImmutableCollection<HStoreFile> clearFiles() {
-    if (enableLiveVersionFiles) {
-      liveVersionStoreFiles = ImmutableList.of();
+    if (enableLiveFileTracking) {
+      liveStoreFiles = ImmutableList.of();
     }
     ImmutableList<HStoreFile> result = storefiles;
     storefiles = ImmutableList.of();
@@ -153,11 +152,10 @@ public class DefaultStoreFileManager implements StoreFileManager {
   @Override
   public void addCompactionResults(Collection<HStoreFile> newCompactedfiles,
     Collection<HStoreFile> results) throws IOException {
-    if (enableLiveVersionFiles) {
-      this.liveVersionStoreFiles = ImmutableList.sortedCopyOf(storeFileComparator,
-        Iterables.concat(
-          Iterables.filter(liveVersionStoreFiles, sf -> !newCompactedfiles.contains(sf)),
-          getLiveVersionFiles(results)));
+    if (enableLiveFileTracking) {
+      this.liveStoreFiles = ImmutableList.sortedCopyOf(storeFileComparator,
+        Iterables.concat(Iterables.filter(liveStoreFiles, sf -> !newCompactedfiles.contains(sf)),
+          getLiveFiles(results)));
     }
     this.storefiles = ImmutableList.sortedCopyOf(storeFileComparator, Iterables
       .concat(Iterables.filter(storefiles, sf -> !newCompactedfiles.contains(sf)), results));
@@ -200,8 +198,8 @@ public class DefaultStoreFileManager implements StoreFileManager {
   @Override
   public Collection<HStoreFile> getFilesForScan(byte[] startRow, boolean includeStartRow,
     byte[] stopRow, boolean includeStopRow, boolean onlyLatestVersion) {
-    if (onlyLatestVersion && enableLiveVersionFiles) {
-      return liveVersionStoreFiles;
+    if (onlyLatestVersion && enableLiveFileTracking) {
+      return liveStoreFiles;
     }
     // We cannot provide any useful input and already have the files sorted by seqNum.
     return getStorefiles();

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY;
-import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_ENABLE_DUAL_FILE_WRITER;
+import static org.apache.hadoop.hbase.regionserver.StoreFileWriter.DEFAULT_ENABLE_HISTORICAL_COMPACTION_FILES;
+import static org.apache.hadoop.hbase.regionserver.StoreFileWriter.ENABLE_HISTORICAL_COMPACTION_FILES;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -147,12 +147,12 @@ public class CompactionConfiguration {
     minFilesToCompact = Math.max(2, conf.getInt(HBASE_HSTORE_COMPACTION_MIN_KEY,
       conf.getInt(HBASE_HSTORE_COMPACTION_MIN_KEY_OLD, 3)));
     if (
-      conf.getBoolean(DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY,
-        DEFAULT_ENABLE_DUAL_FILE_WRITER)
+      conf.getBoolean(ENABLE_HISTORICAL_COMPACTION_FILES,
+        DEFAULT_ENABLE_HISTORICAL_COMPACTION_FILES)
     ) {
-      // If DualFileWriter is enabled, we bump up the min value by one as DualFileWriter compacts
-      // files into two files, live and historical, instead of one. This also eliminates infinite
-      // re-compaction when the min value is set to 2
+      // If historical file writing is enabled, we bump up the min value by one as DualFileWriter
+      // compacts files into two files, live and historical, instead of one. This also eliminates
+      // infinite re-compaction when the min value is set to 2
       minFilesToCompact += 1;
     }
     maxFilesToCompact = conf.getInt(HBASE_HSTORE_COMPACTION_MAX_KEY, 10);

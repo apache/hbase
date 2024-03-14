@@ -537,7 +537,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         Bytes.equals(e.getKey(), HStoreFile.MAJOR_COMPACTION_KEY)
           || Bytes.equals(e.getKey(), HFileInfo.TAGS_COMPRESSED)
           || Bytes.equals(e.getKey(), HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY)
-          || Bytes.equals(e.getKey(), HStoreFile.HAS_LIVE_VERSIONS_KEY)
+          || Bytes.equals(e.getKey(), HStoreFile.HISTORICAL_KEY)
       ) {
         out.println(Bytes.toBoolean(e.getValue()));
       } else if (Bytes.equals(e.getKey(), HFileInfo.LASTKEY)) {

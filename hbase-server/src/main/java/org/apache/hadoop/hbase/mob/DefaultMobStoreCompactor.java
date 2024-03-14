@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CloseChecker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
-import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
+import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
@@ -74,7 +74,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.SetMultimap;
  * Compact passed set of files in the mob-enabled column family.
  */
 @InterfaceAudience.Private
-public class DefaultMobStoreCompactor extends Compactor<StoreFileWriter> {
+public class DefaultMobStoreCompactor extends DefaultCompactor {
 
   private static final Logger LOG = LoggerFactory.getLogger(DefaultMobStoreCompactor.class);
   protected long mobSizeThreshold;
@@ -172,6 +172,7 @@ public class DefaultMobStoreCompactor extends Compactor<StoreFileWriter> {
 
   }
 
+  @Override
   public List<Path> compact(CompactionRequestImpl request,
     ThroughputController throughputController, User user) throws IOException {
     String tableName = store.getTableName().toString();
@@ -714,19 +715,4 @@ public class DefaultMobStoreCompactor extends Compactor<StoreFileWriter> {
 
   }
 
-  @Override
-  protected final void abortWriter(StoreFileWriter writer) throws IOException {
-    Path leftoverFile = writer.getPath();
-    try {
-      writer.close();
-    } catch (IOException e) {
-      LOG.warn("Failed to close the writer after an unfinished compaction.", e);
-    }
-    try {
-      store.getFileSystem().delete(leftoverFile, false);
-    } catch (IOException e) {
-      LOG.warn("Failed to delete the leftover file {} after an unfinished compaction.",
-        leftoverFile, e);
-    }
-  }
 }
