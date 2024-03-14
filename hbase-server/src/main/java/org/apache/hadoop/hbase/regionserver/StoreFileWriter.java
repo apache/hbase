@@ -271,14 +271,10 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   }
 
   public void close() throws IOException {
-    LOG.info(
-      "closing liveFileWriter " + liveFileWriter.getPath() + " pos " + liveFileWriter.getPos());
     liveFileWriter.appendFileInfo(HISTORICAL_KEY, Bytes.toBytes(true));
     liveFileWriter.close();
     if (historicalFileWriter != null) {
       historicalFileWriter.appendFileInfo(HISTORICAL_KEY, Bytes.toBytes(false));
-      LOG.info("closing historicalFileWriter " + historicalFileWriter.getPath() + " pos "
-        + historicalFileWriter.getPos());
       historicalFileWriter.close();
     }
   }
