@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolic
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -45,16 +46,13 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
     "hbase.hstore.defaultengine.compactor.class";
   public static final String DEFAULT_COMPACTION_POLICY_CLASS_KEY =
     "hbase.hstore.defaultengine.compactionpolicy.class";
-  public static final String DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY =
-    "hbase.hstore.defaultengine.enable.dualfilewriter";
 
   private static final Class<? extends DefaultStoreFlusher> DEFAULT_STORE_FLUSHER_CLASS =
     DefaultStoreFlusher.class;
   private static final Class<? extends DefaultCompactor> DEFAULT_COMPACTOR_CLASS =
     DefaultCompactor.class;
-  public static final Class<? extends RatioBasedCompactionPolicy> DEFAULT_COMPACTION_POLICY_CLASS =
+  private static final Class<? extends RatioBasedCompactionPolicy> DEFAULT_COMPACTION_POLICY_CLASS =
     ExploringCompactionPolicy.class;
-  public static final boolean DEFAULT_ENABLE_DUAL_FILE_WRITER = false;
 
   @Override
   public boolean needsCompaction(List<HStoreFile> filesCompacting) {
@@ -72,17 +70,36 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
   }
 
   protected void createCompactor(Configuration conf, HStore store) throws IOException {
-    createCompactor(conf, store, DEFAULT_COMPACTOR_CLASS_KEY, DEFAULT_COMPACTOR_CLASS.getName());
+    String className = conf.get(DEFAULT_COMPACTOR_CLASS_KEY, DEFAULT_COMPACTOR_CLASS.getName());
+    try {
+      compactor = ReflectionUtils.instantiateWithCustomCtor(className,
+        new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
+    } catch (Exception e) {
+      throw new IOException("Unable to load configured compactor '" + className + "'", e);
+    }
   }
 
   protected void createCompactionPolicy(Configuration conf, HStore store) throws IOException {
-    createCompactionPolicy(conf, store, DEFAULT_COMPACTION_POLICY_CLASS_KEY,
-      DEFAULT_COMPACTION_POLICY_CLASS.getName());
+    String className =
+      conf.get(DEFAULT_COMPACTION_POLICY_CLASS_KEY, DEFAULT_COMPACTION_POLICY_CLASS.getName());
+    try {
+      compactionPolicy = ReflectionUtils.instantiateWithCustomCtor(className,
+        new Class[] { Configuration.class, StoreConfigInformation.class },
+        new Object[] { conf, store });
+    } catch (Exception e) {
+      throw new IOException("Unable to load configured compaction policy '" + className + "'", e);
+    }
   }
 
   protected void createStoreFlusher(Configuration conf, HStore store) throws IOException {
-    createStoreFlusher(conf, store, DEFAULT_STORE_FLUSHER_CLASS_KEY,
-      DEFAULT_STORE_FLUSHER_CLASS.getName());
+    String className =
+      conf.get(DEFAULT_STORE_FLUSHER_CLASS_KEY, DEFAULT_STORE_FLUSHER_CLASS.getName());
+    try {
+      storeFlusher = ReflectionUtils.instantiateWithCustomCtor(className,
+        new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
+    } catch (Exception e) {
+      throw new IOException("Unable to load configured store flusher '" + className + "'", e);
+    }
   }
 
   @Override

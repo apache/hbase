@@ -17,45 +17,40 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY;
-import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_ENABLE_DUAL_FILE_WRITER;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.regionserver.DualFileWriter;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Compact passed set of files. Create an instance and then call
  * {@link #compact(CompactionRequestImpl, ThroughputController, User)}
  */
 @InterfaceAudience.Private
-public class DefaultCompactor extends AbstractMultiOutputCompactor<DualFileWriter> {
+public class DefaultCompactor extends Compactor<StoreFileWriter> {
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultCompactor.class);
 
   public DefaultCompactor(Configuration conf, HStore store) {
     super(conf, store);
   }
 
-  private final CellSinkFactory<DualFileWriter> writerFactory =
-    new CellSinkFactory<DualFileWriter>() {
+  private final CellSinkFactory<StoreFileWriter> writerFactory =
+    new CellSinkFactory<StoreFileWriter>() {
       @Override
-      public DualFileWriter createWriter(InternalScanner scanner, FileDetails fd,
+      public StoreFileWriter createWriter(InternalScanner scanner, FileDetails fd,
         boolean shouldDropBehind, boolean major, Consumer<Path> writerCreationTracker)
         throws IOException {
-        boolean enableDualFileWriter = conf.getBoolean(
-          DEFAULT_COMPACTION_ENABLE_DUAL_FILE_WRITER_KEY, DEFAULT_ENABLE_DUAL_FILE_WRITER);
-        DualFileWriter writer = new DualFileWriter(store.getComparator(),
-          store.getColumnFamilyDescriptor().getMaxVersions(), enableDualFileWriter,
-          store.getColumnFamilyDescriptor().isNewVersionBehavior());
-        initMultiWriter(writer, scanner, fd, shouldDropBehind, major, writerCreationTracker);
-        return writer;
+        return DefaultCompactor.this.createWriter(fd, shouldDropBehind, major,
+          writerCreationTracker);
       }
     };
 
@@ -67,10 +62,31 @@ public class DefaultCompactor extends AbstractMultiOutputCompactor<DualFileWrite
     return compact(request, defaultScannerFactory, writerFactory, throughputController, user);
   }
 
-  protected List<Path> commitWriter(DualFileWriter writer, FileDetails fd,
+  @Override
+  protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,
     CompactionRequestImpl request) throws IOException {
-    List<Path> pathList =
-      writer.commitWriters(fd.maxSeqId, request.isAllFiles(), request.getFiles());
-    return pathList;
+    List<Path> newFiles = writer.getPaths();
+    writer.appendMetadata(fd.maxSeqId, request.isAllFiles(), request.getFiles());
+    writer.close();
+    return newFiles;
   }
+
+  @Override
+  protected final void abortWriter(StoreFileWriter writer) throws IOException {
+    List<Path> leftoverFiles = writer.getPaths();
+    try {
+      writer.close();
+    } catch (IOException e) {
+      LOG.warn("Failed to close the writer after an unfinished compaction.", e);
+    }
+    try {
+      for (Path path : leftoverFiles) {
+        store.getFileSystem().delete(path, false);
+      }
+    } catch (IOException e) {
+      LOG.warn("Failed to delete the leftover file {} after an unfinished compaction.",
+        leftoverFiles, e);
+    }
+  }
+
 }

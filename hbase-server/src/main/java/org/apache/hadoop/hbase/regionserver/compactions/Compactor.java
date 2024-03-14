@@ -105,7 +105,7 @@ public abstract class Compactor<T extends CellSink> {
     Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
 
   // TODO: depending on Store is not good but, realistically, all compactors currently do.
-  protected Compactor(Configuration conf, HStore store) {
+  Compactor(Configuration conf, HStore store) {
     this.conf = conf;
     this.store = store;
     this.compactionKVMax =
