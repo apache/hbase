@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.regionserver.StoreFileWriter.DEFAULT_ENABLE_HISTORICAL_COMPACTION_FILES;
-import static org.apache.hadoop.hbase.regionserver.StoreFileWriter.ENABLE_HISTORICAL_COMPACTION_FILES;
+import static org.apache.hadoop.hbase.regionserver.StoreFileWriter.shouldEnableHistoricalCompactionFiles;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -78,8 +77,7 @@ class DefaultStoreFileManager implements StoreFileManager {
     this.comConf = comConf;
     this.blockingFileCount =
       conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
-    this.enableLiveFileTracking = conf.getBoolean(ENABLE_HISTORICAL_COMPACTION_FILES,
-      DEFAULT_ENABLE_HISTORICAL_COMPACTION_FILES);
+    this.enableLiveFileTracking = shouldEnableHistoricalCompactionFiles(conf);
   }
 
   private List<HStoreFile> getLiveFiles(Collection<HStoreFile> storeFiles) throws IOException {
