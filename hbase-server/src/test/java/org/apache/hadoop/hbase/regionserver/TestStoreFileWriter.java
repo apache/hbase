@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -84,6 +85,8 @@ public class TestStoreFileWriter {
   private HRegion[] regions = new HRegion[2];
   private final byte[][] qualifiers =
     { Bytes.toBytes("0"), Bytes.toBytes("1"), Bytes.toBytes("2") };
+  // This keeps track of all cells. It is a list of rows, each row is a list of columns, each
+  // column is a list of CellInfo object
   private ArrayList<ArrayList<ArrayList<CellInfo>>> insertedCells;
   private TableName[] tableName = new TableName[2];
   private final Configuration conf = testUtil.getConfiguration();
@@ -97,10 +100,13 @@ public class TestStoreFileWriter {
   @Parameterized.Parameters(name = "keepDeletedCells={0}, maxVersions={1}")
   public static synchronized Collection<Object[]> data() {
     return Arrays.asList(new Object[][] { { KeepDeletedCells.FALSE, 1 },
-      { KeepDeletedCells.FALSE, 2 }, { KeepDeletedCells.FALSE, 2 }, { KeepDeletedCells.TRUE, 1 },
+      { KeepDeletedCells.FALSE, 2 }, { KeepDeletedCells.FALSE, 3 }, { KeepDeletedCells.TRUE, 1 },
       { KeepDeletedCells.TRUE, 2 }, { KeepDeletedCells.TRUE, 3 } });
   }
 
+  // In memory representation of a cell. We only need to know timestamp and type field for our
+  // testing for cell. Please note the row for the cell is implicit in insertedCells. The fied
+  // flushCount is only for debugging
   private static class CellInfo {
     long timestamp;
     Cell.Type type;
@@ -128,6 +134,8 @@ public class TestStoreFileWriter {
   @Before
   public void setUp() throws Exception {
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY, 6);
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+      String.valueOf(MemoryCompactionPolicy.NONE));
     testUtil.startMiniCluster();
     createTable(0, false);
     createTable(1, true);
@@ -152,7 +160,7 @@ public class TestStoreFileWriter {
     scan.readAllVersions();
 
     for (int i = 0; i < 10; i++) {
-      putRows(ROW_NUM / 2);
+      insertRows(ROW_NUM * maxVersions);
       deleteRows(ROW_NUM / 8);
       deleteRowVersions(ROW_NUM / 8);
       deleteColumns(ROW_NUM / 8);
@@ -196,7 +204,7 @@ public class TestStoreFileWriter {
     String phase) throws Exception {
     scan.setRaw(false);
     LOG.info("[" + phase + "] Live cell count expected: " + expectedLiveCellCount + " actual: "
-      + scanAndVerifyAndCountCells(regions[0]));
+      + scanAndVerifyAndCountLiveCells(regions[0]));
     scan.setRaw(true);
     LOG.info("[" + phase + "] All cell count expected: " + expectedAllCellCount + " actual: "
       + scanAndCompareAndCountCells(regions[0], regions[1], scan));
@@ -237,6 +245,18 @@ public class TestStoreFileWriter {
       for (int q = 0; q < qualifiers.length; q++) {
         count += insertedCells.get(r).get(q).size();
       }
+      // For simplicity, the family delete markers are inserted for all columns instead of
+      // allocating a separate column for them. So we need to adjust the count
+      for (int q = 1; q < qualifiers.length; q++) {
+        for (CellInfo cellInfo : insertedCells.get(r).get(q)) {
+          if (
+            cellInfo.type == Cell.Type.DeleteFamily
+              || cellInfo.type == Cell.Type.DeleteFamilyVersion
+          ) {
+            count--;
+          }
+        }
+      }
     }
     return count;
   }
@@ -263,7 +283,7 @@ public class TestStoreFileWriter {
     return maxTimestamp;
   }
 
-  private void putRows(int rowCount) throws Exception {
+  private void insertRows(int rowCount) throws Exception {
     int row;
     long timestamp = System.currentTimeMillis();
     for (int r = 0; r < rowCount; r++) {
@@ -294,6 +314,9 @@ public class TestStoreFileWriter {
       Delete delete = new Delete(Bytes.toBytes(String.valueOf(row)));
       regions[0].delete(delete);
       regions[1].delete(delete);
+      // For simplicity, the family delete markers are inserted for all columns (instead of
+      // allocating a separate column for them) in the memory representation of the data stored
+      // to HBase
       for (int q = 0; q < qualifiers.length; q++) {
         insertedCells.get(row).get(q)
           .add(new CellInfo(timestamp, Cell.Type.DeleteFamily, flushCount));
@@ -306,6 +329,9 @@ public class TestStoreFileWriter {
     delete.addFamilyVersion(HBaseTestingUtil.fam1, timestamp);
     regions[0].delete(delete);
     regions[1].delete(delete);
+    // For simplicity, the family delete version markers are inserted for all columns (instead of
+    // allocating a separate column for them) in the memory representation of the data stored
+    // to HBase
     for (int q = 0; q < qualifiers.length; q++) {
       insertedCells.get(row).get(q)
         .add(new CellInfo(timestamp, Cell.Type.DeleteFamilyVersion, flushCount));
@@ -369,6 +395,8 @@ public class TestStoreFileWriter {
       if (cellInfo.type == Cell.Type.Put) {
         if (previousDeleteVersionCellInfo != null) {
           if (previousDeleteVersionCellInfo.timestamp != cellInfo.timestamp) {
+            // Delete marker for this column is superfluous as its timestamp does not match with
+            // the next put cell
             previousDeleteVersionCellInfo = null;
             currentVersion++;
             if (currentVersion == version) {
@@ -392,7 +420,7 @@ public class TestStoreFileWriter {
     return -1;
   }
 
-  private int scanAndVerifyAndCountCells(HRegion region) throws Exception {
+  private int scanAndVerifyAndCountLiveCells(HRegion region) throws Exception {
     int cellCount = 0;
     Scan scan = new Scan();
     scan.readAllVersions();
