@@ -69,8 +69,8 @@ import org.slf4j.LoggerFactory;
  * hbase.enable.historical.compaction.files). The test maintains the information about cells
  * inserted in memory and compares in memory state with the state on disk. The mismatches are
  * currently logged only now instead of asserting on them as the test finds inconsistencies. These
- * inconsistencies (data integrity issues) are due to mishandling of version delete markers
- * currently in HBase (see HBASE-XXXXXX).
+ * inconsistencies (data integrity issues) were due to mishandling of version delete markers in
+ * HBase at the time this test is introduced.
  */
 @Category({ MediumTests.class, RegionServerTests.class })
 @RunWith(Parameterized.class)

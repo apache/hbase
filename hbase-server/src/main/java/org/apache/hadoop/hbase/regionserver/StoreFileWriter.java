@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_PARAM_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_TYPE_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.COMPACTION_EVENT_KEY;
@@ -28,6 +29,7 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAX_SEQ_ID_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_CELLS_COUNT;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_FILE_REFS;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
+import static org.apache.hadoop.hbase.regionserver.StoreEngine.STORE_ENGINE_CLASS_KEY;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -58,6 +60,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.util.BloomContext;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
@@ -154,6 +157,15 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     this.newVersionBehavior = newVersionBehavior;
     liveFileWriter = new SingleStoreFileWriter(fs, liveFilePath, conf, cacheConf, bloomType,
       maxKeys, favoredNodes, fileContext, shouldDropCacheBehind, compactedFilesSupplier);
+  }
+
+  public static boolean shouldEnableHistoricalCompactionFiles(Configuration conf) {
+    return conf.getBoolean(ENABLE_HISTORICAL_COMPACTION_FILES,
+      DEFAULT_ENABLE_HISTORICAL_COMPACTION_FILES)
+      && conf.get(STORE_ENGINE_CLASS_KEY, DefaultStoreEngine.class.getName())
+        .equals(DefaultStoreEngine.class.getName())
+      && conf.get(DEFAULT_COMPACTOR_CLASS_KEY, DefaultCompactor.class.getName())
+        .equals(DefaultCompactor.class.getName());
   }
 
   public long getPos() throws IOException {
@@ -969,15 +981,8 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         }
       }
 
-      if (
-        isCompaction && conf.getBoolean(ENABLE_HISTORICAL_COMPACTION_FILES,
-          DEFAULT_ENABLE_HISTORICAL_COMPACTION_FILES)
-      ) {
+      if (isCompaction && shouldEnableHistoricalCompactionFiles(conf)) {
         historicalFilePath = getUniqueFile(fs, dir);
-        LOG.info("Dual file compaction is enabled liveFilePath " + liveFilePath
-          + " historicalFilePath " + historicalFilePath);
-      } else {
-        LOG.info("Dual file compaction is not enabled liveFilePath " + liveFilePath);
       }
 
       // make sure we call this before actually create the writer
