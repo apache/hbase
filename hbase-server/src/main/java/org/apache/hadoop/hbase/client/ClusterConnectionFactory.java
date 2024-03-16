@@ -64,7 +64,7 @@ public final class ClusterConnectionFactory {
    */
   public static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
     SocketAddress localAddress, User user) throws IOException {
-    return createAsyncClusterConnection(conf, ConnectionRegistryFactory.getRegistry(conf, user),
+    return createAsyncClusterConnection(conf, ConnectionRegistryFactory.create(conf, user),
       localAddress, user);
   }
 
