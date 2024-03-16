@@ -283,10 +283,10 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   }
 
   public void close() throws IOException {
-    liveFileWriter.appendFileInfo(HISTORICAL_KEY, Bytes.toBytes(true));
+    liveFileWriter.appendFileInfo(HISTORICAL_KEY, Bytes.toBytes(false));
     liveFileWriter.close();
     if (historicalFileWriter != null) {
-      historicalFileWriter.appendFileInfo(HISTORICAL_KEY, Bytes.toBytes(false));
+      historicalFileWriter.appendFileInfo(HISTORICAL_KEY, Bytes.toBytes(true));
       historicalFileWriter.close();
     }
   }
@@ -438,6 +438,10 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         } else {
           // It is deleted
           getHistoricalFileWriter().append(cell);
+          if (newVersionBehavior) {
+            // Deleted versions are considered toward total version count when newVersionBehavior
+            livePutCellCount++;
+          }
         }
       } else {
         // It is an older put cell
