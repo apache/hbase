@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.NEW_VERSION_BEHAVIOR;
 import static org.apache.hadoop.hbase.regionserver.StoreFileWriter.ENABLE_HISTORICAL_COMPACTION_FILES;
 import static org.junit.Assert.assertEquals;
 
@@ -51,8 +52,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Store file writer does not do any compaction. Each cell written to either the live or historical
@@ -66,11 +65,7 @@ import org.slf4j.LoggerFactory;
  * regular and raw scans. Then the same verification is done after tables are minor and finally
  * major compacted. The test also verifies that flushes do not generate historical files and the
  * historical files are generated only when historical file generation is enabled (by the config
- * hbase.enable.historical.compaction.files). The test maintains the information about cells
- * inserted in memory and compares in memory state with the state on disk. The mismatches are
- * currently logged only now instead of asserting on them as the test finds inconsistencies. These
- * inconsistencies (data integrity issues) were due to mishandling of version delete markers in
- * HBase at the time this test is introduced.
+ * hbase.enable.historical.compaction.files).
  */
 @Category({ MediumTests.class, RegionServerTests.class })
 @RunWith(Parameterized.class)
@@ -78,7 +73,6 @@ public class TestStoreFileWriter {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestStoreFileWriter.class);
-  private static final Logger LOG = LoggerFactory.getLogger(RegionScannerImpl.class);
   private final int ROW_NUM = 100;
   private final Random RANDOM = new Random(11);
   private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
@@ -96,26 +90,26 @@ public class TestStoreFileWriter {
   public KeepDeletedCells keepDeletedCells;
   @Parameterized.Parameter(1)
   public int maxVersions;
+  @Parameterized.Parameter(2)
+  public boolean newVersionBehavior;
 
-  @Parameterized.Parameters(name = "keepDeletedCells={0}, maxVersions={1}")
+  @Parameterized.Parameters(name = "keepDeletedCells={0}, maxVersions={1}, newVersionBehavior={2}")
   public static synchronized Collection<Object[]> data() {
-    return Arrays.asList(new Object[][] { { KeepDeletedCells.FALSE, 1 },
-      { KeepDeletedCells.FALSE, 2 }, { KeepDeletedCells.FALSE, 3 }, { KeepDeletedCells.TRUE, 1 },
-      { KeepDeletedCells.TRUE, 2 }, { KeepDeletedCells.TRUE, 3 } });
+    return Arrays.asList(
+      new Object[][] { { KeepDeletedCells.FALSE, 1, true }, { KeepDeletedCells.FALSE, 2, false },
+        { KeepDeletedCells.FALSE, 3, true }, { KeepDeletedCells.TRUE, 1, false },
+        { KeepDeletedCells.TRUE, 2, true }, { KeepDeletedCells.TRUE, 3, false } });
   }
 
   // In memory representation of a cell. We only need to know timestamp and type field for our
-  // testing for cell. Please note the row for the cell is implicit in insertedCells. The fied
-  // flushCount is only for debugging
+  // testing for cell. Please note the row for the cell is implicit in insertedCells.
   private static class CellInfo {
     long timestamp;
     Cell.Type type;
-    int flushCount;
 
-    CellInfo(long timestamp, Cell.Type type, int flushCount) {
+    CellInfo(long timestamp, Cell.Type type) {
       this.timestamp = timestamp;
       this.type = type;
-      this.flushCount = flushCount;
     }
   }
 
@@ -123,7 +117,8 @@ public class TestStoreFileWriter {
     tableName[index] = TableName.valueOf(getClass().getSimpleName() + "_" + index);
     ColumnFamilyDescriptor familyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(HBaseTestingUtil.fam1).setMaxVersions(maxVersions)
-        .setKeepDeletedCells(keepDeletedCells).build();
+        .setKeepDeletedCells(keepDeletedCells)
+        .setValue(NEW_VERSION_BEHAVIOR, Boolean.toString(newVersionBehavior)).build();
     TableDescriptorBuilder builder =
       TableDescriptorBuilder.newBuilder(tableName[index]).setColumnFamily(familyDescriptor)
         .setValue(ENABLE_HISTORICAL_COMPACTION_FILES, Boolean.toString(enableDualFileWriter));
@@ -156,9 +151,6 @@ public class TestStoreFileWriter {
 
   @Test
   public void testCompactedFiles() throws Exception {
-    Scan scan = new Scan();
-    scan.readAllVersions();
-
     for (int i = 0; i < 10; i++) {
       insertRows(ROW_NUM * maxVersions);
       deleteRows(ROW_NUM / 8);
@@ -168,7 +160,7 @@ public class TestStoreFileWriter {
       flushRegion();
     }
 
-    verifyCells(scan, getLiveCellCount(), getAllCellCount(), "Flush");
+    verifyCells();
 
     HStore[] stores = new HStore[2];
 
@@ -186,7 +178,7 @@ public class TestStoreFileWriter {
     assertEquals(flushCount - stores[1].getCompactedFiles().size() + 2,
       stores[1].getStorefilesCount());
 
-    verifyCells(scan, getLiveCellCount(), getAllCellCount(), "Minor Compaction");
+    verifyCells();
 
     regions[0].compact(true);
     assertEquals(1, stores[0].getStorefilesCount());
@@ -195,70 +187,12 @@ public class TestStoreFileWriter {
     assertEquals(keepDeletedCells == KeepDeletedCells.FALSE ? 1 : 2,
       stores[1].getStorefilesCount());
 
-    verifyCells(scan, getLiveCellCount(),
-      keepDeletedCells == KeepDeletedCells.FALSE ? getLiveCellCount() : getAllCellCount(),
-      "Major Compaction");
+    verifyCells();
   }
 
-  private void verifyCells(Scan scan, int expectedLiveCellCount, int expectedAllCellCount,
-    String phase) throws Exception {
-    scan.setRaw(false);
-    LOG.info("[" + phase + "] Live cell count expected: " + expectedLiveCellCount + " actual: "
-      + scanAndVerifyAndCountLiveCells(regions[0]));
-    scan.setRaw(true);
-    LOG.info("[" + phase + "] All cell count expected: " + expectedAllCellCount + " actual: "
-      + scanAndCompareAndCountCells(regions[0], regions[1], scan));
-  }
-
-  private int getLiveCellCount(int row, int q) {
-    int count = 0;
-    List<CellInfo> cellTypeList = insertedCells.get(row).get(q);
-    for (int version = 1; version <= maxVersions; version++) {
-      if (getPutCellTimestamp(cellTypeList, version) != -1) {
-        count++;
-      } else {
-        break;
-      }
-    }
-    return count;
-  }
-
-  private int getLiveCellCount(int row) {
-    int count = 0;
-    for (int q = 0; q < qualifiers.length; q++) {
-      count += getLiveCellCount(row, q);
-    }
-    return count;
-  }
-
-  private int getLiveCellCount() {
-    int count = 0;
-    for (int r = 0; r < ROW_NUM; r++) {
-      count += getLiveCellCount(r);
-    }
-    return count;
-  }
-
-  private int getAllCellCount() {
-    int count = 0;
-    for (int r = 0; r < ROW_NUM; r++) {
-      for (int q = 0; q < qualifiers.length; q++) {
-        count += insertedCells.get(r).get(q).size();
-      }
-      // For simplicity, the family delete markers are inserted for all columns instead of
-      // allocating a separate column for them. So we need to adjust the count
-      for (int q = 1; q < qualifiers.length; q++) {
-        for (CellInfo cellInfo : insertedCells.get(r).get(q)) {
-          if (
-            cellInfo.type == Cell.Type.DeleteFamily
-              || cellInfo.type == Cell.Type.DeleteFamilyVersion
-          ) {
-            count--;
-          }
-        }
-      }
-    }
-    return count;
+  private void verifyCells() throws Exception {
+    scanAndCompare(false);
+    scanAndCompare(true);
   }
 
   private void flushRegion() throws Exception {
@@ -283,6 +217,16 @@ public class TestStoreFileWriter {
     return maxTimestamp;
   }
 
+  private long getNewTimestamp(long timestamp) throws Exception {
+    long newTimestamp = System.currentTimeMillis();
+    if (timestamp == newTimestamp) {
+      Thread.sleep(1);
+      newTimestamp = System.currentTimeMillis();
+      assert (timestamp < newTimestamp);
+    }
+    return newTimestamp;
+  }
+
   private void insertRows(int rowCount) throws Exception {
     int row;
     long timestamp = System.currentTimeMillis();
@@ -292,17 +236,11 @@ public class TestStoreFileWriter {
       for (int q = 0; q < qualifiers.length; q++) {
         put.addColumn(HBaseTestingUtil.fam1, qualifiers[q],
           Bytes.toBytes(String.valueOf(timestamp)));
-        insertedCells.get(row).get(q).add(new CellInfo(timestamp, Cell.Type.Put, flushCount));
+        insertedCells.get(row).get(q).add(new CellInfo(timestamp, Cell.Type.Put));
       }
       regions[0].put(put);
       regions[1].put(put);
-      long newTimestamp = System.currentTimeMillis();
-      if (timestamp == newTimestamp) {
-        Thread.sleep(1);
-        newTimestamp = System.currentTimeMillis();
-        assert (timestamp < newTimestamp);
-      }
-      timestamp = newTimestamp;
+      timestamp = getNewTimestamp(timestamp);
     }
   }
 
@@ -318,8 +256,7 @@ public class TestStoreFileWriter {
       // allocating a separate column for them) in the memory representation of the data stored
       // to HBase
       for (int q = 0; q < qualifiers.length; q++) {
-        insertedCells.get(row).get(q)
-          .add(new CellInfo(timestamp, Cell.Type.DeleteFamily, flushCount));
+        insertedCells.get(row).get(q).add(new CellInfo(timestamp, Cell.Type.DeleteFamily));
       }
     }
   }
@@ -333,8 +270,7 @@ public class TestStoreFileWriter {
     // allocating a separate column for them) in the memory representation of the data stored
     // to HBase
     for (int q = 0; q < qualifiers.length; q++) {
-      insertedCells.get(row).get(q)
-        .add(new CellInfo(timestamp, Cell.Type.DeleteFamilyVersion, flushCount));
+      insertedCells.get(row).get(q).add(new CellInfo(timestamp, Cell.Type.DeleteFamilyVersion));
     }
   }
 
@@ -362,8 +298,7 @@ public class TestStoreFileWriter {
       delete.addColumns(HBaseTestingUtil.fam1, qualifiers[q], timestamp);
       regions[0].delete(delete);
       regions[1].delete(delete);
-      insertedCells.get(row).get(q)
-        .add(new CellInfo(timestamp, Cell.Type.DeleteColumn, flushCount));
+      insertedCells.get(row).get(q).add(new CellInfo(timestamp, Cell.Type.DeleteColumn));
     }
   }
 
@@ -378,92 +313,21 @@ public class TestStoreFileWriter {
         delete.addColumn(HBaseTestingUtil.fam1, qualifiers[q], timestamp);
         regions[0].delete(delete);
         regions[1].delete(delete);
-        insertedCells.get(row).get(q).add(new CellInfo(timestamp, Cell.Type.Delete, flushCount));
+        insertedCells.get(row).get(q).add(new CellInfo(timestamp, Cell.Type.Delete));
       }
     }
   }
 
-  private long getPutCellTimestamp(List<CellInfo> cellList, int version) {
-    if (cellList.isEmpty()) {
-      return -1;
-    }
-    int currentVersion = 0;
-    CellInfo previousDeleteVersionCellInfo = null;
-    int size = cellList.size();
-    for (int i = size - 1; i >= 0; i--) {
-      CellInfo cellInfo = cellList.get(i);
-      if (cellInfo.type == Cell.Type.Put) {
-        if (previousDeleteVersionCellInfo != null) {
-          if (previousDeleteVersionCellInfo.timestamp != cellInfo.timestamp) {
-            // Delete marker for this column is superfluous as its timestamp does not match with
-            // the next put cell
-            previousDeleteVersionCellInfo = null;
-            currentVersion++;
-            if (currentVersion == version) {
-              return cellInfo.timestamp;
-            }
-          }
-          // Skip this cell as it is deleted by a family version delete marker
-        } else {
-          currentVersion++;
-          if (currentVersion == version) {
-            return cellInfo.timestamp;
-          }
-        }
-      } else
-        if (cellInfo.type == Cell.Type.DeleteFamily || cellInfo.type == Cell.Type.DeleteColumn) {
-          return -1;
-        } else {
-          previousDeleteVersionCellInfo = cellInfo;
-        }
-    }
-    return -1;
-  }
-
-  private int scanAndVerifyAndCountLiveCells(HRegion region) throws Exception {
-    int cellCount = 0;
+  private Scan createScan(boolean raw) {
     Scan scan = new Scan();
     scan.readAllVersions();
-
-    try (RegionScanner regionScanner = region.getScanner(scan)) {
-      boolean hasMore;
-      do {
-        List<Cell> rowList = new ArrayList<>();
-        hasMore = regionScanner.nextRaw(rowList);
-        cellCount += rowList.size();
-        int previousColumn = -1;
-        int version = 1;
-        int row = 0;
-        for (Cell cell : rowList) {
-          row = Integer.valueOf(Bytes.toString(CellUtil.cloneRow(cell)));
-          int q = Integer.valueOf(Bytes.toString(CellUtil.cloneQualifier(cell)));
-          if (q == previousColumn) {
-            version++;
-          } else {
-            previousColumn = q;
-            version = 1;
-          }
-          long expected = getPutCellTimestamp(insertedCells.get(row).get(q), version);
-          long actual = cell.getTimestamp();
-          if (expected != actual) {
-            LOG.info("Row: " + row + " qualifier: " + q + " cell timestamp expected: " + expected
-              + " actual: " + actual);
-          }
-        }
-        if (!rowList.isEmpty() && rowList.size() != getLiveCellCount(row)) {
-          LOG.info("Row: " + row + " live cell count expected: " + getLiveCellCount(row)
-            + " actual: " + rowList.size());
-        }
-      } while (hasMore);
-    }
-    return cellCount;
+    scan.setRaw(raw);
+    return scan;
   }
 
-  private int scanAndCompareAndCountCells(HRegion firstRegion, HRegion secondRegion, Scan scan)
-    throws Exception {
-    int cellCount = 0;
-    try (RegionScanner firstRS = firstRegion.getScanner(scan)) {
-      try (RegionScanner secondRS = secondRegion.getScanner(scan)) {
+  private void scanAndCompare(boolean raw) throws Exception {
+    try (RegionScanner firstRS = regions[0].getScanner(createScan(raw))) {
+      try (RegionScanner secondRS = regions[1].getScanner(createScan(raw))) {
         boolean firstHasMore;
         boolean secondHasMore;
         do {
@@ -472,7 +336,6 @@ public class TestStoreFileWriter {
           firstHasMore = firstRS.nextRaw(firstRowList);
           secondHasMore = secondRS.nextRaw(secondRowList);
           assertEquals(firstRowList.size(), secondRowList.size());
-          cellCount += firstRowList.size();
           int size = firstRowList.size();
           for (int i = 0; i < size; i++) {
             Cell firstCell = firstRowList.get(i);
@@ -485,6 +348,5 @@ public class TestStoreFileWriter {
         assertEquals(firstHasMore, secondHasMore);
       }
     }
-    return cellCount;
   }
 }
