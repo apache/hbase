@@ -200,7 +200,9 @@ class AsyncRegionLocator {
             future
               .completeExceptionally(new DoNotRetryIOException("The specified region replica id '"
                 + replicaId + "' does not exist, the REGION_REPLICATION of this table "
-                + tableName.getNameAsString() + " is " + regionReplicationCount + " ."));
+                + tableName.getNameAsString() + " is " + regionReplicationCount + " , this means "
+                + "that the maximum region replica id you can specify is "
+                +  (regionReplicationCount - 1) + "."));
             return;
           }
           // meta region can not be split right now so we always call the same method.
