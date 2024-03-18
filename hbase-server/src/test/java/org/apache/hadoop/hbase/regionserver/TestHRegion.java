@@ -4642,6 +4642,39 @@ public class TestHRegion {
     }
   }
 
+  @Test
+  public void testCloseAndArchiveCompactedFiles() throws IOException {
+    byte[] CF1 = Bytes.toBytes("CF1");
+    byte[] CF2 = Bytes.toBytes("CF2");
+    this.region = initHRegion(tableName, method, CONF, CF1, CF2);
+    for (int i = 0; i < 2; i++) {
+      int index = i;
+      Put put =
+        new Put(Bytes.toBytes(index)).addColumn(CF1, Bytes.toBytes("q"), Bytes.toBytes(index));
+      region.put(put);
+      region.flush(true);
+    }
+
+    region.compact(true);
+
+    HStore store1 = region.getStore(CF1);
+    HStore store2 = region.getStore(CF2);
+    store1.closeAndArchiveCompactedFiles();
+    store2.closeAndArchiveCompactedFiles();
+
+    int storefilesCount = region.getStores().stream().mapToInt(Store::getStorefilesCount).sum();
+    assertTrue(storefilesCount == 1);
+
+    FileSystem fs = region.getRegionFileSystem().getFileSystem();
+    Configuration conf = region.getReadOnlyConfiguration();
+    RegionInfo regionInfo = region.getRegionInfo();
+    Path store1ArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, CF1);
+    assertTrue(fs.exists(store1ArchiveDir));
+    // The archived dir of CF2 does not exist because this column family has no data at all
+    Path store2ArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, CF2);
+    assertFalse(fs.exists(store2ArchiveDir));
+  }
+
   protected class PutThread extends Thread {
     private volatile boolean done;
     private volatile int numPutsFinished = 0;
