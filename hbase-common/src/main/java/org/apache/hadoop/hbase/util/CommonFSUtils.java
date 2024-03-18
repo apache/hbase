@@ -758,10 +758,10 @@ public final class CommonFSUtils {
       Method noLocalWriteMethod = null;
       if (builderClass != null) {
         try {
-          replicateMethod = builderClass.getMethod("noLocalWrite");
+          noLocalWriteMethod = builderClass.getMethod("noLocalWrite");
           LOG.debug("Using builder API via reflection for DFS file creation.");
         } catch (NoSuchMethodException e) {
-          LOG.debug("Could not find noLocalWrite method on builder; will not set replicate when"
+          LOG.debug("Could not find noLocalWrite method on builder; will not set noLocalWrite when"
             + " creating output stream", e);
         }
       }
