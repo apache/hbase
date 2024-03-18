@@ -134,8 +134,8 @@ public class TestAsyncTableRegionLocatorWithRegionReplicaId {
       future.get();
     } catch (ExecutionException e) {
       assertTrue(e.getCause() instanceof DoNotRetryIOException);
-      String message = "The specified region replica id '" + NON_EXISTING_REGION_REPLICA_ID
-        + "' does not exist, the REGION_REPLICATION of this table "
+      String message = "The specified region replica id " + NON_EXISTING_REGION_REPLICA_ID
+        + " does not exist, the REGION_REPLICATION of this table "
         + TableName.META_TABLE_NAME.getNameAsString() + " is "
         + TableDescriptorBuilder.DEFAULT_REGION_REPLICATION + ", "
         + "this means that the maximum region replica id you can specify is "
@@ -163,8 +163,8 @@ public class TestAsyncTableRegionLocatorWithRegionReplicaId {
       future.get();
     } catch (ExecutionException e) {
       assertTrue(e.getCause() instanceof DoNotRetryIOException);
-      String message = "The specified region replica id '" + NON_EXISTING_REGION_REPLICA_ID
-        + "' does not exist, the REGION_REPLICATION of this table " + tableName.getNameAsString()
+      String message = "The specified region replica id " + NON_EXISTING_REGION_REPLICA_ID
+        + " does not exist, the REGION_REPLICATION of this table " + tableName.getNameAsString()
         + " is " + REGION_REPLICATION_COUNT + ", "
         + "this means that the maximum region replica id you can specify is "
         + (REGION_REPLICATION_COUNT - 1) + ".";
