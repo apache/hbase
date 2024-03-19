@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -904,7 +905,7 @@ public class Scan extends Query {
    */
   @Override
   public Map<String, Object> toMap(int maxCols) {
-    // start with the fingerpring map and build on top of it
+    // start with the fingerprint map and build on top of it
     Map<String, Object> map = getFingerprint();
     // map from families to column list replaces fingerprint's list of families
     Map<String, List<String>> familyColumns = new HashMap<>();
@@ -952,6 +953,34 @@ public class Scan extends Query {
     if (getId() != null) {
       map.put("id", getId());
     }
+    map.put("includeStartRow", includeStartRow);
+    map.put("includeStopRow", includeStopRow);
+    map.put("allowPartialResults", allowPartialResults);
+    map.put("storeLimit", storeLimit);
+    map.put("storeOffset", storeOffset);
+    map.put("reversed", reversed);
+    if (null != asyncPrefetch) {
+      map.put("asyncPrefetch", asyncPrefetch);
+    }
+    map.put("mvccReadPoint", mvccReadPoint);
+    map.put("limit", limit);
+    map.put("readType", readType);
+    map.put("needCursorResult", needCursorResult);
+    map.put("targetReplicaId", targetReplicaId);
+    map.put("consistency", consistency);
+    if (!colFamTimeRangeMap.isEmpty()) {
+      Map<String, List<Long>> colFamTimeRangeMapStr = colFamTimeRangeMap.entrySet().stream()
+        .collect(Collectors.toMap((e) -> Bytes.toStringBinary(e.getKey()), e -> {
+          TimeRange value = e.getValue();
+          List<Long> rangeList = new ArrayList<>();
+          rangeList.add(value.getMin());
+          rangeList.add(value.getMax());
+          return rangeList;
+        }));
+
+      map.put("colFamTimeRangeMap", colFamTimeRangeMapStr);
+    }
+    map.put("priority", getPriority());
     return map;
   }
 
