@@ -152,7 +152,7 @@ class AsyncRegionLocator {
     }, AsyncRegionLocator::getRegionNames, supplier);
   }
 
-  public void internalAddListener(CompletableFuture<HRegionLocation> future,
+  private void internalAddListener(CompletableFuture<HRegionLocation> future,
     CompletableFuture<RegionLocations> locsFuture, TableName tableName, byte[] row, int replicaId,
     RegionLocateType type) {
     addListener(locsFuture, (locs, error) -> {
