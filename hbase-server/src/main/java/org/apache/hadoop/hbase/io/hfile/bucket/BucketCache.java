@@ -1467,7 +1467,8 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private void parsePB(BucketCacheProtos.BucketCacheEntry proto) throws IOException {
     Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> pair =
-      BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap(), this::createRecycler);
+      BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap(),
+        this::createRecycler);
     backingMap = pair.getFirst();
     blocksByHFile = pair.getSecond();
     fullyCachedFiles.clear();

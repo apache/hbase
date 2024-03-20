@@ -124,13 +124,12 @@ final class BucketProtoUtils {
     }
   }
 
-  static Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> fromPB(Map<Integer, String> deserializers,
-    BucketCacheProtos.BackingMap backingMap, Function<BucketEntry, Recycler> createRecycler)
-    throws IOException {
+  static Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> fromPB(
+    Map<Integer, String> deserializers, BucketCacheProtos.BackingMap backingMap,
+    Function<BucketEntry, Recycler> createRecycler) throws IOException {
     ConcurrentHashMap<BlockCacheKey, BucketEntry> result = new ConcurrentHashMap<>();
-    NavigableSet<BlockCacheKey> resultSet =
-      new ConcurrentSkipListSet<>(Comparator.comparing(BlockCacheKey::getHfileName).
-        thenComparingLong(BlockCacheKey::getOffset));
+    NavigableSet<BlockCacheKey> resultSet = new ConcurrentSkipListSet<>(Comparator
+      .comparing(BlockCacheKey::getHfileName).thenComparingLong(BlockCacheKey::getOffset));
     for (BucketCacheProtos.BackingMapEntry entry : backingMap.getEntryList()) {
       BucketCacheProtos.BlockCacheKey protoKey = entry.getKey();
       BlockCacheKey key = new BlockCacheKey(protoKey.getHfilename(), protoKey.getOffset(),
