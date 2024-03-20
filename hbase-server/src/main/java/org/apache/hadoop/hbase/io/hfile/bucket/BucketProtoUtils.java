@@ -18,9 +18,12 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
@@ -121,10 +124,13 @@ final class BucketProtoUtils {
     }
   }
 
-  static ConcurrentHashMap<BlockCacheKey, BucketEntry> fromPB(Map<Integer, String> deserializers,
+  static Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> fromPB(Map<Integer, String> deserializers,
     BucketCacheProtos.BackingMap backingMap, Function<BucketEntry, Recycler> createRecycler)
     throws IOException {
     ConcurrentHashMap<BlockCacheKey, BucketEntry> result = new ConcurrentHashMap<>();
+    NavigableSet<BlockCacheKey> resultSet =
+      new ConcurrentSkipListSet<>(Comparator.comparing(BlockCacheKey::getHfileName).
+        thenComparingLong(BlockCacheKey::getOffset));
     for (BucketCacheProtos.BackingMapEntry entry : backingMap.getEntryList()) {
       BucketCacheProtos.BlockCacheKey protoKey = entry.getKey();
       BlockCacheKey key = new BlockCacheKey(protoKey.getHfilename(), protoKey.getOffset(),
@@ -153,8 +159,9 @@ final class BucketProtoUtils {
         throw new IOException("Unknown deserializer class found: " + deserializerClass);
       }
       result.put(key, value);
+      resultSet.add(key);
     }
-    return result;
+    return new Pair<>(result, resultSet);
   }
 
   private static BlockType fromPb(BucketCacheProtos.BlockType blockType) {
