@@ -1,0 +1,158 @@
+<?xml version="1.0"?>
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1 http://maven.apache.org/xsd/assembly-1.1.1.xsd">
+<!--
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+
+  <!--This 'all' id is not appended to the produced bundle because we do this: http://maven.apache.org/plugins/maven-assembly-plugin/faq.html#required-classifiers -->
+  <id>bin</id>
+  <formats>
+    <format>tar.gz</format>
+  </formats>
+  <componentDescriptors>
+    <componentDescriptor>src/main/assembly/components.xml</componentDescriptor>
+  </componentDescriptors>
+  <!-- Include the generated LICENSE and NOTICE files -->
+  <files>
+    <file>
+      <source>${project.build.directory}/maven-shared-archive-resources/META-INF/LICENSE</source>
+      <outputDirectory>.</outputDirectory>
+      <destName>LICENSE.txt</destName>
+      <lineEnding>unix</lineEnding>
+    </file>
+    <file>
+      <source>${project.build.directory}/NOTICE.aggregate</source>
+      <outputDirectory>.</outputDirectory>
+      <destName>NOTICE.txt</destName>
+      <lineEnding>unix</lineEnding>
+    </file>
+    <file>
+      <source>${basedir}/src/main/resources/META-INF/LEGAL</source>
+      <outputDirectory>.</outputDirectory>
+      <destName>LEGAL</destName>
+      <lineEnding>unix</lineEnding>
+    </file>
+  </files>
+
+  <dependencySets>
+    <dependencySet>
+      <outputDirectory>lib</outputDirectory>
+      <useTransitiveDependencies>true</useTransitiveDependencies>
+      <!-- Exclude artifacts added in the sub-directories to avoid duplication -->
+      <excludes>
+        <!-- Exclude the shaded jars that go in the lib/shaded-clients directory -->
+        <exclude>org.apache.hbase:hbase-shaded-mapreduce</exclude>
+        <exclude>org.apache.hbase:hbase-shaded-client-byo-hadoop</exclude>
+        <!-- Exclude the Ruby jar that goes in the lib/ruby directory -->
+        <exclude>org.jruby:jruby-complete</exclude>
+        <!-- Exclude jars that go into the lib/client-facing-thirdparty directory -->
+        <exclude>com.github.stephenc.findbugs:findbugs-annotations</exclude>
+        <exclude>commons-logging:commons-logging</exclude>
+        <exclude>log4j:log4j</exclude>
+        <exclude>org.apache.htrace:htrace-core4</exclude>
+        <exclude>org.apache.htrace:htrace-core</exclude>
+        <exclude>org.apache.yetus:audience-annotations</exclude>
+        <exclude>org.slf4j:*</exclude>
+        <exclude>org.apache.logging.log4j:*</exclude>
+        <exclude>io.opentelemetry:*</exclude>
+        <!-- Exclude the opentelemetry agent that goes in the lib/trace directory -->
+        <exclude>io.opentelemetry.javaagent:*</exclude>
+        <!-- Exclude jline2 which goes into lib/zk-client. jline3 is a different artifact-->
+        <exclude>jline:jline</exclude>
+        <!-- These two exclusions are added here to preserve previous behaviour, and are not included in sub-directories -->
+        <!-- TODO investigate using the provided mechanism for these -->
+        <exclude>com.sun.jersey:*</exclude>
+        <exclude>com.sun.jersey.contribs:*</exclude>
+        <!-- FIXME remove when jaxws-ri is removed from assembly -->
+        <exclude>com.sun.xml.ws:jaxws-ri:pom</exclude>
+      </excludes>
+    </dependencySet>
+    <!-- Add jruby-complete to hbase_home/lib/ruby.
+         Update JRUBY_PACKAGED_WITH_HBASE in bin/hbase and hbase.cmd if you would like to update outputDirectory below -->
+    <dependencySet>
+      <outputDirectory>lib/ruby</outputDirectory>
+      <includes>
+        <include>org.jruby:jruby-complete</include>
+      </includes>
+    </dependencySet>
+    <!-- Include third party dependencies the shaded clients expose in the lib directory
+      -->
+    <dependencySet>
+      <outputDirectory>lib/client-facing-thirdparty</outputDirectory>
+      <useTransitiveDependencies>true</useTransitiveDependencies>
+      <!-- Unfortunately, we have to whitelist these because Maven
+           currently doesn't use the dependency-reduced-pom after
+           the shaded module has done its thing. That means if we
+           did this as "transitives of the shaded modules" we'd
+           get a duplication of all the jars we already have in our
+           shaded artifacts. See MNG-5899.
+
+           Check that things match by listing files and making
+           sure the runtime scoped things are all present in the
+           tarball. e.g.:
+
+           for module in hbase-shaded-mapreduce hbase-shaded-client; do
+             mvn dependency:list -f hbase-shaded/${module}/dependency-reduced-pom.xml
+           done | \
+           grep -E "runtime|compile" | \
+           grep -v -E "junit|(optional)" | \
+           cut -d ' ' -f 3- | \
+           sort -u
+
+           TODO we should check this in nightly
+
+           Alternatively, we could
+           stop waiting for Maven to fix this and build the client
+           tarball in a different build.
+        -->
+      <includes>
+        <!-- TODO Review and remove entries that are not present in any supported HBase and Hadoop version -->
+        <include>com.github.stephenc.findbugs:findbugs-annotations</include>
+        <include>commons-logging:commons-logging</include>
+        <include>log4j:log4j</include>
+        <include>org.apache.htrace:htrace-core4</include>
+        <include>org.apache.htrace:htrace-core</include>
+        <include>org.apache.yetus:audience-annotations</include>
+        <include>org.slf4j:*</include>
+        <include>org.apache.logging.log4j:*</include>
+        <include>io.opentelemetry:*</include>
+      </includes>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>lib/shaded-clients</outputDirectory>
+      <includes>
+        <include>org.apache.hbase:hbase-shaded-mapreduce</include>
+        <include>org.apache.hbase:hbase-shaded-client-byo-hadoop</include>
+      </includes>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>lib/zkcli</outputDirectory>
+      <includes>
+        <!-- This is jline2 -->
+        <include>jline:jline</include>
+      </includes>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>lib/trace</outputDirectory>
+      <includes>
+        <include>io.opentelemetry.javaagent:*</include>
+      </includes>
+    </dependencySet>
+  </dependencySets>
+</assembly>
