@@ -762,6 +762,7 @@
     <module>hbase-it</module>
     <module>hbase-examples</module>
     <module>hbase-assembly</module>
+    <module>hbase-assembly-byo-hadoop</module>
     <module>hbase-testing-util</module>
     <module>hbase-annotations</module>
     <module>hbase-rest</module>
@@ -1051,6 +1052,11 @@
           is what glassfish's jspC jar uses and that's where we get our own need for a jsp-api.
         -->
       <!-- Intra-module dependencies -->
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-annotations</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-annotations</artifactId>
