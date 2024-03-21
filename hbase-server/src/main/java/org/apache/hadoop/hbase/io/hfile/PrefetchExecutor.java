@@ -88,9 +88,6 @@ public final class PrefetchExecutor{
       + Path.SEPARATOR_CHAR + ")|(" + Path.SEPARATOR_CHAR
       + HConstants.HREGION_COMPACTIONDIR_NAME.replace(".", "\\.") + Path.SEPARATOR_CHAR + ")");
 
-  // For tests. Contains computed prefetch delay
-  private static long computedPrefetchDelay;
-
   public static void request(Path path, Runnable runnable) {
     if (!prefetchPathExclude.matcher(path.toString()).find()) {
       long delay;
@@ -102,7 +99,6 @@ public final class PrefetchExecutor{
         delay = 0;
       }
       try {
-        computedPrefetchDelay = delay;
         LOG.debug("Prefetch requested for {}, delay={} ms", path, delay);
         final Runnable tracedRunnable =
           TraceUtil.tracedRunnable(runnable, "PrefetchExecutor.request");
@@ -165,13 +161,6 @@ public final class PrefetchExecutor{
     return prefetchExecutorPool;
   }
 
-  /* Visible for testing only */
-  @RestrictedApi(explanation = "Should only be called in tests. This is a non thread safe "
-    + "variable that would not yield accurate values when multiple readers created and "
-    + "calling PrefetchExecutor.request concurrently", link = "",
-    allowedOnPath = ".*/src/test/.*")
-  public static long getComputedPrefetchDelay() {return computedPrefetchDelay;}
-
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*/src/test/.*")
   static Map<Path, Future<?>> getPrefetchFutures() {
@@ -208,9 +197,10 @@ public final class PrefetchExecutor{
   public static void loadConfiguration(Configuration conf) {
     prefetchDelayMillis = conf.getInt(PREFETCH_DELAY, 1000);
     prefetchFutures.forEach((k, v) -> {
-      // Do not cancel the task which is about to complete
       ScheduledFuture sf = (ScheduledFuture) prefetchFutures.get(k);
-      if (sf.getDelay(TimeUnit.MILLISECONDS) > prefetchDelayMillis) {
+      if (!(sf.getDelay(TimeUnit.MILLISECONDS) > 0)) {
+        //the thread is still pending delay expiration and has not started to run yet, so can be
+        // re-scheduled at no cost.
         interrupt(k);
         request(k, prefetchRunnable.get(k));
       }

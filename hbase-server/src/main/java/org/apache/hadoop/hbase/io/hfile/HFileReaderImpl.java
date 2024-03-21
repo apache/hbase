@@ -1659,6 +1659,11 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     return PrefetchExecutor.isCompleted(path);
   }
 
+  /**
+   * Returns true if block prefetching was started after waiting for specified delay, false
+   * otherwise
+   */
+  @Override
   public boolean prefetchStarted() {
     return PrefetchExecutor.isPrefetchStarted();
   }
