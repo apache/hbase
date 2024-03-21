@@ -824,8 +824,8 @@ public final class ZKUtil {
     throws KeeperException {
     CreateRequest create = (CreateRequest) toZooKeeperOp(zkw, cafs).toRequestRecord();
     String znode = create.getPath();
+    RecoverableZooKeeper zk = zkw.getRecoverableZooKeeper();
     try {
-      RecoverableZooKeeper zk = zkw.getRecoverableZooKeeper();
       if (zk.exists(znode, false) == null) {
         zk.create(znode, create.getData(), create.getAcl(), CreateMode.fromFlag(create.getFlags()));
       }
@@ -833,9 +833,9 @@ public final class ZKUtil {
       // pass
     } catch (KeeperException.NoAuthException nee) {
       try {
-        if (null == zkw.getRecoverableZooKeeper().exists(znode, false)) {
+        if (zk.exists(znode, false) == null) {
           // If we failed to create the file and it does not already exist.
-          throw (nee);
+          throw nee;
         }
       } catch (InterruptedException ie) {
         zkw.interruptedException(ie);
