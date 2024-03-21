@@ -611,7 +611,7 @@
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.14.1</thrift.version>
-    <zookeeper.version>3.8.3</zookeeper.version>
+    <zookeeper.version>3.8.4</zookeeper.version>
     <jline.version>2.11</jline.version>
     <slf4j.version>1.7.33</slf4j.version>
     <clover.version>4.0.3</clover.version>
