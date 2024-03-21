@@ -22,9 +22,22 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -45,6 +58,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.AdditionalAnswers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -139,31 +153,10 @@ public class TestZKUtil {
     assertEquals(2, v2);
   }
 
-  /**
-   * A test for HBASE-3238
-   * @throws IOException          A connection attempt to zk failed
-   * @throws InterruptedException One of the non ZKUtil actions was interrupted
-   * @throws KeeperException      Any of the zookeeper connections had a KeeperException
-   */
-  @Test
-  public void testCreateSilentIsReallySilent()
-    throws InterruptedException, KeeperException, IOException {
-    Configuration c = UTIL.getConfiguration();
-
-    String aclZnode = "/aclRoot";
-    String quorumServers = ZKConfig.getZKQuorumServersString(c);
-    int sessionTimeout = 5 * 1000; // 5 seconds
-    ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance);
-    zk.addAuthInfo("digest", "hbase:rox".getBytes());
-
-    // Save the previous ACL
-    Stat s;
-    List<ACL> oldACL;
-    while (true) {
+  private <V> V callAndIgnoreTransientError(Callable<V> action) throws Exception {
+    for (;;) {
       try {
-        s = new Stat();
-        oldACL = zk.getACL("/", s);
-        break;
+        return action.call();
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
@@ -177,54 +170,54 @@ public class TestZKUtil {
         }
       }
     }
+  }
 
-    // I set this acl after the attempted creation of the cluster home node.
-    // Add retries in case of retryable zk exceptions.
-    while (true) {
-      try {
-        zk.setACL("/", ZooDefs.Ids.CREATOR_ALL_ACL, -1);
-        break;
-      } catch (KeeperException e) {
-        switch (e.code()) {
-          case CONNECTIONLOSS:
-          case SESSIONEXPIRED:
-          case OPERATIONTIMEOUT:
-            LOG.warn("Possibly transient ZooKeeper exception: " + e);
-            Threads.sleep(100);
-            break;
-          default:
-            throw e;
+  /**
+   * A test for HBASE-3238
+   */
+  @Test
+  public void testCreateSilentIsReallySilent() throws Exception {
+    Configuration c = UTIL.getConfiguration();
+
+    String aclZnode = "/aclRoot";
+    String quorumServers = ZKConfig.getZKQuorumServersString(c);
+    int sessionTimeout = 5 * 1000; // 5 seconds
+    try (ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance)) {
+      zk.addAuthInfo("digest", Bytes.toBytes("hbase:rox"));
+
+      // Save the previous ACL
+      List<ACL> oldACL = callAndIgnoreTransientError(() -> zk.getACL("/", new Stat()));
+
+      // I set this acl after the attempted creation of the cluster home node.
+      // Add retries in case of retryable zk exceptions.
+      callAndIgnoreTransientError(() -> zk.setACL("/", ZooDefs.Ids.CREATOR_ALL_ACL, -1));
+
+      ZKWatcher watcher = spy(ZKW);
+      RecoverableZooKeeper rzk = mock(RecoverableZooKeeper.class,
+        AdditionalAnswers.delegatesTo(ZKW.getRecoverableZooKeeper()));
+      when(watcher.getRecoverableZooKeeper()).thenReturn(rzk);
+      AtomicBoolean firstExists = new AtomicBoolean(true);
+      doAnswer(inv -> {
+        String path = inv.getArgument(0);
+        boolean watch = inv.getArgument(1);
+        Stat stat = ZKW.getRecoverableZooKeeper().exists(path, watch);
+        // create the znode after first exists check, this is to simulate that we enter the create
+        // branch but we have no permission for creation, but the znode has been created by others
+        if (firstExists.compareAndSet(true, false)) {
+          callAndIgnoreTransientError(() -> zk.create(aclZnode, null,
+            Arrays.asList(new ACL(ZooDefs.Perms.READ, ZooDefs.Ids.ANYONE_ID_UNSAFE),
+              new ACL(ZooDefs.Perms.ALL, ZooDefs.Ids.AUTH_IDS)),
+            CreateMode.PERSISTENT));
         }
-      }
-    }
-
-    while (true) {
-      try {
-        zk.create(aclZnode, null, ZooDefs.Ids.CREATOR_ALL_ACL, CreateMode.PERSISTENT);
-        break;
-      } catch (KeeperException e) {
-        switch (e.code()) {
-          case CONNECTIONLOSS:
-          case SESSIONEXPIRED:
-          case OPERATIONTIMEOUT:
-            LOG.warn("Possibly transient ZooKeeper exception: " + e);
-            Threads.sleep(100);
-            break;
-          default:
-            throw e;
-        }
-      }
-    }
-    zk.close();
-    ZKUtil.createAndFailSilent(ZKW, aclZnode);
-
-    // Restore the ACL
-    ZooKeeper zk3 = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance);
-    zk3.addAuthInfo("digest", "hbase:rox".getBytes());
-    try {
-      zk3.setACL("/", oldACL, -1);
-    } finally {
-      zk3.close();
+        return stat;
+      }).when(rzk).exists(any(), anyBoolean());
+      ZKUtil.createAndFailSilent(watcher, aclZnode);
+      // make sure we call the exists method twice and create once
+      verify(rzk, times(2)).exists(any(), anyBoolean());
+      verify(rzk).create(anyString(), any(), anyList(), any());
+      // Restore the ACL
+      zk.addAuthInfo("digest", Bytes.toBytes("hbase:rox"));
+      zk.setACL("/", oldACL, -1);
     }
   }
 
