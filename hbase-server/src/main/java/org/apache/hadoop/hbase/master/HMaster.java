@@ -1384,6 +1384,22 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     status.markComplete("Progress after master initialized complete");
   }
 
+  /**
+   * Used for testing only to set Mock objects.
+   * @param hbckChore hbckChore
+   */
+  public void setHbckChoreForTesting(HbckChore hbckChore) {
+    this.hbckChore = hbckChore;
+  }
+
+  /**
+   * Used for testing only to set Mock objects.
+   * @param catalogJanitorChore catalogJanitorChore
+   */
+  public void setCatalogJanitorChoreForTesting(CatalogJanitor catalogJanitorChore) {
+    this.catalogJanitorChore = catalogJanitorChore;
+  }
+
   private void createMissingCFsInMetaDuringUpgrade(TableDescriptor metaDescriptor)
     throws IOException {
     TableDescriptor newMetaDesc = TableDescriptorBuilder.newBuilder(metaDescriptor)

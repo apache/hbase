@@ -21,19 +21,19 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class HbckOverlapRegions {
-  private final HbckRegionDetails region1;
-  private final HbckRegionDetails region2;
+  private final HbckRegionDetails region1Info;
+  private final HbckRegionDetails region2Info;
 
-  public HbckOverlapRegions(HbckRegionDetails region1, HbckRegionDetails region2) {
-    this.region1 = region1;
-    this.region2 = region2;
+  public HbckOverlapRegions(HbckRegionDetails region1Info, HbckRegionDetails region2Info) {
+    this.region1Info = region1Info;
+    this.region2Info = region2Info;
   }
 
-  public HbckRegionDetails getRegion1() {
-    return region1;
+  public HbckRegionDetails getRegion1Info() {
+    return region1Info;
   }
 
-  public HbckRegionDetails getRegion2() {
-    return region2;
+  public HbckRegionDetails getRegion2Info() {
+    return region2Info;
   }
 }

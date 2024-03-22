@@ -21,19 +21,19 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class HbckRegionHoles {
-  private final HbckRegionDetails region1;
-  private final HbckRegionDetails region2;
+  private final HbckRegionDetails region1Info;
+  private final HbckRegionDetails region2Info;
 
-  public HbckRegionHoles(HbckRegionDetails regionHole1, HbckRegionDetails regionHole2) {
-    this.region1 = regionHole1;
-    this.region2 = regionHole2;
+  public HbckRegionHoles(HbckRegionDetails region1Info, HbckRegionDetails region2Info) {
+    this.region1Info = region1Info;
+    this.region2Info = region2Info;
   }
 
-  public HbckRegionDetails getRegion1() {
-    return region1;
+  public HbckRegionDetails getRegion1Info() {
+    return region1Info;
   }
 
-  public HbckRegionDetails getRegion2() {
-    return region2;
+  public HbckRegionDetails getRegion2Info() {
+    return region2Info;
   }
 }
