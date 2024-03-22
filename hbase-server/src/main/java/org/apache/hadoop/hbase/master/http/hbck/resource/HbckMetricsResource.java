@@ -66,19 +66,6 @@ public class HbckMetricsResource {
   }
 
   @GET
-  @Path("/temp_inconsistent_regions")
-  public List<HbckInconsistentRegions> tempGetInconsistentRegions() {
-    HbckServerName hbckServerName = new HbckServerName("localhost", 16010, 12345);
-    List<HbckServerName> serverNamesList = new ArrayList<>();
-    serverNamesList.add(hbckServerName);
-    HbckInconsistentRegions hbckInconsistentRegion =
-      new HbckInconsistentRegions("abcdefef", hbckServerName, serverNamesList);
-    List<HbckInconsistentRegions> listOfHbckInconsistentRegions = new ArrayList<>();
-    listOfHbckInconsistentRegions.add(hbckInconsistentRegion);
-    return listOfHbckInconsistentRegions;
-  }
-
-  @GET
   @Path("/orphan_regions_on_fs")
   public List<HbckOrphanRegionsOnFS> getOrphanRegionsOnFS() {
     return hbckReport.getOrphanRegionsOnFS().entrySet().stream()
