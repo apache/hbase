@@ -24,9 +24,9 @@ public class HbckOverlapRegions {
   private final HbckRegionDetails region1;
   private final HbckRegionDetails region2;
 
-  public HbckOverlapRegions(HbckRegionDetails overlapRegion1, HbckRegionDetails overlapRegion2) {
-    this.region1 = overlapRegion1;
-    this.region2 = overlapRegion2;
+  public HbckOverlapRegions(HbckRegionDetails region1, HbckRegionDetails region2) {
+    this.region1 = region1;
+    this.region2 = region2;
   }
 
   public HbckRegionDetails getRegion1() {

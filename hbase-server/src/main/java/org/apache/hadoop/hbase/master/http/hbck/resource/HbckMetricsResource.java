@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.http.hbck.resource;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
@@ -44,7 +43,7 @@ import org.apache.hbase.thirdparty.javax.ws.rs.Path;
 import org.apache.hbase.thirdparty.javax.ws.rs.Produces;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
-@Path("hbck_metrics")
+@Path("hbck-metrics")
 @Produces({ MediaType.APPLICATION_JSON })
 @InterfaceAudience.Private
 public class HbckMetricsResource {
@@ -66,7 +65,7 @@ public class HbckMetricsResource {
   }
 
   @GET
-  @Path("/orphan_regions_on_fs")
+  @Path("/orphan-regions-on-fs")
   public List<HbckOrphanRegionsOnFS> getOrphanRegionsOnFS() {
     return hbckReport.getOrphanRegionsOnFS().entrySet().stream()
       .map(obj1 -> new HbckOrphanRegionsOnFS(obj1.getKey(), obj1.getValue().toString()))
@@ -74,7 +73,7 @@ public class HbckMetricsResource {
   }
 
   @GET
-  @Path("/orphan_regions_on_rs")
+  @Path("/orphan-regions-on-rs")
   public List<HbckOrphanRegionsOnRS> getOrphanRegionsOnRS() {
     return hbckReport.getOrphanRegionsOnRS().entrySet().stream()
       .map(obj1 -> new HbckOrphanRegionsOnRS(obj1.getKey(), parseServerName(obj1.getValue())))
@@ -82,7 +81,7 @@ public class HbckMetricsResource {
   }
 
   @GET
-  @Path("/inconsistent_regions")
+  @Path("/inconsistent-regions")
   public List<HbckInconsistentRegions> getInconsistentRegions() {
     return hbckReport.getInconsistentRegions().entrySet().stream()
       .map(obj1 -> new HbckInconsistentRegions(obj1.getKey(),
@@ -92,7 +91,7 @@ public class HbckMetricsResource {
   }
 
   @GET
-  @Path("/region_holes")
+  @Path("/region-holes")
   public List<HbckRegionHoles> getRegionChainHoles() {
     return catalogJanitorReport.getHoles().stream()
       .map(obj1 -> new HbckRegionHoles(parseRegionInfo(obj1.getFirst()),
@@ -101,7 +100,7 @@ public class HbckMetricsResource {
   }
 
   @GET
-  @Path("/region_overlaps")
+  @Path("/region-overlaps")
   public List<HbckOverlapRegions> getRegionChainOverlap() {
     return catalogJanitorReport.getOverlaps().stream()
       .map(obj1 -> new HbckOverlapRegions(parseRegionInfo(obj1.getFirst()),
@@ -110,7 +109,7 @@ public class HbckMetricsResource {
   }
 
   @GET
-  @Path("/unknown_servers")
+  @Path("/unknown-servers")
   public List<HbckUnknownServers> getUnknownServers() {
     return catalogJanitorReport.getUnknownServers().stream()
       .map(obj1 -> new HbckUnknownServers(parseRegionInfo(obj1.getFirst()),
@@ -119,7 +118,7 @@ public class HbckMetricsResource {
   }
 
   @GET
-  @Path("/empty_regioninfo")
+  @Path("/empty-regioninfo")
   public List<HbckEmptyRegionInfo> getEmptyRegionInfo() {
     return catalogJanitorReport.getEmptyRegionInfo().stream()
       .map(obj1 -> new HbckEmptyRegionInfo(Bytes.toString(obj1))).collect(Collectors.toList());
