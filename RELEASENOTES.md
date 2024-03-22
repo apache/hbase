@@ -758,6 +758,14 @@ When hbase.quota.use.result.size.bytes is false, we will now estimate the amount
 Upgrade zookeeper to 3.8.4 for addressing CVE-2024-23944.
 
 
+---
+
+* [HBASE-28416](https://issues.apache.org/jira/browse/HBASE-28416) | *Major* | **Remove hbase-examples from hbase-assembly**
+
+Remove hbase-examples from the release binaries.
+We will still publish it into maven central.
+
+
 
 # HBASE  2.2.0 Release Notes
 

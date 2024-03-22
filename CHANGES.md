@@ -18,7 +18,7 @@
 -->
 # HBASE Changelog
 
-## Release 2.6.0 - Unreleased (as of 2024-03-21)
+## Release 2.6.0 - Unreleased (as of 2024-03-22)
 
 
 
@@ -221,6 +221,7 @@
 | [HBASE-28385](https://issues.apache.org/jira/browse/HBASE-28385) | Quota estimates are too optimistic for large scans |  Major | . |
 | [HBASE-28427](https://issues.apache.org/jira/browse/HBASE-28427) | FNFE related to 'master:store' when moving archived hfiles to global archived dir |  Minor | master |
 | [HBASE-28124](https://issues.apache.org/jira/browse/HBASE-28124) | Missing fields in Scan.toJSON |  Major | . |
+| [HBASE-28416](https://issues.apache.org/jira/browse/HBASE-28416) | Remove hbase-examples from hbase-assembly |  Major | . |
 
 
 ### BUG FIXES:
@@ -426,6 +427,7 @@
 | [HBASE-28260](https://issues.apache.org/jira/browse/HBASE-28260) | Possible data loss in WAL after RegionServer crash |  Major | . |
 | [HBASE-28338](https://issues.apache.org/jira/browse/HBASE-28338) | Bounded leak of FSDataInputStream buffers from checksum switching |  Major | . |
 | [HBASE-28415](https://issues.apache.org/jira/browse/HBASE-28415) | Remove Curator dependency from hbase-endpoint |  Major | . |
+| [HBASE-28314](https://issues.apache.org/jira/browse/HBASE-28314) | Enable maven-source-plugin for all modules |  Major | build |
 
 
 ### TESTS:
