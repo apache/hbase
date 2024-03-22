@@ -21,19 +21,19 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class HbckOrphanRegionsOnFS {
-  private final String orphanRegionId;
-  private final String orphanRegionHdfsPath;
+  private final String regionId;
+  private final String regionHdfsPath;
 
   public HbckOrphanRegionsOnFS(String regionId, String orphanRegionHdfsPath) {
-    this.orphanRegionId = regionId;
-    this.orphanRegionHdfsPath = orphanRegionHdfsPath;
+    this.regionId = regionId;
+    this.regionHdfsPath = orphanRegionHdfsPath;
   }
 
-  public String getOrphanRegionId() {
-    return orphanRegionId;
+  public String getRegionId() {
+    return regionId;
   }
 
-  public String getOrphanRegionHdfsPath() {
-    return orphanRegionHdfsPath;
+  public String getRegionHdfsPath() {
+    return regionHdfsPath;
   }
 }

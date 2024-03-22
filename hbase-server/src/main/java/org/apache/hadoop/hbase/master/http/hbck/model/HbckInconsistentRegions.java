@@ -22,26 +22,26 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class HbckInconsistentRegions {
-  private final String inconsistentRegionId;
+  private final String regionId;
   private final HbckServerName serverNameInMeta;
-  private final List<HbckServerName> listOfServerName;
+  private final List<HbckServerName> listOfServers;
 
   public HbckInconsistentRegions(String inconsistentRegionId, HbckServerName serverNameInMeta,
     List<HbckServerName> listOfServerName) {
-    this.inconsistentRegionId = inconsistentRegionId;
+    this.regionId = inconsistentRegionId;
     this.serverNameInMeta = serverNameInMeta;
-    this.listOfServerName = listOfServerName;
+    this.listOfServers = listOfServerName;
   }
 
-  public String getInconsistentRegionId() {
-    return inconsistentRegionId;
+  public String getRegionId() {
+    return regionId;
   }
 
   public HbckServerName getServerNameInMeta() {
     return serverNameInMeta;
   }
 
-  public List<HbckServerName> getListOfServerName() {
-    return listOfServerName;
+  public List<HbckServerName> getListOfServers() {
+    return listOfServers;
   }
 }

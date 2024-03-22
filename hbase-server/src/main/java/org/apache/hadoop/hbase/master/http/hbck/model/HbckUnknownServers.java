@@ -21,20 +21,20 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class HbckUnknownServers {
-  private final HbckRegionDetails unknownServerRegionId;
-  private final HbckServerName unknownServerName;
+  private final HbckRegionDetails serverRegionId;
+  private final HbckServerName serverName;
 
   public HbckUnknownServers(HbckRegionDetails unknownServerRegionId,
     HbckServerName unknownServerName) {
-    this.unknownServerRegionId = unknownServerRegionId;
-    this.unknownServerName = unknownServerName;
+    this.serverRegionId = unknownServerRegionId;
+    this.serverName = unknownServerName;
   }
 
-  public HbckRegionDetails getUnknownServerRegionId() {
-    return unknownServerRegionId;
+  public HbckRegionDetails getServerRegionId() {
+    return serverRegionId;
   }
 
-  public HbckServerName getUnknownServerName() {
-    return unknownServerName;
+  public HbckServerName getServerName() {
+    return serverName;
   }
 }

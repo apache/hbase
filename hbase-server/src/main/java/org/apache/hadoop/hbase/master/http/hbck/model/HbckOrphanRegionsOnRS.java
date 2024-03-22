@@ -21,19 +21,19 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class HbckOrphanRegionsOnRS {
-  private final String orphanRegionId;
-  private final HbckServerName orphanRegionRsName;
+  private final String regionId;
+  private final HbckServerName rsName;
 
   public HbckOrphanRegionsOnRS(String orphanRegionId, HbckServerName orphanRegionRsName) {
-    this.orphanRegionId = orphanRegionId;
-    this.orphanRegionRsName = orphanRegionRsName;
+    this.regionId = orphanRegionId;
+    this.rsName = orphanRegionRsName;
   }
 
-  public String getOrphanRegionId() {
-    return orphanRegionId;
+  public String getRegionId() {
+    return regionId;
   }
 
-  public HbckServerName getOrphanRegionRsName() {
-    return orphanRegionRsName;
+  public HbckServerName getRsName() {
+    return rsName;
   }
 }

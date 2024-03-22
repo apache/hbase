@@ -21,13 +21,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class HbckEmptyRegionInfo {
-  private final String emptyRegionInfo;
+  private final String regionInfo;
 
   public HbckEmptyRegionInfo(String emptyRegionInfo) {
-    this.emptyRegionInfo = emptyRegionInfo;
+    this.regionInfo = emptyRegionInfo;
   }
 
-  public String getEmptyRegionInfo() {
-    return emptyRegionInfo;
+  public String getRegionInfo() {
+    return regionInfo;
   }
 }
