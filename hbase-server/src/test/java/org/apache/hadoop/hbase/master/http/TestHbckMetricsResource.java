@@ -58,7 +58,7 @@ import org.apache.hbase.thirdparty.javax.ws.rs.client.WebTarget;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
 /**
- * Tests for the master api_v1 {@link HbckMetricsResource}.
+ * Tests for the {@link HbckMetricsResource}.
  */
 @Category({ MasterTests.class, LargeTests.class })
 public class TestHbckMetricsResource {
@@ -114,7 +114,7 @@ public class TestHbckMetricsResource {
         admin.getMaster().thenApply(ServerName::getHostname).thenCombine(admin.getMasterInfoPort(),
           (hostName, infoPort) -> "http://" + hostName + ":" + infoPort).get();
       final Client client = ClientBuilder.newClient();
-      target = client.target(baseUrl).path("hbck/hbck_metrics");
+      target = client.target(baseUrl).path("hbck/hbck-metrics");
     }
 
     @Override
@@ -160,7 +160,7 @@ public class TestHbckMetricsResource {
   @Test
   public void testGetOrphanRegionOnFS() {
     final String response =
-      classRule.getTarget().path("orphan_regions_on_fs").request(MediaType.APPLICATION_JSON_TYPE)
+      classRule.getTarget().path("orphan-regions-on-fs").request(MediaType.APPLICATION_JSON_TYPE)
         .header("X-Jersey-Tracing-Accept", true).get(String.class);
     assertThat(response, allOf(startsWith("{\"data\":["), endsWith("]}")));
   }
@@ -168,14 +168,14 @@ public class TestHbckMetricsResource {
   @Test
   public void testGetOrphanRegionOnFSHtml() {
     assertThrows(NotAcceptableException.class,
-      () -> classRule.getTarget().path("orphan_regions_on_fs").request(MediaType.TEXT_HTML_TYPE)
+      () -> classRule.getTarget().path("orphan-regions-on-fs").request(MediaType.TEXT_HTML_TYPE)
         .header("X-Jersey-Tracing-Accept", true).get(String.class));
   }
 
   @Test
   public void testGetOrphanRegionOnRS() {
     final String response =
-      classRule.getTarget().path("orphan_regions_on_rs").request(MediaType.APPLICATION_JSON_TYPE)
+      classRule.getTarget().path("orphan-regions-on-rs").request(MediaType.APPLICATION_JSON_TYPE)
         .header("X-Jersey-Tracing-Accept", true).get(String.class);
     assertThat(response, allOf(startsWith("{\"data\":["), endsWith("]}")));
   }
@@ -183,14 +183,14 @@ public class TestHbckMetricsResource {
   @Test
   public void testGetOrphanRegionOnRSHtml() {
     assertThrows(NotAcceptableException.class,
-      () -> classRule.getTarget().path("orphan_regions_on_rs").request(MediaType.TEXT_HTML_TYPE)
+      () -> classRule.getTarget().path("orphan-regions-on-rs").request(MediaType.TEXT_HTML_TYPE)
         .header("X-Jersey-Tracing-Accept", true).get(String.class));
   }
 
   @Test
   public void testGetInconsistentRegions() {
     final String response =
-      classRule.getTarget().path("inconsistent_regions").request(MediaType.APPLICATION_JSON_TYPE)
+      classRule.getTarget().path("inconsistent-regions").request(MediaType.APPLICATION_JSON_TYPE)
         .header("X-Jersey-Tracing-Accept", true).get(String.class);
     assertThat(response, allOf(startsWith("{\"data\":["), endsWith("]}")));
   }
@@ -198,63 +198,63 @@ public class TestHbckMetricsResource {
   @Test
   public void testGetInconsistentRegionsHtml() {
     assertThrows(NotAcceptableException.class,
-      () -> classRule.getTarget().path("inconsistent_regions").request(MediaType.TEXT_HTML_TYPE)
+      () -> classRule.getTarget().path("inconsistent-regions").request(MediaType.TEXT_HTML_TYPE)
         .header("X-Jersey-Tracing-Accept", true).get(String.class));
   }
 
   @Test
   public void testGetRegionHoles() {
     final String response =
-      classRule.getTarget().path("region_holes").request(MediaType.APPLICATION_JSON_TYPE)
+      classRule.getTarget().path("region-holes").request(MediaType.APPLICATION_JSON_TYPE)
         .header("X-Jersey-Tracing-Accept", true).get(String.class);
     assertThat(response, allOf(startsWith("{\"data\":["), endsWith("]}")));
   }
 
   @Test
   public void testGetRegionHolesHtml() {
-    assertThrows(NotAcceptableException.class, () -> classRule.getTarget().path("region_holes")
+    assertThrows(NotAcceptableException.class, () -> classRule.getTarget().path("region-holes")
       .request(MediaType.TEXT_HTML_TYPE).header("X-Jersey-Tracing-Accept", true).get(String.class));
   }
 
   @Test
   public void testGetRegionOverlaps() {
     final String response =
-      classRule.getTarget().path("region_overlaps").request(MediaType.APPLICATION_JSON_TYPE)
+      classRule.getTarget().path("region-overlaps").request(MediaType.APPLICATION_JSON_TYPE)
         .header("X-Jersey-Tracing-Accept", true).get(String.class);
     assertThat(response, allOf(startsWith("{\"data\":["), endsWith("]}")));
   }
 
   @Test
   public void testGetRegionOverlapsHtml() {
-    assertThrows(NotAcceptableException.class, () -> classRule.getTarget().path("region_overlaps")
+    assertThrows(NotAcceptableException.class, () -> classRule.getTarget().path("region-overlaps")
       .request(MediaType.TEXT_HTML_TYPE).header("X-Jersey-Tracing-Accept", true).get(String.class));
   }
 
   @Test
   public void testGetUnkownServers() {
     final String response =
-      classRule.getTarget().path("unknown_servers").request(MediaType.APPLICATION_JSON_TYPE)
+      classRule.getTarget().path("unknown-servers").request(MediaType.APPLICATION_JSON_TYPE)
         .header("X-Jersey-Tracing-Accept", true).get(String.class);
     assertThat(response, allOf(startsWith("{\"data\":["), endsWith("]}")));
   }
 
   @Test
   public void testGetUnkownServersHtml() {
-    assertThrows(NotAcceptableException.class, () -> classRule.getTarget().path("unknown_servers")
+    assertThrows(NotAcceptableException.class, () -> classRule.getTarget().path("unknown-servers")
       .request(MediaType.TEXT_HTML_TYPE).header("X-Jersey-Tracing-Accept", true).get(String.class));
   }
 
   @Test
   public void testGetEmptyRegionInfo() {
     final String response =
-      classRule.getTarget().path("empty_regioninfo").request(MediaType.APPLICATION_JSON_TYPE)
+      classRule.getTarget().path("empty-regioninfo").request(MediaType.APPLICATION_JSON_TYPE)
         .header("X-Jersey-Tracing-Accept", true).get(String.class);
     assertThat(response, allOf(startsWith("{\"data\":["), endsWith("]}")));
   }
 
   @Test
   public void testGetEmptyRegionInfoHtml() {
-    assertThrows(NotAcceptableException.class, () -> classRule.getTarget().path("empty_regioninfo")
+    assertThrows(NotAcceptableException.class, () -> classRule.getTarget().path("empty-regioninfo")
       .request(MediaType.TEXT_HTML_TYPE).header("X-Jersey-Tracing-Accept", true).get(String.class));
   }
 }
