@@ -29,7 +29,7 @@ import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ServerProperties;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.server.TracingConfig;
 
 @InterfaceAudience.Private
-public class HbckConfigFactory {
+public final class HbckConfigFactory {
   private HbckConfigFactory() {
   }
 
