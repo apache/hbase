@@ -324,8 +324,19 @@ public class ServerManager implements ConfigurationObserver {
       // the ServerName to use. Here we presume a master has already done
       // that so we'll press on with whatever it gave us for ServerName.
       if (!checkAndRecordNewServer(sn, sl)) {
-        LOG.info("RegionServerReport ignored, could not record the server: " + sn);
-        return; // Not recorded, so no need to move on
+        // Master already registered server with same (host + port) and higher startcode.
+        // This can happen if regionserver report comes late from old server
+        // (possible race condition), by that time master has already processed SCP for that
+        // server and started accepting regionserver report from new server i.e. server with
+        // same (host + port) and higher startcode.
+        // If we don't reject report from old server here, it can cause large num of inconsistencies
+        // because region snapshot from old server will be recorded, and these inconsistencies
+        // sometimes would not be resolved until hbck recoveries are executed for such old servers
+        // manually.
+        final String errorMsg = "RegionServerReport ignored, could not record the server: " + sn
+          + " . Consider yourself dead as server with higher startcode is already registered.";
+        LOG.warn(errorMsg);
+        throw new YouAreDeadException(errorMsg);
       }
     }
     updateLastFlushedSequenceIds(sn, sl);
