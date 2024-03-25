@@ -190,8 +190,11 @@ public class TestBackupSystemTable {
     String[] servers = new String[] { "server1", "server2", "server3" };
     Long[] timestamps = new Long[] { 100L, 102L, 107L };
 
+    // validate the prefix scan in readRegionServerlastLogRollResult will get the right timestamps
+    // when a backup root with the same prefix is present
     for (int i = 0; i < servers.length; i++) {
       table.writeRegionServerLastLogRollResult(servers[i], timestamps[i], "root");
+      table.writeRegionServerLastLogRollResult(servers[i], timestamps[i], "root/backup");
     }
 
     HashMap<String, Long> result = table.readRegionServerLastLogRollResult("root");
@@ -265,7 +268,10 @@ public class TestBackupSystemTable {
     rsTimestampMap.put("rs2:100", 101L);
     rsTimestampMap.put("rs3:100", 103L);
 
+    // validate the prefix scan in readLogTimestampMap will get the right timestamps
+    // when a backup root with the same prefix is present
     table.writeRegionServerLogTimestamp(tables, rsTimestampMap, "root");
+    table.writeRegionServerLogTimestamp(tables, rsTimestampMap, "root/backup");
 
     Map<TableName, Map<String, Long>> result = table.readLogTimestampMap("root");
 
@@ -291,7 +297,10 @@ public class TestBackupSystemTable {
     rsTimestampMap1.put("rs2:100", 201L);
     rsTimestampMap1.put("rs3:100", 203L);
 
+    // validate the prefix scan in readLogTimestampMap will get the right timestamps
+    // when a backup root with the same prefix is present
     table.writeRegionServerLogTimestamp(tables1, rsTimestampMap1, "root");
+    table.writeRegionServerLogTimestamp(tables1, rsTimestampMap, "root/backup");
 
     result = table.readLogTimestampMap("root");
 
