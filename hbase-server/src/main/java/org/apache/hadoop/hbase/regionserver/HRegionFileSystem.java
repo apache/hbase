@@ -490,7 +490,7 @@ public class HRegionFileSystem {
 
     String name = buildPath.getName();
     if (generateNewName) {
-      name = generateUniqueName((seqNum < 0) ? null : "_SeqId_" + seqNum + "_");
+      name = generateUniqueName((seqNum < 0) ? null : StoreFileInfo.formatBulkloadSeqId(seqNum));
     }
     Path dstPath = new Path(storeDir, name);
     if (!fs.exists(buildPath)) {

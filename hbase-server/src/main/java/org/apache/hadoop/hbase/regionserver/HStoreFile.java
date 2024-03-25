@@ -329,13 +329,8 @@ public class HStoreFile implements StoreFile {
 
   @Override
   public boolean isBulkLoadResult() {
-    boolean bulkLoadedHFile = false;
-    String fileName = this.getPath().getName();
-    int startPos = fileName.indexOf("SeqId_");
-    if (startPos != -1) {
-      bulkLoadedHFile = true;
-    }
-    return bulkLoadedHFile || (metadataMap != null && metadataMap.containsKey(BULKLOAD_TIME_KEY));
+    return StoreFileInfo.hasBulkloadSeqId(this.getPath())
+      || (metadataMap != null && metadataMap.containsKey(BULKLOAD_TIME_KEY));
   }
 
   public boolean isCompactedAway() {
@@ -415,17 +410,15 @@ public class HStoreFile implements StoreFile {
     if (isBulkLoadResult()) {
       // generate the sequenceId from the fileName
       // fileName is of the form <randomName>_SeqId_<id-when-loaded>_
-      String fileName = this.getPath().getName();
-      // Use lastIndexOf() to get the last, most recent bulk load seqId.
-      int startPos = fileName.lastIndexOf("SeqId_");
-      if (startPos != -1) {
-        this.sequenceid =
-          Long.parseLong(fileName.substring(startPos + 6, fileName.indexOf('_', startPos + 6)));
+      OptionalLong sequenceId = StoreFileInfo.getBulkloadSeqId(this.getPath());
+      if (sequenceId.isPresent()) {
+        this.sequenceid = sequenceId.getAsLong();
         // Handle reference files as done above.
         if (fileInfo.isTopReference()) {
           this.sequenceid += 1;
         }
       }
+
       // SKIP_RESET_SEQ_ID only works in bulk loaded file.
       // In mob compaction, the hfile where the cells contain the path of a new mob file is bulk
       // loaded to hbase, these cells have the same seqIds with the old ones. We do not want
