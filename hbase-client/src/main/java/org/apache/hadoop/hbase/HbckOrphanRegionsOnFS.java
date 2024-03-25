@@ -15,25 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.http.hbck.model;
+package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Private
-public class HbckUnknownServers {
-  private final HbckRegionDetails regionInfo;
-  private final HbckServerName serverName;
+/**
+ * POJO to present Orphan Region on FS from HBCK Inconsistencies Report via REST API.
+ * These inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of HBCK Inconsistencies.
+ */
+@InterfaceAudience.Public
+public class HbckOrphanRegionsOnFS {
+  private final String regionId;
+  private final String regionHdfsPath;
 
-  public HbckUnknownServers(HbckRegionDetails regionInfo, HbckServerName unknownServerName) {
-    this.regionInfo = regionInfo;
-    this.serverName = unknownServerName;
+  public HbckOrphanRegionsOnFS(String regionId, String orphanRegionHdfsPath) {
+    this.regionId = regionId;
+    this.regionHdfsPath = orphanRegionHdfsPath;
   }
 
-  public HbckRegionDetails getRegionInfo() {
-    return regionInfo;
+  public String getRegionId() {
+    return regionId;
   }
 
-  public HbckServerName getServerName() {
-    return serverName;
+  public String getRegionHdfsPath() {
+    return regionHdfsPath;
   }
 }

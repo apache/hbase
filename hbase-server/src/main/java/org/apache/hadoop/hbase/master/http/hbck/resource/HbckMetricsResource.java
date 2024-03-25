@@ -24,16 +24,16 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.hbck.HbckReport;
-import org.apache.hadoop.hbase.master.http.hbck.model.HbckEmptyRegionInfo;
-import org.apache.hadoop.hbase.master.http.hbck.model.HbckInconsistentRegions;
+import org.apache.hadoop.hbase.HbckEmptyRegionInfo;
+import org.apache.hadoop.hbase.HbckInconsistentRegions;
 import org.apache.hadoop.hbase.master.http.hbck.model.HbckMetrics;
-import org.apache.hadoop.hbase.master.http.hbck.model.HbckOrphanRegionsOnFS;
-import org.apache.hadoop.hbase.master.http.hbck.model.HbckOrphanRegionsOnRS;
-import org.apache.hadoop.hbase.master.http.hbck.model.HbckOverlapRegions;
-import org.apache.hadoop.hbase.master.http.hbck.model.HbckRegionDetails;
-import org.apache.hadoop.hbase.master.http.hbck.model.HbckRegionHoles;
-import org.apache.hadoop.hbase.master.http.hbck.model.HbckServerName;
-import org.apache.hadoop.hbase.master.http.hbck.model.HbckUnknownServers;
+import org.apache.hadoop.hbase.HbckOrphanRegionsOnFS;
+import org.apache.hadoop.hbase.HbckOrphanRegionsOnRS;
+import org.apache.hadoop.hbase.HbckOverlapRegions;
+import org.apache.hadoop.hbase.HbckRegionDetails;
+import org.apache.hadoop.hbase.HbckRegionHoles;
+import org.apache.hadoop.hbase.HbckServerName;
+import org.apache.hadoop.hbase.HbckUnknownServers;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitorReport;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -43,6 +43,9 @@ import org.apache.hbase.thirdparty.javax.ws.rs.Path;
 import org.apache.hbase.thirdparty.javax.ws.rs.Produces;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
+/**
+ * The root object exposing hbck.jsp page as JSON Output.
+ */
 @Path("hbck-metrics")
 @Produces({ MediaType.APPLICATION_JSON })
 @InterfaceAudience.Private

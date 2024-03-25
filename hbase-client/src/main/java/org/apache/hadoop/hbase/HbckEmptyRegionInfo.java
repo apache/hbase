@@ -15,25 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.http.hbck.model;
+package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Private
-public class HbckOverlapRegions {
-  private final HbckRegionDetails region1Info;
-  private final HbckRegionDetails region2Info;
+/**
+ * POJO to present Empty Region Info from Catalog Janitor Inconsistencies Report via REST API.
+ * These inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of Catalog Janitor inconsistencies.
+ */
+@InterfaceAudience.Public
+public class HbckEmptyRegionInfo {
+  private final String regionInfo;
 
-  public HbckOverlapRegions(HbckRegionDetails region1Info, HbckRegionDetails region2Info) {
-    this.region1Info = region1Info;
-    this.region2Info = region2Info;
+  public HbckEmptyRegionInfo(String emptyRegionInfo) {
+    this.regionInfo = emptyRegionInfo;
   }
 
-  public HbckRegionDetails getRegion1Info() {
-    return region1Info;
-  }
-
-  public HbckRegionDetails getRegion2Info() {
-    return region2Info;
+  public String getRegionInfo() {
+    return regionInfo;
   }
 }

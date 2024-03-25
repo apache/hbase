@@ -15,25 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.http.hbck.model;
+package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Private
-public class HbckOrphanRegionsOnRS {
-  private final String regionId;
-  private final HbckServerName rsName;
+/**
+ * POJO to present Unknown Regions from Catalog Janitor Inconsistencies Report via REST API.
+ * These inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of Catalog Janitor inconsistencies.
+ */
+@InterfaceAudience.Public
+public class HbckUnknownServers {
+  private final HbckRegionDetails regionInfo;
+  private final HbckServerName serverName;
 
-  public HbckOrphanRegionsOnRS(String orphanRegionId, HbckServerName orphanRegionRsName) {
-    this.regionId = orphanRegionId;
-    this.rsName = orphanRegionRsName;
+  public HbckUnknownServers(HbckRegionDetails regionInfo, HbckServerName unknownServerName) {
+    this.regionInfo = regionInfo;
+    this.serverName = unknownServerName;
   }
 
-  public String getRegionId() {
-    return regionId;
+  public HbckRegionDetails getRegionInfo() {
+    return regionInfo;
   }
 
-  public HbckServerName getRsName() {
-    return rsName;
+  public HbckServerName getServerName() {
+    return serverName;
   }
 }

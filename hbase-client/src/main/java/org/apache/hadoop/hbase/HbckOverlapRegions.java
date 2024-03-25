@@ -15,25 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.http.hbck.model;
+package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Private
-public class HbckOrphanRegionsOnFS {
-  private final String regionId;
-  private final String regionHdfsPath;
+/**
+ * POJO to present Region Overlap from Catalog Janitor Inconsistencies Report via REST API.
+ * These inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of Catalog Janitor inconsistencies.
+ */
+@InterfaceAudience.Public
+public class HbckOverlapRegions {
+  private final HbckRegionDetails region1Info;
+  private final HbckRegionDetails region2Info;
 
-  public HbckOrphanRegionsOnFS(String regionId, String orphanRegionHdfsPath) {
-    this.regionId = regionId;
-    this.regionHdfsPath = orphanRegionHdfsPath;
+  public HbckOverlapRegions(HbckRegionDetails region1Info, HbckRegionDetails region2Info) {
+    this.region1Info = region1Info;
+    this.region2Info = region2Info;
   }
 
-  public String getRegionId() {
-    return regionId;
+  public HbckRegionDetails getRegion1Info() {
+    return region1Info;
   }
 
-  public String getRegionHdfsPath() {
-    return regionHdfsPath;
+  public HbckRegionDetails getRegion2Info() {
+    return region2Info;
   }
 }

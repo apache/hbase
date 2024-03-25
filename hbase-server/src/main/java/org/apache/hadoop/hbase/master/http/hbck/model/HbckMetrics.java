@@ -18,8 +18,18 @@
 package org.apache.hadoop.hbase.master.http.hbck.model;
 
 import java.util.List;
+import org.apache.hadoop.hbase.HbckEmptyRegionInfo;
+import org.apache.hadoop.hbase.HbckInconsistentRegions;
+import org.apache.hadoop.hbase.HbckOrphanRegionsOnFS;
+import org.apache.hadoop.hbase.HbckOrphanRegionsOnRS;
+import org.apache.hadoop.hbase.HbckOverlapRegions;
+import org.apache.hadoop.hbase.HbckRegionHoles;
+import org.apache.hadoop.hbase.HbckUnknownServers;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * This class exposes hbck.jsp report as JSON Output via /hbck/hbck-metrics API.
+ */
 @InterfaceAudience.Private
 public class HbckMetrics {
 

@@ -15,12 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.http.hbck.model;
+package org.apache.hadoop.hbase;
 
 import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Private
+/**
+ * POJO to present HBCK Inconsistent Regions from HBCK Inconsistencies Report via REST API.
+ * These inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of HBCK inconsistencies.
+ */
+@InterfaceAudience.Public
 public class HbckInconsistentRegions {
   private final String regionId;
   private final HbckServerName serverNameInMeta;

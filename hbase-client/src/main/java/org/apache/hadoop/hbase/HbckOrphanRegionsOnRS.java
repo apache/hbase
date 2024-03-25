@@ -15,25 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.http.hbck.model;
+package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Private
-public class HbckRegionHoles {
-  private final HbckRegionDetails region1Info;
-  private final HbckRegionDetails region2Info;
+/**
+ * POJO to present Orphan Region on RS from HBCK Inconsistencies Report via REST API.
+ * These inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of HBCK Inconsistencies.
+ */
+@InterfaceAudience.Public
+public class HbckOrphanRegionsOnRS {
+  private final String regionId;
+  private final HbckServerName rsName;
 
-  public HbckRegionHoles(HbckRegionDetails region1Info, HbckRegionDetails region2Info) {
-    this.region1Info = region1Info;
-    this.region2Info = region2Info;
+  public HbckOrphanRegionsOnRS(String orphanRegionId, HbckServerName orphanRegionRsName) {
+    this.regionId = orphanRegionId;
+    this.rsName = orphanRegionRsName;
   }
 
-  public HbckRegionDetails getRegion1Info() {
-    return region1Info;
+  public String getRegionId() {
+    return regionId;
   }
 
-  public HbckRegionDetails getRegion2Info() {
-    return region2Info;
+  public HbckServerName getRsName() {
+    return rsName;
   }
 }

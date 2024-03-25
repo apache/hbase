@@ -15,37 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.http.hbck.model;
+package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Private
-public class HbckRegionDetails {
-  private final String regionId;
-  private final String tableName;
-  private final String startKey;
-  private final String endKey;
+/**
+ * POJO to present Region Holes from Catalog Janitor Inconsistencies Report via REST API.
+ * These inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of Catalog Janitor inconsistencies.
+ */
+@InterfaceAudience.Public
+public class HbckRegionHoles {
+  private final HbckRegionDetails region1Info;
+  private final HbckRegionDetails region2Info;
 
-  public HbckRegionDetails(String regionId, String tableName, String startKey, String endKey) {
-    this.regionId = regionId;
-    this.tableName = tableName;
-    this.startKey = startKey;
-    this.endKey = endKey;
+  public HbckRegionHoles(HbckRegionDetails region1Info, HbckRegionDetails region2Info) {
+    this.region1Info = region1Info;
+    this.region2Info = region2Info;
   }
 
-  public String getRegionId() {
-    return regionId;
+  public HbckRegionDetails getRegion1Info() {
+    return region1Info;
   }
 
-  public String getTableName() {
-    return tableName;
-  }
-
-  public String getStartKey() {
-    return startKey;
-  }
-
-  public String getEndKey() {
-    return endKey;
+  public HbckRegionDetails getRegion2Info() {
+    return region2Info;
   }
 }

@@ -15,11 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.http.hbck.model;
+package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Private
+/**
+ * POJO class for ServerName in HBCK Inconsistencies report.
+ */
+@InterfaceAudience.Public
 public class HbckServerName {
   private final String hostName;
   private final int hostPort;
