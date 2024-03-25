@@ -70,6 +70,8 @@ public class QuotaCache implements Stoppable {
 
   // for testing purpose only, enforce the cache to be always refreshed
   static boolean TEST_FORCE_REFRESH = false;
+  // for testing purpose only, block cache refreshes to reliably verify state
+  static boolean TEST_BLOCK_REFRESH = false;
 
   private final ConcurrentHashMap<String, QuotaState> namespaceQuotaCache =
     new ConcurrentHashMap<>();
@@ -140,7 +142,7 @@ public class QuotaCache implements Stoppable {
    */
   public UserQuotaState getUserQuotaState(final UserGroupInformation ugi) {
     return computeIfAbsent(userQuotaCache, getQuotaUserName(ugi),
-      () -> QuotaUtil.buildDefaultUserQuotaState(rsServices.getConfiguration()),
+      () -> QuotaUtil.buildDefaultUserQuotaState(rsServices.getConfiguration(), 0L),
       this::triggerCacheRefresh);
   }
 
@@ -242,6 +244,14 @@ public class QuotaCache implements Stoppable {
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "GC_UNRELATED_TYPES",
         justification = "I do not understand why the complaints, it looks good to me -- FIX")
     protected void chore() {
+      while (TEST_BLOCK_REFRESH) {
+        LOG.info("TEST_BLOCK_REFRESH=true, so blocking QuotaCache refresh until it is false");
+        try {
+          Thread.sleep(10);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
       // Prefetch online tables/namespaces
       for (TableName table : ((HRegionServer) QuotaCache.this.rsServices).getOnlineTables()) {
         if (table.isSystemTable()) continue;
