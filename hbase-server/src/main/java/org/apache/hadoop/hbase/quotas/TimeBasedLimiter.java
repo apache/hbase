@@ -49,15 +49,17 @@ public class TimeBasedLimiter implements QuotaLimiter {
         conf.getClass(RateLimiter.QUOTA_RATE_LIMITER_CONF_KEY, AverageIntervalRateLimiter.class)
           .getName())
     ) {
-      reqsLimiter = new FixedIntervalRateLimiter();
-      reqSizeLimiter = new FixedIntervalRateLimiter();
-      writeReqsLimiter = new FixedIntervalRateLimiter();
-      writeSizeLimiter = new FixedIntervalRateLimiter();
-      readReqsLimiter = new FixedIntervalRateLimiter();
-      readSizeLimiter = new FixedIntervalRateLimiter();
-      reqCapacityUnitLimiter = new FixedIntervalRateLimiter();
-      writeCapacityUnitLimiter = new FixedIntervalRateLimiter();
-      readCapacityUnitLimiter = new FixedIntervalRateLimiter();
+      long refillInterval = conf.getLong(FixedIntervalRateLimiter.RATE_LIMITER_REFILL_INTERVAL_MS,
+        RateLimiter.DEFAULT_TIME_UNIT);
+      reqsLimiter = new FixedIntervalRateLimiter(refillInterval);
+      reqSizeLimiter = new FixedIntervalRateLimiter(refillInterval);
+      writeReqsLimiter = new FixedIntervalRateLimiter(refillInterval);
+      writeSizeLimiter = new FixedIntervalRateLimiter(refillInterval);
+      readReqsLimiter = new FixedIntervalRateLimiter(refillInterval);
+      readSizeLimiter = new FixedIntervalRateLimiter(refillInterval);
+      reqCapacityUnitLimiter = new FixedIntervalRateLimiter(refillInterval);
+      writeCapacityUnitLimiter = new FixedIntervalRateLimiter(refillInterval);
+      readCapacityUnitLimiter = new FixedIntervalRateLimiter(refillInterval);
     } else {
       reqsLimiter = new AverageIntervalRateLimiter();
       reqSizeLimiter = new AverageIntervalRateLimiter();

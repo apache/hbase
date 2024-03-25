@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -426,5 +428,72 @@ public class TestRateLimiter {
     // Now thread1 compensates 80
     avgLimiter.consume(-80);
     assertEquals(limit, avgLimiter.getAvailable());
+  }
+
+  @Test
+  public void itRunsFullWithPartialRefillInterval() {
+    RateLimiter limiter = new FixedIntervalRateLimiter(100);
+    limiter.set(10, TimeUnit.SECONDS);
+    assertEquals(0, limiter.getWaitIntervalMs());
+
+    // Consume the quota
+    limiter.consume(10);
+
+    // Need to wait 1s to acquire another resource
+    long waitInterval = limiter.waitInterval(10);
+    assertTrue(900 < waitInterval);
+    assertTrue(1000 >= waitInterval);
+    // We need to wait 2s to acquire more than 10 resources
+    waitInterval = limiter.waitInterval(20);
+    assertTrue(1900 < waitInterval);
+    assertTrue(2000 >= waitInterval);
+
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 1000);
+    // We've waited the full interval, so we should now have 10
+    assertEquals(0, limiter.getWaitIntervalMs(10));
+    assertEquals(0, limiter.waitInterval());
+  }
+
+  @Test
+  public void itRunsPartialRefillIntervals() {
+    RateLimiter limiter = new FixedIntervalRateLimiter(100);
+    limiter.set(10, TimeUnit.SECONDS);
+    assertEquals(0, limiter.getWaitIntervalMs());
+
+    // Consume the quota
+    limiter.consume(10);
+
+    // Need to wait 1s to acquire another resource
+    long waitInterval = limiter.waitInterval(10);
+    assertTrue(900 < waitInterval);
+    assertTrue(1000 >= waitInterval);
+    // We need to wait 2s to acquire more than 10 resources
+    waitInterval = limiter.waitInterval(20);
+    assertTrue(1900 < waitInterval);
+    assertTrue(2000 >= waitInterval);
+    // We need to wait 0<=x<=100ms to acquire 1 resource
+    waitInterval = limiter.waitInterval(1);
+    assertTrue(0 < waitInterval);
+    assertTrue(100 >= waitInterval);
+
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 500);
+    // We've waited half the interval, so we should now have half available
+    assertEquals(0, limiter.getWaitIntervalMs(5));
+    assertEquals(0, limiter.waitInterval());
+  }
+
+  @Test
+  public void itRunsRepeatedPartialRefillIntervals() {
+    RateLimiter limiter = new FixedIntervalRateLimiter(100);
+    limiter.set(10, TimeUnit.SECONDS);
+    assertEquals(0, limiter.getWaitIntervalMs());
+    // Consume the quota
+    limiter.consume(10);
+    for (int i = 0; i < 100; i++) {
+      limiter.setNextRefillTime(limiter.getNextRefillTime() - 100); // free 1 resource
+      limiter.consume(1);
+      assertFalse(limiter.isAvailable(1)); // all resources consumed
+      assertTrue(limiter.isAvailable(0)); // not negative
+    }
   }
 }
