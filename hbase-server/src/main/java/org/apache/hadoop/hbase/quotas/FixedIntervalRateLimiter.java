@@ -21,26 +21,65 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 /**
  * With this limiter resources will be refilled only after a fixed interval of time.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class FixedIntervalRateLimiter extends RateLimiter {
+
+  /**
+   * The FixedIntervalRateLimiter can be harsh from a latency/backoff perspective, which makes it
+   * difficult to fully and consistently utilize a quota allowance. By configuring the
+   * {@link #RATE_LIMITER_REFILL_INTERVAL_MS} to a lower value you will encourage the rate limiter
+   * to throw smaller wait intervals for requests which may be fulfilled in timeframes shorter than
+   * the quota's full interval. For example, if you're saturating a 100MB/sec read IO quota with a
+   * ton of tiny gets, then configuring this to a value like 100ms will ensure that your retry
+   * backoffs approach ~100ms, rather than 1sec. Be careful not to configure this too low, or you
+   * may produce a dangerous amount of retry volume.
+   */
+  public static final String RATE_LIMITER_REFILL_INTERVAL_MS =
+    "hbase.quota.rate.limiter.refill.interval.ms";
+
   private long nextRefillTime = -1L;
+  private final long refillInterval;
+
+  public FixedIntervalRateLimiter() {
+    this(DEFAULT_TIME_UNIT);
+  }
+
+  public FixedIntervalRateLimiter(long refillInterval) {
+    super();
+    Preconditions.checkArgument(getTimeUnitInMillis() >= refillInterval,
+      String.format("Refill interval %s must be less than or equal to TimeUnit millis %s",
+        refillInterval, getTimeUnitInMillis()));
+    this.refillInterval = refillInterval;
+  }
 
   @Override
   public long refill(long limit) {
     final long now = EnvironmentEdgeManager.currentTime();
+    if (nextRefillTime == -1) {
+      nextRefillTime = now + refillInterval;
+      return limit;
+    }
     if (now < nextRefillTime) {
       return 0;
     }
-    nextRefillTime = now + super.getTimeUnitInMillis();
-    return limit;
+    long diff = refillInterval + now - nextRefillTime;
+    long refills = diff / refillInterval;
+    nextRefillTime = now + refillInterval;
+    long refillAmount = refills * getRefillIntervalAdjustedLimit(limit);
+    return Math.min(limit, refillAmount);
   }
 
   @Override
   public long getWaitInterval(long limit, long available, long amount) {
+    // adjust the limit based on the refill interval
+    limit = getRefillIntervalAdjustedLimit(limit);
+
     if (nextRefillTime == -1) {
       return 0;
     }
@@ -62,7 +101,11 @@ public class FixedIntervalRateLimiter extends RateLimiter {
     if (diff % limit == 0) {
       extraRefillsNecessary--;
     }
-    return nextRefillInterval + (extraRefillsNecessary * super.getTimeUnitInMillis());
+    return nextRefillInterval + (extraRefillsNecessary * refillInterval);
+  }
+
+  private long getRefillIntervalAdjustedLimit(long limit) {
+    return (long) Math.ceil(refillInterval / (double) getTimeUnitInMillis() * limit);
   }
 
   // This method is for strictly testing purpose only
