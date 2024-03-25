@@ -329,10 +329,14 @@ public class ServerManager implements ConfigurationObserver {
         // (possible race condition), by that time master has already processed SCP for that
         // server and started accepting regionserver report from new server i.e. server with
         // same (host + port) and higher startcode.
-        // If we don't reject report from old server here, it can cause large num of inconsistencies
-        // because region snapshot from old server will be recorded, and these inconsistencies
-        // sometimes would not be resolved until hbck recoveries are executed for such old servers
-        // manually.
+        // The exception thrown here is not meant to tell the region server it is dead because if
+        // there is a new server on the same host port, the old server should have already been
+        // dead in ideal situation.
+        // The exception thrown here is to skip the later steps of the whole regionServerReport
+        // request processing. Usually, after recording it in ServerManager, we will call the
+        // related methods in AssignmentManager to record region states. If the region server
+        // is already dead, we should not do these steps anymore, so here we throw an exception
+        // to let the upper layer know that they should not continue processing anymore.
         final String errorMsg = "RegionServerReport ignored, could not record the server: " + sn
           + " . Consider yourself dead as server with higher startcode is already registered.";
         LOG.warn(errorMsg);
