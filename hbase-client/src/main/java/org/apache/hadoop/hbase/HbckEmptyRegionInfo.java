@@ -20,8 +20,9 @@ package org.apache.hadoop.hbase;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * POJO to present Empty Region Info from Catalog Janitor Inconsistencies Report via REST API.
- * These inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of Catalog Janitor inconsistencies.
+ * POJO to present Empty Region Info from Catalog Janitor Inconsistencies Report via REST API. These
+ * inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of Catalog Janitor
+ * inconsistencies.
  */
 @InterfaceAudience.Public
 public class HbckEmptyRegionInfo {

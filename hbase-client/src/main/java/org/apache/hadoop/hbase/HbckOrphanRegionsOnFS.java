@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * POJO to present Orphan Region on FS from HBCK Inconsistencies Report via REST API.
- * These inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of HBCK Inconsistencies.
+ * POJO to present Orphan Region on FS from HBCK Inconsistencies Report via REST API. These
+ * inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of HBCK Inconsistencies.
  */
 @InterfaceAudience.Public
 public class HbckOrphanRegionsOnFS {

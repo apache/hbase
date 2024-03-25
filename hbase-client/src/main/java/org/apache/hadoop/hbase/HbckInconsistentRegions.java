@@ -21,8 +21,8 @@ import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * POJO to present HBCK Inconsistent Regions from HBCK Inconsistencies Report via REST API.
- * These inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of HBCK inconsistencies.
+ * POJO to present HBCK Inconsistent Regions from HBCK Inconsistencies Report via REST API. These
+ * inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of HBCK inconsistencies.
  */
 @InterfaceAudience.Public
 public class HbckInconsistentRegions {
