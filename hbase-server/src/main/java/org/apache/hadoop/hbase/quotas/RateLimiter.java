@@ -35,7 +35,9 @@ import org.apache.yetus.audience.InterfaceStability;
       + "are mostly synchronized...but to me it looks like they are totally synchronized")
 public abstract class RateLimiter {
   public static final String QUOTA_RATE_LIMITER_CONF_KEY = "hbase.quota.rate.limiter";
-  private long tunit = 1000; // Timeunit factor for translating to ms.
+  public static final long DEFAULT_TIME_UNIT = 1000;
+
+  private long tunit = DEFAULT_TIME_UNIT; // Timeunit factor for translating to ms.
   private long limit = Long.MAX_VALUE; // The max value available resource units can be refilled to.
   private long avail = Long.MAX_VALUE; // Currently available resource units
 
@@ -157,7 +159,7 @@ public abstract class RateLimiter {
    * @param amount the number of required resources, a non-negative number
    * @return true if there are enough available resources, otherwise false
    */
-  private boolean isAvailable(final long amount) {
+  protected boolean isAvailable(final long amount) {
     if (isBypass()) {
       return true;
     }
