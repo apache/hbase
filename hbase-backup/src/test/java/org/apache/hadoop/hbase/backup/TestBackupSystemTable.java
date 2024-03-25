@@ -192,6 +192,7 @@ public class TestBackupSystemTable {
 
     for (int i = 0; i < servers.length; i++) {
       table.writeRegionServerLastLogRollResult(servers[i], timestamps[i], "root");
+      table.writeRegionServerLastLogRollResult(servers[i], timestamps[i], "root/backup");
     }
 
     HashMap<String, Long> result = table.readRegionServerLastLogRollResult("root");
@@ -266,6 +267,7 @@ public class TestBackupSystemTable {
     rsTimestampMap.put("rs3:100", 103L);
 
     table.writeRegionServerLogTimestamp(tables, rsTimestampMap, "root");
+    table.writeRegionServerLogTimestamp(tables, rsTimestampMap, "root/backup");
 
     Map<TableName, Map<String, Long>> result = table.readLogTimestampMap("root");
 
@@ -292,6 +294,8 @@ public class TestBackupSystemTable {
     rsTimestampMap1.put("rs3:100", 203L);
 
     table.writeRegionServerLogTimestamp(tables1, rsTimestampMap1, "root");
+    table.writeRegionServerLogTimestamp(tables1, rsTimestampMap, "root/backup");
+
 
     result = table.readLogTimestampMap("root");
 
