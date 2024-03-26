@@ -86,6 +86,7 @@ public final class BlockCacheFactory {
   public static BlockCache createBlockCache(Configuration conf) {
     FirstLevelBlockCache l1Cache = createFirstLevelCache(conf);
     if (l1Cache == null) {
+      LOG.debug("Block cache creation failed due to unsuccessful L1 cache creation.");
       return null;
     }
     boolean useExternal = conf.getBoolean(EXTERNAL_BLOCKCACHE_KEY, EXTERNAL_BLOCKCACHE_DEFAULT);
@@ -109,6 +110,7 @@ public final class BlockCacheFactory {
   private static FirstLevelBlockCache createFirstLevelCache(final Configuration c) {
     final long cacheSize = MemorySizeUtil.getOnHeapCacheSize(c);
     if (cacheSize < 0) {
+      LOG.debug("L1 cache creation failed due to negative cache size.");
       return null;
     }
     String policy = c.get(BLOCKCACHE_POLICY_KEY, BLOCKCACHE_POLICY_DEFAULT);
