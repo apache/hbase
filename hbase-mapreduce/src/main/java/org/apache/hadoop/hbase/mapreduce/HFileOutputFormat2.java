@@ -187,10 +187,10 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
 
   /**
    * ExtendedCell and ExtendedCellSerialization are InterfaceAudience.Private. We expose this config
-   * package-private for internal usage for jobs like WALPlayer which need to use features of
-   * ExtendedCell.
+   * for internal usage in jobs like WALPlayer which need to use features of ExtendedCell.
    */
-  static final String EXTENDED_CELL_SERIALIZATION_ENABLED_KEY =
+  @InterfaceAudience.Private
+  public static final String EXTENDED_CELL_SERIALIZATION_ENABLED_KEY =
     "hbase.mapreduce.hfileoutputformat.extendedcell.enabled";
   static final boolean EXTENDED_CELL_SERIALIZATION_ENABLED_DEFULT = false;
 
