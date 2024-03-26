@@ -122,4 +122,8 @@ class AsyncSingleRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
   protected Optional<TableName> getTableName() {
     return Optional.of(tableName);
   }
+
+  public int getReplicaId() {
+    return replicaId;
+  }
 }

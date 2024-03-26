@@ -204,6 +204,29 @@ public abstract class AsyncRpcRetryingCaller<T> {
           }
           if (disabled) {
             future.completeExceptionally(new TableNotEnabledException(tableName.get()));
+            return;
+          }
+          if (this instanceof AsyncSingleRequestRpcRetryingCaller) {
+            AsyncSingleRequestRpcRetryingCaller caller = (AsyncSingleRequestRpcRetryingCaller) this;
+            int replicaId = caller.getReplicaId();
+            FutureUtils.addListener(conn.getAdmin().getDescriptor(tableName.get()),
+              (tdesc, tdescError) -> {
+                if (tdescError != null) {
+                  future.completeExceptionally(tdescError);
+                  return;
+                }
+                int regionReplicationCount = tdesc.getRegionReplication();
+                if (replicaId >= regionReplicationCount) {
+                  future.completeExceptionally(
+                    new DoNotRetryIOException("The specified region replica id " + replicaId
+                      + " does not exist, the REGION_REPLICATION of this table "
+                      + tableName.get().getNameAsString() + " is " + regionReplicationCount + ","
+                      + " this means that the maximum region replica id you can specify is "
+                      + (regionReplicationCount - 1) + "."));
+                  return;
+                }
+                tryScheduleRetry(error);
+              });
           } else {
             tryScheduleRetry(error);
           }
