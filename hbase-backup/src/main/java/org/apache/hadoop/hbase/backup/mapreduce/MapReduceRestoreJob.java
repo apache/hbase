@@ -74,9 +74,7 @@ public class MapReduceRestoreJob implements RestoreJob {
         BackupUtils.getFileNameCompatibleString(newTableNames[i]), getConf());
       Configuration conf = getConf();
       conf.set(bulkOutputConfKey, bulkOutputPath.toString());
-      String[] playerArgs = { dirs,
-        fullBackupRestore ? newTableNames[i].getNameAsString() : tableNames[i].getNameAsString() };
-
+      String[] playerArgs = { dirs, newTableNames[i].getNameAsString() };
       int result;
       try {
 
