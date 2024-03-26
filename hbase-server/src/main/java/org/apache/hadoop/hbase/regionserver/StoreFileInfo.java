@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.OptionalLong;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -419,6 +420,54 @@ public class StoreFileInfo implements Configurable {
   public String toString() {
     return this.getPath()
       + (isReference() ? "->" + getReferredToFile(this.getPath()) + "-" + reference : "");
+  }
+
+  /**
+   * Cells in a bulkloaded file don't have a sequenceId since they don't go through memstore. When a
+   * bulkload file is committed, the current memstore ts is stamped onto the file name as the
+   * sequenceId of the file. At read time, the sequenceId is copied onto all of the cells returned
+   * so that they can be properly sorted relative to other cells in other files. Further, when
+   * opening multiple files for scan, the sequence id is used to ensusre that the bulkload file's
+   * scanner is porperly sorted amongst the other scanners. Non-bulkloaded files get their
+   * sequenceId from the MAX_MEMSTORE_TS_KEY since those go through the memstore and have true
+   * sequenceIds.
+   */
+  private static final String SEQ_ID_MARKER = "_SeqId_";
+  private static final int SEQ_ID_MARKER_LENGTH = SEQ_ID_MARKER.length();
+
+  /**
+   * @see #SEQ_ID_MARKER
+   * @return True if the file name looks like a bulkloaded file, based on the presence of the SeqId
+   *         marker added to those files.
+   */
+  public static boolean hasBulkloadSeqId(final Path path) {
+    String fileName = path.getName();
+    return fileName.contains(SEQ_ID_MARKER);
+  }
+
+  /**
+   * @see #SEQ_ID_MARKER
+   * @return If the path is a properly named bulkloaded file, returns the sequence id stamped at the
+   *         end of the file name.
+   */
+  public static OptionalLong getBulkloadSeqId(final Path path) {
+    String fileName = path.getName();
+    int startPos = fileName.indexOf(SEQ_ID_MARKER);
+    if (startPos != -1) {
+      String strVal = fileName.substring(startPos + SEQ_ID_MARKER_LENGTH,
+        fileName.indexOf('_', startPos + SEQ_ID_MARKER_LENGTH));
+      return OptionalLong.of(Long.parseLong(strVal));
+    }
+    return OptionalLong.empty();
+  }
+
+  /**
+   * @see #SEQ_ID_MARKER
+   * @return A string value for appending to the end of a bulkloaded file name, containing the
+   *         properly formatted SeqId marker.
+   */
+  public static String formatBulkloadSeqId(long seqId) {
+    return SEQ_ID_MARKER + seqId + "_";
   }
 
   /**

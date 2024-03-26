@@ -20,15 +20,18 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -77,6 +80,7 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
     private Cell value = null;
     private long count;
     private boolean seeked = false;
+    private OptionalLong bulkloadSeqId;
 
     @Override
     public void initialize(InputSplit split, TaskAttemptContext context)
@@ -87,6 +91,7 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
       FileSystem fs = path.getFileSystem(conf);
       LOG.info("Initialize HFileRecordReader for {}", path);
       this.in = HFile.createReader(fs, path, conf);
+      this.bulkloadSeqId = StoreFileInfo.getBulkloadSeqId(path);
 
       // The file info must be loaded before the scanner can be used.
       // This seems like a bug in HBase, but it's easily worked around.
@@ -108,6 +113,9 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
         return false;
       }
       value = scanner.getCell();
+      if (value != null && bulkloadSeqId.isPresent()) {
+        PrivateCellUtil.setSequenceId(value, bulkloadSeqId.getAsLong());
+      }
       count++;
       return true;
     }
