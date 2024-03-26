@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -152,67 +151,36 @@ class AsyncRegionLocator {
     }, AsyncRegionLocator::getRegionNames, supplier);
   }
 
-  private void internalAddListener(CompletableFuture<HRegionLocation> future,
-    CompletableFuture<RegionLocations> locsFuture, TableName tableName, byte[] row, int replicaId,
-    RegionLocateType type) {
-    addListener(locsFuture, (locs, error) -> {
-      if (error != null) {
-        future.completeExceptionally(error);
-        return;
-      }
-      HRegionLocation loc = locs.getRegionLocation(replicaId);
-      if (loc == null) {
-        future.completeExceptionally(
-          new RegionOfflineException("No location for " + tableName + ", row='"
-            + Bytes.toStringBinary(row) + "', locateType=" + type + ", replicaId=" + replicaId));
-      } else if (loc.getServerName() == null) {
-        future
-          .completeExceptionally(new RegionOfflineException("No server address listed for region '"
-            + loc.getRegion().getRegionNameAsString() + ", row='" + Bytes.toStringBinary(row)
-            + "', locateType=" + type + ", replicaId=" + replicaId));
-      } else {
-        future.complete(loc);
-      }
-    });
-  }
-
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
     int replicaId, RegionLocateType type, boolean reload, long timeoutNs) {
     final Supplier<Span> supplier = new TableSpanBuilder(conn)
       .setName("AsyncRegionLocator.getRegionLocation").setTableName(tableName);
     return tracedLocationFuture(() -> {
+      // meta region can not be split right now so we always call the same method.
+      // Change it later if the meta table can have more than one regions.
       CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
-      if (replicaId == RegionReplicaUtil.DEFAULT_REPLICA_ID) {
-        // meta region can not be split right now so we always call the same method.
-        // Change it later if the meta table can have more than one regions.
-        CompletableFuture<RegionLocations> locsFuture = isMeta(tableName)
-          ? metaRegionLocator.getRegionLocations(replicaId, reload)
-          : nonMetaRegionLocator.getRegionLocations(tableName, row, replicaId, type, reload);
-        internalAddListener(future, locsFuture, tableName, row, replicaId, type);
-      } else {
-        addListener(conn.getAdmin().getDescriptor(tableName), (tdesc, error) -> {
-          if (error != null) {
-            future.completeExceptionally(error);
-            return;
-          }
-          int regionReplicationCount = tdesc.getRegionReplication();
-          if (replicaId >= regionReplicationCount) {
-            future
-              .completeExceptionally(new DoNotRetryIOException("The specified region replica id "
-                + replicaId + " does not exist, the REGION_REPLICATION of this table "
-                + tableName.getNameAsString() + " is " + regionReplicationCount + ","
-                + " this means that the maximum region replica id you can specify is "
-                + (regionReplicationCount - 1) + "."));
-            return;
-          }
-          // meta region can not be split right now so we always call the same method.
-          // Change it later if the meta table can have more than one regions.
-          CompletableFuture<RegionLocations> locsFuture = isMeta(tableName)
-            ? metaRegionLocator.getRegionLocations(replicaId, reload)
-            : nonMetaRegionLocator.getRegionLocations(tableName, row, replicaId, type, reload);
-          internalAddListener(future, locsFuture, tableName, row, replicaId, type);
-        });
-      }
+      CompletableFuture<RegionLocations> locsFuture = isMeta(tableName)
+        ? metaRegionLocator.getRegionLocations(replicaId, reload)
+        : nonMetaRegionLocator.getRegionLocations(tableName, row, replicaId, type, reload);
+      addListener(locsFuture, (locs, error) -> {
+        if (error != null) {
+          future.completeExceptionally(error);
+          return;
+        }
+        HRegionLocation loc = locs.getRegionLocation(replicaId);
+        if (loc == null) {
+          future.completeExceptionally(
+            new RegionOfflineException("No location for " + tableName + ", row='"
+              + Bytes.toStringBinary(row) + "', locateType=" + type + ", replicaId=" + replicaId));
+        } else if (loc.getServerName() == null) {
+          future.completeExceptionally(
+            new RegionOfflineException("No server address listed for region '"
+              + loc.getRegion().getRegionNameAsString() + ", row='" + Bytes.toStringBinary(row)
+              + "', locateType=" + type + ", replicaId=" + replicaId));
+        } else {
+          future.complete(loc);
+        }
+      });
       return withTimeout(future, timeoutNs,
         () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs)
           + "ms) waiting for region location for " + tableName + ", row='"

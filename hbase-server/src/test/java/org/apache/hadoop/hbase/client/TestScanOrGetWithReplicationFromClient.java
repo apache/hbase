@@ -18,17 +18,15 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -46,10 +44,10 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 
 @Category({ MediumTests.class, ClientTests.class })
-public class TestAsyncTableRegionLocatorWithRegionReplicaId {
+public class TestScanOrGetWithReplicationFromClient {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableRegionLocatorWithRegionReplicaId.class);
+    HBaseClassTestRule.forClass(TestScanOrGetWithReplicationFromClient.class);
 
   @Rule
   public TestName name = new TestName();
@@ -63,7 +61,6 @@ public class TestAsyncTableRegionLocatorWithRegionReplicaId {
   // region replica id starts from 0
   private static final int NON_EXISTING_REGION_REPLICA_ID = REGION_REPLICATION_COUNT;
   private static Connection connection;
-  private static AsyncConnection asyncConn;
   private static Admin admin;
   private TableName tableName;
 
@@ -71,7 +68,6 @@ public class TestAsyncTableRegionLocatorWithRegionReplicaId {
   public static void setUpBeforeClass() throws Exception {
     UTIL.startMiniCluster(1);
     connection = UTIL.getConnection();
-    asyncConn = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
     admin = UTIL.getAdmin();
   }
 
@@ -115,60 +111,98 @@ public class TestAsyncTableRegionLocatorWithRegionReplicaId {
   }
 
   @Test
-  public void testMetaTableRegionLocatorWithRegionReplicaId()
-    throws ExecutionException, InterruptedException {
-    AsyncTableRegionLocator locator = asyncConn.getRegionLocator(TableName.META_TABLE_NAME);
-    CompletableFuture<HRegionLocation> future =
-      locator.getRegionLocation(tableName.getName(), RegionReplicaUtil.DEFAULT_REPLICA_ID, true);
-    HRegionLocation hrl = future.get();
-    assertNotNull(hrl);
+  public void testScanMetaWithRegionReplicaId() throws IOException {
+    Table metaTable = connection.getTable(TableName.META_TABLE_NAME);
+    Scan scan = new Scan();
+    scan.setFilter(new PrefixFilter(tableName.getName()));
+    scan.setReplicaId(RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    scan.setConsistency(Consistency.TIMELINE);
+    ResultScanner rs = metaTable.getScanner(scan);
+    rs.forEach(r -> assertTrue(Bytes.toString(r.getRow()).contains(tableName.getNameAsString())));
   }
 
   @Test
-  public void testMetaTableRegionLocatorWithNonExistingRegionReplicaId()
-    throws InterruptedException {
-    AsyncTableRegionLocator locator = asyncConn.getRegionLocator(TableName.META_TABLE_NAME);
-    CompletableFuture<HRegionLocation> future =
-      locator.getRegionLocation(tableName.getName(), NON_EXISTING_REGION_REPLICA_ID, true);
+  public void testScanMetaWithNonExistingRegionReplicaId() throws IOException {
+    Table metaTable = connection.getTable(TableName.META_TABLE_NAME);
+    Scan scan = new Scan();
+    scan.setReplicaId(NON_EXISTING_REGION_REPLICA_ID);
+    scan.setConsistency(Consistency.TIMELINE);
+    exception.expect(DoNotRetryIOException.class);
+    ResultScanner rs = metaTable.getScanner(scan);
     try {
-      future.get();
-    } catch (ExecutionException e) {
-      assertTrue(e.getCause() instanceof DoNotRetryIOException);
+      rs.forEach(r -> Bytes.toString(r.getRow()));
+    } catch (Exception e) {
+      Throwable throwable = e.getCause();
+      assertTrue(throwable instanceof DoNotRetryIOException);
       String message = "The specified region replica id " + NON_EXISTING_REGION_REPLICA_ID
         + " does not exist, the REGION_REPLICATION of this table "
         + TableName.META_TABLE_NAME.getNameAsString() + " is "
         + TableDescriptorBuilder.DEFAULT_REGION_REPLICATION + ", "
         + "this means that the maximum region replica id you can specify is "
         + (TableDescriptorBuilder.DEFAULT_REGION_REPLICATION - 1) + ".";
-      assertEquals(message, e.getCause().getMessage());
+      assertEquals(message, throwable.getMessage());
     }
   }
 
   @Test
-  public void testTableRegionLocatorWithRegionReplicaId()
-    throws ExecutionException, InterruptedException {
-    AsyncTableRegionLocator locator = asyncConn.getRegionLocator(tableName);
-    CompletableFuture<HRegionLocation> future =
-      locator.getRegionLocation(Bytes.toBytes(ROW), RegionReplicaUtil.DEFAULT_REPLICA_ID, true);
-    HRegionLocation hrl = future.get();
-    assertNotNull(hrl);
+  public void testScanTableWithRegionReplicaId() throws IOException {
+    Table table = connection.getTable(tableName);
+    Scan scan = new Scan();
+    scan.setReplicaId(RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    scan.setConsistency(Consistency.TIMELINE);
+    ResultScanner rs = table.getScanner(scan);
+    rs.forEach(r -> assertEquals(ROW, Bytes.toString(r.getRow())));
   }
 
   @Test
-  public void testTableRegionLocatorWithNonExistingRegionReplicaId() throws InterruptedException {
-    AsyncTableRegionLocator locator = asyncConn.getRegionLocator(tableName);
-    CompletableFuture<HRegionLocation> future =
-      locator.getRegionLocation(Bytes.toBytes(ROW), NON_EXISTING_REGION_REPLICA_ID, true);
+  public void testScanTableWithNonExistingRegionReplicaId() throws IOException {
+    Table table = connection.getTable(tableName);
+    Scan scan = new Scan();
+    scan.setReplicaId(NON_EXISTING_REGION_REPLICA_ID);
+    scan.setConsistency(Consistency.TIMELINE);
+    exception.expect(DoNotRetryIOException.class);
+    ResultScanner rs = table.getScanner(scan);
     try {
-      future.get();
-    } catch (ExecutionException e) {
-      assertTrue(e.getCause() instanceof DoNotRetryIOException);
+      rs.forEach(r -> Bytes.toString(r.getRow()));
+    } catch (Exception e) {
+      Throwable throwable = e.getCause();
+      assertTrue(throwable instanceof DoNotRetryIOException);
       String message = "The specified region replica id " + NON_EXISTING_REGION_REPLICA_ID
         + " does not exist, the REGION_REPLICATION of this table " + tableName.getNameAsString()
         + " is " + REGION_REPLICATION_COUNT + ", "
         + "this means that the maximum region replica id you can specify is "
         + (REGION_REPLICATION_COUNT - 1) + ".";
-      assertEquals(message, e.getCause().getMessage());
+      assertEquals(message, throwable.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetTableWithRegionReplicaId() throws IOException {
+    Table table = connection.getTable(tableName);
+    Get get = new Get(Bytes.toBytes(ROW)).setConsistency(Consistency.TIMELINE)
+      .setReplicaId(RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    Result result = table.get(get);
+    assertEquals(ROW, Bytes.toString(result.getRow()));
+    String value = Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("q")));
+    assertEquals("test_value", value);
+  }
+
+  @Test
+  public void testGetTableWithNonExistingRegionReplicaId() throws IOException {
+    Table table = connection.getTable(tableName);
+    Get get = new Get(Bytes.toBytes(ROW)).setConsistency(Consistency.TIMELINE)
+      .setReplicaId(NON_EXISTING_REGION_REPLICA_ID);
+    try {
+      Result result = table.get(get);
+      result.getValue(FAMILY, Bytes.toBytes("q"));
+    } catch (Exception e) {
+      assertTrue(e instanceof DoNotRetryIOException);
+      String message = "The specified region replica id " + NON_EXISTING_REGION_REPLICA_ID
+        + " does not exist, the REGION_REPLICATION of this table " + tableName.getNameAsString()
+        + " is " + REGION_REPLICATION_COUNT + ", "
+        + "this means that the maximum region replica id you can specify is "
+        + (REGION_REPLICATION_COUNT - 1) + ".";
+      assertEquals(message, e.getMessage());
     }
   }
 }
