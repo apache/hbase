@@ -408,8 +408,7 @@ public class HStoreFile implements StoreFile {
     }
 
     if (isBulkLoadResult()) {
-      // generate the sequenceId from the fileName
-      // fileName is of the form <randomName>_SeqId_<id-when-loaded>_
+      // For bulkloads, we have to parse the sequenceid from the path name
       OptionalLong sequenceId = StoreFileInfo.getBulkloadSeqId(this.getPath());
       if (sequenceId.isPresent()) {
         this.sequenceid = sequenceId.getAsLong();
