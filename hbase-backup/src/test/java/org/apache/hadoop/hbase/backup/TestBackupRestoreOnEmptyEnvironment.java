@@ -21,26 +21,22 @@ import static org.apache.hadoop.hbase.backup.BackupInfo.BackupState.COMPLETE;
 import static org.apache.hadoop.hbase.backup.BackupTestUtil.enableBackup;
 import static org.apache.hadoop.hbase.backup.BackupTestUtil.verifyBackup;
 import static org.apache.hadoop.hbase.backup.BackupType.FULL;
+import static org.apache.hadoop.hbase.backup.BackupType.INCREMENTAL;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.client.Admin;
@@ -52,13 +48,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testing.TestingHBaseCluster;
 import org.apache.hadoop.hbase.testing.TestingHBaseClusterOption;
-import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -72,29 +66,27 @@ import org.slf4j.LoggerFactory;
 
 @Category(MediumTests.class)
 @RunWith(Parameterized.class)
-public class TestBackupRestoreWithModifications {
+public class TestBackupRestoreOnEmptyEnvironment {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestBackupRestoreWithModifications.class);
+    LoggerFactory.getLogger(TestBackupRestoreOnEmptyEnvironment.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupRestoreWithModifications.class);
+    HBaseClassTestRule.forClass(TestBackupRestoreOnEmptyEnvironment.class);
 
-  @Parameterized.Parameters(name = "{index}: useBulkLoad={0}")
+  @Parameterized.Parameters(name = "{index}: restoreToOtherTable={0}")
   public static Iterable<Object[]> data() {
     return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
   }
 
   @Parameterized.Parameter(0)
-  public boolean useBulkLoad;
-
+  public boolean restoreToOtherTable;
   private TableName sourceTable;
   private TableName targetTable;
 
-  private List<TableName> allTables;
   private static TestingHBaseCluster cluster;
-  private static final Path BACKUP_ROOT_DIR = new Path("backupIT");
+  private static Path BACKUP_ROOT_DIR;
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("0");
 
   @BeforeClass
@@ -103,6 +95,7 @@ public class TestBackupRestoreWithModifications {
     enableBackup(conf);
     cluster = TestingHBaseCluster.create(TestingHBaseClusterOption.builder().conf(conf).build());
     cluster.start();
+    BACKUP_ROOT_DIR = new Path(new Path(conf.get("fs.defaultFS")), new Path("/backupIT"));
   }
 
   @AfterClass
@@ -112,38 +105,68 @@ public class TestBackupRestoreWithModifications {
 
   @Before
   public void setUp() throws Exception {
-    sourceTable = TableName.valueOf("table-" + useBulkLoad);
-    targetTable = TableName.valueOf("another-table-" + useBulkLoad);
-    allTables = Arrays.asList(sourceTable, targetTable);
+    sourceTable = TableName.valueOf("table");
+    targetTable = TableName.valueOf("another-table");
     createTable(sourceTable);
     createTable(targetTable);
   }
 
+  @After
+  public void removeTables() throws Exception {
+    deleteTables();
+  }
+
   @Test
-  public void testModificationsOnTable() throws Exception {
-    Instant timestamp = Instant.now();
+  public void testRestoreToCorrectTable() throws Exception {
+    Instant timestamp = Instant.now().minusSeconds(10);
 
     // load some data
-    load(sourceTable, timestamp, "data");
+    putLoad(sourceTable, timestamp, "data");
 
-    String backupId = backup(FULL, allTables);
+    String backupId = backup(FULL, Collections.singletonList(sourceTable));
     BackupInfo backupInfo = verifyBackup(cluster.getConf(), backupId, FULL, COMPLETE);
     assertTrue(backupInfo.getTables().contains(sourceTable));
 
-    restore(backupId, sourceTable, targetTable);
-    validateDataEquals(sourceTable, "data");
-    validateDataEquals(targetTable, "data");
+    LOG.info("Deleting the tables before restore ...");
+    deleteTables();
 
-    // load new data on the same timestamp
-    load(sourceTable, timestamp, "changed_data");
+    if (restoreToOtherTable) {
+      restore(backupId, sourceTable, targetTable);
+      validateDataEquals(targetTable, "data");
+    } else {
+      restore(backupId, sourceTable, sourceTable);
+      validateDataEquals(sourceTable, "data");
+    }
 
-    backupId = backup(FULL, allTables);
-    backupInfo = verifyBackup(cluster.getConf(), backupId, FULL, COMPLETE);
-    assertTrue(backupInfo.getTables().contains(sourceTable));
+  }
 
-    restore(backupId, sourceTable, targetTable);
-    validateDataEquals(sourceTable, "changed_data");
-    validateDataEquals(targetTable, "changed_data");
+  @Test
+  public void testRestoreCorrectTableForIncremental() throws Exception {
+    Instant timestamp = Instant.now().minusSeconds(10);
+
+    // load some data
+    putLoad(sourceTable, timestamp, "data");
+
+    String backupId = backup(FULL, Collections.singletonList(sourceTable));
+    verifyBackup(cluster.getConf(), backupId, FULL, COMPLETE);
+
+    // some incremental data
+    putLoad(sourceTable, timestamp.plusMillis(1), "new_data");
+
+    String backupId2 = backup(INCREMENTAL, Collections.singletonList(sourceTable));
+    verifyBackup(cluster.getConf(), backupId2, INCREMENTAL, COMPLETE);
+
+    LOG.info("Deleting the tables before restore ...");
+    deleteTables();
+
+    if (restoreToOtherTable) {
+      restore(backupId2, sourceTable, targetTable);
+      validateDataEquals(targetTable, "new_data");
+    } else {
+      restore(backupId2, sourceTable, sourceTable);
+      validateDataEquals(sourceTable, "new_data");
+    }
+
   }
 
   private void createTable(TableName tableName) throws IOException {
@@ -155,11 +178,15 @@ public class TestBackupRestoreWithModifications {
     }
   }
 
-  private void load(TableName tableName, Instant timestamp, String data) throws IOException {
-    if (useBulkLoad) {
-      hFileBulkLoad(tableName, timestamp, data);
-    } else {
-      putLoad(tableName, timestamp, data);
+  private void deleteTables() throws IOException {
+    try (Connection connection = ConnectionFactory.createConnection(cluster.getConf());
+      Admin admin = connection.getAdmin()) {
+      for (TableName table : Arrays.asList(sourceTable, targetTable)) {
+        if (admin.tableExists(table)) {
+          admin.disableTable(table);
+          admin.deleteTable(table);
+        }
+      }
     }
   }
 
@@ -183,30 +210,6 @@ public class TestBackupRestoreWithModifications {
       }
       connection.getAdmin().flush(tableName);
     }
-  }
-
-  private void hFileBulkLoad(TableName tableName, Instant timestamp, String data)
-    throws IOException {
-    FileSystem fs = FileSystem.get(cluster.getConf());
-    LOG.info("Writing new data to HBase using BulkLoad: {}", data);
-    // HFiles require this strict directory structure to allow to load them
-    Path hFileRootPath = new Path("/tmp/hfiles_" + UUID.randomUUID());
-    fs.mkdirs(hFileRootPath);
-    Path hFileFamilyPath = new Path(hFileRootPath, Bytes.toString(COLUMN_FAMILY));
-    fs.mkdirs(hFileFamilyPath);
-    try (HFile.Writer writer = HFile.getWriterFactoryNoCache(cluster.getConf())
-      .withPath(fs, new Path(hFileFamilyPath, "hfile_" + UUID.randomUUID()))
-      .withFileContext(new HFileContextBuilder().withTableName(tableName.toBytes())
-        .withColumnFamily(COLUMN_FAMILY).build())
-      .create()) {
-      for (int i = 0; i < 10; i++) {
-        writer.append(new KeyValue(Bytes.toBytes(i), COLUMN_FAMILY, Bytes.toBytes("data"),
-          timestamp.toEpochMilli(), Bytes.toBytes(data)));
-      }
-    }
-    Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer> result =
-      BulkLoadHFiles.create(cluster.getConf()).bulkLoad(tableName, hFileRootPath);
-    assertFalse(result.isEmpty());
   }
 
   private String backup(BackupType backupType, List<TableName> tables) throws IOException {
@@ -239,7 +242,6 @@ public class TestBackupRestoreWithModifications {
     try (Connection connection = ConnectionFactory.createConnection(cluster.getConf());
       Table table = connection.getTable(tableName)) {
       Scan scan = new Scan();
-      scan.readAllVersions();
       scan.setRaw(true);
       scan.setBatch(100);
 
@@ -252,5 +254,4 @@ public class TestBackupRestoreWithModifications {
       }
     }
   }
-
 }
