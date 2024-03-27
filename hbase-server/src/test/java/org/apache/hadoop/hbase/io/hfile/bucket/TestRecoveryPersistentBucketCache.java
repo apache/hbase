@@ -110,7 +110,7 @@ public class TestRecoveryPersistentBucketCache {
 
   @Test
   public void testBucketCacheEvictByHFileAfterRecovery() throws Exception {
-    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Path testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
     Configuration conf = HBaseConfiguration.create();
