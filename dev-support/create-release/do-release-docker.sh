@@ -304,7 +304,7 @@ if [ "${HOST_OS}" == "DARWIN" ]; then
   KEYSCAN_OUTPUT_PATH="${WORKDIR}/gpg-agent-proxy.ssh-keyscan"
   if [ -f "${KEYSCAN_OUTPUT_PATH}" ]; then
     # cleanup first so that the below checks will work, in case this is a rerun.
-    rm $KEYSCAN_OUTPUT_PATH
+    rm "${KEYSCAN_OUTPUT_PATH}"
   fi
 
   log "Waiting for port 62222 to be available"
