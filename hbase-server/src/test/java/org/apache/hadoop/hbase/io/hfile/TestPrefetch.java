@@ -360,12 +360,10 @@ public class TestPrefetch {
     conf.setInt(PREFETCH_DELAY, 25000);
     prefetchExecutorNotifier.onConfigurationChange(conf);
 
-    // Write file
     HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
       .withBlockSize(DATA_BLOCK_SIZE).build();
     Path storeFile = writeStoreFile("TestPrefetchWithDelay", context);
-
-    // Open the file
+    
     HFile.Reader reader = HFile.createReader(fs, storeFile, cacheConf, true, conf);
     long startTime = System.currentTimeMillis();
 
