@@ -766,6 +766,13 @@ Remove hbase-examples from the release binaries.
 We will still publish it into maven central.
 
 
+---
+
+* [HBASE-28453](https://issues.apache.org/jira/browse/HBASE-28453) | *Major* | **Support a middle ground between the Average and Fixed interval rate limiters**
+
+FixedIntervalRateLimiter now supports a custom refill interval via hbase.quota.rate.limiter.refill.interval.ms. Users of quotas may wish to change hbase.quota.rate.limiter to FixedIntervalRateLimiter and customize this new setting. It will likely lead to healthier backoffs for clients and more full quota utilization.
+
+
 
 # HBASE  2.2.0 Release Notes
 
