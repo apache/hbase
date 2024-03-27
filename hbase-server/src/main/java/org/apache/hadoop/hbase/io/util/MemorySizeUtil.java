@@ -210,8 +210,8 @@ public class MemorySizeUtil {
     float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
       HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
     if (cachePercentage <= 0.0001f) {
-      LOG.debug("On heap cache is disabled due to " + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + 
-          " is set to " + cachePercentage + " <= 0.0001");
+      LOG.debug("On heap cache is disabled due to " + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY
+        + " is set to " + cachePercentage + " <= 0.0001");
       return -1;
     }
     if (cachePercentage > 1.0) {
