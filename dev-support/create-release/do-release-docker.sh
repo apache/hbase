@@ -300,9 +300,22 @@ if [ "${HOST_OS}" == "DARWIN" ]; then
      "type=bind,src=${HOME}/.ssh/id_rsa.pub,dst=/home/${USER}/.ssh/authorized_keys,readonly" \
      "${GPG_PROXY_MOUNT[@]}" \
      "org.apache.hbase/gpg-agent-proxy:${IMGTAG}"
+
+  KEYSCAN_OUTPUT_PATH="${WORKDIR}/gpg-agent-proxy.ssh-keyscan"
+  if [ -f "${KEYSCAN_OUTPUT_PATH}" ]; then
+    # cleanup first so that the below checks will work, in case this is a rerun.
+    rm $KEYSCAN_OUTPUT_PATH
+  fi
+
+  log "Waiting for port 62222 to be available"
+  while [ ! -s "${KEYSCAN_OUTPUT_PATH}" ]; do
+    sleep 5
+    ssh-keyscan -p 62222 localhost 2>/dev/null | sort > "${KEYSCAN_OUTPUT_PATH}"
+  done
+  log "Done - port 62222 is ready"
+
   # gotta trust the container host
-  ssh-keyscan -p 62222 localhost 2>/dev/null | sort > "${WORKDIR}/gpg-agent-proxy.ssh-keyscan"
-  sort "${HOME}/.ssh/known_hosts" | comm -1 -3 - "${WORKDIR}/gpg-agent-proxy.ssh-keyscan" \
+  sort "${HOME}/.ssh/known_hosts" | comm -1 -3 - "${KEYSCAN_OUTPUT_PATH}" \
       > "${WORKDIR}/gpg-agent-proxy.known_hosts"
   if [ -s "${WORKDIR}/gpg-agent-proxy.known_hosts" ]; then
     log "Your ssh known_hosts does not include the entries for the gpg-agent proxy container."
