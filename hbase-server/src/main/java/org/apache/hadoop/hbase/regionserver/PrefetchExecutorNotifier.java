@@ -25,7 +25,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
  * Class to submit requests for PrefetchExecutor depending on configuration change
  */

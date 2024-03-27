@@ -66,17 +66,16 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.PrefetchExecutorNotifier;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.TestHStoreFile;
-import org.apache.hadoop.hbase.regionserver.PrefetchExecutorNotifier;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -98,11 +97,6 @@ public class TestPrefetch {
   private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
   private static final int DATA_BLOCK_SIZE = 2048;
   private static final int NUM_KV = 1000;
-
-  private long startTime;
-  private boolean measureTiming;
-
-
   private Configuration conf;
   private CacheConfig cacheConf;
   private FileSystem fs;
@@ -302,23 +296,10 @@ public class TestPrefetch {
     throws Exception {
     // Open the file
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
-    startTimer();
 
     while (!reader.prefetchComplete()) {
       // Sleep for a bit
       Thread.sleep(1000);
-      if (getComputeTiming()) {
-        // After task is scheduled and before the delay expires, prefetch should not start
-        // if prefetchFutures contains entry (which means it's not cancelled or completed)
-        // and wait time remaining is below delay expiry watermark, it can be deduced that
-        // the prefetch is not started yet.
-        if (getElapsedTime() >= (conf.getLong(PREFETCH_DELAY, 1000))) {
-          assertTrue("Prefetch should be started at this point", reader.prefetchStarted());
-          setComputeTiming(false);
-        } else {
-          assertFalse("Prefetch Should not start at this point", reader.prefetchStarted());
-        }
-      }
     }
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
@@ -374,19 +355,41 @@ public class TestPrefetch {
 
   @Test
   public void testPrefetchWithDelay() throws Exception {
+    // Configure custom delay
     PrefetchExecutorNotifier prefetchExecutorNotifier = new PrefetchExecutorNotifier(conf);
-    conf.setInt(PREFETCH_DELAY, 35000);
+    conf.setInt(PREFETCH_DELAY, 25000);
     prefetchExecutorNotifier.onConfigurationChange(conf);
 
+    // Write file
     HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
       .withBlockSize(DATA_BLOCK_SIZE).build();
     Path storeFile = writeStoreFile("TestPrefetchWithDelay", context);
 
-    resetTiming();
-    setComputeTiming(true);
+    // Open the file
+    HFile.Reader reader = HFile.createReader(fs, storeFile, cacheConf, true, conf);
+    long startTime = System.currentTimeMillis();
 
-    readStoreFile(storeFile);
-    resetTiming();
+    // Wait for 20 seconds, no thread should start prefetch
+    Thread.sleep(20000);
+    assertFalse("Prefetch threads should not be running at this point", reader.prefetchStarted());
+    while (!reader.prefetchStarted()) {
+      assertTrue("Prefetch delay has not been expired yet",
+        getElapsedTime(startTime) < PrefetchExecutor.getPrefetchDelay());
+    }
+
+    // Prefech threads started working but not completed yet
+    assertFalse(reader.prefetchComplete());
+
+    // In prefetch executor, we further compute passed in delay using variation and a random
+    // multiplier to get 'effective delay'. Hence, in the test, for delay of 25000 milli-secs
+    // check that prefetch is started after 20000 milli-sec and prefetch started after that.
+    // However, prefetch should not start after configured delay.
+    if (reader.prefetchStarted()) {
+      LOG.info("elapsed time {}, Delay {}", getElapsedTime(startTime),
+        PrefetchExecutor.getPrefetchDelay());
+      assertTrue("Prefetch should start post configured delay",
+        getElapsedTime(startTime) <= PrefetchExecutor.getPrefetchDelay());
+    }
 
     conf.setInt(PREFETCH_DELAY, 1000);
     prefetchExecutorNotifier.onConfigurationChange(conf);
@@ -546,26 +549,7 @@ public class TestPrefetch {
     }
   }
 
-  private void resetTiming() {
-    startTime = 0;
-    measureTiming = false;
-  }
-
-  private void startTimer() {
-    if (measureTiming) {
-      startTime = System.currentTimeMillis();
-    }
-  }
-
-  private long getElapsedTime() {
+  private long getElapsedTime(long startTime) {
     return System.currentTimeMillis() - startTime;
-  }
-
-  private void setComputeTiming(boolean status) {
-    measureTiming = status;
-  }
-
-  private boolean getComputeTiming() {
-    return measureTiming;
   }
 }

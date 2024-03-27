@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.io.hfile;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -29,7 +28,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public final class PrefetchExecutor{
+public final class PrefetchExecutor {
 
   private static final Logger LOG = LoggerFactory.getLogger(PrefetchExecutor.class);
   /** Wait time in miliseconds before executing prefetch */
@@ -104,8 +102,8 @@ public final class PrefetchExecutor{
           TraceUtil.tracedRunnable(runnable, "PrefetchExecutor.request");
         final Future<?> future =
           prefetchExecutorPool.schedule(tracedRunnable, delay, TimeUnit.MILLISECONDS);
-          prefetchFutures.put(path, future);
-          prefetchRunnable.put(path, runnable);
+        prefetchFutures.put(path, future);
+        prefetchRunnable.put(path, runnable);
       } catch (RejectedExecutionException e) {
         prefetchFutures.remove(path);
         prefetchRunnable.remove(path);
@@ -156,19 +154,19 @@ public final class PrefetchExecutor{
 
   /* Visible for testing only */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   static ScheduledExecutorService getExecutorPool() {
     return prefetchExecutorPool;
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   static Map<Path, Future<?>> getPrefetchFutures() {
     return prefetchFutures;
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   static Map<Path, Runnable> getPrefetchRunnable() {
     return prefetchRunnable;
   }
@@ -180,9 +178,8 @@ public final class PrefetchExecutor{
       Future<?> v = entry.getValue();
       ScheduledFuture sf = (ScheduledFuture) prefetchFutures.get(k);
       long waitTime = sf.getDelay(TimeUnit.MILLISECONDS);
-      LOG.info("Remaining wait time is : {}", waitTime);
       if (waitTime < 0) {
-        //At this point prefetch is started
+        // At this point prefetch is started
         prefetchStarted.set(true);
         break;
       }
@@ -199,7 +196,7 @@ public final class PrefetchExecutor{
     prefetchFutures.forEach((k, v) -> {
       ScheduledFuture sf = (ScheduledFuture) prefetchFutures.get(k);
       if (!(sf.getDelay(TimeUnit.MILLISECONDS) > 0)) {
-        //the thread is still pending delay expiration and has not started to run yet, so can be
+        // the thread is still pending delay expiration and has not started to run yet, so can be
         // re-scheduled at no cost.
         interrupt(k);
         request(k, prefetchRunnable.get(k));

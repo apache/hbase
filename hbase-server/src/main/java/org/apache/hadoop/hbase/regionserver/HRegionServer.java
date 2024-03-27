@@ -2042,7 +2042,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     // Compaction thread
     this.compactSplitThread = new CompactSplit(this);
 
-    //Prefetch Notifier
+    // Prefetch Notifier
     this.prefetchExecutorNotifier = new PrefetchExecutorNotifier(conf);
 
     // Background thread to check for compactions; needed if region has not gotten updates
