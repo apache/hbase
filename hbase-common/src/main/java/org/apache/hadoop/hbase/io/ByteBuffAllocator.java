@@ -175,11 +175,19 @@ public class ByteBuffAllocator {
       // that by the time a handler originated response is actually done writing to socket and so
       // released the BBs it used, the handler might have processed one more read req. On an avg 2x
       // we consider and consider that also for the max buffers to pool
+      if (poolBufSize <= 0) {
+        throw new IllegalArgumentException(BUFFER_SIZE_KEY + " must be positive. Please disable "
+          + "the reservoir rather than setting the size of the buffer to zero or negative.");
+      }
       int bufsForTwoMB = (2 * 1024 * 1024) / poolBufSize;
       int maxBuffCount =
         conf.getInt(MAX_BUFFER_COUNT_KEY, conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
           HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * bufsForTwoMB * 2);
       int minSizeForReservoirUse = conf.getInt(MIN_ALLOCATE_SIZE_KEY, poolBufSize / 6);
+      if (minSizeForReservoirUse <= 0) {
+        LOG.warn("The minimal size for reservoir use is less or equal to zero, all allocations "
+          + "will be from the pool. Set a higher " + MIN_ALLOCATE_SIZE_KEY + " to avoid this.");
+      }
       Class<?> clazz = conf.getClass(BYTEBUFF_ALLOCATOR_CLASS, ByteBuffAllocator.class);
       return (ByteBuffAllocator) ReflectionUtils.newInstance(clazz, true, maxBuffCount, poolBufSize,
         minSizeForReservoirUse);
