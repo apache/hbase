@@ -2102,6 +2102,9 @@ public class BucketCache implements BlockCache, HeapSize {
             + "Total blocks for file: {}. Checking for blocks pending cache in cache writer queue.",
           fileName, count.getValue(), dataBlockCount);
         if (ramCache.hasBlocksForFile(fileName.getName())) {
+          for (ReentrantReadWriteLock lock : locks) {
+            lock.readLock().unlock();
+          }
           LOG.debug("There are still blocks pending caching for file {}. Will sleep 100ms "
             + "and try the verification again.", fileName);
           Thread.sleep(100);
