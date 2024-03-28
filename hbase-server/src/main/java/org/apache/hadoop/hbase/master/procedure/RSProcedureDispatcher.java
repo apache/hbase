@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.net.ConnectException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -259,7 +260,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
         DEFAULT_RS_RPC_RETRY_INTERVAL);
     }
 
-    private AsyncRegionServerAdmin getRsAdmin() throws IOException {
+    private AsyncRegionServerAdmin getRsAdmin() {
       return master.getAsyncClusterConnection().getRegionServerAdmin(serverName);
     }
 
@@ -306,6 +307,14 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           serverName, e.toString(), numberOfAttemptsSoFar);
         return false;
       }
+      //This situation may be that the master resolves to the wrong ip address.
+      // removing the cache so that the master can resolve the ip for regionserver again.
+      if (e instanceof ConnectException) {
+        getRsAdmin().removeRsStub(serverName);
+        LOG.warn("Request to {} failed due to {}, try={} retry get new rs admin... ",
+          serverName, e.toString(), numberOfAttemptsSoFar);
+      }
+
       if (e instanceof RegionServerAbortedException || e instanceof RegionServerStoppedException) {
         // A better way is to return true here to let the upper layer quit, and then schedule a
         // background task to check whether the region server is dead. And if it is dead, call
@@ -313,7 +322,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
         // result, but waste some resources.
         LOG.warn("{} is aborted or stopped, for safety we still need to"
           + " wait until it is fully dead, try={}", serverName, numberOfAttemptsSoFar);
-      } else {
+      } else if (!(e instanceof ConnectException)) {
         LOG.warn("request to {} failed due to {}, try={}, retrying...", serverName, e.toString(),
           numberOfAttemptsSoFar);
       }

@@ -216,4 +216,8 @@ public class AsyncRegionServerAdmin {
     executeProcedures(ExecuteProceduresRequest request) {
     return call((stub, controller, done) -> stub.executeProcedures(controller, request, done));
   }
+
+  public void removeRsStub(ServerName serverName) {
+    conn.removeAdminStub(serverName);
+  }
 }
