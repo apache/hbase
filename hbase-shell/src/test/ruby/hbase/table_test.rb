@@ -122,12 +122,36 @@ module Hbase
       @test_table.put("111", "x:a", "5")
       @test_table.put("111", "x:b", "6")
       @test_table.put("112", "x:a", "5")
+
+      #Insert data to test multi column delete operations
+      @test_table.put('201', {'x:a' => '1a', 'x:b' => '1b'}, 1220)
+      @test_table.put('202', {'x:a' => '2a', 'x:b' => '2b'}, 1232)
+      @test_table.put(203, {'x:a' => '4a', 'x:b' => '4b'}, 3234)
+      @test_table.put('204', {'x:a' => 5, 'x:b' => 6}, 3248)
+      @test_table.put('205', {'x:a' => '5a', 'x:b' => '5b'}, 3939)
+
+      @test_table.put('206', {'x:c' => '6c0', 'x:d' => 6})
+      @test_table.put('206', {'x:c' => '6c1'})
+      @test_table.put('207', {'x:c' => '7c0', 'x:d' => 7}, 1233)
+      @test_table.put('207', {'x:c' => '7c1'}, 1238)
+      @test_table.put(208, {'x:c' => '8c0', 'x:d' => '8d0'})
+      @test_table.put(208, {'x:c' => '8c1', 'x:d' => '8d1'})
+      @test_table.put('209', {'x:c' => '9c0', 'x:d' => '9d0'})
+      @test_table.put('209', {'x:c' => '9c1', 'x:a' => '9a0'})
+      @test_table.put('210', {'x:c' => '10c0', 'x:d' => '10d0'})
+      @test_table.put('210', {'x:a' => '10a0', 'x:b' => '10b0', 'x:c' => '10c1'})
+      @test_table.put('222201', {'x:a' => 0, 'x:c' => 1, 'x:d' => 2})
+      @test_table.put('222202', {'x:c' => '2c', 'x:d' => '2d'})
+      @test_table.put('222203', {'x:c' => 3, 'x:d' => '4'})
+      @test_table.put('222204', 'x:c' , '4')
     end
 
     def teardown
       @test_table.close
       shutdown
     end
+
+    #-------------------------------------------------------------------------------
 
     define_test "put should work without timestamp" do
       @test_table.put("123", "x:a", "1")
@@ -147,6 +171,60 @@ module Hbase
     
     define_test "put should work with attributes" do
        @test_table.put("123", "x:a", 4, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
+    end
+
+    define_test "put should fail if no value passed as argument" do
+      assert_raise(ArgumentError) do
+        @test_table.put('421', 'x:a')
+      end
+    end
+
+    define_test 'multi column put should work without timestamp' do
+      @test_table.put('401', {'x:a' => '1', 'x:b' => '2'})
+      res = @test_table._get_internal('401', 'x:a')
+      assert_not_nil(res)
+      res = @test_table._get_internal('401', 'x:b')
+      assert_not_nil(res)
+    end
+
+    define_test 'multi column put should work with timestamp' do
+      @test_table.put('402', {'x:a' => '3', 'x:b' => '4'}, Time.now.to_i)
+      res = @test_table._get_internal('402', 'x:a')
+      assert_not_nil(res)
+      res = @test_table._get_internal('402', 'x:b')
+      assert_not_nil(res)
+    end
+
+    define_test 'multi column put should work with integer keys' do
+      @test_table.put(403, {'x:a' => '5', 'x:b' => '6'})
+      res = @test_table._get_internal(403, 'x:a')
+      assert_not_nil(res)
+      res = @test_table._get_internal(403, 'x:b')
+      assert_not_nil(res)
+    end
+
+    define_test 'multi column put should work with integer values' do
+      @test_table.put('404', {'x:a' => 7, 'x:b' => 8})
+      res = @test_table._get_internal('404', 'x:a')
+      assert_not_nil(res)
+      res = @test_table._get_internal('404', 'x:b')
+      assert_not_nil(res)
+    end
+
+    define_test 'multi column put should work with attributes' do
+      @test_table.put('405', {'x:a' => '3', 'x:b' => '4'},
+        {ATTRIBUTES=>{'mykey'=>'myvalue'}})
+      res = @test_table._get_internal('405', 'x:a')
+      assert_not_nil(res)
+      res = @test_table._get_internal('405', 'x:b')
+      assert_not_nil(res)
+    end
+
+    define_test 'multi column put should fail when args is passed as argument' do
+      assert_raise(ArgumentError) do
+        @test_table.put('431', {'x:a' => '3', 'x:b' => '4'}, 1111111,
+          {ATTRIBUTES => {'mykey' => 'myvalue'}}, {'dummy_key' => 'dummy_value'})
+      end
     end
 
     #-------------------------------------------------------------------------------
@@ -177,6 +255,37 @@ module Hbase
       del = @test_table._createdelete_internal('104', 'x', 1212, [], false)
       assert_equal(del.get('x'.to_java_bytes, nil).get(0).getType.getCode,
                    org.apache.hadoop.hbase::KeyValue::Type::DeleteFamilyVersion.getCode)
+    end
+
+    define_test 'multi column delete should work without timestamp' do
+      @test_table.delete('201', ['x:a', 'x:b'])
+      res = @test_table._get_internal('201', ['x:a', 'x:b'])
+      assert_nil(res)
+    end
+
+    define_test 'multi column delete should work with timestamp' do
+      @test_table.delete('202', ['x:a', 'x:b'], 1232)
+      res = @test_table._get_internal('202', ['x:a', 'x:b'])
+      assert_nil(res)
+    end
+
+    define_test 'multi column delete should work with integer keys' do
+      @test_table.delete(203, ['x:a', 'x:b'], 3234)
+      res = @test_table._get_internal('203', ['x:a', 'x:b'])
+      assert_nil(res)
+    end
+
+    define_test 'multi column delete should work with integer values' do
+      @test_table.delete('204', ['x:a', 'x:b'])
+      res = @test_table._get_internal('204', ['x:a', 'x:b'])
+      assert_nil(res)
+    end
+
+    define_test 'multi column delete should work with attributes' do
+      @test_table.delete('205', ['x:a', 'x:b'],
+        {ATTRIBUTES => {'mykey' => 'myvalue'}})
+      res = @test_table._get_internal('205', ['x:a', 'x:b'])
+      assert_nil(res)
     end
 
     #-------------------------------------------------------------------------------
@@ -216,6 +325,56 @@ module Hbase
       end
     end
 
+    define_test 'multi column deleteall should work w/o timestamps' do
+      @test_table.deleteall('206', ['x:c', 'x:d'])
+      res = @test_table._get_internal('206', ['x:c', 'x:d'])
+      assert_nil(res)
+    end
+
+    define_test 'multi column deleteall should work with timestamps' do
+      @test_table.deleteall('207', ['x:c', 'x:d'], 1300)
+      res = @test_table._get_internal('207', ['x:c', 'x:d'])
+      assert_nil(res)
+    end
+
+    define_test 'multi column deleteall should work with integer keys' do
+      @test_table.deleteall(208, ['x:c', 'x:d'])
+      res = @test_table._get_internal('208', ['x:c', 'x:d'])
+      assert_nil(res)
+    end
+
+    define_test 'multi column deleteall should work with attributes' do
+      @test_table.deleteall('209', ['x:c', 'x:d'],
+        {ATTRIBUTES => {'mykey' => 'myvalue'}})
+      res = @test_table._get_internal('209', ['x:c', 'x:d'])
+      assert_nil(res)
+    end
+
+    define_test 'multi column deleteall should delete only specified columns' do
+      @test_table.deleteall('210', ['x:c', 'x:d'])
+      res = @test_table._get_internal('210', ['x:c', 'x:d'])
+      assert_nil(res)
+      res = @test_table._get_internal('210', ['x:a', 'x:b'])
+      assert_not_nil(res)
+    end
+
+    define_test 'multi column deletall should work with row prefix' do
+      @test_table.deleteall({ROWPREFIXFILTER => '2222'}, ['x:c', 'x:d'])
+      res = @test_table._get_internal('222201', ['x:c'], 'x:d')
+      assert_nil(res)
+      res = @test_table._get_internal('222201', ['x:a'])
+      assert_not_nil(res)
+      res = @test_table._get_internal('222202')
+      assert_nil(res)
+      res = @test_table._get_internal('222203')
+      assert_nil(res)
+      res = @test_table._get_internal('222204')
+      assert_nil(res)
+    end
+
+
+    #-------------------------------------------------------------------------------
+
     define_test "append should work with value" do
       @test_table.append("123", 'x:cnt2', '123')
       assert_equal("123123", @test_table._append_internal("123", 'x:cnt2', '123'))
@@ -226,6 +385,34 @@ module Hbase
       assert_equal('123321', @test_table._append_internal('1001', 'x', '321'))
     end
 
+    define_test "append should fail if no value passed as argument" do
+      assert_raise(ArgumentError) do
+        @test_table.append('441', 'x:cnt2')
+      end
+    end
+
+    define_test 'multi column append should work with value' do
+      @test_table.append('401', {'x:a' => '12', 'x:b'=> '11'})
+      assert_equal({'x:a' => '12123', 'x:b' => '11222'},
+      @test_table._append_multi_column_internal('401',
+        {'x:a' => '123', 'x:b'=> '222'}))
+    end
+
+    define_test 'multi column append should work with attributes' do
+      @test_table.append('402', {'x:a' => '123'},
+        ATTRIBUTES=>{'mykey' => 'myvalue'})
+      assert_equal({'x:a' => '123123', 'x:b' => '222'},
+      @test_table._append_multi_column_internal('402',
+        {'x:a' => '123', 'x:b'=> '222'}, ATTRIBUTES => {'mykey' => 'myvalue'}))
+    end
+
+    define_test 'multi column append should fail when args is passed as argument' do
+      assert_raise(ArgumentError) do
+        @test_table.append('451', {'x:a' => '3', 'x:b' => '4'},
+          {ATTRIBUTES => {'mykey' => 'myvalue'}}, {'dummy_key' => 'dummy_value'})
+      end
+    end
+
     #-------------------------------------------------------------------------------
     define_test 'incr should work without qualifier' do
       @test_table.incr('1010', 'x', 123)
@@ -234,6 +421,28 @@ module Hbase
       assert_equal(246, @test_table._get_counter_internal('1010', 'x'))
     end
 
+    define_test 'multi column incr should work with value' do
+      @test_table.incr('501', {'x:a' => 11, 'x:b'=> 12})
+      assert_equal({'x:a' => 111, 'x:b' => 13},
+      @test_table._incr_multi_column_internal('501', {'x:a' => 100, 'x:b'=> 1}))
+    end
+
+    define_test 'multi column incr should work w/o value' do
+      @test_table.incr('502', {'x:a' => 11, 'x:b'=> 12})
+      assert_equal({'x:a' => 12, 'x:b' => 13},
+      @test_table._incr_multi_column_internal('502', ['x:a', 'x:b']))
+    end
+
+    define_test 'multi column incr should work with attributes' do
+      @test_table.incr('503', {'x:a' => 123}, ATTRIBUTES => {'mykey' => 'myvalue'})
+      assert_equal({'x:a' => 246, 'x:b'=> 222},
+      @test_table._incr_multi_column_internal('503', {'x:a' => 123, 'x:b'=> 222},
+        ATTRIBUTES => {'mykey' => 'myvalue'}))
+      assert_kind_of(Fixnum, @test_table._get_counter_internal('503', 'x:a'))
+      assert_kind_of(Fixnum, @test_table._get_counter_internal('503', 'x:b'))
+    end
+
+    #-------------------------------------------------------------------------------
     define_test "get_counter should work with integer keys" do
       @test_table.incr(12345, 'x:cnt')
       assert_kind_of(Fixnum, @test_table._get_counter_internal(12345, 'x:cnt'))
@@ -242,8 +451,31 @@ module Hbase
     define_test "get_counter should return nil for non-existent counters" do
       assert_nil(@test_table._get_counter_internal(12345, 'x:qqqq'))
     end
+
+    define_test 'multi column get_counter should work with integer keys' do
+      @test_table.incr(601, ['x:cnt1', 'x:cnt2'])
+      assert_kind_of(Hash, @test_table._get_counter_multi_column_internal(601,
+        ['x:cnt1', 'x:cnt2']))
+      assert_equal({'x:cnt1' => 1, 'x:cnt2' => 1},
+        @test_table._get_counter_multi_column_internal(601, ['x:cnt1', 'x:cnt2']))
+    end
+
+    define_test 'multi column get_counter should return nil for non-existent counters' do
+      @test_table.incr('602', ['x:cnt1', 'x:cnt2'])
+      assert_nil(@test_table._get_counter_multi_column_internal('602',
+        ['x:qqqq', 'x:zzzz']))
+    end
+
+    define_test 'multi column get_counter should not return nil for one non-existent among two counters' do
+      @test_table.incr('603', 'x:cnt1')
+      assert_kind_of(Hash, @test_table._get_counter_multi_column_internal('603',
+        ['x:cnt1', 'x:zzz']))
+      assert_equal({'x:cnt1' => 1},
+        @test_table._get_counter_multi_column_internal('603', ['x:cnt1', 'x:zzz']))
+    end
   end
 
+  #-------------------------------------------------------------------------------
   # Complex data management methods tests
   # rubocop:disable Metrics/ClassLength
   class TableComplexMethodsTest < Test::Unit::TestCase

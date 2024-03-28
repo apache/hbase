@@ -37,6 +37,18 @@ t to table 't1', the corresponding command would be:
 
   hbase> t.delete 'r1', 'c1',  ts1
   hbase> t.delete 'r1', 'c1',  ts1, {VISIBILITY=>'PRIVATE|SECRET'}
+
+Alternately, we can put delete cell values for multiple columns at specified table/row and
+optionally timestamp coordinates.
+
+  hbase> delete 'ns1:t1', 'r1', ['c1', 'c2'], ts1
+  hbase> delete 't1', 'r1', ['c1', 'c2'], ts1
+  hbase> delete 't1', 'r1', ['c1', 'c2'], ts1, {VISIBILITY=>'PRIVATE|SECRET'}
+
+The same command can also be run on a table reference.
+
+  hbase> t.delete 'r1', ['c1', 'c2'],  ts1
+  hbase> t.delete 'r1', ['c1', 'c2'],  ts1, {VISIBILITY=>'PRIVATE|SECRET'}
 EOF
       end
 

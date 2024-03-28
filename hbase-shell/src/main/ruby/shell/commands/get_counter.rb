@@ -33,18 +33,45 @@ The same commands also can be run on a table reference. Suppose you had a refere
 t to table 't1', the corresponding command would be:
 
   hbase> t.get_counter 'r1', 'c1'
+
+Alternately, we can run the following commands to get counter cell values for multiple
+columns at specified table/row coordinates.
+
+  hbase> get_counter 'ns1:t1', 'r1', ['c1', 'c2']
+  hbase> get_counter 't1', 'r1', ['c1', 'c2']
+
+The same commands also can be run on a table reference.
+
+  hbase> t.get_counter 'r1', ['c1', 'c2']
+
 EOF
       end
 
+      # Gets the counter value(s) from a table for a specific row and column(s).
+      # If the column parameter is an array, it retrieves multiple counter values.
+      # If no counter is found, it prints an error message.
+      #
+      # @param table [String] the name of the table
+      # @param row [String] the row key
+      # @param column [String, Array<String>] the column name(s)
       def command(table, row, column)
         get_counter(table(table), row, column)
       end
 
       def get_counter(table, row, column)
-        if cnt = table._get_counter_internal(row, column)
-          puts "COUNTER VALUE = #{cnt}"
+        # when column is an array, then it is a case of multi column get counter
+        if column.is_a?(Array)
+          if cnts = table._get_counter_multi_column_internal(row, column)
+            puts "COUNTER VALUES = #{cnts}"
+          else
+            puts 'No counters found at specified coordinates'
+          end
         else
-          puts 'No counter found at specified coordinates'
+          if cnt = table._get_counter_internal(row, column)
+            puts "COUNTER VALUE = #{cnt}"
+          else
+            puts 'No counter found at specified coordinates'
+          end
         end
       end
     end

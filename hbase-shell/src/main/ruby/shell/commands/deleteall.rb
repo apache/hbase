@@ -30,14 +30,15 @@ row key prefix. Examples:
   hbase> deleteall 't1', 'r1'
   hbase> deleteall 't1', 'r1', 'c1'
   hbase> deleteall 't1', 'r1', 'c1', ts1
-  //'' means no specific column, will delete all cells in the row which timestamp is lower than
-  //the one specified in the command
+  # '' means no specific column, will delete all cells in the row which timestamp is lower than
+  # the one specified in the command
   hbase> deleteall 't1', 'r1', '', ts1
   hbase> deleteall 't1', 'r1', 'c1', ts1, {VISIBILITY=>'PRIVATE|SECRET'}
 
 ROWPREFIXFILTER can be used to delete row ranges
   hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}
-  hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, 'c1'        //delete certain column family in the row ranges
+  # delete certain column family in the row ranges
+  hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, 'c1'
   hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, 'c1', ts1
   hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, '', ts1
   hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, 'c1', ts1, {VISIBILITY=>'PRIVATE|SECRET'}
@@ -51,6 +52,23 @@ t to table 't1', the corresponding command would be:
 
   hbase> t.deleteall 'r1', 'c1', ts1, {VISIBILITY=>'PRIVATE|SECRET'}
   hbase> t.deleteall {ROWPREFIXFILTER => 'prefix', CACHE => 100}, 'c1', ts1, {VISIBILITY=>'PRIVATE|SECRET'}
+
+Alternately, we can run the following commands for deleting all cell values for
+multiple columns at specified table/row coordinates.
+
+  hbase> deleteall 't1', 'r1', ['c1', 'c2']
+  hbase> deleteall 't1', 'r1', ['c1', 'c2'], ts1
+  hbase> deleteall 't1', 'r1', ['c1', 'c2'], ts1, {VISIBILITY=>'PRIVATE|SECRET'}
+  # delete certain column families in the row ranges
+  hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, ['c1', 'c2']
+  hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, ['c1', 'c2'], ts1
+  hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, ['c1', 'c2'], ts1, {VISIBILITY=>'PRIVATE|SECRET'}
+
+The same commands can also be run on a table reference.
+
+  hbase> t.deleteall 'r1', ['c1', 'c2'], ts1, {VISIBILITY=>'PRIVATE|SECRET'}
+  hbase> t.deleteall {ROWPREFIXFILTER => 'prefix', CACHE => 100}, ['c1', 'c2'], ts1, {VISIBILITY=>'PRIVATE|SECRET'}
+
 EOF
       end
 
