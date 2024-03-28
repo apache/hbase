@@ -387,6 +387,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   private final RegionServerAccounting regionServerAccounting;
 
+  private final RegionScannerLimiter regionScannerLimiter;
+
   private NamedQueueServiceChore namedQueueServiceChore = null;
 
   // Block cache
@@ -529,6 +531,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME);
 
       regionServerAccounting = new RegionServerAccounting(conf);
+      regionScannerLimiter = new RegionScannerLimiter(conf);
 
       blockCache = BlockCacheFactory.createBlockCache(conf);
       mobFileCache = new MobFileCache(conf);
@@ -2129,6 +2132,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     configurationManager.registerObserver(this.cacheFlusher);
     configurationManager.registerObserver(this.rpcServices);
     configurationManager.registerObserver(this);
+    configurationManager.registerObserver(regionScannerLimiter);
   }
 
   /*
@@ -3692,5 +3696,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   @Override
   public RegionReplicationBufferManager getRegionReplicationBufferManager() {
     return regionReplicationBufferManager;
+  }
+
+  public RegionScannerLimiter getRegionScannerLimiter() {
+    return regionScannerLimiter;
   }
 }

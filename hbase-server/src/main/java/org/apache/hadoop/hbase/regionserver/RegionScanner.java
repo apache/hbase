@@ -110,4 +110,12 @@ public interface RegionScanner extends InternalScanner {
    * @throws IOException e
    */
   boolean nextRaw(List<Cell> result, ScannerContext scannerContext) throws IOException;
+
+  default void setName(String name) {
+
+  }
+
+  default String getName() {
+    return null;
+  }
 }
