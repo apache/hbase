@@ -130,8 +130,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * @throws ZooKeeperConnectionException if the client can't connect to ZooKeeper
    */
   public ZKWatcher(Configuration conf, String identifier, Abortable abortable,
-    ZKClientConfig zkConfig)
-    throws ZooKeeperConnectionException, IOException {
+    ZKClientConfig zkConfig) throws ZooKeeperConnectionException, IOException {
     this(conf, identifier, abortable, false, zkConfig);
   }
 
@@ -164,7 +163,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * @throws ZooKeeperConnectionException if the client can't connect to ZooKeeper
    */
   public ZKWatcher(Configuration conf, String identifier, Abortable abortable,
-    boolean canCreateBaseZNode, ZKClientConfig zkConfig) throws IOException, ZooKeeperConnectionException {
+    boolean canCreateBaseZNode, ZKClientConfig zkConfig)
+    throws IOException, ZooKeeperConnectionException {
     this(conf, identifier, abortable, canCreateBaseZNode, false, zkConfig);
   }
 
@@ -201,7 +201,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    *                                      ZNodes
    */
   public ZKWatcher(Configuration conf, String identifier, Abortable abortable,
-    boolean canCreateBaseZNode, boolean clientZK, ZKClientConfig zkConfig) throws IOException, ZooKeeperConnectionException {
+    boolean canCreateBaseZNode, boolean clientZK, ZKClientConfig zkConfig)
+    throws IOException, ZooKeeperConnectionException {
     this.conf = conf;
     if (clientZK) {
       String clientZkQuorumServers = ZKConfig.getClientZKQuorumServersString(conf);

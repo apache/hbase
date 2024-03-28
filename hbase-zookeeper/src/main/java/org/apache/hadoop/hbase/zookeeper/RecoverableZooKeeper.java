@@ -112,7 +112,7 @@ public class RecoverableZooKeeper {
    */
   public static RecoverableZooKeeper connect(Configuration conf, String ensemble, Watcher watcher,
     final String identifier) throws IOException {
-     return connect(conf, ensemble, watcher, identifier, null);
+    return connect(conf, ensemble, watcher, identifier, null);
   }
 
   /**
@@ -148,8 +148,7 @@ public class RecoverableZooKeeper {
       justification = "None. Its always been this way.")
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout, Watcher watcher,
     int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier, int maxMultiSize,
-    ZKClientConfig zkConfig)
-    throws IOException {
+    ZKClientConfig zkConfig) throws IOException {
     // TODO: Add support for zk 'chroot'; we don't add it to the quorumServers String as we should.
     this.retryCounterFactory =
       new RetryCounterFactory(maxRetries + 1, retryIntervalMillis, maxSleepTime);
