@@ -23,10 +23,15 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
@@ -53,6 +58,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
@@ -60,10 +66,14 @@ import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ThreadUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
@@ -573,15 +583,35 @@ public class MergeTableRegionsProcedure
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), regionsToMerge[0].getTable());
     final FileSystem fs = mfs.getFileSystem();
-    List<Path> mergedFiles = new ArrayList<>();
     HRegionFileSystem mergeRegionFs = HRegionFileSystem
       .createRegionOnFileSystem(env.getMasterConfiguration(), fs, tableDir, mergedRegion);
 
+    Configuration conf = env.getMasterConfiguration();
+    int numOfThreads = conf.getInt(HConstants.REGION_SPLIT_THREADS_MAX,
+      conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT));
+    List<Path> mergedFiles = new ArrayList<Path>();
+    final ExecutorService threadPool = Executors.newFixedThreadPool(numOfThreads,
+      new ThreadFactoryBuilder().setNameFormat("StoreFileMerge-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+    final List<Future<Path>> futures = new ArrayList<Future<Path>>();
     for (RegionInfo ri : this.regionsToMerge) {
       HRegionFileSystem regionFs = HRegionFileSystem
         .openRegionFromFileSystem(env.getMasterConfiguration(), fs, tableDir, ri, false);
-      mergedFiles.addAll(mergeStoreFiles(env, regionFs, mergeRegionFs, mergedRegion));
+      mergeStoreFiles(env, regionFs, mergeRegionFs, mergedRegion, threadPool, futures);
     }
+    // Shutdown the pool
+    threadPool.shutdown();
+
+    // Wait for all the tasks to finish.
+    // When splits ran on the RegionServer, how-long-to-wait-configuration was named
+    // hbase.regionserver.fileSplitTimeout. If set, use its value.
+    long fileSplitTimeout = conf.getLong("hbase.master.fileSplitTimeout",
+      conf.getLong("hbase.regionserver.fileSplitTimeout", 600000));
+    ThreadUtil.waitOnShutdown(threadPool, fileSplitTimeout,
+      "Took too long to merge the files and create the references, aborting merge");
+
+    List<Path> paths = ThreadUtil.getAllResults(futures);
+    mergedFiles.addAll(paths);
     assert mergeRegionFs != null;
     mergeRegionFs.commitMergedRegion(mergedFiles, env);
 
@@ -590,11 +620,11 @@ public class MergeTableRegionsProcedure
       .setState(State.MERGING_NEW);
   }
 
-  private List<Path> mergeStoreFiles(MasterProcedureEnv env, HRegionFileSystem regionFs,
-    HRegionFileSystem mergeRegionFs, RegionInfo mergedRegion) throws IOException {
+  private void mergeStoreFiles(MasterProcedureEnv env, HRegionFileSystem regionFs,
+    HRegionFileSystem mergeRegionFs, RegionInfo mergedRegion, ExecutorService threadPool,
+    List<Future<Path>> futures) throws IOException {
     final TableDescriptor htd =
       env.getMasterServices().getTableDescriptors().get(mergedRegion.getTable());
-    List<Path> mergedFiles = new ArrayList<>();
     for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
       String family = hcd.getNameAsString();
       StoreFileTracker tracker =
@@ -611,13 +641,17 @@ public class MergeTableRegionsProcedure
           // is running in a regionserver's Store context, or we might not be able
           // to read the hfiles.
           storeFileInfo.setConf(storeConfiguration);
-          Path refFile = mergeRegionFs.mergeStoreFile(regionFs.getRegionInfo(), family,
-            new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED));
-          mergedFiles.add(refFile);
+          futures.add(threadPool.submit(new Callable<Path>() {
+            @Override
+            public Path call() throws Exception {
+              // TODO Auto-generated method stub
+              return mergeRegionFs.mergeStoreFile(regionFs.getRegionInfo(), family,
+                new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED));
+            }
+          }));
         }
       }
     }
-    return mergedFiles;
   }
 
   /**
