@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -78,7 +79,7 @@ public class TestRepairAfterFailedDelete extends TestBackupBase {
     admin.restoreSnapshot(snapshotName);
     admin.enableTable(BackupSystemTable.getTableName(conf1));
     // Start backup session
-    table.startBackupExclusiveOperation();
+    table.startBackupExclusiveOperation(Arrays.asList(info));
     // Start delete operation
     table.startDeleteOperation(backupIds);
 
