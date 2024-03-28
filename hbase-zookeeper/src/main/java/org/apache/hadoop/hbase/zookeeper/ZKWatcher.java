@@ -44,6 +44,7 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooDefs.Perms;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
@@ -122,6 +123,20 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
 
   /**
    * Instantiate a ZooKeeper connection and watcher.
+   * @param identifier string that is passed to RecoverableZookeeper to be used as identifier for
+   *                   this instance. Use null for default.
+   * @param zkConfig   zkClientConfig to use for the connection, can be null
+   * @throws IOException                  if the connection to ZooKeeper fails
+   * @throws ZooKeeperConnectionException if the client can't connect to ZooKeeper
+   */
+  public ZKWatcher(Configuration conf, String identifier, Abortable abortable,
+    ZKClientConfig zkConfig)
+    throws ZooKeeperConnectionException, IOException {
+    this(conf, identifier, abortable, false, zkConfig);
+  }
+
+  /**
+   * Instantiate a ZooKeeper connection and watcher.
    * @param conf               the configuration to use
    * @param identifier         string that is passed to RecoverableZookeeper to be used as
    *                           identifier for this instance. Use null for default.
@@ -133,7 +148,24 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    */
   public ZKWatcher(Configuration conf, String identifier, Abortable abortable,
     boolean canCreateBaseZNode) throws IOException, ZooKeeperConnectionException {
-    this(conf, identifier, abortable, canCreateBaseZNode, false);
+    this(conf, identifier, abortable, canCreateBaseZNode, false, null);
+  }
+
+  /**
+   * Instantiate a ZooKeeper connection and watcher.
+   * @param conf               the configuration to use
+   * @param identifier         string that is passed to RecoverableZookeeper to be used as
+   *                           identifier for this instance. Use null for default.
+   * @param abortable          Can be null if there is on error there is no host to abort: e.g.
+   *                           client context.
+   * @param canCreateBaseZNode true if a base ZNode can be created
+   * @param zkConfig           zkClientConfig to use for the connection, can be null
+   * @throws IOException                  if the connection to ZooKeeper fails
+   * @throws ZooKeeperConnectionException if the client can't connect to ZooKeeper
+   */
+  public ZKWatcher(Configuration conf, String identifier, Abortable abortable,
+    boolean canCreateBaseZNode, ZKClientConfig zkConfig) throws IOException, ZooKeeperConnectionException {
+    this(conf, identifier, abortable, canCreateBaseZNode, false, zkConfig);
   }
 
   /**
@@ -151,6 +183,25 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    */
   public ZKWatcher(Configuration conf, String identifier, Abortable abortable,
     boolean canCreateBaseZNode, boolean clientZK) throws IOException, ZooKeeperConnectionException {
+    this(conf, identifier, abortable, canCreateBaseZNode, clientZK, null);
+  }
+
+  /**
+   * Instantiate a ZooKeeper connection and watcher.
+   * @param conf               the configuration to use
+   * @param identifier         string that is passed to RecoverableZookeeper to be used as
+   *                           identifier for this instance. Use null for default.
+   * @param abortable          Can be null if there is on error there is no host to abort: e.g.
+   *                           client context.
+   * @param canCreateBaseZNode true if a base ZNode can be created
+   * @param clientZK           whether this watcher is set to access client ZK
+   * @param zkConfig           zkClientConfig to use for the connection, can be null
+   * @throws IOException                  if the connection to ZooKeeper fails
+   * @throws ZooKeeperConnectionException if the connection to Zookeeper fails when create base
+   *                                      ZNodes
+   */
+  public ZKWatcher(Configuration conf, String identifier, Abortable abortable,
+    boolean canCreateBaseZNode, boolean clientZK, ZKClientConfig zkConfig) throws IOException, ZooKeeperConnectionException {
     this.conf = conf;
     if (clientZK) {
       String clientZkQuorumServers = ZKConfig.getClientZKQuorumServersString(conf);
@@ -177,7 +228,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     this.znodePaths = new ZNodePaths(conf);
     PendingWatcher pendingWatcher = new PendingWatcher();
     this.recoverableZooKeeper =
-      RecoverableZooKeeper.connect(conf, quorum, pendingWatcher, identifier);
+      RecoverableZooKeeper.connect(conf, quorum, pendingWatcher, identifier, zkConfig);
     pendingWatcher.prepare(this);
     if (canCreateBaseZNode) {
       try {

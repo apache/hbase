@@ -41,6 +41,7 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.CreateRequest;
@@ -79,6 +80,7 @@ public class RecoverableZooKeeper {
   private final int sessionTimeout;
   private final String quorumServers;
   private final int maxMultiSize;
+  private final ZKClientConfig zkConfig;
 
   /**
    * See {@link #connect(Configuration, String, Watcher, String)}
@@ -110,6 +112,23 @@ public class RecoverableZooKeeper {
    */
   public static RecoverableZooKeeper connect(Configuration conf, String ensemble, Watcher watcher,
     final String identifier) throws IOException {
+     return connect(conf, ensemble, watcher, identifier, null);
+  }
+
+  /**
+   * Creates a new connection to ZooKeeper, pulling settings and ensemble config from the specified
+   * configuration object using methods from {@link ZKConfig}. Sets the connection status monitoring
+   * watcher to the specified watcher.
+   * @param conf       configuration to pull ensemble and other settings from
+   * @param watcher    watcher to monitor connection changes
+   * @param ensemble   ZooKeeper servers quorum string
+   * @param identifier value used to identify this client instance.
+   * @param zkConfig   zkClientConfig to use for the connection, can be null
+   * @return connection to zookeeper
+   * @throws IOException if unable to connect to zk or config problem
+   */
+  public static RecoverableZooKeeper connect(Configuration conf, String ensemble, Watcher watcher,
+    final String identifier, ZKClientConfig zkConfig) throws IOException {
     if (ensemble == null) {
       throw new IOException("Unable to determine ZooKeeper ensemble");
     }
@@ -122,13 +141,14 @@ public class RecoverableZooKeeper {
     int maxSleepTime = conf.getInt("zookeeper.recovery.retry.maxsleeptime", 60000);
     int multiMaxSize = conf.getInt("zookeeper.multi.max.size", 1024 * 1024);
     return new RecoverableZooKeeper(ensemble, timeout, watcher, retry, retryIntervalMillis,
-      maxSleepTime, identifier, multiMaxSize);
+      maxSleepTime, identifier, multiMaxSize, zkConfig);
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DE_MIGHT_IGNORE",
       justification = "None. Its always been this way.")
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout, Watcher watcher,
-    int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier, int maxMultiSize)
+    int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier, int maxMultiSize,
+    ZKClientConfig zkConfig)
     throws IOException {
     // TODO: Add support for zk 'chroot'; we don't add it to the quorumServers String as we should.
     this.retryCounterFactory =
@@ -147,6 +167,7 @@ public class RecoverableZooKeeper {
     this.sessionTimeout = sessionTimeout;
     this.quorumServers = quorumServers;
     this.maxMultiSize = maxMultiSize;
+    this.zkConfig = zkConfig;
 
     try {
       checkZk();
@@ -174,7 +195,7 @@ public class RecoverableZooKeeper {
   protected synchronized ZooKeeper checkZk() throws KeeperException {
     if (this.zk == null) {
       try {
-        this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
+        this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher, zkConfig);
       } catch (IOException ex) {
         LOG.warn("Unable to create ZooKeeper Connection", ex);
         throw new KeeperException.OperationTimeoutException();

@@ -41,6 +41,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.AuthFailedException;
 import org.apache.zookeeper.KeeperException.ConnectionLossException;
 import org.apache.zookeeper.KeeperException.SessionExpiredException;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -193,10 +194,14 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
       if (zkw != null) {
         zkw.close();
       }
-      zkw =
-        new ZKWatcher(ctx.getConfiguration(), "connection to cluster: " + ctx.getPeerId(), this);
+      zkw = new ZKWatcher(ctx.getConfiguration(), "connection to cluster: " + ctx.getPeerId(), this,
+        getZKClientConfig());
       zkw.registerListener(new PeerRegionServerListener(this));
     }
+  }
+
+  protected ZKClientConfig getZKClientConfig() {
+    return new ZKClientConfig();
   }
 
   private void connectPeerCluster() throws IOException {
