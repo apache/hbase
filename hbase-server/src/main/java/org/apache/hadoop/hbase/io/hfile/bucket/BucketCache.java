@@ -283,7 +283,8 @@ public class BucketCache implements BlockCache, HeapSize {
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
     int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration,
     Configuration conf) throws IOException {
-    Preconditions.checkArgument(blockSize > 0, "BucketCache capacity is set to " + blockSize + ", can not be less than 0");
+    Preconditions.checkArgument(blockSize > 0,
+      "BucketCache capacity is set to " + blockSize + ", can not be less than 0");
     boolean useStrongRef = conf.getBoolean(STRONG_REF_KEY, STRONG_REF_DEFAULT);
     if (useStrongRef) {
       this.offsetLock = new IdReadWriteLockStrongRef<>();
