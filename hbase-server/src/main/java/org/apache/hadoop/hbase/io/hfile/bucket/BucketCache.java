@@ -2146,6 +2146,5 @@ public class BucketCache implements BlockCache, HeapSize {
     } else {
       return Optional.of(entry.getOnDiskSizeWithHeader());
     }
-
   }
 }

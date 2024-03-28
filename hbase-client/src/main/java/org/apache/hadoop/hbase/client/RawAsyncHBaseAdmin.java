@@ -144,6 +144,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWrit
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UncacheStaleBlocksRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UncacheStaleBlocksResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -4535,6 +4537,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         List<String>> adminCall(controller, stub, request.build(),
           (s, c, req, done) -> s.getCachedFilesList(c, req, done),
           resp -> resp.getCachedFilesList()))
+      .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Map<String, Integer>> uncacheStaleBlocks(ServerName serverName) {
+    UncacheStaleBlocksRequest.Builder request = UncacheStaleBlocksRequest.newBuilder();
+    return this.<Map<String, Integer>> newAdminCaller()
+      .action((controller, stub) -> this.<UncacheStaleBlocksRequest, UncacheStaleBlocksResponse,
+        Map<String, Integer>> adminCall(controller, stub, request.build(),
+          (s, c, req, done) -> s.uncacheStaleBlocks(c, req, done),
+          resp -> resp.getUncachedFilesMap()))
       .serverName(serverName).call();
   }
 }
