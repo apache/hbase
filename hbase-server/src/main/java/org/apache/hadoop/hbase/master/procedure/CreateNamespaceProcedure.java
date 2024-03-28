@@ -18,9 +18,11 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -187,6 +189,20 @@ public class CreateNamespaceProcedure
         new NamespaceExistException("Namespace " + nsDescriptor.getName() + " already exists"));
       return false;
     }
+
+    int dfsMaxComponentLength =
+      env.getMasterConfiguration().getInt(DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_DEFAULT);
+    assert dfsMaxComponentLength >= 0;
+    if (dfsMaxComponentLength > 0 && nsDescriptor.getName().length() > dfsMaxComponentLength) {
+      // maxComponentLength == 0 means that hdfs do not limit the length of component
+      setFailure("master-create-namespace",
+        new DoNotRetryIOException(
+          "The length of Namespace " + nsDescriptor.getName() + " exceeds " + dfsMaxComponentLength
+            + ", which means that it is unable to create directory for this namespace."));
+      return false;
+    }
+
     getTableNamespaceManager(env).validateTableAndRegionCount(nsDescriptor);
     checkNamespaceRSGroup(env, nsDescriptor);
     return true;

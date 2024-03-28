@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -34,6 +36,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -226,6 +229,32 @@ public class TestCreateNamespaceProcedure {
       // Expected
       LOG.info("The namespace " + nsd.getName() + " is not created.");
     }
+  }
+
+  @Test
+  public void testCreateLongNameNamespace() {
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    MasterProcedureEnv env = procExec.getEnvironment();
+    int dfsMaxComponentLength =
+      env.getMasterConfiguration().getInt(DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_DEFAULT);
+
+    StringBuilder sb = new StringBuilder("");
+    for (int i = 0; i <= dfsMaxComponentLength; i++) {
+      sb.append("N");
+    }
+
+    assertTrue(sb.toString().length() > dfsMaxComponentLength);
+
+    final NamespaceDescriptor nsd = NamespaceDescriptor.create(sb.toString()).build();
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
+    procExec.getResult(procId);
+    Procedure<?> result = procExec.getResult(procId);
+    assertEquals(true, result.isFailed());
+    Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
+    assertTrue("expected DoNotRetryIOException, got " + cause,
+      cause instanceof DoNotRetryIOException);
   }
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {

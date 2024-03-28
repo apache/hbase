@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -283,5 +284,32 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     long procId = ProcedureTestingUtility.submitAndWait(procExec,
       new CreateTableProcedureOnHDFSFailure(procExec.getEnvironment(), htd, regions));
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+  }
+
+  @Test
+  public void testCreateLongNameTable() {
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    MasterProcedureEnv env = procExec.getEnvironment();
+    int dfsMaxComponentLength =
+      env.getMasterConfiguration().getInt(DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_DEFAULT);
+
+    StringBuilder sb = new StringBuilder("");
+    for (int i = 0; i <= dfsMaxComponentLength; i++) {
+      sb.append("T");
+    }
+
+    assertTrue(sb.toString().length() > dfsMaxComponentLength);
+
+    TableName longNameTable = TableName.valueOf(sb.toString());
+    final TableDescriptor htd = MasterProcedureTestingUtility.createHTD(longNameTable, "f");
+    final RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, null);
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
+    Procedure<?> result = procExec.getResult(procId);
+    assertEquals(true, result.isFailed());
+    Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
+    assertTrue("expected DoNotRetryIOException, got " + cause,
+      cause instanceof DoNotRetryIOException);
   }
 }

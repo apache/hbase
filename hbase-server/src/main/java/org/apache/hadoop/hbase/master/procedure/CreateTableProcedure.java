@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,10 +86,10 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
       switch (state) {
         case CREATE_TABLE_PRE_OPERATION:
           // Verify if we can create the table
-          boolean exists = !prepareCreate(env);
+          boolean success = prepareCreate(env);
           releaseSyncLatch();
 
-          if (exists) {
+          if (!success) {
             assert isFailed() : "the delete should have an exception here";
             return Flow.NO_MORE_STATE;
           }
@@ -262,6 +264,35 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
         "Table " + getTableName().toString() + " should have at least one column family."));
       return false;
     }
+
+    int dfsMaxComponentLength =
+      env.getMasterConfiguration().getInt(DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_DEFAULT);
+    assert dfsMaxComponentLength >= 0;
+    // maxComponentLength == 0 means that hdfs does not limit the length of component
+    if (dfsMaxComponentLength > 0 && tableName.getNameAsString().length() > dfsMaxComponentLength) {
+      setFailure("master-create-table",
+        new DoNotRetryIOException("The length of table name " + tableName.getNameAsString()
+          + " exceeds " + dfsMaxComponentLength
+          + ", which means that it is unable to create directory for this table."));
+      return false;
+    }
+
+    List<String> badColumnFamilies = new ArrayList<>();
+    for (ColumnFamilyDescriptor cfd : tableDescriptor.getColumnFamilies()) {
+      String columnFamilyName = cfd.getNameAsString();
+      // maxComponentLength == 0 means that hdfs does not limit the length of component
+      if (dfsMaxComponentLength > 0 && columnFamilyName.length() > dfsMaxComponentLength) {
+        badColumnFamilies.add(columnFamilyName);
+      }
+    }
+    if (badColumnFamilies.size() > 0) {
+      setFailure("master-create-table",
+        new DoNotRetryIOException("The length of column families: " + badColumnFamilies
+          + " exceeds " + dfsMaxComponentLength
+          + ", which means that it is unable to create directory for these column families."));
+    }
+
     if (!tableName.isSystemTable()) {
       // do not check rs group for system tables as we may block the bootstrap.
       Supplier<String> forWhom = () -> "table " + tableName;
