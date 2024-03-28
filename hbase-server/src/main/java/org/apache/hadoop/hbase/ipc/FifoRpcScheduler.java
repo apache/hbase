@@ -69,7 +69,9 @@ public class FifoRpcScheduler extends RpcScheduler {
 
   @Override
   public void stop() {
-    this.executor.shutdown();
+    if (this.executor != null) {
+      this.executor.shutdown();
+    }
   }
 
   private static class FifoCallRunner implements Runnable {
