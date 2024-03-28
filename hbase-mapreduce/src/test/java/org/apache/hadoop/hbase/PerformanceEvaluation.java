@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Properties;
 import java.util.Queue;
 import java.util.Random;
 import java.util.TreeMap;
@@ -360,7 +361,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     // {RegionSplitPolicy,replica count} does not match requested, or when the
     // number of column families does not match requested.
     if (
-      (exists && opts.presplitRegions != DEFAULT_OPTS.presplitRegions)
+      (exists && opts.presplitRegions != DEFAULT_OPTS.presplitRegions
+        && opts.presplitRegions != admin.getRegions(tableName).size())
         || (!isReadCmd && desc != null
           && !StringUtils.equals(desc.getRegionSplitPolicyClassName(), opts.splitPolicy))
         || (!isReadCmd && desc != null && desc.getRegionReplication() != opts.replicas)
@@ -721,6 +723,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     boolean cacheBlocks = true;
     Scan.ReadType scanReadType = Scan.ReadType.DEFAULT;
     long bufferSize = 2l * 1024l * 1024l;
+    Properties commandProperties;
 
     public TestOptions() {
     }
@@ -777,6 +780,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.cacheBlocks = that.cacheBlocks;
       this.scanReadType = that.scanReadType;
       this.bufferSize = that.bufferSize;
+      this.commandProperties = that.commandProperties;
+    }
+
+    public Properties getCommandProperties() {
+      return commandProperties;
     }
 
     public int getCaching() {
@@ -1142,10 +1150,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected final Configuration conf;
     protected final TestOptions opts;
 
-    private final Status status;
+    protected final Status status;
 
     private String testName;
-    private Histogram latencyHistogram;
+    protected Histogram latencyHistogram;
     private Histogram replicaLatencyHistogram;
     private Histogram valueSizeHistogram;
     private Histogram rpcCallsHistogram;
@@ -2345,7 +2353,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    boolean testRow(final int i, final long startTime) throws IOException {
+    protected boolean testRow(final int i, final long startTime) throws IOException {
       byte[] row = generateRow(i);
       Put put = new Put(row);
       for (int family = 0; family < opts.families; family++) {
@@ -2718,6 +2726,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     for (CmdDescriptor command : COMMANDS.values()) {
       System.err.println(String.format(" %-20s %s", command.getName(), command.getDescription()));
     }
+    System.err.println(String.format(" %-20s %s", "? extends Test",
+      "Run custom implementation of provided Test present in classpath"));
     System.err.println();
     System.err.println("Args:");
     System.err.println(" nclients        Integer. Required. Total number of clients "
@@ -3013,6 +3023,20 @@ public class PerformanceEvaluation extends Configured implements Tool {
         continue;
       }
 
+      final String commandPropertiesFile = "--commandPropertiesFile=";
+      if (cmd.startsWith(commandPropertiesFile)) {
+        String fileName = String.valueOf(cmd.substring(commandPropertiesFile.length()));
+        Properties properties = new Properties();
+        try {
+          properties
+            .load(PerformanceEvaluation.class.getClassLoader().getResourceAsStream(fileName));
+          opts.commandProperties = properties;
+        } catch (IOException e) {
+          LOG.error("Failed to load metricIds from properties file", e);
+        }
+        continue;
+      }
+
       validateParsedOpts(opts);
 
       if (isCommandClass(cmd)) {
@@ -3126,7 +3150,20 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   private static boolean isCommandClass(String cmd) {
-    return COMMANDS.containsKey(cmd);
+    return !COMMANDS.containsKey(cmd) ? isCustomTestClass(cmd) : true;
+  }
+
+  private static boolean isCustomTestClass(String cmd) {
+    Class<? extends Test> cmdClass;
+    try {
+      cmdClass =
+        (Class<? extends Test>) PerformanceEvaluation.class.getClassLoader().loadClass(cmd);
+      addCommandDescriptor(cmdClass, cmd, "custom command");
+      return true;
+    } catch (Throwable th) {
+      LOG.info("No class found for command: " + cmd, th);
+      return false;
+    }
   }
 
   private static Class<? extends TestBase> determineCommandClass(String cmd) {
