@@ -956,10 +956,10 @@ public class HStore
    * @return all scanners for this store
    */
   public List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean isGet, boolean usePread,
-    boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, byte[] stopRow, long readPt)
-    throws IOException {
+    boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, byte[] stopRow, long readPt,
+    boolean onlyLatestVersion) throws IOException {
     return getScanners(cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow, false,
-      readPt);
+      readPt, onlyLatestVersion);
   }
 
   /**
@@ -977,13 +977,14 @@ public class HStore
    */
   public List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean usePread,
     boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, boolean includeStartRow,
-    byte[] stopRow, boolean includeStopRow, long readPt) throws IOException {
+    byte[] stopRow, boolean includeStopRow, long readPt, boolean onlyLatestVersion)
+    throws IOException {
     Collection<HStoreFile> storeFilesToScan;
     List<KeyValueScanner> memStoreScanners;
     this.storeEngine.readLock();
     try {
       storeFilesToScan = this.storeEngine.getStoreFileManager().getFilesForScan(startRow,
-        includeStartRow, stopRow, includeStopRow);
+        includeStartRow, stopRow, includeStopRow, onlyLatestVersion);
       memStoreScanners = this.memstore.getScanners(readPt);
       // NOTE: here we must increase the refCount for storeFiles because we would open the
       // storeFiles and get the StoreFileScanners for them.If we don't increase the refCount here,
@@ -1042,10 +1043,10 @@ public class HStore
    */
   public List<KeyValueScanner> getScanners(List<HStoreFile> files, boolean cacheBlocks,
     boolean isGet, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
-    byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner)
-    throws IOException {
+    byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner,
+    boolean onlyLatestVersion) throws IOException {
     return getScanners(files, cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow,
-      false, readPt, includeMemstoreScanner);
+      false, readPt, includeMemstoreScanner, onlyLatestVersion);
   }
 
   /**
@@ -1067,7 +1068,7 @@ public class HStore
   public List<KeyValueScanner> getScanners(List<HStoreFile> files, boolean cacheBlocks,
     boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
     boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
-    boolean includeMemstoreScanner) throws IOException {
+    boolean includeMemstoreScanner, boolean onlyLatestVersion) throws IOException {
     List<KeyValueScanner> memStoreScanners = null;
     if (includeMemstoreScanner) {
       this.storeEngine.readLock();
@@ -1762,7 +1763,7 @@ public class HStore
         return null;
       }
       return getScanners(filesToReopen, cacheBlocks, false, false, matcher, startRow,
-        includeStartRow, stopRow, includeStopRow, readPt, false);
+        includeStartRow, stopRow, includeStopRow, readPt, false, false);
     } finally {
       this.storeEngine.readUnlock();
     }
