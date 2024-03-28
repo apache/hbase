@@ -133,6 +133,13 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     }
 
     try {
+      ADMIN.moveAllServersFromOneRSGroupToOther("doesnotexist", "bogus");
+      fail("Expected move from  bogus doesnotexist group to fail");
+    } catch (ConstraintException ex) {
+      // expected
+    }
+
+    try {
       ADMIN.balancerSwitch(true, true);
       ADMIN.balanceRSGroup("bogus");
       ADMIN.balancerSwitch(false, true);
