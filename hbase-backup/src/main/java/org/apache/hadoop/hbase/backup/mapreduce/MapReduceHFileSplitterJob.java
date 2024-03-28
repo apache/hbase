@@ -99,6 +99,10 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
     conf.set(FileInputFormat.INPUT_DIR, inputDirs);
     Job job = Job.getInstance(conf,
       conf.get(JOB_NAME_CONF_KEY, NAME + "_" + EnvironmentEdgeManager.currentTime()));
+    // MapReduceHFileSplitter needs ExtendedCellSerialization so that sequenceId can be propagated
+    // when sorting cells in CellSortReducer
+    job.getConfiguration().setBoolean(HFileOutputFormat2.EXTENDED_CELL_SERIALIZATION_ENABLED_KEY,
+      true);
     job.setJarByClass(MapReduceHFileSplitterJob.class);
     job.setInputFormatClass(HFileInputFormat.class);
     job.setMapOutputKeyClass(ImmutableBytesWritable.class);

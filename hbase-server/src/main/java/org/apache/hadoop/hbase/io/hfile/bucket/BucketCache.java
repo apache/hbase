@@ -222,13 +222,8 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   transient final IdReadWriteLock<Long> offsetLock;
 
-  final NavigableSet<BlockCacheKey> blocksByHFile = new ConcurrentSkipListSet<>((a, b) -> {
-    int nameComparison = a.getHfileName().compareTo(b.getHfileName());
-    if (nameComparison != 0) {
-      return nameComparison;
-    }
-    return Long.compare(a.getOffset(), b.getOffset());
-  });
+  NavigableSet<BlockCacheKey> blocksByHFile = new ConcurrentSkipListSet<>(
+    Comparator.comparing(BlockCacheKey::getHfileName).thenComparingLong(BlockCacheKey::getOffset));
 
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
   private transient final ScheduledExecutorService scheduleThreadPool =
@@ -1471,8 +1466,11 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private void parsePB(BucketCacheProtos.BucketCacheEntry proto) throws IOException {
-    backingMap = BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap(),
-      this::createRecycler);
+    Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> pair =
+      BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap(),
+        this::createRecycler);
+    backingMap = pair.getFirst();
+    blocksByHFile = pair.getSecond();
     fullyCachedFiles.clear();
     fullyCachedFiles.putAll(BucketProtoUtils.fromPB(proto.getCachedFilesMap()));
     if (proto.hasChecksum()) {
