@@ -56,7 +56,7 @@ public class TestBackupDeleteRestore extends TestBackupBase {
     LOG.info("test full restore on a single table empty table");
 
     List<TableName> tables = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     assertTrue(checkSucceeded(backupId));
     LOG.info("backup complete");
     int numRows = TEST_UTIL.countRows(table1);

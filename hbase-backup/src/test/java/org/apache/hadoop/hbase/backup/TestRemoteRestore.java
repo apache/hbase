@@ -69,7 +69,8 @@ public class TestRemoteRestore extends TestBackupBase {
   public void testFullRestoreRemote() throws Exception {
     LOG.info("test remote full backup on a single table");
     String backupId =
-      backupTables(BackupType.FULL, toList(table1.getNameAsString()), BACKUP_REMOTE_ROOT_DIR);
+      backupTables(BackupType.FULL, toList(table1.getNameAsString()), BACKUP_REMOTE_ROOT_DIR)
+        .getBackupId();
     LOG.info("backup complete");
     TableName[] tableset = new TableName[] { table1 };
     TableName[] tablemap = new TableName[] { table1_restore };
@@ -90,7 +91,8 @@ public class TestRemoteRestore extends TestBackupBase {
   public void testFullRestoreRemoteWithAlternateRestoreOutputDir() throws Exception {
     LOG.info("test remote full backup on a single table with alternate restore output dir");
     String backupId =
-      backupTables(BackupType.FULL, toList(table1.getNameAsString()), BACKUP_REMOTE_ROOT_DIR);
+      backupTables(BackupType.FULL, toList(table1.getNameAsString()), BACKUP_REMOTE_ROOT_DIR)
+        .getBackupId();
     LOG.info("backup complete");
     TableName[] tableset = new TableName[] { table1 };
     TableName[] tablemap = new TableName[] { table1_restore };
