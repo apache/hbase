@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.impl.FullTableBackupClient;
 import org.apache.hadoop.hbase.backup.impl.IncrementalBackupManager;
 import org.apache.hadoop.hbase.backup.impl.IncrementalTableBackupClient;
-import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -206,8 +205,7 @@ public class TestBackupBase {
 
         Map<String, String> props = new HashMap<>();
         props.put("backupRoot", backupInfo.getBackupRootDir());
-        admin.execProcedure(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE,
-          LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, props);
+        BackupUtils.rollWALWriters(admin, props);
         failStageIf(Stage.stage_2);
         newTimestamps = backupManager.readRegionServerLastLogRollResult();
 
