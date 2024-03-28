@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.ClassRule;
@@ -69,6 +70,44 @@ public class TestFullRestore extends TestBackupBase {
     assertTrue(hba.tableExists(table1_restore));
     TEST_UTIL.deleteTable(table1_restore);
     hba.close();
+  }
+
+  @Test
+  public void testFullRestoreSingleWithRegion() throws Exception {
+    LOG.info("test full restore on a single table empty table that has a region");
+
+    // This test creates its own table so other tests are not affected (we adjust it in this test)
+    TableName tableName = TableName.valueOf("table-full-restore-single-region");
+    TEST_UTIL.createTable(tableName, famName);
+
+    Admin admin = TEST_UTIL.getAdmin();
+
+    // Add & remove data to ensure a region is active, but functionally empty
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
+    loadTable(table);
+    admin.flush(tableName);
+    TEST_UTIL.deleteTableData(tableName);
+    admin.flush(tableName);
+
+    admin.majorCompact(tableName);
+    Thread.sleep(5_000);
+
+    List<TableName> tables = Lists.newArrayList(tableName);
+    String backupId = fullTableBackup(tables);
+    assertTrue(checkSucceeded(backupId));
+
+    LOG.info("backup complete");
+
+    TEST_UTIL.deleteTable(tableName);
+
+    TableName[] tableset = new TableName[] { tableName };
+    TableName[] tablemap = new TableName[] { tableName };
+    BackupAdmin client = getBackupAdmin();
+    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tableset,
+      tablemap, false));
+    assertTrue(admin.tableExists(tableName));
+    TEST_UTIL.deleteTable(tableName);
+    admin.close();
   }
 
   @Test
