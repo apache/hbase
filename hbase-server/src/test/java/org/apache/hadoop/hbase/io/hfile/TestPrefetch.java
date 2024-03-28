@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY;
+import static org.apache.hadoop.hbase.io.hfile.PrefetchExecutor.PREFETCH_DELAY;
 import static org.apache.hadoop.hbase.regionserver.CompactSplit.HBASE_REGION_SERVER_ENABLE_COMPACTION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
@@ -65,6 +66,7 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.PrefetchExecutorNotifier;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.TestHStoreFile;
@@ -95,7 +97,6 @@ public class TestPrefetch {
   private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
   private static final int DATA_BLOCK_SIZE = 2048;
   private static final int NUM_KV = 1000;
-
   private Configuration conf;
   private CacheConfig cacheConf;
   private FileSystem fs;
@@ -337,6 +338,62 @@ public class TestPrefetch {
   }
 
   @Test
+  public void testOnConfigurationChange() {
+    PrefetchExecutorNotifier prefetchExecutorNotifier = new PrefetchExecutorNotifier(conf);
+    conf.setInt(PREFETCH_DELAY, 40000);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
+    assertEquals(prefetchExecutorNotifier.getPrefetchDelay(), 40000);
+
+    // restore
+    conf.setInt(PREFETCH_DELAY, 30000);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
+    assertEquals(prefetchExecutorNotifier.getPrefetchDelay(), 30000);
+
+    conf.setInt(PREFETCH_DELAY, 1000);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
+  }
+
+  @Test
+  public void testPrefetchWithDelay() throws Exception {
+    // Configure custom delay
+    PrefetchExecutorNotifier prefetchExecutorNotifier = new PrefetchExecutorNotifier(conf);
+    conf.setInt(PREFETCH_DELAY, 25000);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
+
+    HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
+      .withBlockSize(DATA_BLOCK_SIZE).build();
+    Path storeFile = writeStoreFile("TestPrefetchWithDelay", context);
+
+    HFile.Reader reader = HFile.createReader(fs, storeFile, cacheConf, true, conf);
+    long startTime = System.currentTimeMillis();
+
+    // Wait for 20 seconds, no thread should start prefetch
+    Thread.sleep(20000);
+    assertFalse("Prefetch threads should not be running at this point", reader.prefetchStarted());
+    while (!reader.prefetchStarted()) {
+      assertTrue("Prefetch delay has not been expired yet",
+        getElapsedTime(startTime) < PrefetchExecutor.getPrefetchDelay());
+    }
+
+    // Prefech threads started working but not completed yet
+    assertFalse(reader.prefetchComplete());
+
+    // In prefetch executor, we further compute passed in delay using variation and a random
+    // multiplier to get 'effective delay'. Hence, in the test, for delay of 25000 milli-secs
+    // check that prefetch is started after 20000 milli-sec and prefetch started after that.
+    // However, prefetch should not start after configured delay.
+    if (reader.prefetchStarted()) {
+      LOG.info("elapsed time {}, Delay {}", getElapsedTime(startTime),
+        PrefetchExecutor.getPrefetchDelay());
+      assertTrue("Prefetch should start post configured delay",
+        getElapsedTime(startTime) <= PrefetchExecutor.getPrefetchDelay());
+    }
+
+    conf.setInt(PREFETCH_DELAY, 1000);
+    prefetchExecutorNotifier.onConfigurationChange(conf);
+  }
+
+  @Test
   public void testPrefetchDoesntSkipHFileLink() throws Exception {
     testPrefetchWhenHFileLink(c -> {
       boolean isCached = c != null;
@@ -490,4 +547,7 @@ public class TestPrefetch {
     }
   }
 
+  private long getElapsedTime(long startTime) {
+    return System.currentTimeMillis() - startTime;
+  }
 }
