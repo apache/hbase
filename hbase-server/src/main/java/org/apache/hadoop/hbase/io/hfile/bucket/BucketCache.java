@@ -255,6 +255,8 @@ public class BucketCache implements BlockCache, HeapSize {
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
     int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration,
     Configuration conf) throws IOException {
+    Preconditions.checkArgument(blockSize > 0,
+      "BucketCache capacity is set to " + blockSize + ", can not be less than 0");
     this.algorithm = conf.get(FILE_VERIFY_ALGORITHM, DEFAULT_FILE_VERIFY_ALGORITHM);
     this.ioEngine = getIOEngineFromName(ioEngineName, capacity, persistencePath);
     this.writerThreads = new WriterThread[writerThreadNum];
