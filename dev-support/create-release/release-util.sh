@@ -613,6 +613,8 @@ function update_releasenotes {
   else
     mv "${releasenotes}" "${project_dir}/RELEASENOTES.md"
   fi
+  log "${MVN[@]}" spotless:apply -DspotlessFiles='RELEASENOTES*.md,CHANGES*.md'
+  "${MVN[@]}" spotless:apply -DspotlessFiles='RELEASENOTES*.md,CHANGES*.md' | grep -v "no value" # silence logs
   stop_step "${timing_token}"
 }
 
@@ -745,6 +747,8 @@ function maven_set_version { #input: <version_to_set>
     log "${MVN[@]}" versions:set-property -Dproperty=revision -DnewVersion="$this_version" -DgenerateBackupPoms=false
     "${MVN[@]}" versions:set-property -Dproperty=revision -DnewVersion="$this_version" -DgenerateBackupPoms=false | grep -v "no value" # silence logs
   fi
+  log "${MVN[@]}" spotless:apply -DspotlessFiles='**/pom.xml'
+  "${MVN[@]}" spotless:apply -DspotlessFiles='**/pom.xml' | grep -v "no value" # silence logs
 }
 
 # Do maven command to read version from local pom
