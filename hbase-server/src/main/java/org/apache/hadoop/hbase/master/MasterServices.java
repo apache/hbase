@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
@@ -105,6 +106,9 @@ public interface MasterServices extends Server {
 
   /** Returns Master's instance of {@link CatalogJanitor} */
   CatalogJanitor getCatalogJanitor();
+
+  /** Returns Master's instance of {@link HbckChore} */
+  HbckChore getHbckChore();
 
   /** Returns Master's instance of {@link ProcedureExecutor} */
   ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor();
