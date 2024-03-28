@@ -292,11 +292,6 @@
           <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
-      <!-- Make a jar and put the sources in the jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-      </plugin>
       <!-- General ant tasks, bound to different build phases -->
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>

@@ -35,7 +35,13 @@
 
   <build>
     <plugins>
-
+      <plugin>
+        <!--Disable source plugin as this module does not contain source files -->
+        <artifactId>maven-source-plugin</artifactId>
+        <configuration>
+          <skipSource>true</skipSource>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
