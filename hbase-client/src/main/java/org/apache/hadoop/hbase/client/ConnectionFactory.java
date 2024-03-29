@@ -210,6 +210,36 @@ public class ConnectionFactory {
    * }
    * </pre>
    *
+   * @param conf configuration
+   * @param user the user the connection is for
+   * @param pool the thread pool to use for batch operations
+   * @return Connection object for <code>conf</code>
+   */
+  public static Connection createConnection(Configuration conf, ExecutorService pool,
+    final User user) throws IOException {
+    return createConnection(conf, pool, user, Collections.emptyMap());
+  }
+
+  /**
+   * Create a new Connection instance using the passed <code>conf</code> instance. Connection
+   * encapsulates all housekeeping for a connection to the cluster. All tables and interfaces
+   * created from returned connection share zookeeper connection, meta cache, and connections to
+   * region servers and masters. <br>
+   * The caller is responsible for calling {@link Connection#close()} on the returned connection
+   * instance. Typical usage:
+   *
+   * <pre>
+   * Connection connection = ConnectionFactory.createConnection(conf);
+   * Table table = connection.getTable(TableName.valueOf("table1"));
+   * try {
+   *   table.get(...);
+   *   ...
+   * } finally {
+   *   table.close();
+   *   connection.close();
+   * }
+   * </pre>
+   *
    * @param conf                 configuration
    * @param user                 the user the connection is for
    * @param pool                 the thread pool to use for batch operations
