@@ -327,6 +327,9 @@ Quitting...
 The RegionServer Grouping feature has been reimplemented. See section
 <<migrating.rsgroup>> in <<ops_mgt>> for more details.
 
+The `hbase:namespace` table has been removed and fold into `hbase:meta`. See section
+<<namspace_table>> in <<datamodel>> for more details.
+
 [[upgrade2.4]]
 There is no special consideration upgrading to hbase-2.4.x from 2.3.x. And for earlier versions,
 just follow the <<upgrade2.3>> guide. In general, 2.2.x should be rolling upgradeable, for 2.1.x
