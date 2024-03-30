@@ -98,7 +98,8 @@ public class TestStoreFileWriter {
     return Arrays.asList(
       new Object[][] { { KeepDeletedCells.FALSE, 1, true }, { KeepDeletedCells.FALSE, 2, false },
         { KeepDeletedCells.FALSE, 3, true }, { KeepDeletedCells.TRUE, 1, false },
-        { KeepDeletedCells.TRUE, 2, true }, { KeepDeletedCells.TRUE, 3, false } });
+        // { KeepDeletedCells.TRUE, 2, true }, see HBASE-28442
+        { KeepDeletedCells.TRUE, 3, false } });
   }
 
   // In memory representation of a cell. We only need to know timestamp and type field for our

@@ -140,10 +140,14 @@ public class HStoreFile implements StoreFile {
   // Indicates if the file got compacted
   private volatile boolean compactedAway = false;
 
-  // Indicate if the file contains historical cell versions. This is used when
+  // Indicates if the file contains historical cell versions. This is used when
   // hbase.enable.historical.compaction.files is set to true. In that case, compactions
   // can generate two files, one with the live cell versions and the other with the remaining
-  // (historical) cell versions.
+  // (historical) cell versions. If isHistorical is true then the hfile is historical.
+  // Historical files are skipped for regular (not raw) scans for latest row versions.
+  // When hbase.enable.historical.compaction.files is false, isHistorical will be false
+  // for all files. This means all files will be treated as live files. Historical files are
+  // generated only when hbase.enable.historical.compaction.files is true.
   private volatile boolean isHistorical = false;
 
   // Keys for metadata stored in backing HFile.

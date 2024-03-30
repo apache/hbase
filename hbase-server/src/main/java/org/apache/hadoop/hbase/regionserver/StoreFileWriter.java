@@ -301,7 +301,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   /**
    * For use in testing.
    */
-  HFile.Writer getHFileWriter() {
+  HFile.Writer getLiveFileWriter() {
     return liveFileWriter.getHFileWriter();
   }
 

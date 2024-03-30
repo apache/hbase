@@ -129,7 +129,7 @@ public class TestCompactorMemLeak {
     @Override
     protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,
       CompactionRequestImpl request) throws IOException {
-      HFileWriterImpl writerImpl = (HFileWriterImpl) writer.getHFileWriter();
+      HFileWriterImpl writerImpl = (HFileWriterImpl) writer.getLiveFileWriter();
       Cell cell = writerImpl.getLastCell();
       // The cell should be backend with an KeyOnlyKeyValue.
       IS_LAST_CELL_ON_HEAP.set(cell instanceof KeyOnlyKeyValue);

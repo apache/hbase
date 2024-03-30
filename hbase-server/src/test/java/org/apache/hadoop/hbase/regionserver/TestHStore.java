@@ -1958,7 +1958,7 @@ public class TestHStore {
       .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(10000L)
         .compression(Compression.Algorithm.NONE).isCompaction(true).includeMVCCReadpoint(true)
         .includesTag(false).shouldDropBehind(true));
-    HFileContext hFileContext = writer.getHFileWriter().getFileContext();
+    HFileContext hFileContext = writer.getLiveFileWriter().getFileContext();
     assertArrayEquals(family, hFileContext.getColumnFamily());
     assertArrayEquals(table, hFileContext.getTableName());
   }
