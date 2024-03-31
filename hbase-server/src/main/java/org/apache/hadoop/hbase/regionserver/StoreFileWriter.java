@@ -160,12 +160,29 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   }
 
   public static boolean shouldEnableHistoricalCompactionFiles(Configuration conf) {
-    return conf.getBoolean(ENABLE_HISTORICAL_COMPACTION_FILES,
-      DEFAULT_ENABLE_HISTORICAL_COMPACTION_FILES)
-      && conf.get(STORE_ENGINE_CLASS_KEY, DefaultStoreEngine.class.getName())
-        .equals(DefaultStoreEngine.class.getName())
-      && conf.get(DEFAULT_COMPACTOR_CLASS_KEY, DefaultCompactor.class.getName())
-        .equals(DefaultCompactor.class.getName());
+    if (
+      conf.getBoolean(ENABLE_HISTORICAL_COMPACTION_FILES,
+        DEFAULT_ENABLE_HISTORICAL_COMPACTION_FILES)
+    ) {
+      // Historical compaction files are supported only for default store engine with
+      // default compactor.
+      String storeEngine = conf.get(STORE_ENGINE_CLASS_KEY, DefaultStoreEngine.class.getName());
+      if (!storeEngine.equals(DefaultStoreEngine.class.getName())) {
+        LOG.warn("Historical compaction file generation is ignored for " + storeEngine
+          + ". hbase.enable.historical.compaction.files can be set to true only for the "
+          + "default compaction (DefaultStoreEngine and DefaultCompactor)");
+        return false;
+      }
+      String compactor = conf.get(DEFAULT_COMPACTOR_CLASS_KEY, DefaultCompactor.class.getName());
+      if (!compactor.equals(DefaultCompactor.class.getName())) {
+        LOG.warn("Historical compaction file generation is ignored for " + compactor
+          + ". hbase.enable.historical.compaction.files can be set to true only for the "
+          + "default compaction (DefaultStoreEngine and DefaultCompactor)");
+        return false;
+      }
+      return true;
+    }
+    return false;
   }
 
   public long getPos() throws IOException {
