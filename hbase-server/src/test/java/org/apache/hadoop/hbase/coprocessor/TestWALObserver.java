@@ -355,10 +355,9 @@ public class TestWALObserver {
 
         SampleRegionWALCoprocessor cp2 =
           region.getCoprocessorHost().findCoprocessor(SampleRegionWALCoprocessor.class);
-        // TODO: asserting here is problematic.
         assertNotNull(cp2);
-        assertTrue(cp2.isPreWALRestoreCalled());
-        assertTrue(cp2.isPostWALRestoreCalled());
+        assertTrue(cp2.isPreReplayWALsCalled());
+        assertTrue(cp2.isPostReplayWALsCalled());
         region.close();
         wals2.close();
         return null;
