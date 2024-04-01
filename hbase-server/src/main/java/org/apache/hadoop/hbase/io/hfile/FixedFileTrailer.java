@@ -205,7 +205,8 @@ public class FixedFileTrailer {
       .setTotalUncompressedBytes(totalUncompressedBytes).setDataIndexCount(dataIndexCount)
       .setMetaIndexCount(metaIndexCount).setEntryCount(entryCount)
       .setNumDataIndexLevels(numDataIndexLevels).setFirstDataBlockOffset(firstDataBlockOffset)
-      .setLastDataBlockOffset(lastDataBlockOffset).setCompressionCodec(compressionCodec.ordinal());
+      .setLastDataBlockOffset(lastDataBlockOffset).setComparatorClassName(comparatorClassName)
+      .setCompressionCodec(compressionCodec.ordinal());
     if (encryptionKey != null) {
       builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(encryptionKey));
     }
