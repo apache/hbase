@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.junit.After;
 import org.junit.Before;
@@ -88,7 +89,7 @@ public class TestBlockEvictionOnRegionMovement {
   @Test
   public void testBlockEvictionOnRegionMove() throws Exception {
     // Write to table and flush
-    TableName tableRegionMove = writeDataToTable();
+    TableName tableRegionMove = writeDataToTable("testBlockEvictionOnRegionMove");
 
     HRegionServer regionServingRS =
       cluster.getRegionServer(1).getRegions(tableRegionMove).size() == 1
@@ -114,7 +115,7 @@ public class TestBlockEvictionOnRegionMovement {
   @Test
   public void testBlockEvictionOnGracefulStop() throws Exception {
     // Write to table and flush
-    TableName tableRegionClose = writeDataToTable();
+    TableName tableRegionClose = writeDataToTable("testBlockEvictionOnGracefulStop");
 
     HRegionServer regionServingRS =
       cluster.getRegionServer(1).getRegions(tableRegionClose).size() == 1
@@ -137,8 +138,8 @@ public class TestBlockEvictionOnRegionMovement {
     assertNotEquals(0, regionServingRS.getBlockCache().get().getBlockCaches()[1].getBlockCount());
   }
 
-  public TableName writeDataToTable() throws IOException, InterruptedException {
-    TableName tableName = TableName.valueOf("table1");
+  public TableName writeDataToTable(String testName) throws IOException, InterruptedException {
+    TableName tableName = TableName.valueOf(testName + EnvironmentEdgeManager.currentTime());
     byte[] row0 = Bytes.toBytes("row1");
     byte[] row1 = Bytes.toBytes("row2");
     byte[] family = Bytes.toBytes("family");
