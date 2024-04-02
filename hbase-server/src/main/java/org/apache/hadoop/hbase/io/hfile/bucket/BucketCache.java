@@ -2020,26 +2020,30 @@ public class BucketCache implements BlockCache, HeapSize {
     // so we need to count all blocks for this file in the backing map under
     // a read lock for the block offset
     final List<ReentrantReadWriteLock> locks = new ArrayList<>();
-    LOG.debug("Notifying caching completed for file {}, with total blocks {}", fileName,
-      dataBlockCount);
+    LOG.debug("Notifying caching completed for file {}, with total blocks {}, and data blocks {}",
+      fileName, totalBlockCount, dataBlockCount);
     try {
       final MutableInt count = new MutableInt();
       LOG.debug("iterating over {} entries in the backing map", backingMap.size());
       backingMap.entrySet().stream().forEach(entry -> {
-        if (entry.getKey().getHfileName().equals(fileName.getName())) {
+        if (
+          entry.getKey().getHfileName().equals(fileName.getName())
+            && entry.getKey().getBlockType().equals(BlockType.DATA)
+        ) {
           LOG.debug("found block for file {} in the backing map. Acquiring read lock for offset {}",
             fileName.getName(), entry.getKey().getOffset());
           ReentrantReadWriteLock lock = offsetLock.getLock(entry.getKey().getOffset());
           lock.readLock().lock();
           locks.add(lock);
+          // rechecks the given key is still there (no eviction happened before the lock acquired)
           if (backingMap.containsKey(entry.getKey())) {
             count.increment();
           }
         }
       });
-      // We may either place only data blocks on the BucketCache or all type of blocks
-      if (dataBlockCount == count.getValue() || totalBlockCount == count.getValue()) {
-        LOG.debug("File {} has now been fully cached.", fileName.getName());
+      // BucketCache would only have data blocks
+      if (dataBlockCount == count.getValue()) {
+        LOG.debug("File {} has now been fully cached.", fileName);
         fileCacheCompleted(fileName, size);
       } else {
         LOG.debug(
@@ -2047,15 +2051,17 @@ public class BucketCache implements BlockCache, HeapSize {
             + "Total blocks for file: {}. Checking for blocks pending cache in cache writer queue.",
           fileName.getName(), count.getValue(), dataBlockCount);
         if (ramCache.hasBlocksForFile(fileName.getName())) {
+          for (ReentrantReadWriteLock lock : locks) {
+            lock.readLock().unlock();
+          }
           LOG.debug("There are still blocks pending caching for file {}. Will sleep 100ms "
             + "and try the verification again.", fileName.getName());
           Thread.sleep(100);
           notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
         } else {
-          LOG.info(
-            "We found only {} blocks cached from a total of {} for file {}, "
-              + "but no blocks pending caching. Maybe cache is full?",
-            count, dataBlockCount, fileName.getName());
+          LOG.info("We found only {} blocks cached from a total of {} for file {}, "
+            + "but no blocks pending caching. Maybe cache is full or evictions "
+            + "happened concurrently to cache prefetch.", count, totalBlockCount, fileName);
         }
       }
     } catch (InterruptedException e) {

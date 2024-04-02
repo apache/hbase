@@ -162,20 +162,21 @@ public class TestBucketCachePersister {
     // Load Blocks in cache
     Path storeFile = writeStoreFile("TestPrefetch3", conf, cacheConf, fs);
     HFile.createReader(fs, storeFile, cacheConf, true, conf);
-    while (bucketCache.backingMap.size() == 0) {
+    boolean evicted = false;
+    while (!PrefetchExecutor.isCompleted(storeFile)) {
+      if (bucketCache.backingMap.size() > 0 && !evicted) {
+        Iterator<Map.Entry<BlockCacheKey, BucketEntry>> it =
+          bucketCache.backingMap.entrySet().iterator();
+        // Evict a data block from cache
+        Map.Entry<BlockCacheKey, BucketEntry> entry = it.next();
+        while (it.hasNext() && !evicted) {
+          if (entry.getKey().getBlockType().equals(BlockType.DATA)) {
+            evicted = bucketCache.evictBlock(it.next().getKey());
+          }
+        }
+      }
       Thread.sleep(10);
     }
-    Iterator<Map.Entry<BlockCacheKey, BucketEntry>> it =
-      bucketCache.backingMap.entrySet().iterator();
-    // Evict Blocks from cache
-    bucketCache.evictBlock(it.next().getKey());
-    bucketCache.evictBlock(it.next().getKey());
-    int retries = 0;
-    while (!PrefetchExecutor.isCompleted(storeFile) && retries < 5) {
-      Thread.sleep(500);
-      retries++;
-    }
-    assertTrue(retries < 5);
     assertFalse(bucketCache.fullyCachedFiles.containsKey(storeFile.getName()));
     cleanupBucketCache(bucketCache);
   }
