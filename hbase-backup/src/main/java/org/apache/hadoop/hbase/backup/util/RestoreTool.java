@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
  */
 @InterfaceAudience.Private
 public class RestoreTool {
-  public static final Logger LOG = LoggerFactory.getLogger(BackupUtils.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RestoreTool.class);
   private final static long TABLE_AVAILABILITY_WAIT_TIME = 180000;
 
   private final String[] ignoreDirs = { HConstants.RECOVERED_EDITS_DIR };
@@ -437,6 +437,10 @@ public class RestoreTool {
           HFile.Reader reader = HFile.createReader(fs, hfile, conf);
           final byte[] first, last;
           try {
+            if (reader.getEntries() == 0) {
+              LOG.debug("Skipping hfile with 0 entries: " + hfile);
+              continue;
+            }
             first = reader.getFirstRowKey().get();
             last = reader.getLastRowKey().get();
             LOG.debug("Trying to figure out region boundaries hfile=" + hfile + " first="
@@ -491,8 +495,12 @@ public class RestoreTool {
             admin.createTable(htd);
           } else {
             keys = generateBoundaryKeys(regionDirList);
-            // create table using table descriptor and region boundaries
-            admin.createTable(htd, keys);
+            if (keys.length > 0) {
+              // create table using table descriptor and region boundaries
+              admin.createTable(htd, keys);
+            } else {
+              admin.createTable(htd);
+            }
           }
         } catch (NamespaceNotFoundException e) {
           LOG.warn("There was no namespace and the same will be created");
