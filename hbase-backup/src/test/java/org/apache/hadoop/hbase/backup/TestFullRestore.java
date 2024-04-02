@@ -89,8 +89,7 @@ public class TestFullRestore extends TestBackupBase {
     TEST_UTIL.deleteTableData(tableName);
     admin.flush(tableName);
 
-    admin.majorCompact(tableName);
-    Thread.sleep(5_000);
+    TEST_UTIL.compact(tableName, true);
 
     List<TableName> tables = Lists.newArrayList(tableName);
     String backupId = fullTableBackup(tables);

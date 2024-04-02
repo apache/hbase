@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
  */
 @InterfaceAudience.Private
 public class RestoreTool {
-  public static final Logger LOG = LoggerFactory.getLogger(BackupUtils.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RestoreTool.class);
   private final static long TABLE_AVAILABILITY_WAIT_TIME = 180000;
 
   private final String[] ignoreDirs = { HConstants.RECOVERED_EDITS_DIR };
