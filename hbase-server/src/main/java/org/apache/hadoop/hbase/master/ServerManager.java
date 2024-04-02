@@ -337,8 +337,9 @@ public class ServerManager implements ConfigurationObserver {
         // related methods in AssignmentManager to record region states. If the region server
         // is already dead, we should not do these steps anymore, so here we throw an exception
         // to let the upper layer know that they should not continue processing anymore.
-        final String errorMsg = "RegionServerReport ignored, could not record the server: " + sn
-          + " . Consider yourself dead as server with higher startcode is already registered.";
+        final String errorMsg = "RegionServerReport received from " + sn
+          + ", but another server with the same name and higher startcode is already registered,"
+          + " ignoring";
         LOG.warn(errorMsg);
         throw new YouAreDeadException(errorMsg);
       }
