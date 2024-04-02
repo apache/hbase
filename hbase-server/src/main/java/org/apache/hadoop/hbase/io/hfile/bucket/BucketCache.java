@@ -747,7 +747,8 @@ public class BucketCache implements BlockCache, HeapSize {
     } else {
       return bucketEntryToUse.withWriteLock(offsetLock, () -> {
         if (backingMap.remove(cacheKey, bucketEntryToUse)) {
-          LOG.debug("removed key {} from back map in the evict process", cacheKey);
+          LOG.debug("removed key {} from back map with offset lock {} in the evict process",
+            cacheKey, bucketEntryToUse.offset());
           blockEvicted(cacheKey, bucketEntryToUse, !existedInRamCache, evictedByEvictionProcess);
           return true;
         }
@@ -2083,9 +2084,10 @@ public class BucketCache implements BlockCache, HeapSize {
           entry.getKey().getHfileName().equals(fileName.getName())
             && entry.getKey().getBlockType().equals(BlockType.DATA)
         ) {
+          long offsetToLock = entry.getValue().offset();
           LOG.debug("found block for file {} in the backing map. Acquiring read lock for offset {}",
-            fileName, entry.getKey().getOffset());
-          ReentrantReadWriteLock lock = offsetLock.getLock(entry.getKey().getOffset());
+            fileName, offsetToLock);
+          ReentrantReadWriteLock lock = offsetLock.getLock(offsetToLock);
           lock.readLock().lock();
           locks.add(lock);
           // rechecks the given key is still there (no eviction happened before the lock acquired)
