@@ -1659,17 +1659,19 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public int evictBlocksByHfileName(String hfileName) {
     fileNotFullyCached(hfileName);
-    Set<BlockCacheKey> keySet = blocksByHFile.subSet(new BlockCacheKey(hfileName, Long.MIN_VALUE),
-      true, new BlockCacheKey(hfileName, Long.MAX_VALUE), true);
-
+    Set<BlockCacheKey> keySet = getAllCacheKeysForFile(hfileName);
     int numEvicted = 0;
     for (BlockCacheKey key : keySet) {
       if (evictBlock(key)) {
         ++numEvicted;
       }
     }
-
     return numEvicted;
+  }
+
+  private Set<BlockCacheKey> getAllCacheKeysForFile(String hfileName) {
+    return blocksByHFile.subSet(new BlockCacheKey(hfileName, Long.MIN_VALUE), true,
+      new BlockCacheKey(hfileName, Long.MAX_VALUE), true);
   }
 
   /**
@@ -2085,25 +2087,31 @@ public class BucketCache implements BlockCache, HeapSize {
             && entry.getKey().getBlockType().equals(BlockType.DATA)
         ) {
           long offsetToLock = entry.getValue().offset();
-          LOG.debug("found block for file {} in the backing map. Acquiring read lock for offset {}",
-            fileName, offsetToLock);
+          LOG.debug("found block {} in the backing map. Acquiring read lock for offset {}",
+            entry.getKey(), offsetToLock);
           ReentrantReadWriteLock lock = offsetLock.getLock(offsetToLock);
           lock.readLock().lock();
           locks.add(lock);
           // rechecks the given key is still there (no eviction happened before the lock acquired)
           if (backingMap.containsKey(entry.getKey())) {
             count.increment();
+          } else {
+            lock.readLock().unlock();
+            locks.remove(lock);
+            LOG.debug("found block {}, but when locked and tried to count, it was gone.");
           }
         }
       });
+      int metaCount = totalBlockCount - dataBlockCount;
       // BucketCache would only have data blocks
       if (dataBlockCount == count.getValue()) {
         LOG.debug("File {} has now been fully cached.", fileName);
         fileCacheCompleted(fileName, size);
       } else {
         LOG.debug(
-          "Prefetch executor completed for {}, but only {} blocks were cached. "
-            + "Total blocks for file: {}. Checking for blocks pending cache in cache writer queue.",
+          "Prefetch executor completed for {}, but only {} data blocks were cached. "
+            + "Total data blocks for file: {}. "
+            + "Checking for blocks pending cache in cache writer queue.",
           fileName, count.getValue(), dataBlockCount);
         if (ramCache.hasBlocksForFile(fileName.getName())) {
           for (ReentrantReadWriteLock lock : locks) {
@@ -2113,11 +2121,17 @@ public class BucketCache implements BlockCache, HeapSize {
             + "and try the verification again.", fileName);
           Thread.sleep(100);
           notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
-        } else {
-          LOG.info("We found only {} blocks cached from a total of {} for file {}, "
-            + "but no blocks pending caching. Maybe cache is full or evictions "
-            + "happened concurrently to cache prefetch.", count, totalBlockCount, fileName);
-        }
+        } else
+          if ((getAllCacheKeysForFile(fileName.getName()).size() - metaCount) == dataBlockCount) {
+            LOG.debug("We counted {} data blocks, expected was {}, there was no more pending in "
+              + "the cache write queue but we now found that total cached blocks for file {} "
+              + "is equal to data block count.", count, dataBlockCount, fileName.getName());
+            fileCacheCompleted(fileName, size);
+          } else {
+            LOG.info("We found only {} data blocks cached from a total of {} for file {}, "
+              + "but no blocks pending caching. Maybe cache is full or evictions "
+              + "happened concurrently to cache prefetch.", count, dataBlockCount, fileName);
+          }
       }
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
