@@ -503,6 +503,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>stoty</id>
+      <name>Istvan Toth</name>
+      <email>stoty@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
       <id>syuanjiang</id>
       <name>Stephen Yuan Jiang</name>
       <email>syuanjiang@apache.org</email>
