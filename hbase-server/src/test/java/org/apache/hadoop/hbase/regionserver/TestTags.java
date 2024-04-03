@@ -147,14 +147,14 @@ public class TestTags {
     }
   }
 
-  private void testReverseScanWithDBE(Connection conn, DataBlockEncoding encoding, byte[] family, int blockSize, int maxRows)
-    throws IOException {
+  private void testReverseScanWithDBE(Connection conn, DataBlockEncoding encoding, byte[] family,
+    int blockSize, int maxRows) throws IOException {
     LOG.info("Running test with DBE={}", encoding);
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName() + "-" + encoding);
-    TEST_UTIL.createTable(TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(family).setDataBlockEncoding(encoding).setBlocksize(blockSize).build())
-      .build(), null);
+    TEST_UTIL.createTable(
+      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(family).setDataBlockEncoding(encoding).setBlocksize(blockSize).build()).build(),
+      null);
 
     Table table = conn.getTable(tableName);
 
