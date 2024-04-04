@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -542,10 +544,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     assert sinkPeer != null;
     AsyncRegionServerAdmin rsAdmin = sinkPeer.getRegionServer();
     final SinkPeer sinkPeerToUse = sinkPeer;
-    FutureUtils.addListener(
-      ReplicationProtobufUtil.replicateWALEntry(rsAdmin, entries.toArray(new Entry[entries.size()]),
-        replicationClusterId, baseNamespaceDir, hfileArchiveDir, timeout),
-      (response, exception) -> {
+    final Entry[] preparedEntries = prepareEntries(entries);
+    FutureUtils.addListener(ReplicationProtobufUtil.replicateWALEntry(rsAdmin, preparedEntries,
+      replicationClusterId, baseNamespaceDir, hfileArchiveDir, timeout), (response, exception) -> {
         if (exception != null) {
           onReplicateWALEntryException(entriesHashCode, exception, sinkPeerToUse);
           resultCompletableFuture.completeExceptionally(exception);
@@ -631,5 +632,37 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
 
   private String logPeerId() {
     return "[Source for peer " + this.ctx.getPeerId() + "]:";
+  }
+
+  private Entry[] prepareEntries(List<Entry> entries) {
+    Entry[] results = new Entry[entries.size()];
+    ReplicationPeerConfig peerConfig = ctx.getPeerConfig();
+    Map<TableName, TableName> sourceToTargetTables = peerConfig.getSourceTablesToTargetTables();
+
+    if (sourceToTargetTables == null) {
+      return entries.toArray(new Entry[0]);
+    }
+
+    for (int i = 0; i < entries.size(); ++i) {
+      Entry entry = entries.get(i);
+
+      TableName sourceTable = entry.getKey().getTableName();
+      TableName targetTable = sourceToTargetTables.get(sourceTable);
+
+      if (targetTable == null) {
+        results[i] = entry;
+        continue;
+      }
+
+      WALKeyImpl current = entry.getKey();
+      WALKeyImpl updatedKey =
+        new WALKeyImpl(current.getEncodedRegionName(), targetTable, current.getWriteTime(),
+          current.getClusterIds(), current.getNonceGroup(), current.getNonce(), current.getMvcc(),
+          current.getReplicationScopes(), current.getExtendedAttributes());
+
+      results[i] = new Entry(updatedKey, entry.getEdit());
+    }
+
+    return results;
   }
 }

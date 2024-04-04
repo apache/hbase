@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
@@ -397,6 +398,37 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     Assert.assertTrue(msr.getLastShippedAge() > 0);
     Assert.assertTrue(msr.getShippedBytes() > 0);
 
+  }
+
+  @Test
+  public void testMapsTablesCorrectly() throws Exception {
+    TableName targetTable = TableName.valueOf("test-target");
+    Map<TableName, TableName> tableMappings = new HashMap<>(1);
+    tableMappings.put(tableName, targetTable);
+    ReplicationPeerConfig rpc =
+      ReplicationPeerConfig.newBuilder().setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF2))
+        .setReplicationEndpointImpl(ReplicationEndpointTest.class.getName())
+        .setSourceTablesToTargetTable(tableMappings).build();
+    String peer = "testMapsTablesCorrectly";
+
+    createTable(targetTable);
+    // Remove existing intercluster replication so we can verify we didn't replicate to the
+    // target cluster for table `tableName`
+    hbaseAdmin.removeReplicationPeer(PEER_ID2);
+    hbaseAdmin.addReplicationPeer(peer, rpc);
+
+    byte[] row = Bytes.toBytes("row1");
+    try (Connection connection = ConnectionFactory.createConnection(CONF1)) {
+      doPut(connection, row);
+    }
+
+    htable2 = connection2.getTable(targetTable);
+    final Get get = new Get(row);
+    Waiter.waitFor(CONF1, 60000, (Waiter.Predicate<Exception>) () -> !htable2.get(get).isEmpty());
+
+    htable2 = connection2.getTable(tableName);
+    Assert.assertTrue(htable2.get(get).isEmpty());
+    hbaseAdmin.removeReplicationPeer(peer);
   }
 
   private List<Pair<Entry, Long>> createWALEntriesWithSize(String tableName) {

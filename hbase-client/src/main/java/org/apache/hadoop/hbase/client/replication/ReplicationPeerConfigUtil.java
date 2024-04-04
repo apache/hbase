@@ -332,6 +332,19 @@ public final class ReplicationPeerConfigUtil {
     if (peer.hasRemoteWALDir()) {
       builder.setRemoteWALDir(peer.getRemoteWALDir());
     }
+
+    List<ReplicationProtos.SourceTablesToTargetTables> sourceToTargetTables =
+      peer.getSourceTablesToTargetTablesList();
+    if (sourceToTargetTables != null) {
+      Map<TableName, TableName> map = new HashMap<>(sourceToTargetTables.size());
+      for (ReplicationProtos.SourceTablesToTargetTables tables : sourceToTargetTables) {
+        map.put(ProtobufUtil.toTableName(tables.getSource()),
+          ProtobufUtil.toTableName(tables.getTarget()));
+      }
+
+      builder.setSourceTablesToTargetTable(map);
+    }
+
     return builder.build();
   }
 
@@ -389,6 +402,18 @@ public final class ReplicationPeerConfigUtil {
     if (peerConfig.getRemoteWALDir() != null) {
       builder.setRemoteWALDir(peerConfig.getRemoteWALDir());
     }
+
+    Map<TableName, TableName> sourceTablesToTargetTables =
+      peerConfig.getSourceTablesToTargetTables();
+    if (sourceTablesToTargetTables != null) {
+      for (Map.Entry<TableName, TableName> entry : sourceTablesToTargetTables.entrySet()) {
+        HBaseProtos.TableName source = ProtobufUtil.toProtoTableName(entry.getKey());
+        HBaseProtos.TableName target = ProtobufUtil.toProtoTableName(entry.getValue());
+        builder.addSourceTablesToTargetTables(ReplicationProtos.SourceTablesToTargetTables
+          .newBuilder().setSource(source).setTarget(target).build());
+      }
+    }
+
     return builder.build();
   }
 
