@@ -7003,7 +7003,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   Span createRegionSpan(String name) {
     return TraceUtil.createSpan(name).setAttribute(REGION_NAMES_KEY,
-      Collections.singletonList(getRegionInfo().getRegionNameAsString()));
+      Collections.singletonList(getRegionInfo().getEncodedName()));
   }
 
   // will be override in tests
