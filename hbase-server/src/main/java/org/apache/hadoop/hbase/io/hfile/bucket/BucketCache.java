@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -77,6 +78,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.regionserver.DataTieringManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
@@ -926,6 +928,27 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     try {
       freeInProgress = true;
+
+      // Fetch the file names from the backing map.
+      // Use the hash-map for efficient lookups
+      Map<String, String> fileNames = new HashMap<>();
+      for (Map.Entry<BlockCacheKey, BucketEntry> bucketEntryWithKey : backingMap.entrySet()) {
+        String fileName = bucketEntryWithKey.getKey().getHfileName();
+        if (!fileNames.containsKey(fileName)) {
+          // We are only interested in the keys.
+          fileNames.put(fileName, null);
+        }
+      }
+
+      // Check the list of files to determine the cold files which can be readily evicted.
+      List<String> coldFiles =
+        DataTieringManager.getInstance().getColdFileList(new ArrayList<>(fileNames.keySet()));
+      if (coldFiles != null) {
+        for(String fileName : coldFiles) {
+          evictBlocksByHfileName(fileName);
+        }
+      }
+
       long bytesToFreeWithoutExtra = 0;
       // Calculate free byte for each bucketSizeinfo
       StringBuilder msgBuffer = LOG.isDebugEnabled() ? new StringBuilder() : null;

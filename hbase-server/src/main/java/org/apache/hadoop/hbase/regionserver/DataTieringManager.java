@@ -17,15 +17,20 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -166,5 +171,45 @@ public class DataTieringManager {
   private long getDataTieringHotDataAge(Configuration conf) {
     return Long.parseLong(
       conf.get(DATATIERING_HOT_DATA_AGE_KEY, String.valueOf(DEFAULT_DATATIERING_HOT_DATA_AGE)));
+  }
+
+  /*
+   * This API takes the names of files as input and returns a subset of these file names
+   * that are cold.
+   * @parameter inputFileNames: Input list of file names
+   * @return List of names of files that are cold as per data-tiering logic.
+   */
+  public List<String> getColdFileList(List<String> inputFileNames) {
+    List<String> coldFileList = new ArrayList<>();
+    for (HRegion r : this.onlineRegions.values()) {
+      for (HStore hStore : r.getStores()) {
+        Configuration conf = hStore.getReadOnlyConfiguration();
+        if (getDataTieringType(conf) != DataTieringType.TIME_RANGE) {
+          // Data-Tiering not enabled for the store. Just skip it.
+          continue;
+        }
+        Long hotDataAge = getDataTieringHotDataAge(conf);
+
+        for (HStoreFile hStoreFile : hStore.getStorefiles()) {
+          String hFileName =
+            hStoreFile.getFileInfo().getHFileInfo().getHFileContext().getHFileName();
+          if(inputFileNames.contains(hFileName)) {
+            OptionalLong maxTimestamp = hStoreFile.getMaximumTimestamp();
+            if (!maxTimestamp.isPresent()) {
+              // We could throw from here, But we are already in the critical code-path
+              // of freeing space. Hence, we can ignore that file for now
+              // Or do we want to include it?
+              continue;
+            }
+            long currentTimestamp = EnvironmentEdgeManager.getDelegate().currentTime();
+            long fileAge = currentTimestamp - maxTimestamp.getAsLong();
+            if (fileAge > hotDataAge) {
+              coldFileList.add(hFileName);
+            }
+          }
+        }
+      }
+    }
+    return coldFileList;
   }
 }
