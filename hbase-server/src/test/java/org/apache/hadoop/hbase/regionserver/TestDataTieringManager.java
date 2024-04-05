@@ -224,7 +224,7 @@ public class TestDataTieringManager {
       if (exception != null) {
         fail("Expected DataTieringException to be thrown");
       }
-      assertEquals(value, expectedResult);
+      assertEquals(expectedResult, value);
     } catch (DataTieringException e) {
       if (exception == null) {
         fail("Unexpected DataTieringException: " + e.getMessage());
@@ -240,7 +240,7 @@ public class TestDataTieringManager {
       if (exception != null) {
         fail("Expected DataTieringException to be thrown");
       }
-      assertEquals(value, expectedResult);
+      assertEquals(expectedResult, value);
     } catch (DataTieringException e) {
       if (exception == null) {
         fail("Unexpected DataTieringException: " + e.getMessage());
