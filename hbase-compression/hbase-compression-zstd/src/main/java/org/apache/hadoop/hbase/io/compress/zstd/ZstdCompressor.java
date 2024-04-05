@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.compress.zstd;
 
 import com.github.luben.zstd.Zstd;
+import com.github.luben.zstd.ZstdCompressCtx;
 import com.github.luben.zstd.ZstdDictCompress;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -39,6 +40,7 @@ public class ZstdCompressor implements CanReinit, Compressor {
   protected long bytesRead, bytesWritten;
   protected int dictId;
   protected ZstdDictCompress dict;
+  protected ZstdCompressCtx ctx;
 
   ZstdCompressor(final int level, final int bufferSize, final byte[] dictionary) {
     this.level = level;
@@ -46,10 +48,13 @@ public class ZstdCompressor implements CanReinit, Compressor {
     this.inBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf.position(bufferSize);
+    this.ctx = new ZstdCompressCtx();
+    this.ctx.setLevel(level);
     if (dictionary != null) {
       this.dictId = ZstdCodec.getDictionaryId(dictionary);
       this.dict = new ZstdDictCompress(dictionary, level);
     }
+    this.ctx.loadDict(this.dict);
   }
 
   ZstdCompressor(final int level, final int bufferSize) {
@@ -79,12 +84,7 @@ public class ZstdCompressor implements CanReinit, Compressor {
         } else {
           outBuf.clear();
         }
-        int written;
-        if (dict != null) {
-          written = Zstd.compress(outBuf, inBuf, dict);
-        } else {
-          written = Zstd.compress(outBuf, inBuf, level);
-        }
+        int written = ctx.compress(outBuf, inBuf);
         bytesWritten += written;
         inBuf.clear();
         finished = true;
@@ -170,6 +170,9 @@ public class ZstdCompressor implements CanReinit, Compressor {
     bytesWritten = 0;
     finish = false;
     finished = false;
+    ctx.setLevel(level);
+    // loadDict() accepts null to clear the dictionary
+    ctx.loadDict(dict);
   }
 
   @Override

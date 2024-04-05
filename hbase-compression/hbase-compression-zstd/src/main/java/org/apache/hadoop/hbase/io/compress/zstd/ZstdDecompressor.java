@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.compress.zstd;
 
-import com.github.luben.zstd.Zstd;
+import com.github.luben.zstd.ZstdDecompressCtx;
 import com.github.luben.zstd.ZstdDictDecompress;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -39,16 +39,19 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
   protected boolean finished;
   protected int dictId;
   protected ZstdDictDecompress dict;
+  protected ZstdDecompressCtx ctx;
 
   ZstdDecompressor(final int bufferSize, final byte[] dictionary) {
     this.bufferSize = bufferSize;
     this.inBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf.position(bufferSize);
+    this.ctx = new ZstdDecompressCtx();
     if (dictionary != null) {
       this.dictId = ZstdCodec.getDictionaryId(dictionary);
       this.dict = new ZstdDictDecompress(dictionary);
     }
+    this.ctx.loadDict(this.dict);
   }
 
   ZstdDecompressor(final int bufferSize) {
@@ -67,12 +70,7 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
       int remaining = inBuf.remaining();
       inLen -= remaining;
       outBuf.clear();
-      int written;
-      if (dict != null) {
-        written = Zstd.decompress(outBuf, inBuf, dict);
-      } else {
-        written = Zstd.decompress(outBuf, inBuf);
-      }
+      int written = ctx.decompress(outBuf, inBuf);
       inBuf.clear();
       outBuf.flip();
       int n = Math.min(written, len);
@@ -109,6 +107,9 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
     outBuf.clear();
     outBuf.position(outBuf.capacity());
     finished = false;
+    ctx.reset();
+    // loadDict() accepts null to clear the dictionary
+    ctx.loadDict(dict);
   }
 
   @Override
