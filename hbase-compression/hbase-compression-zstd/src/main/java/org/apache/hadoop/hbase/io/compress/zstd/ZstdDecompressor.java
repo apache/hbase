@@ -50,8 +50,8 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
     if (dictionary != null) {
       this.dictId = ZstdCodec.getDictionaryId(dictionary);
       this.dict = new ZstdDictDecompress(dictionary);
+      this.ctx.loadDict(this.dict);
     }
-    this.ctx.loadDict(this.dict);
   }
 
   ZstdDecompressor(final int bufferSize) {
@@ -108,8 +108,12 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
     outBuf.position(outBuf.capacity());
     finished = false;
     ctx.reset();
-    // loadDict() accepts null to clear the dictionary
-    ctx.loadDict(dict);
+    if (dict != null) {
+      ctx.loadDict(dict);
+    } else {
+      // loadDict((byte[]) accepts null to clear the dictionary
+      ctx.loadDict((byte[]) null);
+    }
   }
 
   @Override

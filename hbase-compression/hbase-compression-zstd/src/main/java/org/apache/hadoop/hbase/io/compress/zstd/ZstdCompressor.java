@@ -53,8 +53,8 @@ public class ZstdCompressor implements CanReinit, Compressor {
     if (dictionary != null) {
       this.dictId = ZstdCodec.getDictionaryId(dictionary);
       this.dict = new ZstdDictCompress(dictionary, level);
+      this.ctx.loadDict(this.dict);
     }
-    this.ctx.loadDict(this.dict);
   }
 
   ZstdCompressor(final int level, final int bufferSize) {
@@ -171,8 +171,12 @@ public class ZstdCompressor implements CanReinit, Compressor {
     finish = false;
     finished = false;
     ctx.setLevel(level);
-    // loadDict() accepts null to clear the dictionary
-    ctx.loadDict(dict);
+    if (dict != null) {
+      ctx.loadDict(dict);
+    } else {
+      // loadDict((byte[]) accepts null to clear the dictionary
+      ctx.loadDict((byte[]) null);
+    }
   }
 
   @Override
