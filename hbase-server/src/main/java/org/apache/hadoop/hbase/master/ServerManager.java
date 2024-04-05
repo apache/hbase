@@ -324,8 +324,24 @@ public class ServerManager implements ConfigurationObserver {
       // the ServerName to use. Here we presume a master has already done
       // that so we'll press on with whatever it gave us for ServerName.
       if (!checkAndRecordNewServer(sn, sl)) {
-        LOG.info("RegionServerReport ignored, could not record the server: " + sn);
-        return; // Not recorded, so no need to move on
+        // Master already registered server with same (host + port) and higher startcode.
+        // This can happen if regionserver report comes late from old server
+        // (possible race condition), by that time master has already processed SCP for that
+        // server and started accepting regionserver report from new server i.e. server with
+        // same (host + port) and higher startcode.
+        // The exception thrown here is not meant to tell the region server it is dead because if
+        // there is a new server on the same host port, the old server should have already been
+        // dead in ideal situation.
+        // The exception thrown here is to skip the later steps of the whole regionServerReport
+        // request processing. Usually, after recording it in ServerManager, we will call the
+        // related methods in AssignmentManager to record region states. If the region server
+        // is already dead, we should not do these steps anymore, so here we throw an exception
+        // to let the upper layer know that they should not continue processing anymore.
+        final String errorMsg = "RegionServerReport received from " + sn
+          + ", but another server with the same name and higher startcode is already registered,"
+          + " ignoring";
+        LOG.warn(errorMsg);
+        throw new YouAreDeadException(errorMsg);
       }
     }
     updateLastFlushedSequenceIds(sn, sl);
