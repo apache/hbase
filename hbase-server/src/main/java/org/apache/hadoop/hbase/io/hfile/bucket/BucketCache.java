@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -937,6 +938,24 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     try {
       freeInProgress = true;
+      // Check the list of files to determine the cold files which can be readily evicted.
+      Map<String, String> coldFiles = null;
+      try {
+        DataTieringManager dataTieringManager = DataTieringManager.getInstance();
+        coldFiles = dataTieringManager.getColdFilesList();
+      } catch (IllegalStateException e) {
+        LOG.warn("Data Tiering Manager is not set. Ignore time-based block evictions.");
+      }
+
+      long bytesFreed = 0;
+      for (Map.Entry<BlockCacheKey, BucketEntry> bucketEntryWithKey : backingMap.entrySet()) {
+        if (coldFiles != null && coldFiles.containsKey(bucketEntryWithKey.getKey().getHfileName())) {
+          int freedBlockSize = bucketEntryWithKey.getValue().getLength();
+          evictBlockIfNoRpcReferenced(bucketEntryWithKey.getKey());
+          bytesFreed += freedBlockSize;
+          continue;
+        }
+      }
       long bytesToFreeWithoutExtra = 0;
       // Calculate free byte for each bucketSizeinfo
       StringBuilder msgBuffer = LOG.isDebugEnabled() ? new StringBuilder() : null;
@@ -1009,8 +1028,6 @@ public class BucketCache implements BlockCache, HeapSize {
       bucketQueue.add(bucketMemory);
 
       int remainingBuckets = bucketQueue.size();
-      long bytesFreed = 0;
-
       BucketEntryGroup bucketGroup;
       while ((bucketGroup = bucketQueue.poll()) != null) {
         long overflow = bucketGroup.overflow();
