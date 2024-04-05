@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.OptionalLong;
 import org.apache.hadoop.conf.Configuration;
@@ -152,17 +151,25 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
     List<FileStatus> result = new ArrayList<FileStatus>();
 
     // Explode out directories that match the original FileInputFormat filters
-    // since HFiles are written to directories where the
-    // directory name is the column name
+    // Typically these are <regionname>-level dirs, only requiring 1 level of recursion to
+    // get the <columnname>-level dirs where the HFile are written, but in some cases
+    // <tablename>-level dirs are provided requiring 2 levels of recursion.
     for (FileStatus status : super.listStatus(job)) {
-      if (status.isDirectory()) {
-        FileSystem fs = status.getPath().getFileSystem(job.getConfiguration());
-        Collections.addAll(result, fs.listStatus(status.getPath(), HIDDEN_FILE_FILTER));
-      } else {
-        result.add(status);
-      }
+      addFilesRecursively(job, status, result);
     }
     return result;
+  }
+
+  private static void addFilesRecursively(JobContext job, FileStatus status,
+    List<FileStatus> result) throws IOException {
+    if (status.isDirectory()) {
+      FileSystem fs = status.getPath().getFileSystem(job.getConfiguration());
+      for (FileStatus fileStatus : fs.listStatus(status.getPath(), HIDDEN_FILE_FILTER)) {
+        addFilesRecursively(job, fileStatus, result);
+      }
+    } else {
+      result.add(status);
+    }
   }
 
   @Override
