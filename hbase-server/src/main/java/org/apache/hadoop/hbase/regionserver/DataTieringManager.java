@@ -30,6 +30,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The DataTieringManager class categorizes data into hot data and cold data based on the specified
+ * {@link DataTieringType} when DataTiering is enabled. DataTiering is disabled by default with
+ * {@link DataTieringType} set to {@link DataTieringType#NONE}. The {@link DataTieringType}
+ * determines the logic for distinguishing data into hot or cold. By default, all data is considered
+ * as hot.
+ */
 @InterfaceAudience.Private
 public class DataTieringManager {
   private static final Logger LOG = LoggerFactory.getLogger(DataTieringManager.class);
@@ -45,6 +52,10 @@ public class DataTieringManager {
     this.onlineRegions = onlineRegions;
   }
 
+  /**
+   * Initializes the DataTieringManager instance with the provided map of online regions.
+   * @param onlineRegions A map containing online regions.
+   */
   public static synchronized void instantiate(Map<String, HRegion> onlineRegions) {
     if (instance == null) {
       instance = new DataTieringManager(onlineRegions);
@@ -54,6 +65,11 @@ public class DataTieringManager {
     }
   }
 
+  /**
+   * Retrieves the instance of DataTieringManager.
+   * @return The instance of DataTieringManager.
+   * @throws IllegalStateException if DataTieringManager has not been instantiated.
+   */
   public static synchronized DataTieringManager getInstance() {
     if (instance == null) {
       throw new IllegalStateException(
@@ -62,6 +78,13 @@ public class DataTieringManager {
     return instance;
   }
 
+  /**
+   * Determines whether data tiering is enabled for the given block cache key.
+   * @param key the block cache key
+   * @return {@code true} if data tiering is enabled for the HFile associated with the key,
+   *         {@code false} otherwise
+   * @throws DataTieringException if there is an error retrieving the HFile path or configuration
+   */
   public boolean isDataTieringEnabled(BlockCacheKey key) throws DataTieringException {
     Path hFilePath = key.getFilePath();
     if (hFilePath == null) {
@@ -70,12 +93,25 @@ public class DataTieringManager {
     return isDataTieringEnabled(hFilePath);
   }
 
+  /**
+   * Determines whether data tiering is enabled for the given HFile path.
+   * @param hFilePath the path to the HFile
+   * @return {@code true} if data tiering is enabled, {@code false} otherwise
+   * @throws DataTieringException if there is an error retrieving the configuration
+   */
   public boolean isDataTieringEnabled(Path hFilePath) throws DataTieringException {
     Configuration configuration = getConfiguration(hFilePath);
     DataTieringType dataTieringType = getDataTieringType(configuration);
     return !dataTieringType.equals(DataTieringType.NONE);
   }
 
+  /**
+   * Determines whether the data associated with the given block cache key is considered hot.
+   * @param key the block cache key
+   * @return {@code true} if the data is hot, {@code false} otherwise
+   * @throws DataTieringException if there is an error retrieving data tiering information or the
+   *                              HFile maximum timestamp
+   */
   public boolean isHotData(BlockCacheKey key) throws DataTieringException {
     Path hFilePath = key.getFilePath();
     if (hFilePath == null) {
@@ -84,6 +120,14 @@ public class DataTieringManager {
     return isHotData(hFilePath);
   }
 
+  /**
+   * Determines whether the data in the HFile at the given path is considered hot based on the
+   * configured data tiering type and hot data age.
+   * @param hFilePath the path to the HFile
+   * @return {@code true} if the data is hot, {@code false} otherwise
+   * @throws DataTieringException if there is an error retrieving data tiering information or the
+   *                              HFile maximum timestamp
+   */
   public boolean isHotData(Path hFilePath) throws DataTieringException {
     Configuration configuration = getConfiguration(hFilePath);
     DataTieringType dataTieringType = getDataTieringType(configuration);
@@ -93,8 +137,8 @@ public class DataTieringManager {
 
       HStoreFile hStoreFile = getHStoreFile(hFilePath);
       if (hStoreFile == null) {
-        throw new DataTieringException(
-          "HStoreFile corresponding to " + hFilePath + " doesn't exist");
+        LOG.error("HStoreFile corresponding to " + hFilePath + " doesn't exist");
+        return false;
       }
       OptionalLong maxTimestamp = hStoreFile.getMaximumTimestamp();
       if (!maxTimestamp.isPresent()) {
@@ -105,9 +149,17 @@ public class DataTieringManager {
       long diff = currentTimestamp - maxTimestamp.getAsLong();
       return diff <= hotDataAge;
     }
-    return false;
+    // DataTieringType.NONE or other types are considered hot by default
+    return true;
   }
 
+  /**
+   * Returns a set of cold data filenames from the given set of cached blocks. Cold data is
+   * determined by the configured data tiering type and hot data age.
+   * @param allCachedBlocks a set of all cached block cache keys
+   * @return a set of cold data filenames
+   * @throws DataTieringException if there is an error determining whether a block is hot
+   */
   public Set<String> getColdDataFiles(Set<BlockCacheKey> allCachedBlocks)
     throws DataTieringException {
     Set<String> coldHFiles = new HashSet<>();
@@ -115,7 +167,7 @@ public class DataTieringManager {
       if (coldHFiles.contains(key.getHfileName())) {
         continue;
       }
-      if (isDataTieringEnabled(key) && !isHotData(key)) {
+      if (!isHotData(key)) {
         coldHFiles.add(key.getHfileName());
       }
     }

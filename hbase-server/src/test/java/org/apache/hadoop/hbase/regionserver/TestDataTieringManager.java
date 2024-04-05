@@ -69,7 +69,7 @@ import org.junit.experimental.categories.Category;
  * | HStoreFile       | Region             | Store               | DataTiering           | isHot |
  * |------------------|--------------------|---------------------|-----------------------|-------|
  * | hStoreFile0      | region1            | hStore11            | TIME_RANGE            | true  |
- * | hStoreFile1      | region1            | hStore12            | NONE                  | false |
+ * | hStoreFile1      | region1            | hStore12            | NONE                  | true |
  * | hStoreFile2      | region2            | hStore21            | TIME_RANGE            | true  |
  * | hStoreFile3      | region2            | hStore22            | TIME_RANGE            | false |
  */
@@ -170,7 +170,7 @@ public class TestDataTieringManager {
     testDataTieringMethodWithKeyNoException(methodCallerWithKey, key, true);
 
     // Test with another valid key
-    key = new BlockCacheKey(hStoreFiles.get(1).getPath(), 0, true, BlockType.DATA);
+    key = new BlockCacheKey(hStoreFiles.get(3).getPath(), 0, true, BlockType.DATA);
     testDataTieringMethodWithKeyNoException(methodCallerWithKey, key, false);
   }
 
@@ -186,10 +186,35 @@ public class TestDataTieringManager {
     hFilePath = hStoreFiles.get(3).getPath();
     testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
 
-    // Test with an incorrect filename
+    // Test with a filename where corresponding HStoreFile in not present
     hFilePath = new Path(hStoreFiles.get(0).getPath().getParent(), "incorrectFileName");
-    testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("HStoreFile corresponding to " + hFilePath + " doesn't exist"));
+    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
+  }
+
+  @Test
+  public void testColdDataFiles() {
+    Set<BlockCacheKey> allCachedBlocks = new HashSet<>();
+    for (HStoreFile file : hStoreFiles) {
+      allCachedBlocks.add(new BlockCacheKey(file.getPath(), 0, true, BlockType.DATA));
+    }
+
+    // Verify hStoreFile3 is identified as cold data
+    DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isHotData;
+    Path hFilePath = hStoreFiles.get(3).getPath();
+    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
+
+    // Verify all the other files in hStoreFiles are hot data
+    for (int i = 0; i < hStoreFiles.size() - 1; i++) {
+      hFilePath = hStoreFiles.get(i).getPath();
+      testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, true);
+    }
+
+    try {
+      Set<String> coldFilePaths = dataTieringManager.getColdDataFiles(allCachedBlocks);
+      assertEquals(1, coldFilePaths.size());
+    } catch (DataTieringException e) {
+      fail("Unexpected DataTieringException: " + e.getMessage());
+    }
   }
 
   private void testDataTieringMethodWithPath(DataTieringMethodCallerWithPath caller, Path path,
@@ -242,21 +267,6 @@ public class TestDataTieringManager {
   private void testDataTieringMethodWithKeyNoException(DataTieringMethodCallerWithKey caller,
     BlockCacheKey key, boolean expectedResult) {
     testDataTieringMethodWithKey(caller, key, expectedResult, null);
-  }
-
-  @Test
-  public void testColdDataFiles() {
-    Set<BlockCacheKey> allCachedBlocks = new HashSet<>();
-    for (HStoreFile file : hStoreFiles) {
-      allCachedBlocks.add(new BlockCacheKey(file.getPath(), 0, true, BlockType.DATA));
-    }
-
-    try {
-      Set<String> coldFilePaths = dataTieringManager.getColdDataFiles(allCachedBlocks);
-      assertEquals(1, coldFilePaths.size());
-    } catch (DataTieringException e) {
-      fail("Unexpected DataTieringException: " + e.getMessage());
-    }
   }
 
   private static void setupOnlineRegions() throws IOException {
