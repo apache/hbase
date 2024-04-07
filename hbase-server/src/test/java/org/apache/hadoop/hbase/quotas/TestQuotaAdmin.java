@@ -994,4 +994,15 @@ public class TestQuotaAdmin {
     }
     return quotaSettingCount;
   }
+
+  @Test
+  public void testQuotaTableDisableAndEnable() throws Exception {
+    final Admin admin = TEST_UTIL.getAdmin();
+    admin.disableTable(QuotaUtil.QUOTA_TABLE_NAME);
+    try {
+      admin.enableTable(QuotaUtil.QUOTA_TABLE_NAME);
+    } catch (Exception ex) {
+      fail("Got an exception while enabling table: " + QuotaUtil.QUOTA_TABLE_NAME);
+    }
+  }
 }
