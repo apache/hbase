@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -407,7 +408,7 @@ public class TestNamespaceAuditor {
     try {
       ADMIN.split(tableTwo, Bytes.toBytes("6"));
       fail();
-    } catch (DoNotRetryRegionException e) {
+    } catch (DoNotRetryIOException e) {
       // Expected
     }
     Thread.sleep(2000);
