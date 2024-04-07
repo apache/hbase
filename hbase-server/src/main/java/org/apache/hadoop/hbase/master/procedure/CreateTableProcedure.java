@@ -56,6 +56,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.C
 public class CreateTableProcedure extends AbstractStateMachineTableProcedure<CreateTableState> {
   private static final Logger LOG = LoggerFactory.getLogger(CreateTableProcedure.class);
 
+  private static final int MAX_REGION_REPLICATION = 0x10000;
+
   private TableDescriptor tableDescriptor;
   private List<RegionInfo> newRegions;
 
@@ -84,10 +86,10 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
       switch (state) {
         case CREATE_TABLE_PRE_OPERATION:
           // Verify if we can create the table
-          boolean exists = !prepareCreate(env);
+          boolean success = prepareCreate(env);
           releaseSyncLatch();
 
-          if (exists) {
+          if (!success) {
             assert isFailed() : "the delete should have an exception here";
             return Flow.NO_MORE_STATE;
           }
@@ -260,6 +262,13 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
     if (tableDescriptor.getColumnFamilyCount() == 0) {
       setFailure("master-create-table", new DoNotRetryIOException(
         "Table " + getTableName().toString() + " should have at least one column family."));
+      return false;
+    }
+
+    int regionReplicationCount = tableDescriptor.getRegionReplication();
+    if (regionReplicationCount > MAX_REGION_REPLICATION) {
+      setFailure("master-create-table", new IllegalArgumentException(
+        "Region Replication cannot exceed " + MAX_REGION_REPLICATION + "."));
       return false;
     }
 

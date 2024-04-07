@@ -96,7 +96,7 @@ class MutableRegionInfo implements RegionInfo {
 
   private static int checkReplicaId(int regionId) {
     if (regionId > MAX_REPLICA_ID) {
-      throw new IllegalArgumentException("ReplicaId cannot be greater than" + MAX_REPLICA_ID);
+      throw new IllegalArgumentException("ReplicaId cannot be greater than " + MAX_REPLICA_ID);
     }
     return regionId;
   }
