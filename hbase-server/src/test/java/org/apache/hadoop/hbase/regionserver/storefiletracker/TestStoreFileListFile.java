@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -161,5 +163,19 @@ public class TestStoreFileListFile {
     content[5] = (byte) ~content[5];
     write(fs, trackerFileStatus.getPath(), content, 0, content.length);
     assertThrows(IOException.class, () -> storeFileListFile.load());
+  }
+
+  @Test
+  public void testLoadHigherVersion() throws IOException {
+    // write a fake StoreFileList file with higher version
+    StoreFileList storeFileList =
+      StoreFileList.newBuilder().setVersion(StoreFileListFile.VERSION + 1)
+        .setTimestamp(EnvironmentEdgeManager.currentTime()).build();
+    Path trackFileDir = new Path(testDir, StoreFileListFile.TRACK_FILE_DIR);
+    StoreFileListFile.write(FileSystem.get(UTIL.getConfiguration()),
+      new Path(trackFileDir, StoreFileListFile.TRACK_FILE), storeFileList);
+    IOException error = assertThrows(IOException.class, () -> storeFileListFile.load());
+    assertEquals("Higher store file list version detected, expected " + StoreFileListFile.VERSION
+      + ", got " + (StoreFileListFile.VERSION + 1), error.getMessage());
   }
 }

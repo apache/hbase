@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -47,15 +48,24 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.StoreFileTrackerProtos.
  * without error on partial bytes if you stop at some special points, but the return message will
  * have incorrect field value. We should try our best to prevent this happens because loading an
  * incorrect store file list file usually leads to data loss.
+ * <p/>
+ * To prevent failing silently while downgrading, where we may miss some newly introduced fields in
+ * {@link StoreFileList} which are necessary, we introduce a 'version' field in
+ * {@link StoreFileList}. If we find out that we are reading a {@link StoreFileList} with higher
+ * version, we will fail immediately and tell users that you need extra steps while downgrading, to
+ * prevent potential data loss.
  */
 @InterfaceAudience.Private
 class StoreFileListFile {
 
   private static final Logger LOG = LoggerFactory.getLogger(StoreFileListFile.class);
 
+  // the current version for StoreFileList
+  static final long VERSION = 1;
+
   static final String TRACK_FILE_DIR = ".filelist";
 
-  private static final String TRACK_FILE = "f1";
+  static final String TRACK_FILE = "f1";
 
   private static final String TRACK_FILE_ROTATE = "f2";
 
@@ -101,7 +111,18 @@ class StoreFileListFile {
       throw new IOException(
         "Checksum mismatch, expected " + expectedChecksum + ", actual " + calculatedChecksum);
     }
-    return StoreFileList.parseFrom(data);
+    StoreFileList storeFileList = StoreFileList.parseFrom(data);
+    if (storeFileList.getVersion() > VERSION) {
+      LOG.error(
+        "The loaded store file list is in version {}, which is higher than expected"
+          + " version {}. Stop loading to prevent potential data loss. This usually because your"
+          + " cluster is downgraded from a newer version. You need extra steps before downgrading,"
+          + " like switching back to default store file tracker.",
+        storeFileList.getVersion(), VERSION);
+      throw new IOException("Higher store file list version detected, expected " + VERSION
+        + ", got " + storeFileList.getVersion());
+    }
+    return storeFileList;
   }
 
   private int select(StoreFileList[] lists) {
@@ -134,30 +155,38 @@ class StoreFileListFile {
     return lists[winnerIndex];
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/StoreFileListFile.java|.*/src/test/.*")
+  static void write(FileSystem fs, Path file, StoreFileList storeFileList) throws IOException {
+    byte[] data = storeFileList.toByteArray();
+    CRC32 crc32 = new CRC32();
+    crc32.update(data);
+    int checksum = (int) crc32.getValue();
+    // 4 bytes length at the beginning, plus 4 bytes checksum
+    try (FSDataOutputStream out = fs.create(file, true)) {
+      out.writeInt(data.length);
+      out.write(data);
+      out.writeInt(checksum);
+    }
+  }
+
   /**
-   * We will set the timestamp in this method so just pass the builder in
+   * We will set the timestamp and version in this method so just pass the builder in
    */
   void update(StoreFileList.Builder builder) throws IOException {
     if (nextTrackFile < 0) {
       // we need to call load first to load the prevTimestamp and also the next file
       load();
     }
-    long timestamp = Math.max(prevTimestamp + 1, EnvironmentEdgeManager.currentTime());
-    byte[] actualData = builder.setTimestamp(timestamp).build().toByteArray();
-    CRC32 crc32 = new CRC32();
-    crc32.update(actualData);
-    int checksum = (int) crc32.getValue();
-    // 4 bytes length at the beginning, plus 4 bytes checksum
     FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
-    try (FSDataOutputStream out = fs.create(trackFiles[nextTrackFile], true)) {
-      out.writeInt(actualData.length);
-      out.write(actualData);
-      out.writeInt(checksum);
-    }
+    long timestamp = Math.max(prevTimestamp + 1, EnvironmentEdgeManager.currentTime());
+    write(fs, trackFiles[nextTrackFile],
+      builder.setTimestamp(timestamp).setVersion(VERSION).build());
     // record timestamp
     prevTimestamp = timestamp;
     // rotate the file
     nextTrackFile = 1 - nextTrackFile;
+
     try {
       fs.delete(trackFiles[nextTrackFile], false);
     } catch (IOException e) {
