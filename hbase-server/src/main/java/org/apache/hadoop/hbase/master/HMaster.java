@@ -2602,16 +2602,20 @@ public class HMaster extends HRegionServer implements MasterServices {
           MasterQuotaManager quotaManager = getMasterQuotaManager();
           if (quotaManager != null) {
             if (quotaManager.isQuotaInitialized()) {
-              SpaceQuotaSnapshot currSnapshotOfTable =
-                QuotaTableUtil.getCurrentSnapshotFromQuotaTable(getConnection(), tableName);
-              if (currSnapshotOfTable != null) {
-                SpaceQuotaStatus quotaStatus = currSnapshotOfTable.getQuotaStatus();
-                if (
-                  quotaStatus.isInViolation()
-                    && SpaceViolationPolicy.DISABLE == quotaStatus.getPolicy().orElse(null)
-                ) {
-                  throw new AccessDeniedException("Enabling the table '" + tableName
-                    + "' is disallowed due to a violated space quota.");
+              // skip checking quotas for system tables, see:
+              // https://issues.apache.org/jira/browse/HBASE-28183
+              if (!tableName.isSystemTable()) {
+                SpaceQuotaSnapshot currSnapshotOfTable =
+                  QuotaTableUtil.getCurrentSnapshotFromQuotaTable(getConnection(), tableName);
+                if (currSnapshotOfTable != null) {
+                  SpaceQuotaStatus quotaStatus = currSnapshotOfTable.getQuotaStatus();
+                  if (
+                    quotaStatus.isInViolation()
+                      && SpaceViolationPolicy.DISABLE == quotaStatus.getPolicy().orElse(null)
+                  ) {
+                    throw new AccessDeniedException("Enabling the table '" + tableName
+                      + "' is disallowed due to a violated space quota.");
+                  }
                 }
               }
             } else if (LOG.isTraceEnabled()) {
