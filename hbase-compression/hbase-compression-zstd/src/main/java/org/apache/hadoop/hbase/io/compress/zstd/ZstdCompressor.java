@@ -170,6 +170,7 @@ public class ZstdCompressor implements CanReinit, Compressor {
     bytesWritten = 0;
     finish = false;
     finished = false;
+    ctx.reset();
     ctx.setLevel(level);
     if (dict != null) {
       ctx.loadDict(dict);
