@@ -140,6 +140,7 @@ import org.apache.hadoop.hbase.master.http.MasterDumpServlet;
 import org.apache.hadoop.hbase.master.http.MasterRedirectServlet;
 import org.apache.hadoop.hbase.master.http.MasterStatusServlet;
 import org.apache.hadoop.hbase.master.http.api_v1.ResourceConfigFactory;
+import org.apache.hadoop.hbase.master.http.hbck.HbckConfigFactory;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.migrate.RollingUpgradeChore;
@@ -740,6 +741,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   protected void configureInfoServer() {
     infoServer.addUnprivilegedServlet("master-status", "/master-status", MasterStatusServlet.class);
     infoServer.addUnprivilegedServlet("api_v1", "/api/v1/*", buildApiV1Servlet());
+    infoServer.addUnprivilegedServlet("hbck", "/hbck/*", buildHbckServlet());
 
     infoServer.setAttribute(MASTER, this);
     if (LoadBalancer.isTablesOnMaster(conf)) {
@@ -749,6 +751,11 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private ServletHolder buildApiV1Servlet() {
     final ResourceConfig config = ResourceConfigFactory.createResourceConfig(conf, this);
+    return new ServletHolder(new ServletContainer(config));
+  }
+
+  private ServletHolder buildHbckServlet() {
+    final ResourceConfig config = HbckConfigFactory.createResourceConfig(conf, this);
     return new ServletHolder(new ServletContainer(config));
   }
 
@@ -1322,6 +1329,22 @@ public class HMaster extends HRegionServer implements MasterServices {
     getChoreService().scheduleChore(this.oldWALsDirSizeChore);
 
     status.markComplete("Progress after master initialized complete");
+  }
+
+  /**
+   * Used for testing only to set Mock objects.
+   * @param hbckChore hbckChore
+   */
+  public void setHbckChoreForTesting(HbckChore hbckChore) {
+    this.hbckChore = hbckChore;
+  }
+
+  /**
+   * Used for testing only to set Mock objects.
+   * @param catalogJanitorChore catalogJanitorChore
+   */
+  public void setCatalogJanitorChoreForTesting(CatalogJanitor catalogJanitorChore) {
+    this.catalogJanitorChore = catalogJanitorChore;
   }
 
   private void createMissingCFsInMetaDuringUpgrade(TableDescriptor metaDescriptor)
@@ -4179,6 +4202,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     return super.getWalGroupsReplicationStatus();
   }
 
+  @Override
   public HbckChore getHbckChore() {
     return this.hbckChore;
   }
