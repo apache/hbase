@@ -700,6 +700,7 @@ public class HRegionServer extends Thread
       // no need to instantiate block cache and mob file cache when master not carry table
       if (!isMasterNotCarryTable) {
         blockCache = BlockCacheFactory.createBlockCache(conf);
+        DataTieringManager.instantiate(onlineRegions);
         mobFileCache = new MobFileCache(conf);
       }
 
