@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public final class PrefetchExecutorNotifier implements PropagatingConfigurationObserver {
-  private static final Logger LOG = LoggerFactory.getLogger(CompactSplit.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PrefetchExecutorNotifier.class);
 
   /** Wait time in miliseconds before executing prefetch */
   public static final String PREFETCH_DELAY = "hbase.hfile.prefetch.delay";
