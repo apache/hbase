@@ -65,11 +65,11 @@ RELEASE="hs"
 
 if [[ "$GIT_BRANCH" = "$MAIN_BRANCH" ]]; then
     SET_VERSION="${MINOR_VERSION}-hubspot-SNAPSHOT"
-    YUM_REPO_UPLOAD_OVERRIDE_CENTOS_8="8_hs-hbase"
+    REPO_NAME="AnyLinuxVersion_hs-hbase"
 elif [[ "$GIT_BRANCH" != "hubspot" ]]; then
     SET_VERSION="${MINOR_VERSION}-${GIT_BRANCH}-SNAPSHOT"
     RELEASE="${RELEASE}~${GIT_BRANCH//[^[:alnum:]]/_}"
-    YUM_REPO_UPLOAD_OVERRIDE_CENTOS_8="8_hs-hbase-develop"
+    REPO_NAME="AnyLinuxVersion_hs-hbase-develop"
 else
     echo "Invalid git branch $GIT_BRANCH"
     exit 1
@@ -83,7 +83,7 @@ write-build-env-var SET_VERSION "$SET_VERSION"
 write-build-env-var HBASE_VERSION "$HBASE_VERSION"
 write-build-env-var PKG_RELEASE "$RELEASE"
 write-build-env-var FULL_BUILD_VERSION "$FULL_BUILD_VERSION"
-write-build-env-var YUM_REPO_UPLOAD_OVERRIDE_CENTOS_8 "$YUM_REPO_UPLOAD_OVERRIDE_CENTOS_8"
+write-build-env-var REPO_NAME "$REPO_NAME"
 # Adding this value as versioninfo.version ensures we have the same value as would normally
 # show up in a non-hubspot hbase build. Otherwise due to set-maven-versions we'd end up
 # with 2.6-hubspot-SNAPSHOT which is not very useful as a point of reference.
