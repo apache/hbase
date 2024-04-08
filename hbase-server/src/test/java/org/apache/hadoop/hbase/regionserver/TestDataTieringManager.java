@@ -64,14 +64,15 @@ import org.junit.experimental.categories.Category;
  * Please refer to {@link TestDataTieringManager#setupOnlineRegions()} for the structure.
  * Additionally, a list of all store files is maintained in {@link TestDataTieringManager#hStoreFiles}.
  * The characteristics of these store files are listed below:
- * ## HStoreFile Information
+ * @formatter:off ## HStoreFile Information
  *
  * | HStoreFile       | Region             | Store               | DataTiering           | isHot |
  * |------------------|--------------------|---------------------|-----------------------|-------|
  * | hStoreFile0      | region1            | hStore11            | TIME_RANGE            | true  |
- * | hStoreFile1      | region1            | hStore12            | NONE                  | true |
+ * | hStoreFile1      | region1            | hStore12            | NONE                  | true  |
  * | hStoreFile2      | region2            | hStore21            | TIME_RANGE            | true  |
  * | hStoreFile3      | region2            | hStore22            | TIME_RANGE            | false |
+ * @formatter:on
  */
 
 @Category({ RegionServerTests.class, SmallTests.class })
