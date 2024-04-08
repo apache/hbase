@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
@@ -103,6 +104,11 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public CatalogJanitor getCatalogJanitor() {
+    return null;
+  }
+
+  @Override
+  public HbckChore getHbckChore() {
     return null;
   }
 
