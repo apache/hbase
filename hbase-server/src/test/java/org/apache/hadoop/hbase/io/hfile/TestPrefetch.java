@@ -303,7 +303,7 @@ public class TestPrefetch {
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       HFileBlock block = readFunction.apply(reader, offset);
-      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getPath(), offset);
       validationFunction.accept(blockCacheKey, block);
       offset += block.getOnDiskSizeWithHeader();
     }
@@ -371,7 +371,7 @@ public class TestPrefetch {
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null, true);
-      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getPath(), offset);
       if (block.getBlockType() == BlockType.DATA) {
         test.accept(blockCache.getBlock(blockCacheKey, true, false, true));
       }
@@ -417,7 +417,7 @@ public class TestPrefetch {
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null, true);
-      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getPath(), offset);
       if (block.getBlockType() == BlockType.DATA) {
         test.accept(blockCache.getBlock(blockCacheKey, true, false, true));
       }

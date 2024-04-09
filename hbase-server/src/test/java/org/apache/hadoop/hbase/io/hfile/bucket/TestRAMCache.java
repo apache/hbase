@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -86,7 +87,7 @@ public class TestRAMCache {
     byte[] byteArr = new byte[length];
 
     RAMCache cache = new RAMCache();
-    BlockCacheKey key = new BlockCacheKey("file-1", 1);
+    BlockCacheKey key = new BlockCacheKey(new Path("file-1"), 1);
     MockHFileBlock blk = new MockHFileBlock(BlockType.DATA, size, size, -1,
       ByteBuffer.wrap(byteArr, 0, size), HFileBlock.FILL_HEADER, -1, 52, -1,
       new HFileContextBuilder().build(), ByteBuffAllocator.HEAP);

@@ -168,7 +168,7 @@ public class TestCacheConfig {
   void basicBlockCacheOps(final BlockCache bc, final CacheConfig cc, final boolean doubling,
     final boolean sizing) {
     assertTrue(CacheConfig.DEFAULT_IN_MEMORY == cc.isInMemory());
-    BlockCacheKey bck = new BlockCacheKey("f", 0);
+    BlockCacheKey bck = new BlockCacheKey(new Path("f"), 0);
     Cacheable c = new DataCacheEntry();
     // Do asserts on block counting.
     long initialBlockCount = bc.getBlockCount();
@@ -336,13 +336,13 @@ public class TestCacheConfig {
     long initialL1BlockCount = lbc.getBlockCount();
     long initialL2BlockCount = bc.getBlockCount();
     Cacheable c = new DataCacheEntry();
-    BlockCacheKey bck = new BlockCacheKey("bck", 0);
+    BlockCacheKey bck = new BlockCacheKey(new Path("bck"), 0);
     lbc.cacheBlock(bck, c, false);
     assertEquals(initialL1BlockCount + 1, lbc.getBlockCount());
     assertEquals(initialL2BlockCount, bc.getBlockCount());
     // Force evictions by putting in a block too big.
     final long justTooBigSize = ((LruBlockCache) lbc).acceptableSize() + 1;
-    lbc.cacheBlock(new BlockCacheKey("bck2", 0), new DataCacheEntry() {
+    lbc.cacheBlock(new BlockCacheKey(new Path("bck2"), 0), new DataCacheEntry() {
       @Override
       public long heapSize() {
         return justTooBigSize;
@@ -380,7 +380,7 @@ public class TestCacheConfig {
     assertTrue(blockCache instanceof IndexOnlyLruBlockCache);
     // reject data block
     long initialBlockCount = blockCache.getBlockCount();
-    BlockCacheKey bck = new BlockCacheKey("bck", 0);
+    BlockCacheKey bck = new BlockCacheKey(new Path("bck"), 0);
     Cacheable c = new DataCacheEntry();
     blockCache.cacheBlock(bck, c, true);
     // accept index block

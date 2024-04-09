@@ -39,24 +39,16 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
    * @param hfileName The name of the HFile this block belongs to.
    * @param offset    Offset of the block into the file
    */
-  public BlockCacheKey(String hfileName, long offset) {
-    this(hfileName, offset, true, BlockType.DATA);
-  }
-
-  public BlockCacheKey(String hfileName, long offset, boolean isPrimaryReplica,
-    BlockType blockType) {
-    this.isPrimaryReplicaBlock = isPrimaryReplica;
-    this.hfileName = hfileName;
-    this.offset = offset;
-    this.blockType = blockType;
+  public BlockCacheKey(Path hfilePath, long offset) {
+    this(hfilePath, offset, true, BlockType.DATA);
   }
 
   public BlockCacheKey(Path hfilePath, long offset, boolean isPrimaryReplica, BlockType blockType) {
-    this.filePath = hfilePath;
     this.isPrimaryReplicaBlock = isPrimaryReplica;
     this.hfileName = hfilePath.getName();
     this.offset = offset;
     this.blockType = blockType;
+    this.filePath = hfilePath;
   }
 
   @Override

@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -58,8 +59,8 @@ public class TestBlockCacheReporting {
     Cacheable dce = new DataCacheEntry();
     Cacheable ice = new IndexCacheEntry();
     for (int i = 0; i < count; i++) {
-      BlockCacheKey bckd = new BlockCacheKey("f", i);
-      BlockCacheKey bcki = new BlockCacheKey("f", i + count);
+      BlockCacheKey bckd = new BlockCacheKey(new Path("f"), i);
+      BlockCacheKey bcki = new BlockCacheKey(new Path("f"), i + count);
       bc.getBlock(bckd, true, false, true);
       bc.cacheBlock(bckd, dce);
       bc.cacheBlock(bcki, ice);
@@ -67,8 +68,8 @@ public class TestBlockCacheReporting {
       bc.getBlock(bcki, true, false, true);
     }
     assertEquals(2 * count /* Data and Index blocks */, bc.getStats().getHitCount());
-    BlockCacheKey bckd = new BlockCacheKey("f", 0);
-    BlockCacheKey bcki = new BlockCacheKey("f", 0 + count);
+    BlockCacheKey bckd = new BlockCacheKey(new Path("f"), 0);
+    BlockCacheKey bcki = new BlockCacheKey(new Path("f"), 0 + count);
     bc.evictBlock(bckd);
     bc.evictBlock(bcki);
     bc.getStats().getEvictedCount();

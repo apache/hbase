@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -91,7 +92,7 @@ public class TestHFileDataBlockEncoder {
     HFileBlock cacheBlock = createBlockOnDisk(conf, kvs, block, useTag);
 
     LruBlockCache blockCache = new LruBlockCache(8 * 1024 * 1024, 32 * 1024);
-    BlockCacheKey cacheKey = new BlockCacheKey("test", 0);
+    BlockCacheKey cacheKey = new BlockCacheKey(new Path("test"), 0);
     blockCache.cacheBlock(cacheKey, cacheBlock);
 
     HeapSize heapSize = blockCache.getBlock(cacheKey, false, false, true);

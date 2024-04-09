@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -812,7 +813,7 @@ public class TestLruBlockCache {
         1.2f, // limit
         false, 1024);
 
-    BlockCacheKey key = new BlockCacheKey("key1", 0);
+    BlockCacheKey key = new BlockCacheKey(new Path("key1"), 0);
     ByteBuffer actualBuffer = ByteBuffer.allocate(length);
     ByteBuffer block1Buffer = ByteBuffer.allocate(length);
     ByteBuffer block2Buffer = ByteBuffer.allocate(length);
@@ -887,12 +888,12 @@ public class TestLruBlockCache {
     int size;
 
     CachedItem(String blockName, int size, int offset) {
-      this.cacheKey = new BlockCacheKey(blockName, offset);
+      this.cacheKey = new BlockCacheKey(new Path(blockName), offset);
       this.size = size;
     }
 
     CachedItem(String blockName, int size) {
-      this.cacheKey = new BlockCacheKey(blockName, 0);
+      this.cacheKey = new BlockCacheKey(new Path(blockName), 0);
       this.size = size;
     }
 
@@ -933,7 +934,7 @@ public class TestLruBlockCache {
     int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
     byte[] byteArr = new byte[length];
     HFileContext meta = new HFileContextBuilder().build();
-    BlockCacheKey key = new BlockCacheKey("key1", 0);
+    BlockCacheKey key = new BlockCacheKey(new Path("key1"), 0);
     HFileBlock blk = new HFileBlock(BlockType.DATA, size, size, -1,
       ByteBuff.wrap(ByteBuffer.wrap(byteArr, 0, size)), HFileBlock.FILL_HEADER, -1, 52, -1, meta,
       HEAP);

@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -91,7 +92,7 @@ public class TestBucketWriterThread {
     this.q = bc.writerQueues.get(0);
 
     wt.disableWriter();
-    this.plainKey = new BlockCacheKey("f", 0);
+    this.plainKey = new BlockCacheKey(new Path("f"), 0);
     this.plainCacheable = Mockito.mock(Cacheable.class);
 
     assertThat(bc.ramCache.isEmpty(), is(true));

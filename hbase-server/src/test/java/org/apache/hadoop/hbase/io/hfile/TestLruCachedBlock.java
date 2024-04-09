@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -42,8 +43,8 @@ public class TestLruCachedBlock {
 
   @Before
   public void setUp() throws Exception {
-    BlockCacheKey cacheKey = new BlockCacheKey("name", 0);
-    BlockCacheKey otherKey = new BlockCacheKey("name2", 1);
+    BlockCacheKey cacheKey = new BlockCacheKey(new Path("name"), 0);
+    BlockCacheKey otherKey = new BlockCacheKey(new Path("name2"), 1);
 
     Cacheable cacheable = Mockito.mock(Cacheable.class);
     Cacheable otheCacheable = Mockito.mock(Cacheable.class);

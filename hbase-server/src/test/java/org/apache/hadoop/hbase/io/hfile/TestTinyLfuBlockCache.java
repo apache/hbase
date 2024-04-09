@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -266,7 +267,7 @@ public class TestTinyLfuBlockCache {
     int size;
 
     CachedItem(String blockName, int size) {
-      this.cacheKey = new BlockCacheKey(blockName, 0);
+      this.cacheKey = new BlockCacheKey(new Path(blockName), 0);
       this.size = size;
     }
 

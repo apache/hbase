@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -238,7 +239,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
         // evict all the blocks
         while (iterator.hasNext()) {
           CachedBlock next = iterator.next();
-          BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+          BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
           cacheList.add(cacheKey);
           // evict what ever is available
           cache.evictBlock(cacheKey);
@@ -373,7 +374,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
             // evict all the blocks
             while (iterator.hasNext()) {
               CachedBlock next = iterator.next();
-              BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+              BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
               cacheList.add(cacheKey);
               /**
                * There is only one Block referenced by rpc,here we evict blocks which have no rpc
@@ -412,7 +413,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
                 iterator = cache.iterator();
                 while (iterator.hasNext()) {
                   CachedBlock next = iterator.next();
-                  BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+                  BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
                   newCacheList.add(cacheKey);
                 }
                 for (BlockCacheKey key : cacheList) {

@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -434,7 +435,7 @@ public class TestBlockEvictionFromClient {
       int noOfBlocksWithRef = 0;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+        BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
         if (cache instanceof BucketCache) {
           refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
@@ -528,7 +529,7 @@ public class TestBlockEvictionFromClient {
       int noOfBlocksWithRef = 0;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+        BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
         if (cache instanceof BucketCache) {
           refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
@@ -675,7 +676,7 @@ public class TestBlockEvictionFromClient {
       boolean foundNonZeroBlock = false;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+        BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
         if (cache instanceof BucketCache) {
           refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
@@ -763,7 +764,7 @@ public class TestBlockEvictionFromClient {
       int noOfBlocksWithRef = 0;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+        BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
         if (cache instanceof BucketCache) {
           refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
@@ -928,7 +929,7 @@ public class TestBlockEvictionFromClient {
       boolean usedBlocksFound = false;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+        BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
         if (cache instanceof BucketCache) {
           refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
@@ -955,7 +956,7 @@ public class TestBlockEvictionFromClient {
       iterator = cache.iterator();
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+        BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
         if (cache instanceof BucketCache) {
           refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
@@ -1045,7 +1046,7 @@ public class TestBlockEvictionFromClient {
       boolean usedBlocksFound = false;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+        BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
         if (cache instanceof BucketCache) {
           refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
@@ -1081,7 +1082,7 @@ public class TestBlockEvictionFromClient {
       iterator = cache.iterator();
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+        BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
         if (cache instanceof BucketCache) {
           refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
@@ -1160,7 +1161,7 @@ public class TestBlockEvictionFromClient {
       int refCount = 0;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+        BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
         if (cache instanceof BucketCache) {
           refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
@@ -1186,7 +1187,7 @@ public class TestBlockEvictionFromClient {
       refCount = 0;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+        BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
         if (cache instanceof BucketCache) {
           refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
@@ -1214,7 +1215,7 @@ public class TestBlockEvictionFromClient {
     int refCount;
     while (iterator.hasNext()) {
       CachedBlock next = iterator.next();
-      BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+      BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
       if (cache instanceof BucketCache) {
         refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         LOG.info("BucketCache {} {}", cacheKey, refCount);
@@ -1294,7 +1295,7 @@ public class TestBlockEvictionFromClient {
     int refCount = 0;
     while (iterator.hasNext()) {
       CachedBlock next = iterator.next();
-      BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+      BlockCacheKey cacheKey = new BlockCacheKey(new Path(next.getFilename()), next.getOffset());
       if (cache instanceof BucketCache) {
         refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
       } else if (cache instanceof CombinedBlockCache) {

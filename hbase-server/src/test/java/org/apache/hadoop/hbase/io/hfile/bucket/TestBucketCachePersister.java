@@ -193,7 +193,7 @@ public class TestBucketCachePersister {
       Thread.sleep(1000);
     }
     HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null);
-    BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
+    BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getPath(), offset);
     BucketEntry be = bucketCache.backingMap.get(blockCacheKey);
     boolean isCached = bucketCache.getBlock(blockCacheKey, true, false, true) != null;
 

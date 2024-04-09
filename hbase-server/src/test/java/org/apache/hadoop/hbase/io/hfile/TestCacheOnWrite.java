@@ -215,7 +215,7 @@ public class TestCacheOnWrite {
           Thread.sleep(10);
         }
         for (CachedBlock block : Lists.newArrayList(blockCache)) {
-          BlockCacheKey key = new BlockCacheKey(block.getFilename(), block.getOffset());
+          BlockCacheKey key = new BlockCacheKey(new Path(block.getFilename()), block.getOffset());
           // CombinedBucketCache may need evict two times.
           for (int evictCount = 0; blockCache.evictBlock(key); evictCount++) {
             if (evictCount > 1) {
@@ -284,7 +284,7 @@ public class TestCacheOnWrite {
       // Also, pass null for expected block type to avoid checking it.
       HFileBlock block =
         reader.readBlock(offset, -1, false, true, false, true, null, encodingInCache);
-      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getPath(), offset);
       HFileBlock fromCache = (HFileBlock) blockCache.getBlock(blockCacheKey, true, false, true);
       boolean isCached = fromCache != null;
       cachedBlocksOffset.add(offset);
@@ -338,7 +338,7 @@ public class TestCacheOnWrite {
     Iterator<Long> iterator = cachedBlocksOffset.iterator();
     while (iterator.hasNext()) {
       Long entry = iterator.next();
-      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), entry);
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getPath(), entry);
       Pair<HFileBlock, HFileBlock> blockPair = cachedBlocks.get(entry);
       if (blockPair != null) {
         // Call return twice because for the isCache cased the counter would have got incremented

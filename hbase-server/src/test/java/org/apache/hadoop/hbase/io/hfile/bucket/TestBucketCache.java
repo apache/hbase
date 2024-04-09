@@ -249,7 +249,7 @@ public class TestBucketCache {
 
   @Test
   public void testMemoryLeak() throws Exception {
-    final BlockCacheKey cacheKey = new BlockCacheKey("dummy", 1L);
+    final BlockCacheKey cacheKey = new BlockCacheKey(new Path("dummy"), 1L);
     cacheAndWaitUntilFlushedToBucket(cache, cacheKey,
       new CacheTestUtils.ByteArrayCacheable(new byte[10]), true);
     long lockId = cache.backingMap.get(cacheKey).offset();
@@ -609,7 +609,7 @@ public class TestBucketCache {
     HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1,
       ByteBuff.wrap(buf2), HFileBlock.FILL_HEADER, -1, -1, -1, meta, allocator);
 
-    BlockCacheKey key = new BlockCacheKey("testEvictionCount", 0);
+    BlockCacheKey key = new BlockCacheKey(new Path("testEvictionCount"), 0);
     ByteBuffer actualBuffer = ByteBuffer.allocate(length);
     ByteBuffer block1Buffer = ByteBuffer.allocate(length);
     ByteBuffer block2Buffer = ByteBuffer.allocate(length);
@@ -659,7 +659,7 @@ public class TestBucketCache {
     HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1,
       ByteBuff.wrap(buf2), HFileBlock.FILL_HEADER, -1, -1, -1, meta, allocator);
 
-    BlockCacheKey key = new BlockCacheKey("testCacheBlockNextBlockMetadataMissing", 0);
+    BlockCacheKey key = new BlockCacheKey(new Path("testCacheBlockNextBlockMetadataMissing"), 0);
     ByteBuffer actualBuffer = ByteBuffer.allocate(length);
     ByteBuffer block1Buffer = ByteBuffer.allocate(length);
     ByteBuffer block2Buffer = ByteBuffer.allocate(length);
@@ -714,8 +714,8 @@ public class TestBucketCache {
     HFileContext meta = new HFileContextBuilder().build();
 
     RAMCache cache = new RAMCache();
-    BlockCacheKey key1 = new BlockCacheKey("file-1", 1);
-    BlockCacheKey key2 = new BlockCacheKey("file-2", 2);
+    BlockCacheKey key1 = new BlockCacheKey(new Path("file-1"), 1);
+    BlockCacheKey key2 = new BlockCacheKey(new Path("file-2"), 2);
     HFileBlock blk1 = new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(buf),
       HFileBlock.FILL_HEADER, -1, 52, -1, meta, ByteBuffAllocator.HEAP);
     HFileBlock blk2 = new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(buf),
@@ -767,7 +767,7 @@ public class TestBucketCache {
     long availableSpace = 1024 * 1024 * 1024L;
     BucketAllocator allocator = new BucketAllocator(availableSpace, null);
 
-    BlockCacheKey key = new BlockCacheKey("dummy", 1L);
+    BlockCacheKey key = new BlockCacheKey(new Path("dummy"), 1L);
     RAMQueueEntry re = new RAMQueueEntry(key, block, 1, true, false);
 
     Assert.assertEquals(0, allocator.getUsedSize());

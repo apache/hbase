@@ -25,6 +25,7 @@ import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -32,15 +33,20 @@ import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.regionserver.DataTieringManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BucketCacheProtos;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 final class BucketProtoUtils {
+  private static final Logger LOG = LoggerFactory.getLogger(BucketProtoUtils.class);
+
   private BucketProtoUtils() {
 
   }
@@ -130,10 +136,30 @@ final class BucketProtoUtils {
     ConcurrentHashMap<BlockCacheKey, BucketEntry> result = new ConcurrentHashMap<>();
     NavigableSet<BlockCacheKey> resultSet = new ConcurrentSkipListSet<>(Comparator
       .comparing(BlockCacheKey::getHfileName).thenComparingLong(BlockCacheKey::getOffset));
+
+    Map<String, Path> allFilePaths = null;
+    DataTieringManager dataTieringManager;
+    try {
+      dataTieringManager = DataTieringManager.getInstance();
+      allFilePaths = dataTieringManager.getAllFilesList();
+    } catch (IllegalStateException e) {
+      // Data-Tiering manager has not been set up.
+      // Ignore the error and proceed with the normal flow.
+      LOG.warn("Error while getting DataTieringManager instance: {}", e.getMessage());
+    }
+
     for (BucketCacheProtos.BackingMapEntry entry : backingMap.getEntryList()) {
       BucketCacheProtos.BlockCacheKey protoKey = entry.getKey();
-      BlockCacheKey key = new BlockCacheKey(protoKey.getHfilename(), protoKey.getOffset(),
-        protoKey.getPrimaryReplicaBlock(), fromPb(protoKey.getBlockType()));
+
+      BlockCacheKey key = null;
+      if (allFilePaths != null) {
+        key = new BlockCacheKey(allFilePaths.get(protoKey.getHfilename()), protoKey.getOffset(),
+          protoKey.getPrimaryReplicaBlock(), fromPb(protoKey.getBlockType()));
+      } else {
+        key = new BlockCacheKey(new Path(protoKey.getHfilename()), protoKey.getOffset(),
+          protoKey.getPrimaryReplicaBlock(), fromPb(protoKey.getBlockType()));
+      }
+
       BucketCacheProtos.BucketEntry protoValue = entry.getValue();
       // TODO:We use ByteBuffAllocator.HEAP here, because we could not get the ByteBuffAllocator
       // which created by RpcServer elegantly.

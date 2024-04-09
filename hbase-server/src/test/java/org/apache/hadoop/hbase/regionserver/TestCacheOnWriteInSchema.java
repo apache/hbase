@@ -233,7 +233,7 @@ public class TestCacheOnWriteInSchema {
         // Also, pass null for expected block type to avoid checking it.
         HFileBlock block =
           reader.readBlock(offset, -1, false, true, false, true, null, DataBlockEncoding.NONE);
-        BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
+        BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getPath(), offset);
         boolean isCached = cache.getBlock(blockCacheKey, true, false, true) != null;
         boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
         final BlockType blockType = block.getBlockType();

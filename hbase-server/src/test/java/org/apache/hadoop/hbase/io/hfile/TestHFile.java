@@ -183,7 +183,7 @@ public class TestHFile {
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-      BlockCacheKey key = new BlockCacheKey(storeFilePath.getName(), offset);
+      BlockCacheKey key = new BlockCacheKey(storeFilePath, offset);
       HFileBlock block = reader.readBlock(offset, -1, true, true, false, true, null, null);
       offset += block.getOnDiskSizeWithHeader();
       // Ensure the block is an heap one.
@@ -228,7 +228,7 @@ public class TestHFile {
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-      BlockCacheKey key = new BlockCacheKey(storeFilePath.getName(), offset);
+      BlockCacheKey key = new BlockCacheKey(storeFilePath, offset);
       HFileBlock block = reader.readBlock(offset, -1, true, true, false, true, null, null);
       offset += block.getOnDiskSizeWithHeader();
       // Read the cached block.
@@ -1028,7 +1028,7 @@ public class TestHFile {
     long offset = 0;
     Cacheable cachedBlock = null;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-      BlockCacheKey key = new BlockCacheKey(storeFilePath.getName(), offset);
+      BlockCacheKey key = new BlockCacheKey(storeFilePath, offset);
       HFileBlock block = reader.readBlock(offset, -1, true, true, false, true, null, null);
       offset += block.getOnDiskSizeWithHeader();
       // Read the cached block.

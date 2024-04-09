@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketEntry;
+import org.apache.hadoop.hbase.regionserver.DataTieringManager;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -244,7 +245,7 @@ public class TestPrefetchWithBucketCache {
     long sizeForDataBlocks = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       HFileBlock block = readFunction.apply(reader, offset);
-      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getPath(), offset);
       validationFunction.accept(blockCacheKey, block);
       offset += block.getOnDiskSizeWithHeader();
     }

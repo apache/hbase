@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -141,8 +142,8 @@ public class BucketCache implements BlockCache, HeapSize {
   /** Statistics thread */
   private static final int statThreadPeriod = 5 * 60;
 
-  final static int DEFAULT_WRITER_THREADS = 3;
-  final static int DEFAULT_WRITER_QUEUE_ITEMS = 64;
+  public final static int DEFAULT_WRITER_THREADS = 3;
+  public final static int DEFAULT_WRITER_QUEUE_ITEMS = 64;
 
   // Store/read block data
   transient final IOEngine ioEngine;
@@ -682,7 +683,7 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private void updateRegionCachedSize(Path filePath, long cachedSize) {
-    if (filePath != null) {
+    if (filePath != null && filePath.getParent() != null && filePath.getParent().getParent() != null) {
       String regionName = filePath.getParent().getParent().getName();
       regionCachedSize.merge(regionName, cachedSize,
         (previousSize, newBlockSize) -> previousSize + newBlockSize);
@@ -1670,8 +1671,8 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private Set<BlockCacheKey> getAllCacheKeysForFile(String hfileName) {
-    return blocksByHFile.subSet(new BlockCacheKey(hfileName, Long.MIN_VALUE), true,
-      new BlockCacheKey(hfileName, Long.MAX_VALUE), true);
+    return blocksByHFile.subSet(new BlockCacheKey(new Path(hfileName), Long.MIN_VALUE, true, BlockType.DATA), true,
+      new BlockCacheKey(new Path(hfileName), Long.MAX_VALUE, true, BlockType.DATA), true);
   }
 
   /**

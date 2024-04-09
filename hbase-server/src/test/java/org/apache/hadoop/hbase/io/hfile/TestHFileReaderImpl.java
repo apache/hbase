@@ -147,7 +147,7 @@ public class TestHFileReaderImpl {
 
     for (CachedBlock cachedBlock : Lists.newArrayList(bucketcache)) {
       BlockCacheKey cacheKey =
-        new BlockCacheKey(cachedBlock.getFilename(), cachedBlock.getOffset());
+        new BlockCacheKey(new Path(cachedBlock.getFilename()), cachedBlock.getOffset());
       int refCount = bucketcache.getRpcRefCount(cacheKey);
       assertEquals(0, refCount);
     }
@@ -160,7 +160,7 @@ public class TestHFileReaderImpl {
     scanner.close();
     for (CachedBlock cachedBlock : Lists.newArrayList(bucketcache)) {
       BlockCacheKey cacheKey =
-        new BlockCacheKey(cachedBlock.getFilename(), cachedBlock.getOffset());
+        new BlockCacheKey(new Path(cachedBlock.getFilename()), cachedBlock.getOffset());
       int refCount = bucketcache.getRpcRefCount(cacheKey);
       assertEquals(0, refCount);
     }
@@ -170,7 +170,7 @@ public class TestHFileReaderImpl {
     // clear bucketcache
     for (CachedBlock cachedBlock : Lists.newArrayList(bucketcache)) {
       BlockCacheKey cacheKey =
-        new BlockCacheKey(cachedBlock.getFilename(), cachedBlock.getOffset());
+        new BlockCacheKey(new Path(cachedBlock.getFilename()), cachedBlock.getOffset());
       bucketcache.evictBlock(cacheKey);
     }
     bucketcache.shutdown();

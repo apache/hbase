@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.junit.Assert.assertEquals;
 
 import java.nio.ByteBuffer;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -117,7 +118,7 @@ public class TestCachedBlockQueue {
 
   private static class CachedBlock extends org.apache.hadoop.hbase.io.hfile.LruCachedBlock {
     public CachedBlock(final long heapSize, String name, long accessTime) {
-      super(new BlockCacheKey(name, 0), new Cacheable() {
+      super(new BlockCacheKey(new Path(name), 0), new Cacheable() {
         @Override
         public long heapSize() {
           return ((int) (heapSize - CachedBlock.PER_BLOCK_OVERHEAD));

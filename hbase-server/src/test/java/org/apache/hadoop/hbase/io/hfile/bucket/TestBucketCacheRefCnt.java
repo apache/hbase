@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -93,7 +94,7 @@ public class TestBucketCacheRefCnt {
   }
 
   private static BlockCacheKey createKey(String hfileName, long offset) {
-    return new BlockCacheKey(hfileName, offset);
+    return new BlockCacheKey(new Path(hfileName), offset);
   }
 
   private void disableWriter() {
