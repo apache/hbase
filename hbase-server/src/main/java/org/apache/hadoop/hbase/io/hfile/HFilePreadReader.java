@@ -79,7 +79,7 @@ public class HFilePreadReader extends HFileReaderImpl {
               // so we check first if the block exists on its in-memory index, if so, we just
               // update the offset and move on to the next block without actually going read all
               // the way to the cache.
-              BlockCacheKey cacheKey = new BlockCacheKey(name, offset);
+              BlockCacheKey cacheKey = new BlockCacheKey(path, offset, true, BlockType.DATA);
               if (cache.isAlreadyCached(cacheKey).orElse(false)) {
                 // Right now, isAlreadyCached is only supported by BucketCache, which should
                 // always cache data blocks.

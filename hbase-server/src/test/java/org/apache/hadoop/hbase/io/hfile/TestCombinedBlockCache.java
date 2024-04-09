@@ -24,6 +24,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.nio.ByteBuffer;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -145,7 +146,7 @@ public class TestCombinedBlockCache {
   public void testCombinedBlockCacheStats(BlockType type, int expectedL1Miss, int expectedL2Miss)
     throws Exception {
     CombinedBlockCache blockCache = createCombinedBlockCache();
-    BlockCacheKey key = new BlockCacheKey("key1", 0, false, type);
+    BlockCacheKey key = new BlockCacheKey(new Path("key1"), 0, false, type);
     int size = 100;
     int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
     byte[] byteArr = new byte[length];

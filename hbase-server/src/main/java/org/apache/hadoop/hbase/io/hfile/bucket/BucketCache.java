@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.regionserver.DataTieringManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
@@ -141,8 +142,8 @@ public class BucketCache implements BlockCache, HeapSize {
   /** Statistics thread */
   private static final int statThreadPeriod = 5 * 60;
 
-  final static int DEFAULT_WRITER_THREADS = 3;
-  final static int DEFAULT_WRITER_QUEUE_ITEMS = 64;
+  public final static int DEFAULT_WRITER_THREADS = 3;
+  public final static int DEFAULT_WRITER_QUEUE_ITEMS = 64;
 
   // Store/read block data
   transient final IOEngine ioEngine;
@@ -935,6 +936,16 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     try {
       freeInProgress = true;
+
+      // Check the list of files to determine the cold files which can be readily evicted.
+      Set<String> coldFiles =
+        DataTieringManager.getInstance().getColdDataFiles(backingMap.keySet());
+      if (coldFiles != null) {
+        for(String fileName : coldFiles) {
+          evictBlocksByHfileName(fileName);
+        }
+      }
+
       long bytesToFreeWithoutExtra = 0;
       // Calculate free byte for each bucketSizeinfo
       StringBuilder msgBuffer = LOG.isDebugEnabled() ? new StringBuilder() : null;

@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -978,7 +979,7 @@ public class HFileBlockIndex {
     private CacheConfig cacheConf;
 
     /** Name to use for computing cache keys */
-    private String nameForCaching;
+    private Path pathForCaching;
 
     /** Type of encoding used for index blocks in HFile */
     private HFileIndexBlockEncoder indexBlockEncoder;
@@ -995,15 +996,15 @@ public class HFileBlockIndex {
      * @param cacheConf   used to determine when and how a block should be cached-on-write.
      */
     public BlockIndexWriter(HFileBlock.Writer blockWriter, CacheConfig cacheConf,
-      String nameForCaching, HFileIndexBlockEncoder indexBlockEncoder) {
-      if ((cacheConf == null) != (nameForCaching == null)) {
+      Path pathForCaching, HFileIndexBlockEncoder indexBlockEncoder) {
+      if ((cacheConf == null) != (pathForCaching == null)) {
         throw new IllegalArgumentException(
           "Block cache and file name for " + "caching must be both specified or both null");
       }
 
       this.blockWriter = blockWriter;
       this.cacheConf = cacheConf;
-      this.nameForCaching = nameForCaching;
+      this.pathForCaching = pathForCaching;
       this.maxChunkSize = HFileBlockIndex.DEFAULT_MAX_CHUNK_SIZE;
       this.minIndexNumEntries = HFileBlockIndex.DEFAULT_MIN_INDEX_NUM_ENTRIES;
       this.indexBlockEncoder =
@@ -1070,7 +1071,7 @@ public class HFileBlockIndex {
         if (cacheConf != null) {
           cacheConf.getBlockCache().ifPresent(cache -> {
             HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
-            cache.cacheBlock(new BlockCacheKey(nameForCaching, rootLevelIndexPos, true,
+            cache.cacheBlock(new BlockCacheKey(pathForCaching, rootLevelIndexPos, true,
               blockForCaching.getBlockType()), blockForCaching);
           });
         }
@@ -1162,7 +1163,7 @@ public class HFileBlockIndex {
         cacheConf.getBlockCache().ifPresent(cache -> {
           HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
           cache.cacheBlock(
-            new BlockCacheKey(nameForCaching, beginOffset, true, blockForCaching.getBlockType()),
+            new BlockCacheKey(pathForCaching,  beginOffset, true, blockForCaching.getBlockType()),
             blockForCaching);
         });
       }

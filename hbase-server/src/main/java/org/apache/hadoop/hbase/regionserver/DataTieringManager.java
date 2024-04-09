@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.OptionalLong;
@@ -218,5 +219,25 @@ public class DataTieringManager {
   private long getDataTieringHotDataAge(Configuration conf) {
     return Long.parseLong(
       conf.get(DATATIERING_HOT_DATA_AGE_KEY, String.valueOf(DEFAULT_DATATIERING_HOT_DATA_AGE)));
+  }
+
+  /*
+   * This API browses through all the regions and returns a map of all file names
+   * pointing to their paths.
+   * @return Map with entries containing a mapping from filename to filepath
+   */
+  public Map<String, Path> getAllFilesList() {
+    Map<String, Path> allFileList = new HashMap<>();
+    for (HRegion r : this.onlineRegions.values()) {
+      for (HStore hStore : r.getStores()) {
+        Configuration conf = hStore.getReadOnlyConfiguration();
+        for (HStoreFile hStoreFile : hStore.getStorefiles()) {
+          String hFileName =
+            hStoreFile.getFileInfo().getHFileInfo().getHFileContext().getHFileName();
+          allFileList.put(hFileName, hStoreFile.getPath());
+        }
+      }
+    }
+    return allFileList;
   }
 }

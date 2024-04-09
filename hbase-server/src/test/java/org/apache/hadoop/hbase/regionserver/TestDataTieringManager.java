@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_WRITER_THREADS;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_WRITER_QUEUE_ITEMS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -42,11 +46,12 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -92,13 +97,22 @@ public class TestDataTieringManager {
   private static DataTieringManager dataTieringManager;
   private static List<HStoreFile> hStoreFiles;
 
+  final static long capacitySize = 32 * 1024 * 1024;
+  final static int writeThreads = DEFAULT_WRITER_THREADS;
+  final static int writerQLen = DEFAULT_WRITER_QUEUE_ITEMS;
+  final static int[] bucketSizes = new int[] { 8 * 1024 + 1024 };
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     testDir = TEST_UTIL.getDataTestDir(TestDataTieringManager.class.getSimpleName());
     defaultConf = TEST_UTIL.getConfiguration();
     fs = HFileSystem.get(defaultConf);
-    BlockCache blockCache = BlockCacheFactory.createBlockCache(defaultConf);
+    fs.mkdirs(testDir);
+
+    BlockCache blockCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
+      DEFAULT_ERROR_TOLERATION_DURATION, defaultConf);
     cacheConf = new CacheConfig(defaultConf, blockCache);
+
     setupOnlineRegions();
     DataTieringManager.instantiate(testOnlineRegions);
     dataTieringManager = DataTieringManager.getInstance();
@@ -215,6 +229,49 @@ public class TestDataTieringManager {
       assertEquals(1, coldFilePaths.size());
     } catch (DataTieringException e) {
       fail("Unexpected DataTieringException: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testAllDataFiles() {
+    Set<BlockCacheKey> allCachedBlocks = new HashSet<>();
+    for (HStoreFile file : hStoreFiles) {
+      allCachedBlocks.add(new BlockCacheKey(file.getPath(), 0, true, BlockType.DATA));
+    }
+    Map<String, Path> allFilePaths = dataTieringManager.getAllFilesList();
+    assertEquals(hStoreFiles.size(), allFilePaths.size());
+  }
+
+  public void testAllDataFilesAfterRestart() throws Exception {
+    Set<BlockCacheKey> cacheKeys = new HashSet<>();
+    // Create Cache keys
+    for (HStoreFile file : hStoreFiles) {
+      cacheKeys.add(new BlockCacheKey(file.getPath(), 0, true, BlockType.DATA));
+    }
+    // Create dummy data to be cached.
+    CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 4);
+    BucketCache cache = (BucketCache) cacheConf.getBlockCache().get();
+    int blocksIter = 0;
+    for(BlockCacheKey key: cacheKeys) {
+      cache.cacheBlock(key, blocks[blocksIter++].getBlock());
+      // Ensure that the block is persisted to the file.
+      while (!cache.getBackingMap().containsKey(key)) {
+        Thread.sleep(100);
+      }
+    }
+
+    // shutting down the cache persists the backmap to disk.
+    cache.shutdown();
+
+    // create a new cache which is populated from the disk which simulates a server restart.
+    BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
+      DEFAULT_ERROR_TOLERATION_DURATION, defaultConf);
+
+    Set<BlockCacheKey> keySet = newBucketCache.getBackingMap().keySet();
+    assertEquals(hStoreFiles.size(), keySet.size());
+    for(BlockCacheKey key: keySet) {
+      assertNotNull(key.getFilePath());
     }
   }
 

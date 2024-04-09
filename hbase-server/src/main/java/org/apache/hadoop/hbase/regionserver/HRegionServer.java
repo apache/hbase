@@ -530,8 +530,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
       regionServerAccounting = new RegionServerAccounting(conf);
 
-      blockCache = BlockCacheFactory.createBlockCache(conf);
       DataTieringManager.instantiate(onlineRegions);
+      blockCache = BlockCacheFactory.createBlockCache(conf);
       mobFileCache = new MobFileCache(conf);
 
       rsSnapshotVerifier = new RSSnapshotVerifier(conf);
