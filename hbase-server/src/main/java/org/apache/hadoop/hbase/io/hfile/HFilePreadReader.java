@@ -23,6 +23,7 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.regionserver.DataTieringManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +38,17 @@ public class HFilePreadReader extends HFileReaderImpl {
   public HFilePreadReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
+
+    try {
+      DataTieringManager dataTieringManager = DataTieringManager.getInstance();
+      if (!dataTieringManager.isHotData(this)) {
+        LOG.debug("Data tiering is enabled for path '{}' and it is not hot data", path);
+        return;
+      }
+    } catch (IllegalStateException e) {
+      LOG.error("Error while getting DataTieringManager instance: {}", e.getMessage());
+    }
+
     final MutableBoolean shouldCache = new MutableBoolean(true);
 
     cacheConf.getBlockCache().ifPresent(cache -> {

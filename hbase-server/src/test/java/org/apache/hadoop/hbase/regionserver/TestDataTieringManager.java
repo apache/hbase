@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -26,12 +28,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -51,6 +55,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -85,22 +90,26 @@ public class TestDataTieringManager {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration defaultConf;
   private static FileSystem fs;
+  private static BlockCache blockCache;
   private static CacheConfig cacheConf;
   private static Path testDir;
-  private static Map<String, HRegion> testOnlineRegions;
+  private static final Map<String, HRegion> testOnlineRegions = new HashMap<>();
 
   private static DataTieringManager dataTieringManager;
-  private static List<HStoreFile> hStoreFiles;
+  private static final List<HStoreFile> hStoreFiles = new ArrayList<>();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     testDir = TEST_UTIL.getDataTestDir(TestDataTieringManager.class.getSimpleName());
     defaultConf = TEST_UTIL.getConfiguration();
+    defaultConf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
+    defaultConf.setStrings(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
+    defaultConf.setLong(BUCKET_CACHE_SIZE_KEY, 400);
     fs = HFileSystem.get(defaultConf);
-    BlockCache blockCache = BlockCacheFactory.createBlockCache(defaultConf);
+    blockCache = BlockCacheFactory.createBlockCache(defaultConf);
     cacheConf = new CacheConfig(defaultConf, blockCache);
-    setupOnlineRegions();
     DataTieringManager.instantiate(testOnlineRegions);
+    setupOnlineRegions();
     dataTieringManager = DataTieringManager.getInstance();
   }
 
@@ -189,7 +198,40 @@ public class TestDataTieringManager {
 
     // Test with a filename where corresponding HStoreFile in not present
     hFilePath = new Path(hStoreFiles.get(0).getPath().getParent(), "incorrectFileName");
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
+    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, true);
+  }
+
+  @Test
+  public void testPrefetchWhenDataTieringEnabled() throws InterruptedException {
+    // Wait for all files to prefetch
+    boolean allPrefetched = waitForAllPrefetch();
+
+    // Assertion based on prefetch completion
+    if (allPrefetched) {
+      assertFullyCachedFilesCount();
+    } else {
+      fail("Prefetching of all files timed out. Block cache might be inconsistent.");
+    }
+  }
+
+  private boolean waitForAllPrefetch() throws InterruptedException {
+    long timeoutMillis = 60_000; // 1 minute timeout
+    long startTime = System.currentTimeMillis();
+    for (HStoreFile file : hStoreFiles) {
+      while (!file.getReader().getHFileReader().prefetchComplete()) {
+        if (System.currentTimeMillis() - startTime > timeoutMillis) {
+          return false;
+        }
+        Thread.sleep(1000); // Short sleep to avoid busy waiting
+      }
+    }
+    return true;
+  }
+
+  private void assertFullyCachedFilesCount() {
+    Optional<Map<String, Pair<String, Long>>> fullyCachedFiles = blockCache.getFullyCachedFiles();
+    assertTrue("We should get the fully cached files from the cache", fullyCachedFiles.isPresent());
+    assertEquals("Number of fully cached files are incorrect", 3, fullyCachedFiles.get().size());
   }
 
   @Test
@@ -271,21 +313,18 @@ public class TestDataTieringManager {
   }
 
   private static void setupOnlineRegions() throws IOException {
-    testOnlineRegions = new HashMap<>();
-    hStoreFiles = new ArrayList<>();
-
     long day = 24 * 60 * 60 * 1000;
     long currentTime = System.currentTimeMillis();
 
     HRegion region1 = createHRegion("table1");
 
     HStore hStore11 = createHStore(region1, "cf1", getConfWithTimeRangeDataTieringEnabled(day));
-    hStoreFiles
-      .add(createHStoreFile(hStore11.getStoreContext().getFamilyStoreDirectoryPath(), currentTime));
+    hStoreFiles.add(createHStoreFile(hStore11.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore11.getReadOnlyConfiguration(), currentTime));
     hStore11.refreshStoreFiles();
     HStore hStore12 = createHStore(region1, "cf2");
     hStoreFiles.add(createHStoreFile(hStore12.getStoreContext().getFamilyStoreDirectoryPath(),
-      currentTime - day));
+      hStore12.getReadOnlyConfiguration(), currentTime - day));
     hStore12.refreshStoreFiles();
 
     region1.stores.put(Bytes.toBytes("cf1"), hStore11);
@@ -296,11 +335,11 @@ public class TestDataTieringManager {
 
     HStore hStore21 = createHStore(region2, "cf1");
     hStoreFiles.add(createHStoreFile(hStore21.getStoreContext().getFamilyStoreDirectoryPath(),
-      currentTime - 2 * day));
+      hStore21.getReadOnlyConfiguration(), currentTime - 2 * day));
     hStore21.refreshStoreFiles();
     HStore hStore22 = createHStore(region2, "cf2");
     hStoreFiles.add(createHStoreFile(hStore22.getStoreContext().getFamilyStoreDirectoryPath(),
-      currentTime - 3 * day));
+      hStore22.getReadOnlyConfiguration(), currentTime - 3 * day));
     hStore22.refreshStoreFiles();
 
     region2.stores.put(Bytes.toBytes("cf1"), hStore21);
@@ -359,17 +398,17 @@ public class TestDataTieringManager {
     return conf;
   }
 
-  private static HStoreFile createHStoreFile(Path storeDir, long timestamp) throws IOException {
+  private static HStoreFile createHStoreFile(Path storeDir, Configuration conf, long timestamp)
+    throws IOException {
     String columnFamily = storeDir.getName();
 
-    StoreFileWriter storeFileWriter = new StoreFileWriter.Builder(defaultConf, cacheConf, fs)
+    StoreFileWriter storeFileWriter = new StoreFileWriter.Builder(conf, cacheConf, fs)
       .withOutputDir(storeDir).withFileContext(new HFileContextBuilder().build()).build();
 
     writeStoreFileRandomData(storeFileWriter, Bytes.toBytes(columnFamily), Bytes.toBytes("random"),
       timestamp);
 
-    return new HStoreFile(fs, storeFileWriter.getPath(), defaultConf, cacheConf, BloomType.NONE,
-      true);
+    return new HStoreFile(fs, storeFileWriter.getPath(), conf, cacheConf, BloomType.NONE, true);
   }
 
   private static void writeStoreFileRandomData(final StoreFileWriter writer, byte[] columnFamily,

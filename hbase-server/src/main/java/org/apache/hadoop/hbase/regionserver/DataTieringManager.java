@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
+
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.OptionalLong;
@@ -24,6 +27,8 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.io.hfile.HFilePreadReader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -106,11 +111,13 @@ public class DataTieringManager {
   }
 
   /**
-   * Determines whether the data associated with the given block cache key is considered hot.
+   * Determines whether the data associated with the given block cache key is considered hot. If the
+   * data tiering type is set to {@link DataTieringType#TIME_RANGE} and maximum timestamp is not
+   * present, it considers {@code Long.MAX_VALUE} as the maximum timestamp, making the data hot by
+   * default.
    * @param key the block cache key
    * @return {@code true} if the data is hot, {@code false} otherwise
-   * @throws DataTieringException if there is an error retrieving data tiering information or the
-   *                              HFile maximum timestamp
+   * @throws DataTieringException if there is an error retrieving data tiering information
    */
   public boolean isHotData(BlockCacheKey key) throws DataTieringException {
     Path hFilePath = key.getFilePath();
@@ -122,35 +129,76 @@ public class DataTieringManager {
 
   /**
    * Determines whether the data in the HFile at the given path is considered hot based on the
-   * configured data tiering type and hot data age.
+   * configured data tiering type and hot data age. If the data tiering type is set to
+   * {@link DataTieringType#TIME_RANGE} and maximum timestamp is not present, it considers
+   * {@code Long.MAX_VALUE} as the maximum timestamp, making the data hot by default.
    * @param hFilePath the path to the HFile
    * @return {@code true} if the data is hot, {@code false} otherwise
-   * @throws DataTieringException if there is an error retrieving data tiering information or the
-   *                              HFile maximum timestamp
+   * @throws DataTieringException if there is an error retrieving data tiering information
    */
   public boolean isHotData(Path hFilePath) throws DataTieringException {
     Configuration configuration = getConfiguration(hFilePath);
     DataTieringType dataTieringType = getDataTieringType(configuration);
 
     if (dataTieringType.equals(DataTieringType.TIME_RANGE)) {
-      long hotDataAge = getDataTieringHotDataAge(configuration);
-
-      HStoreFile hStoreFile = getHStoreFile(hFilePath);
-      if (hStoreFile == null) {
-        LOG.error("HStoreFile corresponding to " + hFilePath + " doesn't exist");
-        return false;
-      }
-      OptionalLong maxTimestamp = hStoreFile.getMaximumTimestamp();
-      if (!maxTimestamp.isPresent()) {
-        throw new DataTieringException("Maximum timestamp not present for " + hFilePath);
-      }
-
-      long currentTimestamp = EnvironmentEdgeManager.getDelegate().currentTime();
-      long diff = currentTimestamp - maxTimestamp.getAsLong();
-      return diff <= hotDataAge;
+      return hotDataValidator(getMaxTimestamp(hFilePath), getDataTieringHotDataAge(configuration));
     }
     // DataTieringType.NONE or other types are considered hot by default
     return true;
+  }
+
+  /**
+   * Determines whether the data in the HFile being read is considered hot based on the configured
+   * data tiering type and hot data age. If the data tiering type is set to
+   * {@link DataTieringType#TIME_RANGE} and maximum timestamp is not present, it considers
+   * {@code Long.MAX_VALUE} as the maximum timestamp, making the data hot by default.
+   * @param reader the HFilePreadReader
+   * @return {@code true} if the data is hot, {@code false} otherwise
+   * @throws IOException if an I/O error occurs
+   */
+  public boolean isHotData(HFilePreadReader reader) throws IOException {
+    Configuration configuration = reader.getConf();
+    DataTieringType dataTieringType = getDataTieringType(configuration);
+    if (dataTieringType.equals(DataTieringType.TIME_RANGE)) {
+      return hotDataValidator(getMaxTimestamp(reader), getDataTieringHotDataAge(configuration));
+    }
+    // DataTieringType.NONE or other types are considered hot by default
+    return true;
+  }
+
+  private boolean hotDataValidator(long maxTimestamp, long hotDataAge) {
+    long currentTimestamp = getCurrentTimestamp();
+    long diff = currentTimestamp - maxTimestamp;
+    return diff <= hotDataAge;
+  }
+
+  private long getMaxTimestamp(Path hFilePath) throws DataTieringException {
+    HStoreFile hStoreFile = getHStoreFile(hFilePath);
+    if (hStoreFile == null) {
+      LOG.error("HStoreFile corresponding to " + hFilePath + " doesn't exist");
+      return Long.MAX_VALUE;
+    }
+    OptionalLong maxTimestamp = hStoreFile.getMaximumTimestamp();
+    if (!maxTimestamp.isPresent()) {
+      LOG.error("Maximum timestamp not present for " + hFilePath);
+      return Long.MAX_VALUE;
+    }
+    return maxTimestamp.getAsLong();
+  }
+
+  private long getMaxTimestamp(HFilePreadReader reader) throws IOException {
+    HFileInfo hFileInfo = new HFileInfo(reader.getContext(), reader.getConf());
+    hFileInfo.initMetaAndIndex(reader);
+    byte[] hFileTimeRange = hFileInfo.get(TIMERANGE_KEY);
+    if (hFileTimeRange == null) {
+      LOG.error("Timestamp information not present for " + reader.getPath());
+      return Long.MAX_VALUE;
+    }
+    return TimeRangeTracker.parseFrom(hFileTimeRange).getMax();
+  }
+
+  private long getCurrentTimestamp() {
+    return EnvironmentEdgeManager.getDelegate().currentTime();
   }
 
   /**
