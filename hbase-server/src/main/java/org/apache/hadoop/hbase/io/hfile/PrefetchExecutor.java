@@ -66,8 +66,8 @@ public final class PrefetchExecutor {
     // 1s here for tests, consider 30s in hbase-default.xml
     // Set to 0 for no delay
     prefetchDelayMillis = conf.getInt(PREFETCH_DELAY, 1000);
-    prefetchDelayVariation = conf.getFloat(PREFETCH_DELAY_VARIATION,
-      PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
+    prefetchDelayVariation =
+      conf.getFloat(PREFETCH_DELAY_VARIATION, PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
     int prefetchThreads = conf.getInt("hbase.hfile.thread.prefetch", 4);
     prefetchExecutorPool = new ScheduledThreadPoolExecutor(prefetchThreads, new ThreadFactory() {
       @Override
@@ -195,8 +195,8 @@ public final class PrefetchExecutor {
 
   public static void loadConfiguration(Configuration conf) {
     prefetchDelayMillis = conf.getInt(PREFETCH_DELAY, 1000);
-    prefetchDelayVariation = conf.getFloat(PREFETCH_DELAY_VARIATION,
-      PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
+    prefetchDelayVariation =
+      conf.getFloat(PREFETCH_DELAY_VARIATION, PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
     prefetchFutures.forEach((k, v) -> {
       ScheduledFuture sf = (ScheduledFuture) prefetchFutures.get(k);
       if (!(sf.getDelay(TimeUnit.MILLISECONDS) > 0)) {
@@ -205,8 +205,8 @@ public final class PrefetchExecutor {
         interrupt(k);
         request(k, prefetchRunnable.get(k));
       }
-      LOG.debug("Reset called on Prefetch of file {} with delay {}, delay variation {}",
-        k, prefetchDelayMillis, prefetchDelayVariation);
+      LOG.debug("Reset called on Prefetch of file {} with delay {}, delay variation {}", k,
+        prefetchDelayMillis, prefetchDelayVariation);
     });
   }
 }

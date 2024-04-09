@@ -371,14 +371,13 @@ public class TestPrefetch {
 
     // Wait for 20 seconds, no thread should start prefetch
     Thread.sleep(20000);
-    assertFalse("Prefetch threads should not be running at this point",
-      reader.prefetchStarted());
+    assertFalse("Prefetch threads should not be running at this point", reader.prefetchStarted());
     while (!reader.prefetchStarted()) {
       assertTrue("Prefetch delay has not been expired yet",
         getElapsedTime(startTime) < PrefetchExecutor.getPrefetchDelay());
     }
     if (reader.prefetchStarted()) {
-      //Added some delay as we have started the timer a bit late.
+      // Added some delay as we have started the timer a bit late.
       Thread.sleep(500);
       assertTrue("Prefetch should start post configured delay",
         getElapsedTime(startTime) > PrefetchExecutor.getPrefetchDelay());
