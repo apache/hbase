@@ -144,7 +144,8 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     ClaimReplicationQueueRemoteStateData.Builder builder = ClaimReplicationQueueRemoteStateData
       .newBuilder().setCrashedServer(ProtobufUtil.toServerName(queueId.getServerName()))
-      .setQueue(queueId.getPeerId()).setTargetServer(ProtobufUtil.toServerName(targetServer));
+      .setQueue(queueId.getPeerId()).setTargetServer(ProtobufUtil.toServerName(targetServer))
+      .setState(state);
     queueId.getSourceServerName()
       .ifPresent(sourceServer -> builder.setSourceServer(ProtobufUtil.toServerName(sourceServer)));
     serializer.serialize(builder.build());
@@ -157,6 +158,7 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
     targetServer = ProtobufUtil.toServerName(data.getTargetServer());
     ServerName crashedServer = ProtobufUtil.toServerName(data.getCrashedServer());
     String queue = data.getQueue();
+    state = data.getState();
     if (data.hasSourceServer()) {
       queueId = new ReplicationQueueId(crashedServer, queue,
         ProtobufUtil.toServerName(data.getSourceServer()));
