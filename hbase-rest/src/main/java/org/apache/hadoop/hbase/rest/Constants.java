@@ -69,6 +69,12 @@ public interface Constants {
   String REST_DNS_NAMESERVER = "hbase.rest.dns.nameserver";
   String REST_DNS_INTERFACE = "hbase.rest.dns.interface";
 
+  String REST_SCANNERCACHE_SIZE = "hbase.rest.scannercache.size";
+  final int DEFAULT_REST_SCANNERCACHE_SIZE = 10000;
+
+  String REST_SCANNERCACHE_EXPIRE_TIME = "hbase.rest.scannercache.expire.time";
+  final long DEFAULT_REST_SCANNERCACHE_EXPIRE_TIME_MS = 60 * 60 * 1000;
+
   String FILTER_CLASSES = "hbase.rest.filter.classes";
   String SCAN_START_ROW = "startrow";
   String SCAN_END_ROW = "endrow";
