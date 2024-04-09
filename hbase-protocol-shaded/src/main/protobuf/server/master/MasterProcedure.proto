@@ -254,6 +254,7 @@ message SnapshotVerifyProcedureStateData {
   required SnapshotDescription snapshot = 1;
   required RegionInfo region = 2;
   optional ServerName target_server = 3;
+  optional ServerRemoteProcedureState state = 4;
 }
 
 message SnapshotVerifyParameter {
@@ -522,6 +523,7 @@ message RefreshPeerStateData {
   required ServerName target_server = 3;
     /** We need multiple stages for sync replication state transition **/
   optional uint32 stage = 4 [default = 0];
+  optional ServerRemoteProcedureState state = 5;
 }
 
 message RefreshPeerParameter {
@@ -613,6 +615,7 @@ message SyncReplicationReplayWALRemoteStateData {
   required string peer_id = 1;
   repeated string wal = 2;
   required ServerName target_server = 3;
+  optional ServerRemoteProcedureState state = 4;
 }
 
 message ReplaySyncReplicationWALParameter {
@@ -650,6 +653,12 @@ enum RegionRemoteProcedureBaseState {
   REGION_REMOTE_PROCEDURE_SERVER_CRASH = 4;
 }
 
+enum ServerRemoteProcedureState {
+  SERVER_REMOTE_PROCEDURE_DISPATCH = 1;
+  SERVER_REMOTE_PROCEDURE_REPORT_SUCCEED = 2;
+  SERVER_REMOTE_PROCEDURE_DISPATCH_FAIL = 3;
+}
+
 message RegionRemoteProcedureBaseStateData {
   required RegionInfo region = 1;
   required ServerName target_server = 2;
@@ -681,6 +690,7 @@ message SwitchRpcThrottleStateData {
 message SwitchRpcThrottleRemoteStateData {
   required ServerName target_server = 1;
   required bool rpc_throttle_enabled = 2;
+  optional ServerRemoteProcedureState state = 3;
 }
 
 message SplitWALParameter {
@@ -698,6 +708,7 @@ message SplitWALRemoteData{
   required string wal_path = 1;
   required ServerName crashed_server=2;
   required ServerName worker = 3;
+  optional ServerRemoteProcedureState state = 4;
 }
 
 enum SplitWALState{
@@ -715,6 +726,7 @@ message ClaimReplicationQueueRemoteStateData {
   required string queue = 2;
   required ServerName target_server = 3;
   optional ServerName source_server = 4;
+  optional ServerRemoteProcedureState state = 5;
 }
 
 message ClaimReplicationQueueRemoteParameter {

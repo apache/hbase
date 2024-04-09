@@ -177,7 +177,8 @@ public class SnapshotVerifyProcedure extends ServerRemoteProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     SnapshotVerifyProcedureStateData.Builder builder =
       SnapshotVerifyProcedureStateData.newBuilder();
-    builder.setSnapshot(snapshot).setRegion(ProtobufUtil.toRegionInfo(region));
+    builder.setSnapshot(snapshot).setRegion(ProtobufUtil.toRegionInfo(region))
+      .setState(state);
     if (targetServer != null) {
       builder.setTargetServer(ProtobufUtil.toServerName(targetServer));
     }
@@ -190,6 +191,7 @@ public class SnapshotVerifyProcedure extends ServerRemoteProcedure
       serializer.deserialize(SnapshotVerifyProcedureStateData.class);
     this.snapshot = data.getSnapshot();
     this.region = ProtobufUtil.toRegionInfo(data.getRegion());
+    this.state = data.getState();
     if (data.hasTargetServer()) {
       this.targetServer = ProtobufUtil.toServerName(data.getTargetServer());
     }
