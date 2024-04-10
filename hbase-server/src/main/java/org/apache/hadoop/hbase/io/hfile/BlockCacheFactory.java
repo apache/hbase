@@ -74,6 +74,10 @@ public final class BlockCacheFactory {
 
   private static final String EXTERNAL_BLOCKCACHE_CLASS_KEY = "hbase.blockcache.external.class";
 
+  private static final String BLOCKCACHE_VICTIM_HANDLER_ENABLED_KEY =
+    "hbase.blockcache.victim.handler.enabled";
+  private static final boolean BLOCKCACHE_VICTIM_HANDLER_ENABLED_DEFAULT = false;
+
   /**
    * @deprecated use {@link BlockCacheFactory#BLOCKCACHE_BLOCKSIZE_KEY} instead.
    */
@@ -102,7 +106,17 @@ public final class BlockCacheFactory {
         LOG.warn(
           "From HBase 2.0 onwards only combined mode of LRU cache and bucket cache is available");
       }
-      return bucketCache == null ? l1Cache : new CombinedBlockCache(l1Cache, bucketCache);
+
+      if (bucketCache == null) {
+        return l1Cache;
+      }
+
+      if (conf.getBoolean(BLOCKCACHE_VICTIM_HANDLER_ENABLED_KEY,
+          BLOCKCACHE_VICTIM_HANDLER_ENABLED_DEFAULT)) {
+        return new InclusiveCombinedBlockCache(l1Cache, bucketCache);
+      } else {
+        return new CombinedBlockCache(l1Cache, bucketCache);
+      }
     }
   }
 
