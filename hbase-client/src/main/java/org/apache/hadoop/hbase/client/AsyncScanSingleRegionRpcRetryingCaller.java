@@ -258,7 +258,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       doResume(true);
     }
 
-    private void doResume(boolean close) {
+    private void doResume(boolean stopScan) {
       // just used to fix findbugs warnings. In fact, if resume is called before prepare, then we
       // just return at the first if condition without loading the resp and numValidResuls field. If
       // resume is called after suspend, then it is also safe to just reference resp and
@@ -283,7 +283,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
         localResp = this.resp;
         localNumberOfCompleteRows = this.numberOfCompleteRows;
       }
-      if (close) {
+      if (stopScan) {
         stopScan(localResp);
       } else {
         completeOrNext(localResp, localNumberOfCompleteRows);

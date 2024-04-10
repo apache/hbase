@@ -130,5 +130,4 @@ public class TestAsyncTableScannerCloseWhileSuspending {
     latch.await();
     assertEquals(1, onNextCounter.get());
   }
-
 }
