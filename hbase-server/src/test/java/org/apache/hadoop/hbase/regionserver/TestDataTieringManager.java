@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -104,7 +105,7 @@ public class TestDataTieringManager {
     defaultConf = TEST_UTIL.getConfiguration();
     defaultConf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     defaultConf.setStrings(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
-    defaultConf.setLong(BUCKET_CACHE_SIZE_KEY, 400);
+    defaultConf.setLong(BUCKET_CACHE_SIZE_KEY, 32);
     fs = HFileSystem.get(defaultConf);
     blockCache = BlockCacheFactory.createBlockCache(defaultConf);
     cacheConf = new CacheConfig(defaultConf, blockCache);
@@ -202,35 +203,19 @@ public class TestDataTieringManager {
   }
 
   @Test
-  public void testPrefetchWhenDataTieringEnabled() throws InterruptedException {
-    // Wait for all files to prefetch
-    boolean allPrefetched = waitForAllPrefetch();
-
-    // Assertion based on prefetch completion
-    if (allPrefetched) {
-      assertFullyCachedFilesCount();
-    } else {
-      fail("Prefetching of all files timed out. Block cache might be inconsistent.");
-    }
-  }
-
-  private boolean waitForAllPrefetch() throws InterruptedException {
-    long timeoutMillis = 60_000; // 1 minute timeout
-    long startTime = System.currentTimeMillis();
+  public void testPrefetchWhenDataTieringEnabled() throws IOException {
+    // Evict blocks from cache by closing the files and passing evict on close.
+    // Then initialize the reader again. Since Prefetch on open is set to true, it should prefetch
+    // those blocks.
     for (HStoreFile file : hStoreFiles) {
-      while (!file.getReader().getHFileReader().prefetchComplete()) {
-        if (System.currentTimeMillis() - startTime > timeoutMillis) {
-          return false;
-        }
-        Thread.sleep(1000); // Short sleep to avoid busy waiting
-      }
+      file.closeStoreFile(true);
+      file.initReader();
     }
-    return true;
-  }
 
-  private void assertFullyCachedFilesCount() {
+    // Since we have one cold file among four files, only three should get prefetched.
     Optional<Map<String, Pair<String, Long>>> fullyCachedFiles = blockCache.getFullyCachedFiles();
     assertTrue("We should get the fully cached files from the cache", fullyCachedFiles.isPresent());
+    Waiter.waitFor(defaultConf, 60000, () -> fullyCachedFiles.get().size() == 3);
     assertEquals("Number of fully cached files are incorrect", 3, fullyCachedFiles.get().size());
   }
 

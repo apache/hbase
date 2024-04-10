@@ -156,7 +156,7 @@ public class DataTieringManager {
    * @return {@code true} if the data is hot, {@code false} otherwise
    * @throws IOException if an I/O error occurs
    */
-  public boolean isHotData(HFilePreadReader reader) throws IOException {
+  public boolean isHotData(HFilePreadReader reader) {
     Configuration configuration = reader.getConf();
     DataTieringType dataTieringType = getDataTieringType(configuration);
     if (dataTieringType.equals(DataTieringType.TIME_RANGE)) {
@@ -186,15 +186,21 @@ public class DataTieringManager {
     return maxTimestamp.getAsLong();
   }
 
-  private long getMaxTimestamp(HFilePreadReader reader) throws IOException {
-    HFileInfo hFileInfo = new HFileInfo(reader.getContext(), reader.getConf());
-    hFileInfo.initMetaAndIndex(reader);
-    byte[] hFileTimeRange = hFileInfo.get(TIMERANGE_KEY);
-    if (hFileTimeRange == null) {
-      LOG.error("Timestamp information not present for " + reader.getPath());
+  private long getMaxTimestamp(HFilePreadReader reader) {
+    try {
+      HFileInfo hFileInfo = new HFileInfo(reader.getContext(), reader.getConf());
+      hFileInfo.initMetaAndIndex(reader);
+      byte[] hFileTimeRange = hFileInfo.get(TIMERANGE_KEY);
+      if (hFileTimeRange == null) {
+        LOG.error("Timestamp information not found for file: {}", reader.getPath());
+        return Long.MAX_VALUE;
+      }
+      return TimeRangeTracker.parseFrom(hFileTimeRange).getMax();
+    } catch (IOException e) {
+      LOG.error("Error occurred while reading the timestamp metadata of file: {}", reader.getPath(),
+        e);
       return Long.MAX_VALUE;
     }
-    return TimeRangeTracker.parseFrom(hFileTimeRange).getMax();
   }
 
   private long getCurrentTimestamp() {
