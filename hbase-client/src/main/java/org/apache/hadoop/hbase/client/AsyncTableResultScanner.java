@@ -143,6 +143,16 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
     resumer = null;
   }
 
+  private void closeResumer() {
+    if (resumer != null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(String.format("0x%x", System.identityHashCode(this)) + "close resumer");
+      }
+      resumer.terminate();
+      resumer = null;
+    }
+  }
+
   @Override
   public synchronized Result next() throws IOException {
     while (queue.isEmpty()) {
@@ -173,9 +183,7 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
     closed = true;
     queue.clear();
     cacheSize = 0;
-    if (resumer != null) {
-      resumePrefetch();
-    }
+    closeResumer();
     notifyAll();
   }
 

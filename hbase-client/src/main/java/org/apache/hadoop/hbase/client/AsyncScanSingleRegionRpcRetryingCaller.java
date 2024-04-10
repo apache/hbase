@@ -250,6 +250,15 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
     @Override
     public void resume() {
+      doResume(false);
+    }
+
+    @Override
+    public void terminate() {
+      doResume(true);
+    }
+
+    private void doResume(boolean close) {
       // just used to fix findbugs warnings. In fact, if resume is called before prepare, then we
       // just return at the first if condition without loading the resp and numValidResuls field. If
       // resume is called after suspend, then it is also safe to just reference resp and
@@ -274,7 +283,11 @@ class AsyncScanSingleRegionRpcRetryingCaller {
         localResp = this.resp;
         localNumberOfCompleteRows = this.numberOfCompleteRows;
       }
-      completeOrNext(localResp, localNumberOfCompleteRows);
+      if (close) {
+        stopScan(localResp);
+      } else {
+        completeOrNext(localResp, localNumberOfCompleteRows);
+      }
     }
 
     private void scheduleRenewLeaseTask() {
@@ -536,12 +549,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     }
     ScanControllerState state = scanController.destroy();
     if (state == ScanControllerState.TERMINATED) {
-      if (resp.getMoreResultsInRegion()) {
-        // we have more results in region but user request to stop the scan, so we need to close the
-        // scanner explicitly.
-        closeScanner();
-      }
-      completeNoMoreResults();
+      stopScan(resp);
       return;
     }
     int numberOfCompleteRows = resultCache.numberOfCompleteRows() - numberOfCompleteRowsBefore;
@@ -551,6 +559,15 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       }
     }
     completeOrNext(resp, numberOfCompleteRows);
+  }
+
+  private void stopScan(ScanResponse resp) {
+    if (resp.getMoreResultsInRegion()) {
+      // we have more results in region but user request to stop the scan, so we need to close the
+      // scanner explicitly.
+      closeScanner();
+    }
+    completeNoMoreResults();
   }
 
   private void call() {

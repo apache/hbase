@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -78,21 +80,41 @@ public class TestAsyncTableScannerCloseWhileSuspending {
 
   @Test
   public void testCloseScannerWhileSuspending() throws Exception {
-    try (ResultScanner scanner = TABLE.getScanner(new Scan().setMaxResultSize(1))) {
-      TEST_UTIL.waitFor(10000, 100, new ExplainingPredicate<Exception>() {
+    final AtomicInteger onNextCounter = new AtomicInteger(0);
+    final CountDownLatch latch = new CountDownLatch(1);
+    final Scan scan = new Scan().setMaxResultSize(1);
+    final AsyncTableResultScanner scanner = new AsyncTableResultScanner(TABLE_NAME, scan, 1) {
+      @Override
+      public void onNext(Result[] results, ScanController controller) {
+        onNextCounter.incrementAndGet();
+        super.onNext(results, controller);
+      }
 
-        @Override
-        public boolean evaluate() throws Exception {
-          return ((AsyncTableResultScanner) scanner).isSuspended();
-        }
+      @Override
+      public void onComplete() {
+        super.onComplete();
+        latch.countDown();
+      }
+    };
 
-        @Override
-        public String explainFailure() throws Exception {
-          return "The given scanner has been suspended in time";
-        }
-      });
-      assertEquals(1, getScannersCount());
-    }
+    CONN.getTable(TABLE_NAME).scan(scan, scanner);
+
+    TEST_UTIL.waitFor(10000, 100, new ExplainingPredicate<Exception>() {
+
+      @Override
+      public boolean evaluate() throws Exception {
+        return scanner.isSuspended();
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        return "The given scanner has been suspended in time";
+      }
+    });
+    assertEquals(1, getScannersCount());
+    assertEquals(1, onNextCounter.get());
+
+    scanner.close();
     TEST_UTIL.waitFor(10000, 100, new ExplainingPredicate<Exception>() {
 
       @Override
@@ -105,5 +127,8 @@ public class TestAsyncTableScannerCloseWhileSuspending {
         return "Still have " + getScannersCount() + " scanners opened";
       }
     });
+    latch.await();
+    assertEquals(1, onNextCounter.get());
   }
+
 }
