@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-syntax = "proto2";
-// This file contains protocol buffers that are used for store file tracker.
-package hbase.pb;
+package org.apache.hadoop.hbase;
 
-option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
-option java_outer_classname = "StoreFileTrackerProtos";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
-option optimize_for = SPEED;
+import org.apache.yetus.audience.InterfaceAudience;
 
-message StoreFileEntry {
-  required string name = 1;
-  required uint64 size = 2;
-}
+/**
+ * POJO to present Orphan Region on FS from HBCK Inconsistencies Report via REST API. These
+ * inconsistencies are shown on hbck.jsp page on Active HMaster UI as part of HBCK Inconsistencies.
+ */
+@InterfaceAudience.Public
+public class HbckOrphanRegionsOnFS {
+  private final String regionId;
+  private final String regionHdfsPath;
 
-message StoreFileList {
-  required uint64 timestamp = 1;
-  repeated StoreFileEntry store_file = 2;
-  optional uint64 version = 3 [default = 1];
+  public HbckOrphanRegionsOnFS(String regionId, String orphanRegionHdfsPath) {
+    this.regionId = regionId;
+    this.regionHdfsPath = orphanRegionHdfsPath;
+  }
+
+  public String getRegionId() {
+    return regionId;
+  }
+
+  public String getRegionHdfsPath() {
+    return regionHdfsPath;
+  }
 }

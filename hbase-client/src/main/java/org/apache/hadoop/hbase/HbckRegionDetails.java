@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +15,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-syntax = "proto2";
-// This file contains protocol buffers that are used for store file tracker.
-package hbase.pb;
+package org.apache.hadoop.hbase;
 
-option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
-option java_outer_classname = "StoreFileTrackerProtos";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
-option optimize_for = SPEED;
+import org.apache.yetus.audience.InterfaceAudience;
 
-message StoreFileEntry {
-  required string name = 1;
-  required uint64 size = 2;
-}
+/**
+ * POJO class for HBCK RegionInfo in HBCK Inconsistencies report.
+ */
+@InterfaceAudience.Public
+public class HbckRegionDetails {
+  private final String regionId;
+  private final String tableName;
+  private final String startKey;
+  private final String endKey;
 
-message StoreFileList {
-  required uint64 timestamp = 1;
-  repeated StoreFileEntry store_file = 2;
-  optional uint64 version = 3 [default = 1];
+  public HbckRegionDetails(String regionId, String tableName, String startKey, String endKey) {
+    this.regionId = regionId;
+    this.tableName = tableName;
+    this.startKey = startKey;
+    this.endKey = endKey;
+  }
+
+  public String getRegionId() {
+    return regionId;
+  }
+
+  public String getTableName() {
+    return tableName;
+  }
+
+  public String getStartKey() {
+    return startKey;
+  }
+
+  public String getEndKey() {
+    return endKey;
+  }
 }

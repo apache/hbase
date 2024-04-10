@@ -146,6 +146,7 @@ import org.apache.hadoop.hbase.master.http.MasterDumpServlet;
 import org.apache.hadoop.hbase.master.http.MasterRedirectServlet;
 import org.apache.hadoop.hbase.master.http.MasterStatusServlet;
 import org.apache.hadoop.hbase.master.http.api_v1.ResourceConfigFactory;
+import org.apache.hadoop.hbase.master.http.hbck.HbckConfigFactory;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.migrate.RollingUpgradeChore;
@@ -760,12 +761,18 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   protected void configureInfoServer(InfoServer infoServer) {
     infoServer.addUnprivilegedServlet("master-status", "/master-status", MasterStatusServlet.class);
     infoServer.addUnprivilegedServlet("api_v1", "/api/v1/*", buildApiV1Servlet());
+    infoServer.addUnprivilegedServlet("hbck", "/hbck/*", buildHbckServlet());
 
     infoServer.setAttribute(MASTER, this);
   }
 
   private ServletHolder buildApiV1Servlet() {
     final ResourceConfig config = ResourceConfigFactory.createResourceConfig(conf, this);
+    return new ServletHolder(new ServletContainer(config));
+  }
+
+  private ServletHolder buildHbckServlet() {
+    final ResourceConfig config = HbckConfigFactory.createResourceConfig(conf, this);
     return new ServletHolder(new ServletContainer(config));
   }
 
@@ -1375,6 +1382,22 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     getChoreService().scheduleChore(this.oldWALsDirSizeChore);
 
     status.markComplete("Progress after master initialized complete");
+  }
+
+  /**
+   * Used for testing only to set Mock objects.
+   * @param hbckChore hbckChore
+   */
+  public void setHbckChoreForTesting(HbckChore hbckChore) {
+    this.hbckChore = hbckChore;
+  }
+
+  /**
+   * Used for testing only to set Mock objects.
+   * @param catalogJanitorChore catalogJanitorChore
+   */
+  public void setCatalogJanitorChoreForTesting(CatalogJanitor catalogJanitorChore) {
+    this.catalogJanitorChore = catalogJanitorChore;
   }
 
   private void createMissingCFsInMetaDuringUpgrade(TableDescriptor metaDescriptor)
@@ -2728,16 +2751,20 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           MasterQuotaManager quotaManager = getMasterQuotaManager();
           if (quotaManager != null) {
             if (quotaManager.isQuotaInitialized()) {
-              SpaceQuotaSnapshot currSnapshotOfTable =
-                QuotaTableUtil.getCurrentSnapshotFromQuotaTable(getConnection(), tableName);
-              if (currSnapshotOfTable != null) {
-                SpaceQuotaStatus quotaStatus = currSnapshotOfTable.getQuotaStatus();
-                if (
-                  quotaStatus.isInViolation()
-                    && SpaceViolationPolicy.DISABLE == quotaStatus.getPolicy().orElse(null)
-                ) {
-                  throw new AccessDeniedException("Enabling the table '" + tableName
-                    + "' is disallowed due to a violated space quota.");
+              // skip checking quotas for system tables, see:
+              // https://issues.apache.org/jira/browse/HBASE-28183
+              if (!tableName.isSystemTable()) {
+                SpaceQuotaSnapshot currSnapshotOfTable =
+                  QuotaTableUtil.getCurrentSnapshotFromQuotaTable(getConnection(), tableName);
+                if (currSnapshotOfTable != null) {
+                  SpaceQuotaStatus quotaStatus = currSnapshotOfTable.getQuotaStatus();
+                  if (
+                    quotaStatus.isInViolation()
+                      && SpaceViolationPolicy.DISABLE == quotaStatus.getPolicy().orElse(null)
+                  ) {
+                    throw new AccessDeniedException("Enabling the table '" + tableName
+                      + "' is disallowed due to a violated space quota.");
+                  }
                 }
               }
             } else if (LOG.isTraceEnabled()) {
@@ -4253,6 +4280,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return this.syncReplicationReplayWALManager;
   }
 
+  @Override
   public HbckChore getHbckChore() {
     return this.hbckChore;
   }
