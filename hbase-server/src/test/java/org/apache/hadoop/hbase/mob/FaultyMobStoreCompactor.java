@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.compactions.CloseChecker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
@@ -148,8 +149,9 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
       .build();
     throughputController.start(compactionName);
     KeyValueScanner kvs = (scanner instanceof KeyValueScanner) ? (KeyValueScanner) scanner : null;
-    long shippedCallSizeLimit =
-      (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
+    int blockSize = StoreUtils.getBlockSize(store.getReadOnlyConfiguration(),
+      store.getColumnFamilyDescriptor().getBlocksize());
+    long shippedCallSizeLimit = (long) request.getFiles().size() * blockSize;
 
     Cell mobCell = null;
 
