@@ -35,7 +35,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Hadoop lzma codec implemented with XZ for Java.
  * <p>
- * Deprecated. See HBASE-28506.
+ * @deprecated Deprecated in 2.5 and removed in 2.6 and up. See HBASE-28506.
  */
 @InterfaceAudience.Private
 @Deprecated

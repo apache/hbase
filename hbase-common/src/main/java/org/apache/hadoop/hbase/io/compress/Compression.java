@@ -82,10 +82,10 @@ public final class Compression {
 
   // LZMA
 
-  /** Deprecated. See HBASE-28506. **/
+  /** @deprecated Deprecated in 2.5 and removed in 2.6 and up. See HBASE-28506. **/
   @Deprecated
   public static final String LZMA_CODEC_CLASS_KEY = "hbase.io.compress.lzma.codec";
-  /** Deprecated. See HBASE-28506. **/
+  /** @deprecated Deprecated in 2.5 and removed in 2.6 and up. See HBASE-28506. **/
   @Deprecated
   public static final String LZMA_CODEC_CLASS_DEFAULT =
     "org.apache.hadoop.hbase.io.compress.xz.LzmaCodec";
