@@ -217,7 +217,8 @@ public class TestIllegalTableDescriptor {
     cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
 
     // First scenario: DataTieringType set to TIME_RANGE without DateTieredStoreEngine
-    cfBuilder.setConfiguration(DataTieringManager.DATATIERING_KEY, DataTieringType.TIME_RANGE.name());
+    cfBuilder.setConfiguration(DataTieringManager.DATATIERING_KEY,
+      DataTieringType.TIME_RANGE.name());
     checkTableIsIllegal(builder.setColumnFamily(cfBuilder.build()).build());
 
     // Second scenario: DataTieringType set to TIME_RANGE with DateTieredStoreEngine
