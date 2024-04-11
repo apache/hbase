@@ -24,7 +24,7 @@ defusedxml==0.6.0
 enlighten==1.4.0
 gitdb2==2.0.6
 GitPython==3.1.41
-idna==2.8
+idna==3.7
 jira==2.0.0
 oauthlib==3.1.0
 pbr==5.4.4
