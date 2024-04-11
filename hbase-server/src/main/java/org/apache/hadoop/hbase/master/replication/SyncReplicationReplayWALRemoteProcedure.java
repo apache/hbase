@@ -125,8 +125,7 @@ public class SyncReplicationReplayWALRemoteProcedure extends ServerRemoteProcedu
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     SyncReplicationReplayWALRemoteStateData.Builder builder =
       SyncReplicationReplayWALRemoteStateData.newBuilder().setPeerId(peerId)
-        .setTargetServer(ProtobufUtil.toServerName(targetServer))
-        .setState(state);
+        .setTargetServer(ProtobufUtil.toServerName(targetServer)).setState(state);
     wals.stream().forEach(builder::addWal);
     serializer.serialize(builder.build());
   }
