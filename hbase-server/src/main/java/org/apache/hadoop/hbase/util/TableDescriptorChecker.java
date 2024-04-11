@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine.DATE_TIERED_STORE_ENGINE;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompoundConfiguration;
@@ -229,8 +231,6 @@ public final class TableDescriptorChecker {
 
   private static void checkDateTieredCompactionForTimeRangeDataTiering(final Configuration conf)
     throws IOException {
-    final String DATE_TIERED_STORE_ENGINE =
-      "org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine";
     final String errorMessage =
       "Time Range Data Tiering should be enabled with Date Tiered Compaction.";
 
@@ -240,7 +240,7 @@ public final class TableDescriptorChecker {
       // enabled after the configuration change.
       if (DataTieringType.TIME_RANGE.name().equals(conf.get(DataTieringManager.DATATIERING_KEY))) {
         if (!DATE_TIERED_STORE_ENGINE.equals(conf.get(StoreEngine.STORE_ENGINE_CLASS_KEY))) {
-          throw new IOException(errorMessage);
+          throw new IllegalArgumentException(errorMessage);
         }
       }
     });
