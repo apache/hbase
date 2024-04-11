@@ -25,6 +25,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.AsyncScanSingleRegionRpcRetryingCaller.ScanResumerImpl;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -143,14 +144,16 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
     resumer = null;
   }
 
-  private void closeResumer() {
-    if (resumer != null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(String.format("0x%x", System.identityHashCode(this)) + "close resumer");
-      }
-      resumer.terminate();
-      resumer = null;
+  private void termianteResumerIfPossible() {
+    if (resumer == null) {
+      return;
     }
+    if (resumer instanceof ScanResumerImpl) {
+      ((ScanResumerImpl) resumer).terminate();
+    } else {
+      resumePrefetch();
+    }
+    resumer = null;
   }
 
   @Override
@@ -183,7 +186,7 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
     closed = true;
     queue.clear();
     cacheSize = 0;
-    closeResumer();
+    termianteResumerIfPossible();
     notifyAll();
   }
 

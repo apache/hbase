@@ -230,7 +230,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   // Notice that, the public methods of this class is supposed to be called by upper layer only, and
   // package private methods can only be called within the implementation of
   // AsyncScanSingleRegionRpcRetryingCaller.
-  private final class ScanResumerImpl implements AdvancedScanResultConsumer.ScanResumer {
+  @InterfaceAudience.Private
+  final class ScanResumerImpl implements AdvancedScanResultConsumer.ScanResumer {
 
     // INITIALIZED -> SUSPENDED -> RESUMED
     // INITIALIZED -> RESUMED
@@ -253,7 +254,10 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       doResume(false);
     }
 
-    @Override
+    /**
+     * This method is used when {@link ScanControllerImpl#suspend} had ever been called to get a
+     * {@link ScanResumerImpl}, but now user stops scan and does not need more scan results.
+     */
     public void terminate() {
       doResume(true);
     }

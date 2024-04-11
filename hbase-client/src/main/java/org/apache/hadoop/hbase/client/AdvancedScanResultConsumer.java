@@ -51,18 +51,6 @@ public interface AdvancedScanResultConsumer extends ScanResultConsumerBase {
      * effect.
      */
     void resume();
-
-    /**
-     * This method is used when {@link ScanController#suspend} had ever been called to get a
-     * {@link ScanResumer}, but now you stop the scan and do not need more scan results, so you
-     * invoke this method to tell lower layer that scan is stopped by user and should release
-     * resources and not initiate new scans any more.
-     * <p>
-     * You are free to call it multiple time but only the first call will take effect.
-     */
-    default void terminate() {
-      resume();
-    }
   }
 
   /**
