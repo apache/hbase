@@ -50,11 +50,11 @@ public final class PrefetchExecutor {
   public static final float PREFETCH_DELAY_VARIATION_DEFAULT_VALUE = 0.2f;
 
   /** Futures for tracking block prefetch activity */
-  public static final Map<Path, Future<?>> prefetchFutures = new ConcurrentSkipListMap<>();
+  private static final Map<Path, Future<?>> prefetchFutures = new ConcurrentSkipListMap<>();
   /** Runnables for resetting the prefetch activity */
-  public static final Map<Path, Runnable> prefetchRunnable = new ConcurrentSkipListMap<>();
+  private static final Map<Path, Runnable> prefetchRunnable = new ConcurrentSkipListMap<>();
   /** Executor pool shared among all HFiles for block prefetch */
-  public static final ScheduledExecutorService prefetchExecutorPool;
+  private static final ScheduledExecutorService prefetchExecutorPool;
   /** Delay before beginning prefetch */
   private static int prefetchDelayMillis;
   /** Variation in prefetch delay times, to mitigate stampedes */
