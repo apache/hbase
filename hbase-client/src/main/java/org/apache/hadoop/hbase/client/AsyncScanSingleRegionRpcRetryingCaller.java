@@ -256,7 +256,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
     /**
      * This method is used when {@link ScanControllerImpl#suspend} had ever been called to get a
-     * {@link ScanResumerImpl}, but now user stops scan and does not need more scan results.
+     * {@link ScanResumerImpl}, but now user stops scan and does not need any more scan results.
      */
     public void terminate() {
       doResume(true);
