@@ -70,8 +70,7 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
     MasterProcedureProtos.SplitWALRemoteData.Builder builder =
       MasterProcedureProtos.SplitWALRemoteData.newBuilder();
     builder.setWalPath(walPath).setWorker(ProtobufUtil.toServerName(targetServer))
-      .setCrashedServer(ProtobufUtil.toServerName(crashedServer))
-      .setState(state);
+      .setCrashedServer(ProtobufUtil.toServerName(crashedServer)).setState(state);
     serializer.serialize(builder.build());
   }
 

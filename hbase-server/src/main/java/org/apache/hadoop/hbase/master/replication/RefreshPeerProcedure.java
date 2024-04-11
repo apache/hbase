@@ -151,8 +151,8 @@ public class RefreshPeerProcedure extends ServerRemoteProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     serializer.serialize(
       RefreshPeerStateData.newBuilder().setPeerId(peerId).setType(toPeerModificationType(type))
-        .setTargetServer(ProtobufUtil.toServerName(targetServer)).setStage(stage)
-        .setState(state).build());
+        .setTargetServer(ProtobufUtil.toServerName(targetServer)).setStage(stage).setState(state)
+        .build());
   }
 
   @Override

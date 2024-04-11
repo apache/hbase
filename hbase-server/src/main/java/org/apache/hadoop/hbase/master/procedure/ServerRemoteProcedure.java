@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 
 @InterfaceAudience.Private
@@ -116,17 +117,20 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
   @Override
   public synchronized void remoteCallFailed(MasterProcedureEnv env, ServerName serverName,
     IOException exception) {
+    state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH_FAIL;
     remoteOperationDone(env, exception);
   }
 
   @Override
   public synchronized void remoteOperationCompleted(MasterProcedureEnv env) {
+    state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_REPORT_SUCCEED;
     remoteOperationDone(env, null);
   }
 
   @Override
   public synchronized void remoteOperationFailed(MasterProcedureEnv env,
     RemoteProcedureException error) {
+    state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_SERVER_CRASH;
     remoteOperationDone(env, error);
   }
 
@@ -140,8 +144,7 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
         getProcId());
       return;
     }
-    //below persistence is added so that if report goes to last active master, it throws exception
-    state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_REPORT_SUCCEED;
+    // below persistence is added so that if report goes to last active master, it throws exception
     env.getMasterServices().getMasterProcedureExecutor().getStore().update(this);
 
     complete(env, error);

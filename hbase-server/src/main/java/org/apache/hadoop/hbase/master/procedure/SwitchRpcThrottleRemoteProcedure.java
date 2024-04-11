@@ -61,8 +61,7 @@ public class SwitchRpcThrottleRemoteProcedure extends ServerRemoteProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     SwitchRpcThrottleRemoteStateData.newBuilder()
       .setTargetServer(ProtobufUtil.toServerName(targetServer))
-      .setRpcThrottleEnabled(rpcThrottleEnabled)
-      .setState(state).build();
+      .setRpcThrottleEnabled(rpcThrottleEnabled).setState(state).build();
   }
 
   @Override
