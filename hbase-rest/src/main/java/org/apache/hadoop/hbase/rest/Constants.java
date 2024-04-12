@@ -85,7 +85,8 @@ public interface Constants {
   String SCAN_BATCH_SIZE = "batchsize";
   String SCAN_LIMIT = "limit";
   String SCAN_FETCH_SIZE = "hbase.rest.scan.fetchsize";
-  String SCAN_FILTER = "filter";
+  String FILTER = "filter";
+  String FILTER_B64 = "filter_b64";
   String SCAN_REVERSED = "reversed";
   String SCAN_CACHE_BLOCKS = "cacheblocks";
   String CUSTOM_FILTERS = "hbase.rest.custom.filters";
