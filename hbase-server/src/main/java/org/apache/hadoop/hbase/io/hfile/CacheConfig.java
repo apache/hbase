@@ -124,7 +124,7 @@ public class CacheConfig {
    * turned off on a per-family or per-request basis). If off we will STILL cache meta blocks; i.e.
    * INDEX and BLOOM types. This cannot be disabled.
    */
-  private final boolean cacheDataOnRead;
+  private boolean cacheDataOnRead;
 
   /** Whether blocks should be flagged as in-memory when being cached */
   private final boolean inMemory;
@@ -296,6 +296,14 @@ public class CacheConfig {
   }
 
   /**
+   * @param cacheDataOnRead whether data blocks should be written to the cache when an HFile is
+   *                        read
+   */
+  public void setCacheDataOnRead(boolean cacheDataOnRead) {
+    this.cacheDataOnRead = cacheDataOnRead;
+  }
+
+  /**
    * Enable cache on write including: cacheDataOnWrite cacheIndexesOnWrite cacheBloomsOnWrite
    */
   public void enableCacheOnWrite() {
@@ -463,5 +471,18 @@ public class CacheConfig {
       + ", cacheBloomsOnWrite=" + shouldCacheBloomsOnWrite() + ", cacheEvictOnClose="
       + shouldEvictOnClose() + ", cacheDataCompressed=" + shouldCacheDataCompressed()
       + ", prefetchOnOpen=" + shouldPrefetchOnOpen();
+  }
+
+  public void loadConfiguration(Configuration conf) {
+    cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ);
+    cacheDataOnWrite = conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE);
+    evictOnClose = conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE);
+    LOG.info("Config "
+        + "hbase.block.data.cacheonread is changed to {}, "
+        + "hbase.rs.cacheblocksonwrite is changed to {}, "
+        + "hbase.rs.evictblocksonclose is changed to {},",
+      conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ),
+      conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE),
+      conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE));
   }
 }

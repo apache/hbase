@@ -2179,6 +2179,7 @@ public class HStore
     this.conf = storeConf;
     this.storeEngine.compactionPolicy.setConf(storeConf);
     this.offPeakHours = OffPeakHours.getInstance(storeConf);
+    this.storeContext.getCacheConf().loadConfiguration(conf);
   }
 
   /**
