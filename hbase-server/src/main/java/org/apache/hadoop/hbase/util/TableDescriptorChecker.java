@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine.DATE_TIERED_STORE_ENGINE;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompoundConfiguration;
@@ -29,10 +31,13 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
+import org.apache.hadoop.hbase.regionserver.DataTieringManager;
+import org.apache.hadoop.hbase.regionserver.DataTieringType;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
+import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -201,6 +206,8 @@ public final class TableDescriptorChecker {
 
       // check in-memory compaction
       warnOrThrowExceptionForFailure(logWarn, hcd::getInMemoryCompaction);
+
+      checkDateTieredCompactionForTimeRangeDataTiering(conf, td);
     }
   }
 
@@ -215,6 +222,35 @@ public final class TableDescriptorChecker {
             + cfd.getScope() + " which is invalid.";
 
           throw new DoNotRetryIOException(message);
+        }
+      }
+    });
+  }
+
+  private static void checkDateTieredCompactionForTimeRangeDataTiering(final Configuration conf,
+    final TableDescriptor td) throws IOException {
+    // Table level configurations
+    checkDateTieredCompactionForTimeRangeDataTiering(conf);
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      // Column family level configurations
+      Configuration cfdConf =
+        new CompoundConfiguration().add(conf).addStringMap(cfd.getConfiguration());
+      checkDateTieredCompactionForTimeRangeDataTiering(cfdConf);
+    }
+  }
+
+  private static void checkDateTieredCompactionForTimeRangeDataTiering(final Configuration conf)
+    throws IOException {
+    final String errorMessage =
+      "Time Range Data Tiering should be enabled with Date Tiered Compaction.";
+
+    warnOrThrowExceptionForFailure(false, () -> {
+
+      // Determine whether Date Tiered Compaction will be enabled when Time Range Data Tiering is
+      // enabled after the configuration change.
+      if (DataTieringType.TIME_RANGE.name().equals(conf.get(DataTieringManager.DATATIERING_KEY))) {
+        if (!DATE_TIERED_STORE_ENGINE.equals(conf.get(StoreEngine.STORE_ENGINE_CLASS_KEY))) {
+          throw new IllegalArgumentException(errorMessage);
         }
       }
     });

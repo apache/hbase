@@ -19,19 +19,19 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -47,6 +47,8 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -82,15 +84,21 @@ public class TestDataTieringManager {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestDataTieringManager.class);
 
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration defaultConf;
   private static FileSystem fs;
   private static CacheConfig cacheConf;
   private static Path testDir;
-  private static Map<String, HRegion> testOnlineRegions;
-
+  private static final Map<String, HRegion> testOnlineRegions = new HashMap<>();
   private static DataTieringManager dataTieringManager;
-  private static List<HStoreFile> hStoreFiles;
+  private static final List<HStoreFile> hStoreFiles = new ArrayList<>();
+
+  /**
+   * Represents the current lexicographically increasing string used as a row key when writing
+   * HFiles. It is incremented each time {@link #nextString()} is called to generate unique row
+   * keys.
+   */
+  private static String rowKeyString;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -271,21 +279,20 @@ public class TestDataTieringManager {
   }
 
   private static void setupOnlineRegions() throws IOException {
-    testOnlineRegions = new HashMap<>();
-    hStoreFiles = new ArrayList<>();
-
+    testOnlineRegions.clear();
+    hStoreFiles.clear();
     long day = 24 * 60 * 60 * 1000;
     long currentTime = System.currentTimeMillis();
 
     HRegion region1 = createHRegion("table1");
 
     HStore hStore11 = createHStore(region1, "cf1", getConfWithTimeRangeDataTieringEnabled(day));
-    hStoreFiles
-      .add(createHStoreFile(hStore11.getStoreContext().getFamilyStoreDirectoryPath(), currentTime));
+    hStoreFiles.add(createHStoreFile(hStore11.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore11.getReadOnlyConfiguration(), currentTime, region1.getRegionFileSystem()));
     hStore11.refreshStoreFiles();
     HStore hStore12 = createHStore(region1, "cf2");
     hStoreFiles.add(createHStoreFile(hStore12.getStoreContext().getFamilyStoreDirectoryPath(),
-      currentTime - day));
+      hStore12.getReadOnlyConfiguration(), currentTime - day, region1.getRegionFileSystem()));
     hStore12.refreshStoreFiles();
 
     region1.stores.put(Bytes.toBytes("cf1"), hStore11);
@@ -296,11 +303,11 @@ public class TestDataTieringManager {
 
     HStore hStore21 = createHStore(region2, "cf1");
     hStoreFiles.add(createHStoreFile(hStore21.getStoreContext().getFamilyStoreDirectoryPath(),
-      currentTime - 2 * day));
+      hStore21.getReadOnlyConfiguration(), currentTime - 2 * day, region2.getRegionFileSystem()));
     hStore21.refreshStoreFiles();
     HStore hStore22 = createHStore(region2, "cf2");
     hStoreFiles.add(createHStoreFile(hStore22.getStoreContext().getFamilyStoreDirectoryPath(),
-      currentTime - 3 * day));
+      hStore22.getReadOnlyConfiguration(), currentTime - 3 * day, region2.getRegionFileSystem()));
     hStore22.refreshStoreFiles();
 
     region2.stores.put(Bytes.toBytes("cf1"), hStore21);
@@ -359,31 +366,61 @@ public class TestDataTieringManager {
     return conf;
   }
 
-  private static HStoreFile createHStoreFile(Path storeDir, long timestamp) throws IOException {
+
+  static HStoreFile createHStoreFile(Path storeDir, Configuration conf, long timestamp,
+    HRegionFileSystem regionFs) throws IOException {
     String columnFamily = storeDir.getName();
 
-    StoreFileWriter storeFileWriter = new StoreFileWriter.Builder(defaultConf, cacheConf, fs)
+    StoreFileWriter storeFileWriter = new StoreFileWriter.Builder(conf, cacheConf, fs)
       .withOutputDir(storeDir).withFileContext(new HFileContextBuilder().build()).build();
 
-    writeStoreFileRandomData(storeFileWriter, Bytes.toBytes(columnFamily), Bytes.toBytes("random"),
-      timestamp);
+    writeStoreFileRandomData(storeFileWriter, Bytes.toBytes(columnFamily), timestamp);
 
-    return new HStoreFile(fs, storeFileWriter.getPath(), defaultConf, cacheConf, BloomType.NONE,
-      true);
+    StoreContext storeContext = StoreContext.getBuilder().withRegionFileSystem(regionFs).build();
+
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, true, storeContext);
+    return new HStoreFile(fs, storeFileWriter.getPath(), conf, cacheConf, BloomType.NONE, true,
+      sft);
   }
 
   private static void writeStoreFileRandomData(final StoreFileWriter writer, byte[] columnFamily,
-    byte[] qualifier, long timestamp) throws IOException {
+    long timestamp) throws IOException {
+    int cellsPerFile = 10;
+    byte[] qualifier = Bytes.toBytes("qualifier");
+    byte[] value = generateRandomBytes(4 * 1024);
     try {
-      for (char d = 'a'; d <= 'z'; d++) {
-        for (char e = 'a'; e <= 'z'; e++) {
-          byte[] b = new byte[] { (byte) d, (byte) e };
-          writer.append(new KeyValue(b, columnFamily, qualifier, timestamp, b));
-        }
+      for (int i = 0; i < cellsPerFile; i++) {
+        byte[] row = Bytes.toBytes(nextString());
+        writer.append(new KeyValue(row, columnFamily, qualifier, timestamp, value));
       }
     } finally {
       writer.appendTrackedTimestampsToMetadata();
       writer.close();
     }
   }
+
+
+  private static byte[] generateRandomBytes(int sizeInBytes) {
+    Random random = new Random();
+    byte[] randomBytes = new byte[sizeInBytes];
+    random.nextBytes(randomBytes);
+    return randomBytes;
+  }
+
+  /**
+   * Returns the lexicographically larger string every time it's called.
+   */
+  private static String nextString() {
+    if (rowKeyString == null || rowKeyString.isEmpty()) {
+      rowKeyString = "a";
+    }
+    char lastChar = rowKeyString.charAt(rowKeyString.length() - 1);
+    if (lastChar < 'z') {
+      rowKeyString = rowKeyString.substring(0, rowKeyString.length() - 1) + (char) (lastChar + 1);
+    } else {
+      rowKeyString = rowKeyString + "a";
+    }
+    return rowKeyString;
+  }
+
 }
