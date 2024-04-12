@@ -33,6 +33,9 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.DataTieringManager;
+import org.apache.hadoop.hbase.regionserver.DataTieringType;
+import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -187,6 +190,42 @@ public class TestIllegalTableDescriptor {
     verify(LOGGER).warn(contains("MEMSTORE_FLUSHSIZE for table "
       + "descriptor or \"hbase.hregion.memstore.flush.size\" (0) is too small, which might "
       + "cause very frequent flushing."));
+  }
+
+  @Test
+  public void testIllegalTableDescriptorWithDataTiering() throws IOException {
+    // table level configuration changes
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
+
+    // First scenario: DataTieringType set to TIME_RANGE without DateTieredStoreEngine
+    htd.setValue(DataTieringManager.DATATIERING_KEY, DataTieringType.TIME_RANGE.name());
+    checkTableIsIllegal(htd);
+
+    // Second scenario: DataTieringType set to TIME_RANGE with DateTieredStoreEngine
+    htd.setValue(StoreEngine.STORE_ENGINE_CLASS_KEY,
+      "org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine");
+    checkTableIsLegal(htd);
+
+    // Third scenario: Disabling DateTieredStoreEngine while Time Range DataTiering is active
+    htd.setValue(StoreEngine.STORE_ENGINE_CLASS_KEY,
+      "org.apache.hadoop.hbase.regionserver.DefaultStoreEngine");
+    checkTableIsIllegal(htd);
+
+    // First scenario: DataTieringType set to TIME_RANGE without DateTieredStoreEngine
+    hcd.setConfiguration(DataTieringManager.DATATIERING_KEY,
+      DataTieringType.TIME_RANGE.name());
+    checkTableIsIllegal(htd.addFamily(hcd));
+
+    // Second scenario: DataTieringType set to TIME_RANGE with DateTieredStoreEngine
+    hcd.setConfiguration(StoreEngine.STORE_ENGINE_CLASS_KEY,
+      "org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine");
+    checkTableIsLegal(htd.addFamily(hcd));
+
+    // Third scenario: Disabling DateTieredStoreEngine while Time Range DataTiering is active
+    hcd.setConfiguration(StoreEngine.STORE_ENGINE_CLASS_KEY,
+      "org.apache.hadoop.hbase.regionserver.DefaultStoreEngine");
+    checkTableIsIllegal(htd.addFamily(hcd));
   }
 
   private void checkTableIsLegal(HTableDescriptor htd) throws IOException {
