@@ -34,8 +34,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Hadoop lzma codec implemented with XZ for Java.
+ * <p>
+ * @deprecated Deprecated in 2.5 and removed in 2.6 and up. See HBASE-28506.
  */
 @InterfaceAudience.Private
+@Deprecated
 public class LzmaCodec implements Configurable, CompressionCodec {
 
   public static final String LZMA_LEVEL_KEY = "hbase.io.compress.lzma.level";
