@@ -1775,7 +1775,7 @@ public class TestHStore {
     assertEquals((10 + 100 + 1000 + 10000) / 4.0, store.getAvgStoreFileAge().getAsDouble(), 1E-4);
   }
 
-    private HStoreFile mockStoreFile(long createdTime) {
+  private HStoreFile mockStoreFile(long createdTime) {
     StoreFileInfo info = mock(StoreFileInfo.class);
     when(info.getCreatedTimestamp()).thenReturn(createdTime);
     HStoreFile sf = mock(HStoreFile.class);

@@ -296,8 +296,7 @@ public class CacheConfig {
   }
 
   /**
-   * @param cacheDataOnRead whether data blocks should be written to the cache when an HFile is
-   *                        read
+   * @param cacheDataOnRead whether data blocks should be written to the cache when an HFile is read
    */
   public void setCacheDataOnRead(boolean cacheDataOnRead) {
     this.cacheDataOnRead = cacheDataOnRead;
@@ -477,8 +476,8 @@ public class CacheConfig {
     cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ);
     cacheDataOnWrite = conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE);
     evictOnClose = conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE);
-    LOG.info("Config "
-        + "hbase.block.data.cacheonread is changed to {}, "
+    LOG.info(
+      "Config " + "hbase.block.data.cacheonread is changed to {}, "
         + "hbase.rs.cacheblocksonwrite is changed to {}, "
         + "hbase.rs.evictblocksonclose is changed to {},",
       conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ),
