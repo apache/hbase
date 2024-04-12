@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  * of this class and a filter object is constructed. This filter object is then wrapped in a scanner
  * object which is then returned
  * <p>
- * This class addresses the HBASE-4168 JIRA. More documentation on this Filter Language can be found
+ * This class addresses the HBASE-4176 JIRA. More documentation on this Filter Language can be found
  * at: https://issues.apache.org/jira/browse/HBASE-4176
  */
 @InterfaceAudience.Public
