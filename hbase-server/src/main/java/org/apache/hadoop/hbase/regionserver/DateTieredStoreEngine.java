@@ -41,6 +41,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
   DateTieredCompactionPolicy, DateTieredCompactor, DefaultStoreFileManager> {
+
+  public static final String DATE_TIERED_STORE_ENGINE = DateTieredStoreEngine.class.getName();
+
   @Override
   public boolean needsCompaction(List<HStoreFile> filesCompacting) {
     return compactionPolicy.needsCompaction(storeFileManager.getStoreFiles(), filesCompacting);
