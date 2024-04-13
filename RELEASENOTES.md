@@ -73,8 +73,8 @@ New behaviour: If "hbase.writer.unified.encoded.blocksize.ratio" is set to anyth
 
 * [HBASE-27144](https://issues.apache.org/jira/browse/HBASE-27144) | *Minor* | **Add special rpc handlers for bulkload operations**
 
-Bulkload will consume a lot of resources in the cluster. We try to reduce the impact of bulkload on online services and do simple resource isolation for bulkload. 
-The bulkload RpcExecutor is disabled by default. Enable by setting "hbase.regionserver.bulkload.handler.count" greater than 0. 
+Bulkload will consume a lot of resources in the cluster. We try to reduce the impact of bulkload on online services and do simple resource isolation for bulkload.
+The bulkload RpcExecutor is disabled by default. Enable by setting "hbase.regionserver.bulkload.handler.count" greater than 0.
 Online HBASE cluster "hbase.regionserver.bulkload.handler.count" is recommended to be set to 1.
 Offline HBASE clusters can be appropriately increased.
 "hbase.regionserver.bulkload.handler.count" works with "hbase.ipc.server.bulkload.max.callqueue.length".
@@ -103,10 +103,10 @@ To avoid very larger block sizes in the case of large compression factor, this a
 
 * [HBASE-20904](https://issues.apache.org/jira/browse/HBASE-20904) | *Major* | **Prometheus metrics http endpoint for monitoring integration**
 
-HBase metrics can be published in JSON and now Prometheus friendly formats via servlets. Any of these servlets can be enabled or disabled by the configuration property 'hbase.http.metrics.servlets' in the 'hbase-default.xml' file. 
+HBase metrics can be published in JSON and now Prometheus friendly formats via servlets. Any of these servlets can be enabled or disabled by the configuration property 'hbase.http.metrics.servlets' in the 'hbase-default.xml' file.
 
-The value for the property should be a comma separated list of the servlet aliases which are '{jmx, metrics, prometheus}'. 
-The '/jmx', '/metrics', '/prometheus' servlets are enabled by default. 
+The value for the property should be a comma separated list of the servlet aliases which are '{jmx, metrics, prometheus}'.
+The '/jmx', '/metrics', '/prometheus' servlets are enabled by default.
 
 To get metrics using these servlets access the URL 'http://SERVER\_HOSTNAME:SERVER\_WEB\_UI\_PORT/endpoint'. Where endpoint is one of {'/jmx', '/metrics', '/prometheus'}.
 
@@ -278,10 +278,10 @@ Adds a new withRestoreRootDir method to RestoreRequest. When specified, the bulk
 
 * [HBASE-27551](https://issues.apache.org/jira/browse/HBASE-27551) | *Major* | **Add config options to delay assignment to retain last region location**
 
-This change introduces a boolean hbase.master.scp.retain.assignment.force property with default value of false to the AssignmentManager. 
-AssignmentManager already defines a hbase.master.scp.retain.assignment property, which enables AssignmentManager to prioritise the previous RegionServer the region was online when coming up with an assignment plan. This, however, does not guarantee the assignment retainment, in case the SCP triggers the TransitRegionStateProcedure (TRSP) before the given RegionServer is online. 
-To forcibly "honour" the retainment, hbase.master.scp.retain.assignment.force property should be also set to true. 
-Note that this could delay the region assignment until the given RegionServer reports itself as online to the master, and RITs may be reported on master UI or by HBCK. 
+This change introduces a boolean hbase.master.scp.retain.assignment.force property with default value of false to the AssignmentManager.
+AssignmentManager already defines a hbase.master.scp.retain.assignment property, which enables AssignmentManager to prioritise the previous RegionServer the region was online when coming up with an assignment plan. This, however, does not guarantee the assignment retainment, in case the SCP triggers the TransitRegionStateProcedure (TRSP) before the given RegionServer is online.
+To forcibly "honour" the retainment, hbase.master.scp.retain.assignment.force property should be also set to true.
+Note that this could delay the region assignment until the given RegionServer reports itself as online to the master, and RITs may be reported on master UI or by HBCK.
 The amount of time the TRSP will try to open the region on the given RS is determined by hbase.master.scp.retain.assignment.force.retries (default to 600). Between each retry, the TRSP will sleep for an exponential factor of the value defined in hbase.master.scp.retain.assignment.force.wait-interval (default to 50) in millis.
 
 
@@ -317,7 +317,7 @@ MasterRpcServices#setRegionStateInMeta can now work with both primary and timeli
 
 * [HBASE-27681](https://issues.apache.org/jira/browse/HBASE-27681) | *Major* | **Refactor Table Latency Metrics**
 
-Table request metrics (table latency histograms and TableReadQueryMeter/TableWriteQueryMeter) have been reorganized into a new metric bean TableRequests. The new TableRequests bean is published separately for each table on the regionserver, with the bean name including the table name and metric names within the bean simplified. Beans will be cleaned up after tables leave the regionserver. 
+Table request metrics (table latency histograms and TableReadQueryMeter/TableWriteQueryMeter) have been reorganized into a new metric bean TableRequests. The new TableRequests bean is published separately for each table on the regionserver, with the bean name including the table name and metric names within the bean simplified. Beans will be cleaned up after tables leave the regionserver.
 
 Users who collect TableLatencies or table query meters will have to update metric collection to work with the new structure. For example:
 
@@ -524,7 +524,7 @@ When a slow client is not able to read responses from the server fast enough, th
 When high watermark is exceeded, server will stop accepting new requests from the client. When outbound bytes drops below the low watermark, it will start again. This does not stop the server from processing already enqueued requests, so if those requests continue to grow the outbound bytes beyond the fatal threshold, the connection will be forcibly closed.
 
 Also added new metrics for monitoring this situation in bean "Hadoop:service=HBase,name=RegionServer,sub=IPC":
- - UnwritableTime\_\* - histogram of time periods between when the high watermark was exceeded and when it eventually drops below low watermark. 
+ - UnwritableTime\_\* - histogram of time periods between when the high watermark was exceeded and when it eventually drops below low watermark.
 - nettyTotalPendingOutboundBytes - as the name suggests, for all channels the total amount of bytes waiting to be written to sockets
 - nettyMaxPendingOutboundBytes - the number of bytes waiting on the most backed up channel across all channels
 
@@ -554,7 +554,7 @@ Added a new property "hbase.normalizer.merge.merge\_request\_max\_number\_of\_re
 
 * [HBASE-28168](https://issues.apache.org/jira/browse/HBASE-28168) | *Minor* | **Add option in RegionMover.java to isolate one or more regions on the RegionSever**
 
-This adds a new "isolate\_regions" operation to RegionMover, which allows operators to pass a list of region encoded ids to be "isolated" in the passed RegionServer. 
+This adds a new "isolate\_regions" operation to RegionMover, which allows operators to pass a list of region encoded ids to be "isolated" in the passed RegionServer.
 Regions currently deployed in the RegionServer that are not in the passed list of regions would be moved to other RegionServers. Regions in the passed list that are currently on other RegionServers would be moved to the passed RegionServer.
 
 Please refer to the command help for further information.
@@ -694,7 +694,7 @@ Conditional atomic mutations which involve a read-modify-write (increment/append
 
 * [HBASE-28204](https://issues.apache.org/jira/browse/HBASE-28204) | *Major* | **Region Canary can take lot more time If any region (except the first region) starts with delete markers**
 
-Canary is using Scan for first region of the table and Get for rest of the region. RAW Scan was only enabled for first region of any table. If a region has high number of deleted rows for the first row of the key-space, then It can take really long time for Get to finish execution. 
+Canary is using Scan for first region of the table and Get for rest of the region. RAW Scan was only enabled for first region of any table. If a region has high number of deleted rows for the first row of the key-space, then It can take really long time for Get to finish execution.
 
 With this change, Region canary will use scan to validate that every region is accessible and also enables RAW Scan if it's enabled by the user.
 
@@ -726,7 +726,7 @@ This change introduces the configuration `hbase.master.reject.decommissioned.hos
 
 * [HBASE-27230](https://issues.apache.org/jira/browse/HBASE-27230) | *Major* | **RegionServer should be aborted when WAL.sync throws TimeoutIOException**
 
-This changes add additional logic for WAL.sync: 
+This changes add additional logic for WAL.sync:
 If  WAL.sync get a timeout exception, we wrap TimeoutIOException as a special WALSyncTimeoutIOException. When upper layer such as HRegion.doMiniBatchMutate called by HRegion.batchMutation catches this special exception, we abort the region server.
 
 
