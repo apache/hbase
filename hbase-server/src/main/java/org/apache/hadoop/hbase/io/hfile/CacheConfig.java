@@ -294,14 +294,6 @@ public class CacheConfig {
   public void setCacheDataOnWrite(boolean cacheDataOnWrite) {
     this.cacheDataOnWrite = cacheDataOnWrite;
   }
-
-  /**
-   * @param cacheDataOnRead whether data blocks should be written to the cache when an HFile is read
-   */
-  public void setCacheDataOnRead(boolean cacheDataOnRead) {
-    this.cacheDataOnRead = cacheDataOnRead;
-  }
-
   /**
    * Enable cache on write including: cacheDataOnWrite cacheIndexesOnWrite cacheBloomsOnWrite
    */
