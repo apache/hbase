@@ -146,7 +146,8 @@ if [[ "$1" == "tag" ]]; then
 
   # Create release version
   maven_set_version "$RELEASE_VERSION"
-  find . -name pom.xml -exec git add {} \;
+  maven_spotless_apply
+  git_add_poms
   # Always put CHANGES.md and RELEASENOTES.md to parent directory, so later we do not need to
   # check their position when generating release data. We can not put them under the source code
   # directory because for 3.x+, CHANGES.md and RELEASENOTES.md are not tracked so later when
@@ -168,7 +169,8 @@ if [[ "$1" == "tag" ]]; then
 
   # Create next version
   maven_set_version "$NEXT_VERSION"
-  find . -name pom.xml -exec git add {} \;
+  maven_spotless_apply
+  git_add_poms
   git commit -s -m "Preparing development version $NEXT_VERSION"
 
   if ! is_dry_run; then
