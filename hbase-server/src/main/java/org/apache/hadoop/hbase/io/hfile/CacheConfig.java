@@ -294,6 +294,7 @@ public class CacheConfig {
   public void setCacheDataOnWrite(boolean cacheDataOnWrite) {
     this.cacheDataOnWrite = cacheDataOnWrite;
   }
+
   /**
    * Enable cache on write including: cacheDataOnWrite cacheIndexesOnWrite cacheBloomsOnWrite
    */
