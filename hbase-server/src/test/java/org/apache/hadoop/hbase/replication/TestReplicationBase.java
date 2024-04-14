@@ -25,12 +25,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -367,6 +369,14 @@ public class TestReplicationBase {
     assertEquals(NB_ROWS_IN_BATCH, res1.length);
 
     waitForReplication(NB_ROWS_IN_BATCH, NB_RETRIES);
+  }
+
+  protected static void stopAllRegionServers(HBaseTestingUtil util) throws IOException {
+    List<ServerName> rses = util.getMiniHBaseCluster().getRegionServerThreads().stream()
+      .map(t -> t.getRegionServer().getServerName()).collect(Collectors.toList());
+    for (ServerName rs : rses) {
+      util.getMiniHBaseCluster().stopRegionServer(rs);
+    }
   }
 
   @AfterClass
