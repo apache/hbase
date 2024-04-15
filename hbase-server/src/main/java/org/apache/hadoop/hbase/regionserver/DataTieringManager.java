@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
-import org.apache.hadoop.hbase.io.hfile.HFilePreadReader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -152,15 +151,14 @@ public class DataTieringManager {
    * data tiering type and hot data age. If the data tiering type is set to
    * {@link DataTieringType#TIME_RANGE} and maximum timestamp is not present, it considers
    * {@code Long.MAX_VALUE} as the maximum timestamp, making the data hot by default.
-   * @param reader the HFilePreadReader
+   * @param hFileInfo     Information about the HFile to determine if its data is hot.
+   * @param configuration The configuration object to use for determining hot data criteria.
    * @return {@code true} if the data is hot, {@code false} otherwise
-   * @throws IOException if an I/O error occurs
    */
-  public boolean isHotData(HFilePreadReader reader) {
-    Configuration configuration = reader.getConf();
+  public boolean isHotData(HFileInfo hFileInfo, Configuration configuration) {
     DataTieringType dataTieringType = getDataTieringType(configuration);
     if (dataTieringType.equals(DataTieringType.TIME_RANGE)) {
-      return hotDataValidator(getMaxTimestamp(reader), getDataTieringHotDataAge(configuration));
+      return hotDataValidator(getMaxTimestamp(hFileInfo), getDataTieringHotDataAge(configuration));
     }
     // DataTieringType.NONE or other types are considered hot by default
     return true;
@@ -186,19 +184,18 @@ public class DataTieringManager {
     return maxTimestamp.getAsLong();
   }
 
-  private long getMaxTimestamp(HFilePreadReader reader) {
+  private long getMaxTimestamp(HFileInfo hFileInfo) {
     try {
-      HFileInfo hFileInfo = new HFileInfo(reader.getContext(), reader.getConf());
-      hFileInfo.initMetaAndIndex(reader);
       byte[] hFileTimeRange = hFileInfo.get(TIMERANGE_KEY);
       if (hFileTimeRange == null) {
-        LOG.error("Timestamp information not found for file: {}", reader.getPath());
+        LOG.error("Timestamp information not found for file: {}",
+          hFileInfo.getHFileContext().getHFileName());
         return Long.MAX_VALUE;
       }
       return TimeRangeTracker.parseFrom(hFileTimeRange).getMax();
     } catch (IOException e) {
-      LOG.error("Error occurred while reading the timestamp metadata of file: {}", reader.getPath(),
-        e);
+      LOG.error("Error occurred while reading the timestamp metadata of file: {}",
+        hFileInfo.getHFileContext().getHFileName(), e);
       return Long.MAX_VALUE;
     }
   }
