@@ -144,10 +144,17 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
     resumer = null;
   }
 
-  private void termianteResumerIfPossible() {
+  private void terminateResumerIfPossible() {
     if (resumer == null) {
       return;
     }
+    // AsyncTableResultScanner.close means we do not need scan results any more, but for
+    // ScanResumerImpl.resume, it would perform another scan on RegionServer and call
+    // AsyncTableResultScanner.onNext again when ScanResponse is received. This time
+    // AsyncTableResultScanner.onNext would do nothing else but just discard ScanResponse
+    // because AsyncTableResultScanner.closed is true. So here we would better save this
+    // unnecessary scan on RegionServer and introduce ScanResumerImpl.terminate to close
+    // scanner directly.
     if (resumer instanceof ScanResumerImpl) {
       ((ScanResumerImpl) resumer).terminate();
     } else {
@@ -186,7 +193,7 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
     closed = true;
     queue.clear();
     cacheSize = 0;
-    termianteResumerIfPossible();
+    terminateResumerIfPossible();
     notifyAll();
   }
 
