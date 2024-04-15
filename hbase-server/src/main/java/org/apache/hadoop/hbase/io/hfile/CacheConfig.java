@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -30,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * Stores all of the cache objects and configuration for a single HFile.
  */
 @InterfaceAudience.Private
-public class CacheConfig {
+public class CacheConfig implements ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(CacheConfig.class.getName());
 
   /**
@@ -124,13 +125,13 @@ public class CacheConfig {
    * turned off on a per-family or per-request basis). If off we will STILL cache meta blocks; i.e.
    * INDEX and BLOOM types. This cannot be disabled.
    */
-  private boolean cacheDataOnRead;
+  private volatile boolean cacheDataOnRead;
 
   /** Whether blocks should be flagged as in-memory when being cached */
   private final boolean inMemory;
 
   /** Whether data blocks should be cached when new files are written */
-  private boolean cacheDataOnWrite;
+  private volatile boolean cacheDataOnWrite;
 
   /** Whether index blocks should be cached when new files are written */
   private boolean cacheIndexesOnWrite;
@@ -139,7 +140,7 @@ public class CacheConfig {
   private boolean cacheBloomsOnWrite;
 
   /** Whether blocks of a file should be evicted when the file is closed */
-  private boolean evictOnClose;
+  private volatile boolean evictOnClose;
 
   /** Whether data blocks should be stored in compressed and/or encrypted form in the cache */
   private final boolean cacheDataCompressed;
@@ -465,7 +466,8 @@ public class CacheConfig {
       + ", prefetchOnOpen=" + shouldPrefetchOnOpen();
   }
 
-  public void loadConfiguration(Configuration conf) {
+  @Override
+  public void onConfigurationChange(Configuration conf) {
     cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ);
     cacheDataOnWrite = conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE);
     evictOnClose = conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE);

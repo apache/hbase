@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.ReadOnlyConfiguration;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -2179,7 +2180,6 @@ public class HStore
     this.conf = storeConf;
     this.storeEngine.compactionPolicy.setConf(storeConf);
     this.offPeakHours = OffPeakHours.getInstance(storeConf);
-    this.storeContext.getCacheConf().loadConfiguration(conf);
   }
 
   /**
@@ -2188,6 +2188,11 @@ public class HStore
   @Override
   public void registerChildren(ConfigurationManager manager) {
     // No children to register
+    CacheConfig cacheConfig = this.storeContext.getCacheConf();
+    if (cacheConfig instanceof ConfigurationObserver) {
+      final ConfigurationObserver observer = cacheConfig;
+      manager.registerObserver(observer);
+    }
   }
 
   /**
