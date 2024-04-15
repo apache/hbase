@@ -19,11 +19,14 @@ package org.apache.hadoop.hbase.rest;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
@@ -46,9 +49,7 @@ public class ScannerResource extends ResourceBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(ScannerResource.class);
 
-  static final Map<String, ScannerInstanceResource> scanners =
-    Collections.synchronizedMap(new HashMap<String, ScannerInstanceResource>());
-
+  private static final Cache<String, ScannerInstanceResource> scanners = setupScanners();
   TableResource tableResource;
 
   /**
@@ -59,13 +60,34 @@ public class ScannerResource extends ResourceBase {
     this.tableResource = tableResource;
   }
 
+  private static Cache<String, ScannerInstanceResource> setupScanners() {
+    final Configuration conf = HBaseConfiguration.create();
+
+    int size = conf.getInt(REST_SCANNERCACHE_SIZE, DEFAULT_REST_SCANNERCACHE_SIZE);
+    long evictTimeoutMs = conf.getTimeDuration(REST_SCANNERCACHE_EXPIRE_TIME,
+      DEFAULT_REST_SCANNERCACHE_EXPIRE_TIME_MS, TimeUnit.MILLISECONDS);
+
+    Cache<String, ScannerInstanceResource> cache =
+      Caffeine.newBuilder().removalListener(ScannerResource::removalListener).maximumSize(size)
+        .expireAfterAccess(evictTimeoutMs, TimeUnit.MILLISECONDS)
+        .<String, ScannerInstanceResource> build();
+
+    return cache;
+  }
+
   static boolean delete(final String id) {
-    ScannerInstanceResource instance = scanners.remove(id);
+    ScannerInstanceResource instance = scanners.asMap().remove(id);
     if (instance != null) {
       instance.generator.close();
       return true;
     } else {
       return false;
+    }
+  }
+
+  static void removalListener(String key, ScannerInstanceResource value, RemovalCause cause) {
+    if (cause.wasEvicted()) {
+      delete(key);
     }
   }
 
@@ -140,7 +162,7 @@ public class ScannerResource extends ResourceBase {
   @Path("{scanner: .+}")
   public ScannerInstanceResource getScannerInstanceResource(final @PathParam("scanner") String id)
     throws IOException {
-    ScannerInstanceResource instance = scanners.get(id);
+    ScannerInstanceResource instance = scanners.getIfPresent(id);
     if (instance == null) {
       servlet.getMetrics().incrementFailedGetRequests(1);
       return new ScannerInstanceResource();
