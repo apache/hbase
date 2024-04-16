@@ -200,6 +200,11 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
     }
   }
 
+  /**
+   * Allows us to create a zk client config matching the destination cluster's zk in
+   * replication extensions if needed.
+   * @return ZKClientConfig set up to match the destination cluster.
+   */
   protected ZKClientConfig getZKClientConfig() {
     return new ZKClientConfig();
   }
