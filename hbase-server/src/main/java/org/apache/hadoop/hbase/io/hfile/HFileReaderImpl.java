@@ -1619,6 +1619,15 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   }
 
   /**
+   * Returns true if block prefetching was started after waiting for specified delay, false
+   * otherwise
+   */
+  @Override
+  public boolean prefetchStarted() {
+    return PrefetchExecutor.isPrefetchStarted();
+  }
+
+  /**
    * Create a Scanner on this file. No seeks or reads are done on creation. Call
    * {@link HFileScanner#seekTo(Cell)} to position an start the read. There is nothing to clean up
    * in a Scanner. Letting go of your references to the scanner is sufficient. NOTE: Do not use this

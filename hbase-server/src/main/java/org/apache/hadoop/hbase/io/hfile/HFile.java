@@ -455,6 +455,8 @@ public final class HFile {
 
     boolean prefetchComplete();
 
+    boolean prefetchStarted();
+
     /**
      * To close the stream's socket. Note: This can be concurrently called from multiple threads and
      * implementation should take care of thread safety.
