@@ -17,15 +17,18 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -41,23 +44,30 @@ import org.slf4j.LoggerFactory;
 public final class PrefetchExecutor {
 
   private static final Logger LOG = LoggerFactory.getLogger(PrefetchExecutor.class);
+  /** Wait time in miliseconds before executing prefetch */
+  public static final String PREFETCH_DELAY = "hbase.hfile.prefetch.delay";
+  public static final String PREFETCH_DELAY_VARIATION = "hbase.hfile.prefetch.delay.variation";
+  public static final float PREFETCH_DELAY_VARIATION_DEFAULT_VALUE = 0.2f;
 
   /** Futures for tracking block prefetch activity */
   private static final Map<Path, Future<?>> prefetchFutures = new ConcurrentSkipListMap<>();
+  /** Runnables for resetting the prefetch activity */
+  private static final Map<Path, Runnable> prefetchRunnable = new ConcurrentSkipListMap<>();
   /** Executor pool shared among all HFiles for block prefetch */
   private static final ScheduledExecutorService prefetchExecutorPool;
   /** Delay before beginning prefetch */
-  private static final int prefetchDelayMillis;
+  private static int prefetchDelayMillis;
   /** Variation in prefetch delay times, to mitigate stampedes */
-  private static final float prefetchDelayVariation;
+  private static float prefetchDelayVariation;
   static {
     // Consider doing this on demand with a configuration passed in rather
     // than in a static initializer.
     Configuration conf = HBaseConfiguration.create();
     // 1s here for tests, consider 30s in hbase-default.xml
     // Set to 0 for no delay
-    prefetchDelayMillis = conf.getInt("hbase.hfile.prefetch.delay", 1000);
-    prefetchDelayVariation = conf.getFloat("hbase.hfile.prefetch.delay.variation", 0.2f);
+    prefetchDelayMillis = conf.getInt(PREFETCH_DELAY, 1000);
+    prefetchDelayVariation =
+      conf.getFloat(PREFETCH_DELAY_VARIATION, PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
     int prefetchThreads = conf.getInt("hbase.hfile.thread.prefetch", 4);
     prefetchExecutorPool = new ScheduledThreadPoolExecutor(prefetchThreads, new ThreadFactory() {
       @Override
@@ -95,8 +105,10 @@ public final class PrefetchExecutor {
         final Future<?> future =
           prefetchExecutorPool.schedule(tracedRunnable, delay, TimeUnit.MILLISECONDS);
         prefetchFutures.put(path, future);
+        prefetchRunnable.put(path, runnable);
       } catch (RejectedExecutionException e) {
         prefetchFutures.remove(path);
+        prefetchRunnable.remove(path);
         LOG.warn("Prefetch request rejected for {}", path);
       }
     }
@@ -104,6 +116,7 @@ public final class PrefetchExecutor {
 
   public static void complete(Path path) {
     prefetchFutures.remove(path);
+    prefetchRunnable.remove(path);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Prefetch completed for {}", path.getName());
     }
@@ -115,8 +128,22 @@ public final class PrefetchExecutor {
       // ok to race with other cancellation attempts
       future.cancel(true);
       prefetchFutures.remove(path);
+      prefetchRunnable.remove(path);
       LOG.debug("Prefetch cancelled for {}", path);
     }
+  }
+
+  public static void interrupt(Path path) {
+    Future<?> future = prefetchFutures.get(path);
+    if (future != null) {
+      prefetchFutures.remove(path);
+      // ok to race with other cancellation attempts
+      future.cancel(true);
+      LOG.debug("Prefetch cancelled for {}", path);
+    }
+  }
+
+  private PrefetchExecutor() {
   }
 
   public static boolean isCompleted(Path path) {
@@ -127,11 +154,59 @@ public final class PrefetchExecutor {
     return true;
   }
 
-  private PrefetchExecutor() {
-  }
-
   /* Visible for testing only */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
   static ScheduledExecutorService getExecutorPool() {
     return prefetchExecutorPool;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  static Map<Path, Future<?>> getPrefetchFutures() {
+    return prefetchFutures;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  static Map<Path, Runnable> getPrefetchRunnable() {
+    return prefetchRunnable;
+  }
+
+  static boolean isPrefetchStarted() {
+    AtomicBoolean prefetchStarted = new AtomicBoolean(false);
+    for (Map.Entry<Path, Future<?>> entry : prefetchFutures.entrySet()) {
+      Path k = entry.getKey();
+      Future<?> v = entry.getValue();
+      ScheduledFuture sf = (ScheduledFuture) prefetchFutures.get(k);
+      long waitTime = sf.getDelay(TimeUnit.MILLISECONDS);
+      if (waitTime < 0) {
+        // At this point prefetch is started
+        prefetchStarted.set(true);
+        break;
+      }
+    }
+    return prefetchStarted.get();
+  }
+
+  public static int getPrefetchDelay() {
+    return prefetchDelayMillis;
+  }
+
+  public static void loadConfiguration(Configuration conf) {
+    prefetchDelayMillis = conf.getInt(PREFETCH_DELAY, 1000);
+    prefetchDelayVariation =
+      conf.getFloat(PREFETCH_DELAY_VARIATION, PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
+    prefetchFutures.forEach((k, v) -> {
+      ScheduledFuture sf = (ScheduledFuture) prefetchFutures.get(k);
+      if (!(sf.getDelay(TimeUnit.MILLISECONDS) > 0)) {
+        // the thread is still pending delay expiration and has not started to run yet, so can be
+        // re-scheduled at no cost.
+        interrupt(k);
+        request(k, prefetchRunnable.get(k));
+      }
+      LOG.debug("Reset called on Prefetch of file {} with delay {}, delay variation {}", k,
+        prefetchDelayMillis, prefetchDelayVariation);
+    });
   }
 }
