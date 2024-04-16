@@ -79,6 +79,8 @@ public class Client {
 
   private HttpClient httpClient;
   private Cluster cluster;
+  private Integer lastNodeId;
+  private boolean sticky = false;
   private Configuration conf;
   private boolean sslEnabled;
   private HttpResponse resp;
@@ -249,10 +251,12 @@ public class Client {
   }
 
   /**
-   * Execute a transaction method given only the path. Will select at random one of the members of
-   * the supplied cluster definition and iterate through the list until a transaction can be
-   * successfully completed. The definition of success here is a complete HTTP transaction,
-   * irrespective of result code.
+   * Execute a transaction method given only the path. If sticky is false: Will select at random one
+   * of the members of the supplied cluster definition and iterate through the list until a
+   * transaction can be successfully completed. The definition of success here is a complete HTTP
+   * transaction, irrespective of result code. If sticky is true: For the first request it will
+   * select a random one of the members of the supplied cluster definition. For subsequent requests
+   * it will use the same member, and it will not automatically re-try if the call fails.
    * @param cluster the cluster definition
    * @param method  the transaction method
    * @param headers HTTP header values to send
@@ -265,10 +269,12 @@ public class Client {
     if (cluster.nodes.size() < 1) {
       throw new IOException("Cluster is empty");
     }
-    int start = (int) Math.round((cluster.nodes.size() - 1) * Math.random());
-    int i = start;
+    if (lastNodeId == null || !sticky) {
+      lastNodeId = (int) (cluster.nodes.size() * Math.random());
+    }
+    int start = lastNodeId;
     do {
-      cluster.lastHost = cluster.nodes.get(i);
+      cluster.lastHost = cluster.nodes.get(lastNodeId);
       try {
         StringBuilder sb = new StringBuilder();
         if (sslEnabled) {
@@ -302,7 +308,11 @@ public class Client {
       } catch (URISyntaxException use) {
         lastException = new IOException(use);
       }
-    } while (++i != start && i < cluster.nodes.size());
+      if (!sticky) {
+        lastNodeId = (++lastNodeId) % cluster.nodes.size();
+      }
+      // Do not retry if sticky. Let the caller handle the error.
+    } while (!sticky && lastNodeId != start);
     throw lastException;
   }
 
@@ -404,6 +414,28 @@ public class Client {
    */
   public void setCluster(Cluster cluster) {
     this.cluster = cluster;
+  }
+
+  /**
+   * The default behaviour is load balancing by sending each request to a random host. This DOES NOT
+   * work with scans, which have state on the REST servers. Make sure sticky is set to true before
+   * attempting Scan related operations if more than one host is defined in the cluster.
+   * @return whether subsequent requests will use the same host
+   */
+  public boolean isSticky() {
+    return sticky;
+  }
+
+  /**
+   * The default behaviour is load balancing by sending each request to a random host. This DOES NOT
+   * work with scans, which have state on the REST servers. Set sticky to true before attempting
+   * Scan related operations if more than one host is defined in the cluster. Nodes must not be
+   * added or removed from the Cluster object while sticky is true.
+   * @param sticky whether subsequent requests will use the same host
+   */
+  public void setSticky(boolean sticky) {
+    lastNodeId = null;
+    this.sticky = sticky;
   }
 
   /**
