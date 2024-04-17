@@ -17,9 +17,20 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import static org.apache.hadoop.hbase.mob.MobConstants.DEFAULT_MOB_FILE_CLEANER_CHORE_TIME_OUT;
+import static org.apache.hadoop.hbase.mob.MobConstants.MOB_FILE_CLEANER_CHORE_TIME_OUT;
+
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -31,6 +42,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.MoreExecutors;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 /**
  * The class MobFileCleanerChore for running cleaner regularly to remove the expired and obsolete
  * (files which have no active references to) mob files.
@@ -39,8 +53,11 @@ import org.slf4j.LoggerFactory;
 public class MobFileCleanerChore extends ScheduledChore {
 
   private static final Logger LOG = LoggerFactory.getLogger(MobFileCleanerChore.class);
+
   private final HMaster master;
-  private ExpiredMobFileCleaner cleaner;
+  private final ExpiredMobFileCleaner cleaner;
+  private final ExecutorService threadPool;
+  private final int cleanerFutureTimeout;
 
   public MobFileCleanerChore(HMaster master) {
     super(master.getServerName() + "-MobFileCleanerChore", master,
@@ -52,7 +69,19 @@ public class MobFileCleanerChore extends ScheduledChore {
     this.master = master;
     cleaner = new ExpiredMobFileCleaner();
     cleaner.setConf(master.getConfiguration());
+    int threadCount = master.getConfiguration().getInt(MobConstants.MOB_CLEANER_THREAD_COUNT,
+      MobConstants.DEFAULT_MOB_CLEANER_THREAD_COUNT);
+
+    ThreadFactory threadFactory =
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("mobfile-cleaner-pool-%d").build();
+    if (threadCount == 1) {
+      threadPool = MoreExecutors.newDirectExecutorService();
+    } else {
+      threadPool = Executors.newFixedThreadPool(threadCount, threadFactory);
+    }
     checkObsoleteConfigurations();
+    cleanerFutureTimeout = master.getConfiguration().getInt(MOB_FILE_CLEANER_CHORE_TIME_OUT,
+      DEFAULT_MOB_FILE_CLEANER_CHORE_TIME_OUT);
   }
 
   private void checkObsoleteConfigurations() {
@@ -83,28 +112,42 @@ public class MobFileCleanerChore extends ScheduledChore {
       LOG.error("MobFileCleanerChore failed", e);
       return;
     }
+    List<Future> futureList = new ArrayList<>(map.size());
     for (TableDescriptor htd : map.values()) {
-      for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
-        if (hcd.isMobEnabled() && hcd.getMinVersions() == 0) {
-          try {
-            cleaner.cleanExpiredMobFiles(htd, hcd);
-          } catch (IOException e) {
-            LOG.error("Failed to clean the expired mob files table={} family={}",
-              htd.getTableName().getNameAsString(), hcd.getNameAsString(), e);
-          }
-        }
-      }
+      Future<?> future = threadPool.submit(() -> handleOneTable(htd));
+      futureList.add(future);
+    }
+
+    for (Future future : futureList) {
       try {
-        // Now clean obsolete files for a table
-        LOG.info("Cleaning obsolete MOB files from table={}", htd.getTableName());
-        try (final Admin admin = master.getConnection().getAdmin()) {
-          MobFileCleanupUtil.cleanupObsoleteMobFiles(master.getConfiguration(), htd.getTableName(),
-            admin);
-        }
-        LOG.info("Cleaning obsolete MOB files finished for table={}", htd.getTableName());
-      } catch (IOException e) {
-        LOG.error("Failed to clean the obsolete mob files for table={}", htd.getTableName(), e);
+        future.get(cleanerFutureTimeout, TimeUnit.SECONDS);
+      } catch (InterruptedException | ExecutionException | TimeoutException e) {
+        LOG.warn("Exception during the execution of MobFileCleanerChore", e);
       }
+    }
+  }
+
+  private void handleOneTable(TableDescriptor htd) {
+    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
+      if (hcd.isMobEnabled() && hcd.getMinVersions() == 0) {
+        try {
+          cleaner.cleanExpiredMobFiles(htd, hcd);
+        } catch (IOException e) {
+          LOG.error("Failed to clean the expired mob files table={} family={}",
+            htd.getTableName().getNameAsString(), hcd.getNameAsString(), e);
+        }
+      }
+    }
+    try {
+      // Now clean obsolete files for a table
+      LOG.info("Cleaning obsolete MOB files from table={}", htd.getTableName());
+      try (final Admin admin = master.getConnection().getAdmin()) {
+        MobFileCleanupUtil.cleanupObsoleteMobFiles(master.getConfiguration(), htd.getTableName(),
+          admin);
+      }
+      LOG.info("Cleaning obsolete MOB files finished for table={}", htd.getTableName());
+    } catch (IOException e) {
+      LOG.error("Failed to clean the obsolete mob files for table={}", htd.getTableName(), e);
     }
   }
 
