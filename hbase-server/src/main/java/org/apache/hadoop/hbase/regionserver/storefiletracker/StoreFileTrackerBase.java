@@ -19,28 +19,41 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.regionserver.CreateHFileLinkParams;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Base class for all store file tracker.
@@ -187,6 +200,107 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
         .withFileStoragePolicy(params.fileStoragePolicy())
         .withWriterCreationTracker(params.writerCreationTracker());
     return builder.build();
+  }
+
+  @Override
+  public String createHFileLink(CreateHFileLinkParams params) throws IOException {
+    String name = HFileLink.createHFileLinkName(params.getLinkedTable(), params.getLinkedRegion(),
+      params.getHfileName());
+    String refName =
+      HFileLink.createBackReferenceName(params.getDstTableName(), params.getDstRegionName());
+
+    // Make sure the destination directory exists
+    params.getFs().mkdirs(params.getDstFamilyPath());
+
+    // Make sure the FileLink reference directory exists
+    Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(conf, params.getLinkedTable(),
+      params.getLinkedRegion(), params.getFamilyName());
+    Path backRefPath = null;
+    if (params.isCreateBackRef()) {
+      Path backRefssDir = HFileLink.getBackReferencesDir(archiveStoreDir, params.getHfileName());
+      params.getFs().mkdirs(backRefssDir);
+
+      // Create the reference for the link
+      backRefPath = new Path(backRefssDir, refName);
+      params.getFs().createNewFile(backRefPath);
+    }
+    try {
+      // Create the link
+      if (params.getFs().createNewFile(new Path(params.getDstFamilyPath(), name))) {
+        return name;
+      }
+    } catch (IOException e) {
+      LOG.error("couldn't create the link=" + name + " for " + params.getDstFamilyPath(), e);
+      // Revert the reference if the link creation failed
+      if (params.isCreateBackRef()) {
+        params.getFs().delete(backRefPath, false);
+      }
+      throw e;
+    }
+    throw new IOException(
+      "File link=" + name + " already exists under " + params.getDstFamilyPath() + " folder.");
+  }
+
+  @Override
+  public Reference createReference(Reference reference, Path path) throws IOException {
+    FSDataOutputStream out = ctx.getRegionFileSystem().getFileSystem().create(path, false);
+    try {
+      out.write(reference.toByteArray());
+    } finally {
+      out.close();
+    }
+    return reference;
+  }
+
+  /**
+   * Returns true if the specified family has reference files
+   * @param familyName Column Family Name
+   * @return true if family contains reference files
+   */
+  public boolean hasReferences(final String familyName) throws IOException {
+    Path storeDir = ctx.getRegionFileSystem().getStoreDir(familyName);
+    FileStatus[] files =
+      CommonFSUtils.listStatus(ctx.getRegionFileSystem().getFileSystem(), storeDir);
+    if (files != null) {
+      for (FileStatus stat : files) {
+        if (stat.isDirectory()) {
+          continue;
+        }
+        if (StoreFileInfo.isReference(stat.getPath())) {
+          LOG.trace("Reference {}", stat.getPath());
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public Reference readReference(final Path p) throws IOException {
+    InputStream in = ctx.getRegionFileSystem().getFileSystem().open(p);
+    try {
+      // I need to be able to move back in the stream if this is not a pb serialization so I can
+      // do the Writable decoding instead.
+      in = in.markSupported() ? in : new BufferedInputStream(in);
+      int pblen = ProtobufUtil.lengthOfPBMagic();
+      in.mark(pblen);
+      byte[] pbuf = new byte[pblen];
+      IOUtils.readFully(in, pbuf, 0, pblen);
+      // WATCHOUT! Return in middle of function!!!
+      if (ProtobufUtil.isPBMagicPrefix(pbuf)) return Reference.convert(
+        org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos.Reference.parseFrom(in));
+      // Else presume Writables. Need to reset the stream since it didn't start w/ pb.
+      // We won't bother rewriting thie Reference as a pb since Reference is transitory.
+      in.reset();
+      Reference r = new Reference();
+      DataInputStream dis = new DataInputStream(in);
+      // Set in = dis so it gets the close below in the finally on our way out.
+      in = dis;
+      r.readFields(dis);
+      return r;
+    } finally {
+      in.close();
+    }
   }
 
   /**

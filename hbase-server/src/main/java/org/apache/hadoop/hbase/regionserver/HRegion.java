@@ -152,6 +152,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.compactions.ForbidMajorCompactionChecker;
 import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationSink;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
@@ -1345,7 +1347,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (StoreFileInfo.isReference(p) || HFileLink.isHFileLink(p)) {
           // Only construct StoreFileInfo object if its not a hfile, save obj
           // creation
-          StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, status);
+          StoreFileTracker sft =
+            StoreFileTrackerFactory.create(conf, tableDescriptor, family, regionFs);
+          StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, status.getPath(), sft);
           hdfsBlocksDistribution.add(storeFileInfo.computeHDFSBlocksDistribution(fs));
         } else if (StoreFileInfo.isHFile(p)) {
           // If its a HFile, then lets just add to the block distribution
@@ -5475,9 +5479,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // column family. Have to fake out file type too by casting our recovered.edits as
         // storefiles
         String fakeFamilyName = WALSplitUtil.getRegionDirRecoveredEditsDir(regionWALDir).getName();
+        StoreContext storeContext =
+          StoreContext.getBuilder().withRegionFileSystem(getRegionFileSystem()).build();
+        StoreFileTracker sft = StoreFileTrackerFactory.create(this.conf, true, storeContext);
         Set<HStoreFile> fakeStoreFiles = new HashSet<>(files.size());
         for (Path file : files) {
-          fakeStoreFiles.add(new HStoreFile(walFS, file, this.conf, null, null, true));
+          fakeStoreFiles.add(new HStoreFile(walFS, file, this.conf, null, null, true, sft));
         }
         getRegionWALFileSystem().archiveRecoveredEdits(fakeFamilyName, fakeStoreFiles);
       } else {
@@ -6494,17 +6501,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             continue;
           }
 
-          List<String> storeFiles = storeDescriptor.getStoreFileList();
-          for (String storeFile : storeFiles) {
-            StoreFileInfo storeFileInfo = null;
+          StoreContext storeContext = store.getStoreContext();
+          StoreFileTracker sft = StoreFileTrackerFactory.create(conf,
+            ServerRegionReplicaUtil.isDefaultReplica(getRegionInfo()), storeContext);
+
+          List<StoreFileInfo> storeFiles = sft.load();
+          for (StoreFileInfo storeFileInfo : storeFiles) {
             try {
-              storeFileInfo = fs.getStoreFileInfo(Bytes.toString(family), storeFile);
               store.bulkLoadHFile(storeFileInfo);
             } catch (FileNotFoundException ex) {
               LOG.warn(getRegionInfo().getEncodedName() + " : "
                 + ((storeFileInfo != null)
                   ? storeFileInfo.toString()
-                  : (new Path(Bytes.toString(family), storeFile)).toString())
+                  : (new Path(Bytes.toString(family), storeFileInfo.toString())).toString())
                 + " doesn't exist any more. Skip loading the file");
             }
           }

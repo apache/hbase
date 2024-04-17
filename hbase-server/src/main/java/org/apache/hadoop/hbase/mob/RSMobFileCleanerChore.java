@@ -31,19 +31,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -112,6 +116,8 @@ public class RSMobFileCleanerChore extends ScheduledChore {
         for (HRegion region : regions) {
           for (ColumnFamilyDescriptor hcd : list) {
             HStore store = region.getStore(hcd.getName());
+            StoreFileTrackerFactory.create(region.getReadOnlyConfiguration(), false,
+              store.getStoreContext());
             Collection<HStoreFile> sfs = store.getStorefiles();
             Set<String> regionMobs = new HashSet<String>();
             Path currentPath = null;
@@ -191,11 +197,16 @@ public class RSMobFileCleanerChore extends ScheduledChore {
         for (ColumnFamilyDescriptor hcd : list) {
           List<Path> toArchive = new ArrayList<Path>();
           String family = hcd.getNameAsString();
-          Path dir = MobUtils.getMobFamilyPath(rs.getConfiguration(), htd.getTableName(), family);
-          RemoteIterator<LocatedFileStatus> rit = fs.listLocatedStatus(dir);
-          while (rit.hasNext()) {
-            LocatedFileStatus lfs = rit.next();
-            Path p = lfs.getPath();
+          RegionInfo regionInfo = MobUtils.getMobRegionInfo(htd.getTableName());
+          HRegionFileSystem regionFS = HRegionFileSystem.create(rs.getConfiguration(), fs,
+            MobUtils.getMobRegionPath(new Path(rs.getConfiguration().get(HConstants.HBASE_DIR)),
+              htd.getTableName()),
+            regionInfo);
+          StoreFileTracker sft =
+            StoreFileTrackerFactory.create(rs.getConfiguration(), htd, hcd, regionFS);
+          List<StoreFileInfo> storeFileInfos = sft.load();
+          for (StoreFileInfo storeFileInfo : storeFileInfos) {
+            Path p = storeFileInfo.getPath();
             String[] mobParts = p.getName().split("_");
             String regionName = mobParts[mobParts.length - 1];
 

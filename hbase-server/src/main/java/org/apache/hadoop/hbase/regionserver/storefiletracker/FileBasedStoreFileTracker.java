@@ -77,7 +77,7 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
     for (StoreFileEntry entry : list.getStoreFileList()) {
       infos.add(ServerRegionReplicaUtil.getStoreFileInfo(conf, fs, ctx.getRegionInfo(),
         ctx.getRegionFileSystem().getRegionInfoForFS(), ctx.getFamily().getNameAsString(),
-        new Path(ctx.getFamilyStoreDirectoryPath(), entry.getName())));
+        new Path(ctx.getFamilyStoreDirectoryPath(), entry.getName()), this));
     }
     // In general, for primary replica, the load method should only be called once when
     // initialization, so we do not need synchronized here. And for secondary replicas, though the
