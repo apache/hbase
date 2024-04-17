@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import javax.net.ssl.SSLContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -270,7 +271,7 @@ public class Client {
       throw new IOException("Cluster is empty");
     }
     if (lastNodeId == null || !sticky) {
-      lastNodeId = (int) (cluster.nodes.size() * Math.random());
+      lastNodeId = ThreadLocalRandom.current().nextInt(cluster.nodes.size());
     }
     int start = lastNodeId;
     do {
