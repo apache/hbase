@@ -792,7 +792,7 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Unassign a Region.
-   * @param regionName Region name to assign.
+   * @param regionName Region name to unassign.
    * @throws IOException if a remote or network exception occurs
    */
   void unassign(byte[] regionName) throws IOException;
