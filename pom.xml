@@ -3357,6 +3357,10 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>com.codahale.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3389,6 +3393,10 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.codahale.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3441,6 +3449,10 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.codahale.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3806,6 +3818,10 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.codahale.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
