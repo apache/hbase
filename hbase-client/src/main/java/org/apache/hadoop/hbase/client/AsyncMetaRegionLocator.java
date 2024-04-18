@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.replaceReg
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -56,9 +57,9 @@ class AsyncMetaRegionLocator {
    * replicas. If we do not check the location for the given replica, we will always return the
    * cached region locations and cause an infinite loop.
    */
-  CompletableFuture<RegionLocations> getRegionLocations(int replicaId, boolean reload) {
+  CompletableFuture<RegionLocations> getRegionLocations(int replicaId, boolean reload, Configuration conf) {
     return ConnectionUtils.getOrFetch(metaRegionLocations, metaRelocateFuture, reload,
-      registry::getMetaRegionLocations, locs -> isGood(locs, replicaId), "meta region location");
+      registry::getMetaRegionLocations, locs -> isGood(locs, replicaId), "meta region location", conf);
   }
 
   private HRegionLocation getCacheLocation(HRegionLocation loc) {

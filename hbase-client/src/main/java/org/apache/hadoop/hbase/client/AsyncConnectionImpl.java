@@ -39,6 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -46,6 +47,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -326,15 +328,17 @@ public class AsyncConnectionImpl implements AsyncConnection {
           }
         }
 
-      });
+      }, conf.getInt(HConstants.CONNECTION_REGISTRY_API_TIMEOUT,
+        HConstants.DEFAULT_CONNECTION_REGISTRY_API_TIMEOUT));
       return future;
-    }, stub -> true, "master stub");
+    }, stub -> true, "master stub", conf);
   }
 
   String getClusterId() {
     try {
-      return registry.getClusterId().get();
-    } catch (InterruptedException | ExecutionException e) {
+      return registry.getClusterId().get(conf.getInt(HConstants.CONNECTION_REGISTRY_API_TIMEOUT,
+        HConstants.DEFAULT_CONNECTION_REGISTRY_API_TIMEOUT), TimeUnit.MILLISECONDS);
+    } catch (InterruptedException | ExecutionException | TimeoutException e) {
       LOG.error("Error fetching cluster ID: ", e);
     }
     return null;
@@ -447,7 +451,8 @@ public class AsyncConnectionImpl implements AsyncConnection {
         } else {
           future.complete(getHbckInternal(sn));
         }
-      });
+      }, conf.getInt(HConstants.CONNECTION_REGISTRY_API_TIMEOUT,
+        HConstants.DEFAULT_CONNECTION_REGISTRY_API_TIMEOUT));
       return future;
     }, "AsyncConnection.getHbck");
   }

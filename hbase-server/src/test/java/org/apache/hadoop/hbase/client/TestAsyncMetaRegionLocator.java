@@ -174,7 +174,8 @@ public class TestAsyncMetaRegionLocator {
               @Override
               public RegionLocations getRegionLocations(TableName tableName, int replicaId,
                 boolean reload) throws Exception {
-                return locator.getRegionLocations(replicaId, reload).get();
+                final Configuration conf = HBaseConfiguration.create();
+                return locator.getRegionLocations(replicaId, reload, conf).get();
               }
             });
         } catch (Exception e) {

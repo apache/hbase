@@ -208,6 +208,11 @@ public final class HConstants {
   public static final String ZK_CONNECTION_REGISTRY_CLASS =
     "org.apache.hadoop.hbase.client.ZKConnectionRegistry";
 
+  public static final String CONNECTION_REGISTRY_API_TIMEOUT =
+    "hbase.connection.registry.api.timeout";
+
+  public static final int DEFAULT_CONNECTION_REGISTRY_API_TIMEOUT = 120000;
+
   /** Parameter name for the master type being backup (waits for primary to go inactive). */
   public static final String MASTER_TYPE_BACKUP = "hbase.master.backup";
 

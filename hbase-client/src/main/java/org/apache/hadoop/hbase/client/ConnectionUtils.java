@@ -533,7 +533,7 @@ public final class ConnectionUtils {
 
   static <T> CompletableFuture<T> getOrFetch(AtomicReference<T> cacheRef,
     AtomicReference<CompletableFuture<T>> futureRef, boolean reload,
-    Supplier<CompletableFuture<T>> fetch, Predicate<T> validator, String type) {
+    Supplier<CompletableFuture<T>> fetch, Predicate<T> validator, String type, Configuration conf) {
     for (;;) {
       if (!reload) {
         T value = cacheRef.get();
@@ -564,7 +564,8 @@ public final class ConnectionUtils {
           cacheRef.set(value);
           futureRef.set(null);
           future.complete(value);
-        });
+        }, conf.getInt(HConstants.CONNECTION_REGISTRY_API_TIMEOUT,
+          HConstants.DEFAULT_CONNECTION_REGISTRY_API_TIMEOUT));
         return future;
       } else {
         CompletableFuture<T> future = futureRef.get();
