@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -100,60 +101,20 @@ public class TestZKConfig {
   }
 
   @Test
-  public void testZooKeeperTlsPropertiesClient() {
+  public void testZooKeeperTlsProperties() {
     // Arrange
     Configuration conf = HBaseConfiguration.create();
     for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
       conf.set(HConstants.ZK_CFG_PROPERTY_PREFIX + p, p);
-      String zkprop = "zookeeper." + p;
-      System.clearProperty(zkprop);
     }
 
     // Act
-    ZKConfig.getClientZKQuorumServersString(conf);
+    ZKClientConfig zkClientConfig = ZKConfig.getZKClientConfig(conf);
 
     // Assert
     for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
-      String zkprop = "zookeeper." + p;
-      assertEquals("Invalid or unset system property: " + zkprop, p, System.getProperty(zkprop));
-      System.clearProperty(zkprop);
+      assertEquals("Invalid or unset system property: " + p, p, zkClientConfig.getProperty(p));
     }
-  }
-
-  @Test
-  public void testZooKeeperTlsPropertiesServer() {
-    // Arrange
-    Configuration conf = HBaseConfiguration.create();
-    for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
-      conf.set(HConstants.ZK_CFG_PROPERTY_PREFIX + p, p);
-      String zkprop = "zookeeper." + p;
-      System.clearProperty(zkprop);
-    }
-
-    // Act
-    ZKConfig.getZKQuorumServersString(conf);
-
-    // Assert
-    for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
-      String zkprop = "zookeeper." + p;
-      assertEquals("Invalid or unset system property: " + zkprop, p, System.getProperty(zkprop));
-      System.clearProperty(zkprop);
-    }
-  }
-
-  @Test
-  public void testZooKeeperPropertiesDoesntOverwriteSystem() {
-    // Arrange
-    System.setProperty("zookeeper.a.b.c", "foo");
-    Configuration conf = HBaseConfiguration.create();
-    conf.set(HConstants.ZK_CFG_PROPERTY_PREFIX + "a.b.c", "bar");
-
-    // Act
-    ZKConfig.getZKQuorumServersString(conf);
-
-    // Assert
-    assertEquals("foo", System.getProperty("zookeeper.a.b.c"));
-    System.clearProperty("zookeeper.a.b.c");
   }
 
   private void testKey(String ensemble, int port, String znode) throws IOException {

@@ -176,8 +176,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     this.abortable = abortable;
     this.znodePaths = new ZNodePaths(conf);
     PendingWatcher pendingWatcher = new PendingWatcher();
-    this.recoverableZooKeeper =
-      RecoverableZooKeeper.connect(conf, quorum, pendingWatcher, identifier);
+    this.recoverableZooKeeper = RecoverableZooKeeper.connect(conf, quorum, pendingWatcher,
+      identifier, ZKConfig.getZKClientConfig(conf));
     pendingWatcher.prepare(this);
     if (canCreateBaseZNode) {
       try {

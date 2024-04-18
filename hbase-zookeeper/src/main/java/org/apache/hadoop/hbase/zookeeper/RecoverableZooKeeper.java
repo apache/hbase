@@ -41,6 +41,7 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.CreateRequest;
@@ -49,19 +50,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A zookeeper that can handle 'recoverable' errors. To handle recoverable errors, developers need
- * to realize that there are two classes of requests: idempotent and non-idempotent requests. Read
- * requests and unconditional sets and deletes are examples of idempotent requests, they can be
- * reissued with the same results. (Although, the delete may throw a NoNodeException on reissue its
- * effect on the ZooKeeper state is the same.) Non-idempotent requests need special handling,
- * application and library writers need to keep in mind that they may need to encode information in
- * the data or name of znodes to detect retries. A simple example is a create that uses a sequence
- * flag. If a process issues a create("/x-", ..., SEQUENCE) and gets a connection loss exception,
- * that process will reissue another create("/x-", ..., SEQUENCE) and get back x-111. When the
- * process does a getChildren("/"), it sees x-1,x-30,x-109,x-110,x-111, now it could be that x-109
- * was the result of the previous create, so the process actually owns both x-109 and x-111. An easy
- * way around this is to use "x-process id-" when doing the create. If the process is using an id of
- * 352, before reissuing the create it will do a getChildren("/") and see "x-222-1", "x-542-30",
+ * A zookeeper that can handle 'recoverable' errors.
+ * <p>
+ * To handle recoverable errors, developers need to realize that there are two classes of requests:
+ * idempotent and non-idempotent requests. Read requests and unconditional sets and deletes are
+ * examples of idempotent requests, they can be reissued with the same results.
+ * <p>
+ * (Although, the delete may throw a NoNodeException on reissue its effect on the ZooKeeper state is
+ * the same.) Non-idempotent requests need special handling, application and library writers need to
+ * keep in mind that they may need to encode information in the data or name of znodes to detect
+ * retries. A simple example is a create that uses a sequence flag. If a process issues a
+ * create("/x-", ..., SEQUENCE) and gets a connection loss exception, that process will reissue
+ * another create("/x-", ..., SEQUENCE) and get back x-111. When the process does a
+ * getChildren("/"), it sees x-1,x-30,x-109,x-110,x-111, now it could be that x-109 was the result
+ * of the previous create, so the process actually owns both x-109 and x-111. An easy way around
+ * this is to use "x-process id-" when doing the create. If the process is using an id of 352,
+ * before reissuing the create it will do a getChildren("/") and see "x-222-1", "x-542-30",
  * "x-352-109", x-333-110". The process will know that the original create succeeded an the znode it
  * created is "x-352-109".
  * @see "https://cwiki.apache.org/confluence/display/HADOOP2/ZooKeeper+ErrorHandling"
@@ -79,37 +83,31 @@ public class RecoverableZooKeeper {
   private final int sessionTimeout;
   private final String quorumServers;
   private final int maxMultiSize;
+  private final ZKClientConfig zkClientConfig;
 
   /**
-   * See {@link #connect(Configuration, String, Watcher, String)}
+   * See {@link #connect(Configuration, String, Watcher, String, ZKClientConfig)}.
    */
   public static RecoverableZooKeeper connect(Configuration conf, Watcher watcher)
     throws IOException {
     String ensemble = ZKConfig.getZKQuorumServersString(conf);
-    return connect(conf, ensemble, watcher);
-  }
-
-  /**
-   * See {@link #connect(Configuration, String, Watcher, String)}
-   */
-  public static RecoverableZooKeeper connect(Configuration conf, String ensemble, Watcher watcher)
-    throws IOException {
-    return connect(conf, ensemble, watcher, null);
+    return connect(conf, ensemble, watcher, null, null);
   }
 
   /**
    * Creates a new connection to ZooKeeper, pulling settings and ensemble config from the specified
    * configuration object using methods from {@link ZKConfig}. Sets the connection status monitoring
    * watcher to the specified watcher.
-   * @param conf       configuration to pull ensemble and other settings from
-   * @param watcher    watcher to monitor connection changes
-   * @param ensemble   ZooKeeper servers quorum string
-   * @param identifier value used to identify this client instance.
+   * @param conf           configuration to pull ensemble and other settings from
+   * @param watcher        watcher to monitor connection changes
+   * @param ensemble       ZooKeeper servers quorum string
+   * @param identifier     value used to identify this client instance.
+   * @param zkClientConfig client specific configurations for this instance
    * @return connection to zookeeper
    * @throws IOException if unable to connect to zk or config problem
    */
   public static RecoverableZooKeeper connect(Configuration conf, String ensemble, Watcher watcher,
-    final String identifier) throws IOException {
+    final String identifier, ZKClientConfig zkClientConfig) throws IOException {
     if (ensemble == null) {
       throw new IOException("Unable to determine ZooKeeper ensemble");
     }
@@ -122,14 +120,12 @@ public class RecoverableZooKeeper {
     int maxSleepTime = conf.getInt("zookeeper.recovery.retry.maxsleeptime", 60000);
     int multiMaxSize = conf.getInt("zookeeper.multi.max.size", 1024 * 1024);
     return new RecoverableZooKeeper(ensemble, timeout, watcher, retry, retryIntervalMillis,
-      maxSleepTime, identifier, multiMaxSize);
+      maxSleepTime, identifier, multiMaxSize, zkClientConfig);
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DE_MIGHT_IGNORE",
-      justification = "None. Its always been this way.")
-  public RecoverableZooKeeper(String quorumServers, int sessionTimeout, Watcher watcher,
-    int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier, int maxMultiSize)
-    throws IOException {
+  RecoverableZooKeeper(String quorumServers, int sessionTimeout, Watcher watcher, int maxRetries,
+    int retryIntervalMillis, int maxSleepTime, String identifier, int maxMultiSize,
+    ZKClientConfig zkClientConfig) throws IOException {
     // TODO: Add support for zk 'chroot'; we don't add it to the quorumServers String as we should.
     this.retryCounterFactory =
       new RetryCounterFactory(maxRetries + 1, retryIntervalMillis, maxSleepTime);
@@ -147,12 +143,7 @@ public class RecoverableZooKeeper {
     this.sessionTimeout = sessionTimeout;
     this.quorumServers = quorumServers;
     this.maxMultiSize = maxMultiSize;
-
-    try {
-      checkZk();
-    } catch (Exception x) {
-      /* ignore */
-    }
+    this.zkClientConfig = zkClientConfig;
   }
 
   /**
@@ -171,10 +162,10 @@ public class RecoverableZooKeeper {
    * @return The created ZooKeeper connection object
    * @throws KeeperException if a ZooKeeper operation fails
    */
-  protected synchronized ZooKeeper checkZk() throws KeeperException {
+  private synchronized ZooKeeper checkZk() throws KeeperException {
     if (this.zk == null) {
       try {
-        this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
+        this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher, zkClientConfig);
       } catch (IOException ex) {
         LOG.warn("Unable to create ZooKeeper Connection", ex);
         throw new KeeperException.OperationTimeoutException();
