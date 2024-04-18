@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.monitoring.HealthCheckServlet;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -35,51 +36,60 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class RSHealthServlet extends HealthCheckServlet<HRegionServer> {
 
-  Map<String, Instant> regionUnavailabeSince = new ConcurrentHashMap<>();
+  private final Map<String, Instant> regionUnavailableSince = new ConcurrentHashMap<>();
 
   public RSHealthServlet() {
     super(HRegionServer.REGIONSERVER);
   }
 
   @Override
-  protected Optional<String> check(HRegionServer regionServer, HttpServletRequest req)
-    throws IOException {
+  protected Optional<String> check(HRegionServer regionServer, HttpServletRequest req,
+    Connection conn) throws IOException {
     long maxUnavailableMillis = Optional.ofNullable(req.getParameter("maxUnavailableMillis"))
       .filter(StringUtils::isNumeric).map(Long::parseLong).orElse(Long.MAX_VALUE);
 
     Instant oldestUnavailableSince = Instant.MAX;
     String longestUnavailableRegion = null;
     int unavailableCount = 0;
-    Set<String> regionsPreviouslyUnavailable = new HashSet<>(regionUnavailabeSince.keySet());
 
-    for (HRegion region : regionServer.getOnlineRegionsLocalContext()) {
-      regionsPreviouslyUnavailable.remove(region.getRegionInfo().getEncodedName());
-      if (!region.isAvailable()) {
-        unavailableCount++;
-        Instant unavailableSince = regionUnavailabeSince
-          .computeIfAbsent(region.getRegionInfo().getEncodedName(), k -> Instant.now());
+    synchronized (regionUnavailableSince) {
+      Set<String> regionsPreviouslyUnavailable = new HashSet<>(regionUnavailableSince.keySet());
 
-        if (unavailableSince.isBefore(oldestUnavailableSince)) {
-          oldestUnavailableSince = unavailableSince;
-          longestUnavailableRegion = region.getRegionInfo().getEncodedName();
+      for (HRegion region : regionServer.getOnlineRegionsLocalContext()) {
+        regionsPreviouslyUnavailable.remove(region.getRegionInfo().getEncodedName());
+        if (!region.isAvailable()) {
+          unavailableCount++;
+          Instant unavailableSince = regionUnavailableSince
+            .computeIfAbsent(region.getRegionInfo().getEncodedName(), k -> Instant.now());
+
+          if (unavailableSince.isBefore(oldestUnavailableSince)) {
+            oldestUnavailableSince = unavailableSince;
+            longestUnavailableRegion = region.getRegionInfo().getEncodedName();
+          }
+
+        } else {
+          regionUnavailableSince.remove(region.getRegionInfo().getEncodedName());
         }
-
-      } else {
-        regionUnavailabeSince.remove(region.getRegionInfo().getEncodedName());
       }
+
+      regionUnavailableSince.keySet().removeAll(regionsPreviouslyUnavailable);
     }
 
-    regionUnavailabeSince.keySet().removeAll(regionsPreviouslyUnavailable);
+    String message = "ok";
 
-    Duration longestUnavailableRegionTime = Duration.between(oldestUnavailableSince, Instant.now());
-    if (longestUnavailableRegionTime.toMillis() > maxUnavailableMillis) {
-      throw new IOException("Region " + longestUnavailableRegion
-        + " has been unavailable too long, since " + oldestUnavailableSince);
+    if (unavailableCount > 0) {
+      Duration longestUnavailableRegionTime =
+        Duration.between(oldestUnavailableSince, Instant.now());
+      if (longestUnavailableRegionTime.toMillis() > maxUnavailableMillis) {
+        throw new IOException("Region " + longestUnavailableRegion
+          + " has been unavailable too long, since " + oldestUnavailableSince);
+      }
+
+      message += " - unavailableRegions: " + unavailableCount + ", longestUnavailableDuration: "
+        + longestUnavailableRegionTime + ", longestUnavailableRegion: " + longestUnavailableRegion;
     }
 
-    return Optional
-      .of("ok - unavailableRegions: " + unavailableCount + ", longestUnavailableDuration: "
-        + longestUnavailableRegionTime + ", longestUnavailableRegion: " + longestUnavailableRegion);
+    return Optional.of(message);
 
   }
 }

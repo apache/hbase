@@ -21,12 +21,8 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.RpcConnectionRegistry;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.monitoring.HealthCheckServlet;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -34,41 +30,17 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MasterHealthServlet extends HealthCheckServlet<HMaster> {
 
-  private static final String CLIENT_RPC_TIMEOUT = "healthcheck.hbase.client.rpc.timeout";
-  private static final int CLIENT_RPC_TIMEOUT_DEFAULT = 5000;
-  private static final String CLIENT_RETRIES = "healthcheck.hbase.client.retries";
-  private static final int CLIENT_RETRIES_DEFAULT = 2;
-  private static final String CLIENT_OPERATION_TIMEOUT =
-    "healthcheck.hbase.client.operation.timeout";
-  private static final int CLIENT_OPERATION_TIMEOUT_DEFAULT = 15000;
-
   public MasterHealthServlet() {
     super(HMaster.MASTER);
   }
 
   @Override
-  protected Optional<String> check(HMaster master, HttpServletRequest req) throws IOException {
-    Configuration conf = new Configuration(master.getConfiguration());
-    conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
-      RpcConnectionRegistry.class.getName());
-    conf.set(RpcConnectionRegistry.BOOTSTRAP_NODES, master.getServerName().getAddress().toString());
-    conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-      conf.getInt(CLIENT_RPC_TIMEOUT, CLIENT_RPC_TIMEOUT_DEFAULT));
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-      conf.getInt(CLIENT_RETRIES, CLIENT_RETRIES_DEFAULT));
-    conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-      conf.getInt(CLIENT_OPERATION_TIMEOUT, CLIENT_OPERATION_TIMEOUT_DEFAULT));
+  protected Optional<String> check(HMaster master, HttpServletRequest req, Connection conn)
+    throws IOException {
 
-    try (Connection conn = ConnectionFactory.createConnection(conf)) {
-      // this will fail if the server is not accepting requests
-      if (conn.getClusterId() == null) {
-        throw new IOException("Could not retrieve clusterId from self via rpc");
-      }
-
-      if (master.isActiveMaster() && master.isOnline()) {
-        // this will fail if there is a problem with the active master
-        conn.getAdmin().getClusterMetrics(EnumSet.of(ClusterMetrics.Option.CLUSTER_ID));
-      }
+    if (master.isActiveMaster() && master.isOnline()) {
+      // this will fail if there is a problem with the active master
+      conn.getAdmin().getClusterMetrics(EnumSet.of(ClusterMetrics.Option.CLUSTER_ID));
     }
 
     return Optional.empty();
