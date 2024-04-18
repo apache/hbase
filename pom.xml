@@ -3108,6 +3108,10 @@
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>com.codahale.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3132,6 +3136,10 @@
               <exclusion>
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.codahale.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3176,6 +3184,10 @@
               <exclusion>
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.codahale.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3485,6 +3497,10 @@
               <exclusion>
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.codahale.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
