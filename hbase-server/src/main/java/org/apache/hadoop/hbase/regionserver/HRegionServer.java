@@ -169,6 +169,7 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
 import org.apache.hadoop.hbase.regionserver.http.RSDumpServlet;
+import org.apache.hadoop.hbase.regionserver.http.RSHealthServlet;
 import org.apache.hadoop.hbase.regionserver.http.RSStatusServlet;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -383,7 +384,7 @@ public class HRegionServer extends Thread
 
   // A state before we go into stopped state. At this stage we're closing user
   // space regions.
-  private boolean stopping = false;
+  private volatile boolean stopping = false;
   private volatile boolean killed = false;
   private volatile boolean shutDown = false;
 
@@ -862,6 +863,10 @@ public class HRegionServer extends Thread
 
   protected Class<? extends HttpServlet> getDumpServlet() {
     return RSDumpServlet.class;
+  }
+
+  protected Class<? extends HttpServlet> getHealthServlet() {
+    return RSHealthServlet.class;
   }
 
   /**
@@ -2472,6 +2477,7 @@ public class HRegionServer extends Thread
       try {
         this.infoServer = new InfoServer(getProcessName(), addr, port, false, this.conf);
         infoServer.addPrivilegedServlet("dump", "/dump", getDumpServlet());
+        infoServer.addPrivilegedServlet("health", "/health", getHealthServlet());
         configureInfoServer();
         this.infoServer.start();
         break;
@@ -3197,6 +3203,10 @@ public class HRegionServer extends Thread
   @Override
   public boolean isStopping() {
     return this.stopping;
+  }
+
+  public boolean isKilled() {
+    return this.killed;
   }
 
   @Override
