@@ -41,11 +41,10 @@ public class HFilePreadReader extends HFileReaderImpl {
     final MutableBoolean shouldCache = new MutableBoolean(true);
 
     // Initialize HFileInfo object with metadata for caching decisions
-    HFileInfo hFileInfoForCaching = new HFileInfo(context, conf);
-    hFileInfoForCaching.initMetaAndIndex(this);
+    fileInfo.initMetaAndIndex(this);
 
     cacheConf.getBlockCache().ifPresent(cache -> {
-      Optional<Boolean> result = cache.shouldCacheFile(hFileInfoForCaching, conf);
+      Optional<Boolean> result = cache.shouldCacheFile(fileInfo, conf);
       shouldCache.setValue(result.isPresent() ? result.get().booleanValue() : true);
     });
 
