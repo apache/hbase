@@ -947,15 +947,6 @@ public class BucketCache implements BlockCache, HeapSize {
         LOG.warn("Data Tiering Manager is not set. Ignore time-based block evictions.");
       }
 
-      long bytesFreed = 0;
-      for (Map.Entry<BlockCacheKey, BucketEntry> bucketEntryWithKey : backingMap.entrySet()) {
-        if (coldFiles != null && coldFiles.containsKey(bucketEntryWithKey.getKey().getHfileName())) {
-          int freedBlockSize = bucketEntryWithKey.getValue().getLength();
-          evictBlockIfNoRpcReferenced(bucketEntryWithKey.getKey());
-          bytesFreed += freedBlockSize;
-          continue;
-        }
-      }
       long bytesToFreeWithoutExtra = 0;
       // Calculate free byte for each bucketSizeinfo
       StringBuilder msgBuffer = LOG.isDebugEnabled() ? new StringBuilder() : null;
@@ -992,7 +983,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
       long bytesToFreeWithExtra =
         (long) Math.floor(bytesToFreeWithoutExtra * (1 + extraFreeFactor));
-
+      long bytesFreed = 0;
       // Instantiate priority buckets
       BucketEntryGroup bucketSingle =
         new BucketEntryGroup(bytesToFreeWithExtra, blockSize, getPartitionSize(singleFactor));
@@ -1004,6 +995,15 @@ public class BucketCache implements BlockCache, HeapSize {
       // Scan entire map putting bucket entry into appropriate bucket entry
       // group
       for (Map.Entry<BlockCacheKey, BucketEntry> bucketEntryWithKey : backingMap.entrySet()) {
+
+        if (coldFiles != null
+          && coldFiles.containsKey(bucketEntryWithKey.getKey().getHfileName())) {
+          int freedBlockSize = bucketEntryWithKey.getValue().getLength();
+          evictBlockIfNoRpcReferenced(bucketEntryWithKey.getKey());
+          bytesFreed += freedBlockSize;
+          continue;
+        }
+
         switch (bucketEntryWithKey.getValue().getPriority()) {
           case SINGLE: {
             bucketSingle.add(bucketEntryWithKey);
@@ -1018,6 +1018,12 @@ public class BucketCache implements BlockCache, HeapSize {
             break;
           }
         }
+      }
+
+      // Check if the cold file eviction is sufficient to create enough space.
+      bytesToFreeWithExtra -= bytesFreed;
+      if (bytesToFreeWithExtra <= 0) {
+        return;
       }
 
       PriorityQueue<BucketEntryGroup> bucketQueue =
