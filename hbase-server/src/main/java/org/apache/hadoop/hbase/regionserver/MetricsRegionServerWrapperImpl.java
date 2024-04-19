@@ -29,6 +29,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.GlobalStorageStatistics;
+import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -1050,6 +1052,29 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   @Override
   public long getLocalBytesRead() {
     return FSDataInputStreamWrapper.getLocalBytesRead();
+  }
+
+  @Override
+  public long getLocalRackBytesRead() {
+    return getGlobalStorageStatistic("bytesReadDistanceOfOneOrTwo");
+  }
+
+  @Override
+  public long getRemoteRackBytesRead() {
+    return getGlobalStorageStatistic("bytesReadDistanceOfThreeOrFour")
+      + getGlobalStorageStatistic("bytesReadDistanceOfFiveOrLarger");
+  }
+
+  private static long getGlobalStorageStatistic(String name) {
+    StorageStatistics stats = GlobalStorageStatistics.INSTANCE.get("hdfs");
+    if (stats == null) {
+      return 0;
+    }
+    Long val = stats.getLong(name);
+    if (val == null) {
+      return 0;
+    }
+    return val;
   }
 
   @Override

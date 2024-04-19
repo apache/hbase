@@ -560,6 +560,10 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
         PERCENT_FILES_LOCAL_SECONDARY_REGIONS_DESC), rsWrap.getPercentFileLocalSecondaryRegions())
       .addGauge(Interns.info(TOTAL_BYTES_READ, TOTAL_BYTES_READ_DESC), rsWrap.getTotalBytesRead())
       .addGauge(Interns.info(LOCAL_BYTES_READ, LOCAL_BYTES_READ_DESC), rsWrap.getLocalBytesRead())
+      .addGauge(Interns.info(LOCAL_RACK_BYTES_READ, LOCAL_RACK_BYTES_READ_DESC),
+        rsWrap.getLocalRackBytesRead())
+      .addGauge(Interns.info(REMOTE_RACK_BYTES_READ, REMOTE_RACK_BYTES_READ_DESC),
+        rsWrap.getRemoteRackBytesRead())
       .addGauge(Interns.info(SHORTCIRCUIT_BYTES_READ, SHORTCIRCUIT_BYTES_READ_DESC),
         rsWrap.getShortCircuitBytesRead())
       .addGauge(Interns.info(ZEROCOPY_BYTES_READ, ZEROCOPY_BYTES_READ_DESC),
