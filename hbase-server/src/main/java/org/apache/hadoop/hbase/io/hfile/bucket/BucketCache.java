@@ -999,8 +999,17 @@ public class BucketCache implements BlockCache, HeapSize {
         if (coldFiles != null
           && coldFiles.containsKey(bucketEntryWithKey.getKey().getHfileName())) {
           int freedBlockSize = bucketEntryWithKey.getValue().getLength();
-          evictBlockIfNoRpcReferenced(bucketEntryWithKey.getKey());
-          bytesFreed += freedBlockSize;
+          if (evictBlockIfNoRpcReferenced(bucketEntryWithKey.getKey())) {
+            bytesFreed += freedBlockSize;
+          }
+          if (bytesFreed >= bytesToFreeWithExtra) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Bucket cache free space completed; required: " + bytesToFreeWithExtra
+                + " freed=" + StringUtils.byteDesc(bytesFreed) + " from cold data blocks.");
+            }
+            //Sufficient bytes have been freed.
+            return;
+          }
           continue;
         }
 
