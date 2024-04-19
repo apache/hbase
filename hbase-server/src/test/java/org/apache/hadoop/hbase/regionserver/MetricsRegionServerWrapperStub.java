@@ -538,6 +538,16 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getLocalRackBytesRead() {
+    return 0;
+  }
+
+  @Override
+  public long getRemoteRackBytesRead() {
+    return 0;
+  }
+
+  @Override
   public long getShortCircuitBytesRead() {
     return 0;
   }

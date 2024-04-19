@@ -544,6 +544,10 @@ public interface MetricsRegionServerWrapper {
   /** Returns Number of bytes read from the local HDFS DataNode. */
   long getLocalBytesRead();
 
+  long getLocalRackBytesRead();
+
+  long getRemoteRackBytesRead();
+
   /** Returns Number of bytes read locally through HDFS short circuit. */
   long getShortCircuitBytesRead();
 
