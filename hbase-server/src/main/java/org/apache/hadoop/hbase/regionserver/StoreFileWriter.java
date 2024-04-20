@@ -257,17 +257,6 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     }
   }
 
-  /**
-   * Record the earlest Put timestamp. If the timeRangeTracker is not set, update TimeRangeTracker
-   * to include the timestamp of this key
-   */
-  public void trackTimestamps(final Cell cell) {
-    liveFileWriter.trackTimestamps(cell);
-    if (historicalFileWriter != null) {
-      historicalFileWriter.trackTimestamps(cell);
-    }
-  }
-
   @Override
   public void beforeShipped() throws IOException {
     liveFileWriter.beforeShipped();
