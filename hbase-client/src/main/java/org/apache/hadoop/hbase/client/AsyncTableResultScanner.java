@@ -25,6 +25,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.AsyncScanSingleRegionRpcRetryingCaller.ScanResumerImpl;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -143,6 +144,25 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
     resumer = null;
   }
 
+  private void terminateResumerIfPossible() {
+    if (resumer == null) {
+      return;
+    }
+    // AsyncTableResultScanner.close means we do not need scan results any more, but for
+    // ScanResumerImpl.resume, it would perform another scan on RegionServer and call
+    // AsyncTableResultScanner.onNext again when ScanResponse is received. This time
+    // AsyncTableResultScanner.onNext would do nothing else but just discard ScanResponse
+    // because AsyncTableResultScanner.closed is true. So here we would better save this
+    // unnecessary scan on RegionServer and introduce ScanResumerImpl.terminate to close
+    // scanner directly.
+    if (resumer instanceof ScanResumerImpl) {
+      ((ScanResumerImpl) resumer).terminate();
+    } else {
+      resumePrefetch();
+    }
+    resumer = null;
+  }
+
   @Override
   public synchronized Result next() throws IOException {
     while (queue.isEmpty()) {
@@ -173,9 +193,7 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
     closed = true;
     queue.clear();
     cacheSize = 0;
-    if (resumer != null) {
-      resumePrefetch();
-    }
+    terminateResumerIfPossible();
     notifyAll();
   }
 
