@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Histogram;
@@ -33,6 +34,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 /**
@@ -1032,6 +1034,19 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
       store.update(this);
     }
     releaseLock(env);
+  }
+
+  protected final ProcedureSuspendedException suspend(int timeoutMillis, boolean jitter)
+    throws ProcedureSuspendedException {
+    if (jitter) {
+      // 10% possible jitter
+      double add = (double) timeoutMillis * ThreadLocalRandom.current().nextDouble(0.1);
+      timeoutMillis += add;
+    }
+    setTimeout(timeoutMillis);
+    setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+    skipPersistence();
+    throw new ProcedureSuspendedException();
   }
 
   @Override
