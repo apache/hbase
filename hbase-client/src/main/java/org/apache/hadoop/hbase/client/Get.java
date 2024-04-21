@@ -27,6 +27,7 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -430,6 +431,26 @@ public class Get extends Query implements Row {
     if (getId() != null) {
       map.put("id", getId());
     }
+    map.put("storeLimit", this.storeLimit);
+    map.put("storeOffset", this.storeOffset);
+    map.put("checkExistenceOnly", this.checkExistenceOnly);
+
+    map.put("targetReplicaId", this.targetReplicaId);
+    map.put("consistency", this.consistency);
+    map.put("loadColumnFamiliesOnDemand", this.loadColumnFamiliesOnDemand);
+    if (!colFamTimeRangeMap.isEmpty()) {
+      Map<String, List<Long>> colFamTimeRangeMapStr = colFamTimeRangeMap.entrySet().stream()
+        .collect(Collectors.toMap((e) -> Bytes.toStringBinary(e.getKey()), e -> {
+          TimeRange value = e.getValue();
+          List<Long> rangeList = new ArrayList<>();
+          rangeList.add(value.getMin());
+          rangeList.add(value.getMax());
+          return rangeList;
+        }));
+
+      map.put("colFamTimeRangeMap", colFamTimeRangeMapStr);
+    }
+    map.put("priority", getPriority());
     return map;
   }
 
