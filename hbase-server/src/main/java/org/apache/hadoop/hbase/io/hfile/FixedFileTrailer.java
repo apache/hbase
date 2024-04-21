@@ -267,7 +267,7 @@ public class FixedFileTrailer {
     // read PB and skip padding
     int start = inputStream.available();
     HFileProtos.FileTrailerProto trailerProto =
-      HFileProtos.FileTrailerProto.PARSER.parseDelimitedFrom(inputStream);
+      HFileProtos.FileTrailerProto.parser().parseDelimitedFrom(inputStream);
     int size = start - inputStream.available();
     inputStream.skip(getTrailerSize() - NOT_PB_SIZE - size);
 
