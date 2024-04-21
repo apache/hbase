@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
@@ -245,8 +244,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
     @Override
     protected Flow executeFromState(MasterProcedureEnv env,
-      MasterProcedureProtos.CreateTableState state)
-      throws InterruptedException, ProcedureSuspendedException {
+      MasterProcedureProtos.CreateTableState state) throws InterruptedException {
 
       if (
         !failOnce && state == MasterProcedureProtos.CreateTableState.CREATE_TABLE_WRITE_FS_LAYOUT
