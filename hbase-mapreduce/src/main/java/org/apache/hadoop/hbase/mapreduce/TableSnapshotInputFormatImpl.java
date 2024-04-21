@@ -227,7 +227,7 @@ public class TableSnapshotInputFormatImpl {
       int len = in.readInt();
       byte[] buf = new byte[len];
       in.readFully(buf);
-      TableSnapshotRegionSplit split = TableSnapshotRegionSplit.PARSER.parseFrom(buf);
+      TableSnapshotRegionSplit split = TableSnapshotRegionSplit.parser().parseFrom(buf);
       this.htd = ProtobufUtil.toTableDescriptor(split.getTable());
       this.regionInfo = HRegionInfo.convert(split.getRegion());
       List<String> locationsList = split.getLocationsList();
