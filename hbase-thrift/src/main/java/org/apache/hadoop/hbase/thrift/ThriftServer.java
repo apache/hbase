@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import static org.apache.hadoop.hbase.http.HttpServerUtil.PATH_SPEC_ANY;
 import static org.apache.hadoop.hbase.thrift.Constants.BACKLOG_CONF_DEAFULT;
 import static org.apache.hadoop.hbase.thrift.Constants.BACKLOG_CONF_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.BIND_CONF_KEY;
@@ -80,6 +81,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.security.PrivilegedAction;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -91,14 +93,17 @@ import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.SaslServer;
+import javax.servlet.DispatcherType;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.http.ClickjackingPreventionFilter;
 import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.http.SecurityHeadersFilter;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityUtil;
@@ -115,6 +120,7 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterHolder;
 import org.apache.thrift.TProcessor;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
@@ -387,9 +393,12 @@ public class ThriftServer extends Configured implements Tool {
     httpServer = new Server(threadPool);
 
     // Context handler
+    boolean isSecure = conf.getBoolean(THRIFT_SSL_ENABLED_KEY, false);
     ServletContextHandler ctxHandler =
       new ServletContextHandler(httpServer, "/", ServletContextHandler.SESSIONS);
-    ctxHandler.addServlet(new ServletHolder(thriftHttpServlet), "/*");
+    HttpServerUtil.addClickjackingPreventionFilter(ctxHandler, conf, PATH_SPEC_ANY);
+    HttpServerUtil.addSecurityHeadersFilter(ctxHandler, conf, isSecure, PATH_SPEC_ANY);
+    ctxHandler.addServlet(new ServletHolder(thriftHttpServlet), PATH_SPEC_ANY);
     HttpServerUtil.constrainHttpMethods(ctxHandler,
       conf.getBoolean(THRIFT_HTTP_ALLOW_OPTIONS_METHOD, THRIFT_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
@@ -404,7 +413,7 @@ public class ThriftServer extends Configured implements Tool {
     httpConfig.setSendDateHeader(false);
 
     ServerConnector serverConnector;
-    if (conf.getBoolean(THRIFT_SSL_ENABLED_KEY, false)) {
+    if (isSecure) {
       HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
       httpsConfig.addCustomizer(new SecureRequestCustomizer());
 
