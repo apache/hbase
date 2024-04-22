@@ -27,7 +27,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -938,15 +937,6 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     try {
       freeInProgress = true;
-      // Check the list of files to determine the cold files which can be readily evicted.
-      Map<String, String> coldFiles = null;
-      try {
-        DataTieringManager dataTieringManager = DataTieringManager.getInstance();
-        coldFiles = dataTieringManager.getColdFilesList();
-      } catch (IllegalStateException e) {
-        LOG.warn("Data Tiering Manager is not set. Ignore time-based block evictions.");
-      }
-
       long bytesToFreeWithoutExtra = 0;
       // Calculate free byte for each bucketSizeinfo
       StringBuilder msgBuffer = LOG.isDebugEnabled() ? new StringBuilder() : null;
@@ -983,6 +973,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
       long bytesToFreeWithExtra =
         (long) Math.floor(bytesToFreeWithoutExtra * (1 + extraFreeFactor));
+
       long bytesFreed = 0;
       // Instantiate priority buckets
       BucketEntryGroup bucketSingle =
@@ -992,22 +983,31 @@ public class BucketCache implements BlockCache, HeapSize {
       BucketEntryGroup bucketMemory =
         new BucketEntryGroup(bytesToFreeWithExtra, blockSize, getPartitionSize(memoryFactor));
 
+      // Check the list of files to determine the cold files which can be readily evicted.
+      Map<String, String> coldFiles = null;
+      try {
+        DataTieringManager dataTieringManager = DataTieringManager.getInstance();
+        coldFiles = dataTieringManager.getColdFilesList();
+      } catch (IllegalStateException e) {
+        LOG.warn("Data Tiering Manager is not set. Ignore time-based block evictions.");
+      }
       // Scan entire map putting bucket entry into appropriate bucket entry
       // group
       for (Map.Entry<BlockCacheKey, BucketEntry> bucketEntryWithKey : backingMap.entrySet()) {
-
-        if (coldFiles != null
-          && coldFiles.containsKey(bucketEntryWithKey.getKey().getHfileName())) {
+        if (
+          coldFiles != null && coldFiles.containsKey(bucketEntryWithKey.getKey().getHfileName())
+        ) {
           int freedBlockSize = bucketEntryWithKey.getValue().getLength();
           if (evictBlockIfNoRpcReferenced(bucketEntryWithKey.getKey())) {
             bytesFreed += freedBlockSize;
           }
           if (bytesFreed >= bytesToFreeWithExtra) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Bucket cache free space completed; required: " + bytesToFreeWithExtra
-                + " freed=" + StringUtils.byteDesc(bytesFreed) + " from cold data blocks.");
+              LOG.debug(
+                "Bucket cache free space completed; required: {} freed: {} from cold data blocks.",
+                bytesToFreeWithExtra, StringUtils.byteDesc(bytesFreed));
             }
-            //Sufficient bytes have been freed.
+            // Sufficient bytes have been freed.
             return;
           }
           continue;
@@ -1032,7 +1032,16 @@ public class BucketCache implements BlockCache, HeapSize {
       // Check if the cold file eviction is sufficient to create enough space.
       bytesToFreeWithExtra -= bytesFreed;
       if (bytesToFreeWithExtra <= 0) {
+        LOG.debug("Bucket cache free space completed; freed space : {} bytes of cold data blocks.",
+          StringUtils.byteDesc(bytesFreed));
         return;
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+          "Bucket cache free space completed; freed space : {} "
+            + "bytes of cold data blocks. {} more bytes required to be freed.",
+          StringUtils.byteDesc(bytesFreed), bytesToFreeWithExtra);
       }
 
       PriorityQueue<BucketEntryGroup> bucketQueue =

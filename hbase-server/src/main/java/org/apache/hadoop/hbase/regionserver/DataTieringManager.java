@@ -20,22 +20,17 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -179,12 +174,12 @@ public class DataTieringManager {
   private long getMaxTimestamp(Path hFilePath) throws DataTieringException {
     HStoreFile hStoreFile = getHStoreFile(hFilePath);
     if (hStoreFile == null) {
-      LOG.error("HStoreFile corresponding to " + hFilePath + " doesn't exist");
+      LOG.error("HStoreFile corresponding to {} doesn't exist", hFilePath);
       return Long.MAX_VALUE;
     }
     OptionalLong maxTimestamp = hStoreFile.getMaximumTimestamp();
     if (!maxTimestamp.isPresent()) {
-      LOG.error("Maximum timestamp not present for " + hFilePath);
+      LOG.error("Maximum timestamp not present for {}", hFilePath);
       return Long.MAX_VALUE;
     }
     return maxTimestamp.getAsLong();
@@ -278,8 +273,8 @@ public class DataTieringManager {
   }
 
   /*
-   * This API traverses through the list of online regions and returns a
-   * subset of these files-names that are cold.
+   * This API traverses through the list of online regions and returns a subset of these files-names
+   * that are cold.
    * @return List of names of files with cold data as per data-tiering logic.
    */
   public Map<String, String> getColdFilesList() {
@@ -296,21 +291,21 @@ public class DataTieringManager {
         for (HStoreFile hStoreFile : hStore.getStorefiles()) {
           String hFileName =
             hStoreFile.getFileInfo().getHFileInfo().getHFileContext().getHFileName();
-            OptionalLong maxTimestamp = hStoreFile.getMaximumTimestamp();
-            if (!maxTimestamp.isPresent()) {
-              LOG.warn("maxTimestamp missing for file: "
-                + hStoreFile.getFileInfo().getActiveFileName());
-              continue;
-            }
-            long currentTimestamp = EnvironmentEdgeManager.getDelegate().currentTime();
-            long fileAge = currentTimestamp - maxTimestamp.getAsLong();
-            if (fileAge > hotDataAge) {
-              // Values do not matter.
-              coldFiles.put(hFileName, null);
-            }
+          OptionalLong maxTimestamp = hStoreFile.getMaximumTimestamp();
+          if (!maxTimestamp.isPresent()) {
+            LOG.warn("maxTimestamp missing for file: {}",
+              hStoreFile.getFileInfo().getActiveFileName());
+            continue;
+          }
+          long currentTimestamp = EnvironmentEdgeManager.getDelegate().currentTime();
+          long fileAge = currentTimestamp - maxTimestamp.getAsLong();
+          if (fileAge > hotDataAge) {
+            // Values do not matter.
+            coldFiles.put(hFileName, null);
           }
         }
       }
+    }
     return coldFiles;
   }
 }
