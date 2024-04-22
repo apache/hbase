@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,14 +28,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Optional;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -53,6 +58,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -87,9 +93,11 @@ public class TestDataTieringManager {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration defaultConf;
   private static FileSystem fs;
+  private static BlockCache blockCache;
   private static CacheConfig cacheConf;
   private static Path testDir;
   private static final Map<String, HRegion> testOnlineRegions = new HashMap<>();
+
   private static DataTieringManager dataTieringManager;
   private static final List<HStoreFile> hStoreFiles = new ArrayList<>();
 
@@ -104,11 +112,14 @@ public class TestDataTieringManager {
   public static void setupBeforeClass() throws Exception {
     testDir = TEST_UTIL.getDataTestDir(TestDataTieringManager.class.getSimpleName());
     defaultConf = TEST_UTIL.getConfiguration();
+    defaultConf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
+    defaultConf.setStrings(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
+    defaultConf.setLong(BUCKET_CACHE_SIZE_KEY, 32);
     fs = HFileSystem.get(defaultConf);
-    BlockCache blockCache = BlockCacheFactory.createBlockCache(defaultConf);
+    blockCache = BlockCacheFactory.createBlockCache(defaultConf);
     cacheConf = new CacheConfig(defaultConf, blockCache);
-    setupOnlineRegions();
     DataTieringManager.instantiate(testOnlineRegions);
+    setupOnlineRegions();
     dataTieringManager = DataTieringManager.getInstance();
   }
 
@@ -197,7 +208,30 @@ public class TestDataTieringManager {
 
     // Test with a filename where corresponding HStoreFile in not present
     hFilePath = new Path(hStoreFiles.get(0).getPath().getParent(), "incorrectFileName");
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
+    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, true);
+  }
+
+  @Test
+  public void testPrefetchWhenDataTieringEnabled() throws IOException {
+    setPrefetchBlocksOnOpen();
+    initializeTestEnvironment();
+    // Evict blocks from cache by closing the files and passing evict on close.
+    // Then initialize the reader again. Since Prefetch on open is set to true, it should prefetch
+    // those blocks.
+    for (HStoreFile file : hStoreFiles) {
+      file.closeStoreFile(true);
+      file.initReader();
+    }
+
+    // Since we have one cold file among four files, only three should get prefetched.
+    Optional<Map<String, Pair<String, Long>>> fullyCachedFiles = blockCache.getFullyCachedFiles();
+    assertTrue("We should get the fully cached files from the cache", fullyCachedFiles.isPresent());
+    Waiter.waitFor(defaultConf, 10000, () -> fullyCachedFiles.get().size() == 3);
+    assertEquals("Number of fully cached files are incorrect", 3, fullyCachedFiles.get().size());
+  }
+
+  private void setPrefetchBlocksOnOpen() {
+    defaultConf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
   }
 
   @Test
@@ -276,6 +310,17 @@ public class TestDataTieringManager {
   private void testDataTieringMethodWithKeyNoException(DataTieringMethodCallerWithKey caller,
     BlockCacheKey key, boolean expectedResult) {
     testDataTieringMethodWithKey(caller, key, expectedResult, null);
+  }
+
+  private static void initializeTestEnvironment() throws IOException {
+    setupFileSystemAndCache();
+    setupOnlineRegions();
+  }
+
+  private static void setupFileSystemAndCache() throws IOException {
+    fs = HFileSystem.get(defaultConf);
+    blockCache = BlockCacheFactory.createBlockCache(defaultConf);
+    cacheConf = new CacheConfig(defaultConf, blockCache);
   }
 
   private static void setupOnlineRegions() throws IOException {
@@ -376,11 +421,11 @@ public class TestDataTieringManager {
 
     writeStoreFileRandomData(storeFileWriter, Bytes.toBytes(columnFamily), timestamp);
 
-    StoreContext storeContext = StoreContext.getBuilder().withRegionFileSystem(regionFs).build();
+    StoreContext storeContext =
+      StoreContext.getBuilder().withRegionFileSystem(regionFs).build();
 
     StoreFileTracker sft = StoreFileTrackerFactory.create(conf, true, storeContext);
-    return new HStoreFile(fs, storeFileWriter.getPath(), conf, cacheConf, BloomType.NONE, true,
-      sft);
+    return new HStoreFile(fs, storeFileWriter.getPath(), conf, cacheConf, BloomType.NONE, true, sft);
   }
 
   private static void writeStoreFileRandomData(final StoreFileWriter writer, byte[] columnFamily,

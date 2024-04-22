@@ -79,9 +79,11 @@ import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.regionserver.DataTieringManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -2398,7 +2400,18 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public Optional<Boolean> shouldCacheFile(String fileName) {
+  public Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
+    String fileName = hFileInfo.getHFileContext().getHFileName();
+    try {
+      DataTieringManager dataTieringManager = DataTieringManager.getInstance();
+      if (!dataTieringManager.isHotData(hFileInfo, conf)) {
+        LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data", fileName);
+        return Optional.of(false);
+      }
+    } catch (IllegalStateException e) {
+      LOG.error("Error while getting DataTieringManager instance: {}", e.getMessage());
+    }
+
     // if we don't have the file in fullyCachedFiles, we should cache it
     return Optional.of(!fullyCachedFiles.containsKey(fileName));
   }
