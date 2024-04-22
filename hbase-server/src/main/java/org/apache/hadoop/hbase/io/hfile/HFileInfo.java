@@ -121,6 +121,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
 
   private FixedFileTrailer trailer;
   private HFileContext hfileContext;
+  private boolean initialized = false;
 
   public HFileInfo() {
     super();
@@ -361,6 +362,10 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
    * should be called after initTrailerAndContext
    */
   public void initMetaAndIndex(HFile.Reader reader) throws IOException {
+    if (initialized) {
+      return;
+    }
+
     ReaderContext context = reader.getContext();
     try {
       HFileBlock.FSReader blockReader = reader.getUncachedBlockReader();
@@ -398,6 +403,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
       throw new CorruptHFileException(
         "Problem reading data index and meta index from file " + context.getFilePath(), t);
     }
+    initialized = true;
   }
 
   private HFileContext createHFileContext(Path path, FixedFileTrailer trailer, Configuration conf)

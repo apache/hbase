@@ -35,6 +35,8 @@ public class HFilePreadReader extends HFileReaderImpl {
   public HFilePreadReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
+    // Initialize HFileInfo object with metadata for caching decisions
+    fileInfo.initMetaAndIndex(this);
     // master hosted regions, like the master procedures store wouldn't have a block cache
     // Prefetch file blocks upon open if requested
     if (cacheConf.getBlockCache().isPresent() && cacheConf.shouldPrefetchOnOpen()) {
