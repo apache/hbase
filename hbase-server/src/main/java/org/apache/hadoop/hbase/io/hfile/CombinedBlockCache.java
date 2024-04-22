@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -482,9 +483,9 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
-  public Optional<Boolean> shouldCacheFile(String fileName) {
-    Optional<Boolean> l1Result = l1Cache.shouldCacheFile(fileName);
-    Optional<Boolean> l2Result = l2Cache.shouldCacheFile(fileName);
+  public Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
+    Optional<Boolean> l1Result = l1Cache.shouldCacheFile(hFileInfo, conf);
+    Optional<Boolean> l2Result = l2Cache.shouldCacheFile(hFileInfo, conf);
     final Mutable<Boolean> combinedResult = new MutableBoolean(true);
     l1Result.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
     l2Result.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
