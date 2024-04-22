@@ -45,6 +45,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class DataTieringManager {
   private static final Logger LOG = LoggerFactory.getLogger(DataTieringManager.class);
+  public static final String DATA_TIERING_ENABLED_KEY = "hbase.hstore.datatiering.enable";
+  public static final boolean DEFAULT_DATA_TIERING_ENABLED = false; // disabled by default
   public static final String DATATIERING_KEY = "hbase.hstore.datatiering.type";
   public static final String DATATIERING_HOT_DATA_AGE_KEY =
     "hbase.hstore.datatiering.hot.age.millis";
@@ -61,25 +63,25 @@ public class DataTieringManager {
    * Initializes the DataTieringManager instance with the provided map of online regions.
    * @param onlineRegions A map containing online regions.
    */
-  public static synchronized void instantiate(Map<String, HRegion> onlineRegions) {
-    if (instance == null) {
-      instance = new DataTieringManager(onlineRegions);
-      LOG.info("DataTieringManager instantiated successfully.");
+  public static synchronized void instantiate(Configuration conf,
+    Map<String, HRegion> onlineRegions) {
+    if (isDataTieringFeatureEnabled(conf)) {
+      if (instance == null) {
+        instance = new DataTieringManager(onlineRegions);
+        LOG.info("DataTieringManager instantiated successfully.");
+      } else {
+        LOG.warn("DataTieringManager is already instantiated.");
+      }
     } else {
-      LOG.warn("DataTieringManager is already instantiated.");
+      LOG.info("Data-Tiering feature is not enabled.");
     }
   }
 
   /**
    * Retrieves the instance of DataTieringManager.
    * @return The instance of DataTieringManager.
-   * @throws IllegalStateException if DataTieringManager has not been instantiated.
    */
   public static synchronized DataTieringManager getInstance() {
-    if (instance == null) {
-      throw new IllegalStateException(
-        "DataTieringManager has not been instantiated. Call instantiate() first.");
-    }
     return instance;
   }
 
@@ -307,5 +309,10 @@ public class DataTieringManager {
       }
     }
     return coldFiles;
+  }
+
+  public static boolean isDataTieringFeatureEnabled(Configuration conf) {
+    return conf.getBoolean(DataTieringManager.DATA_TIERING_ENABLED_KEY,
+      DataTieringManager.DEFAULT_DATA_TIERING_ENABLED);
   }
 }
