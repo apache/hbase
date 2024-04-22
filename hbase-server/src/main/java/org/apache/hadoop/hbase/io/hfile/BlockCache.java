@@ -199,11 +199,12 @@ public interface BlockCache extends Iterable<CachedBlock>, ConfigurationObserver
    * overridden by all implementing classes. In such cases, the returned Optional will be empty. For
    * subclasses implementing this logic, the returned Optional would contain the boolean value
    * reflecting if the passed file should indeed be cached.
-   * @param fileName to check if it should be cached.
+   * @param hFileInfo Information about the file to check if it should be cached.
+   * @param conf      The configuration object to use for determining caching behavior.
    * @return empty optional if this method is not supported, otherwise the returned optional
    *         contains the boolean value informing if the file should be cached.
    */
-  default Optional<Boolean> shouldCacheFile(String fileName) {
+  default Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
     return Optional.empty();
   }
 
