@@ -23,6 +23,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -505,6 +506,8 @@ public class RemoteHTable implements Table {
   class Scanner implements ResultScanner {
 
     String uri;
+    private Result[] cachedResults;
+    private int nextCachedResultsRow = 0;
 
     public Scanner(Scan scan) throws IOException {
       ScannerModel model;
@@ -540,11 +543,8 @@ public class RemoteHTable implements Table {
       throw new IOException("scan request timed out");
     }
 
-    @Override
-    public Result[] next(int nbRows) throws IOException {
+    public Result[] nextBatch() throws IOException {
       StringBuilder sb = new StringBuilder(uri);
-      sb.append("?n=");
-      sb.append(nbRows);
       for (int i = 0; i < maxRetries; i++) {
         Response response = client.get(sb.toString(), Constants.MIMETYPE_PROTOBUF);
         int code = response.getCode();
@@ -570,13 +570,31 @@ public class RemoteHTable implements Table {
       throw new IOException("scanner.next request timed out");
     }
 
+    private boolean updateCachedResults() throws IOException {
+      if (cachedResults == null || nextCachedResultsRow >= cachedResults.length) {
+        nextCachedResultsRow = 0;
+        cachedResults = nextBatch();
+      }
+      return !(cachedResults == null || cachedResults.length < 1);
+    }
+
     @Override
-    public Result next() throws IOException {
-      Result[] results = next(1);
-      if (results == null || results.length < 1) {
+    public Result[] next(int nbRows) throws IOException {
+      if (!updateCachedResults()) {
         return null;
       }
-      return results[0];
+      int endIndex = Math.min(cachedResults.length, nextCachedResultsRow + nbRows);
+      Result[] chunk = Arrays.copyOfRange(cachedResults, nextCachedResultsRow, endIndex);
+      nextCachedResultsRow = endIndex;
+      return chunk;
+    }
+
+    @Override
+    public Result next() throws IOException {
+      if (!updateCachedResults()) {
+        return null;
+      }
+      return cachedResults[nextCachedResultsRow++];
     }
 
     class Iter implements Iterator<Result> {
