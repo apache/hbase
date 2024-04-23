@@ -64,7 +64,7 @@ public class TestMetaRegionLocationCache {
     TEST_UTIL.startMiniCluster(3);
     HBaseTestingUtility.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
     REGISTRY =
-      ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration(), User.getCurrent());
+      ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
     RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, REGISTRY);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
   }

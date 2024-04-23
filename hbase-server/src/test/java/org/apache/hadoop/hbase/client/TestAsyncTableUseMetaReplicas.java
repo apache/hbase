@@ -96,7 +96,7 @@ public class TestAsyncTableUseMetaReplicas {
     UTIL.startMiniCluster(3);
     HBaseTestingUtility.setReplicas(UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
     try (ConnectionRegistry registry =
-      ConnectionRegistryFactory.getRegistry(conf, User.getCurrent())) {
+      ConnectionRegistryFactory.create(conf, User.getCurrent())) {
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(UTIL, registry);
     }
     try (Table table = UTIL.createTable(TABLE_NAME, FAMILY)) {

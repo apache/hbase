@@ -351,7 +351,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
     try {
       if (registry == null) {
-        this.registry = ConnectionRegistryFactory.getRegistry(conf, user);
+        this.registry = ConnectionRegistryFactory.create(conf, user);
       } else {
         this.registry = registry;
       }

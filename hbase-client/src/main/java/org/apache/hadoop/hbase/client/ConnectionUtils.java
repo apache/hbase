@@ -143,8 +143,8 @@ public final class ConnectionUtils {
    */
   static class MasterlessConnection extends ConnectionImplementation {
     MasterlessConnection(Configuration conf, ExecutorService pool, User user,
-      Map<String, byte[]> requestAttributes) throws IOException {
-      super(conf, pool, user, requestAttributes);
+      ConnectionRegistry registry, Map<String, byte[]> requestAttributes) throws IOException {
+      super(conf, pool, user, registry, requestAttributes);
     }
 
     @Override
