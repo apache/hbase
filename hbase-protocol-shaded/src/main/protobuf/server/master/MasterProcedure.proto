@@ -29,6 +29,7 @@ import "rpc/RPC.proto";
 import "server/Snapshot.proto";
 import "server/master/Replication.proto";
 import "server/master/RegionServerStatus.proto";
+import "server/ErrorHandling.proto";
 
 // ============================================================================
 //  WARNING - Compatibility rules
@@ -255,6 +256,7 @@ message SnapshotVerifyProcedureStateData {
   required RegionInfo region = 2;
   optional ServerName target_server = 3;
   optional ServerRemoteProcedureState state = 4;
+  optional ForeignExceptionMessage error = 5;
 }
 
 message SnapshotVerifyParameter {
@@ -524,6 +526,7 @@ message RefreshPeerStateData {
     /** We need multiple stages for sync replication state transition **/
   optional uint32 stage = 4 [default = 0];
   optional ServerRemoteProcedureState state = 5;
+  optional ForeignExceptionMessage error = 6;
 }
 
 message RefreshPeerParameter {
@@ -616,6 +619,7 @@ message SyncReplicationReplayWALRemoteStateData {
   repeated string wal = 2;
   required ServerName target_server = 3;
   optional ServerRemoteProcedureState state = 4;
+  optional ForeignExceptionMessage error = 5;
 }
 
 message ReplaySyncReplicationWALParameter {
@@ -693,6 +697,7 @@ message SwitchRpcThrottleRemoteStateData {
   required ServerName target_server = 1;
   required bool rpc_throttle_enabled = 2;
   optional ServerRemoteProcedureState state = 3;
+  optional ForeignExceptionMessage error = 4;
 }
 
 message SplitWALParameter {
@@ -711,6 +716,7 @@ message SplitWALRemoteData{
   required ServerName crashed_server=2;
   required ServerName worker = 3;
   optional ServerRemoteProcedureState state = 4;
+  optional ForeignExceptionMessage error = 5;
 }
 
 enum SplitWALState{
@@ -729,6 +735,7 @@ message ClaimReplicationQueueRemoteStateData {
   required ServerName target_server = 3;
   optional ServerName source_server = 4;
   optional ServerRemoteProcedureState state = 5;
+  optional ForeignExceptionMessage error = 6;
 }
 
 message ClaimReplicationQueueRemoteParameter {

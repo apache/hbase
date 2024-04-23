@@ -29,11 +29,13 @@ import org.apache.hadoop.hbase.master.procedure.ServerRemoteProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.replication.regionserver.ReplaySyncReplicationWALCallable;
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ReplaySyncReplicationWALParameter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SyncReplicationReplayWALRemoteStateData;
 
@@ -127,6 +129,11 @@ public class SyncReplicationReplayWALRemoteProcedure extends ServerRemoteProcedu
       SyncReplicationReplayWALRemoteStateData.newBuilder().setPeerId(peerId)
         .setTargetServer(ProtobufUtil.toServerName(targetServer)).setState(state);
     wals.stream().forEach(builder::addWal);
+    if (this.remoteError != null) {
+      ErrorHandlingProtos.ForeignExceptionMessage fem =
+        ForeignExceptionUtil.toProtoForeignException(remoteError);
+      builder.setError(fem);
+    }
     serializer.serialize(builder.build());
   }
 
@@ -139,6 +146,9 @@ public class SyncReplicationReplayWALRemoteProcedure extends ServerRemoteProcedu
     data.getWalList().forEach(wals::add);
     targetServer = ProtobufUtil.toServerName(data.getTargetServer());
     state = data.getState();
+    if (data.hasError()) {
+      this.remoteError = ForeignExceptionUtil.toException(data.getError());
+    }
   }
 
   @Override
