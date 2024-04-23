@@ -262,7 +262,7 @@ public class TestDataTieringManager {
    */
   @Test
   public void testBlockEvictions() throws Exception {
-    long capacitySize = 64 * 1024;
+    long capacitySize = 40 * 1024;
     int writeThreads = 3;
     int writerQLen = 64;
     int[] bucketSizes = new int[] { 8 * 1024 + 1024 };
@@ -286,8 +286,7 @@ public class TestDataTieringManager {
     for (BlockCacheKey key : cacheKeys) {
       bucketCache.cacheBlock(key, blocks[blocksIter++].getBlock());
       // Ensure that the block is persisted to the file.
-      Waiter.waitFor(defaultConf, 1000000, 100,
-        () -> (bucketCache.getBackingMap().containsKey(key)));
+      Waiter.waitFor(defaultConf, 10000, 100, () -> (bucketCache.getBackingMap().containsKey(key)));
     }
 
     // Verify that the bucket cache contains 3 blocks.
@@ -298,7 +297,7 @@ public class TestDataTieringManager {
     CacheTestUtils.HFileBlockPair[] newBlock = CacheTestUtils.generateHFileBlocks(8192, 1);
 
     bucketCache.cacheBlock(newKey, newBlock[0].getBlock());
-    Waiter.waitFor(defaultConf, 1000000, 100,
+    Waiter.waitFor(defaultConf, 10000, 100,
       () -> (bucketCache.getBackingMap().containsKey(newKey)));
 
     // Verify that the bucket cache now contains 2 hot blocks blocks only.
@@ -313,7 +312,7 @@ public class TestDataTieringManager {
    */
   @Test
   public void testBlockEvictionsAllColdBlocks() throws Exception {
-    long capacitySize = 64 * 1024;
+    long capacitySize = 40 * 1024;
     int writeThreads = 3;
     int writerQLen = 64;
     int[] bucketSizes = new int[] { 8 * 1024 + 1024 };
@@ -337,8 +336,7 @@ public class TestDataTieringManager {
     for (BlockCacheKey key : cacheKeys) {
       bucketCache.cacheBlock(key, blocks[blocksIter++].getBlock());
       // Ensure that the block is persisted to the file.
-      Waiter.waitFor(defaultConf, 1000000, 100,
-        () -> (bucketCache.getBackingMap().containsKey(key)));
+      Waiter.waitFor(defaultConf, 10000, 100, () -> (bucketCache.getBackingMap().containsKey(key)));
     }
 
     // Verify that the bucket cache contains 3 blocks.
@@ -349,7 +347,7 @@ public class TestDataTieringManager {
     CacheTestUtils.HFileBlockPair[] newBlock = CacheTestUtils.generateHFileBlocks(8192, 1);
 
     bucketCache.cacheBlock(newKey, newBlock[0].getBlock());
-    Waiter.waitFor(defaultConf, 1000000, 100,
+    Waiter.waitFor(defaultConf, 10000, 100,
       () -> (bucketCache.getBackingMap().containsKey(newKey)));
 
     // Verify that the bucket cache now contains 1 cold block and a newly added hot block.
@@ -361,7 +359,7 @@ public class TestDataTieringManager {
    */
   @Test
   public void testBlockEvictionsHotBlocks() throws Exception {
-    long capacitySize = 64 * 1024;
+    long capacitySize = 40 * 1024;
     int writeThreads = 3;
     int writerQLen = 64;
     int[] bucketSizes = new int[] { 8 * 1024 + 1024 };
@@ -385,8 +383,7 @@ public class TestDataTieringManager {
     for (BlockCacheKey key : cacheKeys) {
       bucketCache.cacheBlock(key, blocks[blocksIter++].getBlock());
       // Ensure that the block is persisted to the file.
-      Waiter.waitFor(defaultConf, 1000000, 100,
-        () -> (bucketCache.getBackingMap().containsKey(key)));
+      Waiter.waitFor(defaultConf, 10000, 100, () -> (bucketCache.getBackingMap().containsKey(key)));
     }
 
     // Verify that the bucket cache contains 3 blocks.
@@ -397,7 +394,7 @@ public class TestDataTieringManager {
     CacheTestUtils.HFileBlockPair[] newBlock = CacheTestUtils.generateHFileBlocks(8192, 1);
 
     bucketCache.cacheBlock(newKey, newBlock[0].getBlock());
-    Waiter.waitFor(defaultConf, 1000000, 100,
+    Waiter.waitFor(defaultConf, 10000, 100,
       () -> (bucketCache.getBackingMap().containsKey(newKey)));
 
     // Verify that the bucket cache now contains 2 hot blocks.
