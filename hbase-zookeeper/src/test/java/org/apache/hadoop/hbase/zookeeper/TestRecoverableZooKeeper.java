@@ -76,7 +76,7 @@ public class TestRecoverableZooKeeper {
     Configuration conf = TEST_UTIL.getConfiguration();
     ZKWatcher zkw = new ZKWatcher(conf, "testSetDataVersionMismatchInLoop", abortable, true);
     String ensemble = ZKConfig.getZKQuorumServersString(conf);
-    RecoverableZooKeeper rzk = RecoverableZooKeeper.connect(conf, ensemble, zkw);
+    RecoverableZooKeeper rzk = RecoverableZooKeeper.connect(conf, ensemble, zkw, null, null);
     rzk.create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     rzk.setData(znode, "OPENING".getBytes(), 0);
     Field zkField = RecoverableZooKeeper.class.getDeclaredField("zk");
