@@ -82,6 +82,8 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
   protected ServerName targetServer;
   protected boolean dispatched;
   protected boolean succ;
+  //after remoteProcedureDone we require error field to decide the next state
+  protected Throwable remoteError;
   protected MasterProcedureProtos.ServerRemoteProcedureState state =
     MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH;
 
@@ -90,11 +92,12 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
   @Override
   protected synchronized Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
     throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
-    if (dispatched) {
+    if (state != MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH) {
+      complete(env, this.remoteError);
       if (succ) {
         return null;
       }
-      dispatched = false;
+      state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH;;
     }
     try {
       env.getRemoteDispatcher().addOperationToNode(targetServer, this);
@@ -130,7 +133,7 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
   @Override
   public synchronized void remoteOperationFailed(MasterProcedureEnv env,
     RemoteProcedureException error) {
-    state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_SERVER_CRASH;
+    state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_REPORT_FAILED;
     remoteOperationDone(env, error);
   }
 
@@ -144,10 +147,9 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
         getProcId());
       return;
     }
+    this.remoteError = error;
     // below persistence is added so that if report goes to last active master, it throws exception
     env.getMasterServices().getMasterProcedureExecutor().getStore().update(this);
-
-    complete(env, error);
     event.wake(env.getProcedureScheduler());
     event = null;
   }

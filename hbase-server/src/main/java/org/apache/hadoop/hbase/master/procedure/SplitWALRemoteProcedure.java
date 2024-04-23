@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.regionserver.SplitWALCallable;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos;
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -71,6 +73,11 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
       MasterProcedureProtos.SplitWALRemoteData.newBuilder();
     builder.setWalPath(walPath).setWorker(ProtobufUtil.toServerName(targetServer))
       .setCrashedServer(ProtobufUtil.toServerName(crashedServer)).setState(state);
+    if(this.remoteError != null){
+      ErrorHandlingProtos.ForeignExceptionMessage fem = ForeignExceptionUtil.toProtoForeignException(
+        remoteError);
+      builder.setError(fem);
+    }
     serializer.serialize(builder.build());
   }
 
@@ -82,6 +89,9 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
     targetServer = ProtobufUtil.toServerName(data.getWorker());
     crashedServer = ProtobufUtil.toServerName(data.getCrashedServer());
     state = data.getState();
+    if(data.hasError()) {
+      this.remoteError = ForeignExceptionUtil.toException(data.getError());
+    }
   }
 
   @Override

@@ -28,6 +28,8 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.replication.regionserver.RefreshPeerCallable;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos;
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -149,8 +151,14 @@ public class RefreshPeerProcedure extends ServerRemoteProcedure
 
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    RefreshPeerStateData.Builder builder = RefreshPeerStateData.newBuilder();
+    if(this.remoteError != null){
+      ErrorHandlingProtos.ForeignExceptionMessage fem = ForeignExceptionUtil.toProtoForeignException(
+        remoteError);
+      builder.setError(fem);
+    }
     serializer.serialize(
-      RefreshPeerStateData.newBuilder().setPeerId(peerId).setType(toPeerModificationType(type))
+      builder.setPeerId(peerId).setType(toPeerModificationType(type))
         .setTargetServer(ProtobufUtil.toServerName(targetServer)).setStage(stage).setState(state)
         .build());
   }
@@ -163,5 +171,8 @@ public class RefreshPeerProcedure extends ServerRemoteProcedure
     targetServer = ProtobufUtil.toServerName(data.getTargetServer());
     stage = data.getStage();
     state = data.getState();
+    if(data.hasError()) {
+      this.remoteError = ForeignExceptionUtil.toException(data.getError());
+    }
   }
 }

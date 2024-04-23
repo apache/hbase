@@ -23,6 +23,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.replication.regionserver.SwitchRpcThrottleRemoteCallable;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos;
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,9 +61,15 @@ public class SwitchRpcThrottleRemoteProcedure extends ServerRemoteProcedure
 
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    SwitchRpcThrottleRemoteStateData.newBuilder()
-      .setTargetServer(ProtobufUtil.toServerName(targetServer))
+    SwitchRpcThrottleRemoteStateData.Builder builder = SwitchRpcThrottleRemoteStateData.newBuilder();
+    builder.setTargetServer(ProtobufUtil.toServerName(targetServer))
       .setRpcThrottleEnabled(rpcThrottleEnabled).setState(state).build();
+    if(this.remoteError != null){
+      ErrorHandlingProtos.ForeignExceptionMessage fem = ForeignExceptionUtil.toProtoForeignException(
+        remoteError);
+      builder.setError(fem);
+    }
+    serializer.serialize(builder.build());
   }
 
   @Override
@@ -71,6 +79,9 @@ public class SwitchRpcThrottleRemoteProcedure extends ServerRemoteProcedure
     targetServer = ProtobufUtil.toServerName(data.getTargetServer());
     rpcThrottleEnabled = data.getRpcThrottleEnabled();
     state = data.getState();
+    if(data.hasError()) {
+      this.remoteError = ForeignExceptionUtil.toException(data.getError());
+    }
   }
 
   @Override

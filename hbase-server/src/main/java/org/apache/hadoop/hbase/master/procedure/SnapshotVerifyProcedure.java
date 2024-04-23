@@ -31,7 +31,9 @@ import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
 import org.apache.hadoop.hbase.regionserver.SnapshotVerifyCallable;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -181,6 +183,11 @@ public class SnapshotVerifyProcedure extends ServerRemoteProcedure
     if (targetServer != null) {
       builder.setTargetServer(ProtobufUtil.toServerName(targetServer));
     }
+    if(this.remoteError != null){
+      ErrorHandlingProtos.ForeignExceptionMessage fem = ForeignExceptionUtil.toProtoForeignException(
+        remoteError);
+      builder.setError(fem);
+    }
     serializer.serialize(builder.build());
   }
 
@@ -193,6 +200,9 @@ public class SnapshotVerifyProcedure extends ServerRemoteProcedure
     this.state = data.getState();
     if (data.hasTargetServer()) {
       this.targetServer = ProtobufUtil.toServerName(data.getTargetServer());
+    }
+    if(data.hasError()) {
+      this.remoteError = ForeignExceptionUtil.toException(data.getError());
     }
   }
 
