@@ -56,7 +56,7 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
     TestAsyncAdminBase.setUpBeforeClass();
     HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
     try (ConnectionRegistry registry =
-      ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration(), User.getCurrent())) {
+      ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent())) {
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, registry);
     }
   }
