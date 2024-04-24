@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -46,11 +47,11 @@ import org.mockito.MockedStatic;
  * Make sure we can successfully parse the URI component
  */
 @Category({ ClientTests.class, SmallTests.class })
-public class TestConnectionRegistryCreatorUriParsing {
+public class TestConnectionRegistryURIFactoryUriParsing {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConnectionRegistryCreatorUriParsing.class);
+    HBaseClassTestRule.forClass(TestConnectionRegistryURIFactoryUriParsing.class);
 
   private Configuration conf;
 
@@ -153,5 +154,33 @@ public class TestConnectionRegistryCreatorUriParsing {
     assertEquals(RpcConnectionRegistry.class, clazzCaptor.getValue());
     assertSame(conf, argsCaptor.getValue()[0]);
     assertSame(user, argsCaptor.getValue()[1]);
+  }
+
+  @Test
+  public void testParseRpcQueries() throws Exception {
+    ConnectionRegistryFactory.create(new URI(
+      "hbase+rpc://server1:123?hedged.fanout=5&initial_refresh_delay_secs=33&refresh_interval_secs=123&min_secs_between_refreshes=11"),
+      conf, user);
+    assertEquals(1, mockedRpcRegistry.constructed().size());
+    assertSame(user, args.get(1));
+    Configuration conf = (Configuration) args.get(0);
+    assertEquals("5", conf.get(RpcConnectionRegistry.HEDGED_REQS_FANOUT_KEY));
+    assertEquals("33", conf.get(RpcConnectionRegistry.INITIAL_REFRESH_DELAY_SECS));
+    assertEquals("123", conf.get(RpcConnectionRegistry.PERIODIC_REFRESH_INTERVAL_SECS));
+    assertEquals("11", conf.get(RpcConnectionRegistry.MIN_SECS_BETWEEN_REFRESHES));
+  }
+
+  @Test
+  public void testParseZkQueries() throws Exception {
+    ConnectionRegistryFactory.create(new URI(
+      "hbase+zk://server1:2181/hbase?session.timeout.ms=3500&recovery.retry=1001&recovery.retry.interval.ms=1234&keep-alive.time.ms=5432"),
+      conf, user);
+    assertEquals(1, mockedZkRegistry.constructed().size());
+    assertSame(user, args.get(1));
+    Configuration conf = (Configuration) args.get(0);
+    assertEquals("3500", conf.get(HConstants.ZK_SESSION_TIMEOUT));
+    assertEquals("1001", conf.get(ReadOnlyZKClient.RECOVERY_RETRY));
+    assertEquals("1234", conf.get(ReadOnlyZKClient.RECOVERY_RETRY_INTERVAL_MILLIS));
+    assertEquals("5432", conf.get(ReadOnlyZKClient.KEEPALIVE_MILLIS));
   }
 }

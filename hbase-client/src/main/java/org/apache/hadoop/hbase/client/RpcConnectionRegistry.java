@@ -50,8 +50,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetBoots
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
 
+  private static final String CONFIG_PREFIX = "hbase.client.bootstrap.";
+
   /** Configuration key that controls the fan out of requests **/
-  public static final String HEDGED_REQS_FANOUT_KEY = "hbase.client.bootstrap.hedged.fanout";
+  public static final String HEDGED_REQS_FANOUT_KEY =
+    CONFIG_PREFIX + RpcConnectionRegistryURIFactory.HEDGED_REQS_FANOUT_KEY;
 
   /**
    * As end users could configure any nodes in a cluster as the initial bootstrap nodes, it is
@@ -62,15 +65,15 @@ public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
    * The default value for initial refresh delay is 1/10 of periodic refresh interval.
    */
   public static final String INITIAL_REFRESH_DELAY_SECS =
-    "hbase.client.bootstrap.initial_refresh_delay_secs";
+    CONFIG_PREFIX + RpcConnectionRegistryURIFactory.INITIAL_REFRESH_DELAY_SECS;
 
   public static final String PERIODIC_REFRESH_INTERVAL_SECS =
-    "hbase.client.bootstrap.refresh_interval_secs";
+    CONFIG_PREFIX + RpcConnectionRegistryURIFactory.PERIODIC_REFRESH_INTERVAL_SECS;
 
   public static final String MIN_SECS_BETWEEN_REFRESHES =
-    "hbase.client.bootstrap.min_secs_between_refreshes";
+    CONFIG_PREFIX + RpcConnectionRegistryURIFactory.MIN_SECS_BETWEEN_REFRESHES;
 
-  public static final String BOOTSTRAP_NODES = "hbase.client.bootstrap.servers";
+  public static final String BOOTSTRAP_NODES = CONFIG_PREFIX + "servers";
 
   private static final char ADDRS_CONF_SEPARATOR = ',';
 

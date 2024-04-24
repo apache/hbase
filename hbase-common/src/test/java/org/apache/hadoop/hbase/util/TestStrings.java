@@ -17,20 +17,25 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
 
 @Category({ SmallTests.class })
 public class TestStrings {
-
-  @Rule
-  public final ExpectedException thrown = ExpectedException.none();
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -38,30 +43,45 @@ public class TestStrings {
 
   @Test
   public void testAppendKeyValue() {
-    Assert.assertEquals("foo, bar=baz",
+    assertEquals("foo, bar=baz",
       Strings.appendKeyValue(new StringBuilder("foo"), "bar", "baz").toString());
-    Assert.assertEquals("bar->baz",
+    assertEquals("bar->baz",
       Strings.appendKeyValue(new StringBuilder(), "bar", "baz", "->", "| ").toString());
-    Assert.assertEquals("foo, bar=baz",
+    assertEquals("foo, bar=baz",
       Strings.appendKeyValue(new StringBuilder("foo"), "bar", "baz", "=", ", ").toString());
-    Assert.assertEquals("foo| bar->baz",
+    assertEquals("foo| bar->baz",
       Strings.appendKeyValue(new StringBuilder("foo"), "bar", "baz", "->", "| ").toString());
   }
 
   @Test
   public void testDomainNamePointerToHostName() {
-    Assert.assertNull(Strings.domainNamePointerToHostName(null));
-    Assert.assertEquals("foo", Strings.domainNamePointerToHostName("foo"));
-    Assert.assertEquals("foo.com", Strings.domainNamePointerToHostName("foo.com"));
-    Assert.assertEquals("foo.bar.com", Strings.domainNamePointerToHostName("foo.bar.com"));
-    Assert.assertEquals("foo.bar.com", Strings.domainNamePointerToHostName("foo.bar.com."));
+    assertNull(Strings.domainNamePointerToHostName(null));
+    assertEquals("foo", Strings.domainNamePointerToHostName("foo"));
+    assertEquals("foo.com", Strings.domainNamePointerToHostName("foo.com"));
+    assertEquals("foo.bar.com", Strings.domainNamePointerToHostName("foo.bar.com"));
+    assertEquals("foo.bar.com", Strings.domainNamePointerToHostName("foo.bar.com."));
   }
 
   @Test
   public void testPadFront() {
-    Assert.assertEquals("ddfoo", Strings.padFront("foo", 'd', 5));
+    assertEquals("ddfoo", Strings.padFront("foo", 'd', 5));
+    assertThrows(IllegalArgumentException.class, () -> Strings.padFront("foo", 'd', 1));
+  }
 
-    thrown.expect(IllegalArgumentException.class);
-    Strings.padFront("foo", 'd', 1);
+  @Test
+  public void testParseURIQueries() throws UnsupportedEncodingException, URISyntaxException {
+    Map<String,
+      String> queries = Strings.parseURIQueries(new URI("hbase+rpc://server01:123?a=1&b=2&a=3&"
+        + URLEncoder.encode("& ?", StandardCharsets.UTF_8.name()) + "=&"
+        + URLEncoder.encode("===", StandardCharsets.UTF_8.name())));
+    assertEquals("1", queries.get("a"));
+    assertEquals("2", queries.get("b"));
+    assertEquals("", queries.get("& ?"));
+    assertEquals("", queries.get("==="));
+    assertEquals(4, queries.size());
+
+    assertTrue(Strings.parseURIQueries(new URI("hbase+zk://zk1:2181/")).isEmpty());
+    assertTrue(Strings.parseURIQueries(new URI("hbase+zk://zk1:2181/?")).isEmpty());
+    assertTrue(Strings.parseURIQueries(new URI("hbase+zk://zk1:2181/?#anchor")).isEmpty());
   }
 }
