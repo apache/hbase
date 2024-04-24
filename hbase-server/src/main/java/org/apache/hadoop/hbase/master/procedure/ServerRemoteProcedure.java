@@ -130,7 +130,7 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
   @Override
   public synchronized void remoteOperationFailed(MasterProcedureEnv env,
     RemoteProcedureException error) {
-    state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_SERVER_CRASH;
+    state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_REPORT_FAILED;
     remoteOperationDone(env, error);
   }
 
@@ -144,10 +144,9 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
         getProcId());
       return;
     }
+    complete(env, error);
     // below persistence is added so that if report goes to last active master, it throws exception
     env.getMasterServices().getMasterProcedureExecutor().getStore().update(this);
-
-    complete(env, error);
     event.wake(env.getProcedureScheduler());
     event = null;
   }
