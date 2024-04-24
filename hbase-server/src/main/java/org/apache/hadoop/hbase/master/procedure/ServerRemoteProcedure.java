@@ -82,7 +82,7 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
   protected ServerName targetServer;
   protected boolean dispatched;
   protected boolean succ;
-  //after remoteProcedureDone we require error field to decide the next state
+  // after remoteProcedureDone we require error field to decide the next state
   protected Throwable remoteError;
   protected MasterProcedureProtos.ServerRemoteProcedureState state =
     MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH;
@@ -92,12 +92,15 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
   @Override
   protected synchronized Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
     throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
-    if (state != MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH) {
+    if (
+      state != MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH
+    ) {
       complete(env, this.remoteError);
       if (succ) {
         return null;
       }
-      state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH;;
+      state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH;
+      ;
     }
     try {
       env.getRemoteDispatcher().addOperationToNode(targetServer, this);

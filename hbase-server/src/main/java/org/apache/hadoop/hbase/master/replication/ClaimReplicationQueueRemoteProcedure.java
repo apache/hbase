@@ -35,13 +35,13 @@ import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProced
 import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.regionserver.ClaimReplicationQueueCallable;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ClaimReplicationQueueRemoteParameter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ClaimReplicationQueueRemoteStateData;
 
@@ -148,9 +148,9 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
       .newBuilder().setCrashedServer(ProtobufUtil.toServerName(queueId.getServerName()))
       .setQueue(queueId.getPeerId()).setTargetServer(ProtobufUtil.toServerName(targetServer))
       .setState(state);
-    if(this.remoteError != null){
-      ErrorHandlingProtos.ForeignExceptionMessage fem = ForeignExceptionUtil.toProtoForeignException(
-        remoteError);
+    if (this.remoteError != null) {
+      ErrorHandlingProtos.ForeignExceptionMessage fem =
+        ForeignExceptionUtil.toProtoForeignException(remoteError);
       builder.setError(fem);
     }
     queueId.getSourceServerName()
@@ -172,7 +172,7 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
     } else {
       queueId = new ReplicationQueueId(crashedServer, queue);
     }
-    if(data.hasError()) {
+    if (data.hasError()) {
       this.remoteError = ForeignExceptionUtil.toException(data.getError());
     }
   }
