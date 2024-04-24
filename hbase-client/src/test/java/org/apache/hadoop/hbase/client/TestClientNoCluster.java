@@ -330,8 +330,8 @@ public class TestClientNoCluster extends Configured implements Tool {
     final ClientService.BlockingInterface stub;
 
     RegionServerStoppedOnScannerOpenConnection(Configuration conf, ExecutorService pool, User user,
-      Map<String, byte[]> requestAttributes) throws IOException {
-      super(conf, pool, user, requestAttributes);
+      ConnectionRegistry registry, Map<String, byte[]> requestAttributes) throws IOException {
+      super(conf, pool, user, registry, requestAttributes);
       // Mock up my stub so open scanner returns a scanner id and then on next, we throw
       // exceptions for three times and then after that, we return no more to scan.
       this.stub = Mockito.mock(ClientService.BlockingInterface.class);
@@ -361,8 +361,8 @@ public class TestClientNoCluster extends Configured implements Tool {
     final ClientService.BlockingInterface stub;
 
     RpcTimeoutConnection(Configuration conf, ExecutorService pool, User user,
-      Map<String, byte[]> requestAttributes) throws IOException {
-      super(conf, pool, user, requestAttributes);
+      ConnectionRegistry registry, Map<String, byte[]> requestAttributes) throws IOException {
+      super(conf, pool, user, registry, requestAttributes);
       // Mock up my stub so an exists call -- which turns into a get -- throws an exception
       this.stub = Mockito.mock(ClientService.BlockingInterface.class);
       try {
@@ -405,8 +405,8 @@ public class TestClientNoCluster extends Configured implements Tool {
     private final Configuration conf;
 
     ManyServersManyRegionsConnection(Configuration conf, ExecutorService pool, User user,
-      Map<String, byte[]> requestAttributes) throws IOException {
-      super(conf, pool, user, requestAttributes);
+      ConnectionRegistry registry, Map<String, byte[]> requestAttributes) throws IOException {
+      super(conf, pool, user, registry, requestAttributes);
       int serverCount = conf.getInt("hbase.test.servers", 10);
       this.serversByClient = new HashMap<>(serverCount);
       this.meta =

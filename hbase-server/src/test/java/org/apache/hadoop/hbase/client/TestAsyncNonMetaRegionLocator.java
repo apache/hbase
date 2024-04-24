@@ -128,7 +128,7 @@ public class TestAsyncNonMetaRegionLocator {
     // Enable meta replica LoadBalance mode for this connection.
     c.set(RegionLocator.LOCATOR_META_REPLICAS_MODE, metaReplicaMode.toString());
     ConnectionRegistry registry =
-      ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration(), User.getCurrent());
+      ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
     conn = new AsyncConnectionImpl(c, registry, registry.getClusterId().get(), User.getCurrent());
     locator = new AsyncNonMetaRegionLocator(conn);
   }
