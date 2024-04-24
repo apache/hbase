@@ -127,6 +127,13 @@ Published poms now contain runtime dependencies only; build and test time depend
 
 ---
 
+* [HBASE-27224](https://issues.apache.org/jira/browse/HBASE-27224) | *Major* | **HFile tool statistic sampling produces misleading results**
+
+Fixes HFilePrettyPrinter's calculation of min and max size for an HFile so that it will truly be the min and max for the whole file. Previously was based on just a sampling, as with the histograms. Additionally adds a new argument to the tool '-d' which prints detailed range counts for each summary. The range counts give you the exact count of rows/cells that fall within the pre-defined ranges, useful for giving more detailed insight into outliers.
+
+
+---
+
 * [HBASE-27371](https://issues.apache.org/jira/browse/HBASE-27371) | *Major* | **Bump spotbugs version**
 
 Bump spotbugs version from 4.2.2 to 4.7.2. Also bump maven spotbugs plugin version from 4.2.0 to 4.7.2.0.
@@ -153,6 +160,13 @@ By default, when TLS is enabled, we will also enable mutual authentication of ce
 
 In some scenarios, such as the elastic scaling scenario on the cloud, the HBase client may not be able to resolve the hostname of the newly added node. If the network is interconnected, the client can actually access the HBase cluster nodes through ip. However, since the HBase client obtains the Master/RS address info from or the ZK or the meta table, so the Master/RS of the HBase cluster needs to expose the service with ip instead of the hostname. Therefore, We can use hostname by default, but at the same time, we can also provide a config ‘hbase.server.useip.enabled’
 to support whether to use ip for Master/RS service.
+
+
+---
+
+* [HBASE-27381](https://issues.apache.org/jira/browse/HBASE-27381) | *Major* | **Still seeing 'Stuck' in static initialization creating RegionInfo instance**
+
+Static constant UNDEFINED has been removed from public interface RegionInfo. This is a breaking change, but resolves a critical deadlock bug. This constant was never meant to be exposed and has been deprecated since version 2.3.2 with no replacement.
 
 
 ---
@@ -195,6 +209,20 @@ Added \`hbase.cleaner.directory.sorting\` configuration to enable the CleanerCho
 
 ---
 
+* [HBASE-27494](https://issues.apache.org/jira/browse/HBASE-27494) | *Minor* | **Client meta cache clear by exception metrics are missing some cases**
+
+Patch available at https://github.com/apache/hbase/pull/4902
+
+
+---
+
+* [HBASE-27490](https://issues.apache.org/jira/browse/HBASE-27490) | *Major* | **Locating regions for all actions of batch requests can exceed operation timeout**
+
+The first step of submitting a multi request is to resolve all region locations for all actions in the request. If meta is slow, previously it was possible to exceed the configured operation timeout in this phase. Now, the operation timeout will be checked before each region location lookup. Once exceeded, the multi request will be failed but the region locations that had been looked up should remain in the cache (making future requests more likely to succeed).
+
+
+---
+
 * [HBASE-27513](https://issues.apache.org/jira/browse/HBASE-27513) | *Major* | **Modify README.txt to mention how to contribue**
 
 Remove README.txt and replace it with README.md.
@@ -217,6 +245,13 @@ This modifies behaviour of block cache management as follows:
 2) If compactions are enabled, doesn't cache blocks for the refs/link files under split daughters once these regions are opened;
 
 For #1 above, an additional evict\_cache property has been added to the CloseRegionRequest protobuf message. It's default to false. Rolling upgrading cluster would retain the previous behaviour on RSes not yet upgraded.
+
+
+---
+
+* [HBASE-27233](https://issues.apache.org/jira/browse/HBASE-27233) | *Major* | **Read blocks into off-heap if caching is disabled for read**
+
+Using Scan.setCacheBlocks(false) with on-heap LRUBlockCache will now result in significantly less heap allocations for those scans if hbase.server.allocator.pool.enabled is enabled. Previously all allocations went to on-heap if LRUBlockCache was used, but now it will go to the off-heap pool if cache blocks is enabled.
 
 
 ---
@@ -445,6 +480,13 @@ Log the `o.a.h.hbase.executor.EventType` and ProcedureV2 pid in log messages via
 
 ---
 
+* [HBASE-27799](https://issues.apache.org/jira/browse/HBASE-27799) | *Major* | **RpcThrottlingException wait interval message is misleading between 0-1s**
+
+The RpcThrottleException now includes millis in the message
+
+
+---
+
 * [HBASE-27838](https://issues.apache.org/jira/browse/HBASE-27838) | *Minor* | **Update zstd-jni from version 1.5.4-2 -\> 1.5.5-2**
 
 Bump zstd-jni from 1.5.4-2 to 1.5.5-2, which fixed a critical issue on s390x.
@@ -474,21 +516,6 @@ If reading block cost time in milliseconds more than the threshold, a warning wi
 * [HBASE-27798](https://issues.apache.org/jira/browse/HBASE-27798) | *Major* | **Client side should back off based on wait interval in RpcThrottlingException**
 
 When throttling quotas are enabled, clients will now respect the wait interval sent along from the server in the RpcThrottlingException. As a result, in these cases retries will backoff differently from your normally configured pause time/schedule to respect the throttling dictated by the server.
-
-
----
-
-* [HBASE-27657](https://issues.apache.org/jira/browse/HBASE-27657) | *Major* | **Connection and Request Attributes**
-
-It is now possible to send Connection and Request attributes to the server.
-
-Connection attributes are passed in via new method overloads in ConnectionFactory. These attributes are only sent once per connection, during connection handshake. They will remain in memory on the server side for the duration of the connection.
-
-Request attributes can be configured via a new setRequestAttributes on TableBuilder and AsyncTableBuilder. Requests sent through the built table will all send along the configured attributes. Each request sent to a RegionServer will include the request attributes in the header. This differs from existing Operation attributes for Scan (which doesn't accept operation attributes) and Multi (which each operation in a batch has its own attributes).
-
-These new attributes can be retrieved in server side plugins by inspecting RpcServer.getCurrentCall(). The returned RpcCall has a getHeader(), which returns the RequestHeader which has a getAttributeList() containing request attributes. We also added a getConnectionHeader() to RpcCall, which also has a getAttributeList() for getting connection attributes.
-
-Note: This involved addition of a new Map\<String, byte[]\> argument to ConnectionImplementation, AsyncConnectionImpl, NettyRpcClient, and BlockingRpcClient. Users who have custom implementations of these Private and LimitedPrivate classes will need to update their constructors accordingly to match so that reflection continues to work.
 
 
 ---
@@ -636,6 +663,13 @@ Added a new build property -Dversioninfo.version which can be used to influence 
 
 ---
 
+* [HBASE-28319](https://issues.apache.org/jira/browse/HBASE-28319) | *Major* | **Expose DelegatingRpcScheduler as IA.LimitedPrivate**
+
+hbase-server now exposes a DelegatingRpcScheduler. Users who have been using hbase.region.server.rpc.scheduler.factory.class to override the default behavior of the built-in schedulers may find it beneficial to have their implementation extend this new class. This will insulate you from breaking interface changes down the line.
+
+
+---
+
 * [HBASE-28302](https://issues.apache.org/jira/browse/HBASE-28302) | *Major* | **Add tracking of fs read times in ScanMetrics and slow logs**
 
 Adds a new getFsReadTime() to the slow log records, and fsReadTime counter to ScanMetrics. In both cases, this is the cumulative time spent reading blocks from hdfs for the given request. Additionally, a new fsSlowReadsCount jmx metric is added to the sub=IO bean. This is the count of HDFS reads which took longer than hbase.fs.reader.warn.time.ms.
@@ -771,6 +805,37 @@ We will still publish it into maven central.
 * [HBASE-28453](https://issues.apache.org/jira/browse/HBASE-28453) | *Major* | **Support a middle ground between the Average and Fixed interval rate limiters**
 
 FixedIntervalRateLimiter now supports a custom refill interval via hbase.quota.rate.limiter.refill.interval.ms. Users of quotas may wish to change hbase.quota.rate.limiter to FixedIntervalRateLimiter and customize this new setting. It will likely lead to healthier backoffs for clients and more full quota utilization.
+
+
+---
+
+* [HBASE-27657](https://issues.apache.org/jira/browse/HBASE-27657) | *Major* | **Connection and Request Attributes**
+
+It is now possible to send Connection and Request attributes to the server.
+
+Connection attributes are passed in via new method overloads in ConnectionFactory. These attributes are only sent once per connection, during connection handshake. They will remain in memory on the server side for the duration of the connection.
+
+Request attributes can be configured via a new setRequestAttributes on TableBuilder and AsyncTableBuilder. Requests sent through the built table will all send along the configured attributes. Each request sent to a RegionServer will include the request attributes in the header. This differs from existing Operation attributes for Scan (which doesn't accept operation attributes) and Multi (which each operation in a batch has its own attributes).
+
+These new attributes can be retrieved in server side plugins by inspecting RpcServer.getCurrentCall(). The returned RpcCall has a getHeader(), which returns the RequestHeader which has a getAttributeList() containing request attributes. We also added a getConnectionHeader() to RpcCall, which also has a getAttributeList() for getting connection attributes.
+
+Note: This involved addition of a new Map\<String, byte[]\> argument to ConnectionImplementation, AsyncConnectionImpl, NettyRpcClient, and BlockingRpcClient. Users who have custom implementations of these Private and LimitedPrivate classes will need to update their constructors accordingly to match so that reflection continues to work.
+
+
+---
+
+* [HBASE-28457](https://issues.apache.org/jira/browse/HBASE-28457) | *Major* | **Introduce a version field in file based tracker record**
+
+Introduce a 'version' field in file based tracker record, so while downgrading, we will know that we are reading a new version of file tracker file and fail with explicit message instead of failing silently and causing possible data loss.
+
+
+---
+
+* [HBASE-28506](https://issues.apache.org/jira/browse/HBASE-28506) | *Major* | **Remove hbase-compression-xz**
+
+CVE-2024-3094 implicated recent releases of the native liblzma library as a vector for malicious code. While this does not include the LZMA algorithm implementation we use to support XZ compression in hbase-compression-xz, xz-java, how the backdoor was introduced calls into question the trustworthiness and viability of the XZ project. XZ compression provides little to no value over more modern alternatives, like ZStandard, that can also achieve similar compression ratios, and to our knowledge no HBase users of XZ compression exist.
+
+XZ compression support has been deprecated in 2.5 and removed in 2.6 and up.
 
 
 

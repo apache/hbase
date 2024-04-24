@@ -18,7 +18,7 @@
 -->
 # HBASE Changelog
 
-## Release 2.6.0 - Unreleased (as of 2024-03-27)
+## Release 2.6.0 - Unreleased (as of 2024-04-24)
 
 
 
@@ -32,18 +32,20 @@
 | [HBASE-20904](https://issues.apache.org/jira/browse/HBASE-20904) | Prometheus metrics http endpoint for monitoring integration |  Major | metrics, monitoring |
 | [HBASE-27304](https://issues.apache.org/jira/browse/HBASE-27304) | Support using IP to expose master/rs servers for some special scenarios |  Minor | master, regionserver |
 | [HBASE-27314](https://issues.apache.org/jira/browse/HBASE-27314) | Make index block be customized and configured |  Major | . |
+| [HBASE-26809](https://issues.apache.org/jira/browse/HBASE-26809) | Report client backoff time for server overloaded in ConnectionMetrics |  Major | . |
 | [HBASE-27444](https://issues.apache.org/jira/browse/HBASE-27444) | Add tool commands list\_enabled\_tables and list\_disabled\_tables |  Minor | master |
 | [HBASE-27347](https://issues.apache.org/jira/browse/HBASE-27347) | Port FileWatcher from ZK to autodetect keystore/truststore changes in TLS connections |  Major | IPC/RPC, security |
 | [HBASE-27238](https://issues.apache.org/jira/browse/HBASE-27238) | Backport Backup/Restore to 2.x |  Major | backport, backup&restore |
 | [HBASE-26913](https://issues.apache.org/jira/browse/HBASE-26913) | Replication Observability Framework |  Major | regionserver, Replication |
 | [HBASE-27110](https://issues.apache.org/jira/browse/HBASE-27110) | Move replication peer storage from zookeeper to other storage systems |  Major | Replication |
 | [HBASE-27904](https://issues.apache.org/jira/browse/HBASE-27904) | A random data generator tool leveraging bulk load. |  Major | util |
-| [HBASE-27657](https://issues.apache.org/jira/browse/HBASE-27657) | Connection and Request Attributes |  Major | . |
 | [HBASE-26867](https://issues.apache.org/jira/browse/HBASE-26867) | Introduce a FlushProcedure |  Minor | proc-v2 |
 | [HBASE-28168](https://issues.apache.org/jira/browse/HBASE-28168) | Add option in RegionMover.java to isolate one or more regions on the RegionSever |  Minor | . |
 | [HBASE-28064](https://issues.apache.org/jira/browse/HBASE-28064) | Implement truncate\_region command to truncate region directly from FS |  Major | Admin, shell |
 | [HBASE-27784](https://issues.apache.org/jira/browse/HBASE-27784) | support quota user overrides |  Major | . |
 | [HBASE-28216](https://issues.apache.org/jira/browse/HBASE-28216) | HDFS erasure coding support for table data dirs |  Major | . |
+| [HBASE-27657](https://issues.apache.org/jira/browse/HBASE-27657) | Connection and Request Attributes |  Major | . |
+| [HBASE-26192](https://issues.apache.org/jira/browse/HBASE-26192) | Master UI hbck should provide a JSON formatted output option |  Minor | . |
 
 
 ### IMPROVEMENTS:
@@ -63,10 +65,12 @@
 | [HBASE-27342](https://issues.apache.org/jira/browse/HBASE-27342) | Use Hadoop Credentials API to retrieve passwords of TLS key/trust stores |  Major | IPC/RPC, security |
 | [HBASE-27332](https://issues.apache.org/jira/browse/HBASE-27332) | Remove RejectedExecutionHandler for long/short compaction thread pools |  Minor | Compaction |
 | [HBASE-27340](https://issues.apache.org/jira/browse/HBASE-27340) | Artifacts with resolved profiles |  Minor | build, pom |
+| [HBASE-27224](https://issues.apache.org/jira/browse/HBASE-27224) | HFile tool statistic sampling produces misleading results |  Major | . |
 | [HBASE-27346](https://issues.apache.org/jira/browse/HBASE-27346) | Autodetect key/truststore file type from file extension |  Major | security |
 | [HBASE-27361](https://issues.apache.org/jira/browse/HBASE-27361) | Add .flattened-pom.xml to .gitignore |  Major | build |
 | [HBASE-27370](https://issues.apache.org/jira/browse/HBASE-27370) | Avoid decompressing blocks when reading from bucket cache prefetch threads |  Major | . |
 | [HBASE-27280](https://issues.apache.org/jira/browse/HBASE-27280) | Add mutual authentication support to TLS |  Major | . |
+| [HBASE-27391](https://issues.apache.org/jira/browse/HBASE-27391) | Downgrade ERROR log to DEBUG in ConnectionUtils.updateStats |  Major | . |
 | [HBASE-27365](https://issues.apache.org/jira/browse/HBASE-27365) | Minimise block addition failures due to no space in bucket cache writers queue by introducing wait time |  Major | BucketCache |
 | [HBASE-27395](https://issues.apache.org/jira/browse/HBASE-27395) | Adding description to Prometheus metrics |  Minor | metrics |
 | [HBASE-27339](https://issues.apache.org/jira/browse/HBASE-27339) | Improve sasl connection failure log message to include server |  Minor | Client |
@@ -79,17 +83,25 @@
 | [HBASE-27448](https://issues.apache.org/jira/browse/HBASE-27448) | Add an admin method to get replication enabled state |  Major | Admin, Client |
 | [HBASE-27414](https://issues.apache.org/jira/browse/HBASE-27414) | Search order for locations in  HFileLink |  Minor | Performance |
 | [HBASE-27495](https://issues.apache.org/jira/browse/HBASE-27495) | Improve HFileLinkCleaner to validate back reference links ahead the next traverse |  Major | master |
+| [HBASE-27408](https://issues.apache.org/jira/browse/HBASE-27408) | Improve BucketAllocatorException log to always include HFile name |  Major | . |
 | [HBASE-27496](https://issues.apache.org/jira/browse/HBASE-27496) | Optionally limit the amount of plans executed in the Normalizer |  Minor | Normalizer |
 | [HBASE-27506](https://issues.apache.org/jira/browse/HBASE-27506) | Optionally disable sorting directories by size in CleanerChore |  Minor | . |
 | [HBASE-27503](https://issues.apache.org/jira/browse/HBASE-27503) | Support replace \<FILE-PATH\> in GC\_OPTS for ZGC |  Minor | scripts |
 | [HBASE-27512](https://issues.apache.org/jira/browse/HBASE-27512) | Add file \`.git-blame-ignore-revs\` for \`git blame\` |  Trivial | . |
+| [HBASE-27487](https://issues.apache.org/jira/browse/HBASE-27487) | Slow meta can create pathological feedback loop with multigets |  Major | . |
 | [HBASE-27466](https://issues.apache.org/jira/browse/HBASE-27466) | hbase client metrics per user specified identity on hconnections. |  Major | Client |
+| [HBASE-27490](https://issues.apache.org/jira/browse/HBASE-27490) | Locating regions for all actions of batch requests can exceed operation timeout |  Major | . |
 | [HBASE-22924](https://issues.apache.org/jira/browse/HBASE-22924) | GitHUB PR job should use when clause to filter to just PRs. |  Minor | build, community |
+| [HBASE-27491](https://issues.apache.org/jira/browse/HBASE-27491) | AsyncProcess should not clear meta cache for RejectedExecutionException |  Major | . |
 | [HBASE-27435](https://issues.apache.org/jira/browse/HBASE-27435) | Make Prometheus metrics queryable |  Minor | metrics |
 | [HBASE-27459](https://issues.apache.org/jira/browse/HBASE-27459) | Improve our hbase\_docker to be able to build and start standalone clusters other than master branch |  Major | scripts |
 | [HBASE-27530](https://issues.apache.org/jira/browse/HBASE-27530) | Fix comment syntax errors |  Trivial | documentation |
+| [HBASE-27253](https://issues.apache.org/jira/browse/HBASE-27253) | Make slow log configs updatable with configuration observer |  Major | . |
 | [HBASE-27474](https://issues.apache.org/jira/browse/HBASE-27474) | Evict blocks on split/merge; Avoid caching reference/hlinks if compaction is enabled |  Major | . |
+| [HBASE-27540](https://issues.apache.org/jira/browse/HBASE-27540) | Client metrics for success/failure counts. |  Major | Client, metrics |
+| [HBASE-27233](https://issues.apache.org/jira/browse/HBASE-27233) | Read blocks into off-heap if caching is disabled for read |  Major | . |
 | [HBASE-27514](https://issues.apache.org/jira/browse/HBASE-27514) | Move some persistent states from zookeeper to master region |  Major | master, Zookeeper |
+| [HBASE-27531](https://issues.apache.org/jira/browse/HBASE-27531) | AsyncRequestFutureImpl unnecessarily clears meta cache for full server |  Major | . |
 | [HBASE-27565](https://issues.apache.org/jira/browse/HBASE-27565) | Make the initial corePoolSize configurable for ChoreService |  Major | conf |
 | [HBASE-27529](https://issues.apache.org/jira/browse/HBASE-27529) | Provide RS coproc ability to attach WAL extended attributes to mutations at replication sink |  Major | Coprocessors, Replication |
 | [HBASE-27493](https://issues.apache.org/jira/browse/HBASE-27493) | Allow namespace admins to clone snapshots created by them |  Major | snapshots |
@@ -138,6 +150,7 @@
 | [HBASE-27819](https://issues.apache.org/jira/browse/HBASE-27819) | 10k RpcServer.MAX\_REQUEST\_SIZE is not enough in ReplicationDroppedTable related tests |  Major | test |
 | [HBASE-27792](https://issues.apache.org/jira/browse/HBASE-27792) | Guard Master/RS Dump Servlet behind admin walls |  Minor | security, UI |
 | [HBASE-27821](https://issues.apache.org/jira/browse/HBASE-27821) | Split TestFuzzyRowFilterEndToEnd |  Major | test |
+| [HBASE-27799](https://issues.apache.org/jira/browse/HBASE-27799) | RpcThrottlingException wait interval message is misleading between 0-1s |  Major | . |
 | [HBASE-27838](https://issues.apache.org/jira/browse/HBASE-27838) | Update zstd-jni from version 1.5.4-2 -\> 1.5.5-2 |  Minor | io |
 | [HBASE-27844](https://issues.apache.org/jira/browse/HBASE-27844) | changed type names to avoid conflicts with built-in types |  Minor | build |
 | [HBASE-27788](https://issues.apache.org/jira/browse/HBASE-27788) | Skip family comparing when compare cells inner the store |  Major | Performance |
@@ -197,6 +210,7 @@
 | [HBASE-28256](https://issues.apache.org/jira/browse/HBASE-28256) | Enhance ByteBufferUtils.readVLong to read more bytes at a time |  Major | Performance |
 | [HBASE-28306](https://issues.apache.org/jira/browse/HBASE-28306) | Add property to customize Version information |  Major | . |
 | [HBASE-28305](https://issues.apache.org/jira/browse/HBASE-28305) | Add "Uncompressed StoreFileSize" column to the table.jsp |  Minor | UI |
+| [HBASE-28319](https://issues.apache.org/jira/browse/HBASE-28319) | Expose DelegatingRpcScheduler as IA.LimitedPrivate |  Major | . |
 | [HBASE-28271](https://issues.apache.org/jira/browse/HBASE-28271) | Infinite waiting on lock acquisition by snapshot can result in unresponsive master |  Major | . |
 | [HBASE-28302](https://issues.apache.org/jira/browse/HBASE-28302) | Add tracking of fs read times in ScanMetrics and slow logs |  Major | . |
 | [HBASE-28327](https://issues.apache.org/jira/browse/HBASE-28327) | Add remove(String key, Metric metric) method to MetricRegistry interface |  Major | metrics |
@@ -223,6 +237,17 @@
 | [HBASE-28124](https://issues.apache.org/jira/browse/HBASE-28124) | Missing fields in Scan.toJSON |  Major | . |
 | [HBASE-28416](https://issues.apache.org/jira/browse/HBASE-28416) | Remove hbase-examples from hbase-assembly |  Major | . |
 | [HBASE-28453](https://issues.apache.org/jira/browse/HBASE-28453) | Support a middle ground between the Average and Fixed interval rate limiters |  Major | . |
+| [HBASE-28485](https://issues.apache.org/jira/browse/HBASE-28485) | Re-use ZstdDecompressCtx/ZstdCompressCtx for performance |  Major | . |
+| [HBASE-28498](https://issues.apache.org/jira/browse/HBASE-28498) | fix spotless:check errors |  Major | . |
+| [HBASE-28504](https://issues.apache.org/jira/browse/HBASE-28504) | Implement eviction logic for scanners in Rest APIs to prevent scanner leakage |  Major | REST |
+| [HBASE-28518](https://issues.apache.org/jira/browse/HBASE-28518) | Allow specifying a filter for the REST multiget endpoint |  Major | REST |
+| [HBASE-28292](https://issues.apache.org/jira/browse/HBASE-28292) | Make Delay prefetch property to be dynamically configured |  Major | . |
+| [HBASE-28470](https://issues.apache.org/jira/browse/HBASE-28470) | Fix Typo in Java Method Comment |  Trivial | Admin |
+| [HBASE-28509](https://issues.apache.org/jira/browse/HBASE-28509) | ScanResumer.resume would perform unnecessary scan when close AsyncTableResultScanner |  Major | asyncclient |
+| [HBASE-28497](https://issues.apache.org/jira/browse/HBASE-28497) | Missing fields in Get.toJSON |  Major | Client |
+| [HBASE-28150](https://issues.apache.org/jira/browse/HBASE-28150) | CreateTableProcedure and DeleteTableProcedure should sleep a while before retrying |  Major | master, proc-v2 |
+| [HBASE-28529](https://issues.apache.org/jira/browse/HBASE-28529) | Use ZKClientConfig instead of system properties when setting zookeeper configurations |  Major | Zookeeper |
+| [HBASE-28255](https://issues.apache.org/jira/browse/HBASE-28255) | Correcting spelling errors or annotations with non-standard spelling |  Minor | . |
 
 
 ### BUG FIXES:
@@ -235,6 +260,7 @@
 | [HBASE-26977](https://issues.apache.org/jira/browse/HBASE-26977) | HMaster's ShutdownHook does not take effect, if tablesOnMaster is false |  Major | master |
 | [HBASE-27246](https://issues.apache.org/jira/browse/HBASE-27246) | RSGroupMappingScript#getRSGroup has thread safety problem |  Major | rsgroup |
 | [HBASE-27325](https://issues.apache.org/jira/browse/HBASE-27325) | the bulkload max call queue size can be update to a wrong value |  Minor | IPC/RPC |
+| [HBASE-25922](https://issues.apache.org/jira/browse/HBASE-25922) | Disabled sanity checks ignored on snapshot restore |  Minor | conf, snapshots |
 | [HBASE-27321](https://issues.apache.org/jira/browse/HBASE-27321) | The ReplicationLogCleaner is not thread safe but can be called from different threads at the same time |  Critical | master, Replication |
 | [HBASE-27152](https://issues.apache.org/jira/browse/HBASE-27152) | Under compaction mark may leak |  Major | Compaction |
 | [HBASE-27335](https://issues.apache.org/jira/browse/HBASE-27335) | HBase shell hang for a minute when quiting |  Major | shell |
@@ -245,6 +271,7 @@
 | [HBASE-27352](https://issues.apache.org/jira/browse/HBASE-27352) | Quoted string argument with spaces passed from command line are propagated wrongly to the underlying java class |  Minor | shell |
 | [HBASE-27368](https://issues.apache.org/jira/browse/HBASE-27368) | Do not need to throw IllegalStateException when peer is not active in ReplicationSource.initialize |  Major | regionserver, Replication |
 | [HBASE-27386](https://issues.apache.org/jira/browse/HBASE-27386) | Use encoded size for calculating compression ratio in block size predicator |  Major | . |
+| [HBASE-27381](https://issues.apache.org/jira/browse/HBASE-27381) | Still seeing 'Stuck' in static initialization creating RegionInfo instance |  Major | . |
 | [HBASE-27409](https://issues.apache.org/jira/browse/HBASE-27409) | Fix the javadoc for WARCRecord |  Major | documentation |
 | [HBASE-27407](https://issues.apache.org/jira/browse/HBASE-27407) | Fixing check for "description" request param in JMXJsonServlet.java |  Minor | metrics |
 | [HBASE-27419](https://issues.apache.org/jira/browse/HBASE-27419) | Update to hbase-thirdparty 4.1.2 |  Major | dependencies |
@@ -259,6 +286,7 @@
 | [HBASE-27472](https://issues.apache.org/jira/browse/HBASE-27472) | The personality script set wrong hadoop2 check version for branch-2 |  Major | jenkins, scripts |
 | [HBASE-27473](https://issues.apache.org/jira/browse/HBASE-27473) | Fix spotbugs warnings in hbase-rest Client.getResponseBody |  Major | REST |
 | [HBASE-27480](https://issues.apache.org/jira/browse/HBASE-27480) | Skip error prone for hadoop2/3 checkes in our nightly jobs |  Major | jenkins, scripts |
+| [HBASE-27469](https://issues.apache.org/jira/browse/HBASE-27469) | IllegalArgumentException is thrown by SnapshotScannerHDFSAclController when dropping a table |  Major | snapshots |
 | [HBASE-27379](https://issues.apache.org/jira/browse/HBASE-27379) | numOpenConnections metric is one less than the actual |  Minor | metrics |
 | [HBASE-27423](https://issues.apache.org/jira/browse/HBASE-27423) | Upgrade hbase-thirdparty to 4.1.3 and upgrade Jackson for CVE-2022-42003/42004 |  Major | security |
 | [HBASE-27464](https://issues.apache.org/jira/browse/HBASE-27464) | In memory compaction 'COMPACT' may cause data corruption when adding cells large than maxAlloc(default 256k) size |  Critical | in-memory-compaction |
@@ -267,6 +295,7 @@
 | [HBASE-27504](https://issues.apache.org/jira/browse/HBASE-27504) | Remove duplicated config 'hbase.normalizer.merge.min\_region\_age.days' in hbase-default.xml |  Minor | conf |
 | [HBASE-27463](https://issues.apache.org/jira/browse/HBASE-27463) | Reset sizeOfLogQueue when refresh replication source |  Minor | Replication |
 | [HBASE-27484](https://issues.apache.org/jira/browse/HBASE-27484) | FNFE on StoreFileScanner after a flush followed by a compaction |  Major | . |
+| [HBASE-27494](https://issues.apache.org/jira/browse/HBASE-27494) | Client meta cache clear by exception metrics are missing some cases |  Minor | . |
 | [HBASE-27519](https://issues.apache.org/jira/browse/HBASE-27519) | Another case for FNFE on StoreFileScanner after a flush followed by a compaction |  Major | . |
 | [HBASE-27527](https://issues.apache.org/jira/browse/HBASE-27527) | Port HBASE-27498 to branch-2 |  Major | Client |
 | [HBASE-27524](https://issues.apache.org/jira/browse/HBASE-27524) | Fix python requirements problem |  Major | scripts, security |
@@ -276,6 +305,7 @@
 | [HBASE-27566](https://issues.apache.org/jira/browse/HBASE-27566) | Bump gitpython from 3.1.29 to 3.1.30 in /dev-support |  Major | scripts, security |
 | [HBASE-27560](https://issues.apache.org/jira/browse/HBASE-27560) | CatalogJanitor consistencyCheck cannot report the hole on last region if next table is disabled in meta |  Minor | hbck2 |
 | [HBASE-27563](https://issues.apache.org/jira/browse/HBASE-27563) | ChaosMonkey sometimes generates invalid boundaries for random item selection |  Minor | integration tests |
+| [HBASE-27561](https://issues.apache.org/jira/browse/HBASE-27561) | hbase.master.port is ignored in processing of hbase.masters |  Minor | Client |
 | [HBASE-27564](https://issues.apache.org/jira/browse/HBASE-27564) | Add default encryption type for MiniKDC to fix failed tests on JDK11+ |  Major | . |
 | [HBASE-27528](https://issues.apache.org/jira/browse/HBASE-27528) | log duplication issues in MasterRpcServices |  Major | logging, master, rpc, security |
 | [HBASE-27579](https://issues.apache.org/jira/browse/HBASE-27579) | CatalogJanitor can cause data loss due to errors during cleanMergeRegion |  Blocker | . |
@@ -287,10 +317,12 @@
 | [HBASE-26967](https://issues.apache.org/jira/browse/HBASE-26967) | FilterList with FuzzyRowFilter and SingleColumnValueFilter evaluated with operator MUST\_PASS\_ONE doesn't work as expected |  Critical | Filters |
 | [HBASE-27585](https://issues.apache.org/jira/browse/HBASE-27585) | Bump up jruby to 9.3.9.0 and related joni and jcodings to 2.1.43 and 1.0.57 respectively |  Major | jruby, security, shell |
 | [HBASE-27608](https://issues.apache.org/jira/browse/HBASE-27608) | Use lowercase image reference name in our docker file |  Major | scripts |
+| [HBASE-27580](https://issues.apache.org/jira/browse/HBASE-27580) | Reverse scan over rows with tags throw exceptions when using DataBlockEncoding |  Major | . |
 | [HBASE-27619](https://issues.apache.org/jira/browse/HBASE-27619) | Bulkload fails when trying to bulkload files with invalid names after HBASE-26707 |  Major | . |
 | [HBASE-27621](https://issues.apache.org/jira/browse/HBASE-27621) | Also clear the Dictionary when resetting when reading compressed WAL file |  Critical | Replication, wal |
 | [HBASE-27602](https://issues.apache.org/jira/browse/HBASE-27602) | Remove the impact of operating env on testHFileCleaning |  Major | test |
 | [HBASE-27637](https://issues.apache.org/jira/browse/HBASE-27637) | Zero length value would cause value compressor read nothing and not advance the position of the InputStream |  Critical | dataloss, wal |
+| [HBASE-27648](https://issues.apache.org/jira/browse/HBASE-27648) | CopyOnWriteArrayMap does not honor contract of ConcurrentMap.putIfAbsent |  Major | . |
 | [HBASE-27636](https://issues.apache.org/jira/browse/HBASE-27636) | The "CREATE\_TIME\_TS" value of the hfile generated by the HFileOutputFormat2 class is 0 |  Major | HFile, mapreduce |
 | [HBASE-27654](https://issues.apache.org/jira/browse/HBASE-27654) | IndexBlockEncoding is missing in HFileContextBuilder copy constructor |  Major | . |
 | [HBASE-27661](https://issues.apache.org/jira/browse/HBASE-27661) | Set size of systable queue in UT |  Major | . |
@@ -326,6 +358,7 @@
 | [HBASE-27822](https://issues.apache.org/jira/browse/HBASE-27822) | TestFromClientSide5.testAppendWithoutWAL is flaky |  Major | scan, test |
 | [HBASE-27823](https://issues.apache.org/jira/browse/HBASE-27823) | NPE in ClaimReplicationQueuesProcedure when running TestAssignmentManager.testAssignSocketTimeout |  Major | test |
 | [HBASE-27824](https://issues.apache.org/jira/browse/HBASE-27824) | NPE in MetricsMasterWrapperImpl.isRunning |  Major | test |
+| [HBASE-26646](https://issues.apache.org/jira/browse/HBASE-26646) | WALPlayer should obtain token from filesystem |  Minor | . |
 | [HBASE-27851](https://issues.apache.org/jira/browse/HBASE-27851) | TestListTablesByState is silently failing due to a surefire bug |  Minor | test |
 | [HBASE-27857](https://issues.apache.org/jira/browse/HBASE-27857) | HBaseClassTestRule: system exit not restored if test times out may cause test to hang |  Minor | test |
 | [HBASE-27860](https://issues.apache.org/jira/browse/HBASE-27860) | Fix build error against Hadoop 3.3.5 |  Major | build, hadoop3 |
@@ -432,6 +465,16 @@
 | [HBASE-28449](https://issues.apache.org/jira/browse/HBASE-28449) | Fix BackupSystemTable Scans |  Major | . |
 | [HBASE-28456](https://issues.apache.org/jira/browse/HBASE-28456) | HBase Restore restores old data if data for the same timestamp is in different hfiles |  Blocker | backup&restore |
 | [HBASE-28412](https://issues.apache.org/jira/browse/HBASE-28412) | Restoring incremental backups to mapped table requires existence of original table |  Major | backup&restore |
+| [HBASE-28450](https://issues.apache.org/jira/browse/HBASE-28450) | BuckeCache.evictBlocksByHfileName won't work after a cache recovery from file |  Major | . |
+| [HBASE-28452](https://issues.apache.org/jira/browse/HBASE-28452) | Missing null check of rpcServer.scheduler.executor causes NPE with invalid value of hbase.client.default.rpc.codec |  Major | IPC/RPC |
+| [HBASE-28460](https://issues.apache.org/jira/browse/HBASE-28460) | Full backup restore fails for empty HFiles |  Major | backup&restore |
+| [HBASE-28366](https://issues.apache.org/jira/browse/HBASE-28366) | Mis-order of SCP and regionServerReport results into region inconsistencies |  Major | . |
+| [HBASE-28458](https://issues.apache.org/jira/browse/HBASE-28458) | BucketCache.notifyFileCachingCompleted may incorrectly consider a file fully cached |  Major | . |
+| [HBASE-28483](https://issues.apache.org/jira/browse/HBASE-28483) | Merge of incremental backups fails on bulkloaded Hfiles |  Major | backup&restore |
+| [HBASE-28481](https://issues.apache.org/jira/browse/HBASE-28481) | Prompting table already exists after failing to create table with many region replications |  Major | . |
+| [HBASE-28183](https://issues.apache.org/jira/browse/HBASE-28183) | It's impossible to re-enable the quota table if it gets disabled |  Major | . |
+| [HBASE-28500](https://issues.apache.org/jira/browse/HBASE-28500) | Rest Java client library assumes stateless servers |  Major | REST |
+| [HBASE-28298](https://issues.apache.org/jira/browse/HBASE-28298) | HFilePrettyPrinter thrown NoSuchMethodError about MetricRegistry |  Major | HFile, UI |
 
 
 ### TESTS:
@@ -502,6 +545,10 @@
 | [HBASE-28350](https://issues.apache.org/jira/browse/HBASE-28350) | [JDK17] Unable to run hbase-it tests with JDK 17 |  Major | . |
 | [HBASE-23324](https://issues.apache.org/jira/browse/HBASE-23324) | Deprecate clients that connect to Zookeeper |  Major | . |
 | [HBASE-28401](https://issues.apache.org/jira/browse/HBASE-28401) | Introduce a close method for memstore for release active segment |  Major | in-memory-compaction, regionserver |
+| [HBASE-27990](https://issues.apache.org/jira/browse/HBASE-27990) | BucketCache causes ArithmeticException due to improper blockSize value checking |  Critical | BucketCache |
+| [HBASE-27993](https://issues.apache.org/jira/browse/HBASE-27993) | AbstractFSWAL causes ArithmeticException due to improper logRollSize value checking |  Critical | . |
+| [HBASE-27989](https://issues.apache.org/jira/browse/HBASE-27989) | ByteBuffAllocator causes ArithmeticException due to improper poolBufSize value checking |  Critical | BucketCache |
+| [HBASE-28457](https://issues.apache.org/jira/browse/HBASE-28457) | Introduce a version field in file based tracker record |  Major | HFile |
 
 
 ### OTHER:
@@ -567,6 +614,8 @@
 | [HBASE-28403](https://issues.apache.org/jira/browse/HBASE-28403) | Improve debugging for failures in procedure tests |  Major | proc-v2, test |
 | [HBASE-28379](https://issues.apache.org/jira/browse/HBASE-28379) | Upgrade thirdparty dep to 4.1.6 |  Major | . |
 | [HBASE-28444](https://issues.apache.org/jira/browse/HBASE-28444) | Bump org.apache.zookeeper:zookeeper from 3.8.3 to 3.8.4 |  Blocker | security, Zookeeper |
+| [HBASE-28506](https://issues.apache.org/jira/browse/HBASE-28506) | Remove hbase-compression-xz |  Major | . |
+| [HBASE-28511](https://issues.apache.org/jira/browse/HBASE-28511) | Update hbase-thirdparty to 4.1.7 |  Major | dependencies |
 
 
 ## Release 2.2.0 - Unreleased (as of 2019-06-11)
