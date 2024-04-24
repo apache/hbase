@@ -1764,7 +1764,7 @@ public class TestHStore {
           Arrays.asList(mockStoreFile(currentTime - 10), mockStoreFile(currentTime - 100),
             mockStoreFile(currentTime - 1000), mockStoreFile(currentTime - 10000));
         StoreFileManager sfm = mock(StoreFileManager.class);
-        when(sfm.getStorefiles()).thenReturn(storefiles);
+        when(sfm.getStoreFiles()).thenReturn(storefiles);
         StoreEngine<?, ?, ?, ?> storeEngine = mock(StoreEngine.class);
         when(storeEngine.getStoreFileManager()).thenReturn(sfm);
         return storeEngine;

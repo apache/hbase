@@ -96,7 +96,7 @@ public interface StoreFileManager {
    * checks; should not assume anything about relations between store files in the list.
    * @return The list of StoreFiles.
    */
-  Collection<HStoreFile> getStorefiles();
+  Collection<HStoreFile> getStoreFiles();
 
   /**
    * List of compacted files inside this store that needs to be excluded in reads because further

@@ -136,7 +136,7 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public Collection<HStoreFile> getStorefiles() {
+  public Collection<HStoreFile> getStoreFiles() {
     return state.allFilesCached;
   }
 

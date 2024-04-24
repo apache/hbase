@@ -117,7 +117,7 @@ public class TestStripeStoreFileManager {
     Collection<HStoreFile> allFiles = manager.clearFiles();
     assertEquals(4, allFiles.size());
     assertEquals(0, manager.getStorefileCount());
-    assertEquals(0, manager.getStorefiles().size());
+    assertEquals(0, manager.getStoreFiles().size());
   }
 
   private static ArrayList<HStoreFile> dumpIterator(Iterator<HStoreFile> iter) {
@@ -541,7 +541,7 @@ public class TestStripeStoreFileManager {
 
   private void verifyInvalidCompactionScenario(StripeStoreFileManager manager,
     ArrayList<HStoreFile> filesToCompact, ArrayList<HStoreFile> filesToInsert) throws Exception {
-    Collection<HStoreFile> allFiles = manager.getStorefiles();
+    Collection<HStoreFile> allFiles = manager.getStoreFiles();
     assertThrows(IllegalStateException.class,
       () -> manager.addCompactionResults(filesToCompact, filesToInsert));
     verifyAllFiles(manager, allFiles); // must have the same files.
