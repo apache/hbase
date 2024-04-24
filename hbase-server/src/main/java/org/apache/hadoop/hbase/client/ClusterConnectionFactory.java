@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.User;
@@ -66,6 +67,20 @@ public final class ClusterConnectionFactory {
     SocketAddress localAddress, User user) throws IOException {
     return createAsyncClusterConnection(conf, ConnectionRegistryFactory.create(conf, user),
       localAddress, user);
+  }
+
+  /**
+   * Create a new {@link AsyncClusterConnection} instance.
+   * <p/>
+   * This is usually used in replication, the given {@code uri} specifies the connection info of the
+   * remote cluster.
+   */
+  public static AsyncClusterConnection createAsyncClusterConnection(URI uri, Configuration conf,
+    SocketAddress localAddress, User user) throws IOException {
+    ConnectionRegistry registry = uri != null
+      ? ConnectionRegistryFactory.create(uri, conf, user)
+      : ConnectionRegistryFactory.create(conf, user);
+    return createAsyncClusterConnection(conf, registry, localAddress, user);
   }
 
   /**

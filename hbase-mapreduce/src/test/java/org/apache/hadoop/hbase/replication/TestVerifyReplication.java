@@ -86,6 +86,14 @@ public class TestVerifyReplication extends TestReplicationBase {
   @Rule
   public TestName name = new TestName();
 
+  @Override
+  protected String getClusterKey(HBaseTestingUtil util) throws Exception {
+    // TODO: VerifyReplication does not support connection uri yet, so here we need to use cluster
+    // key, as in this test we will pass the cluster key config in peer config directly to
+    // VerifyReplication job.
+    return util.getClusterKey();
+  }
+
   @Before
   public void setUp() throws Exception {
     cleanUp();

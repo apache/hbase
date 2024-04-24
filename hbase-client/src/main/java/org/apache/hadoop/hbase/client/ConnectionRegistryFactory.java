@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Locale;
 import java.util.ServiceLoader;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +37,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
  * The entry point for creating a {@link ConnectionRegistry}.
  */
 @InterfaceAudience.Private
-final class ConnectionRegistryFactory {
+public final class ConnectionRegistryFactory {
 
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionRegistryFactory.class);
 
@@ -89,5 +91,47 @@ final class ConnectionRegistryFactory {
       conf.getClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
         RpcConnectionRegistry.class, ConnectionRegistry.class);
     return ReflectionUtils.newInstance(clazz, conf, user);
+  }
+
+  /**
+   * Check whether the given {@code uri} is valid.
+   * <p/>
+   * Notice that there is no fallback logic for this method, so passing an URI with null scheme can
+   * not pass.
+   * @throws IOException if this is not a valid connection registry URI
+   */
+  public static void validate(URI uri) throws IOException {
+    if (StringUtils.isBlank(uri.getScheme())) {
+      throw new IOException("No schema for uri: " + uri);
+    }
+    ConnectionRegistryURIFactory factory = FACTORIES.get(uri.getScheme().toLowerCase(Locale.ROOT));
+    if (factory == null) {
+      throw new IOException(
+        "No factory registered for scheme " + uri.getScheme() + ", uri: " + uri);
+    }
+    factory.validate(uri);
+  }
+
+  /**
+   * If the given {@code clusterKey} can be parsed to a {@link URI}, and the scheme of the
+   * {@link URI} is supported by us, return the {@link URI}, otherwise return {@code null}.
+   * @param clusterKey the cluster key, typically from replication peer config
+   * @return a {@link URI} or {@code null}.
+   */
+  public static URI tryParseAsConnectionURI(String clusterKey) {
+    // The old cluster key format may not be parsed as URI if we use ip address as the zookeeper
+    // address, so here we need to catch the URISyntaxException and return false
+    URI uri;
+    try {
+      uri = new URI(clusterKey);
+    } catch (URISyntaxException e) {
+      LOG.debug("failed to parse cluster key to URI: {}", clusterKey, e);
+      return null;
+    }
+    if (FACTORIES.containsKey(uri.getScheme())) {
+      return uri;
+    } else {
+      return null;
+    }
   }
 }

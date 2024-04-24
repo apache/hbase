@@ -71,7 +71,7 @@ public class TestReplicator extends TestReplicationBase {
 
     // Replace the peer set up for us by the base class with a wrapper for this test
     hbaseAdmin.addReplicationPeer("testReplicatorBatching",
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getRpcConnnectionURI())
         .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()).build());
 
     ReplicationEndpointForTest.setBatchCount(0);
@@ -120,7 +120,7 @@ public class TestReplicator extends TestReplicationBase {
 
     // Replace the peer set up for us by the base class with a wrapper for this test
     hbaseAdmin.addReplicationPeer("testReplicatorWithErrors",
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getRpcConnnectionURI())
         .setReplicationEndpointImpl(FailureInjectingReplicationEndpointForTest.class.getName())
         .build());
 

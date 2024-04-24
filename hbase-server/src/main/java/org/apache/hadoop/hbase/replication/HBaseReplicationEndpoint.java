@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
+import org.apache.hadoop.hbase.client.ConnectionRegistryFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.ReservoirSample;
@@ -54,6 +56,8 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   private static final Logger LOG = LoggerFactory.getLogger(HBaseReplicationEndpoint.class);
 
   protected Configuration conf;
+
+  private URI clusterURI;
 
   private final Object connLock = new Object();
 
@@ -82,19 +86,23 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
 
   private List<ServerName> sinkServers = new ArrayList<>(0);
 
-  /*
+  /**
    * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
    * Connection implementations, or initialize it in a different way, so defining createConnection
    * as protected for possible overridings.
    */
-  protected AsyncClusterConnection createConnection(Configuration conf) throws IOException {
-    return ClusterConnectionFactory.createAsyncClusterConnection(conf, null, User.getCurrent());
+  protected AsyncClusterConnection createConnection(URI clusterURI, Configuration conf)
+    throws IOException {
+    return ClusterConnectionFactory.createAsyncClusterConnection(clusterURI, conf, null,
+      User.getCurrent());
   }
 
   @Override
   public void init(Context context) throws IOException {
     super.init(context);
     this.conf = HBaseConfiguration.create(ctx.getConfiguration());
+    this.clusterURI = ConnectionRegistryFactory
+      .tryParseAsConnectionURI(context.getReplicationPeer().getPeerConfig().getClusterKey());
     this.ratio =
       ctx.getConfiguration().getFloat("replication.source.ratio", DEFAULT_REPLICATION_SOURCE_RATIO);
     this.badSinkThreshold =
@@ -167,7 +175,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
       if (c != null) {
         return c;
       }
-      c = createConnection(this.conf);
+      c = createConnection(clusterURI, conf);
       conn = c;
     }
     return c;
