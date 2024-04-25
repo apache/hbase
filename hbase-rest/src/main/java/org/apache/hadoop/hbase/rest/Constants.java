@@ -86,6 +86,12 @@ public interface Constants {
   String SCAN_LIMIT = "limit";
   String SCAN_FETCH_SIZE = "hbase.rest.scan.fetchsize";
   String FILTER = "filter";
+  /**
+   * @deprecated Since 2.4.18/2.5.9/2.6.0, will be removed in 4.0.0. Please use {@link #FILTER}
+   *             instead.
+   */
+  @Deprecated
+  String SCAN_FILTER = FILTER;
   String FILTER_B64 = "filter_b64";
   String SCAN_REVERSED = "reversed";
   String SCAN_CACHE_BLOCKS = "cacheblocks";
