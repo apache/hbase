@@ -183,7 +183,6 @@ public class TableResource extends ResourceBase {
       if (paramFilterB64 != null) {
         filterBytes = base64Urldecoder.decode(paramFilterB64);
       } else if (paramFilter != null) {
-        // Not binary clean
         filterBytes = paramFilter.getBytes();
       }
       if (filterBytes != null) {
