@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -51,7 +52,9 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -245,6 +248,181 @@ public class TestDataTieringManager {
     } catch (DataTieringException e) {
       fail("Unexpected DataTieringException: " + e.getMessage());
     }
+  }
+
+  @Test
+  public void testPickColdDataFiles() {
+    Map<String, String> coldDataFiles = dataTieringManager.getColdFilesList();
+    assertEquals(1, coldDataFiles.size());
+    // hStoreFiles[3] is the cold file.
+    assert (coldDataFiles.containsKey(hStoreFiles.get(3).getFileInfo().getActiveFileName()));
+  }
+
+  /*
+   * Verify that two cold blocks(both) are evicted when bucket reaches its capacity. The hot file
+   * remains in the cache.
+   */
+  @Test
+  public void testBlockEvictions() throws Exception {
+    long capacitySize = 40 * 1024;
+    int writeThreads = 3;
+    int writerQLen = 64;
+    int[] bucketSizes = new int[] { 8 * 1024 + 1024 };
+
+    // Setup: Create a bucket cache with lower capacity
+    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
+      DEFAULT_ERROR_TOLERATION_DURATION, defaultConf);
+
+    // Create three Cache keys with cold data files and a block with hot data.
+    // hStoreFiles.get(3) is a cold data file, while hStoreFiles.get(0) is a hot file.
+    Set<BlockCacheKey> cacheKeys = new HashSet<>();
+    cacheKeys.add(new BlockCacheKey(hStoreFiles.get(3).getPath(), 0, true, BlockType.DATA));
+    cacheKeys.add(new BlockCacheKey(hStoreFiles.get(3).getPath(), 8192, true, BlockType.DATA));
+    cacheKeys.add(new BlockCacheKey(hStoreFiles.get(0).getPath(), 0, true, BlockType.DATA));
+
+    // Create dummy data to be cached and fill the cache completely.
+    CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 3);
+
+    int blocksIter = 0;
+    for (BlockCacheKey key : cacheKeys) {
+      bucketCache.cacheBlock(key, blocks[blocksIter++].getBlock());
+      // Ensure that the block is persisted to the file.
+      Waiter.waitFor(defaultConf, 10000, 100, () -> (bucketCache.getBackingMap().containsKey(key)));
+    }
+
+    // Verify that the bucket cache contains 3 blocks.
+    assertEquals(3, bucketCache.getBackingMap().keySet().size());
+
+    // Add an additional block into cache with hot data which should trigger the eviction
+    BlockCacheKey newKey = new BlockCacheKey(hStoreFiles.get(2).getPath(), 0, true, BlockType.DATA);
+    CacheTestUtils.HFileBlockPair[] newBlock = CacheTestUtils.generateHFileBlocks(8192, 1);
+
+    bucketCache.cacheBlock(newKey, newBlock[0].getBlock());
+    Waiter.waitFor(defaultConf, 10000, 100,
+      () -> (bucketCache.getBackingMap().containsKey(newKey)));
+
+    // Verify that the bucket cache now contains 2 hot blocks blocks only.
+    // Both cold blocks of 8KB will be evicted to make room for 1 block of 8KB + an additional
+    // space.
+    validateBlocks(bucketCache.getBackingMap().keySet(), 2, 2, 0);
+  }
+
+  /*
+   * Verify that two cold blocks(both) are evicted when bucket reaches its capacity, but one cold
+   * block remains in the cache since the required space is freed.
+   */
+  @Test
+  public void testBlockEvictionsAllColdBlocks() throws Exception {
+    long capacitySize = 40 * 1024;
+    int writeThreads = 3;
+    int writerQLen = 64;
+    int[] bucketSizes = new int[] { 8 * 1024 + 1024 };
+
+    // Setup: Create a bucket cache with lower capacity
+    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
+      DEFAULT_ERROR_TOLERATION_DURATION, defaultConf);
+
+    // Create three Cache keys with three cold data blocks.
+    // hStoreFiles.get(3) is a cold data file.
+    Set<BlockCacheKey> cacheKeys = new HashSet<>();
+    cacheKeys.add(new BlockCacheKey(hStoreFiles.get(3).getPath(), 0, true, BlockType.DATA));
+    cacheKeys.add(new BlockCacheKey(hStoreFiles.get(3).getPath(), 8192, true, BlockType.DATA));
+    cacheKeys.add(new BlockCacheKey(hStoreFiles.get(3).getPath(), 16384, true, BlockType.DATA));
+
+    // Create dummy data to be cached and fill the cache completely.
+    CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 3);
+
+    int blocksIter = 0;
+    for (BlockCacheKey key : cacheKeys) {
+      bucketCache.cacheBlock(key, blocks[blocksIter++].getBlock());
+      // Ensure that the block is persisted to the file.
+      Waiter.waitFor(defaultConf, 10000, 100, () -> (bucketCache.getBackingMap().containsKey(key)));
+    }
+
+    // Verify that the bucket cache contains 3 blocks.
+    assertEquals(3, bucketCache.getBackingMap().keySet().size());
+
+    // Add an additional block into cache with hot data which should trigger the eviction
+    BlockCacheKey newKey = new BlockCacheKey(hStoreFiles.get(2).getPath(), 0, true, BlockType.DATA);
+    CacheTestUtils.HFileBlockPair[] newBlock = CacheTestUtils.generateHFileBlocks(8192, 1);
+
+    bucketCache.cacheBlock(newKey, newBlock[0].getBlock());
+    Waiter.waitFor(defaultConf, 10000, 100,
+      () -> (bucketCache.getBackingMap().containsKey(newKey)));
+
+    // Verify that the bucket cache now contains 1 cold block and a newly added hot block.
+    validateBlocks(bucketCache.getBackingMap().keySet(), 2, 1, 1);
+  }
+
+  /*
+   * Verify that a hot block evicted along with a cold block when bucket reaches its capacity.
+   */
+  @Test
+  public void testBlockEvictionsHotBlocks() throws Exception {
+    long capacitySize = 40 * 1024;
+    int writeThreads = 3;
+    int writerQLen = 64;
+    int[] bucketSizes = new int[] { 8 * 1024 + 1024 };
+
+    // Setup: Create a bucket cache with lower capacity
+    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
+      DEFAULT_ERROR_TOLERATION_DURATION, defaultConf);
+
+    // Create three Cache keys with two hot data blocks and one cold data block
+    // hStoreFiles.get(0) is a hot data file and hStoreFiles.get(3) is a cold data file.
+    Set<BlockCacheKey> cacheKeys = new HashSet<>();
+    cacheKeys.add(new BlockCacheKey(hStoreFiles.get(0).getPath(), 0, true, BlockType.DATA));
+    cacheKeys.add(new BlockCacheKey(hStoreFiles.get(0).getPath(), 8192, true, BlockType.DATA));
+    cacheKeys.add(new BlockCacheKey(hStoreFiles.get(3).getPath(), 0, true, BlockType.DATA));
+
+    // Create dummy data to be cached and fill the cache completely.
+    CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 3);
+
+    int blocksIter = 0;
+    for (BlockCacheKey key : cacheKeys) {
+      bucketCache.cacheBlock(key, blocks[blocksIter++].getBlock());
+      // Ensure that the block is persisted to the file.
+      Waiter.waitFor(defaultConf, 10000, 100, () -> (bucketCache.getBackingMap().containsKey(key)));
+    }
+
+    // Verify that the bucket cache contains 3 blocks.
+    assertEquals(3, bucketCache.getBackingMap().keySet().size());
+
+    // Add an additional block which should evict the only cold block with an additional hot block.
+    BlockCacheKey newKey = new BlockCacheKey(hStoreFiles.get(2).getPath(), 0, true, BlockType.DATA);
+    CacheTestUtils.HFileBlockPair[] newBlock = CacheTestUtils.generateHFileBlocks(8192, 1);
+
+    bucketCache.cacheBlock(newKey, newBlock[0].getBlock());
+    Waiter.waitFor(defaultConf, 10000, 100,
+      () -> (bucketCache.getBackingMap().containsKey(newKey)));
+
+    // Verify that the bucket cache now contains 2 hot blocks.
+    // Only one of the older hot blocks is retained and other one is the newly added hot block.
+    validateBlocks(bucketCache.getBackingMap().keySet(), 2, 2, 0);
+  }
+
+  private void validateBlocks(Set<BlockCacheKey> keys, int expectedTotalKeys, int expectedHotBlocks,
+    int expectedColdBlocks) {
+    int numHotBlocks = 0, numColdBlocks = 0;
+
+    assertEquals(expectedTotalKeys, keys.size());
+    int iter = 0;
+    for (BlockCacheKey key : keys) {
+      try {
+        if (dataTieringManager.isHotData(key)) {
+          numHotBlocks++;
+        } else {
+          numColdBlocks++;
+        }
+      } catch (Exception e) {
+        fail("Unexpected exception!");
+      }
+    }
+    assertEquals(expectedHotBlocks, numHotBlocks);
+    assertEquals(expectedColdBlocks, numColdBlocks);
   }
 
   private void testDataTieringMethodWithPath(DataTieringMethodCallerWithPath caller, Path path,
