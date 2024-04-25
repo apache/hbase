@@ -46,11 +46,11 @@ import org.mockito.MockedStatic;
  * Make sure we can successfully parse the URI component
  */
 @Category({ ClientTests.class, SmallTests.class })
-public class TestConnectionRegistryCreatorUriParsing {
+public class TestConnectionRegistryUriParsing {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConnectionRegistryCreatorUriParsing.class);
+    HBaseClassTestRule.forClass(TestConnectionRegistryUriParsing.class);
 
   private Configuration conf;
 
