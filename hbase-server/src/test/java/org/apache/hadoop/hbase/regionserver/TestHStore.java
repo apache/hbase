@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_DATA_ON_READ_KEY;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_CACHE_DATA_ON_READ;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_CACHE_DATA_ON_WRITE;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_EVICT_ON_CLOSE;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_CLOSE_KEY;
 import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -2618,6 +2624,9 @@ public class TestHStore {
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
       COMMON_MAX_FILES_TO_COMPACT);
+    conf.setBoolean(CACHE_DATA_ON_READ_KEY, false);
+    conf.setBoolean(CACHE_BLOCKS_ON_WRITE_KEY, true);
+    conf.setBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, true);
     ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setConfiguration(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
         String.valueOf(STORE_MAX_FILES_TO_COMPACT))
@@ -2628,8 +2637,19 @@ public class TestHStore {
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
       NEW_COMMON_MAX_FILES_TO_COMPACT);
     this.store.onConfigurationChange(conf);
+
     assertEquals(STORE_MAX_FILES_TO_COMPACT,
       store.getStoreEngine().getCompactionPolicy().getConf().getMaxFilesToCompact());
+
+    assertEquals(conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ), false);
+    assertEquals(conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE), true);
+    assertEquals(conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE), true);
+
+    // reset to default values
+    conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ);
+    conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE);
+    conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE);
+    this.store.onConfigurationChange(conf);
   }
 
   /**
