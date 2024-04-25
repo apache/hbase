@@ -20,33 +20,30 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Connection registry creator implementation for creating {@link ZKConnectionRegistry}.
+ * Connection registry creator implementation for creating {@link RpcConnectionRegistry}.
  */
 @InterfaceAudience.Private
-public class ZKConnectionRegistryCreator implements ConnectionRegistryURIFactory {
+public class RpcConnectionRegistryURIFactory implements ConnectionRegistryURIFactory {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ZKConnectionRegistryCreator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RpcConnectionRegistryURIFactory.class);
 
   @Override
   public ConnectionRegistry create(URI uri, Configuration conf, User user) throws IOException {
     assert getScheme().equals(uri.getScheme());
-    LOG.debug("connect to hbase cluster with zk quorum='{}' and parent='{}'", uri.getAuthority(),
-      uri.getPath());
+    LOG.debug("connect to hbase cluster with rpc bootstrap servers='{}'", uri.getAuthority());
     Configuration c = new Configuration(conf);
-    c.set(HConstants.CLIENT_ZOOKEEPER_QUORUM, uri.getAuthority());
-    c.set(HConstants.ZOOKEEPER_ZNODE_PARENT, uri.getPath());
-    return new ZKConnectionRegistry(c, user);
+    c.set(RpcConnectionRegistry.BOOTSTRAP_NODES, uri.getAuthority());
+    return new RpcConnectionRegistry(c, user);
   }
 
   @Override
   public String getScheme() {
-    return "hbase+zk";
+    return "hbase+rpc";
   }
 }
