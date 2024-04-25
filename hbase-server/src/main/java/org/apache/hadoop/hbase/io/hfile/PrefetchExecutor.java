@@ -99,8 +99,7 @@ public final class PrefetchExecutor {
       }
       try {
         LOG.debug("Prefetch requested for {}, delay={} ms", path, delay);
-        final Runnable tracedRunnable =
-          TraceUtil.wrap(runnable, "PrefetchExecutor.request");
+        final Runnable tracedRunnable = TraceUtil.wrap(runnable, "PrefetchExecutor.request");
         final Future<?> future =
           prefetchExecutorPool.schedule(tracedRunnable, delay, TimeUnit.MILLISECONDS);
         prefetchFutures.put(path, future);

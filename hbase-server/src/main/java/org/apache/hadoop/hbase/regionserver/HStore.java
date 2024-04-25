@@ -2590,7 +2590,10 @@ public class HStore
    */
   @Override
   public void registerChildren(ConfigurationManager manager) {
-    // No children to register
+    CacheConfig cacheConfig = this.storeContext.getCacheConf();
+    if (cacheConfig != null) {
+      manager.registerObserver(cacheConfig);
+    }
   }
 
   /**
