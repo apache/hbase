@@ -39,7 +39,7 @@ final class ConnectionRegistryFactory {
 
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionRegistryFactory.class);
 
-  private static final ImmutableMap<String, ConnectionRegistryURIFactory> CREATORS;
+  private static final ImmutableMap<String, ConnectionRegistryURIFactory> FACTORIES;
   static {
     ImmutableMap.Builder<String, ConnectionRegistryURIFactory> builder = ImmutableMap.builder();
     for (ConnectionRegistryURIFactory factory : ServiceLoader
@@ -47,7 +47,7 @@ final class ConnectionRegistryFactory {
       builder.put(factory.getScheme().toLowerCase(), factory);
     }
     // throw IllegalArgumentException if there are duplicated keys
-    CREATORS = builder.buildOrThrow();
+    FACTORIES = builder.buildOrThrow();
   }
 
   private ConnectionRegistryFactory() {
@@ -69,12 +69,12 @@ final class ConnectionRegistryFactory {
       LOG.warn("No scheme specified for {}, fallback to use old way", uri);
       return create(conf, user);
     }
-    ConnectionRegistryURIFactory creator = CREATORS.get(uri.getScheme().toLowerCase());
-    if (creator == null) {
-      LOG.warn("No creator registered for {}, fallback to use old way", uri);
+    ConnectionRegistryURIFactory factory = FACTORIES.get(uri.getScheme().toLowerCase());
+    if (factory == null) {
+      LOG.warn("No factory registered for {}, fallback to use old way", uri);
       return create(conf, user);
     }
-    return creator.create(uri, conf, user);
+    return factory.create(uri, conf, user);
   }
 
   /**
