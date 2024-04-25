@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.OptionalLong;
@@ -173,12 +174,12 @@ public class DataTieringManager {
   private long getMaxTimestamp(Path hFilePath) throws DataTieringException {
     HStoreFile hStoreFile = getHStoreFile(hFilePath);
     if (hStoreFile == null) {
-      LOG.error("HStoreFile corresponding to " + hFilePath + " doesn't exist");
+      LOG.error("HStoreFile corresponding to {} doesn't exist", hFilePath);
       return Long.MAX_VALUE;
     }
     OptionalLong maxTimestamp = hStoreFile.getMaximumTimestamp();
     if (!maxTimestamp.isPresent()) {
-      LOG.error("Maximum timestamp not present for " + hFilePath);
+      LOG.error("Maximum timestamp not present for {}", hFilePath);
       return Long.MAX_VALUE;
     }
     return maxTimestamp.getAsLong();
@@ -269,5 +270,42 @@ public class DataTieringManager {
   private long getDataTieringHotDataAge(Configuration conf) {
     return Long.parseLong(
       conf.get(DATATIERING_HOT_DATA_AGE_KEY, String.valueOf(DEFAULT_DATATIERING_HOT_DATA_AGE)));
+  }
+
+  /*
+   * This API traverses through the list of online regions and returns a subset of these files-names
+   * that are cold.
+   * @return List of names of files with cold data as per data-tiering logic.
+   */
+  public Map<String, String> getColdFilesList() {
+    Map<String, String> coldFiles = new HashMap<>();
+    for (HRegion r : this.onlineRegions.values()) {
+      for (HStore hStore : r.getStores()) {
+        Configuration conf = hStore.getReadOnlyConfiguration();
+        if (getDataTieringType(conf) != DataTieringType.TIME_RANGE) {
+          // Data-Tiering not enabled for the store. Just skip it.
+          continue;
+        }
+        Long hotDataAge = getDataTieringHotDataAge(conf);
+
+        for (HStoreFile hStoreFile : hStore.getStorefiles()) {
+          String hFileName =
+            hStoreFile.getFileInfo().getHFileInfo().getHFileContext().getHFileName();
+          OptionalLong maxTimestamp = hStoreFile.getMaximumTimestamp();
+          if (!maxTimestamp.isPresent()) {
+            LOG.warn("maxTimestamp missing for file: {}",
+              hStoreFile.getFileInfo().getActiveFileName());
+            continue;
+          }
+          long currentTimestamp = EnvironmentEdgeManager.getDelegate().currentTime();
+          long fileAge = currentTimestamp - maxTimestamp.getAsLong();
+          if (fileAge > hotDataAge) {
+            // Values do not matter.
+            coldFiles.put(hFileName, null);
+          }
+        }
+      }
+    }
+    return coldFiles;
   }
 }
