@@ -320,7 +320,7 @@ public class TestRegionInfo {
     b = RegionInfoBuilder.newBuilder(t).setStartKey(midway).build();
     assertTrue(a.compareTo(b) < 0);
     assertTrue(b.compareTo(a) > 0);
-    assertEquals(a, a);
+    assertTrue(a.equals(a));
     assertEquals(0, a.compareTo(a));
     a = RegionInfoBuilder.newBuilder(t).setStartKey(Bytes.toBytes("a"))
       .setEndKey(Bytes.toBytes("d")).build();
