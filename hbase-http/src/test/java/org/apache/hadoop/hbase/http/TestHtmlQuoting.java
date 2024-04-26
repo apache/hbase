@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.http;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import javax.servlet.http.HttpServletRequest;
@@ -94,7 +95,7 @@ public class TestHtmlQuoting {
       quoter.getParameterValues("x"));
 
     Mockito.doReturn(null).when(mockReq).getParameterValues("x");
-    assertArrayEquals("Test that missing parameters dont cause NPE for array", null,
+    assertNull("Test that missing parameters dont cause NPE for array",
       quoter.getParameterValues("x"));
   }
 }
