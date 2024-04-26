@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -87,7 +88,6 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -215,11 +215,15 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     return combineTableNameSuffix(tableName, family);
   }
 
+  protected static Path getWorkPath(final OutputCommitter committer) {
+    return (Path) ReflectionUtils.invokeMethod(committer, "getWorkPath");
+  }
+
   static <V extends Cell> RecordWriter<ImmutableBytesWritable, V> createRecordWriter(
     final TaskAttemptContext context, final OutputCommitter committer) throws IOException {
 
     // Get the path of the temporary output file
-    final Path outputDir = ((FileOutputCommitter) committer).getWorkPath();
+    final Path outputDir = getWorkPath(committer);
     final Configuration conf = context.getConfiguration();
     final boolean writeMultipleTables =
       conf.getBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY, false);
