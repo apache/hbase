@@ -518,7 +518,7 @@ public class TestThriftHBaseServiceHandler {
 
     get = new TGet(wrap(rowName));
     result = handler.get(table, get);
-    assertArrayEquals(null, result.getRow());
+    assertNull(result.getRow());
     assertEquals(0, result.getColumnValuesSize());
   }
 

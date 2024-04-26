@@ -311,7 +311,7 @@ public class TestHRegionInfo {
     b = new HRegionInfo(t.getTableName(), midway, null);
     assertTrue(a.compareTo(b) < 0);
     assertTrue(b.compareTo(a) > 0);
-    assertEquals(a, a);
+    assertTrue(a.equals(a));
     assertEquals(0, a.compareTo(a));
     a = new HRegionInfo(t.getTableName(), Bytes.toBytes("a"), Bytes.toBytes("d"));
     b = new HRegionInfo(t.getTableName(), Bytes.toBytes("e"), Bytes.toBytes("g"));
