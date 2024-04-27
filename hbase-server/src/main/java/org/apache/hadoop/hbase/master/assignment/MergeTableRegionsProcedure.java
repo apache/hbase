@@ -660,7 +660,7 @@ public class MergeTableRegionsProcedure
     for (RegionInfo rinfo : regionsToMerge) {
       RegionStateNode regionStateNode =
         env.getAssignmentManager().getRegionStates().getRegionStateNode(rinfo);
-      if (!(regionStateNode.getState() == State.MERGING)) {
+      if (regionStateNode.getState() != State.MERGING) {
         // same as before HBASE-28405
         toAssign.add(rinfo);
       }
