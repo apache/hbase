@@ -124,32 +124,46 @@ public class TestTags {
 
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-        testReverseScanWithDBE(connection, encoding, family);
+        testReverseScanWithDBE(connection, encoding, family, HConstants.DEFAULT_BLOCKSIZE, 10);
       }
     }
   }
 
-  private void testReverseScanWithDBE(Connection conn, DataBlockEncoding encoding, byte[] family)
-    throws IOException {
+  /**
+   * Test that we can do reverse scans when writing tags and using DataBlockEncoding. Fails with an
+   * exception for PREFIX, DIFF, and FAST_DIFF
+   */
+  @Test
+  public void testReverseScanWithDBEWhenCurrentBlockUpdates() throws IOException {
+    byte[] family = Bytes.toBytes("0");
+
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+        testReverseScanWithDBE(connection, encoding, family, 1024, 30000);
+      }
+    }
+  }
+
+  private void testReverseScanWithDBE(Connection conn, DataBlockEncoding encoding, byte[] family,
+    int blockSize, int maxRows) throws IOException {
     LOG.info("Running test with DBE={}", encoding);
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName() + "-" + encoding);
-    TEST_UTIL.createTable(TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(family).setDataBlockEncoding(encoding).build())
-      .build(), null);
+    TEST_UTIL.createTable(
+      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(family).setDataBlockEncoding(encoding).setBlocksize(blockSize).build()).build(),
+      null);
 
     Table table = conn.getTable(tableName);
 
-    int maxRows = 10;
     byte[] val1 = new byte[10];
     byte[] val2 = new byte[10];
     Bytes.random(val1);
     Bytes.random(val2);
 
     for (int i = 0; i < maxRows; i++) {
-      if (i == maxRows / 2) {
-        TEST_UTIL.flush(tableName);
-      }
       table.put(new Put(Bytes.toBytes(i)).addColumn(family, Bytes.toBytes(1), val1)
         .addColumn(family, Bytes.toBytes(2), val2).setTTL(600_000));
     }
