@@ -834,6 +834,13 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     public void setCurrentBuffer(ByteBuff buffer) {
       if (this.tagCompressionContext != null) {
         this.tagCompressionContext.clear();
+
+        // Prior seekToKeyInBlock may have reset this to false if we fell back to previous
+        // seeker state. This is an optimization so we don't have to uncompress tags again when
+        // reading last state.
+        // In seekBefore flow, if block change happens then rewind is not called and
+        // setCurrentBuffer is called, so need to uncompress any tags we see.
+        current.uncompressTags = true;
       }
       currentBuffer = buffer;
       current.currentBuffer = currentBuffer;
@@ -876,9 +883,6 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
         // reading last state.
         // In case of rewind, we are starting from the beginning of the buffer, so we need
         // to uncompress any tags we see.
-        // It may make sense to reset this in setCurrentBuffer as well, but we seem to only call
-        // setCurrentBuffer after StoreFileScanner.seekAtOrAfter which calls next to consume the
-        // seeker state. Rewind is called by seekBefore, which doesn't and leaves us in this state.
         current.uncompressTags = true;
       }
       decodeFirst();
