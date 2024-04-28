@@ -450,8 +450,6 @@ module Hbase
         'admin',
         nil
       )
-      zk = @zk_wrapper.getRecoverableZooKeeper.getZooKeeper
-      @zk_main = org.apache.zookeeper.ZooKeeperMain.new(zk)
       org.apache.hadoop.hbase.zookeeper.ZKDump.dump(@zk_wrapper)
     end
 
