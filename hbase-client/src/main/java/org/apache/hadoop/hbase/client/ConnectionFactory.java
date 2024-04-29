@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
+import com.google.common.base.Throwables;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.URI;
@@ -36,6 +37,8 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A non-instantiable class that manages creation of {@link Connection}s. Managing the lifecycle of
@@ -73,6 +76,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class ConnectionFactory {
+
+  private static final Logger LOG = LoggerFactory.getLogger(ConnectionFactory.class);
 
   public static final String HBASE_CLIENT_ASYNC_CONNECTION_IMPL =
     "hbase.client.async.connection.impl";
@@ -399,15 +404,32 @@ public class ConnectionFactory {
       } catch (ClassNotFoundException e) {
         throw new IOException(e);
       }
-      ConnectionRegistry registry = createConnectionRegistry(connectionUri, conf, user);
       try {
         // Default HCM#HCI is not accessible; make it so before invoking.
         Constructor<?> constructor = clazz.getDeclaredConstructor(Configuration.class,
           ExecutorService.class, User.class, ConnectionRegistry.class, Map.class);
         constructor.setAccessible(true);
+        ConnectionRegistry registry = createConnectionRegistry(connectionUri, conf, user);
         return user.runAs((PrivilegedExceptionAction<Connection>) () -> (Connection) constructor
           .newInstance(conf, pool, user, registry, connectionAttributes));
+      } catch (NoSuchMethodException e) {
+        LOG.debug(
+          "Constructor with connection registry not found for class {}, fallback to use old constructor",
+          clazz.getName(), e);
       } catch (Exception e) {
+        Throwables.propagateIfPossible(e, IOException.class);
+        throw new IOException(e);
+      }
+
+      try {
+        // Default HCM#HCI is not accessible; make it so before invoking.
+        Constructor<?> constructor = clazz.getDeclaredConstructor(Configuration.class,
+          ExecutorService.class, User.class, Map.class);
+        constructor.setAccessible(true);
+        return user.runAs((PrivilegedExceptionAction<Connection>) () -> (Connection) constructor
+          .newInstance(conf, pool, user, connectionAttributes));
+      } catch (Exception e) {
+        Throwables.propagateIfPossible(e, IOException.class);
         throw new IOException(e);
       }
     }, () -> TraceUtil.createSpan(ConnectionFactory.class.getSimpleName() + ".createConnection"));
