@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -403,9 +402,10 @@ public class TestNamespaceAuditor {
     Collections.sort(hris, RegionInfo.COMPARATOR);
     // verify that we cannot split
     try {
-      ADMIN.split(tableTwo, Bytes.toBytes("6"));
+      ADMIN.splitRegionAsync(hris.get(1).getRegionName(), Bytes.toBytes("6")).get(10,
+        TimeUnit.SECONDS);
       fail();
-    } catch (DoNotRetryIOException e) {
+    } catch (ExecutionException e) {
       // Expected
     }
     Thread.sleep(2000);
