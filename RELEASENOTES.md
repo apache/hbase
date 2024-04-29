@@ -838,6 +838,28 @@ CVE-2024-3094 implicated recent releases of the native liblzma library as a vect
 XZ compression support has been deprecated in 2.5 and removed in 2.6 and up.
 
 
+---
+
+* [HBASE-28517](https://issues.apache.org/jira/browse/HBASE-28517) | *Major* | **Make properties dynamically configured**
+
+Make the following properties dynamically configured:
+\* hbase.rs.evictblocksonclose
+\* hbase.rs.cacheblocksonwrite
+\* hbase.block.data.cacheonread
+
+
+---
+
+* [HBASE-28552](https://issues.apache.org/jira/browse/HBASE-28552) | *Major* | **Bump up bouncycastle dependency from 1.76 to 1.78**
+
+Bump bouncycastle dependency from 1.76 to 1.78 for addressing several CVEs
+
+CVE-2024-29857
+CVE-2024-30171
+CVE-2024-30172
+CVE-2024-301XX(Full CVE Code not available yet)
+
+
 
 # HBASE  2.2.0 Release Notes
 

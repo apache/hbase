@@ -18,7 +18,7 @@
 -->
 # HBASE Changelog
 
-## Release 2.6.0 - Unreleased (as of 2024-04-24)
+## Release 2.6.0 - Unreleased (as of 2024-04-29)
 
 
 
@@ -240,7 +240,6 @@
 | [HBASE-28485](https://issues.apache.org/jira/browse/HBASE-28485) | Re-use ZstdDecompressCtx/ZstdCompressCtx for performance |  Major | . |
 | [HBASE-28498](https://issues.apache.org/jira/browse/HBASE-28498) | fix spotless:check errors |  Major | . |
 | [HBASE-28504](https://issues.apache.org/jira/browse/HBASE-28504) | Implement eviction logic for scanners in Rest APIs to prevent scanner leakage |  Major | REST |
-| [HBASE-28518](https://issues.apache.org/jira/browse/HBASE-28518) | Allow specifying a filter for the REST multiget endpoint |  Major | REST |
 | [HBASE-28292](https://issues.apache.org/jira/browse/HBASE-28292) | Make Delay prefetch property to be dynamically configured |  Major | . |
 | [HBASE-28470](https://issues.apache.org/jira/browse/HBASE-28470) | Fix Typo in Java Method Comment |  Trivial | Admin |
 | [HBASE-28509](https://issues.apache.org/jira/browse/HBASE-28509) | ScanResumer.resume would perform unnecessary scan when close AsyncTableResultScanner |  Major | asyncclient |
@@ -248,6 +247,9 @@
 | [HBASE-28150](https://issues.apache.org/jira/browse/HBASE-28150) | CreateTableProcedure and DeleteTableProcedure should sleep a while before retrying |  Major | master, proc-v2 |
 | [HBASE-28529](https://issues.apache.org/jira/browse/HBASE-28529) | Use ZKClientConfig instead of system properties when setting zookeeper configurations |  Major | Zookeeper |
 | [HBASE-28255](https://issues.apache.org/jira/browse/HBASE-28255) | Correcting spelling errors or annotations with non-standard spelling |  Minor | . |
+| [HBASE-28517](https://issues.apache.org/jira/browse/HBASE-28517) | Make properties dynamically configured |  Major | . |
+| [HBASE-28518](https://issues.apache.org/jira/browse/HBASE-28518) | Allow specifying a filter for the REST multiget endpoint |  Major | REST |
+| [HBASE-28552](https://issues.apache.org/jira/browse/HBASE-28552) | Bump up bouncycastle dependency from 1.76 to 1.78 |  Major | dependencies, security |
 
 
 ### BUG FIXES:
@@ -271,7 +273,7 @@
 | [HBASE-27352](https://issues.apache.org/jira/browse/HBASE-27352) | Quoted string argument with spaces passed from command line are propagated wrongly to the underlying java class |  Minor | shell |
 | [HBASE-27368](https://issues.apache.org/jira/browse/HBASE-27368) | Do not need to throw IllegalStateException when peer is not active in ReplicationSource.initialize |  Major | regionserver, Replication |
 | [HBASE-27386](https://issues.apache.org/jira/browse/HBASE-27386) | Use encoded size for calculating compression ratio in block size predicator |  Major | . |
-| [HBASE-27381](https://issues.apache.org/jira/browse/HBASE-27381) | Still seeing 'Stuck' in static initialization creating RegionInfo instance |  Major | . |
+| [HBASE-27381](https://issues.apache.org/jira/browse/HBASE-27381) | Still seeing 'Stuck' in static initialization creating RegionInfo instance |  Major | Client |
 | [HBASE-27409](https://issues.apache.org/jira/browse/HBASE-27409) | Fix the javadoc for WARCRecord |  Major | documentation |
 | [HBASE-27407](https://issues.apache.org/jira/browse/HBASE-27407) | Fixing check for "description" request param in JMXJsonServlet.java |  Minor | metrics |
 | [HBASE-27419](https://issues.apache.org/jira/browse/HBASE-27419) | Update to hbase-thirdparty 4.1.2 |  Major | dependencies |
@@ -475,6 +477,9 @@
 | [HBASE-28183](https://issues.apache.org/jira/browse/HBASE-28183) | It's impossible to re-enable the quota table if it gets disabled |  Major | . |
 | [HBASE-28500](https://issues.apache.org/jira/browse/HBASE-28500) | Rest Java client library assumes stateless servers |  Major | REST |
 | [HBASE-28298](https://issues.apache.org/jira/browse/HBASE-28298) | HFilePrettyPrinter thrown NoSuchMethodError about MetricRegistry |  Major | HFile, UI |
+| [HBASE-28482](https://issues.apache.org/jira/browse/HBASE-28482) | Reverse scan with tags throws ArrayIndexOutOfBoundsException with DBE |  Major | HFile |
+| [HBASE-28554](https://issues.apache.org/jira/browse/HBASE-28554) | TestZooKeeperScanPolicyObserver and TestAdminShell fail 100% of times on flaky dashboard |  Blocker | shell, test, Zookeeper |
+| [HBASE-28405](https://issues.apache.org/jira/browse/HBASE-28405) | Region open procedure silently returns without notifying the parent proc |  Major | proc-v2, Region Assignment |
 
 
 ### TESTS:
@@ -616,6 +621,7 @@
 | [HBASE-28444](https://issues.apache.org/jira/browse/HBASE-28444) | Bump org.apache.zookeeper:zookeeper from 3.8.3 to 3.8.4 |  Blocker | security, Zookeeper |
 | [HBASE-28506](https://issues.apache.org/jira/browse/HBASE-28506) | Remove hbase-compression-xz |  Major | . |
 | [HBASE-28511](https://issues.apache.org/jira/browse/HBASE-28511) | Update hbase-thirdparty to 4.1.7 |  Major | dependencies |
+| [HBASE-28512](https://issues.apache.org/jira/browse/HBASE-28512) | Update error prone to 2.26.1 |  Major | dependencies |
 
 
 ## Release 2.2.0 - Unreleased (as of 2019-06-11)
