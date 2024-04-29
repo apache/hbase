@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
-import com.google.common.base.Throwables;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.URI;
@@ -39,6 +38,8 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 /**
  * A non-instantiable class that manages creation of {@link Connection}s. Managing the lifecycle of
