@@ -2195,18 +2195,11 @@ public class BucketCache implements BlockCache, HeapSize {
   public Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
     String fileName = hFileInfo.getHFileContext().getHFileName();
     DataTieringManager dataTieringManager = DataTieringManager.getInstance();
-    if (dataTieringManager != null) {
-      if (!dataTieringManager.isHotData(hFileInfo, conf)) {
-        LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data", fileName);
-        return Optional.of(false);
-      } else {
-        LOG.debug("Data tiering is enabled for file: '{}' and it is hot data", fileName);
-      }
-    } else {
-      LOG.debug("Data tiering feature is not enabled. "
-        + " The file: '{}' will be loaded if not already loaded", fileName);
+    if (dataTieringManager != null && !dataTieringManager.isHotData(hFileInfo, conf)) {
+      LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data", fileName);
+      return Optional.of(false);
     }
-    // if we don't have the file in fullyCachedFiles, we should cache it.
+    // if we don't have the file in fullyCachedFiles, we should cache it
     return Optional.of(!fullyCachedFiles.containsKey(fileName));
   }
 

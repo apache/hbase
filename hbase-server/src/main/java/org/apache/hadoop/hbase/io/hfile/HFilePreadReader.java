@@ -23,7 +23,6 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
-import org.apache.hadoop.hbase.regionserver.DataTieringManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,13 +40,8 @@ public class HFilePreadReader extends HFileReaderImpl {
 
     final MutableBoolean shouldCache = new MutableBoolean(true);
 
-    DataTieringManager dataTieringManager = DataTieringManager.getInstance();
-    if (dataTieringManager != null) {
-      // Initialize HFileInfo object with metadata for caching decisions.
-      // Initialize the metadata only if the data-tiering is enabled.
-      // If not, the metadata will be initialized later.
-      fileInfo.initMetaAndIndex(this);
-    }
+    // Initialize HFileInfo object with metadata for caching decisions
+    fileInfo.initMetaAndIndex(this);
 
     cacheConf.getBlockCache().ifPresent(cache -> {
       Optional<Boolean> result = cache.shouldCacheFile(fileInfo, conf);
