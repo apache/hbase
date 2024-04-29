@@ -414,9 +414,8 @@ public class ConnectionFactory {
         return user.runAs((PrivilegedExceptionAction<Connection>) () -> (Connection) constructor
           .newInstance(conf, pool, user, registry, connectionAttributes));
       } catch (NoSuchMethodException e) {
-        LOG.debug(
-          "Constructor with connection registry not found for class {}, fallback to use old constructor",
-          clazz.getName(), e);
+        LOG.debug("Constructor with connection registry not found for class {},"
+          + " fallback to use old constructor", clazz.getName(), e);
       } catch (Exception e) {
         Throwables.propagateIfPossible(e, IOException.class);
         throw new IOException(e);
