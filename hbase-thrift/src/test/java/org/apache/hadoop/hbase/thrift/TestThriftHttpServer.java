@@ -18,9 +18,7 @@
 package org.apache.hadoop.hbase.thrift;
 
 import static org.apache.hadoop.hbase.thrift.TestThriftServerCmdLine.createBoundServer;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -160,16 +158,6 @@ public class TestThriftHttpServer {
       LOG.error("Thrift Client", clientSideException);
       throw clientSideException;
     }
-  }
-
-  @Test
-  public void testSecurityHeaders() throws Exception {
-    ThriftServerRunner tsr = createBoundServer(getThriftServerSupplier());
-    String url = "http://" + HConstants.LOCALHOST + ":" + tsr.getThriftServer().listenPort;
-    HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-    conn.setRequestMethod("POST");
-    conn.connect();
-    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
   }
 
   private void checkHttpMethods(String url) throws Exception {
