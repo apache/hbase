@@ -65,7 +65,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
  * <p>
  * If sending the operation to remote RS failed, dispatcher will call remoteCallFailed() to handle
  * this which calls remoteOperationDone with the exception. If the targetServer crashed but this
- * procedure has no response, than dispatcher will call remoteOperationFailed() which also calls
+ * procedure has no response or if we receive failed response, then dispatcher will call remoteOperationFailed() which also calls
  * remoteOperationDone with the exception. If the operation is successful, then
  * remoteOperationCompleted will be called and actually calls the remoteOperationDone without
  * exception. In remoteOperationDone, we'll check if the procedure is already get wake up by others.
