@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import static org.apache.hadoop.hbase.http.HttpServerUtil.PATH_SPEC_ANY;
+
 import java.lang.management.ManagementFactory;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -31,10 +33,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.http.ClickjackingPreventionFilter;
 import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
-import org.apache.hadoop.hbase.http.SecurityHeadersFilter;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
@@ -72,7 +72,6 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
-import static org.apache.hadoop.hbase.http.HttpServerUtil.PATH_SPEC_ANY;
 
 /**
  * Main class for launching REST gateway as a servlet hosted by Jetty.

@@ -17,6 +17,20 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import static org.apache.hadoop.hbase.thrift.TestThriftServerCmdLine.createBoundServer;
+import static org.junit.Assert.assertEquals;
+
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.net.HttpURLConnection;
+import java.nio.file.Files;
+import java.security.KeyPair;
+import java.security.KeyStore;
+import java.security.cert.X509Certificate;
+import javax.net.ssl.SSLContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -48,19 +62,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import javax.net.ssl.SSLContext;
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Method;
-import java.net.HttpURLConnection;
-import java.nio.file.Files;
-import java.security.KeyPair;
-import java.security.KeyStore;
-import java.security.cert.X509Certificate;
-import static org.apache.hadoop.hbase.thrift.TestThriftServerCmdLine.createBoundServer;
-import static org.junit.Assert.assertEquals;
 
 @Category({ ClientTests.class, LargeTests.class })
 public class TestThriftHttpServerSSL {
@@ -124,8 +125,7 @@ public class TestThriftHttpServerSSL {
     }
 
     httpClientBuilder = HttpClients.custom();
-    SSLContext sslcontext =
-      SSLContexts.custom().loadTrustMaterial(trustStore, null).build();
+    SSLContext sslcontext = SSLContexts.custom().loadTrustMaterial(trustStore, null).build();
     httpClientBuilder.setSSLContext(sslcontext);
 
     httpPost = new HttpPost(url);
@@ -156,12 +156,10 @@ public class TestThriftHttpServerSSL {
       CloseableHttpResponse httpResponse = httpClient.execute(httpPost);
 
       assertEquals(HttpURLConnection.HTTP_OK, httpResponse.getStatusLine().getStatusCode());
-      assertEquals("DENY",  httpResponse.getFirstHeader("X-Frame-Options").getValue());
+      assertEquals("DENY", httpResponse.getFirstHeader("X-Frame-Options").getValue());
 
-      assertEquals("nosniff",
-        httpResponse.getFirstHeader("X-Content-Type-Options").getValue());
-      assertEquals("1; mode=block",
-        httpResponse.getFirstHeader("X-XSS-Protection").getValue());
+      assertEquals("nosniff", httpResponse.getFirstHeader("X-Content-Type-Options").getValue());
+      assertEquals("1; mode=block", httpResponse.getFirstHeader("X-XSS-Protection").getValue());
 
       assertEquals("default-src https: data: 'unsafe-inline' 'unsafe-eval'",
         httpResponse.getFirstHeader("Content-Security-Policy").getValue());
@@ -198,8 +196,7 @@ public class TestThriftHttpServerSSL {
       "serverKS", keyPair.getPrivate(), serverCertificate);
   }
 
-  private void generateTrustStore(X509Certificate serverCertificate)
-    throws Exception {
+  private void generateTrustStore(X509Certificate serverCertificate) throws Exception {
     String trustStorePath = getTruststoreFilePath();
     KeyStoreTestUtil.createTrustStore(trustStorePath, TRUST_STORE_PASSWORD, "serverTS",
       serverCertificate);
