@@ -18,10 +18,13 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Base64.Decoder;
+import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.rest.model.CellModel;
@@ -98,8 +101,7 @@ public class MultiRowResource extends ResourceBase implements Constants {
         ParseFilter pf = new ParseFilter();
         parsedParamFilter = pf.parseFilterString(filterBytes);
       }
-      CellSetModel model = new CellSetModel();
-      // TODO map this to a Table.get(List<Get> gets) call instead of multiple get calls
+      List<RowSpec> rowSpecs = new ArrayList<>();
       for (String rk : params.get(ROW_KEYS_PARAM_NAME)) {
         RowSpec rowSpec = new RowSpec(rk, keyEncoding);
 
@@ -112,24 +114,24 @@ public class MultiRowResource extends ResourceBase implements Constants {
             rowSpec.addColumn(Bytes.toBytes(this.columns[i]));
           }
         }
-
-        ResultGenerator generator = ResultGenerator.fromRowSpec(this.tableResource.getName(),
-          rowSpec, parsedParamFilter, !params.containsKey(NOCACHE_PARAM_NAME));
-        Cell value = null;
-        RowModel rowModel = new RowModel(rowSpec.getRow());
-        if (generator.hasNext()) {
-          while ((value = generator.next()) != null) {
-            rowModel.addCell(new CellModel(CellUtil.cloneFamily(value),
-              CellUtil.cloneQualifier(value), value.getTimestamp(), CellUtil.cloneValue(value)));
-          }
-          model.addRow(rowModel);
-        } else {
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("The row : " + rk + " not found in the table.");
-          }
-        }
+        rowSpecs.add(rowSpec);
       }
 
+      MultiRowResultReader reader = new MultiRowResultReader(this.tableResource.getName(), rowSpecs,
+        parsedParamFilter, !params.containsKey(NOCACHE_PARAM_NAME));
+
+      CellSetModel model = new CellSetModel();
+      for (Result r : reader.getResults()) {
+        if (r.isEmpty()) {
+          continue;
+        }
+        RowModel rowModel = new RowModel(r.getRow());
+        for (Cell c : r.listCells()) {
+          rowModel.addCell(new CellModel(CellUtil.cloneFamily(c), CellUtil.cloneQualifier(c),
+            c.getTimestamp(), CellUtil.cloneValue(c)));
+        }
+        model.addRow(rowModel);
+      }
       if (model.getRows().isEmpty()) {
         // If no rows found.
         servlet.getMetrics().incrementFailedGetRequests(1);
