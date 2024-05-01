@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -166,6 +167,9 @@ public class TestHBaseReplicationEndpoint {
     ServerName serverNameA = endpoint.getSinkServers().get(0);
     ServerName serverNameB = endpoint.getSinkServers().get(1);
 
+    serverNames.remove(serverNameA);
+    serverNames.remove(serverNameB);
+
     SinkPeer sinkPeerA = new SinkPeer(serverNameA, mock(AsyncRegionServerAdmin.class));
     SinkPeer sinkPeerB = new SinkPeer(serverNameB, mock(AsyncRegionServerAdmin.class));
 
@@ -191,7 +195,7 @@ public class TestHBaseReplicationEndpoint {
     }
 
     @Override
-    public List<ServerName> fetchSlavesAddresses() {
+    protected Collection<ServerName> fetchPeerAddresses() {
       return regionServers;
     }
 
