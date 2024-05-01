@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.ConnectionRegistry;
 import org.apache.hadoop.hbase.client.Hbck;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -1606,7 +1607,9 @@ public class TestHFileOutputFormat2 {
     private final Connection delegate;
 
     public ConfigurationCaptorConnection(Configuration conf, ExecutorService es, User user,
-      Map<String, byte[]> connectionAttributes) throws IOException {
+      ConnectionRegistry registry, Map<String, byte[]> connectionAttributes) throws IOException {
+      // here we do not use this registry, so close it...
+      registry.close();
       Configuration confForDelegate = new Configuration(conf);
       confForDelegate.unset(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL);
       delegate = createConnection(confForDelegate, es, user, connectionAttributes);
