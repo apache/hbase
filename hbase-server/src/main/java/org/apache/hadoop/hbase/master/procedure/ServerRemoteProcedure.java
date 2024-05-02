@@ -65,15 +65,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
  * <p>
  * If sending the operation to remote RS failed, dispatcher will call remoteCallFailed() to handle
  * this which calls remoteOperationDone with the exception. If the targetServer crashed but this
- * procedure has no response or if we receive failed response, then dispatcher will call remoteOperationFailed() which also calls
- * remoteOperationDone with the exception. If the operation is successful, then
- * remoteOperationCompleted will be called and actually calls the remoteOperationDone without
- * exception. In remoteOperationDone, we'll check if the procedure is already get wake up by others.
- * Then developer could implement complete() based on their own purpose. But basic logic is that if
- * operation succeed, set succ to true and do the clean work. If operation failed and require to
- * resend it to the same server, leave the succ as false. If operation failed and require to resend
- * it to another server, set succ to true and upper layer should be able to find out this operation
- * not work and send a operation to another server.
+ * procedure has no response or if we receive failed response, then dispatcher will call
+ * remoteOperationFailed() which also calls remoteOperationDone with the exception. If the operation
+ * is successful, then remoteOperationCompleted will be called and actually calls the
+ * remoteOperationDone without exception. In remoteOperationDone, we'll check if the procedure is
+ * already get wake up by others. Then developer could implement complete() based on their own
+ * purpose. But basic logic is that if operation succeed, set succ to true and do the clean work. If
+ * operation failed and require to resend it to the same server, leave the succ as false. If
+ * operation failed and require to resend it to another server, set succ to true and upper layer
+ * should be able to find out this operation not work and send a operation to another server.
  */
 public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv>
   implements RemoteProcedureDispatcher.RemoteProcedure<MasterProcedureEnv, ServerName> {
