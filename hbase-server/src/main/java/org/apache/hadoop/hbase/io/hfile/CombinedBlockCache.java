@@ -484,11 +484,20 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
-    Optional<Boolean> l1Result = l1Cache.shouldCacheFile(hFileInfo, conf);
-    Optional<Boolean> l2Result = l2Cache.shouldCacheFile(hFileInfo, conf);
+    return combineCacheResults(l1Cache.shouldCacheFile(hFileInfo, conf),
+      l2Cache.shouldCacheFile(hFileInfo, conf));
+  }
+
+  @Override
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key) {
+    return combineCacheResults(l1Cache.shouldCacheBlock(key), l2Cache.shouldCacheBlock(key));
+  }
+
+  private Optional<Boolean> combineCacheResults(Optional<Boolean> result1,
+    Optional<Boolean> result2) {
     final Mutable<Boolean> combinedResult = new MutableBoolean(true);
-    l1Result.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
-    l2Result.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
+    result1.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
+    result2.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
     return Optional.of(combinedResult.getValue());
   }
 

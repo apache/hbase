@@ -128,6 +128,10 @@ public class DataTieringManager {
     if (hFilePath == null) {
       throw new DataTieringException("BlockCacheKey Doesn't Contain HFile Path");
     }
+
+    if (key.getMaxTimestamp().isPresent()) {
+      return isHotData(hFilePath, key.getMaxTimestamp().get());
+    }
     return isHotData(hFilePath);
   }
 
@@ -146,6 +150,27 @@ public class DataTieringManager {
 
     if (dataTieringType.equals(DataTieringType.TIME_RANGE)) {
       return hotDataValidator(getMaxTimestamp(hFilePath), getDataTieringHotDataAge(configuration));
+    }
+    // DataTieringType.NONE or other types are considered hot by default
+    return true;
+  }
+
+  /**
+   * Determines whether the data in the HFile at the given path is considered hot based on the
+   * configured data tiering type and hot data age. If the data tiering type is set to
+   * {@link DataTieringType#TIME_RANGE}, it validates the data against the provided maximum
+   * timestamp.
+   * @param hFilePath    the path to the HFile
+   * @param maxTimestamp the maximum timestamp to validate against
+   * @return {@code true} if the data is hot, {@code false} otherwise
+   * @throws DataTieringException if there is an error retrieving data tiering information
+   */
+  public boolean isHotData(Path hFilePath, long maxTimestamp) throws DataTieringException {
+    Configuration configuration = getConfiguration(hFilePath);
+    DataTieringType dataTieringType = getDataTieringType(configuration);
+
+    if (dataTieringType.equals(DataTieringType.TIME_RANGE)) {
+      return hotDataValidator(maxTimestamp, getDataTieringHotDataAge(configuration));
     }
     // DataTieringType.NONE or other types are considered hot by default
     return true;
@@ -231,10 +256,12 @@ public class DataTieringManager {
   }
 
   private HRegion getHRegion(Path hFilePath) throws DataTieringException {
-    if (hFilePath.getParent() == null || hFilePath.getParent().getParent() == null) {
-      throw new DataTieringException("Incorrect HFile Path: " + hFilePath);
+    String regionId;
+    try {
+      regionId = HRegionFileSystem.getRegionId(hFilePath);
+    } catch (IOException e) {
+      throw new DataTieringException(e.getMessage());
     }
-    String regionId = hFilePath.getParent().getParent().getName();
     HRegion hRegion = this.onlineRegions.get(regionId);
     if (hRegion == null) {
       throw new DataTieringException("HRegion corresponding to " + hFilePath + " doesn't exist");

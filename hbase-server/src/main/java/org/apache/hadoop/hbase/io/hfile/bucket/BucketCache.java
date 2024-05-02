@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.regionserver.DataTieringException;
 import org.apache.hadoop.hbase.regionserver.DataTieringManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -2201,6 +2202,23 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     // if we don't have the file in fullyCachedFiles, we should cache it
     return Optional.of(!fullyCachedFiles.containsKey(fileName));
+  }
+
+  @Override
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key) {
+    try {
+      DataTieringManager dataTieringManager = DataTieringManager.getInstance();
+      if (!dataTieringManager.isHotData(key)) {
+        LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data",
+          key.getHfileName());
+        return Optional.of(false);
+      }
+    } catch (IllegalStateException e) {
+      LOG.warn("Error while getting DataTieringManager instance: {}", e.getMessage());
+    } catch (DataTieringException e) {
+      LOG.warn("Error while checking hotness of the block: {}", e.getMessage());
+    }
+    return Optional.of(true);
   }
 
   @Override
