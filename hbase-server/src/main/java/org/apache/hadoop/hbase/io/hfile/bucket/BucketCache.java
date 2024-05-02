@@ -1143,11 +1143,10 @@ public class BucketCache implements BlockCache, HeapSize {
       long bytesFreed = 0;
       // Check the list of files to determine the cold files which can be readily evicted.
       Map<String, String> coldFiles = null;
-      try {
-        DataTieringManager dataTieringManager = DataTieringManager.getInstance();
+
+      DataTieringManager dataTieringManager = DataTieringManager.getInstance();
+      if (dataTieringManager != null) {
         coldFiles = dataTieringManager.getColdFilesList();
-      } catch (IllegalStateException e) {
-        LOG.warn("Data Tiering Manager is not set. Ignore time-based block evictions.");
       }
       // Scan entire map putting bucket entry into appropriate bucket entry
       // group
@@ -2436,16 +2435,11 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
     String fileName = hFileInfo.getHFileContext().getHFileName();
-    try {
-      DataTieringManager dataTieringManager = DataTieringManager.getInstance();
-      if (!dataTieringManager.isHotData(hFileInfo, conf)) {
-        LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data", fileName);
-        return Optional.of(false);
-      }
-    } catch (IllegalStateException e) {
-      LOG.error("Error while getting DataTieringManager instance: {}", e.getMessage());
+    DataTieringManager dataTieringManager = DataTieringManager.getInstance();
+    if (dataTieringManager != null && !dataTieringManager.isHotData(hFileInfo, conf)) {
+      LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data", fileName);
+      return Optional.of(false);
     }
-
     // if we don't have the file in fullyCachedFiles, we should cache it
     return Optional.of(!fullyCachedFiles.containsKey(fileName));
   }

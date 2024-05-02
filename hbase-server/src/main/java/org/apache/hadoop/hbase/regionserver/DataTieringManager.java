@@ -45,6 +45,9 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class DataTieringManager {
   private static final Logger LOG = LoggerFactory.getLogger(DataTieringManager.class);
+  public static final String GLOBAL_DATA_TIERING_ENABLED_KEY =
+    "hbase.regionserver.datatiering.enable";
+  public static final boolean DEFAULT_GLOBAL_DATA_TIERING_ENABLED = false; // disabled by default
   public static final String DATATIERING_KEY = "hbase.hstore.datatiering.type";
   public static final String DATATIERING_HOT_DATA_AGE_KEY =
     "hbase.hstore.datatiering.hot.age.millis";
@@ -58,28 +61,29 @@ public class DataTieringManager {
   }
 
   /**
-   * Initializes the DataTieringManager instance with the provided map of online regions.
+   * Initializes the DataTieringManager instance with the provided map of online regions, only if
+   * the configuration "hbase.regionserver.datatiering.enable" is enabled.
+   * @param conf          Configuration object.
    * @param onlineRegions A map containing online regions.
+   * @return True if the instance is instantiated successfully, false otherwise.
    */
-  public static synchronized void instantiate(Map<String, HRegion> onlineRegions) {
-    if (instance == null) {
+  public static synchronized boolean instantiate(Configuration conf,
+    Map<String, HRegion> onlineRegions) {
+    if (isDataTieringFeatureEnabled(conf) && instance == null) {
       instance = new DataTieringManager(onlineRegions);
       LOG.info("DataTieringManager instantiated successfully.");
+      return true;
     } else {
       LOG.warn("DataTieringManager is already instantiated.");
     }
+    return false;
   }
 
   /**
    * Retrieves the instance of DataTieringManager.
-   * @return The instance of DataTieringManager.
-   * @throws IllegalStateException if DataTieringManager has not been instantiated.
+   * @return The instance of DataTieringManager, if instantiated, null otherwise.
    */
   public static synchronized DataTieringManager getInstance() {
-    if (instance == null) {
-      throw new IllegalStateException(
-        "DataTieringManager has not been instantiated. Call instantiate() first.");
-    }
     return instance;
   }
 
@@ -307,5 +311,15 @@ public class DataTieringManager {
       }
     }
     return coldFiles;
+  }
+
+  private static boolean isDataTieringFeatureEnabled(Configuration conf) {
+    return conf.getBoolean(DataTieringManager.GLOBAL_DATA_TIERING_ENABLED_KEY,
+      DataTieringManager.DEFAULT_GLOBAL_DATA_TIERING_ENABLED);
+  }
+
+  // Resets the instance to null. To be used only for testing.
+  public static void resetForTestingOnly() {
+    instance = null;
   }
 }
