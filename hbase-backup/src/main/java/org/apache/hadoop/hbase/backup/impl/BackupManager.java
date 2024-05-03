@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupHFileCleaner;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupObserver;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
-import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.hadoop.hbase.backup.master.BackupLogCleaner;
 import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
@@ -322,7 +320,8 @@ public class BackupManager implements Closeable {
       }
     }
 
-    throw new IllegalStateException("Unable to find full backup that contains tables: " + tablesToCover);
+    throw new IllegalStateException(
+      "Unable to find full backup that contains tables: " + tablesToCover);
   }
 
   /**

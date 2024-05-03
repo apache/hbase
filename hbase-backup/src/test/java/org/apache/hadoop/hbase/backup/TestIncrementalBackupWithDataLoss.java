@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.junit.Assert.assertTrue;
+
+import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
@@ -24,16 +27,13 @@ import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-
-import static org.junit.Assert.assertTrue;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestIncrementalBackupWithDataLoss extends TestBackupBase {
@@ -42,7 +42,8 @@ public class TestIncrementalBackupWithDataLoss extends TestBackupBase {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestIncrementalBackupWithDataLoss.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestIncrementalBackupWithDataLoss.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestIncrementalBackupWithDataLoss.class);
 
   @Test
   public void testFullBackupBreaksDependencyOnOlderBackups() throws Exception {
@@ -53,9 +54,11 @@ public class TestIncrementalBackupWithDataLoss extends TestBackupBase {
       List<TableName> tables = Lists.newArrayList(table1);
 
       insertIntoTable(conn, table1, famName, 1, 1).close();
-      String backup1 = client.backupTables(createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR));
+      String backup1 =
+        client.backupTables(createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR));
       insertIntoTable(conn, table1, famName, 2, 1).close();
-      String backup2 = client.backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
+      String backup2 =
+        client.backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
 
       assertTrue(checkSucceeded(backup1));
       assertTrue(checkSucceeded(backup2));
@@ -64,11 +67,14 @@ public class TestIncrementalBackupWithDataLoss extends TestBackupBase {
       TEST_UTIL.getTestFileSystem().delete(new Path(BACKUP_ROOT_DIR, backup2), true);
 
       insertIntoTable(conn, table1, famName, 4, 1).close();
-      String backup4 = client.backupTables(createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR));
+      String backup4 =
+        client.backupTables(createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR));
       insertIntoTable(conn, table1, famName, 5, 1).close();
-      String backup5 = client.backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
+      String backup5 =
+        client.backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
       insertIntoTable(conn, table1, famName, 6, 1).close();
-      String backup6 = client.backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
+      String backup6 =
+        client.backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
 
       assertTrue(checkSucceeded(backup4));
       assertTrue(checkSucceeded(backup5));
