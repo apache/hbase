@@ -664,15 +664,14 @@ public final class BackupUtils {
     return request;
   }
 
-  public static boolean validate(HashMap<TableName, BackupManifest> backupManifestMap,
+  public static boolean validate(List<TableName> tables, BackupManifest backupManifest,
     Configuration conf) throws IOException {
     boolean isValid = true;
 
-    for (Entry<TableName, BackupManifest> manifestEntry : backupManifestMap.entrySet()) {
-      TableName table = manifestEntry.getKey();
+    for (TableName table : tables) {
       TreeSet<BackupImage> imageSet = new TreeSet<>();
 
-      ArrayList<BackupImage> depList = manifestEntry.getValue().getDependentListByTable(table);
+      ArrayList<BackupImage> depList = backupManifest.getDependentListByTable(table);
       if (depList != null && !depList.isEmpty()) {
         imageSet.addAll(depList);
       }
