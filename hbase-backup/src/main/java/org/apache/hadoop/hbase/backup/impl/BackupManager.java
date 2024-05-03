@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -285,6 +286,8 @@ public class BackupManager implements Closeable {
       return ancestors;
     }
 
+    Set<TableName> tablesToCover = new HashSet<>(backupInfo.getTables());
+
     // get all backup history list in descending order (newest to oldest)
     ArrayList<BackupInfo> allHistoryList = getBackupHistory(true);
     for (BackupInfo backup : allHistoryList) {
@@ -295,14 +298,31 @@ public class BackupManager implements Closeable {
         .withRootDir(backup.getBackupRootDir()).withTableList(backup.getTableNames())
         .withStartTime(backup.getStartTs()).withCompleteTime(backup.getCompleteTs()).build();
 
-      LOG.debug("Dependent incremental backup image: {BackupID={}}", image.getBackupId());
-      ancestors.add(image);
-      if (backup.getType().equals(BackupType.FULL)) {
-        break;
+      // If the image has a different rootDir, it cannot be an ancestor.
+      if (!image.getRootDir().equals(backupInfo.getBackupRootDir())) {
+        continue;
+      }
+
+      // The ancestors consist of the most recent FULL backups that cover the list of tables
+      // required in the new backup and all INCREMENTAL backups that came after one of those FULL
+      // backups.
+      if (backup.getType().equals(BackupType.INCREMENTAL)) {
+        ancestors.add(image);
+        LOG.debug("Dependent incremental backup image: {BackupID={}}", image.getBackupId());
+      } else {
+        if (tablesToCover.removeAll(image.getTableNames())) {
+          ancestors.add(image);
+          LOG.debug("Dependent full backup image: {BackupID={}}", image.getBackupId());
+
+          if (tablesToCover.isEmpty()) {
+            LOG.debug("Got {} ancestors for the current backup.", ancestors.size());
+            return ancestors;
+          }
+        }
       }
     }
-    LOG.debug("Got {} ancestors for the current backup.", ancestors.size());
-    return ancestors;
+
+    throw new IllegalStateException("Unable to find full backup that contains tables: " + tablesToCover);
   }
 
   /**
