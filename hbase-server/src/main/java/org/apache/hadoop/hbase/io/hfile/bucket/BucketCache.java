@@ -2208,13 +2208,11 @@ public class BucketCache implements BlockCache, HeapSize {
   public Optional<Boolean> shouldCacheBlock(BlockCacheKey key) {
     try {
       DataTieringManager dataTieringManager = DataTieringManager.getInstance();
-      if (!dataTieringManager.isHotData(key)) {
+      if (dataTieringManager != null && !dataTieringManager.isHotData(key)) {
         LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data",
           key.getHfileName());
         return Optional.of(false);
       }
-    } catch (IllegalStateException e) {
-      LOG.warn("Error while getting DataTieringManager instance: {}", e.getMessage());
     } catch (DataTieringException e) {
       LOG.warn("Error while checking hotness of the block: {}", e.getMessage());
     }
