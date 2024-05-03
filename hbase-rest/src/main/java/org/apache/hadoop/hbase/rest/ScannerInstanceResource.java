@@ -83,7 +83,9 @@ public class ScannerInstanceResource extends ResourceBase {
     }
     CellSetModel model = new CellSetModel();
     RowModel rowModel = null;
-    byte[] rowKey = null;
+    byte[] rowKeyArray = null;
+    int rowKeyOffset = 0;
+    int rowKeyLength = 0;
     int limit = batch;
     if (maxValues > 0) {
       limit = maxValues;
@@ -121,11 +123,13 @@ public class ScannerInstanceResource extends ResourceBase {
         }
         break;
       }
-      if (rowKey == null) {
-        rowKey = CellUtil.cloneRow(value);
-        rowModel = new RowModel(rowKey);
+      if (rowKeyArray == null) {
+        rowKeyArray = value.getRowArray();
+        rowKeyOffset = value.getRowOffset();
+        rowKeyLength = value.getRowLength();
+        rowModel = new RowModel(rowKeyArray, rowKeyOffset, rowKeyLength);
       }
-      if (!Bytes.equals(CellUtil.cloneRow(value), rowKey)) {
+      if (!CellUtil.matchingRow(value, rowKeyArray, rowKeyOffset, rowKeyLength)) {
         // if maxRows was given as a query param, stop if we would exceed the
         // specified number of rows
         if (maxRows > 0) {
@@ -135,11 +139,12 @@ public class ScannerInstanceResource extends ResourceBase {
           }
         }
         model.addRow(rowModel);
-        rowKey = CellUtil.cloneRow(value);
-        rowModel = new RowModel(rowKey);
+        rowKeyArray = value.getRowArray();
+        rowKeyOffset = value.getRowOffset();
+        rowKeyLength = value.getRowLength();
+        rowModel = new RowModel(rowKeyArray, rowKeyOffset, rowKeyLength);
       }
-      rowModel.addCell(new CellModel(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value),
-        value.getTimestamp(), CellUtil.cloneValue(value)));
+      rowModel.addCell(new CellModel(value));
     } while (--count > 0);
     model.addRow(rowModel);
     ResponseBuilder response = Response.ok(model);

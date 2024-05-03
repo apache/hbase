@@ -19,14 +19,9 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
-import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -91,15 +86,11 @@ public class ProtobufStreamingOutput implements StreamingOutput {
 
   private CellSetModel createModelFromResults(Result[] results) {
     CellSetModel cellSetModel = new CellSetModel();
-    for (Result rs : results) {
-      byte[] rowKey = rs.getRow();
-      RowModel rModel = new RowModel(rowKey);
-      List<Cell> kvs = rs.listCells();
-      for (Cell kv : kvs) {
-        rModel.addCell(new CellModel(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
-          kv.getTimestamp(), CellUtil.cloneValue(kv)));
+    for (int i = 0; i < results.length; i++) {
+      if (results[i].isEmpty()) {
+        continue;
       }
-      cellSetModel.addRow(rModel);
+      cellSetModel.addRow(RestUtil.createRowModelFromResult(results[i]));
     }
     return cellSetModel;
   }
