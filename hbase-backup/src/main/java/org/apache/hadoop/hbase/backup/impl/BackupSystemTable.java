@@ -839,23 +839,25 @@ public final class BackupSystemTable implements Closeable {
     return tableHistory;
   }
 
-  public Map<TableName, ArrayList<BackupInfo>> getBackupHistoryForTableSet(Set<TableName> set,
+  /**
+   * Goes through all backup history corresponding to the provided root folder, and collects all
+   * backup info mentioning each of the provided tables.
+   * @param set        the tables for which to collect the {@code BackupInfo}
+   * @param backupRoot backup destination path to retrieve backup history for
+   * @return a map containing (a subset of) the provided {@code TableName}s, mapped to a list of at
+   *         least one {@code BackupInfo}
+   * @throws IOException if getting the backup history fails
+   */
+  public Map<TableName, List<BackupInfo>> getBackupHistoryForTableSet(Set<TableName> set,
     String backupRoot) throws IOException {
     List<BackupInfo> history = getBackupHistory(backupRoot);
-    Map<TableName, ArrayList<BackupInfo>> tableHistoryMap = new HashMap<>();
-    for (Iterator<BackupInfo> iterator = history.iterator(); iterator.hasNext();) {
-      BackupInfo info = iterator.next();
-      if (!backupRoot.equals(info.getBackupRootDir())) {
-        continue;
-      }
+    Map<TableName, List<BackupInfo>> tableHistoryMap = new HashMap<>();
+    for (BackupInfo info : history) {
       List<TableName> tables = info.getTableNames();
       for (TableName tableName : tables) {
         if (set.contains(tableName)) {
-          ArrayList<BackupInfo> list = tableHistoryMap.get(tableName);
-          if (list == null) {
-            list = new ArrayList<>();
-            tableHistoryMap.put(tableName, list);
-          }
+          List<BackupInfo> list =
+            tableHistoryMap.computeIfAbsent(tableName, k -> new ArrayList<>());
           list.add(info);
         }
       }
