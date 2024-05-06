@@ -2089,7 +2089,6 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())
           ? region.getCoprocessorHost()
           : null; // do not invoke coprocessors if this is a secondary region replica
-      List<Pair<WALKey, WALEdit>> walEntries = new ArrayList<>();
 
       // Skip adding the edits to WAL if this is a secondary region replica
       boolean isPrimary = RegionReplicaUtil.isDefaultReplica(region.getRegionInfo());
