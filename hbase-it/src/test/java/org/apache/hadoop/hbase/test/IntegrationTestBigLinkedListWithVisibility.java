@@ -277,7 +277,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       job.getConfiguration().setBoolean("mapreduce.reduce.speculative", false);
       TableMapReduceUtil.initTableReducerJob(COMMON_TABLE_NAME, null, job, null, null, null, null);
       TableMapReduceUtil.addDependencyJars(job);
-      TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
+        AbstractHBaseTool.class);
       TableMapReduceUtil.initCredentials(job);
       job.setNumReduceTasks(0);
       boolean success = job.waitForCompletion(true);
@@ -430,7 +431,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
 
       TableMapReduceUtil.initTableMapperJob(tableName.getName(), scan, VerifyMapper.class,
         BytesWritable.class, BytesWritable.class, job);
-      TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
+        AbstractHBaseTool.class);
 
       job.getConfiguration().setBoolean("mapreduce.map.speculative", false);
 

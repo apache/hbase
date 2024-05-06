@@ -122,7 +122,7 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
       }
       LOG.debug("success configuring load incremental job");
 
-      TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
         org.apache.hbase.thirdparty.com.google.common.base.Preconditions.class);
     } else {
       throw new IOException("No bulk output directory specified");
