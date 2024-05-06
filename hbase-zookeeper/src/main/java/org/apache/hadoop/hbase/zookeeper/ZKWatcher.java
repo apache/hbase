@@ -458,6 +458,11 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   public List<String> getMetaReplicaNodesAndWatchChildren() throws KeeperException {
     List<String> childrenOfBaseNode =
       ZKUtil.listChildrenAndWatchForNewChildren(this, znodePaths.baseZNode);
+    // Need to throw here instead of returning an empty list if the base znode hasn't been created
+    // Caller should retry in that case, versus thinking the base znode has a watcher set
+    if (childrenOfBaseNode == null) {
+      keeperException(new KeeperException.NoNodeException(znodePaths.baseZNode));
+    }
     return filterMetaReplicaNodes(childrenOfBaseNode);
   }
 
