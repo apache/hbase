@@ -53,10 +53,10 @@ public class SampleRegionWALCoprocessor
 
   private boolean preWALWriteCalled = false;
   private boolean postWALWriteCalled = false;
-  private boolean preWALRestoreCalled = false;
-  private boolean postWALRestoreCalled = false;
   private boolean preWALRollCalled = false;
   private boolean postWALRollCalled = false;
+  private boolean preReplayWALsCalled = false;
+  private boolean postReplayWALsCalled = false;
 
   /**
    * Set values: with a table name, a column name which will be ignored, and a column name which
@@ -74,8 +74,6 @@ public class SampleRegionWALCoprocessor
     this.changedQualifier = chq;
     preWALWriteCalled = false;
     postWALWriteCalled = false;
-    preWALRestoreCalled = false;
-    postWALRestoreCalled = false;
     preWALRollCalled = false;
     postWALRollCalled = false;
   }
@@ -132,15 +130,6 @@ public class SampleRegionWALCoprocessor
     }
   }
 
-  /**
-   * Triggered before {@link org.apache.hadoop.hbase.regionserver.HRegion} when WAL is Restoreed.
-   */
-  @Override
-  public void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
-    RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
-    preWALRestoreCalled = true;
-  }
-
   @Override
   public void preWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx, Path oldPath,
     Path newPath) throws IOException {
@@ -153,13 +142,16 @@ public class SampleRegionWALCoprocessor
     postWALRollCalled = true;
   }
 
-  /**
-   * Triggered after {@link org.apache.hadoop.hbase.regionserver.HRegion} when WAL is Restoreed.
-   */
   @Override
-  public void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
-    RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
-    postWALRestoreCalled = true;
+  public void preReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    RegionInfo info, Path edits) throws IOException {
+    preReplayWALsCalled = true;
+  }
+
+  @Override
+  public void postReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    RegionInfo info, Path edits) throws IOException {
+    postReplayWALsCalled = true;
   }
 
   public boolean isPreWALWriteCalled() {
@@ -170,21 +162,19 @@ public class SampleRegionWALCoprocessor
     return postWALWriteCalled;
   }
 
-  public boolean isPreWALRestoreCalled() {
-    LOG.debug(SampleRegionWALCoprocessor.class.getName() + ".isPreWALRestoreCalled is called.");
-    return preWALRestoreCalled;
-  }
-
-  public boolean isPostWALRestoreCalled() {
-    LOG.debug(SampleRegionWALCoprocessor.class.getName() + ".isPostWALRestoreCalled is called.");
-    return postWALRestoreCalled;
-  }
-
   public boolean isPreWALRollCalled() {
     return preWALRollCalled;
   }
 
   public boolean isPostWALRollCalled() {
     return postWALRollCalled;
+  }
+
+  public boolean isPreReplayWALsCalled() {
+    return preReplayWALsCalled;
+  }
+
+  public boolean isPostReplayWALsCalled() {
+    return postReplayWALsCalled;
   }
 }
