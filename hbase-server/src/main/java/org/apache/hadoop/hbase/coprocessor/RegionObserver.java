@@ -502,8 +502,9 @@ public interface RegionObserver {
    * @param byteNow  - timestamp bytes
    * @param get      - the get formed using the current cell's row. Note that the get does not
    *                 specify the family and qualifier
-   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced with
+   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-4.0.0 and replaced with
    *             something that doesn't expose IntefaceAudience.Private classes.
+   *             VisibilityController still needs this, need to change the logic there first.
    */
   @Deprecated
   default void prePrepareTimeStampForDeleteVersion(ObserverContext<RegionCoprocessorEnvironment> c,
@@ -1401,22 +1402,6 @@ public interface RegionObserver {
    */
   default void postReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     RegionInfo info, Path edits) throws IOException {
-  }
-
-  /**
-   * Called before a {@link WALEdit} replayed for this region.
-   * @param ctx the environment provided by the region server
-   */
-  default void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
-    RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
-  }
-
-  /**
-   * Called after a {@link WALEdit} replayed for this region.
-   * @param ctx the environment provided by the region server
-   */
-  default void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
-    RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
   }
 
   /**
