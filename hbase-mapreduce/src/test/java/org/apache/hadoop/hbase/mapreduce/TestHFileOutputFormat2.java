@@ -112,9 +112,12 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.ClassRule;
 import org.junit.Ignore;
@@ -1596,6 +1599,59 @@ public class TestHFileOutputFormat2 {
       testDir.getFileSystem(confA).delete(testDir, true);
       util.shutdownMiniCluster();
       utilB.shutdownMiniCluster();
+    }
+  }
+
+  @Test
+  public void itGetsWorkPathHadoop2() throws Exception {
+    Configuration conf = new Configuration(this.util.getConfiguration());
+    Job job = new Job(conf);
+    FileOutputCommitter committer =
+      new FileOutputCommitter(new Path("/test"), createTestTaskAttemptContext(job));
+    assertEquals(committer.getWorkPath(), HFileOutputFormat2.getWorkPath(committer));
+  }
+
+  @Test
+  public void itGetsWorkPathHadoo3() {
+    Hadoop3TestOutputCommitter committer = new Hadoop3TestOutputCommitter(new Path("/test"));
+    assertEquals(committer.getWorkPath(), HFileOutputFormat2.getWorkPath(committer));
+  }
+
+  static class Hadoop3TestOutputCommitter extends OutputCommitter {
+
+    Path path;
+
+    Hadoop3TestOutputCommitter(Path path) {
+      this.path = path;
+    }
+
+    public Path getWorkPath() {
+      return path;
+    }
+
+    @Override
+    public void setupJob(JobContext jobContext) throws IOException {
+
+    }
+
+    @Override
+    public void setupTask(TaskAttemptContext taskAttemptContext) throws IOException {
+
+    }
+
+    @Override
+    public boolean needsTaskCommit(TaskAttemptContext taskAttemptContext) throws IOException {
+      return false;
+    }
+
+    @Override
+    public void commitTask(TaskAttemptContext taskAttemptContext) throws IOException {
+
+    }
+
+    @Override
+    public void abortTask(TaskAttemptContext taskAttemptContext) throws IOException {
+
     }
   }
 
