@@ -22,14 +22,10 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Base64.Decoder;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
-import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
-import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -125,12 +121,7 @@ public class MultiRowResource extends ResourceBase implements Constants {
         if (r.isEmpty()) {
           continue;
         }
-        RowModel rowModel = new RowModel(r.getRow());
-        for (Cell c : r.listCells()) {
-          rowModel.addCell(new CellModel(CellUtil.cloneFamily(c), CellUtil.cloneQualifier(c),
-            c.getTimestamp(), CellUtil.cloneValue(c)));
-        }
-        model.addRow(rowModel);
+        model.addRow(RestUtil.createRowModelFromResult(r));
       }
       if (model.getRows().isEmpty()) {
         // If no rows found.
