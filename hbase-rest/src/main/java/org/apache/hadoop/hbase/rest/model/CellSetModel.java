@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import static org.apache.hadoop.hbase.rest.model.CellModel.MAGIC_LENGTH;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -67,7 +69,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </pre>
  */
 @XmlRootElement(name = "CellSet")
-@XmlAccessorType(XmlAccessType.FIELD)
+@XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Private
 public class CellSetModel implements Serializable, ProtobufMessageHandler {
   private static final long serialVersionUID = 1L;
@@ -108,11 +110,21 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
     CellSet.Builder builder = CellSet.newBuilder();
     for (RowModel row : getRows()) {
       CellSet.Row.Builder rowBuilder = CellSet.Row.newBuilder();
-      rowBuilder.setKey(ByteStringer.wrap(row.getKey()));
+      if (row.getKeyLength() == MAGIC_LENGTH) {
+        rowBuilder.setKey(ByteStringer.wrap(row.getKey()));
+      } else {
+        rowBuilder
+          .setKey(ByteStringer.wrap(row.getKeyArray(), row.getKeyOffset(), row.getKeyLength()));
+      }
       for (CellModel cell : row.getCells()) {
         Cell.Builder cellBuilder = Cell.newBuilder();
         cellBuilder.setColumn(ByteStringer.wrap(cell.getColumn()));
-        cellBuilder.setData(ByteStringer.wrap(cell.getValue()));
+        if (cell.getValueLength() == MAGIC_LENGTH) {
+          cellBuilder.setData(ByteStringer.wrap(cell.getValue()));
+        } else {
+          cellBuilder.setData(
+            ByteStringer.wrap(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+        }
         if (cell.hasUserTimestamp()) {
           cellBuilder.setTimestamp(cell.getTimestamp());
         }
