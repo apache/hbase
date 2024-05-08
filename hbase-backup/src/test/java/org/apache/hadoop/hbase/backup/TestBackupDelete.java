@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -157,5 +159,28 @@ public class TestBackupDelete extends TestBackupBase {
     output = baos.toString();
     LOG.info(baos.toString());
     assertTrue(output.indexOf("Deleted 1 backups") >= 0);
+  }
+
+  /**
+   * Verify that backup deletion updates the incremental-backup-set.
+   */
+  @Test
+  public void testBackupDeleteUpdatesIncrementalBackupSet() throws Exception {
+    LOG.info("Test backup delete updates the incremental backup set");
+    BackupSystemTable backupSystemTable = new BackupSystemTable(TEST_UTIL.getConnection());
+
+    String backupId1 = fullTableBackup(Lists.newArrayList(table1, table2));
+    assertTrue(checkSucceeded(backupId1));
+    assertEquals(Sets.newHashSet(table1, table2),
+      backupSystemTable.getIncrementalBackupTableSet(BACKUP_ROOT_DIR));
+
+    String backupId2 = fullTableBackup(Lists.newArrayList(table3));
+    assertTrue(checkSucceeded(backupId1));
+    assertEquals(Sets.newHashSet(table1, table2, table3),
+      backupSystemTable.getIncrementalBackupTableSet(BACKUP_ROOT_DIR));
+
+    getBackupAdmin().deleteBackups(new String[] { backupId1 });
+    assertEquals(Sets.newHashSet(table3),
+      backupSystemTable.getIncrementalBackupTableSet(BACKUP_ROOT_DIR));
   }
 }

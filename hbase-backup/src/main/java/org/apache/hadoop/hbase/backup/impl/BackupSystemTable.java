@@ -86,7 +86,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  * <ul>
  * <li>1. Backup sessions rowkey= "session:"+backupId; value =serialized BackupInfo</li>
  * <li>2. Backup start code rowkey = "startcode:"+backupRoot; value = startcode</li>
- * <li>3. Incremental backup set rowkey="incrbackupset:"+backupRoot; value=[list of tables]</li>
+ * <li>3. Incremental backup set rowkey="incrbackupset:"+backupRoot; table="meta:"+tablename of
+ * include table; value=empty</li>
  * <li>4. Table-RS-timestamp map rowkey="trslm:"+backupRoot+table_name; value = map[RS-> last WAL
  * timestamp]</li>
  * <li>5. RS - WAL ts map rowkey="rslogts:"+backupRoot +server; value = last WAL timestamp</li>
