@@ -264,11 +264,11 @@ public abstract class TakeSnapshotHandler extends EventHandler
       try {
         // if the working dir is still present, the snapshot has failed. it is present we delete
         // it.
-        if (!workingDirFs.delete(workingDir, true)) {
-          LOG.error("Couldn't delete snapshot working directory:" + workingDir);
+        if (workingDirFs.exists(workingDir) && !workingDirFs.delete(workingDir, true)) {
+          LOG.error("Couldn't delete snapshot working directory: {}", workingDir);
         }
       } catch (IOException e) {
-        LOG.error("Couldn't delete snapshot working directory:" + workingDir);
+        LOG.error("Couldn't get or delete snapshot working directory: {}", workingDir, e);
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Table snapshot journal : \n" + status.prettyPrintJournal());
