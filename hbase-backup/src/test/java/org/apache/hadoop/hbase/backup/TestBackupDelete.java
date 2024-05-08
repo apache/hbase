@@ -175,7 +175,7 @@ public class TestBackupDelete extends TestBackupBase {
       backupSystemTable.getIncrementalBackupTableSet(BACKUP_ROOT_DIR));
 
     String backupId2 = fullTableBackup(Lists.newArrayList(table3));
-    assertTrue(checkSucceeded(backupId1));
+    assertTrue(checkSucceeded(backupId2));
     assertEquals(Sets.newHashSet(table1, table2, table3),
       backupSystemTable.getIncrementalBackupTableSet(BACKUP_ROOT_DIR));
 
