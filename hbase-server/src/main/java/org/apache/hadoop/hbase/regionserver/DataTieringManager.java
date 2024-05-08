@@ -128,11 +128,29 @@ public class DataTieringManager {
     if (hFilePath == null) {
       throw new DataTieringException("BlockCacheKey Doesn't Contain HFile Path");
     }
-
-    if (key.getMaxTimestamp().isPresent()) {
-      return isHotData(hFilePath, key.getMaxTimestamp().get());
-    }
     return isHotData(hFilePath);
+  }
+
+  /**
+   * Determines whether the data associated with the given block cache key is considered hot. If the
+   * data tiering type is set to {@link DataTieringType#TIME_RANGE} and maximum timestamp is not
+   * present, it considers {@code Long.MAX_VALUE} as the maximum timestamp, making the data hot by
+   * default.
+   * @param key  the block cache key
+   * @param conf The configuration object to use for determining hot data criteria.
+   * @return {@code true} if the data is hot, {@code false} otherwise
+   * @throws DataTieringException if there is an error retrieving data tiering information
+   */
+  public boolean isHotData(BlockCacheKey key, Configuration conf) throws DataTieringException {
+    DataTieringType dataTieringType = getDataTieringType(conf);
+    if (dataTieringType.equals(DataTieringType.TIME_RANGE)) {
+      if (key.getMaxTimestamp().isPresent()) {
+        return hotDataValidator(key.getMaxTimestamp().get(), getDataTieringHotDataAge(conf));
+      }
+      return isHotData(key);
+    }
+    // DataTieringType.NONE or other types are considered hot by default
+    return true;
   }
 
   /**

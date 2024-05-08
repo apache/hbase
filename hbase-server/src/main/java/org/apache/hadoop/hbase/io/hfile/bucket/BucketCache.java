@@ -2205,10 +2205,10 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key) {
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, Configuration conf) {
     try {
       DataTieringManager dataTieringManager = DataTieringManager.getInstance();
-      if (dataTieringManager != null && !dataTieringManager.isHotData(key)) {
+      if (dataTieringManager != null && !dataTieringManager.isHotData(key, conf)) {
         LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data",
           key.getHfileName());
         return Optional.of(false);

@@ -121,6 +121,8 @@ public class HFileWriterImpl implements HFile.Writer {
   /** May be null if we were passed a stream. */
   protected final Path path;
 
+  protected final Configuration conf;
+
   /** Cache configuration for caching data on write. */
   protected final CacheConfig cacheConf;
 
@@ -198,6 +200,7 @@ public class HFileWriterImpl implements HFile.Writer {
     }
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
+    this.conf = conf;
     float encodeBlockSizeRatio = conf.getFloat(UNIFIED_ENCODED_BLOCKSIZE_RATIO, 0f);
     this.encodedBlockSizeLimit = (int) (hFileContext.getBlocksize() * encodeBlockSizeRatio);
 
@@ -586,7 +589,7 @@ public class HFileWriterImpl implements HFile.Writer {
   }
 
   private boolean shouldCacheBlock(BlockCache cache, BlockCacheKey key) {
-    Optional<Boolean> result = cache.shouldCacheBlock(key);
+    Optional<Boolean> result = cache.shouldCacheBlock(key, conf);
     return result.orElse(true);
   }
 

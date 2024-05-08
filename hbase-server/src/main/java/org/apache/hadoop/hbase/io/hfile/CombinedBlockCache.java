@@ -489,8 +489,9 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
-  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key) {
-    return combineCacheResults(l1Cache.shouldCacheBlock(key), l2Cache.shouldCacheBlock(key));
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, Configuration conf) {
+    return combineCacheResults(l1Cache.shouldCacheBlock(key, conf),
+      l2Cache.shouldCacheBlock(key, conf));
   }
 
   private Optional<Boolean> combineCacheResults(Optional<Boolean> result1,

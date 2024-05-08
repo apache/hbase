@@ -212,11 +212,12 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * not be overridden by all implementing classes. In such cases, the returned Optional will be
    * empty. For subclasses implementing this logic, the returned Optional would contain the boolean
    * value reflecting if the passed block should indeed be cached.
-   * @param key The key representing the block to check if it should be cached.
+   * @param key  The key representing the block to check if it should be cached.
+   * @param conf The configuration object to use for determining caching behavior.
    * @return An empty Optional if this method is not supported; otherwise, the returned Optional
    *         contains the boolean value indicating if the block should be cached.
    */
-  default Optional<Boolean> shouldCacheBlock(BlockCacheKey key) {
+  default Optional<Boolean> shouldCacheBlock(BlockCacheKey key, Configuration conf) {
     return Optional.empty();
   }
 
