@@ -555,16 +555,10 @@ public class FixedFileTrailer {
     throws IOException {
     Class<? extends CellComparator> comparatorKlass;
     // for BC
-    if (
-      comparatorClassName.equals(KeyValue.COMPARATOR.getLegacyKeyComparatorName())
-        || comparatorClassName.equals(KeyValue.COMPARATOR.getClass().getName())
-        || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator"))
-    ) {
+    if (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator")) {
       comparatorKlass = InnerStoreCellComparator.class;
     } else if (
-      comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
-        || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())
-        || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator"))
+      comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator")
         || (comparatorClassName
           .equals("org.apache.hadoop.hbase.CellComparatorImpl$MetaCellComparator"))
         || (comparatorClassName.equals("org.apache.hadoop.hbase.MetaCellComparator"))
