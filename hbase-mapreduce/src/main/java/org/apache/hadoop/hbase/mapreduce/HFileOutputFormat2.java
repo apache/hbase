@@ -296,9 +296,10 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
 
             String tableName = Bytes.toString(tableNameBytes);
             if (tableName != null) {
-              try (Connection connection = ConnectionFactory.createConnection(createRemoteClusterConf(conf));
-                RegionLocator locator =
-                  connection.getRegionLocator(TableName.valueOf(tableName))) {
+              try (
+                Connection connection =
+                  ConnectionFactory.createConnection(createRemoteClusterConf(conf));
+                RegionLocator locator = connection.getRegionLocator(TableName.valueOf(tableName))) {
                 loc = locator.getRegionLocation(rowKey);
               } catch (Throwable e) {
                 LOG.warn("Something wrong locating rowkey {} in {}", Bytes.toString(rowKey),
