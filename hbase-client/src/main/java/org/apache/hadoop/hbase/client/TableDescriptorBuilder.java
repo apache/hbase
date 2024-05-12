@@ -1380,26 +1380,6 @@ public class TableDescriptorBuilder {
       return setCoprocessorToMap(value);
     }
 
-    /**
-     * Add a table coprocessor to this table. The coprocessor type must be
-     * org.apache.hadoop.hbase.coprocessor.RegionObserver or Endpoint. It won't check if the class
-     * can be loaded or not. Whether a coprocessor is loadable or not will be determined when a
-     * region is opened.
-     * @param specStr The Coprocessor specification all in in one String
-     * @return the modifyable TD
-     * @deprecated used by HTableDescriptor and admin.rb. As of release 2.0.0, this will be removed
-     *             in HBase 3.0.0.
-     */
-    @Deprecated
-    public ModifyableTableDescriptor setCoprocessorWithSpec(final String specStr)
-      throws IOException {
-      CoprocessorDescriptor cpDesc =
-        toCoprocessorDescriptor(specStr).orElseThrow(() -> new IllegalArgumentException(
-          "Format does not match " + CP_HTD_ATTR_VALUE_PATTERN + ": " + specStr));
-      checkHasCoprocessor(cpDesc.getClassName());
-      return setCoprocessorToMap(specStr);
-    }
-
     private void checkHasCoprocessor(final String className) throws IOException {
       if (hasCoprocessor(className)) {
         throw new IOException("Coprocessor " + className + " already exists.");
