@@ -266,6 +266,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
       private final Map<byte[], WriterLength> writers = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       private final Map<byte[], byte[]> previousRows = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       private final long now = EnvironmentEdgeManager.currentTime();
+      private byte[] tableNameBytes = writeMultipleTables ? null : Bytes.toBytes(writeTableNames);
 
       @Override
       public void write(ImmutableBytesWritable row, V cell) throws IOException {
@@ -279,7 +280,6 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
         byte[] rowKey = CellUtil.cloneRow(kv);
         int length = (PrivateCellUtil.estimatedSerializedSizeOf(kv)) - Bytes.SIZEOF_INT;
         byte[] family = CellUtil.cloneFamily(kv);
-        byte[] tableNameBytes = null;
         if (writeMultipleTables) {
           tableNameBytes = MultiTableHFileOutputFormat.getTableName(row.get());
           tableNameBytes = writeToTableWithNamespace
@@ -290,10 +290,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
             throw new IllegalArgumentException(
               "TableName " + Bytes.toString(tableNameBytes) + " not expected");
           }
-        } else {
-          tableNameBytes = Bytes.toBytes(writeTableNames);
         }
-        Path tableRelPath = getTableRelativePath(tableNameBytes);
         byte[] tableAndFamily = getTableNameSuffixedWithFamily(tableNameBytes, family);
 
         WriterLength wl = this.writers.get(tableAndFamily);
@@ -302,6 +299,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
         if (wl == null) {
           Path writerPath = null;
           if (writeMultipleTables) {
+            Path tableRelPath = getTableRelativePath(tableNameBytes);
             writerPath = new Path(outputDir, new Path(tableRelPath, Bytes.toString(family)));
           } else {
             writerPath = new Path(outputDir, Bytes.toString(family));
@@ -320,6 +318,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
 
         // create a new WAL writer, if necessary
         if (wl == null || wl.writer == null) {
+          InetSocketAddress[] favoredNodes = null;
           if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
             HRegionLocation loc = null;
             String tableName = Bytes.toString(tableNameBytes);
@@ -335,26 +334,22 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
                 loc = null;
               }
             }
-
             if (null == loc) {
               LOG.trace("Failed get of location, use default writer {}", Bytes.toString(rowKey));
-              wl = getNewWriter(tableNameBytes, family, conf, null);
             } else {
               LOG.debug("First rowkey: [{}]", Bytes.toString(rowKey));
               InetSocketAddress initialIsa =
                 new InetSocketAddress(loc.getHostname(), loc.getPort());
               if (initialIsa.isUnresolved()) {
                 LOG.trace("Failed resolve address {}, use default writer", loc.getHostnamePort());
-                wl = getNewWriter(tableNameBytes, family, conf, null);
               } else {
                 LOG.debug("Use favored nodes writer: {}", initialIsa.getHostString());
-                wl = getNewWriter(tableNameBytes, family, conf,
-                  new InetSocketAddress[] { initialIsa });
+                favoredNodes = new InetSocketAddress[] { initialIsa };
               }
             }
-          } else {
-            wl = getNewWriter(tableNameBytes, family, conf, null);
           }
+          wl = getNewWriter(tableNameBytes, family, conf, favoredNodes);
+
         }
 
         // we now have the proper WAL writer. full steam ahead
@@ -369,9 +364,9 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
       private Path getTableRelativePath(byte[] tableNameBytes) {
         String tableName = Bytes.toString(tableNameBytes);
         String[] tableNameParts = tableName.split(":");
-        Path tableRelPath = new Path(tableName.split(":")[0]);
+        Path tableRelPath = new Path(tableNameParts[0]);
         if (tableNameParts.length > 1) {
-          tableRelPath = new Path(tableRelPath, tableName.split(":")[1]);
+          tableRelPath = new Path(tableRelPath, tableNameParts[1]);
         }
         return tableRelPath;
       }
