@@ -57,9 +57,9 @@ class AsyncMetaRegionLocator {
    * replicas. If we do not check the location for the given replica, we will always return the
    * cached region locations and cause an infinite loop.
    */
-  CompletableFuture<RegionLocations> getRegionLocations(int replicaId, boolean reload, Configuration conf) {
+  CompletableFuture<RegionLocations> getRegionLocations(int replicaId, boolean reload) {
     return ConnectionUtils.getOrFetch(metaRegionLocations, metaRelocateFuture, reload,
-      registry::getMetaRegionLocations, locs -> isGood(locs, replicaId), "meta region location", conf);
+      registry::getMetaRegionLocations, locs -> isGood(locs, replicaId), "meta region location");
   }
 
   private HRegionLocation getCacheLocation(HRegionLocation loc) {

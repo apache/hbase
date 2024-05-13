@@ -65,6 +65,6 @@ public class TestAsyncMetaRegionLocatorFailFast {
 
   @Test(expected = DoNotRetryIOException.class)
   public void test() throws IOException {
-    FutureUtils.get(LOCATOR.getRegionLocations(RegionInfo.DEFAULT_REPLICA_ID, false, CONF));
+    FutureUtils.get(LOCATOR.getRegionLocations(RegionInfo.DEFAULT_REPLICA_ID, false));
   }
 }

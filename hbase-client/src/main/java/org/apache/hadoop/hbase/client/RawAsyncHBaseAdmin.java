@@ -1246,8 +1246,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         } else {
           future.complete(Collections.singletonList(metaRegions.getDefaultRegionLocation()));
         }
-      }, connection.getConfiguration().getInt(HConstants.CONNECTION_REGISTRY_API_TIMEOUT,
-        HConstants.DEFAULT_CONNECTION_REGISTRY_API_TIMEOUT));
+      });
       return future;
     } else {
       // For non-meta table, we fetch all locations by scanning hbase:meta table
@@ -1277,8 +1276,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               future.complete(ret);
             }
           });
-        }, connection.getConfiguration().getInt(HConstants.CONNECTION_REGISTRY_API_TIMEOUT,
-            HConstants.DEFAULT_CONNECTION_REGISTRY_API_TIMEOUT));
+        });
         break;
       case NORMAL:
         addListener(getTableHRegionLocations(tableName), (locations, err) -> {
@@ -3256,8 +3254,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                 }
               }
             });
-        }, connection.getConfiguration().getInt(HConstants.CONNECTION_REGISTRY_API_TIMEOUT,
-          HConstants.DEFAULT_CONNECTION_REGISTRY_API_TIMEOUT));
+        });
         break;
       case NORMAL:
         addListener(getTableHRegionLocations(tableName), (locations, err) -> {

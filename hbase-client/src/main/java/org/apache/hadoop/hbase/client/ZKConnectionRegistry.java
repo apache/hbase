@@ -25,11 +25,13 @@ import static org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.lengthOfPBMag
 import static org.apache.hadoop.hbase.trace.TraceUtil.tracedFuture;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
+import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
@@ -49,6 +51,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Zookeeper based registry implementation.
@@ -70,6 +73,11 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   private final ZNodePaths znodePaths;
 
+  private static final long expectedTimeout = 120000;
+  private static final int maxAttempts = 5;
+  private static final long pauseNs = 100000;
+
+
   // User not used, but for rpc based registry we need it
   ZKConnectionRegistry(Configuration conf, User ignored) {
     this.znodePaths = new ZNodePaths(conf);
@@ -85,23 +93,54 @@ class ZKConnectionRegistry implements ConnectionRegistry {
     }
   }
 
+  public ZNodePaths getZNodePaths() {
+    return znodePaths;
+  }
+
   private interface Converter<T> {
     T convert(byte[] data) throws Exception;
   }
 
   private <T> CompletableFuture<T> getAndConvert(String path, Converter<T> converter) {
     CompletableFuture<T> future = new CompletableFuture<>();
-    addListener(zk.get(path), (data, error) -> {
-      if (error != null) {
-        future.completeExceptionally(error);
-        return;
-      }
-      try {
-        future.complete(converter.convert(data));
-      } catch (Exception e) {
-        future.completeExceptionally(e);
-      }
-    });
+      TimerTask pollingTask = new TimerTask() {
+        int tries = 0;
+        long startTime = EnvironmentEdgeManager.currentTime();
+        long endTime = startTime + expectedTimeout;
+        long maxPauseTime = expectedTimeout / maxAttempts;
+
+        @Override
+        public void run(Timeout timeout) throws Exception {
+          if (EnvironmentEdgeManager.currentTime() < endTime) {
+            addListener(zk.get(path), (data, error) -> {
+              if (error != null) {
+                future.completeExceptionally(error);
+                return;
+              }
+              if (data != null  && data.length > 0) {
+                try {
+                  future.complete(converter.convert(data));
+                } catch (Exception e) {
+                  future.completeExceptionally(e);
+                }
+              } else {
+                // retry again after pauseTime.
+                long pauseTime =
+                  ConnectionUtils.getPauseTime(TimeUnit.NANOSECONDS.toMillis(pauseNs), ++tries);
+                pauseTime = Math.min(pauseTime, maxPauseTime);
+                AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, pauseTime,
+                  TimeUnit.MICROSECONDS);
+              }
+            });
+          } else {
+            future.completeExceptionally(new IOException("Procedure wasn't completed in "
+              + "expectedTime:" + expectedTimeout + " ms"));
+          }
+        }
+      };
+      // Queue the polling task into RETRY_TIMER to poll procedure state asynchronously.
+      AsyncConnectionImpl.RETRY_TIMER.newTimeout(pollingTask, 1, TimeUnit.MILLISECONDS);
+
     return future;
   }
 
@@ -217,16 +256,43 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
     return tracedFuture(() -> {
       CompletableFuture<RegionLocations> future = new CompletableFuture<>();
-      addListener(
-        zk.list(znodePaths.baseZNode).thenApply(children -> children.stream()
-          .filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
-        (metaReplicaZNodes, error) -> {
-          if (error != null) {
-            future.completeExceptionally(error);
-            return;
+      TimerTask pollingTask = new TimerTask() {
+        int tries = 0;
+        long startTime = EnvironmentEdgeManager.currentTime();
+        long endTime = startTime + expectedTimeout;
+        long maxPauseTime = expectedTimeout / maxAttempts;
+
+        @Override
+        public void run(Timeout timeout) throws Exception {
+          if (EnvironmentEdgeManager.currentTime() < endTime) {
+            addListener(
+              zk.list(znodePaths.baseZNode).thenApply(children -> children.stream()
+                .filter(c -> getZNodePaths().isMetaZNodePrefix(c)).collect(Collectors.toList())),
+              (metaReplicaZNodes, error) -> {
+              if (error != null) {
+                future.completeExceptionally(error);
+                return;
+              }
+              if (metaReplicaZNodes != null && !metaReplicaZNodes.isEmpty()) {
+                getMetaRegionLocation(future, metaReplicaZNodes);
+              } else {
+                // retry again after pauseTime.
+                long pauseTime =
+                  ConnectionUtils.getPauseTime(TimeUnit.NANOSECONDS.toMillis(pauseNs), ++tries);
+                pauseTime = Math.min(pauseTime, maxPauseTime);
+                AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, pauseTime,
+                  TimeUnit.MICROSECONDS);
+              }
+            });
+          } else {
+            future.completeExceptionally(new IOException("Procedure wasn't completed in "
+            + "expectedTime:" + expectedTimeout + " ms"));
           }
-          getMetaRegionLocation(future, metaReplicaZNodes);
-        });
+        }
+      };
+      // Queue the polling task into RETRY_TIMER to poll procedure state asynchronously.
+      AsyncConnectionImpl.RETRY_TIMER.newTimeout(pollingTask, 1, TimeUnit.MILLISECONDS);
+
       return future;
     }, "ZKConnectionRegistry.getMetaRegionLocations");
   }

@@ -141,8 +141,8 @@ class AsyncRegionLocator {
       .setName("AsyncRegionLocator.getRegionLocations").setTableName(tableName);
     return tracedLocationFuture(() -> {
       CompletableFuture<RegionLocations> future = isMeta(tableName)
-        ? metaRegionLocator.getRegionLocations(RegionReplicaUtil.DEFAULT_REPLICA_ID, reload,
-        conn.getConfiguration()) : nonMetaRegionLocator.getRegionLocations(tableName, row,
+        ? metaRegionLocator.getRegionLocations(RegionReplicaUtil.DEFAULT_REPLICA_ID, reload)
+        : nonMetaRegionLocator.getRegionLocations(tableName, row,
           RegionReplicaUtil.DEFAULT_REPLICA_ID, type, reload);
       return withTimeout(future, timeoutNs,
         () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs)
@@ -160,7 +160,7 @@ class AsyncRegionLocator {
       // Change it later if the meta table can have more than one regions.
       CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
       CompletableFuture<RegionLocations> locsFuture = isMeta(tableName)
-        ? metaRegionLocator.getRegionLocations(replicaId, reload, conn.getConfiguration())
+        ? metaRegionLocator.getRegionLocations(replicaId, reload)
         : nonMetaRegionLocator.getRegionLocations(tableName, row, replicaId, type, reload);
       addListener(locsFuture, (locs, error) -> {
         if (error != null) {

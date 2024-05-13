@@ -75,18 +75,6 @@ public final class FutureUtils {
     });
   }
 
-  public static <T> void addListener(CompletableFuture<T> future,
-    BiConsumer<? super T, ? super Throwable> action, long timeout) {
-    Throwable error = null;
-    T t = null;
-    try {
-      t = future.get(timeout, TimeUnit.MILLISECONDS);
-    } catch (Throwable throwable) {
-      error = throwable;
-    }
-    action.accept(t, unwrapCompletionException(error));
-  }
-
   /**
    * Almost the same with {@link #addListener(CompletableFuture, BiConsumer)} method above, the only
    * exception is that we will call

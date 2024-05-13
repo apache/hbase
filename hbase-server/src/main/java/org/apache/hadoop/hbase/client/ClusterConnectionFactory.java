@@ -20,9 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.security.PrivilegedExceptionAction;
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -42,9 +40,7 @@ public final class ClusterConnectionFactory {
 
   private static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
     ConnectionRegistry registry, SocketAddress localAddress, User user  ) throws IOException {
-    String clusterId = FutureUtils.get(registry.getClusterId(),
-      conf.getInt(HConstants.CONNECTION_REGISTRY_API_TIMEOUT,
-        HConstants.DEFAULT_CONNECTION_REGISTRY_API_TIMEOUT), TimeUnit.MILLISECONDS);
+    String clusterId = FutureUtils.get(registry.getClusterId());
     Class<? extends AsyncClusterConnection> clazz =
       conf.getClass(HBASE_SERVER_CLUSTER_CONNECTION_IMPL, AsyncClusterConnectionImpl.class,
         AsyncClusterConnection.class);
