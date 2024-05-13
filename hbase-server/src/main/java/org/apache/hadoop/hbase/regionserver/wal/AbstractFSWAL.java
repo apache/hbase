@@ -27,6 +27,7 @@ import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DE
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.Sequence;
 import com.lmax.disruptor.Sequencer;
@@ -687,12 +688,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   @Override
-  public long getEarliestMemStoreSeqNum(byte[] encodedRegionName) {
-    // Used by tests. Deprecated as too subtle for general usage.
-    return this.sequenceIdAccounting.getLowestSequenceId(encodedRegionName);
-  }
-
-  @Override
   public long getEarliestMemStoreSeqNum(byte[] encodedRegionName, byte[] familyName) {
     // This method is used by tests and for figuring if we should flush or not because our
     // sequenceids are too old. It is also used reporting the master our oldest sequenceid for use
@@ -728,6 +723,12 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   @Override
   public final void sync(long txid, boolean forceSync) throws IOException {
     TraceUtil.trace(() -> doSync(txid, forceSync), () -> createSpan("WAL.sync"));
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public SequenceIdAccounting getSequenceIdAccounting() {
+    return sequenceIdAccounting;
   }
 
   /**
