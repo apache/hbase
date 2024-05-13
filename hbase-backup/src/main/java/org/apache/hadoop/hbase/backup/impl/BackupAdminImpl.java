@@ -131,10 +131,11 @@ public class BackupAdminImpl implements BackupAdmin {
         List<String> affectedBackupRootDirs = new ArrayList<>();
         for (int i = 0; i < backupIds.length; i++) {
           BackupInfo info = sysTable.readBackupInfo(backupIds[i]);
-          if (info != null) {
-            affectedBackupRootDirs.add(info.getBackupRootDir());
-            totalDeleted += deleteBackup(backupIds[i], sysTable);
+          if (info == null) {
+            continue;
           }
+          affectedBackupRootDirs.add(info.getBackupRootDir());
+          totalDeleted += deleteBackup(backupIds[i], sysTable);
         }
         finalizeDelete(affectedBackupRootDirs, sysTable);
         // Finish
