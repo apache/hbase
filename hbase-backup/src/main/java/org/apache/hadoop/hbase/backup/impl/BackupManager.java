@@ -21,7 +21,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupObserver;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
-import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.hadoop.hbase.backup.master.BackupLogCleaner;
 import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.regionserver.LogRollRegionServerProcedureManager;
@@ -265,85 +263,6 @@ public class BackupManager implements Closeable {
 
   public void setBackupInfo(BackupInfo backupInfo) {
     this.backupInfo = backupInfo;
-  }
-
-  /**
-   * Get direct ancestors of the current backup.
-   * @param backupInfo The backup info for the current backup
-   * @return The ancestors for the current backup
-   * @throws IOException exception
-   */
-  public ArrayList<BackupImage> getAncestors(BackupInfo backupInfo) throws IOException {
-    LOG.debug("Getting the direct ancestors of the current backup {}", backupInfo.getBackupId());
-
-    ArrayList<BackupImage> ancestors = new ArrayList<>();
-
-    // full backup does not have ancestor
-    if (backupInfo.getType() == BackupType.FULL) {
-      LOG.debug("Current backup is a full backup, no direct ancestor for it.");
-      return ancestors;
-    }
-
-    Set<TableName> tablesToCover = new HashSet<>(backupInfo.getTables());
-
-    // get all backup history list in descending order (newest to oldest)
-    ArrayList<BackupInfo> allHistoryList = getBackupHistory(true);
-    for (BackupInfo backup : allHistoryList) {
-
-      BackupImage.Builder builder = BackupImage.newBuilder();
-
-      BackupImage image = builder.withBackupId(backup.getBackupId()).withType(backup.getType())
-        .withRootDir(backup.getBackupRootDir()).withTableList(backup.getTableNames())
-        .withStartTime(backup.getStartTs()).withCompleteTime(backup.getCompleteTs()).build();
-
-      // If the image has a different rootDir, it cannot be an ancestor.
-      if (!image.getRootDir().equals(backupInfo.getBackupRootDir())) {
-        continue;
-      }
-
-      // The ancestors consist of the most recent FULL backups that cover the list of tables
-      // required in the new backup and all INCREMENTAL backups that came after one of those FULL
-      // backups.
-      if (backup.getType().equals(BackupType.INCREMENTAL)) {
-        ancestors.add(image);
-        LOG.debug("Dependent incremental backup image: {BackupID={}}", image.getBackupId());
-      } else {
-        if (tablesToCover.removeAll(image.getTableNames())) {
-          ancestors.add(image);
-          LOG.debug("Dependent full backup image: {BackupID={}}", image.getBackupId());
-
-          if (tablesToCover.isEmpty()) {
-            LOG.debug("Got {} ancestors for the current backup.", ancestors.size());
-            return ancestors;
-          }
-        }
-      }
-    }
-
-    throw new IllegalStateException(
-      "Unable to find full backup that contains tables: " + tablesToCover);
-  }
-
-  /**
-   * Get the direct ancestors of this backup for one table involved.
-   * @param backupInfo backup info
-   * @param table      table
-   * @return backupImages on the dependency list
-   * @throws IOException exception
-   */
-  public ArrayList<BackupImage> getAncestors(BackupInfo backupInfo, TableName table)
-    throws IOException {
-    ArrayList<BackupImage> ancestors = getAncestors(backupInfo);
-    ArrayList<BackupImage> tableAncestors = new ArrayList<>();
-    for (BackupImage image : ancestors) {
-      if (image.hasTable(table)) {
-        tableAncestors.add(image);
-        if (image.getType() == BackupType.FULL) {
-          break;
-        }
-      }
-    }
-    return tableAncestors;
   }
 
   /*
