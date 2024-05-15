@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -498,16 +499,15 @@ public class BackupAdminImpl implements BackupAdmin {
   @Override
   public void restore(RestoreRequest request) throws IOException {
     if (request.isCheck()) {
-      HashMap<TableName, BackupManifest> backupManifestMap = new HashMap<>();
       // check and load backup image manifest for the tables
       Path rootPath = new Path(request.getBackupRootDir());
       String backupId = request.getBackupId();
       TableName[] sTableArray = request.getFromTables();
-      HBackupFileSystem.checkImageManifestExist(backupManifestMap, sTableArray,
-        conn.getConfiguration(), rootPath, backupId);
+      BackupManifest manifest =
+        HBackupFileSystem.getManifest(conn.getConfiguration(), rootPath, backupId);
 
       // Check and validate the backup image and its dependencies
-      if (BackupUtils.validate(backupManifestMap, conn.getConfiguration())) {
+      if (BackupUtils.validate(Arrays.asList(sTableArray), manifest, conn.getConfiguration())) {
         LOG.info(CHECK_OK);
       } else {
         LOG.error(CHECK_FAILED);
