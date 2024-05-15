@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
@@ -268,7 +267,7 @@ public abstract class TableBackupClient {
   }
 
   /**
-   * Add manifest for the current backup. The manifest is stored within the table backup directory.
+   * Creates a manifest based on the provided info, and store it in the backup-specific directory.
    * @param backupInfo The current backup info
    * @throws IOException exception
    */
@@ -277,43 +276,16 @@ public abstract class TableBackupClient {
     // set the overall backup phase : store manifest
     backupInfo.setPhase(BackupPhase.STORE_MANIFEST);
 
-    BackupManifest manifest;
-
-    // Since we have each table's backup in its own directory structure,
-    // we'll store its manifest with the table directory.
-    for (TableName table : backupInfo.getTables()) {
-      manifest = new BackupManifest(backupInfo, table);
-      ArrayList<BackupImage> ancestors = backupManager.getAncestors(backupInfo, table);
-      for (BackupImage image : ancestors) {
-        manifest.addDependentImage(image);
-      }
-
-      if (type == BackupType.INCREMENTAL) {
-        // We'll store the log timestamps for this table only in its manifest.
-        Map<TableName, Map<String, Long>> tableTimestampMap = new HashMap<>();
-        tableTimestampMap.put(table, backupInfo.getIncrTimestampMap().get(table));
-        manifest.setIncrTimestampMap(tableTimestampMap);
-        ArrayList<BackupImage> ancestorss = backupManager.getAncestors(backupInfo);
-        for (BackupImage image : ancestorss) {
-          manifest.addDependentImage(image);
-        }
-      }
-      manifest.store(conf);
-    }
-
-    // For incremental backup, we store a overall manifest in
-    // <backup-root-dir>/WALs/<backup-id>
-    // This is used when created the next incremental backup
+    BackupManifest manifest = new BackupManifest(backupInfo);
     if (type == BackupType.INCREMENTAL) {
-      manifest = new BackupManifest(backupInfo);
       // set the table region server start and end timestamps for incremental backup
       manifest.setIncrTimestampMap(backupInfo.getIncrTimestampMap());
-      ArrayList<BackupImage> ancestors = backupManager.getAncestors(backupInfo);
-      for (BackupImage image : ancestors) {
-        manifest.addDependentImage(image);
-      }
-      manifest.store(conf);
     }
+    ArrayList<BackupImage> ancestors = backupManager.getAncestors(backupInfo);
+    for (BackupImage image : ancestors) {
+      manifest.addDependentImage(image);
+    }
+    manifest.store(conf);
   }
 
   /**
