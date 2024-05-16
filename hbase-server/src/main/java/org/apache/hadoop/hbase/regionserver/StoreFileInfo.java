@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -565,6 +566,24 @@ public class StoreFileInfo implements Configurable {
     // region in the reference path. Also strip regionname suffix from name.
     return new Path(new Path(new Path(tableDir, otherRegion), p.getParent().getName()),
       nameStrippedOfSuffix);
+  }
+
+  /*
+   * Return region and file name referred to by a Reference.
+   * @param referenceFile HFile name which is a Reference.
+   * @return Calculated referenced region and file name.
+   * @throws IllegalArgumentException when referenceFile regex fails to match.
+   */
+  public static Pair<String, String> getReferredToRegionAndFile(final String referenceFile) {
+    Matcher m = REF_NAME_PATTERN.matcher(referenceFile);
+    if (m == null || !m.matches()) {
+      LOG.warn("Failed match of store file name {}", referenceFile);
+      throw new IllegalArgumentException("Failed match of store file name " + referenceFile);
+    }
+    String referencedRegion = m.group(2);
+    String referencedFile = m.group(1);
+    LOG.trace("reference {} to region={} file={}", referenceFile, referencedRegion, referencedFile);
+    return new Pair<>(referencedRegion, referencedFile);
   }
 
   /**

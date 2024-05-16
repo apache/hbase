@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,13 +41,19 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -59,6 +66,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -160,6 +169,39 @@ public class TestExportSnapshot {
   @Test
   public void testExportFileSystemState() throws Exception {
     testExportFileSystemState(tableName, snapshotName, snapshotName, tableNumFiles);
+  }
+
+  @Test
+  public void testExportFileSystemStateWithMergeRegion() throws Exception {
+    // disable compaction
+    admin.compactionSwitch(false,
+      admin.getRegionServers().stream().map(a -> a.getServerName()).collect(Collectors.toList()));
+    // create Table
+    TableName tableName0 = TableName.valueOf("testtb-" + testName.getMethodName() + "-1");
+    byte[] snapshotName0 = Bytes.toBytes("snaptb0-" + testName.getMethodName() + "-1");
+    admin.createTable(
+      TableDescriptorBuilder.newBuilder(tableName0)
+        .setColumnFamilies(
+          Lists.newArrayList(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build()))
+        .build(),
+      new byte[][] { Bytes.toBytes("2") });
+    // put some data
+    try (Table table = admin.getConnection().getTable(tableName0)) {
+      table.put(new Put(Bytes.toBytes("1")).addColumn(FAMILY, null, Bytes.toBytes("1")));
+      table.put(new Put(Bytes.toBytes("2")).addColumn(FAMILY, null, Bytes.toBytes("2")));
+    }
+    List<RegionInfo> regions = admin.getRegions(tableName0);
+    assertEquals(2, regions.size());
+    tableNumFiles = regions.size();
+    // merge region
+    admin.mergeRegionsAsync(new byte[][] { regions.get(0).getEncodedNameAsBytes(),
+      regions.get(1).getEncodedNameAsBytes() }, true).get();
+    // take a snapshot
+    admin.snapshot(snapshotName0, tableName0);
+    // export snapshot and verify
+    testExportFileSystemState(tableName0, snapshotName0, snapshotName0, tableNumFiles);
+    // delete table
+    TEST_UTIL.deleteTable(tableName0);
   }
 
   @Test
@@ -330,12 +372,21 @@ public class TestExportSnapshot {
             return;
           }
 
-          String hfile = storeFile.getName();
-          snapshotFiles.add(hfile);
-          if (!storeFile.hasReference()) {
+          if (!storeFile.hasReference() && !StoreFileInfo.isReference(storeFile.getName())) {
+            String hfile = storeFile.getName();
+            snapshotFiles.add(hfile);
             verifyNonEmptyFile(new Path(exportedArchive,
               new Path(CommonFSUtils.getTableDir(new Path("./"), tableName),
                 new Path(regionInfo.getEncodedName(), new Path(family, hfile)))));
+          } else {
+            Pair<String, String> referredToRegionAndFile =
+              StoreFileInfo.getReferredToRegionAndFile(storeFile.getName());
+            String region = referredToRegionAndFile.getFirst();
+            String hfile = referredToRegionAndFile.getSecond();
+            snapshotFiles.add(hfile);
+            verifyNonEmptyFile(new Path(exportedArchive,
+              new Path(CommonFSUtils.getTableDir(new Path("./"), tableName),
+                new Path(region, new Path(family, hfile)))));
           }
         }
 
