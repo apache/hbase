@@ -72,10 +72,7 @@ class DefaultStoreFileManager implements StoreFileManager {
     }
   }
 
-  private static final StoreFileList EMPTY_STORE_FILE_LIST =
-    new StoreFileList(ImmutableList.of(), null);
-
-  private volatile StoreFileList storeFiles = EMPTY_STORE_FILE_LIST;
+  private volatile StoreFileList storeFiles;
 
   /**
    * List of compacted files inside this store that needs to be excluded in reads because further
@@ -91,9 +88,11 @@ class DefaultStoreFileManager implements StoreFileManager {
     this.cellComparator = cellComparator;
     this.storeFileComparator = storeFileComparator;
     this.comConf = comConf;
-    this.blockingFileCount =
+    blockingFileCount =
       conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
-    this.enableLiveFileTracking = shouldEnableHistoricalCompactionFiles(conf);
+    enableLiveFileTracking = shouldEnableHistoricalCompactionFiles(conf);
+    storeFiles = new StoreFileList(ImmutableList.of(),
+      enableLiveFileTracking ? ImmutableList.of() : null);
   }
 
   private List<HStoreFile> getLiveFiles(Collection<HStoreFile> storeFiles) throws IOException {
