@@ -3087,6 +3087,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       Long lastCallSeq = closedScanners.getIfPresent(scannerName);
       if (lastCallSeq != null) {
         // Check the sequence number to catch if the last call was incorrectly retried.
+        // The only allowed scenario is when the scanner is exhausted and one more scan
+        // request arrives - in this case returning 0 rows is correct.
         if (request.hasNextCallSeq() && request.getNextCallSeq() != lastCallSeq + 1) {
           throw new OutOfOrderScannerNextException("Expected nextCallSeq for closed request: "
             + (lastCallSeq + 1) + " But the nextCallSeq got from client: "
@@ -3699,7 +3701,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       }
       if (!builder.getMoreResults() || !builder.getMoreResultsInRegion() || closeScanner) {
         scannerClosed = true;
-        closeScanner(region, scanner, scannerName, rpcCall);
+        closeScanner(region, scanner, scannerName, rpcCall, false);
       }
 
       // There's no point returning to a timed out client. Throwing ensures scanner is closed
@@ -3715,7 +3717,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         // The scanner state might be left in a dirty state, so we will tell the Client to
         // fail this RPC and close the scanner while opening up another one from the start of
         // row that the client has last seen.
-        closeScanner(region, scanner, scannerName, rpcCall);
+        closeScanner(region, scanner, scannerName, rpcCall, true);
 
         // If it is a DoNotRetryIOException already, throw as it is. Unfortunately, DNRIOE is
         // used in two different semantics.
@@ -3779,7 +3781,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   }
 
   private void closeScanner(HRegion region, RegionScanner scanner, String scannerName,
-    RpcCallContext context) throws IOException {
+    RpcCallContext context, boolean isError) throws IOException {
     if (region.getCoprocessorHost() != null) {
       if (region.getCoprocessorHost().preScannerClose(scanner)) {
         // bypass the actual close.
@@ -3796,7 +3798,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       if (region.getCoprocessorHost() != null) {
         region.getCoprocessorHost().postScannerClose(scanner);
       }
-      closedScanners.put(scannerName, rsh.getNextCallSeq());
+      if (!isError) closedScanners.put(scannerName, rsh.getNextCallSeq());
     }
   }
 
