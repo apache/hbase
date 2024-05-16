@@ -150,8 +150,7 @@ public class TestPrefetchWithBucketCache {
     cacheConf = new CacheConfig(conf, blockCache);
 
     Path tableDir = new Path(TEST_UTIL.getDataTestDir(), "testPrefetchRefsAfterSplit");
-    RegionInfo region =
-      RegionInfoBuilder.newBuilder(TableName.valueOf(tableDir.getName())).build();
+    RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf(tableDir.getName())).build();
     Path regionDir = new Path(tableDir, region.getEncodedName());
     Path cfDir = new Path(regionDir, "cf");
     HRegionFileSystem regionFS =
@@ -165,14 +164,14 @@ public class TestPrefetchWithBucketCache {
     // Our file should have 6 DATA blocks. We should wait for all of them to be cached
     Waiter.waitFor(conf, 300, () -> bc.getBackingMap().size() == 6);
 
-    //split the file and return references to the original file
+    // split the file and return references to the original file
     Random rand = ThreadLocalRandom.current();
     byte[] splitPoint = RandomKeyValueUtil.randomOrderedKey(rand, 50);
     HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true);
     Path ref = regionFS.splitStoreFile(region, "cf", file, splitPoint, false,
       new ConstantSizeRegionSplitPolicy());
     HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true);
-    //starts reader for the ref. The ref should resolve to the original file blocks
+    // starts reader for the ref. The ref should resolve to the original file blocks
     // and not duplicate blocks in the cache.
     refHsf.initReader();
     HFile.Reader reader = refHsf.getReader().getHFileReader();
@@ -180,12 +179,12 @@ public class TestPrefetchWithBucketCache {
       // Sleep for a bit
       Thread.sleep(1000);
     }
-    //the ref file blocks keys should actually resolve to the referred file blocks,
-    //so we should not see additional blocks in the cache.
+    // the ref file blocks keys should actually resolve to the referred file blocks,
+    // so we should not see additional blocks in the cache.
     Waiter.waitFor(conf, 300, () -> bc.getBackingMap().size() == 6);
 
     BlockCacheKey refCacheKey = new BlockCacheKey(ref.getName(), 0);
-    Cacheable result = bc.getBlock(refCacheKey, true, false,true);
+    Cacheable result = bc.getBlock(refCacheKey, true, false, true);
     assertNotNull(result);
     BlockCacheKey fileCacheKey = new BlockCacheKey(file.getPath().getName(), 0);
     assertEquals(result, bc.getBlock(fileCacheKey, true, false, true));
@@ -337,7 +336,8 @@ public class TestPrefetchWithBucketCache {
     return writeStoreFile(context, numKVs, new Path(TEST_UTIL.getDataTestDir(), fname));
   }
 
-  private Path writeStoreFile(HFileContext context, int numKVs, Path regionCFDir) throws IOException {
+  private Path writeStoreFile(HFileContext context, int numKVs, Path regionCFDir)
+    throws IOException {
     StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
       .withOutputDir(regionCFDir).withFileContext(context).build();
     Random rand = ThreadLocalRandom.current();

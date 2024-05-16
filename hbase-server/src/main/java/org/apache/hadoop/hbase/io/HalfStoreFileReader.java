@@ -353,10 +353,11 @@ public class HalfStoreFileReader extends StoreFileReader {
     // Estimate the number of entries as half the original file; this may be wildly inaccurate.
     return super.getFilterEntries() / 2;
   }
+
   @Override
   public void close(boolean evictOnClose) throws IOException {
-    if(closed.compareAndSet(false, true)) {
-      if (evictOnClose) {
+    if (closed.compareAndSet(false, true)) {
+      if (evictOnClose && StoreFileInfo.isReference(this.reader.getPath())) {
         final HFileReaderImpl.HFileScannerImpl s =
           (HFileReaderImpl.HFileScannerImpl) super.getScanner(false, true, false);
         final String reference = this.reader.getHFileInfo().getHFileContext().getHFileName();
@@ -366,14 +367,14 @@ public class HalfStoreFileReader extends StoreFileReader {
         LOG.trace("Seeking to split cell in reader: {} for file: {} top: {}, split offset: {}",
           this, reference, top, offset);
         ((HFileReaderImpl) reader).getCacheConf().getBlockCache().ifPresent(cache -> {
-          int numEvictedReferred = top ?
-            cache.evictBlocksRangeByHfileName(referred, offset, Long.MAX_VALUE) :
-            cache.evictBlocksRangeByHfileName(referred, 0, offset);
+          int numEvictedReferred = top
+            ? cache.evictBlocksRangeByHfileName(referred, offset, Long.MAX_VALUE)
+            : cache.evictBlocksRangeByHfileName(referred, 0, offset);
           int numEvictedReference = cache.evictBlocksByHfileName(reference);
           LOG.trace(
             "Closing reference: {}; referred file: {}; was top? {}; evicted for referred: {};"
-              + "evicted for reference: {}", reference, referred, top, numEvictedReferred,
-            numEvictedReference);
+              + "evicted for reference: {}",
+            reference, referred, top, numEvictedReferred, numEvictedReference);
         });
         reader.close(false);
       } else {

@@ -504,7 +504,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
-    return l1Cache.evictBlocksRangeByHfileName(hfileName, initOffset, endOffset) +
-      l2Cache.evictBlocksRangeByHfileName(hfileName, initOffset, endOffset);
+    return l1Cache.evictBlocksRangeByHfileName(hfileName, initOffset, endOffset)
+      + l2Cache.evictBlocksRangeByHfileName(hfileName, initOffset, endOffset);
   }
 }

@@ -372,11 +372,14 @@ public class TransitRegionStateProcedure
   }
 
   private void closeRegionAfterUpdatingMeta(MasterProcedureEnv env, RegionStateNode regionNode) {
-    CloseRegionProcedure closeProc = isSplit
-      ? new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(), assignCandidate,
-      env.getMasterConfiguration().getBoolean(EVICT_BLOCKS_ON_SPLIT_KEY, DEFAULT_EVICT_ON_SPLIT))
-      : new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(), assignCandidate,
-        evictCache);
+    CloseRegionProcedure closeProc =
+      isSplit
+        ? new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(),
+          assignCandidate,
+          env.getMasterConfiguration().getBoolean(EVICT_BLOCKS_ON_SPLIT_KEY,
+            DEFAULT_EVICT_ON_SPLIT))
+        : new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(),
+          assignCandidate, evictCache);
     addChildProcedure(closeProc);
     setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED);
   }

@@ -51,7 +51,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -574,11 +573,12 @@ public class BucketCache implements BlockCache, HeapSize {
     if (referredFileName != null) {
       BlockCacheKey convertedCacheKey = new BlockCacheKey(referredFileName, key.getOffset());
       foundEntry = backingMap.get(convertedCacheKey);
-      LOG.info("Got a link/ref: {}. Related cacheKey: {}. Found entry: {}",
-        key.getHfileName(), convertedCacheKey, foundEntry);
+      LOG.info("Got a link/ref: {}. Related cacheKey: {}. Found entry: {}", key.getHfileName(),
+        convertedCacheKey, foundEntry);
     }
     return foundEntry;
   }
+
   /**
    * Get the buffer of the block with the specified key.
    * @param key                block's cache key
@@ -613,7 +613,9 @@ public class BucketCache implements BlockCache, HeapSize {
         // We can not read here even if backingMap does contain the given key because its offset
         // maybe changed. If we lock BlockCacheKey instead of offset, then we can only check
         // existence here.
-        if (bucketEntry.equals(backingMap.get(key)) || bucketEntry.equals(getBlockForReference(key))) {
+        if (
+          bucketEntry.equals(backingMap.get(key)) || bucketEntry.equals(getBlockForReference(key))
+        ) {
           // Read the block from IOEngine based on the bucketEntry's offset and length, NOTICE: the
           // block will use the refCnt of bucketEntry, which means if two HFileBlock mapping to
           // the same BucketEntry, then all of the three will share the same refCnt.
@@ -1682,11 +1684,13 @@ public class BucketCache implements BlockCache, HeapSize {
   public int evictBlocksByHfileName(String hfileName) {
     return evictBlocksRangeByHfileName(hfileName, 0, Long.MAX_VALUE);
   }
+
   @Override
   public int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
     fileNotFullyCached(hfileName);
     Set<BlockCacheKey> keySet = getAllCacheKeysForFile(hfileName, initOffset, endOffset);
-    LOG.info("found {} blocks for file {}, starting offset: {}, end offset: {}", keySet.size(), hfileName, initOffset, endOffset);
+    LOG.info("found {} blocks for file {}, starting offset: {}, end offset: {}", keySet.size(),
+      hfileName, initOffset, endOffset);
     int numEvicted = 0;
     for (BlockCacheKey key : keySet) {
       if (evictBlock(key)) {
@@ -1695,6 +1699,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     return numEvicted;
   }
+
   private Set<BlockCacheKey> getAllCacheKeysForFile(String hfileName, long init, long end) {
     return blocksByHFile.subSet(new BlockCacheKey(hfileName, init), true,
       new BlockCacheKey(hfileName, end), true);
@@ -2108,10 +2113,10 @@ public class BucketCache implements BlockCache, HeapSize {
       final MutableInt count = new MutableInt();
       LOG.debug("iterating over {} entries in the backing map", backingMap.size());
       Set<BlockCacheKey> result = getAllCacheKeysForFile(fileName.getName(), 0, Long.MAX_VALUE);
-      if(result.isEmpty() && StoreFileInfo.isReference(fileName)) {
+      if (result.isEmpty() && StoreFileInfo.isReference(fileName)) {
         result = getAllCacheKeysForFile(
-          StoreFileInfo.getReferredToRegionAndFile(fileName.getName()).getSecond(),
-          0, Long.MAX_VALUE);
+          StoreFileInfo.getReferredToRegionAndFile(fileName.getName()).getSecond(), 0,
+          Long.MAX_VALUE);
       }
       result.stream().forEach(entry -> {
         LOG.debug("found block for file {} in the backing map. Acquiring read lock for offset {}",
@@ -2142,17 +2147,19 @@ public class BucketCache implements BlockCache, HeapSize {
             + "and try the verification again.", fileName);
           Thread.sleep(100);
           notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
-        } else
-          if ((getAllCacheKeysForFile(fileName.getName(),0, Long.MAX_VALUE).size() - metaCount) == dataBlockCount) {
-            LOG.debug("We counted {} data blocks, expected was {}, there was no more pending in "
-              + "the cache write queue but we now found that total cached blocks for file {} "
-              + "is equal to data block count.", count, dataBlockCount, fileName.getName());
-            fileCacheCompleted(fileName, size);
-          } else {
-            LOG.info("We found only {} data blocks cached from a total of {} for file {}, "
-              + "but no blocks pending caching. Maybe cache is full or evictions "
-              + "happened concurrently to cache prefetch.", count, dataBlockCount, fileName);
-          }
+        } else if (
+          (getAllCacheKeysForFile(fileName.getName(), 0, Long.MAX_VALUE).size() - metaCount)
+              == dataBlockCount
+        ) {
+          LOG.debug("We counted {} data blocks, expected was {}, there was no more pending in "
+            + "the cache write queue but we now found that total cached blocks for file {} "
+            + "is equal to data block count.", count, dataBlockCount, fileName.getName());
+          fileCacheCompleted(fileName, size);
+        } else {
+          LOG.info("We found only {} data blocks cached from a total of {} for file {}, "
+            + "but no blocks pending caching. Maybe cache is full or evictions "
+            + "happened concurrently to cache prefetch.", count, dataBlockCount, fileName);
+        }
       }
     } catch (InterruptedException e) {
       throw new RuntimeException(e);

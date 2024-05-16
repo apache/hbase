@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Predicate;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;

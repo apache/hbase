@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.apache.hadoop.hbase.regionserver.CompactSplit.HBASE_REGION_SERVER_ENABLE_COMPACTION;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.BLOCK_CACHE_KEY_KEY;
 
 import io.opentelemetry.api.common.Attributes;
@@ -42,14 +41,12 @@ import org.apache.hadoop.hbase.SizeCachedByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
-import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
@@ -349,6 +346,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     public HFileBlock getCurBlock() {
       return curBlock;
     }
+
     // Previous blocks that were used in the course of the read
     protected final ArrayList<HFileBlock> prevBlocks = new ArrayList<>();
 
@@ -1385,7 +1383,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         cacheConf.getBlockCache().ifPresent(cache -> {
           if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
             // Using the wait on cache during compaction and prefetching.
-            cache.cacheBlock(cacheKey, BlockCacheUtil.getBlockForCaching(cacheConf, cacheCompressed ? hfileBlock : unpacked),
+            cache.cacheBlock(cacheKey,
+              BlockCacheUtil.getBlockForCaching(cacheConf, cacheCompressed ? hfileBlock : unpacked),
               cacheConf.isInMemory(), cacheOnly);
           }
         });
