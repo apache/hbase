@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CloseExcessRegionReplicasProcedureState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CloseExcessRegionReplicasProcedureStateData;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
  * Procedure for close excess region replicas.
@@ -90,7 +91,7 @@ public class CloseExcessRegionReplicasProcedure
             "There are still {} region(s) in transition for table {} when closing excess"
               + " region replicas, suspend {}secs and try again later",
             inTransitionCount, tableName, backoffMillis / 1000);
-          suspend(inTransitionCount, true);
+          suspend((int) backoffMillis, true);
         }
         setNextState(CloseExcessRegionReplicasProcedureState.CLOSE_EXCESS_REGION_REPLICAS_CONFIRM);
         return Flow.HAS_MORE_STATE;
@@ -102,12 +103,20 @@ public class CloseExcessRegionReplicasProcedure
             + " region replicas, continue...");
           setNextState(
             CloseExcessRegionReplicasProcedureState.CLOSE_EXCESS_REGION_REPLICAS_SCHEDULE);
+          return Flow.HAS_MORE_STATE;
         } else {
           return Flow.NO_MORE_STATE;
         }
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
     }
+  }
+
+  @Override
+  protected synchronized boolean setTimeoutFailure(MasterProcedureEnv env) {
+    setState(ProcedureProtos.ProcedureState.RUNNABLE);
+    env.getProcedureScheduler().addFront(this);
+    return false;
   }
 
   @Override
