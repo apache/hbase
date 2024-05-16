@@ -212,6 +212,11 @@ public final class HFile {
     /** Add an element to the file info map. */
     void appendFileInfo(byte[] key, byte[] value) throws IOException;
 
+    /**
+     * Add TimestampRange and earliest put timestamp to Metadata
+     */
+    void appendTrackedTimestampsToMetadata() throws IOException;
+
     /** Returns the path to this {@link HFile} */
     Path getPath();
 
@@ -436,6 +441,7 @@ public final class HFile {
     DataInput getDeleteBloomFilterMetadata() throws IOException;
 
     Path getPath();
+
 
     /** Close method with optional evictOnClose */
     void close(boolean evictOnClose) throws IOException;
