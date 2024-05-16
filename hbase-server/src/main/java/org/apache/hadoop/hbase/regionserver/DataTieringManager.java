@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class DataTieringManager {
+
   private static final Logger LOG = LoggerFactory.getLogger(DataTieringManager.class);
   public static final String GLOBAL_DATA_TIERING_ENABLED_KEY =
     "hbase.regionserver.datatiering.enable";
@@ -164,6 +165,15 @@ public class DataTieringManager {
     DataTieringType dataTieringType = getDataTieringType(configuration);
     if (dataTieringType.equals(DataTieringType.TIME_RANGE)) {
       return hotDataValidator(getMaxTimestamp(hFileInfo), getDataTieringHotDataAge(configuration));
+    }
+    // DataTieringType.NONE or other types are considered hot by default
+    return true;
+  }
+  public boolean isHotData(TimeRangeTracker timeRangeTracker, Configuration configuration) {
+    DataTieringType dataTieringType = getDataTieringType(configuration);
+    if (dataTieringType.equals(DataTieringType.TIME_RANGE) &&
+      timeRangeTracker.getMax() != TimeRangeTracker.INITIAL_MAX_TIMESTAMP) {
+      return hotDataValidator(timeRangeTracker.getMax(), getDataTieringHotDataAge(configuration));
     }
     // DataTieringType.NONE or other types are considered hot by default
     return true;
