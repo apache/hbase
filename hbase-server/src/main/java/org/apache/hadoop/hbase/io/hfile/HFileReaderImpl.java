@@ -1347,13 +1347,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         BlockType.BlockCategory category = hfileBlock.getBlockType().getCategory();
         final boolean cacheCompressed = cacheConf.shouldCacheCompressed(category);
         final boolean cacheOnRead = cacheConf.shouldCacheBlockOnRead(category);
-        Optional<Boolean> cacheFileBlock = Optional.of(true);
-        // Additionally perform the time-based priority checks to see
-        // whether, or not to cache the block.
-        if (cacheConf.getBlockCache().isPresent()) {
-          cacheFileBlock = cacheConf.getBlockCache().get().shouldCacheFile(getHFileInfo(), conf);
-        }
-        final boolean shouldCacheFileBlock = cacheFileBlock.get();
+        final boolean shouldCacheFileBlock = cacheConf.shouldCacheFileBlock(getHFileInfo(), conf);
 
         // Don't need the unpacked block back and we're storing the block in the cache compressed
         if (cacheOnly && cacheCompressed && cacheOnRead && shouldCacheFileBlock) {

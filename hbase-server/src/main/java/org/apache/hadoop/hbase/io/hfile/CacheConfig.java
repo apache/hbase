@@ -275,6 +275,18 @@ public class CacheConfig implements ConfigurationObserver {
       || (prefetchOnOpen && (category != BlockCategory.META && category != BlockCategory.UNKNOWN));
   }
 
+  public boolean shouldCacheFileBlock(HFileInfo hFileInfo, Configuration conf) {
+    Optional<Boolean> cacheFileBlock = Optional.of(true);
+    // Additionally perform the time-based priority checks to see
+    // whether, or not to cache the block.
+    if (getBlockCache().isPresent()) {
+
+      cacheFileBlock = getBlockCache().get().shouldCacheFile(hFileInfo, conf);
+      LOG.info("BlockCache Present, cacheFileBlock: {}", cacheFileBlock.get());
+    }
+    return cacheFileBlock.get();
+  }
+
   /** Returns true if blocks in this file should be flagged as in-memory */
   public boolean isInMemory() {
     return this.inMemory;
