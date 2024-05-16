@@ -91,8 +91,8 @@ class DefaultStoreFileManager implements StoreFileManager {
     blockingFileCount =
       conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
     enableLiveFileTracking = shouldEnableHistoricalCompactionFiles(conf);
-    storeFiles = new StoreFileList(ImmutableList.of(),
-      enableLiveFileTracking ? ImmutableList.of() : null);
+    storeFiles =
+      new StoreFileList(ImmutableList.of(), enableLiveFileTracking ? ImmutableList.of() : null);
   }
 
   private List<HStoreFile> getLiveFiles(Collection<HStoreFile> storeFiles) throws IOException {
