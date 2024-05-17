@@ -3798,7 +3798,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       if (region.getCoprocessorHost() != null) {
         region.getCoprocessorHost().postScannerClose(scanner);
       }
-      if (!isError) closedScanners.put(scannerName, rsh.getNextCallSeq());
+      if (!isError) {
+        closedScanners.put(scannerName, rsh.getNextCallSeq());
+      }
     }
   }
 
