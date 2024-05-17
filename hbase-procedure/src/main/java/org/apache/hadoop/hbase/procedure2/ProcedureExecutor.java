@@ -735,14 +735,11 @@ public class ProcedureExecutor<TEnvironment> {
       Thread.currentThread().interrupt();
     }
 
-    // Destroy the Thread Group for the executors
-    // TODO: Fix. #join is not place to destroy resources.
-    try {
-      threadGroup.destroy();
-    } catch (IllegalThreadStateException e) {
-      LOG.error("ThreadGroup {} contains running threads; {}: See STDOUT", this.threadGroup, e);
-      // This dumps list of threads on STDOUT.
-      this.threadGroup.list();
+    // log the still active threads, ThreadGroup.destroy is deprecated in JDK17 and it is not
+    // necessary for us to must destroy it here, so we just do a check and log
+    if (threadGroup.activeCount() > 0) {
+      LOG.error("There are still active thread in group {}, see STDOUT", threadGroup);
+      threadGroup.list();
     }
 
     // reset the in-memory state for testing
