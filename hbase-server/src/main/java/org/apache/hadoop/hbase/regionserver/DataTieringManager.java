@@ -132,22 +132,21 @@ public class DataTieringManager {
   }
 
   /**
-   * Determines whether the data associated with the given block cache key is considered hot. If the
-   * data tiering type is set to {@link DataTieringType#TIME_RANGE} and maximum timestamp is not
-   * present, it considers {@code Long.MAX_VALUE} as the maximum timestamp, making the data hot by
-   * default.
-   * @param key  the block cache key
-   * @param conf The configuration object to use for determining hot data criteria.
+   * Determines whether the data associated with the given time range tracker is considered hot. If
+   * the data tiering type is set to {@link DataTieringType#TIME_RANGE}, it uses the maximum
+   * timestamp from the time range tracker to determine if the data is hot. Otherwise, it considers
+   * the data as hot by default.
+   * @param timeRangeTracker the time range tracker containing the timestamps
+   * @param conf             The configuration object to use for determining hot data criteria.
    * @return {@code true} if the data is hot, {@code false} otherwise
-   * @throws DataTieringException if there is an error retrieving data tiering information
    */
-  public boolean isHotData(BlockCacheKey key, Configuration conf) throws DataTieringException {
+  public boolean isHotData(TimeRangeTracker timeRangeTracker, Configuration conf) {
     DataTieringType dataTieringType = getDataTieringType(conf);
-    if (dataTieringType.equals(DataTieringType.TIME_RANGE)) {
-      if (key.getMaxTimestamp().isPresent()) {
-        return hotDataValidator(key.getMaxTimestamp().get(), getDataTieringHotDataAge(conf));
-      }
-      return isHotData(key);
+    if (
+      dataTieringType.equals(DataTieringType.TIME_RANGE)
+        && timeRangeTracker.getMax() != TimeRangeTracker.INITIAL_MAX_TIMESTAMP
+    ) {
+      return hotDataValidator(timeRangeTracker.getMax(), getDataTieringHotDataAge(conf));
     }
     // DataTieringType.NONE or other types are considered hot by default
     return true;

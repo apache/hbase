@@ -77,8 +77,8 @@ import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
-import org.apache.hadoop.hbase.regionserver.DataTieringException;
 import org.apache.hadoop.hbase.regionserver.DataTieringManager;
+import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
@@ -2205,16 +2205,13 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, Configuration conf) {
-    try {
-      DataTieringManager dataTieringManager = DataTieringManager.getInstance();
-      if (dataTieringManager != null && !dataTieringManager.isHotData(key, conf)) {
-        LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data",
-          key.getHfileName());
-        return Optional.of(false);
-      }
-    } catch (DataTieringException e) {
-      LOG.warn("Error while checking hotness of the block: {}", e.getMessage());
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, TimeRangeTracker timeRangeTracker,
+    Configuration conf) {
+    DataTieringManager dataTieringManager = DataTieringManager.getInstance();
+    if (dataTieringManager != null && !dataTieringManager.isHotData(timeRangeTracker, conf)) {
+      LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data",
+        key.getHfileName());
+      return Optional.of(false);
     }
     return Optional.of(true);
   }

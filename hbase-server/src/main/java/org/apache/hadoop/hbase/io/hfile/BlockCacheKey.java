@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.util.Optional;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -35,7 +33,6 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   private BlockType blockType;
   private final boolean isPrimaryReplicaBlock;
   private Path filePath;
-  private long maxTimestamp = TimeRangeTracker.INITIAL_MAX_TIMESTAMP;
 
   /**
    * Construct a new BlockCacheKey
@@ -60,16 +57,6 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
     this.hfileName = hfilePath.getName();
     this.offset = offset;
     this.blockType = blockType;
-  }
-
-  public BlockCacheKey(Path hfilePath, long offset, boolean isPrimaryReplica, BlockType blockType,
-    long maxTimestamp) {
-    this.filePath = hfilePath;
-    this.isPrimaryReplicaBlock = isPrimaryReplica;
-    this.hfileName = hfilePath.getName();
-    this.offset = offset;
-    this.blockType = blockType;
-    this.maxTimestamp = maxTimestamp;
   }
 
   @Override
@@ -128,12 +115,5 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
 
   public Path getFilePath() {
     return filePath;
-  }
-
-  public Optional<Long> getMaxTimestamp() {
-    if (maxTimestamp == TimeRangeTracker.INITIAL_MAX_TIMESTAMP) {
-      return Optional.empty();
-    }
-    return Optional.of(maxTimestamp);
   }
 }
