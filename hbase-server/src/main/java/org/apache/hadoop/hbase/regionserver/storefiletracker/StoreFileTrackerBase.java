@@ -172,7 +172,9 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
         .withFileContext(hFileContext).withShouldDropCacheBehind(params.shouldDropBehind())
         .withCompactedFilesSupplier(ctx.getCompactedFilesSupplier())
         .withFileStoragePolicy(params.fileStoragePolicy())
-        .withWriterCreationTracker(params.writerCreationTracker());
+        .withWriterCreationTracker(params.writerCreationTracker())
+        .withMaxVersions(ctx.getMaxVersions()).withNewVersionBehavior(ctx.getNewVersionBehavior())
+        .withCellComparator(ctx.getComparator()).withIsCompaction(params.isCompaction());
     return builder.build();
   }
 
