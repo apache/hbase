@@ -593,7 +593,7 @@ public class HStore
   /** Returns All store files. */
   @Override
   public Collection<HStoreFile> getStorefiles() {
-    return this.storeEngine.getStoreFileManager().getStorefiles();
+    return this.storeEngine.getStoreFileManager().getStoreFiles();
   }
 
   @Override
@@ -956,10 +956,10 @@ public class HStore
    * @return all scanners for this store
    */
   public List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean isGet, boolean usePread,
-    boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, byte[] stopRow, long readPt)
-    throws IOException {
+    boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, byte[] stopRow, long readPt,
+    boolean onlyLatestVersion) throws IOException {
     return getScanners(cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow, false,
-      readPt);
+      readPt, onlyLatestVersion);
   }
 
   /**
@@ -977,13 +977,14 @@ public class HStore
    */
   public List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean usePread,
     boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, boolean includeStartRow,
-    byte[] stopRow, boolean includeStopRow, long readPt) throws IOException {
+    byte[] stopRow, boolean includeStopRow, long readPt, boolean onlyLatestVersion)
+    throws IOException {
     Collection<HStoreFile> storeFilesToScan;
     List<KeyValueScanner> memStoreScanners;
     this.storeEngine.readLock();
     try {
       storeFilesToScan = this.storeEngine.getStoreFileManager().getFilesForScan(startRow,
-        includeStartRow, stopRow, includeStopRow);
+        includeStartRow, stopRow, includeStopRow, onlyLatestVersion);
       memStoreScanners = this.memstore.getScanners(readPt);
       // NOTE: here we must increase the refCount for storeFiles because we would open the
       // storeFiles and get the StoreFileScanners for them.If we don't increase the refCount here,
@@ -1042,10 +1043,10 @@ public class HStore
    */
   public List<KeyValueScanner> getScanners(List<HStoreFile> files, boolean cacheBlocks,
     boolean isGet, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
-    byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner)
-    throws IOException {
+    byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner,
+    boolean onlyLatestVersion) throws IOException {
     return getScanners(files, cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow,
-      false, readPt, includeMemstoreScanner);
+      false, readPt, includeMemstoreScanner, onlyLatestVersion);
   }
 
   /**
@@ -1067,7 +1068,7 @@ public class HStore
   public List<KeyValueScanner> getScanners(List<HStoreFile> files, boolean cacheBlocks,
     boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
     boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
-    boolean includeMemstoreScanner) throws IOException {
+    boolean includeMemstoreScanner, boolean onlyLatestVersion) throws IOException {
     List<KeyValueScanner> memStoreScanners = null;
     if (includeMemstoreScanner) {
       this.storeEngine.readLock();
@@ -1427,7 +1428,7 @@ public class HStore
 
   @Override
   public boolean shouldPerformMajorCompaction() throws IOException {
-    for (HStoreFile sf : this.storeEngine.getStoreFileManager().getStorefiles()) {
+    for (HStoreFile sf : this.storeEngine.getStoreFileManager().getStoreFiles()) {
       // TODO: what are these reader checks all over the place?
       if (sf.getReader() == null) {
         LOG.debug("StoreFile {} has null Reader", sf);
@@ -1435,7 +1436,7 @@ public class HStore
       }
     }
     return storeEngine.getCompactionPolicy()
-      .shouldPerformMajorCompaction(this.storeEngine.getStoreFileManager().getStorefiles());
+      .shouldPerformMajorCompaction(this.storeEngine.getStoreFileManager().getStoreFiles());
   }
 
   public Optional<CompactionContext> requestCompaction() throws IOException {
@@ -1613,7 +1614,7 @@ public class HStore
   protected void refreshStoreSizeAndTotalBytes() throws IOException {
     this.storeSize.set(0L);
     this.totalUncompressedBytes.set(0L);
-    for (HStoreFile hsf : this.storeEngine.getStoreFileManager().getStorefiles()) {
+    for (HStoreFile hsf : this.storeEngine.getStoreFileManager().getStoreFiles()) {
       StoreFileReader r = hsf.getReader();
       if (r == null) {
         LOG.debug("StoreFile {} has a null Reader", hsf);
@@ -1761,7 +1762,7 @@ public class HStore
         return null;
       }
       return getScanners(filesToReopen, cacheBlocks, false, false, matcher, startRow,
-        includeStartRow, stopRow, includeStopRow, readPt, false);
+        includeStartRow, stopRow, includeStopRow, readPt, false, false);
     } finally {
       this.storeEngine.readUnlock();
     }
@@ -1783,7 +1784,7 @@ public class HStore
   }
 
   private LongStream getStoreFileAgeStream() {
-    return this.storeEngine.getStoreFileManager().getStorefiles().stream().filter(sf -> {
+    return this.storeEngine.getStoreFileManager().getStoreFiles().stream().filter(sf -> {
       if (sf.getReader() == null) {
         LOG.debug("StoreFile {} has a null Reader", sf);
         return false;
@@ -1811,13 +1812,13 @@ public class HStore
 
   @Override
   public long getNumReferenceFiles() {
-    return this.storeEngine.getStoreFileManager().getStorefiles().stream()
+    return this.storeEngine.getStoreFileManager().getStoreFiles().stream()
       .filter(HStoreFile::isReference).count();
   }
 
   @Override
   public long getNumHFiles() {
-    return this.storeEngine.getStoreFileManager().getStorefiles().stream()
+    return this.storeEngine.getStoreFileManager().getStoreFiles().stream()
       .filter(HStoreFile::isHFile).count();
   }
 
@@ -1829,19 +1830,19 @@ public class HStore
   @Override
   public long getStorefilesSize() {
     // Include all StoreFiles
-    return StoreUtils.getStorefilesSize(this.storeEngine.getStoreFileManager().getStorefiles(),
+    return StoreUtils.getStorefilesSize(this.storeEngine.getStoreFileManager().getStoreFiles(),
       sf -> true);
   }
 
   @Override
   public long getHFilesSize() {
     // Include only StoreFiles which are HFiles
-    return StoreUtils.getStorefilesSize(this.storeEngine.getStoreFileManager().getStorefiles(),
+    return StoreUtils.getStorefilesSize(this.storeEngine.getStoreFileManager().getStoreFiles(),
       HStoreFile::isHFile);
   }
 
   private long getStorefilesFieldSize(ToLongFunction<StoreFileReader> f) {
-    return this.storeEngine.getStoreFileManager().getStorefiles().stream()
+    return this.storeEngine.getStoreFileManager().getStoreFiles().stream()
       .mapToLong(file -> StoreUtils.getStorefileFieldSize(file, f)).sum();
   }
 
@@ -2387,7 +2388,7 @@ public class HStore
   }
 
   public int getStoreRefCount() {
-    return this.storeEngine.getStoreFileManager().getStorefiles().stream()
+    return this.storeEngine.getStoreFileManager().getStoreFiles().stream()
       .filter(sf -> sf.getReader() != null).filter(HStoreFile::isHFile)
       .mapToInt(HStoreFile::getRefCount).sum();
   }

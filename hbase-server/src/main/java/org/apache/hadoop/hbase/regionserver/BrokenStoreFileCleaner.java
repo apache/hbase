@@ -162,7 +162,7 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
   }
 
   private boolean isActiveStorefile(FileStatus file, HStore store) {
-    return store.getStoreEngine().getStoreFileManager().getStorefiles().stream()
+    return store.getStoreEngine().getStoreFileManager().getStoreFiles().stream()
       .anyMatch(sf -> sf.getPath().equals(file.getPath()));
   }
 
