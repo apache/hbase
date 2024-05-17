@@ -1040,16 +1040,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       }
     }
 
-    @Override
-    public String getKeyString() {
-      return CellUtil.toString(getKey(), false);
-    }
-
-    @Override
-    public String getValueString() {
-      return ByteBufferUtils.toStringBinary(getValue());
-    }
-
     public int compareKey(CellComparator comparator, Cell key) {
       blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen, pair);
       this.bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), currKeyLen, rowLen);
@@ -1569,17 +1559,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         return null;
       }
       return seeker.getCell();
-    }
-
-    @Override
-    public String getKeyString() {
-      return CellUtil.toString(getKey(), false);
-    }
-
-    @Override
-    public String getValueString() {
-      ByteBuffer valueBuffer = getValue();
-      return ByteBufferUtils.toStringBinary(valueBuffer);
     }
 
     private void assertValidSeek() {
