@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.NEW_VERSION_BEHAVIOR;
 import static org.apache.hadoop.hbase.regionserver.StoreFileWriter.ENABLE_HISTORICAL_COMPACTION_FILES;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
@@ -75,7 +76,7 @@ public class TestStoreFileWriter {
     HBaseClassTestRule.forClass(TestStoreFileWriter.class);
   private final int ROW_NUM = 100;
   private final Random RANDOM = new Random(11);
-  private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();;
   private HRegion[] regions = new HRegion[2];
   private final byte[][] qualifiers =
     { Bytes.toBytes("0"), Bytes.toBytes("1"), Bytes.toBytes("2") };
@@ -83,7 +84,7 @@ public class TestStoreFileWriter {
   // column is a list of CellInfo object
   private ArrayList<ArrayList<ArrayList<CellInfo>>> insertedCells;
   private TableName[] tableName = new TableName[2];
-  private final Configuration conf = testUtil.getConfiguration();
+  private final Configuration conf = UTIL.getConfiguration();
   private int flushCount = 0;
 
   @Parameterized.Parameter(0)
@@ -116,15 +117,14 @@ public class TestStoreFileWriter {
 
   private void createTable(int index, boolean enableDualFileWriter) throws IOException {
     tableName[index] = TableName.valueOf(getClass().getSimpleName() + "_" + index);
-    ColumnFamilyDescriptor familyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(HBaseTestingUtil.fam1).setMaxVersions(maxVersions)
-        .setKeepDeletedCells(keepDeletedCells)
-        .setValue(NEW_VERSION_BEHAVIOR, Boolean.toString(newVersionBehavior)).build();
+    ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(UTIL.fam1)
+      .setMaxVersions(maxVersions).setKeepDeletedCells(keepDeletedCells)
+      .setValue(NEW_VERSION_BEHAVIOR, Boolean.toString(newVersionBehavior)).build();
     TableDescriptorBuilder builder =
       TableDescriptorBuilder.newBuilder(tableName[index]).setColumnFamily(familyDescriptor)
         .setValue(ENABLE_HISTORICAL_COMPACTION_FILES, Boolean.toString(enableDualFileWriter));
-    testUtil.createTable(builder.build(), null);
-    regions[index] = testUtil.getMiniHBaseCluster().getRegions(tableName[index]).get(0);
+    UTIL.createTable(builder.build(), null);
+    regions[index] = UTIL.getMiniHBaseCluster().getRegions(tableName[index]).get(0);
   }
 
   @Before
@@ -132,7 +132,7 @@ public class TestStoreFileWriter {
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY, 6);
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
       String.valueOf(MemoryCompactionPolicy.NONE));
-    testUtil.startMiniCluster();
+    UTIL.startMiniCluster();
     createTable(0, false);
     createTable(1, true);
     insertedCells = new ArrayList<>(ROW_NUM);
@@ -146,8 +146,8 @@ public class TestStoreFileWriter {
 
   @After
   public void tearDown() throws Exception {
-    this.testUtil.shutdownMiniCluster();
-    testUtil.cleanupTestDir();
+    this.UTIL.shutdownMiniCluster();
+    UTIL.cleanupTestDir();
   }
 
   @Test
@@ -165,10 +165,10 @@ public class TestStoreFileWriter {
 
     HStore[] stores = new HStore[2];
 
-    stores[0] = regions[0].getStore(HBaseTestingUtil.fam1);
+    stores[0] = regions[0].getStore(UTIL.fam1);
     assertEquals(flushCount, stores[0].getStorefilesCount());
 
-    stores[1] = regions[1].getStore(HBaseTestingUtil.fam1);
+    stores[1] = regions[1].getStore(UTIL.fam1);
     assertEquals(flushCount, stores[1].getStorefilesCount());
 
     regions[0].compact(false);
@@ -223,7 +223,7 @@ public class TestStoreFileWriter {
     if (timestamp == newTimestamp) {
       Thread.sleep(1);
       newTimestamp = System.currentTimeMillis();
-      assert (timestamp < newTimestamp);
+      assertTrue(timestamp < newTimestamp);
     }
     return newTimestamp;
   }
@@ -235,8 +235,7 @@ public class TestStoreFileWriter {
       row = RANDOM.nextInt(ROW_NUM);
       Put put = new Put(Bytes.toBytes(String.valueOf(row)), timestamp);
       for (int q = 0; q < qualifiers.length; q++) {
-        put.addColumn(HBaseTestingUtil.fam1, qualifiers[q],
-          Bytes.toBytes(String.valueOf(timestamp)));
+        put.addColumn(UTIL.fam1, qualifiers[q], Bytes.toBytes(String.valueOf(timestamp)));
         insertedCells.get(row).get(q).add(new CellInfo(timestamp, Cell.Type.Put));
       }
       regions[0].put(put);
@@ -264,7 +263,7 @@ public class TestStoreFileWriter {
 
   private void deleteSingleRowVersion(int row, long timestamp) throws IOException {
     Delete delete = new Delete(Bytes.toBytes(String.valueOf(row)));
-    delete.addFamilyVersion(HBaseTestingUtil.fam1, timestamp);
+    delete.addFamilyVersion(UTIL.fam1, timestamp);
     regions[0].delete(delete);
     regions[1].delete(delete);
     // For simplicity, the family delete version markers are inserted for all columns (instead of
@@ -296,7 +295,7 @@ public class TestStoreFileWriter {
       row = RANDOM.nextInt(ROW_NUM);
       int q = RANDOM.nextInt(qualifiers.length);
       Delete delete = new Delete(Bytes.toBytes(String.valueOf(row)), timestamp);
-      delete.addColumns(HBaseTestingUtil.fam1, qualifiers[q], timestamp);
+      delete.addColumns(UTIL.fam1, qualifiers[q], timestamp);
       regions[0].delete(delete);
       regions[1].delete(delete);
       insertedCells.get(row).get(q).add(new CellInfo(timestamp, Cell.Type.DeleteColumn));
@@ -311,7 +310,7 @@ public class TestStoreFileWriter {
       if (timestamp != null) {
         Delete delete = new Delete(Bytes.toBytes(String.valueOf(row)));
         int q = RANDOM.nextInt(qualifiers.length);
-        delete.addColumn(HBaseTestingUtil.fam1, qualifiers[q], timestamp);
+        delete.addColumn(UTIL.fam1, qualifiers[q], timestamp);
         regions[0].delete(delete);
         regions[1].delete(delete);
         insertedCells.get(row).get(q).add(new CellInfo(timestamp, Cell.Type.Delete));
@@ -341,9 +340,10 @@ public class TestStoreFileWriter {
           for (int i = 0; i < size; i++) {
             Cell firstCell = firstRowList.get(i);
             Cell secondCell = secondRowList.get(i);
-            assert (CellUtil.matchingRowColumn(firstCell, secondCell));
-            assert (firstCell.getType() == secondCell.getType());
-            assert (Bytes.equals(CellUtil.cloneValue(firstCell), CellUtil.cloneValue(firstCell)));
+            assertTrue(CellUtil.matchingRowColumn(firstCell, secondCell));
+            assertTrue(firstCell.getType() == secondCell.getType());
+            assertTrue(
+              Bytes.equals(CellUtil.cloneValue(firstCell), CellUtil.cloneValue(firstCell)));
           }
         } while (firstHasMore && secondHasMore);
         assertEquals(firstHasMore, secondHasMore);

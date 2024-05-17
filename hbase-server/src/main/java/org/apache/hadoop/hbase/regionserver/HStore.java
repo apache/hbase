@@ -2388,7 +2388,7 @@ public class HStore
   }
 
   public int getStoreRefCount() {
-    return this.storeEngine.getStoreFileManager().getStorefiles().stream()
+    return this.storeEngine.getStoreFileManager().getStoreFiles().stream()
       .filter(sf -> sf.getReader() != null).filter(HStoreFile::isHFile)
       .mapToInt(HStoreFile::getRefCount).sum();
   }
