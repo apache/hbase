@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.NEW_VERSION_BEHAVIOR;
 import static org.apache.hadoop.hbase.regionserver.StoreFileWriter.ENABLE_HISTORICAL_COMPACTION_FILES;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -223,7 +224,7 @@ public class TestStoreFileWriter {
     if (timestamp == newTimestamp) {
       Thread.sleep(1);
       newTimestamp = System.currentTimeMillis();
-      assert (timestamp < newTimestamp);
+      assertTrue(timestamp < newTimestamp);
     }
     return newTimestamp;
   }
@@ -341,9 +342,10 @@ public class TestStoreFileWriter {
           for (int i = 0; i < size; i++) {
             Cell firstCell = firstRowList.get(i);
             Cell secondCell = secondRowList.get(i);
-            assert (CellUtil.matchingRowColumn(firstCell, secondCell));
-            assert (firstCell.getType() == secondCell.getType());
-            assert (Bytes.equals(CellUtil.cloneValue(firstCell), CellUtil.cloneValue(firstCell)));
+            assertTrue(CellUtil.matchingRowColumn(firstCell, secondCell));
+            assertTrue(firstCell.getType() == secondCell.getType());
+            assertTrue(
+              Bytes.equals(CellUtil.cloneValue(firstCell), CellUtil.cloneValue(firstCell)));
           }
         } while (firstHasMore && secondHasMore);
         assertEquals(firstHasMore, secondHasMore);
