@@ -55,7 +55,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -721,12 +720,6 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     } catch (IOException e) {
       throw getTIOError(e);
     }
-  }
-
-  @Override
-  public boolean isTableAvailableWithSplit(TTableName tableName, List<ByteBuffer> splitKeys)
-    throws TIOError, TException {
-    throw new NotImplementedException("isTableAvailableWithSplit not supported");
   }
 
   @Override
