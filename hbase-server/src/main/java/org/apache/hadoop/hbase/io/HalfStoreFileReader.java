@@ -106,24 +106,10 @@ public class HalfStoreFileReader extends StoreFileReader {
       }
 
       @Override
-      public String getKeyString() {
-        if (atEnd) return null;
-
-        return delegate.getKeyString();
-      }
-
-      @Override
       public ByteBuffer getValue() {
         if (atEnd) return null;
 
         return delegate.getValue();
-      }
-
-      @Override
-      public String getValueString() {
-        if (atEnd) return null;
-
-        return delegate.getValueString();
       }
 
       @Override

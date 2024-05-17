@@ -106,24 +106,6 @@ public interface HFileScanner extends Shipper, Closeable {
   /** Returns Instance of {@link org.apache.hadoop.hbase.Cell}. */
   Cell getCell();
 
-  /**
-   * Convenience method to get a copy of the key as a string - interpreting the bytes as UTF8. You
-   * must call {@link #seekTo(Cell)} before this method.
-   * @return key as a string
-   * @deprecated Since hbase-2.0.0
-   */
-  @Deprecated
-  String getKeyString();
-
-  /**
-   * Convenience method to get a copy of the value as a string - interpreting the bytes as UTF8. You
-   * must call {@link #seekTo(Cell)} before this method.
-   * @return value as a string
-   * @deprecated Since hbase-2.0.0
-   */
-  @Deprecated
-  String getValueString();
-
   /** Returns Reader that underlies this Scanner instance. */
   HFile.Reader getReader();
 
