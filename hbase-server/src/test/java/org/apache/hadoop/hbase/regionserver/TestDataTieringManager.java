@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
@@ -484,13 +485,17 @@ public class TestDataTieringManager {
     // hStoreFiles[0], hStoreFiles[1], hStoreFiles[2] are hot files.
     // hStoreFiles[3] is a cold file.
     try {
-      assertTrue(cacheConf.shouldCacheFileBlock(hStoreFiles.get(0).getFileInfo().getHFileInfo(),
+      assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+        hStoreFiles.get(0).getFileInfo().getHFileInfo(),
         hStoreFiles.get(0).getFileInfo().getConf()));
-      assertTrue(cacheConf.shouldCacheFileBlock(hStoreFiles.get(1).getFileInfo().getHFileInfo(),
+      assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+        hStoreFiles.get(1).getFileInfo().getHFileInfo(),
         hStoreFiles.get(1).getFileInfo().getConf()));
-      assertTrue(cacheConf.shouldCacheFileBlock(hStoreFiles.get(2).getFileInfo().getHFileInfo(),
+      assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+        hStoreFiles.get(2).getFileInfo().getHFileInfo(),
         hStoreFiles.get(2).getFileInfo().getConf()));
-      assertFalse(cacheConf.shouldCacheFileBlock(hStoreFiles.get(3).getFileInfo().getHFileInfo(),
+      assertFalse(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+        hStoreFiles.get(3).getFileInfo().getHFileInfo(),
         hStoreFiles.get(3).getFileInfo().getConf()));
     } finally {
       for (HStoreFile file : hStoreFiles) {
@@ -509,7 +514,7 @@ public class TestDataTieringManager {
 
   @Test
   public void testCacheOnReadHotFile() throws Exception {
-    // hStoreFiles[0] is a hot file. the blocks should not get loaded after a readBlock call.
+    // hStoreFiles[0] is a hot file. the blocks should get loaded after a readBlock call.
     HStoreFile hStoreFile = hStoreFiles.get(0);
     BlockCacheKey cacheKey =
       new BlockCacheKey(hStoreFiles.get(0).getPath(), 0, true, BlockType.DATA);
