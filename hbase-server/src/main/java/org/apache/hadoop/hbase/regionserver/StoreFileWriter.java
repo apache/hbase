@@ -490,7 +490,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     appendCell(cell);
   }
 
-  private static class SingleStoreFileWriter {
+  private final static class SingleStoreFileWriter {
     private final BloomFilterWriter generalBloomFilterWriter;
     private final BloomFilterWriter deleteFamilyBloomFilterWriter;
     private final BloomType bloomType;
