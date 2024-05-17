@@ -56,7 +56,7 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
 
   @Override
   public boolean needsCompaction(List<HStoreFile> filesCompacting) {
-    return compactionPolicy.needsCompaction(this.storeFileManager.getStorefiles(), filesCompacting);
+    return compactionPolicy.needsCompaction(this.storeFileManager.getStoreFiles(), filesCompacting);
   }
 
   @Override
@@ -111,7 +111,7 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
     @Override
     public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
       boolean mayUseOffPeak, boolean forceMajor) throws IOException {
-      request = compactionPolicy.selectCompaction(storeFileManager.getStorefiles(), filesCompacting,
+      request = compactionPolicy.selectCompaction(storeFileManager.getStoreFiles(), filesCompacting,
         isUserCompaction, mayUseOffPeak, forceMajor);
       return request != null;
     }
@@ -124,7 +124,7 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
 
     @Override
     public List<HStoreFile> preSelect(List<HStoreFile> filesCompacting) {
-      return compactionPolicy.preSelectCompactionForCoprocessor(storeFileManager.getStorefiles(),
+      return compactionPolicy.preSelectCompactionForCoprocessor(storeFileManager.getStoreFiles(),
         filesCompacting);
     }
   }

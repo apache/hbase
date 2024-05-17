@@ -181,8 +181,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
     addCommandDescriptor(RandomScanWithRange10000Test.class, "scanRange10000",
       "Run random seek scan with both start and stop row (max 10000 rows)");
     addCommandDescriptor(RandomWriteTest.class, "randomWrite", "Run random write test");
+    addCommandDescriptor(RandomDeleteTest.class, "randomDelete", "Run random delete test");
     addCommandDescriptor(SequentialReadTest.class, "sequentialRead", "Run sequential read test");
     addCommandDescriptor(SequentialWriteTest.class, "sequentialWrite", "Run sequential write test");
+    addCommandDescriptor(SequentialDeleteTest.class, "sequentialDelete",
+      "Run sequential delete test");
     addCommandDescriptor(MetaWriteTest.class, "metaWrite",
       "Populate meta table;used with 1 thread; to be cleaned up by cleanMeta");
     addCommandDescriptor(ScanTest.class, "scan", "Run scan test (read every row)");
@@ -352,7 +355,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     boolean needsDelete = false, exists = admin.tableExists(tableName);
     boolean isReadCmd = opts.cmdName.toLowerCase(Locale.ROOT).contains("read")
       || opts.cmdName.toLowerCase(Locale.ROOT).contains("scan");
-    if (!exists && isReadCmd) {
+    boolean isDeleteCmd = opts.cmdName.toLowerCase(Locale.ROOT).contains("delete");
+    if (!exists && (isReadCmd || isDeleteCmd)) {
       throw new IllegalStateException(
         "Must specify an existing table for read commands. Run a write command first.");
     }
@@ -367,7 +371,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
         && opts.presplitRegions != admin.getRegions(tableName).size())
         || (!isReadCmd && desc != null
           && !StringUtils.equals(desc.getRegionSplitPolicyClassName(), opts.splitPolicy))
-        || (!isReadCmd && desc != null && desc.getRegionReplication() != opts.replicas)
+        || (!(isReadCmd || isDeleteCmd) && desc != null
+          && desc.getRegionReplication() != opts.replicas)
         || (desc != null && desc.getColumnFamilyCount() != opts.families)
     ) {
       needsDelete = true;
@@ -2071,6 +2076,18 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   }
 
+  static class RandomDeleteTest extends SequentialDeleteTest {
+    RandomDeleteTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+    }
+
+    @Override
+    protected byte[] generateRow(final int i) {
+      return getRandomRow(this.rand, opts.totalRows);
+    }
+
+  }
+
   static class ScanTest extends TableTest {
     private ResultScanner testScanner;
 
@@ -2401,6 +2418,34 @@ public class PerformanceEvaluation extends Configured implements Tool {
         }
       } else {
         mutator.mutate(put);
+      }
+      return true;
+    }
+  }
+
+  static class SequentialDeleteTest extends BufferedMutatorTest {
+
+    SequentialDeleteTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+    }
+
+    protected byte[] generateRow(final int i) {
+      return format(i);
+    }
+
+    @Override
+    boolean testRow(final int i, final long startTime) throws IOException {
+      byte[] row = generateRow(i);
+      Delete delete = new Delete(row);
+      for (int family = 0; family < opts.families; family++) {
+        byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+        delete.addFamily(familyName);
+      }
+      delete.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
+      if (opts.autoFlush) {
+        table.delete(delete);
+      } else {
+        mutator.mutate(delete);
       }
       return true;
     }
