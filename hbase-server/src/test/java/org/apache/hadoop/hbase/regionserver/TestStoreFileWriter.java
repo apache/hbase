@@ -342,9 +342,10 @@ public class TestStoreFileWriter {
           for (int i = 0; i < size; i++) {
             Cell firstCell = firstRowList.get(i);
             Cell secondCell = secondRowList.get(i);
-            assert (CellUtil.matchingRowColumn(firstCell, secondCell));
-            assert (firstCell.getType() == secondCell.getType());
-            assert (Bytes.equals(CellUtil.cloneValue(firstCell), CellUtil.cloneValue(firstCell)));
+            assertTrue(CellUtil.matchingRowColumn(firstCell, secondCell));
+            assertTrue(firstCell.getType() == secondCell.getType());
+            assertTrue(
+              Bytes.equals(CellUtil.cloneValue(firstCell), CellUtil.cloneValue(firstCell)));
           }
         } while (firstHasMore && secondHasMore);
         assertEquals(firstHasMore, secondHasMore);
