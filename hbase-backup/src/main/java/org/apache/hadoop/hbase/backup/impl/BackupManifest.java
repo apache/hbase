@@ -465,7 +465,7 @@ public class BackupManifest {
   }
 
   /**
-   * TODO: fix it. Persist the manifest file.
+   * Persist the manifest file.
    * @throws BackupException if an error occurred while storing the manifest file.
    */
   public void store(Configuration conf) throws BackupException {
