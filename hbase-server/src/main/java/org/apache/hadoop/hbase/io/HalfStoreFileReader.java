@@ -363,19 +363,21 @@ public class HalfStoreFileReader extends StoreFileReader {
         final String reference = this.reader.getHFileInfo().getHFileContext().getHFileName();
         final String referred = StoreFileInfo.getReferredToRegionAndFile(reference).getSecond();
         s.seekTo(splitCell);
-        long offset = s.getCurBlock().getOffset();
-        LOG.trace("Seeking to split cell in reader: {} for file: {} top: {}, split offset: {}",
-          this, reference, top, offset);
-        ((HFileReaderImpl) reader).getCacheConf().getBlockCache().ifPresent(cache -> {
-          int numEvictedReferred = top
-            ? cache.evictBlocksRangeByHfileName(referred, offset, Long.MAX_VALUE)
-            : cache.evictBlocksRangeByHfileName(referred, 0, offset);
-          int numEvictedReference = cache.evictBlocksByHfileName(reference);
-          LOG.trace(
-            "Closing reference: {}; referred file: {}; was top? {}; evicted for referred: {};"
-              + "evicted for reference: {}",
-            reference, referred, top, numEvictedReferred, numEvictedReference);
-        });
+        if (s.getCurBlock() != null) {
+          long offset = s.getCurBlock().getOffset();
+          LOG.trace("Seeking to split cell in reader: {} for file: {} top: {}, split offset: {}",
+            this, reference, top, offset);
+          ((HFileReaderImpl) reader).getCacheConf().getBlockCache().ifPresent(cache -> {
+            int numEvictedReferred = top
+              ? cache.evictBlocksRangeByHfileName(referred, offset, Long.MAX_VALUE)
+              : cache.evictBlocksRangeByHfileName(referred, 0, offset);
+            int numEvictedReference = cache.evictBlocksByHfileName(reference);
+            LOG.trace(
+              "Closing reference: {}; referred file: {}; was top? {}; evicted for referred: {};"
+                + "evicted for reference: {}",
+              reference, referred, top, numEvictedReferred, numEvictedReference);
+          });
+        }
         reader.close(false);
       } else {
         reader.close(evictOnClose);

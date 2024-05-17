@@ -2124,7 +2124,7 @@ public class BucketCache implements BlockCache, HeapSize {
         ReentrantReadWriteLock lock = offsetLock.getLock(entry.getOffset());
         lock.readLock().lock();
         locks.add(lock);
-        if (backingMap.containsKey(entry)) {
+        if (backingMap.containsKey(entry) && entry.getBlockType() == BlockType.DATA) {
           count.increment();
         }
       });

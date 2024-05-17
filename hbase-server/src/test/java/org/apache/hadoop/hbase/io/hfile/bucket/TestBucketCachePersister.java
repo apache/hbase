@@ -49,6 +49,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ IOTests.class, MediumTests.class })
 public class TestBucketCachePersister {
@@ -60,6 +62,8 @@ public class TestBucketCachePersister {
   public TestName name = new TestName();
 
   public int constructedBlockSize = 16 * 1024;
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestBucketCachePersister.class);
 
   public int[] constructedBlockSizes =
     new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
@@ -166,6 +170,7 @@ public class TestBucketCachePersister {
     HFile.createReader(fs, storeFile, cacheConf, true, conf);
     boolean evicted = false;
     while (!PrefetchExecutor.isCompleted(storeFile)) {
+      LOG.debug("Entered loop as prefetch for {} is still running.", storeFile);
       if (bucketCache.backingMap.size() > 0 && !evicted) {
         Iterator<Map.Entry<BlockCacheKey, BucketEntry>> it =
           bucketCache.backingMap.entrySet().iterator();
@@ -174,6 +179,7 @@ public class TestBucketCachePersister {
         while (it.hasNext() && !evicted) {
           if (entry.getKey().getBlockType().equals(BlockType.DATA)) {
             evicted = bucketCache.evictBlock(it.next().getKey());
+            LOG.debug("Attempted eviction for {}. Succeeded? {}", storeFile, evicted);
           }
         }
       }

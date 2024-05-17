@@ -1351,8 +1351,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
         span.addEvent("block cache miss", attributes);
         // Load block from filesystem.
-        HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread,
-          !isCompaction, shouldUseHeap(expectedBlockType, cacheBlock));
+        HFileBlock hfileBlock =
+          BlockCacheUtil.getBlockForCaching(cacheConf, fsBlockReader.readBlockData(dataBlockOffset,
+            onDiskBlockSize, pread, !isCompaction, shouldUseHeap(expectedBlockType, cacheBlock)));
         try {
           validateBlockType(hfileBlock, expectedBlockType);
         } catch (IOException e) {
@@ -1383,8 +1384,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         cacheConf.getBlockCache().ifPresent(cache -> {
           if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
             // Using the wait on cache during compaction and prefetching.
-            cache.cacheBlock(cacheKey,
-              BlockCacheUtil.getBlockForCaching(cacheConf, cacheCompressed ? hfileBlock : unpacked),
+            cache.cacheBlock(cacheKey, cacheCompressed ? hfileBlock : unpacked,
               cacheConf.isInMemory(), cacheOnly);
           }
         });
