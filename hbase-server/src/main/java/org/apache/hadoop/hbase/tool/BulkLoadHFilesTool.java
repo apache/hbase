@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
@@ -74,7 +75,6 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.HFileLink;
-import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -83,11 +83,12 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
-import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
+import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -757,6 +758,41 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     copyHFileHalf(conf, inFile, bottomOut, bottomReference, familyDesc, loc);
   }
 
+  private static StoreFileWriter initStoreFileWriter(Configuration conf, Cell cell,
+    HFileContext hFileContext, CacheConfig cacheConf, BloomType bloomFilterType, FileSystem fs,
+    Path outFile, AsyncTableRegionLocator loc) throws IOException {
+    if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
+      byte[] rowKey = CellUtil.cloneRow(cell);
+      HRegionLocation hRegionLocation = FutureUtils.get(loc.getRegionLocation(rowKey));
+      InetSocketAddress[] favoredNodes = null;
+      if (null == hRegionLocation) {
+        LOG.warn("Failed get region location for  rowkey {} , Using writer without favoured nodes.",
+          Bytes.toString(rowKey));
+        return new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
+          .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
+      } else {
+        LOG.debug("First rowkey: [{}]", Bytes.toString(rowKey));
+        InetSocketAddress initialIsa =
+          new InetSocketAddress(hRegionLocation.getHostname(), hRegionLocation.getPort());
+        if (initialIsa.isUnresolved()) {
+          LOG.warn("Failed get location for region {} , Using writer without favoured nodes.",
+            hRegionLocation);
+          return new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
+            .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
+        } else {
+          LOG.debug("Use favored nodes writer: {}", initialIsa.getHostString());
+          favoredNodes = new InetSocketAddress[] { initialIsa };
+          return new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
+            .withBloomType(bloomFilterType).withFileContext(hFileContext)
+            .withFavoredNodes(favoredNodes).build();
+        }
+      }
+    } else {
+      return new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
+        .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
+    }
+  }
+
   /**
    * Copy half of an HFile into a new HFile with favored nodes.
    */
@@ -765,14 +801,14 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     throws IOException {
     FileSystem fs = inFile.getFileSystem(conf);
     CacheConfig cacheConf = CacheConfig.DISABLED;
-    HalfStoreFileReader halfReader = null;
+    StoreFileReader halfReader = null;
     StoreFileWriter halfWriter = null;
     try {
       ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, inFile).build();
       StoreFileInfo storeFileInfo =
         new StoreFileInfo(conf, fs, fs.getFileStatus(inFile), reference);
       storeFileInfo.initHFileInfo(context);
-      halfReader = (HalfStoreFileReader) storeFileInfo.createReader(context, cacheConf);
+      halfReader = storeFileInfo.createReader(context, cacheConf);
       storeFileInfo.getHFileInfo().initMetaAndIndex(halfReader.getHFileReader());
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
@@ -785,51 +821,22 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
         .withDataBlockEncoding(familyDescriptor.getDataBlockEncoding()).withIncludesTags(true)
         .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
 
-      HFileScanner scanner = halfReader.getScanner(false, false, false);
-      scanner.seekTo();
-      do {
-        final Cell cell = scanner.getCell();
-        if (null != halfWriter) {
-          halfWriter.append(cell);
-        } else {
-
-          // init halfwriter
-          if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
-            byte[] rowKey = CellUtil.cloneRow(cell);
-            HRegionLocation hRegionLocation = FutureUtils.get(loc.getRegionLocation(rowKey));
-            InetSocketAddress[] favoredNodes = null;
-            if (null == hRegionLocation) {
-              LOG.warn(
-                "Failed get region location for  rowkey {} , Using writer without favoured nodes.",
-                Bytes.toString(rowKey));
-              halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
-                .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
-            } else {
-              LOG.debug("First rowkey: [{}]", Bytes.toString(rowKey));
-              InetSocketAddress initialIsa =
-                new InetSocketAddress(hRegionLocation.getHostname(), hRegionLocation.getPort());
-              if (initialIsa.isUnresolved()) {
-                LOG.warn("Failed get location for region {} , Using writer without favoured nodes.",
-                  hRegionLocation);
-                halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
-                  .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
-              } else {
-                LOG.debug("Use favored nodes writer: {}", initialIsa.getHostString());
-                favoredNodes = new InetSocketAddress[] { initialIsa };
-                halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
-                  .withBloomType(bloomFilterType).withFileContext(hFileContext)
-                  .withFavoredNodes(favoredNodes).build();
-              }
-            }
-          } else {
-            halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
-              .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
+      try (StoreFileScanner scanner =
+        halfReader.getStoreFileScanner(false, false, false, Long.MAX_VALUE, 0, false)) {
+        scanner.seek(KeyValue.LOWESTKEY);
+        for (;;) {
+          Cell cell = scanner.next();
+          if (cell == null) {
+            break;
+          }
+          if (halfWriter == null) {
+            // init halfwriter
+            halfWriter = initStoreFileWriter(conf, cell, hFileContext, cacheConf, bloomFilterType,
+              fs, outFile, loc);
           }
           halfWriter.append(cell);
         }
-
-      } while (scanner.next());
-
+      }
       for (Map.Entry<byte[], byte[]> entry : fileInfo.entrySet()) {
         if (shouldCopyHFileMetaKey(entry.getKey())) {
           halfWriter.appendFileInfo(entry.getKey(), entry.getValue());

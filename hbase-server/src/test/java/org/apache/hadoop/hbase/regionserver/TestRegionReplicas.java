@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TestMetaTableAccessor;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -43,7 +44,6 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -501,16 +501,19 @@ public class TestRegionReplicas {
         // Our file does not exist anymore. was moved by the compaction above.
         LOG.debug(Boolean.toString(getRS().getFileSystem().exists(sf.getPath())));
         Assert.assertFalse(getRS().getFileSystem().exists(sf.getPath()));
-
-        HFileScanner scanner = sf.getReader().getScanner(false, false);
-        scanner.seekTo();
-        do {
-          keys++;
-
-          Cell cell = scanner.getCell();
-          sum += Integer
-            .parseInt(Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
-        } while (scanner.next());
+        sf.initReader();
+        try (StoreFileScanner scanner = sf.getPreadScanner(false, Long.MAX_VALUE, 0, false)) {
+          scanner.seek(KeyValue.LOWESTKEY);
+          for (Cell cell;;) {
+            cell = scanner.next();
+            if (cell == null) {
+              break;
+            }
+            keys++;
+            sum += Integer.parseInt(
+              Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+          }
+        }
       }
       Assert.assertEquals(3000, keys);
       Assert.assertEquals(4498500, sum);
