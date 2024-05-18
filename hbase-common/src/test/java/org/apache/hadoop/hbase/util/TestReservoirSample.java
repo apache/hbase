@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.util.stream.IntStream;
@@ -88,5 +89,12 @@ public class TestReservoirSample {
     // we assume a 5% error rate
     assertTrue(containsOne > round / 10 * 0.95);
     assertTrue(containsOne < round / 10 * 1.05);
+  }
+
+  @Test
+  public void testNegativeSamplingNumber() {
+    IllegalArgumentException e =
+      assertThrows(IllegalArgumentException.class, () -> new ReservoirSample<Integer>(-1));
+    assertEquals("negative sampling number(-1) is not allowed", e.getMessage());
   }
 }

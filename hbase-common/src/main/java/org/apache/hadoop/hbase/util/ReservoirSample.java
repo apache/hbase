@@ -41,7 +41,7 @@ public class ReservoirSample<T> {
   private int n;
 
   public ReservoirSample(int k) {
-    Preconditions.checkArgument(k > 0, "negative sampling number(%d) is not allowed");
+    Preconditions.checkArgument(k > 0, "negative sampling number(%s) is not allowed", k);
     r = new ArrayList<>(k);
     this.k = k;
   }
