@@ -16,6 +16,89 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.4.18 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-27762](https://issues.apache.org/jira/browse/HBASE-27762) | *Major* | **Include EventType and ProcedureV2 pid in logging via MDC**
+
+<!-- markdown -->
+Log the `o.a.h.hbase.executor.EventType` and ProcedureV2 pid in log messages via MDC. PatternLayouts on master and branch-2 have been updated to make use of the MDC variables. Note that due to LOG4J2-3660, log lines for which the MDC is empty will have extraneous characters. To opt-in on branch-2.5 or branch-2.4, make an appropriate change to `conf/log4j2.properties`.
+
+
+---
+
+* [HBASE-27799](https://issues.apache.org/jira/browse/HBASE-27799) | *Major* | **RpcThrottlingException wait interval message is misleading between 0-1s**
+
+The RpcThrottleException now includes millis in the message
+
+
+---
+
+* [HBASE-27956](https://issues.apache.org/jira/browse/HBASE-27956) | *Major* | **Support wall clock profiling in ProfilerServlet**
+
+You can now do wall clock profiling with async-profiler by specifying ?event=wall query param on the profiler servlet (/prof)
+
+
+---
+
+* [HBASE-28068](https://issues.apache.org/jira/browse/HBASE-28068) | *Minor* | **Add hbase.normalizer.merge.merge\_request\_max\_number\_of\_regions property to limit max number of regions in a merge request for merge normalization**
+
+Added a new property "hbase.normalizer.merge.merge\_request\_max\_number\_of\_regions" to limit the max number of region to be processed for merge request in a single merge normalisation. Defaults to 100
+
+
+---
+
+* [HBASE-28168](https://issues.apache.org/jira/browse/HBASE-28168) | *Minor* | **Add option in RegionMover.java to isolate one or more regions on the RegionSever**
+
+This adds a new "isolate\_regions" operation to RegionMover, which allows operators to pass a list of region encoded ids to be "isolated" in the passed RegionServer.
+Regions currently deployed in the RegionServer that are not in the passed list of regions would be moved to other RegionServers. Regions in the passed list that are currently on other RegionServers would be moved to the passed RegionServer.
+
+Please refer to the command help for further information.
+
+
+---
+
+* [HBASE-28204](https://issues.apache.org/jira/browse/HBASE-28204) | *Major* | **Region Canary can take lot more time If any region (except the first region) starts with delete markers**
+
+Canary is using Scan for first region of the table and Get for rest of the region. RAW Scan was only enabled for first region of any table. If a region has high number of deleted rows for the first row of the key-space, then It can take really long time for Get to finish execution.
+
+With this change, Region canary will use scan to validate that every region is accessible and also enables RAW Scan if it's enabled by the user.
+
+
+---
+
+* [HBASE-28444](https://issues.apache.org/jira/browse/HBASE-28444) | *Blocker* | **Bump org.apache.zookeeper:zookeeper from 3.8.3 to 3.8.4**
+
+Upgrade zookeeper to 3.8.4 for addressing CVE-2024-23944.
+
+
+---
+
+* [HBASE-28517](https://issues.apache.org/jira/browse/HBASE-28517) | *Major* | **Make properties dynamically configured**
+
+Make the following properties dynamically configured:
+\* hbase.rs.evictblocksonclose
+\* hbase.rs.cacheblocksonwrite
+\* hbase.block.data.cacheonread
+
+
+---
+
+* [HBASE-28552](https://issues.apache.org/jira/browse/HBASE-28552) | *Major* | **Bump up bouncycastle dependency from 1.76 to 1.78**
+
+Bump bouncycastle dependency from 1.76 to 1.78 for addressing several CVEs
+
+CVE-2024-29857
+CVE-2024-30171
+CVE-2024-30172
+CVE-2024-301XX(Full CVE Code not available yet)
+
+
+
 # HBASE  2.4.17 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
