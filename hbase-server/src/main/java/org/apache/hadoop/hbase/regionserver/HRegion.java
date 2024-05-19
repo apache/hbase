@@ -4041,6 +4041,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         get.addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell));
       }
       if (mutation instanceof Increment) {
+        Cell cell = cellScanner.current();
+        get.addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell));
         // Increment
         Increment increment = (Increment) mutation;
         get.setTimeRange(increment.getTimeRange().getMin(), increment.getTimeRange().getMax());
