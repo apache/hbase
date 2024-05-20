@@ -3844,7 +3844,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       assert mutation instanceof Increment || mutation instanceof Append;
       Get get = new Get(mutation.getRow());
       CellScanner cellScanner = mutation.cellScanner();
-      while (!cellScanner.advance()) {
+      while (cellScanner.advance()) {
         Cell cell = cellScanner.current();
         get.addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell));
       }
