@@ -767,7 +767,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     // AsyncFSWAl and FSHLog both moves the log from WALs to oldWALs directory asynchronously.
     // Wait for in flight wal close count to become 0. This makes sure that empty wal is moved to
     // oldWALs directory.
-    Waiter.waitFor(CONF, 10000,
+    Waiter.waitFor(CONF, 5000,
       (Waiter.Predicate<Exception>) () -> abstractWAL.getInflightWALCloseCount() == 0);
     // There will 2 logs in the queue.
     assertEquals(2, logQueue.getQueueSize(fakeWalGroupId));
