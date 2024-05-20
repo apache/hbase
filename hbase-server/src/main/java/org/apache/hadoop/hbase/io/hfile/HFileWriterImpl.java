@@ -566,7 +566,7 @@ public class HFileWriterImpl implements HFile.Writer {
   private void doCacheOnWrite(long offset) {
     cacheConf.getBlockCache().ifPresent(cache -> {
       HFileBlock cacheFormatBlock = blockWriter.getBlockForCaching(cacheConf);
-      BlockCacheKey key = new BlockCacheKey(name, offset, true, cacheFormatBlock.getBlockType());
+      BlockCacheKey key = buildCacheBlockKey(offset, cacheFormatBlock.getBlockType());
       if (!shouldCacheBlock(cache, key)) {
         return;
       }
@@ -577,6 +577,13 @@ public class HFileWriterImpl implements HFile.Writer {
         cacheFormatBlock.release();
       }
     });
+  }
+
+  private BlockCacheKey buildCacheBlockKey(long offset, BlockType blockType) {
+    if (path != null) {
+      return new BlockCacheKey(path, offset, true, blockType);
+    }
+    return new BlockCacheKey(name, offset, true, blockType);
   }
 
   private boolean shouldCacheBlock(BlockCache cache, BlockCacheKey key) {
