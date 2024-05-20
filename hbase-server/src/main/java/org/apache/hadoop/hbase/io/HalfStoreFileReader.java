@@ -354,6 +354,14 @@ public class HalfStoreFileReader extends StoreFileReader {
     return super.getFilterEntries() / 2;
   }
 
+  /**
+   * Overrides close method to handle cache evictions for the referred file. If evictionOnClose is
+   * true, we will seek to the block containing the splitCell and evict all blocks from offset 0
+   * up to that block offset if this is a bottom half reader, or the from the split block offset up
+   * to the end of the file if this is a top half reader.
+   * @param evictOnClose true if it should evict the file blocks from the cache.
+   * @throws IOException
+   */
   @Override
   public void close(boolean evictOnClose) throws IOException {
     if (closed.compareAndSet(false, true)) {
