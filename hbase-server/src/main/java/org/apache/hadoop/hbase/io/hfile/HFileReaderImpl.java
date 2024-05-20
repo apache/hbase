@@ -1369,6 +1369,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
             LOG.debug("Skipping decompression of block {} in prefetch", cacheKey);
             // Cache the block if necessary
             if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
+              // When caching on write, we create a block without checksum
+              // (see HFileBlock.Writer.getBlockForCaching). We need to do the same here.
               cache.cacheBlock(cacheKey, BlockCacheUtil.getBlockForCaching(cacheConf, hfileBlock),
                 cacheConf.isInMemory(), cacheOnly);
             }
@@ -1384,6 +1386,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         cacheConf.getBlockCache().ifPresent(cache -> {
           if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
             // Using the wait on cache during compaction and prefetching.
+            // When caching on write, we create a block without checksum
+            // (see HFileBlock.Writer.getBlockForCaching). We need to do the same here.
             cache.cacheBlock(cacheKey,
               cacheCompressed
                 ? BlockCacheUtil.getBlockForCaching(cacheConf, hfileBlock)

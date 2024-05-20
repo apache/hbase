@@ -564,6 +564,15 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
+  /**
+   * If the passed cache key relates to a reference (<hfile>.<parentEncRegion>), this method looks
+   * for the block from the referred file, in the cache. If present in the cache, the block for the
+   * referred file is returned, otherwise, this method returns null. It will also return null if the
+   * passed cache key doesn't relate to a reference.
+   * @param key the BlockCacheKey instance to look for in the cache.
+   * @return the cached block from the referred file, null if there's no such block in the cache or
+   *         the passed key doesn't relate to a reference.
+   */
   public BucketEntry getBlockForReference(BlockCacheKey key) {
     BucketEntry foundEntry = null;
     String referredFileName = null;
@@ -573,7 +582,7 @@ public class BucketCache implements BlockCache, HeapSize {
     if (referredFileName != null) {
       BlockCacheKey convertedCacheKey = new BlockCacheKey(referredFileName, key.getOffset());
       foundEntry = backingMap.get(convertedCacheKey);
-      LOG.info("Got a link/ref: {}. Related cacheKey: {}. Found entry: {}", key.getHfileName(),
+      LOG.debug("Got a link/ref: {}. Related cacheKey: {}. Found entry: {}", key.getHfileName(),
         convertedCacheKey, foundEntry);
     }
     return foundEntry;
@@ -2186,6 +2195,8 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public Optional<Boolean> isAlreadyCached(BlockCacheKey key) {
     boolean foundKey = backingMap.containsKey(key);
+    // if there's no entry for the key itself, we need to check if this key is for a reference,
+    // and if so, look for a block from the referenced file using this getBlockForReference method.
     return Optional.of(foundKey ? true : getBlockForReference(key) != null);
   }
 
@@ -2193,6 +2204,8 @@ public class BucketCache implements BlockCache, HeapSize {
   public Optional<Integer> getBlockSize(BlockCacheKey key) {
     BucketEntry entry = backingMap.get(key);
     if (entry == null) {
+      // the key might be for a reference tha we had found the block from the referenced file in
+      // the cache when we first tried to cache it.
       entry = getBlockForReference(key);
       return entry == null ? Optional.empty() : Optional.of(entry.getOnDiskSizeWithHeader());
     } else {

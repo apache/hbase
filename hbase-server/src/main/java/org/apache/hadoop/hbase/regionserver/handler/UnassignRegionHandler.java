@@ -124,8 +124,7 @@ public class UnassignRegionHandler extends EventHandler {
       region.getCoprocessorHost().preClose(abort);
     }
     // This should be true only in the case of splits/merges closing the parent regions, as
-    // there's no point on keep blocks for those region files. As hbase.rs.evictblocksonclose is
-    // false by default we don't bother overriding it if evictCache is false.
+    // there's no point on keep blocks for those region files.
     region.getStores().forEach(s -> s.getCacheConfig().setEvictOnClose(evictCache));
 
     if (region.close(abort) == null) {
