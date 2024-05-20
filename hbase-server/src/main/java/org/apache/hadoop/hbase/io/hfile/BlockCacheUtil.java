@@ -250,11 +250,11 @@ public class BlockCacheUtil {
 
   /**
    * Similarly to HFileBlock.Writer.getBlockForCaching(), creates a HFileBlock instance without
-   * checksum for caching. This is needed for when we cache blocks via readers (either prefetch
-   * or client read), otherwise we may fail equality comparison when checking against same block
-   * that may already have been cached at write time.
+   * checksum for caching. This is needed for when we cache blocks via readers (either prefetch or
+   * client read), otherwise we may fail equality comparison when checking against same block that
+   * may already have been cached at write time.
    * @param cacheConf the related CacheConfig object.
-   * @param block the HFileBlock instance to be converted.
+   * @param block     the HFileBlock instance to be converted.
    * @return the resulting HFileBlock instance without checksum.
    */
   public static HFileBlock getBlockForCaching(CacheConfig cacheConf, HFileBlock block) {
