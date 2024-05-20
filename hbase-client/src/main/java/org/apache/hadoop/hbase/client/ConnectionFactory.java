@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -569,10 +570,16 @@ public class ConnectionFactory {
     Configuration conf, final User user, Map<String, byte[]> connectionAttributes) {
     return TraceUtil.tracedFuture(() -> {
       ConnectionRegistry registry;
+      Configuration appliedConf;
       try {
-        registry = connectionUri != null
-          ? ConnectionRegistryFactory.create(connectionUri, conf, user)
-          : ConnectionRegistryFactory.create(conf, user);
+        if (connectionUri != null) {
+          appliedConf = new Configuration(conf);
+          Strings.applyURIQueriesToConf(connectionUri, appliedConf);
+          registry = ConnectionRegistryFactory.create(connectionUri, appliedConf, user);
+        } else {
+          appliedConf = conf;
+          registry = ConnectionRegistryFactory.create(appliedConf, user);
+        }
       } catch (Exception e) {
         return FutureUtils.failedFuture(e);
       }
@@ -588,12 +595,12 @@ public class ConnectionFactory {
           future.completeExceptionally(new IOException("clusterid came back null"));
           return;
         }
-        Class<? extends AsyncConnection> clazz = conf.getClass(HBASE_CLIENT_ASYNC_CONNECTION_IMPL,
-          AsyncConnectionImpl.class, AsyncConnection.class);
+        Class<? extends AsyncConnection> clazz = appliedConf.getClass(
+          HBASE_CLIENT_ASYNC_CONNECTION_IMPL, AsyncConnectionImpl.class, AsyncConnection.class);
         try {
-          future.complete(
-            user.runAs((PrivilegedExceptionAction<? extends AsyncConnection>) () -> ReflectionUtils
-              .newInstance(clazz, conf, registry, clusterId, null, user, connectionAttributes)));
+          future.complete(user.runAs((PrivilegedExceptionAction<
+            ? extends AsyncConnection>) () -> ReflectionUtils.newInstance(clazz, appliedConf,
+              registry, clusterId, null, user, connectionAttributes)));
         } catch (Exception e) {
           registry.close();
           future.completeExceptionally(e);
