@@ -104,7 +104,7 @@ public class TestSerialization {
     long l = 0;
     try {
       ByteBufferUtils.putInt(dos, kv_0.getSerializedSize(false));
-      l =  (long) kv_0.write(dos, false) + Bytes.SIZEOF_INT;
+      l = (long) kv_0.write(dos, false) + Bytes.SIZEOF_INT;
       ByteBufferUtils.putInt(dos, kv_1.getSerializedSize(false));
       l += (long) kv_1.write(dos, false) + Bytes.SIZEOF_INT;
       assertEquals(100L, l);
