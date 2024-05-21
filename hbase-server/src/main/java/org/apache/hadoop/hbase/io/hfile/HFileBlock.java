@@ -1205,14 +1205,9 @@ public class HFileBlock implements Cacheable {
      * being wholesome (ECC memory or if file-backed, it does checksumming).
      */
     HFileBlock getBlockForCaching(CacheConfig cacheConf) {
-      boolean cacheWithChecksum = cacheConf.getBlockCache().get().cacheWithChecksum(blockType);
       HFileContext newContext = new HFileContextBuilder().withBlockSize(fileContext.getBlocksize())
-        .withBytesPerCheckSum(cacheWithChecksum ? fileContext.getBytesPerChecksum() : 0)
-        .withChecksumType(cacheWithChecksum ? fileContext.getChecksumType() : ChecksumType.NULL) // no
-                                                                                                 // checksums
-                                                                                                 // in
-                                                                                                 // cached
-                                                                                                 // data
+        .withBytesPerCheckSum(0)
+        .withChecksumType(ChecksumType.NULL)
         .withCompression(fileContext.getCompression())
         .withDataBlockEncoding(fileContext.getDataBlockEncoding())
         .withHBaseCheckSum(fileContext.isUseHBaseChecksum())
@@ -1234,8 +1229,7 @@ public class HFileBlock implements Cacheable {
         .withUncompressedSizeWithoutHeader(getUncompressedSizeWithoutHeader())
         .withPrevBlockOffset(prevOffset).withByteBuff(buff).withFillHeader(FILL_HEADER)
         .withOffset(startOffset).withNextBlockOnDiskSize(UNSET)
-        .withOnDiskDataSizeWithHeader(
-          onDiskBlockBytesWithHeader.size() + (cacheWithChecksum ? 0 : onDiskChecksum.length))
+        .withOnDiskDataSizeWithHeader(onDiskBlockBytesWithHeader.size() + onDiskChecksum.length)
         .withHFileContext(newContext).withByteBuffAllocator(cacheConf.getByteBuffAllocator())
         .withShared(!buff.hasArray()).build();
     }
