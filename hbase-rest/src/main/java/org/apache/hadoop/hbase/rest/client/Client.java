@@ -184,7 +184,7 @@ public class Client {
   /**
    * Constructor This constructor will create an object using the old faulty load balancing logic.
    * When specifying multiple servers in the cluster object, it is highly recommended to call
-   * setSticky() on the created client, or use one of the preferred constructors instead.
+   * setSticky() on the created client, or use the preferred constructor instead.
    * @param cluster the cluster definition
    */
   public Client(Cluster cluster) {
@@ -194,7 +194,7 @@ public class Client {
   /**
    * Constructor This constructor will create an object using the old faulty load balancing logic.
    * When specifying multiple servers in the cluster object, it is highly recommended to call
-   * setSticky() on the created client, or use one of the preferred constructors instead.
+   * setSticky() on the created client, or use the preferred constructor instead.
    * @param cluster    the cluster definition
    * @param sslEnabled enable SSL or not
    */
@@ -206,7 +206,7 @@ public class Client {
   /**
    * Constructor This constructor will create an object using the old faulty load balancing logic.
    * When specifying multiple servers in the cluster object, it is highly recommended to call
-   * setSticky() on the created client, or use one of the preferred constructors instead.
+   * setSticky() on the created client, or use the preferred constructor instead.
    * @param cluster    the cluster definition
    * @param conf       Configuration
    * @param sslEnabled enable SSL or not
@@ -220,7 +220,7 @@ public class Client {
    * Constructor, allowing to define custom trust store (only for SSL connections) This constructor
    * will create an object using the old faulty load balancing logic. When specifying multiple
    * servers in the cluster object, it is highly recommended to call setSticky() on the created
-   * client, or use one of the preferred constructors instead.
+   * client, or use the preferred constructor instead.
    * @param cluster            the cluster definition
    * @param trustStorePath     custom trust store to use for SSL connections
    * @param trustStorePassword password to use for custom trust store
@@ -229,8 +229,7 @@ public class Client {
    */
   public Client(Cluster cluster, String trustStorePath, Optional<String> trustStorePassword,
     Optional<String> trustStoreType) {
-    this(cluster, HBaseConfiguration.create(), true, trustStorePath, trustStorePassword,
-      trustStoreType);
+    this(cluster, HBaseConfiguration.create(), trustStorePath, trustStorePassword, trustStoreType);
   }
 
   /**
@@ -254,9 +253,10 @@ public class Client {
   }
 
   /**
-   * Constructor, allowing to define custom trust store (only for SSL connections) This constructor
-   * also enables sticky mode. This is a preferred constructor when not using BASIC or JWT
-   * authentication. Clients created by this will use the old faulty load balancing logic.
+   * Constructor, allowing to define custom trust store (only for SSL connections). This constructor
+   * will create an object using the old faulty load balancing logic. When specifying multiple
+   * servers in the cluster object, it is highly recommended to call setSticky() on the created
+   * client, or use the preferred constructor instead.
    * @param cluster            the cluster definition
    * @param conf               HBase/Hadoop Configuration
    * @param trustStorePath     custom trust store to use for SSL connections
@@ -264,10 +264,10 @@ public class Client {
    * @param trustStoreType     type of custom trust store
    * @throws ClientTrustStoreInitializationException if the trust store file can not be loaded
    */
-  public Client(Cluster cluster, Configuration conf, boolean sslEnabled, String trustStorePath,
+  public Client(Cluster cluster, Configuration conf, String trustStorePath,
     Optional<String> trustStorePassword, Optional<String> trustStoreType) {
     KeyStore trustStore = loadTruststore(trustStorePath, trustStorePassword, trustStoreType);
-    initialize(cluster, conf, sslEnabled, false, Optional.of(trustStore), Optional.empty(),
+    initialize(cluster, conf, true, false, Optional.of(trustStore), Optional.empty(),
       Optional.empty(), Optional.empty());
   }
 
