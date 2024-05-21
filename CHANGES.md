@@ -18,7 +18,7 @@
 -->
 # HBASE Changelog
 
-## Release 2.4.18 - Unreleased (as of 2024-05-18)
+## Release 2.4.18 - Unreleased (as of 2024-05-21)
 
 
 
@@ -176,6 +176,7 @@
 | [HBASE-28575](https://issues.apache.org/jira/browse/HBASE-28575) | Always printing error log when snapshot table |  Minor | snapshots |
 | [HBASE-28598](https://issues.apache.org/jira/browse/HBASE-28598) | NPE for writer object access in AsyncFSWAL#closeWriter |  Major | wal |
 | [HBASE-28595](https://issues.apache.org/jira/browse/HBASE-28595) | Losing exception from scan RPC can lead to partial results |  Critical | regionserver, Scanners |
+| [HBASE-28599](https://issues.apache.org/jira/browse/HBASE-28599) | RowTooBigException is thrown when duplicate increment RPC call is attempted |  Major | regionserver |
 
 
 ### TESTS:
@@ -239,6 +240,7 @@
 | [HBASE-28333](https://issues.apache.org/jira/browse/HBASE-28333) | Refactor TestClientTimeouts to make it more clear that what we want to test |  Major | Client, test |
 | [HBASE-28444](https://issues.apache.org/jira/browse/HBASE-28444) | Bump org.apache.zookeeper:zookeeper from 3.8.3 to 3.8.4 |  Blocker | security, Zookeeper |
 | [HBASE-28574](https://issues.apache.org/jira/browse/HBASE-28574) | Bump jinja2 from 3.1.3 to 3.1.4 in /dev-support/flaky-tests |  Major | dependabot, scripts, security |
+| [HBASE-28607](https://issues.apache.org/jira/browse/HBASE-28607) | Bump requests from 2.31.0 to 2.32.0 in /dev-support/flaky-tests |  Major | dependabot, scripts, security |
 
 
 ## Release 2.4.17 - Unreleased (as of 2023-03-31)
