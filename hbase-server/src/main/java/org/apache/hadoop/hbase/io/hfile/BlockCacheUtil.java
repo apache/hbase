@@ -273,8 +273,10 @@ public class BlockCacheUtil {
     HFileBlockBuilder builder = new HFileBlockBuilder();
     ByteBuff buff = block.getBufferReadOnly();
     // Calculate how many bytes we need for checksum on the tail of the block.
-    int numBytes = (int) ChecksumUtil.numBytes(block.getOnDiskDataSizeWithHeader(),
-      block.getHFileContext().getBytesPerChecksum());
+    int numBytes = cacheConf.shouldCacheCompressed(block.getBlockType().getCategory())
+      ? 0
+      : (int) ChecksumUtil.numBytes(block.getOnDiskDataSizeWithHeader(),
+        block.getHFileContext().getBytesPerChecksum());
     return builder.withBlockType(block.getBlockType())
       .withOnDiskSizeWithoutHeader(block.getOnDiskSizeWithoutHeader())
       .withUncompressedSizeWithoutHeader(block.getUncompressedSizeWithoutHeader())

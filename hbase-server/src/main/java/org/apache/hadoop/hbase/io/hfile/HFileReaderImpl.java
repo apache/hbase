@@ -1365,33 +1365,30 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
         // Don't need the unpacked block back and we're storing the block in the cache compressed
         if (cacheOnly && cacheCompressed && cacheOnRead) {
+          HFileBlock blockNoChecksum = BlockCacheUtil.getBlockForCaching(cacheConf, hfileBlock);
           cacheConf.getBlockCache().ifPresent(cache -> {
             LOG.debug("Skipping decompression of block {} in prefetch", cacheKey);
             // Cache the block if necessary
             if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
-              // When caching on write, we create a block without checksum
-              // (see HFileBlock.Writer.getBlockForCaching). We need to do the same here.
-              cache.cacheBlock(cacheKey, BlockCacheUtil.getBlockForCaching(cacheConf, hfileBlock),
-                cacheConf.isInMemory(), cacheOnly);
+              cache.cacheBlock(cacheKey, blockNoChecksum, cacheConf.isInMemory(), cacheOnly);
             }
           });
 
           if (updateCacheMetrics && hfileBlock.getBlockType().isData()) {
             HFile.DATABLOCK_READ_COUNT.increment();
           }
-          return hfileBlock;
+          return blockNoChecksum;
         }
         HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
+        HFileBlock unpackedNoChecksum = BlockCacheUtil.getBlockForCaching(cacheConf, unpacked);
         // Cache the block if necessary
         cacheConf.getBlockCache().ifPresent(cache -> {
           if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
             // Using the wait on cache during compaction and prefetching.
-            // When caching on write, we create a block without checksum
-            // (see HFileBlock.Writer.getBlockForCaching). We need to do the same here.
             cache.cacheBlock(cacheKey,
               cacheCompressed
                 ? BlockCacheUtil.getBlockForCaching(cacheConf, hfileBlock)
-                : BlockCacheUtil.getBlockForCaching(cacheConf, unpacked),
+                : unpackedNoChecksum,
               cacheConf.isInMemory(), cacheOnly);
           }
         });
@@ -1403,7 +1400,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
           HFile.DATABLOCK_READ_COUNT.increment();
         }
 
-        return unpacked;
+        return unpackedNoChecksum;
       }
     } finally {
       if (lockEntry != null) {
