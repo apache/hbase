@@ -989,6 +989,31 @@ public class HRegionFileSystem {
   }
 
   /**
+   * Retrieves the Region ID from the given HFile path.
+   * @param hFilePath The path of the HFile.
+   * @return The Region ID extracted from the HFile path.
+   * @throws IOException If an I/O error occurs or if the HFile path is incorrect.
+   */
+  public static String getRegionId(Path hFilePath) throws IOException {
+    if (hFilePath.getParent() == null || hFilePath.getParent().getParent() == null) {
+      throw new IOException("Incorrect HFile Path: " + hFilePath);
+    }
+    Path dir = hFilePath.getParent().getParent();
+    if (isTemporaryDirectoryName(dir.getName())) {
+      if (dir.getParent() == null) {
+        throw new IOException("Incorrect HFile Path: " + hFilePath);
+      }
+      return dir.getParent().getName();
+    }
+    return dir.getName();
+  }
+
+  private static boolean isTemporaryDirectoryName(String dirName) {
+    return REGION_MERGES_DIR.equals(dirName) || REGION_SPLITS_DIR.equals(dirName)
+      || REGION_TEMP_DIR.equals(dirName);
+  }
+
+  /**
    * Creates a directory. Assumes the user has already checked for this directory existence.
    * @return the result of fs.mkdirs(). In case underlying fs throws an IOException, it checks
    *         whether the directory exists or not, and returns true if it exists.

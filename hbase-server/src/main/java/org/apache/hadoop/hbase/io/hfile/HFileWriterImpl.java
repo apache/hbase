@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.MAX_BLOCK_SIZE_UNCOMPRESSED;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
 
 import java.io.DataOutput;
 import java.io.DataOutputStream;
@@ -26,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -46,6 +49,7 @@ import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
+import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -118,6 +122,8 @@ public class HFileWriterImpl implements HFile.Writer {
   /** May be null if we were passed a stream. */
   protected final Path path;
 
+  protected final Configuration conf;
+
   /** Cache configuration for caching data on write. */
   protected final CacheConfig cacheConf;
 
@@ -171,12 +177,16 @@ public class HFileWriterImpl implements HFile.Writer {
 
   protected long maxMemstoreTS = 0;
 
+  private final TimeRangeTracker timeRangeTracker;
+  private long earliestPutTs = HConstants.LATEST_TIMESTAMP;
+
   public HFileWriterImpl(final Configuration conf, CacheConfig cacheConf, Path path,
     FSDataOutputStream outputStream, HFileContext fileContext) {
     this.outputStream = outputStream;
     this.path = path;
     this.name = path != null ? path.getName() : outputStream.toString();
     this.hFileContext = fileContext;
+    this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
     DataBlockEncoding encoding = hFileContext.getDataBlockEncoding();
     if (encoding != DataBlockEncoding.NONE) {
       this.blockEncoder = new HFileDataBlockEncoderImpl(encoding);
@@ -191,6 +201,7 @@ public class HFileWriterImpl implements HFile.Writer {
     }
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
+    this.conf = conf;
     float encodeBlockSizeRatio = conf.getFloat(UNIFIED_ENCODED_BLOCKSIZE_RATIO, 0f);
     this.encodedBlockSizeLimit = (int) (hFileContext.getBlocksize() * encodeBlockSizeRatio);
 
@@ -557,6 +568,9 @@ public class HFileWriterImpl implements HFile.Writer {
     cacheConf.getBlockCache().ifPresent(cache -> {
       HFileBlock cacheFormatBlock = blockWriter.getBlockForCaching(cacheConf);
       BlockCacheKey key = buildCacheBlockKey(offset, cacheFormatBlock.getBlockType());
+      if (!shouldCacheBlock(cache, key)) {
+        return;
+      }
       try {
         cache.cacheBlock(key, cacheFormatBlock, cacheConf.isInMemory(), true);
       } finally {
@@ -571,6 +585,11 @@ public class HFileWriterImpl implements HFile.Writer {
       return new BlockCacheKey(path, offset, true, blockType);
     }
     return new BlockCacheKey(name, offset, true, blockType);
+  }
+
+  private boolean shouldCacheBlock(BlockCache cache, BlockCacheKey key) {
+    Optional<Boolean> result = cache.shouldCacheBlock(key, timeRangeTracker, conf);
+    return result.orElse(true);
   }
 
   /**
@@ -775,6 +794,8 @@ public class HFileWriterImpl implements HFile.Writer {
     if (tagsLength > this.maxTagsLength) {
       this.maxTagsLength = tagsLength;
     }
+
+    trackTimestamps(cell);
   }
 
   @Override
@@ -866,5 +887,26 @@ public class HFileWriterImpl implements HFile.Writer {
       outputStream.close();
       outputStream = null;
     }
+  }
+
+  /**
+   * Add TimestampRange and earliest put timestamp to Metadata
+   */
+  public void appendTrackedTimestampsToMetadata() throws IOException {
+    // TODO: The StoreFileReader always converts the byte[] to TimeRange
+    // via TimeRangeTracker, so we should write the serialization data of TimeRange directly.
+    appendFileInfo(TIMERANGE_KEY, TimeRangeTracker.toByteArray(timeRangeTracker));
+    appendFileInfo(EARLIEST_PUT_TS, Bytes.toBytes(earliestPutTs));
+  }
+
+  /**
+   * Record the earliest Put timestamp. If the timeRangeTracker is not set, update TimeRangeTracker
+   * to include the timestamp of this key
+   */
+  private void trackTimestamps(final ExtendedCell cell) {
+    if (Cell.Type.Put == cell.getType()) {
+      earliestPutTs = Math.min(earliestPutTs, cell.getTimestamp());
+    }
+    timeRangeTracker.includeTimestamp(cell);
   }
 }
