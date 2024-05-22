@@ -41,3 +41,6 @@ this image will start the HMaster and launch the HBase shell when run.
    **hbase_docker** image. Alternatively, you can type `docker run -it hbase_docker
    bash` to start a container without a running HMaster. Within this environment,
    HBase is built in `/root/hbase-bin`.
+
+> NOTE: When running on mac m1 platforms, the docker file requires setting platfrom flag explicitly.
+> You may use same instructions above running from to the "./m1" sub-dir.
