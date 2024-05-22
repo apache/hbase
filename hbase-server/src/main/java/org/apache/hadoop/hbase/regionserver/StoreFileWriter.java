@@ -22,13 +22,11 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_PARAM
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_TYPE_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.COMPACTION_EVENT_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.DELETE_FAMILY_COUNT;
-import static org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.HISTORICAL_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAX_SEQ_ID_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_CELLS_COUNT;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_FILE_REFS;
-import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
 import static org.apache.hadoop.hbase.regionserver.StoreEngine.STORE_ENGINE_CLASS_KEY;
 
 import java.io.IOException;
@@ -52,7 +50,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -496,11 +493,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     private final BloomFilterWriter deleteFamilyBloomFilterWriter;
     private final BloomType bloomType;
     private byte[] bloomParam = null;
-    private long earliestPutTs = HConstants.LATEST_TIMESTAMP;
     private long deleteFamilyCnt = 0;
     private BloomContext bloomContext = null;
     private BloomContext deleteFamilyBloomContext = null;
-    private final TimeRangeTracker timeRangeTracker;
     private final Supplier<Collection<HStoreFile>> compactedFilesSupplier;
 
     private HFile.Writer writer;
@@ -524,7 +519,6 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       HFileContext fileContext, boolean shouldDropCacheBehind,
       Supplier<Collection<HStoreFile>> compactedFilesSupplier) throws IOException {
       this.compactedFilesSupplier = compactedFilesSupplier;
-      this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
       // TODO : Change all writers to be specifically created for compaction context
       writer =
         HFile.getWriterFactory(conf, cacheConf).withPath(fs, path).withFavoredNodes(favoredNodes)
@@ -666,21 +660,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
      * Add TimestampRange and earliest put timestamp to Metadata
      */
     private void appendTrackedTimestampsToMetadata() throws IOException {
-      // TODO: The StoreFileReader always converts the byte[] to TimeRange
-      // via TimeRangeTracker, so we should write the serialization data of TimeRange directly.
-      appendFileInfo(TIMERANGE_KEY, TimeRangeTracker.toByteArray(timeRangeTracker));
-      appendFileInfo(EARLIEST_PUT_TS, Bytes.toBytes(earliestPutTs));
-    }
-
-    /**
-     * Record the earlest Put timestamp. If the timeRangeTracker is not set, update TimeRangeTracker
-     * to include the timestamp of this key
-     */
-    private void trackTimestamps(final ExtendedCell cell) {
-      if (KeyValue.Type.Put.getCode() == cell.getTypeByte()) {
-        earliestPutTs = Math.min(earliestPutTs, cell.getTimestamp());
-      }
-      timeRangeTracker.includeTimestamp(cell);
+      writer.appendTrackedTimestampsToMetadata();
     }
 
     private void appendGeneralBloomfilter(final ExtendedCell cell) throws IOException {
@@ -711,7 +691,6 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       appendGeneralBloomfilter(cell);
       appendDeleteFamilyBloomFilter(cell);
       writer.append(cell);
-      trackTimestamps(cell);
     }
 
     private void beforeShipped() throws IOException {

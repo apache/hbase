@@ -53,8 +53,8 @@ public abstract class TimeRangeTracker {
     SYNC
   }
 
-  static final long INITIAL_MIN_TIMESTAMP = Long.MAX_VALUE;
-  static final long INITIAL_MAX_TIMESTAMP = -1L;
+  public static final long INITIAL_MIN_TIMESTAMP = Long.MAX_VALUE;
+  public static final long INITIAL_MAX_TIMESTAMP = -1L;
 
   public static TimeRangeTracker create(Type type) {
     switch (type) {
