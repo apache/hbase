@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -488,11 +489,22 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
-    Optional<Boolean> l1Result = l1Cache.shouldCacheFile(hFileInfo, conf);
-    Optional<Boolean> l2Result = l2Cache.shouldCacheFile(hFileInfo, conf);
+    return combineCacheResults(l1Cache.shouldCacheFile(hFileInfo, conf),
+      l2Cache.shouldCacheFile(hFileInfo, conf));
+  }
+
+  @Override
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, TimeRangeTracker timeRangeTracker,
+    Configuration conf) {
+    return combineCacheResults(l1Cache.shouldCacheBlock(key, timeRangeTracker, conf),
+      l2Cache.shouldCacheBlock(key, timeRangeTracker, conf));
+  }
+
+  private Optional<Boolean> combineCacheResults(Optional<Boolean> result1,
+    Optional<Boolean> result2) {
     final Mutable<Boolean> combinedResult = new MutableBoolean(true);
-    l1Result.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
-    l2Result.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
+    result1.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
+    result2.ifPresent(b -> combinedResult.setValue(b && combinedResult.getValue()));
     return Optional.of(combinedResult.getValue());
   }
 

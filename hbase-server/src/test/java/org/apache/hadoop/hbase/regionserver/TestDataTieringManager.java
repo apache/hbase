@@ -32,6 +32,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -99,6 +100,7 @@ public class TestDataTieringManager {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestDataTieringManager.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private static final long DAY = 24 * 60 * 60 * 1000;
   private static Configuration defaultConf;
   private static FileSystem fs;
   private static BlockCache blockCache;
@@ -109,20 +111,27 @@ public class TestDataTieringManager {
   private static DataTieringManager dataTieringManager;
   private static final List<HStoreFile> hStoreFiles = new ArrayList<>();
 
+  /**
+   * Represents the current lexicographically increasing string used as a row key when writing
+   * HFiles. It is incremented each time {@link #nextString()} is called to generate unique row
+   * keys.
+   */
+  private static String rowKeyString;
+
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     testDir = TEST_UTIL.getDataTestDir(TestDataTieringManager.class.getSimpleName());
     defaultConf = TEST_UTIL.getConfiguration();
-    defaultConf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
+    updateCommonConfigurations();
+    assertTrue(DataTieringManager.instantiate(defaultConf, testOnlineRegions));
+    dataTieringManager = DataTieringManager.getInstance();
+    rowKeyString = "";
+  }
+
+  private static void updateCommonConfigurations() {
+    defaultConf.setBoolean(DataTieringManager.GLOBAL_DATA_TIERING_ENABLED_KEY, true);
     defaultConf.setStrings(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     defaultConf.setLong(BUCKET_CACHE_SIZE_KEY, 32);
-    defaultConf.setBoolean(DataTieringManager.GLOBAL_DATA_TIERING_ENABLED_KEY, true);
-    fs = HFileSystem.get(defaultConf);
-    blockCache = BlockCacheFactory.createBlockCache(defaultConf);
-    cacheConf = new CacheConfig(defaultConf, blockCache);
-    assertTrue(DataTieringManager.instantiate(defaultConf, testOnlineRegions));
-    setupOnlineRegions();
-    dataTieringManager = DataTieringManager.getInstance();
   }
 
   @FunctionalInterface
@@ -136,7 +145,8 @@ public class TestDataTieringManager {
   }
 
   @Test
-  public void testDataTieringEnabledWithKey() {
+  public void testDataTieringEnabledWithKey() throws IOException {
+    initializeTestEnvironment();
     DataTieringMethodCallerWithKey methodCallerWithKey = DataTieringManager::isDataTieringEnabled;
 
     // Test with valid key
@@ -154,7 +164,8 @@ public class TestDataTieringManager {
   }
 
   @Test
-  public void testDataTieringEnabledWithPath() {
+  public void testDataTieringEnabledWithPath() throws IOException {
+    initializeTestEnvironment();
     DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isDataTieringEnabled;
 
     // Test with valid path
@@ -184,7 +195,8 @@ public class TestDataTieringManager {
   }
 
   @Test
-  public void testHotDataWithKey() {
+  public void testHotDataWithKey() throws IOException {
+    initializeTestEnvironment();
     DataTieringMethodCallerWithKey methodCallerWithKey = DataTieringManager::isHotData;
 
     // Test with valid key
@@ -197,7 +209,8 @@ public class TestDataTieringManager {
   }
 
   @Test
-  public void testHotDataWithPath() {
+  public void testHotDataWithPath() throws IOException {
+    initializeTestEnvironment();
     DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isHotData;
 
     // Test with valid path
@@ -215,6 +228,8 @@ public class TestDataTieringManager {
 
   @Test
   public void testPrefetchWhenDataTieringEnabled() throws IOException {
+    setPrefetchBlocksOnOpen();
+    initializeTestEnvironment();
     // Evict blocks from cache by closing the files and passing evict on close.
     // Then initialize the reader again. Since Prefetch on open is set to true, it should prefetch
     // those blocks.
@@ -226,12 +241,17 @@ public class TestDataTieringManager {
     // Since we have one cold file among four files, only three should get prefetched.
     Optional<Map<String, Pair<String, Long>>> fullyCachedFiles = blockCache.getFullyCachedFiles();
     assertTrue("We should get the fully cached files from the cache", fullyCachedFiles.isPresent());
-    Waiter.waitFor(defaultConf, 60000, () -> fullyCachedFiles.get().size() == 3);
+    Waiter.waitFor(defaultConf, 10000, () -> fullyCachedFiles.get().size() == 3);
     assertEquals("Number of fully cached files are incorrect", 3, fullyCachedFiles.get().size());
   }
 
+  private void setPrefetchBlocksOnOpen() {
+    defaultConf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
+  }
+
   @Test
-  public void testColdDataFiles() {
+  public void testColdDataFiles() throws IOException {
+    initializeTestEnvironment();
     Set<BlockCacheKey> allCachedBlocks = new HashSet<>();
     for (HStoreFile file : hStoreFiles) {
       allCachedBlocks.add(new BlockCacheKey(file.getPath(), 0, true, BlockType.DATA));
@@ -257,7 +277,74 @@ public class TestDataTieringManager {
   }
 
   @Test
-  public void testPickColdDataFiles() {
+  public void testCacheCompactedBlocksOnWriteDataTieringDisabled() throws IOException {
+    setCacheCompactBlocksOnWrite();
+    initializeTestEnvironment();
+
+    HRegion region = createHRegion("table3");
+    testCacheCompactedBlocksOnWrite(region, true);
+  }
+
+  @Test
+  public void testCacheCompactedBlocksOnWriteWithHotData() throws IOException {
+    setCacheCompactBlocksOnWrite();
+    initializeTestEnvironment();
+
+    HRegion region = createHRegion("table3", getConfWithTimeRangeDataTieringEnabled(5 * DAY));
+    testCacheCompactedBlocksOnWrite(region, true);
+  }
+
+  @Test
+  public void testCacheCompactedBlocksOnWriteWithColdData() throws IOException {
+    setCacheCompactBlocksOnWrite();
+    initializeTestEnvironment();
+
+    HRegion region = createHRegion("table3", getConfWithTimeRangeDataTieringEnabled(DAY));
+    testCacheCompactedBlocksOnWrite(region, false);
+  }
+
+  private void setCacheCompactBlocksOnWrite() {
+    defaultConf.setBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, true);
+  }
+
+  private void testCacheCompactedBlocksOnWrite(HRegion region, boolean expectDataBlocksCached)
+    throws IOException {
+    HStore hStore = createHStore(region, "cf1");
+    createTestFilesForCompaction(hStore);
+    hStore.refreshStoreFiles();
+
+    region.stores.put(Bytes.toBytes("cf1"), hStore);
+    testOnlineRegions.put(region.getRegionInfo().getEncodedName(), region);
+
+    long initialStoreFilesCount = hStore.getStorefilesCount();
+    long initialCacheDataBlockCount = blockCache.getDataBlockCount();
+    assertEquals(3, initialStoreFilesCount);
+    assertEquals(0, initialCacheDataBlockCount);
+
+    region.compact(true);
+
+    long compactedStoreFilesCount = hStore.getStorefilesCount();
+    long compactedCacheDataBlockCount = blockCache.getDataBlockCount();
+    assertEquals(1, compactedStoreFilesCount);
+    assertEquals(expectDataBlocksCached, compactedCacheDataBlockCount > 0);
+  }
+
+  private void createTestFilesForCompaction(HStore hStore) throws IOException {
+    long currentTime = System.currentTimeMillis();
+    Path storeDir = hStore.getStoreContext().getFamilyStoreDirectoryPath();
+    Configuration configuration = hStore.getReadOnlyConfiguration();
+
+    createHStoreFile(storeDir, configuration, currentTime - 2 * DAY,
+      hStore.getHRegion().getRegionFileSystem());
+    createHStoreFile(storeDir, configuration, currentTime - 3 * DAY,
+      hStore.getHRegion().getRegionFileSystem());
+    createHStoreFile(storeDir, configuration, currentTime - 4 * DAY,
+      hStore.getHRegion().getRegionFileSystem());
+  }
+
+  @Test
+  public void testPickColdDataFiles() throws IOException {
+    initializeTestEnvironment();
     Map<String, String> coldDataFiles = dataTieringManager.getColdFilesList();
     assertEquals(1, coldDataFiles.size());
     // hStoreFiles[3] is the cold file.
@@ -270,6 +357,7 @@ public class TestDataTieringManager {
    */
   @Test
   public void testBlockEvictions() throws Exception {
+    initializeTestEnvironment();
     long capacitySize = 40 * 1024;
     int writeThreads = 3;
     int writerQLen = 64;
@@ -320,6 +408,7 @@ public class TestDataTieringManager {
    */
   @Test
   public void testBlockEvictionsAllColdBlocks() throws Exception {
+    initializeTestEnvironment();
     long capacitySize = 40 * 1024;
     int writeThreads = 3;
     int writerQLen = 64;
@@ -367,6 +456,7 @@ public class TestDataTieringManager {
    */
   @Test
   public void testBlockEvictionsHotBlocks() throws Exception {
+    initializeTestEnvironment();
     long capacitySize = 40 * 1024;
     int writeThreads = 3;
     int writerQLen = 64;
@@ -414,6 +504,8 @@ public class TestDataTieringManager {
   public void testFeatureKeyDisabled() throws Exception {
     DataTieringManager.resetForTestingOnly();
     defaultConf.setBoolean(DataTieringManager.GLOBAL_DATA_TIERING_ENABLED_KEY, false);
+    initializeTestEnvironment();
+
     try {
       assertFalse(DataTieringManager.instantiate(defaultConf, testOnlineRegions));
       // Verify that the DataaTieringManager instance is not instantiated in the
@@ -546,7 +638,20 @@ public class TestDataTieringManager {
     testDataTieringMethodWithKey(caller, key, expectedResult, null);
   }
 
+  private static void initializeTestEnvironment() throws IOException {
+    setupFileSystemAndCache();
+    setupOnlineRegions();
+  }
+
+  private static void setupFileSystemAndCache() throws IOException {
+    fs = HFileSystem.get(defaultConf);
+    blockCache = BlockCacheFactory.createBlockCache(defaultConf);
+    cacheConf = new CacheConfig(defaultConf, blockCache);
+  }
+
   private static void setupOnlineRegions() throws IOException {
+    testOnlineRegions.clear();
+    hStoreFiles.clear();
     long day = 24 * 60 * 60 * 1000;
     long currentTime = System.currentTimeMillis();
 
@@ -606,7 +711,12 @@ public class TestDataTieringManager {
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
       CommonFSUtils.getTableDir(testDir, hri.getTable()), hri);
 
-    return new HRegion(regionFs, null, conf, htd, null);
+    HRegion region = new HRegion(regionFs, null, conf, htd, null);
+    // Manually sets the BlockCache for the HRegion instance.
+    // This is necessary because the region server is not started within this method,
+    // and therefore the BlockCache needs to be explicitly configured.
+    region.setBlockCache(blockCache);
+    return region;
   }
 
   private static HStore createHStore(HRegion region, String columnFamily) throws IOException {
@@ -639,8 +749,7 @@ public class TestDataTieringManager {
     StoreFileWriter storeFileWriter = new StoreFileWriter.Builder(conf, cacheConf, fs)
       .withOutputDir(storeDir).withFileContext(new HFileContextBuilder().build()).build();
 
-    writeStoreFileRandomData(storeFileWriter, Bytes.toBytes(columnFamily), Bytes.toBytes("random"),
-      timestamp);
+    writeStoreFileRandomData(storeFileWriter, Bytes.toBytes(columnFamily), timestamp);
 
     StoreContext storeContext =
       StoreContext.getBuilder().withRegionFileSystem(regionFs).build();
@@ -649,18 +758,47 @@ public class TestDataTieringManager {
     return new HStoreFile(fs, storeFileWriter.getPath(), conf, cacheConf, BloomType.NONE, true, sft);
   }
 
+  /**
+   * Writes random data to a store file with rows arranged in lexicographically increasing order.
+   * Each row is generated using the {@link #nextString()} method, ensuring that each subsequent row
+   * is lexicographically larger than the previous one.
+   */
   private static void writeStoreFileRandomData(final StoreFileWriter writer, byte[] columnFamily,
-    byte[] qualifier, long timestamp) throws IOException {
+    long timestamp) throws IOException {
+    int cellsPerFile = 10;
+    byte[] qualifier = Bytes.toBytes("qualifier");
+    byte[] value = generateRandomBytes(4 * 1024);
     try {
-      for (char d = 'a'; d <= 'z'; d++) {
-        for (char e = 'a'; e <= 'z'; e++) {
-          byte[] b = new byte[] { (byte) d, (byte) e };
-          writer.append(new KeyValue(b, columnFamily, qualifier, timestamp, b));
-        }
+      for (int i = 0; i < cellsPerFile; i++) {
+        byte[] row = Bytes.toBytes(nextString());
+        writer.append(new KeyValue(row, columnFamily, qualifier, timestamp, value));
       }
     } finally {
       writer.appendTrackedTimestampsToMetadata();
       writer.close();
     }
+  }
+
+  private static byte[] generateRandomBytes(int sizeInBytes) {
+    Random random = new Random();
+    byte[] randomBytes = new byte[sizeInBytes];
+    random.nextBytes(randomBytes);
+    return randomBytes;
+  }
+
+  /**
+   * Returns the lexicographically larger string every time it's called.
+   */
+  private static String nextString() {
+    if (rowKeyString == null || rowKeyString.isEmpty()) {
+      rowKeyString = "a";
+    }
+    char lastChar = rowKeyString.charAt(rowKeyString.length() - 1);
+    if (lastChar < 'z') {
+      rowKeyString = rowKeyString.substring(0, rowKeyString.length() - 1) + (char) (lastChar + 1);
+    } else {
+      rowKeyString = rowKeyString + "a";
+    }
+    return rowKeyString;
   }
 }
