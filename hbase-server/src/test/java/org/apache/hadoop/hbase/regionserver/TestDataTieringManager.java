@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -50,12 +51,15 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
@@ -562,6 +566,66 @@ public class TestDataTieringManager {
       DataTieringManager.resetForTestingOnly();
       defaultConf.setBoolean(DataTieringManager.GLOBAL_DATA_TIERING_ENABLED_KEY, true);
       assertTrue(DataTieringManager.instantiate(defaultConf, testOnlineRegions));
+    }
+  }
+
+  @Test
+  public void testCacheConfigShouldCacheFile() throws Exception {
+    // Evict the files from cache.
+    for (HStoreFile file : hStoreFiles) {
+      file.closeStoreFile(true);
+    }
+    // Verify that the API shouldCacheFileBlock returns the result correctly.
+    // hStoreFiles[0], hStoreFiles[1], hStoreFiles[2] are hot files.
+    // hStoreFiles[3] is a cold file.
+    try {
+      assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+        hStoreFiles.get(0).getFileInfo().getHFileInfo(),
+        hStoreFiles.get(0).getFileInfo().getConf()));
+      assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+        hStoreFiles.get(1).getFileInfo().getHFileInfo(),
+        hStoreFiles.get(1).getFileInfo().getConf()));
+      assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+        hStoreFiles.get(2).getFileInfo().getHFileInfo(),
+        hStoreFiles.get(2).getFileInfo().getConf()));
+      assertFalse(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+        hStoreFiles.get(3).getFileInfo().getHFileInfo(),
+        hStoreFiles.get(3).getFileInfo().getConf()));
+    } finally {
+      for (HStoreFile file : hStoreFiles) {
+        file.initReader();
+      }
+    }
+  }
+
+  @Test
+  public void testCacheOnReadColdFile() throws Exception {
+    // hStoreFiles[3] is a cold file. the blocks should not get loaded after a readBlock call.
+    HStoreFile hStoreFile = hStoreFiles.get(3);
+    BlockCacheKey cacheKey = new BlockCacheKey(hStoreFile.getPath(), 0, true, BlockType.DATA);
+    testCacheOnRead(hStoreFile, cacheKey, 23025, false);
+  }
+
+  @Test
+  public void testCacheOnReadHotFile() throws Exception {
+    // hStoreFiles[0] is a hot file. the blocks should get loaded after a readBlock call.
+    HStoreFile hStoreFile = hStoreFiles.get(0);
+    BlockCacheKey cacheKey =
+      new BlockCacheKey(hStoreFiles.get(0).getPath(), 0, true, BlockType.DATA);
+    testCacheOnRead(hStoreFile, cacheKey, 23025, true);
+  }
+
+  private void testCacheOnRead(HStoreFile hStoreFile, BlockCacheKey key, long onDiskBlockSize,
+    boolean expectedCached) throws Exception {
+    // Execute the read block API which will try to cache the block if the block is a hot block.
+    hStoreFile.getReader().getHFileReader().readBlock(key.getOffset(), onDiskBlockSize, true, false,
+      false, false, key.getBlockType(), DataBlockEncoding.NONE);
+    // Validate that the hot block gets cached and cold block is not cached.
+    HFileBlock block = (HFileBlock) blockCache.getBlock(key, false, false, false, BlockType.DATA);
+    if (expectedCached) {
+      assertNotNull(block);
+    } else {
+      assertNull(block);
     }
   }
 
