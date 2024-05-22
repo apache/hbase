@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.regionserver.DataTieringManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
@@ -2454,6 +2455,18 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     // if we don't have the file in fullyCachedFiles, we should cache it
     return Optional.of(!fullyCachedFiles.containsKey(fileName));
+  }
+
+  @Override
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, TimeRangeTracker timeRangeTracker,
+    Configuration conf) {
+    DataTieringManager dataTieringManager = DataTieringManager.getInstance();
+    if (dataTieringManager != null && !dataTieringManager.isHotData(timeRangeTracker, conf)) {
+      LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data",
+        key.getHfileName());
+      return Optional.of(false);
+    }
+    return Optional.of(true);
   }
 
   @Override

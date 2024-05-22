@@ -23,6 +23,7 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -205,6 +206,22 @@ public interface BlockCache extends Iterable<CachedBlock>, ConfigurationObserver
    *         contains the boolean value informing if the file should be cached.
    */
   default Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
+    return Optional.empty();
+  }
+
+  /**
+   * Checks whether the block represented by the given key should be cached or not. This method may
+   * not be overridden by all implementing classes. In such cases, the returned Optional will be
+   * empty. For subclasses implementing this logic, the returned Optional would contain the boolean
+   * value reflecting if the passed block should indeed be cached.
+   * @param key              The key representing the block to check if it should be cached.
+   * @param timeRangeTracker the time range tracker containing the timestamps
+   * @param conf             The configuration object to use for determining caching behavior.
+   * @return An empty Optional if this method is not supported; otherwise, the returned Optional
+   *         contains the boolean value indicating if the block should be cached.
+   */
+  default Optional<Boolean> shouldCacheBlock(BlockCacheKey key, TimeRangeTracker timeRangeTracker,
+    Configuration conf) {
     return Optional.empty();
   }
 
