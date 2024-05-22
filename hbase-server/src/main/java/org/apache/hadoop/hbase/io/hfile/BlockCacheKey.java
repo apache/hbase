@@ -116,5 +116,4 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   public Path getFilePath() {
     return filePath;
   }
-
 }
