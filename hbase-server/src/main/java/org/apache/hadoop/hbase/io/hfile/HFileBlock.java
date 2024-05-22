@@ -1205,17 +1205,16 @@ public class HFileBlock implements Cacheable {
      * being wholesome (ECC memory or if file-backed, it does checksumming).
      */
     HFileBlock getBlockForCaching(CacheConfig cacheConf) {
-      HFileContext newContext = new HFileContextBuilder().withBlockSize(fileContext.getBlocksize())
-        .withBytesPerCheckSum(0)
-        .withChecksumType(ChecksumType.NULL)
-        .withCompression(fileContext.getCompression())
-        .withDataBlockEncoding(fileContext.getDataBlockEncoding())
-        .withHBaseCheckSum(fileContext.isUseHBaseChecksum())
-        .withCompressTags(fileContext.isCompressTags())
-        .withIncludesMvcc(fileContext.isIncludesMvcc())
-        .withIncludesTags(fileContext.isIncludesTags())
-        .withColumnFamily(fileContext.getColumnFamily()).withTableName(fileContext.getTableName())
-        .build();
+      HFileContext newContext =
+        new HFileContextBuilder().withBlockSize(fileContext.getBlocksize()).withBytesPerCheckSum(0)
+          .withChecksumType(ChecksumType.NULL).withCompression(fileContext.getCompression())
+          .withDataBlockEncoding(fileContext.getDataBlockEncoding())
+          .withHBaseCheckSum(fileContext.isUseHBaseChecksum())
+          .withCompressTags(fileContext.isCompressTags())
+          .withIncludesMvcc(fileContext.isIncludesMvcc())
+          .withIncludesTags(fileContext.isIncludesTags())
+          .withColumnFamily(fileContext.getColumnFamily()).withTableName(fileContext.getTableName())
+          .build();
       // Build the HFileBlock.
       HFileBlockBuilder builder = new HFileBlockBuilder();
       ByteBuff buff;
