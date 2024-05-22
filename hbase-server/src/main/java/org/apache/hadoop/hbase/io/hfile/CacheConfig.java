@@ -279,7 +279,10 @@ public class CacheConfig implements ConfigurationObserver {
     Configuration conf) {
     Optional<Boolean> cacheFileBlock = Optional.of(true);
     if (getBlockCache().isPresent()) {
-      cacheFileBlock = getBlockCache().get().shouldCacheFile(hFileInfo, conf);
+      Optional<Boolean> result = getBlockCache().get().shouldCacheFile(hFileInfo, conf);
+      if (result.isPresent()) {
+        cacheFileBlock = result;
+      }
     }
     return shouldCacheBlockOnRead(category) && cacheFileBlock.get();
   }
