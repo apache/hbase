@@ -2243,6 +2243,7 @@
                     <bannedImport>org.apache.commons.cli.**</bannedImport>
                     <bannedImport>org.apache.commons.collections.**</bannedImport>
                     <bannedImport>org.apache.commons.collections4.**</bannedImport>
+                    <bannedImport>org.apache.hadoop.thirdparty.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
