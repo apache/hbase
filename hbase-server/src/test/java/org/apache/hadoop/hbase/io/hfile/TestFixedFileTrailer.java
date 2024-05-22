@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.InnerStoreCellComparator;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -102,15 +101,7 @@ public class TestFixedFileTrailer {
   @Test
   public void testCreateComparator() throws IOException {
     assertEquals(InnerStoreCellComparator.class,
-      createComparator(KeyValue.COMPARATOR.getLegacyKeyComparatorName()).getClass());
-    assertEquals(InnerStoreCellComparator.class,
-      createComparator(KeyValue.COMPARATOR.getClass().getName()).getClass());
-    assertEquals(InnerStoreCellComparator.class,
       createComparator(CellComparator.class.getName()).getClass());
-    assertEquals(MetaCellComparator.class,
-      createComparator(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName()).getClass());
-    assertEquals(MetaCellComparator.class,
-      createComparator(KeyValue.META_COMPARATOR.getClass().getName()).getClass());
     assertEquals(MetaCellComparator.class,
       createComparator("org.apache.hadoop.hbase.CellComparator$MetaCellComparator").getClass());
     assertEquals(MetaCellComparator.class,
