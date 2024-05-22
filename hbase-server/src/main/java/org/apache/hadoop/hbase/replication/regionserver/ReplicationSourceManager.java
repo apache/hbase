@@ -1181,6 +1181,9 @@ public class ReplicationSourceManager {
       return totalBufferUsed.get();
     }
     long newBufferUsed = totalBufferUsed.addAndGet(size);
+    if (newBufferUsed < 0) {
+      newBufferUsed = 0;
+    }
     // Record the new buffer usage
     this.globalMetrics.setWALReaderEditsBufferBytes(newBufferUsed);
     return newBufferUsed;
