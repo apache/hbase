@@ -279,6 +279,18 @@ public class CacheConfig implements PropagatingConfigurationObserver {
       || (prefetchOnOpen && (category != BlockCategory.META && category != BlockCategory.UNKNOWN));
   }
 
+  public boolean shouldCacheBlockOnRead(BlockCategory category, HFileInfo hFileInfo,
+    Configuration conf) {
+    Optional<Boolean> cacheFileBlock = Optional.of(true);
+    if (getBlockCache().isPresent()) {
+      Optional<Boolean> result = getBlockCache().get().shouldCacheFile(hFileInfo, conf);
+      if (result.isPresent()) {
+        cacheFileBlock = result;
+      }
+    }
+    return shouldCacheBlockOnRead(category) && cacheFileBlock.get();
+  }
+
   /** Returns true if blocks in this file should be flagged as in-memory */
   public boolean isInMemory() {
     return this.inMemory;
