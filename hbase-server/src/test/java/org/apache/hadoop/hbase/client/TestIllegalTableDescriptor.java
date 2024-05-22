@@ -213,8 +213,7 @@ public class TestIllegalTableDescriptor {
     checkTableIsIllegal(htd);
 
     // First scenario: DataTieringType set to TIME_RANGE without DateTieredStoreEngine
-    hcd.setConfiguration(DataTieringManager.DATATIERING_KEY,
-      DataTieringType.TIME_RANGE.name());
+    hcd.setConfiguration(DataTieringManager.DATATIERING_KEY, DataTieringType.TIME_RANGE.name());
     checkTableIsIllegal(htd.addFamily(hcd));
 
     // Second scenario: DataTieringType set to TIME_RANGE with DateTieredStoreEngine

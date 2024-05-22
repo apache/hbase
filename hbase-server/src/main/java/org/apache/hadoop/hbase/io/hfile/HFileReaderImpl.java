@@ -1232,7 +1232,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       BlockCacheKey cacheKey =
         new BlockCacheKey(name, metaBlockOffset, this.isPrimaryReplicaReader(), BlockType.META);
 
-      cacheBlock &= cacheConf.shouldCacheBlockOnRead(BlockType.META.getCategory());
+      cacheBlock &=
+        cacheConf.shouldCacheBlockOnRead(BlockType.META.getCategory(), getHFileInfo(), conf);
       HFileBlock cachedBlock =
         getCachedBlock(cacheKey, cacheBlock, false, true, BlockType.META, null);
       if (cachedBlock != null) {
@@ -1387,7 +1388,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         }
         BlockType.BlockCategory category = hfileBlock.getBlockType().getCategory();
         final boolean cacheCompressed = cacheConf.shouldCacheCompressed(category);
-        final boolean cacheOnRead = cacheConf.shouldCacheBlockOnRead(category);
+        final boolean cacheOnRead =
+          cacheConf.shouldCacheBlockOnRead(category, getHFileInfo(), conf);
 
         // Don't need the unpacked block back and we're storing the block in the cache compressed
         if (cacheOnly && cacheCompressed && cacheOnRead) {
@@ -1395,7 +1397,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
           cacheConf.getBlockCache().ifPresent(cache -> {
             LOG.debug("Skipping decompression of block {} in prefetch", cacheKey);
             // Cache the block if necessary
-            if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
+            if (cacheBlock && cacheOnRead) {
               cache.cacheBlock(cacheKey, blockNoChecksum, cacheConf.isInMemory(), cacheOnly);
             }
           });
@@ -1409,7 +1411,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         HFileBlock unpackedNoChecksum = BlockCacheUtil.getBlockForCaching(cacheConf, unpacked);
         // Cache the block if necessary
         cacheConf.getBlockCache().ifPresent(cache -> {
-          if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
+          if (cacheBlock && cacheOnRead) {
             // Using the wait on cache during compaction and prefetching.
             cache.cacheBlock(cacheKey,
               cacheCompressed
