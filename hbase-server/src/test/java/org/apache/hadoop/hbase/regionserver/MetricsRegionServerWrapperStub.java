@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collections;
 import java.util.List;
+import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 
 public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrapper {
 
@@ -160,6 +161,15 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public int getActiveScanners() {
     return 0;
+  }
+
+  @Override
+  public FastLongHistogram getAgeAtEviction() {
+    FastLongHistogram histogram = new FastLongHistogram();
+    histogram.add(100, 1);
+    histogram.add(500, 1);
+    histogram.add(400, 1);
+    return histogram;
   }
 
   @Override
