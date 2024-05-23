@@ -18,7 +18,11 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
  * Common interface for models capable of supporting protobuf marshalling and unmarshalling. Hooks
@@ -26,13 +30,43 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface ProtobufMessageHandler {
-  /** Returns the protobuf represention of the model */
-  byte[] createProtobufOutput();
+
+  // The Jetty 9.4 HttpOutput default commit size is 32K/4 = 8K. We use that size to avoid
+  // double buffering (and copying) in HttpOutput. If we ever increase the HttpOutput commit size,
+  // we need to adjust this accordingly. We should also revisit this when Jetty is upgraded.
+  static final int BUFFER_SIZE = 8 * 1024;
+
+  /** Writes the protobuf represention of the model */
+  default void writeProtobufOutput(OutputStream os) throws IOException {
+    // Creating an explicit CodedOutputStream for the following reasons :
+    // 1. This avoids the cost of pre-computing the message size
+    // 2. This lets us set the buffer size explicitly
+    CodedOutputStream cos = CodedOutputStream.newInstance(os, BUFFER_SIZE);
+    messageFromObject().writeTo(cos);
+    cos.flush();
+  }
+
+  /**
+   * Use {@link org.apache.hadoop.hbase.rest#writeProtobufOutput(OutputStream)} with
+   * BufferedOutputStream for better performance
+   * @return the protobuf encoded object in a byte array
+   */
+  default byte[] createProtobufOutput() {
+    return messageFromObject().toByteArray();
+  }
+
+  public Message messageFromObject();
 
   /**
    * Initialize the model from a protobuf representation.
    * @param message the raw bytes of the protobuf message
    * @return reference to self for convenience
    */
+  // TODO implement proper stream handling for unmarshalling.
+  // Using byte array here lets us use ProtobufUtil.mergeFrom in the implementations to
+  // avoid the CodedOutputStream size limitation, but is slow
+  // and memory intensive. We should stream the input, and
+  // provide a configuration property and a method parameter to
+  // set the maximum message size
   ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException;
 }
