@@ -566,48 +566,38 @@ public class TestDataTieringManager {
 
   @Test
   public void testCacheConfigShouldCacheFile() throws Exception {
-    // Evict the files from cache.
-    for (HStoreFile file : hStoreFiles) {
-      file.closeStoreFile(true);
-    }
+    initializeTestEnvironment();
     // Verify that the API shouldCacheFileBlock returns the result correctly.
     // hStoreFiles[0], hStoreFiles[1], hStoreFiles[2] are hot files.
     // hStoreFiles[3] is a cold file.
-    try {
-      assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
-        hStoreFiles.get(0).getFileInfo().getHFileInfo(),
-        hStoreFiles.get(0).getFileInfo().getConf()));
-      assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
-        hStoreFiles.get(1).getFileInfo().getHFileInfo(),
-        hStoreFiles.get(1).getFileInfo().getConf()));
-      assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
-        hStoreFiles.get(2).getFileInfo().getHFileInfo(),
-        hStoreFiles.get(2).getFileInfo().getConf()));
-      assertFalse(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
-        hStoreFiles.get(3).getFileInfo().getHFileInfo(),
-        hStoreFiles.get(3).getFileInfo().getConf()));
-    } finally {
-      for (HStoreFile file : hStoreFiles) {
-        file.initReader();
-      }
-    }
+
+    assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+      hStoreFiles.get(0).getFileInfo().getHFileInfo(), hStoreFiles.get(0).getFileInfo().getConf()));
+    assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+      hStoreFiles.get(1).getFileInfo().getHFileInfo(), hStoreFiles.get(1).getFileInfo().getConf()));
+    assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+      hStoreFiles.get(2).getFileInfo().getHFileInfo(), hStoreFiles.get(2).getFileInfo().getConf()));
+    assertFalse(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+      hStoreFiles.get(3).getFileInfo().getHFileInfo(), hStoreFiles.get(3).getFileInfo().getConf()));
   }
 
   @Test
   public void testCacheOnReadColdFile() throws Exception {
+    initializeTestEnvironment();
     // hStoreFiles[3] is a cold file. the blocks should not get loaded after a readBlock call.
     HStoreFile hStoreFile = hStoreFiles.get(3);
     BlockCacheKey cacheKey = new BlockCacheKey(hStoreFile.getPath(), 0, true, BlockType.DATA);
-    testCacheOnRead(hStoreFile, cacheKey, 23025, false);
+    testCacheOnRead(hStoreFile, cacheKey, -1, false);
   }
 
   @Test
   public void testCacheOnReadHotFile() throws Exception {
+    initializeTestEnvironment();
     // hStoreFiles[0] is a hot file. the blocks should get loaded after a readBlock call.
     HStoreFile hStoreFile = hStoreFiles.get(0);
     BlockCacheKey cacheKey =
       new BlockCacheKey(hStoreFiles.get(0).getPath(), 0, true, BlockType.DATA);
-    testCacheOnRead(hStoreFile, cacheKey, 23025, true);
+    testCacheOnRead(hStoreFile, cacheKey, -1, true);
   }
 
   private void testCacheOnRead(HStoreFile hStoreFile, BlockCacheKey key, long onDiskBlockSize,
