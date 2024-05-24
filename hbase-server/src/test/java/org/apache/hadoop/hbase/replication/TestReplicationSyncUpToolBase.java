@@ -118,12 +118,12 @@ public abstract class TestReplicationSyncUpToolBase {
     admin2.createTable(t2SyncupTarget);
 
     // Get HTable from Master
-    Connection conn1 = ConnectionFactory.createConnection(UTIL1.getConfiguration());
+    conn1 = ConnectionFactory.createConnection(UTIL1.getConfiguration());
     ht1Source = conn1.getTable(TN1);
     ht2Source = conn1.getTable(TN2);
 
     // Get HTable from Peer1
-    Connection conn2 = ConnectionFactory.createConnection(UTIL2.getConfiguration());
+    conn2 = ConnectionFactory.createConnection(UTIL2.getConfiguration());
     ht1TargetAtPeer1 = conn2.getTable(TN1);
     ht2TargetAtPeer1 = conn2.getTable(TN2);
 
@@ -131,7 +131,7 @@ public abstract class TestReplicationSyncUpToolBase {
      * set M-S : Master: utility1 Slave1: utility2
      */
     ReplicationPeerConfig rpc =
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey()).build();
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getZkConnectionURI()).build();
     admin1.addReplicationPeer("1", rpc);
   }
 

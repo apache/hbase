@@ -79,7 +79,7 @@ public class TestReplicationAdminForSyncReplication {
     Thread[] threads = new Thread[5];
     for (int i = 0; i < 5; i++) {
       String peerId = "id" + i;
-      String clusterKey = TEST_UTIL.getClusterKey() + "-test" + i;
+      String clusterKey = TEST_UTIL.getZkConnectionURI() + "-test" + i;
       int index = i;
       threads[i] = new Thread(() -> {
         try {

@@ -125,12 +125,12 @@ public class SyncReplicationTestBase {
       new Path(UTIL2.getMiniHBaseCluster().getMaster().getMasterFileSystem().getWALRootDir(),
         "remoteWALs").makeQualified(fs2.getUri(), fs2.getWorkingDirectory());
     UTIL1.getAdmin().addReplicationPeer(PEER_ID,
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getRpcConnnectionURI())
         .setReplicateAllUserTables(false)
         .setTableCFsMap(ImmutableMap.of(TABLE_NAME, new ArrayList<>()))
         .setRemoteWALDir(REMOTE_WAL_DIR2.toUri().toString()).build());
     UTIL2.getAdmin().addReplicationPeer(PEER_ID,
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL1.getClusterKey())
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL1.getRpcConnnectionURI())
         .setReplicateAllUserTables(false)
         .setTableCFsMap(ImmutableMap.of(TABLE_NAME, new ArrayList<>()))
         .setRemoteWALDir(REMOTE_WAL_DIR1.toUri().toString()).build());

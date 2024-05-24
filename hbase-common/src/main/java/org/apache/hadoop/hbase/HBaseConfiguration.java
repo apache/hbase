@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -226,11 +227,11 @@ public class HBaseConfiguration extends Configuration {
   public static Configuration createClusterConf(Configuration baseConf, String clusterKey,
     String overridePrefix) throws IOException {
     Configuration clusterConf = HBaseConfiguration.create(baseConf);
-    if (clusterKey != null && !clusterKey.isEmpty()) {
+    if (!StringUtils.isBlank(clusterKey)) {
       applyClusterKeyToConf(clusterConf, clusterKey);
     }
 
-    if (overridePrefix != null && !overridePrefix.isEmpty()) {
+    if (!StringUtils.isBlank(overridePrefix)) {
       Configuration clusterSubset = HBaseConfiguration.subset(clusterConf, overridePrefix);
       HBaseConfiguration.merge(clusterConf, clusterSubset);
     }

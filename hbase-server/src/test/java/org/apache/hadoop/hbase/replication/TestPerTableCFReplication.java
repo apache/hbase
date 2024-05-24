@@ -404,7 +404,7 @@ public class TestPerTableCFReplication {
       tableCFs.get(tabBName).add("f1");
       tableCFs.get(tabBName).add("f3");
       ReplicationPeerConfig rpc2 =
-        ReplicationPeerConfig.newBuilder().setClusterKey(utility2.getClusterKey())
+        ReplicationPeerConfig.newBuilder().setClusterKey(utility2.getRpcConnnectionURI())
           .setReplicateAllUserTables(false).setTableCFsMap(tableCFs).build();
       replicationAdmin.addReplicationPeer("2", rpc2);
 
@@ -414,7 +414,7 @@ public class TestPerTableCFReplication {
       tableCFs.get(tabBName).add("f1");
       tableCFs.get(tabBName).add("f2");
       ReplicationPeerConfig rpc3 =
-        ReplicationPeerConfig.newBuilder().setClusterKey(utility3.getClusterKey())
+        ReplicationPeerConfig.newBuilder().setClusterKey(utility3.getRpcConnnectionURI())
           .setReplicateAllUserTables(false).setTableCFsMap(tableCFs).build();
       replicationAdmin.addReplicationPeer("3", rpc3);
 
