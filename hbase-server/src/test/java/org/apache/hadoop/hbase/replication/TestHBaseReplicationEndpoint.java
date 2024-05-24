@@ -19,8 +19,10 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -36,8 +38,6 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -48,22 +48,21 @@ public class TestHBaseReplicationEndpoint {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestHBaseReplicationEndpoint.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestHBaseReplicationEndpoint.class);
-
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private HBaseReplicationEndpoint endpoint;
 
   @Before
   public void setUp() throws Exception {
-    try {
-      ReplicationEndpoint.Context context = new ReplicationEndpoint.Context(null,
-        UTIL.getConfiguration(), UTIL.getConfiguration(), null, null, null, null, null, null, null);
-      endpoint = new DummyHBaseReplicationEndpoint();
-      endpoint.init(context);
-    } catch (Exception e) {
-      LOG.info("Failed", e);
-    }
+    ReplicationPeer replicationPeer = mock(ReplicationPeer.class);
+    ReplicationPeerConfig peerConfig = mock(ReplicationPeerConfig.class);
+    when(replicationPeer.getPeerConfig()).thenReturn(peerConfig);
+    when(peerConfig.getClusterKey()).thenReturn("hbase+zk://server1:2181/hbase");
+    ReplicationEndpoint.Context context =
+      new ReplicationEndpoint.Context(null, UTIL.getConfiguration(), UTIL.getConfiguration(), null,
+        null, null, replicationPeer, null, null, null);
+    endpoint = new DummyHBaseReplicationEndpoint();
+    endpoint.init(context);
   }
 
   @Test
@@ -205,7 +204,8 @@ public class TestHBaseReplicationEndpoint {
     }
 
     @Override
-    public AsyncClusterConnection createConnection(Configuration conf) throws IOException {
+    public AsyncClusterConnection createConnection(URI clusterURI, Configuration conf)
+      throws IOException {
       return null;
     }
   }

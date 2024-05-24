@@ -39,4 +39,10 @@ public interface ConnectionRegistryURIFactory {
    * {@link ConnectionRegistryFactory}.
    */
   String getScheme();
+
+  /**
+   * Validate the given {@code uri}.
+   * @throws IOException if this is not a valid connection registry URI.
+   */
+  void validate(URI uri) throws IOException;
 }

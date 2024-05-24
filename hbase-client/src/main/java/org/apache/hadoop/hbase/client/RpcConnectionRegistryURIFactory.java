@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.net.URI;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -45,5 +46,13 @@ public class RpcConnectionRegistryURIFactory implements ConnectionRegistryURIFac
   @Override
   public String getScheme() {
     return "hbase+rpc";
+  }
+
+  @Override
+  public void validate(URI uri) throws IOException {
+    if (StringUtils.isBlank(uri.getAuthority())) {
+      throw new IOException("no bootstrap nodes specified, uri: " + uri);
+    }
+    // TODO: add more check about the bootstrap nodes
   }
 }

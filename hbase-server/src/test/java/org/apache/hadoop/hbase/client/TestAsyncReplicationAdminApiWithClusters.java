@@ -87,7 +87,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     admin2 = connection.getAdmin();
 
     ReplicationPeerConfig rpc =
-      ReplicationPeerConfig.newBuilder().setClusterKey(TEST_UTIL2.getClusterKey()).build();
+      ReplicationPeerConfig.newBuilder().setClusterKey(TEST_UTIL2.getRpcConnnectionURI()).build();
     ASYNC_CONN.getAdmin().addReplicationPeer(ID_SECOND, rpc).join();
   }
 
