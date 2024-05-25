@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,7 +41,6 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 
 @Category({ MediumTests.class, ClientTests.class })
@@ -51,8 +51,6 @@ public class TestScanOrGetWithReplicationFromClient {
 
   @Rule
   public TestName name = new TestName();
-
-  private ExpectedException exception = ExpectedException.none();
 
   private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final String ROW = "r1";
@@ -127,10 +125,10 @@ public class TestScanOrGetWithReplicationFromClient {
     Scan scan = new Scan();
     scan.setReplicaId(NON_EXISTING_REGION_REPLICA_ID);
     scan.setConsistency(Consistency.TIMELINE);
-    exception.expect(DoNotRetryIOException.class);
     ResultScanner rs = metaTable.getScanner(scan);
     try {
       rs.forEach(r -> Bytes.toString(r.getRow()));
+      fail("Should not reach here");
     } catch (Exception e) {
       Throwable throwable = e.getCause();
       assertTrue(throwable instanceof DoNotRetryIOException);
@@ -160,10 +158,10 @@ public class TestScanOrGetWithReplicationFromClient {
     Scan scan = new Scan();
     scan.setReplicaId(NON_EXISTING_REGION_REPLICA_ID);
     scan.setConsistency(Consistency.TIMELINE);
-    exception.expect(DoNotRetryIOException.class);
     ResultScanner rs = table.getScanner(scan);
     try {
       rs.forEach(r -> Bytes.toString(r.getRow()));
+      fail("Should not reach here");
     } catch (Exception e) {
       Throwable throwable = e.getCause();
       assertTrue(throwable instanceof DoNotRetryIOException);
@@ -195,6 +193,7 @@ public class TestScanOrGetWithReplicationFromClient {
     try {
       Result result = table.get(get);
       result.getValue(FAMILY, Bytes.toBytes("q"));
+      fail("Should not reach here");
     } catch (Exception e) {
       assertTrue(e instanceof DoNotRetryIOException);
       String message = "The specified region replica id " + NON_EXISTING_REGION_REPLICA_ID
