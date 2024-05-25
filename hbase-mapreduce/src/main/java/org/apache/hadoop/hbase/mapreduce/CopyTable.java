@@ -181,8 +181,7 @@ public class CopyTable extends Configured implements Tool {
       }
     } else {
       initCopyTableMapperReducerJob(job, scan);
-      TableMapReduceUtil.initTableReducerJob(dstTableName, null, job, null, peerAddress, null,
-        null);
+      TableMapReduceUtil.initTableReducerJob(dstTableName, null, job, null, peerAddress);
     }
 
     return job;
