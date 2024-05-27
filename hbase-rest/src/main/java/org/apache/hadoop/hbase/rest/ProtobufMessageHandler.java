@@ -34,7 +34,7 @@ public interface ProtobufMessageHandler {
   // The Jetty 9.4 HttpOutput default commit size is 32K/4 = 8K. We use that size to avoid
   // double buffering (and copying) in HttpOutput. If we ever increase the HttpOutput commit size,
   // we need to adjust this accordingly. We should also revisit this when Jetty is upgraded.
-  static final int BUFFER_SIZE = 8 * 1024;
+  int BUFFER_SIZE = 8 * 1024;
 
   /** Writes the protobuf represention of the model */
   default void writeProtobufOutput(OutputStream os) throws IOException {
@@ -55,7 +55,7 @@ public interface ProtobufMessageHandler {
     return messageFromObject().toByteArray();
   }
 
-  public Message messageFromObject();
+  Message messageFromObject();
 
   /**
    * Initialize the model from a protobuf representation.
