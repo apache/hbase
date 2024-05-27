@@ -36,7 +36,7 @@ public interface ProtobufMessageHandler {
   // we need to adjust this accordingly. We should also revisit this when Jetty is upgraded.
   int BUFFER_SIZE = 8 * 1024;
 
-  /** Writes the protobuf represention of the model */
+  /** Writes the protobuf represention of the model to os */
   default void writeProtobufOutput(OutputStream os) throws IOException {
     // Creating an explicit CodedOutputStream for the following reasons :
     // 1. This avoids the cost of pre-computing the message size
@@ -47,8 +47,7 @@ public interface ProtobufMessageHandler {
   }
 
   /**
-   * Use {@link org.apache.hadoop.hbase.rest#writeProtobufOutput(OutputStream)} with
-   * BufferedOutputStream for better performance
+   * Use {@link org.apache.hadoop.hbase.rest.ProtobufMessageHandler#writeProtobufOutput(OutputStream)} for better performance
    * @return the protobuf encoded object in a byte array
    */
   default byte[] createProtobufOutput() {
