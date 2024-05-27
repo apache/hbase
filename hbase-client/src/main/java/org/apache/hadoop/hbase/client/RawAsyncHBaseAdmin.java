@@ -2125,8 +2125,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         }
       }
       if (tableName == null) {
-        future.completeExceptionally(new RestoreSnapshotException(
-          "The snapshot " + snapshotName + " does not exist."));
+        future.completeExceptionally(
+          new RestoreSnapshotException("The snapshot " + snapshotName + " does not exist."));
         return;
       }
       final TableName finalTableName = tableName;
