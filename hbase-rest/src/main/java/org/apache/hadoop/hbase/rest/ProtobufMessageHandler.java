@@ -47,13 +47,19 @@ public interface ProtobufMessageHandler {
   }
 
   /**
-   * Use {@link org.apache.hadoop.hbase.rest.ProtobufMessageHandler#writeProtobufOutput(OutputStream)} for better performance
+   * Returns the protobuf represention of the model in a byte array Use
+   * {@link org.apache.hadoop.hbase.rest.ProtobufMessageHandler#writeProtobufOutput(OutputStream)}
+   * for better performance
    * @return the protobuf encoded object in a byte array
    */
   default byte[] createProtobufOutput() {
     return messageFromObject().toByteArray();
   }
 
+  /**
+   * Convert to model to a protobuf Message object
+   * @return the protobuf Message object
+   */
   Message messageFromObject();
 
   /**
@@ -64,8 +70,8 @@ public interface ProtobufMessageHandler {
   // TODO implement proper stream handling for unmarshalling.
   // Using byte array here lets us use ProtobufUtil.mergeFrom in the implementations to
   // avoid the CodedOutputStream size limitation, but is slow
-  // and memory intensive. We should stream the input, and
-  // provide a configuration property and a method parameter to
-  // set the maximum message size
+  // and memory intensive. We could use the ProtobufUtil.mergeFrom() variant that takes
+  // an inputStream and sets the size limit to maxInt.
+  // This would help both on the client side, and when processing large Puts on the server.
   ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException;
 }
