@@ -332,7 +332,7 @@ public class ReplicationSourceShipper extends Thread {
             "Shipper clearWALEntryBatch method timed out whilst waiting reader/shipper "
               + "thread to stop. Not cleaning buffer usage. Shipper alive: {}; Reader alive: {}",
             this.source.getPeerId(), this.isAlive(), this.entryReader.isAlive());
-          return;
+          break;
         } else {
           // Wait both shipper and reader threads to stop
           Thread.sleep(this.sleepForRetries);
@@ -340,7 +340,7 @@ public class ReplicationSourceShipper extends Thread {
       } catch (InterruptedException e) {
         LOG.warn("{} Interrupted while waiting {} to stop on clearWALEntryBatch. "
           + "Not cleaning buffer usage: {}", this.source.getPeerId(), this.getName(), e);
-        return;
+        break;
       }
     }
     long totalReleasedBytes = 0;
