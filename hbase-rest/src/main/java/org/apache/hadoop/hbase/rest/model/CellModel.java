@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIMITER;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import javax.xml.bind.annotation.XmlAccessType;
@@ -200,7 +201,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     Cell.Builder builder = Cell.newBuilder();
     builder.setColumn(ByteStringer.wrap(getColumn()));
     if (valueLength == MAGIC_LENGTH) {
@@ -211,7 +212,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
     if (hasUserTimestamp()) {
       builder.setTimestamp(getTimestamp());
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

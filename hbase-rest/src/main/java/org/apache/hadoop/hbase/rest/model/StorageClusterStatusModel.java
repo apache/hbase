@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.rest.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -651,7 +652,7 @@ public class StorageClusterStatusModel implements Serializable, ProtobufMessageH
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     StorageClusterStatus.Builder builder = StorageClusterStatus.newBuilder();
     builder.setRegions(regions);
     builder.setRequests(requests);
@@ -686,7 +687,7 @@ public class StorageClusterStatusModel implements Serializable, ProtobufMessageH
     for (String node : deadNodes) {
       builder.addDeadNodes(node);
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

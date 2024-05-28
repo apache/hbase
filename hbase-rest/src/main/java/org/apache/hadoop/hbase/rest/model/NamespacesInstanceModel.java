@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -139,7 +140,7 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     NamespaceProperties.Builder builder = NamespaceProperties.newBuilder();
     if (properties != null) {
       for (Map.Entry<String, String> entry : properties.entrySet()) {
@@ -150,7 +151,7 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
         builder.addProps(property);
       }
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override
