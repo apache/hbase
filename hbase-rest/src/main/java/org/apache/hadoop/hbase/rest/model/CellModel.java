@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -202,7 +203,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     Cell.Builder builder = Cell.newBuilder();
     builder.setColumn(UnsafeByteOperations.unsafeWrap(getColumn()));
     if (valueLength == MAGIC_LENGTH) {
@@ -213,7 +214,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
     if (hasUserTimestamp()) {
       builder.setTimestamp(getTimestamp());
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

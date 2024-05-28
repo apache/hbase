@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.TableSchemaMessage.TableSchema;
@@ -248,7 +250,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     TableSchema.Builder builder = TableSchema.newBuilder();
     builder.setName(name);
     for (Map.Entry<QName, Object> e : attrs.entrySet()) {
@@ -281,7 +283,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     if (attrs.containsKey(READONLY)) {
       builder.setReadOnly(Boolean.parseBoolean(attrs.get(READONLY).toString()));
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

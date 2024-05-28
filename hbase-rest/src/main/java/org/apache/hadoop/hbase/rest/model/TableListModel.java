@@ -26,6 +26,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.TableListMessage.TableList;
 
@@ -90,12 +92,12 @@ public class TableListModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     TableList.Builder builder = TableList.newBuilder();
     for (TableModel aTable : tables) {
       builder.addName(aTable.getName());
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

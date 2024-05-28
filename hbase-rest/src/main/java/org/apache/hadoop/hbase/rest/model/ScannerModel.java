@@ -71,6 +71,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
@@ -809,7 +810,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     Scanner.Builder builder = Scanner.newBuilder();
     if (!Bytes.equals(startRow, HConstants.EMPTY_START_ROW)) {
       builder.setStartRow(UnsafeByteOperations.unsafeWrap(startRow));
@@ -842,7 +843,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         builder.addLabels(label);
     }
     builder.setCacheBlocks(cacheBlocks);
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override
