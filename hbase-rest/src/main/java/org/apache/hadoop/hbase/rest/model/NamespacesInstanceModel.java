@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.NamespacePropertiesMessage.NamespaceProperties;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import com.google.protobuf.Message;
+
 /**
  * List a HBase namespace's key/value properties.
  * <ul>
@@ -139,7 +141,7 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     NamespaceProperties.Builder builder = NamespaceProperties.newBuilder();
     if (properties != null) {
       for (Map.Entry<String, String> entry : properties.entrySet()) {
@@ -150,7 +152,7 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
         builder.addProps(property);
       }
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

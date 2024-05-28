@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.rest.model;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.protobuf.Message;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -245,7 +247,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     TableSchema.Builder builder = TableSchema.newBuilder();
     builder.setName(name);
     for (Map.Entry<QName, Object> e : attrs.entrySet()) {
@@ -278,7 +280,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     if (attrs.containsKey(READONLY)) {
       builder.setReadOnly(Boolean.parseBoolean(attrs.get(READONLY).toString()));
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

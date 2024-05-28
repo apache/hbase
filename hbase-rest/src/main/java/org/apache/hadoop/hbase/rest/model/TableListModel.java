@@ -28,6 +28,8 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import com.google.protobuf.Message;
+
 /**
  * Simple representation of a list of table names.
  */
@@ -89,12 +91,12 @@ public class TableListModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     TableList.Builder builder = TableList.newBuilder();
     for (TableModel aTable : tables) {
       builder.addName(aTable.getName());
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

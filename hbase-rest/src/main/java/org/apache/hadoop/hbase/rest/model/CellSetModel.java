@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import com.google.protobuf.Message;
+
 /**
  * Representation of a grouping of cells. May contain cells from more than one row. Encapsulates
  * RowModel and CellModel models.
@@ -106,7 +108,7 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     CellSet.Builder builder = CellSet.newBuilder();
     for (RowModel row : getRows()) {
       CellSet.Row.Builder rowBuilder = CellSet.Row.newBuilder();
@@ -132,7 +134,7 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
       }
       builder.addRows(rowBuilder);
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

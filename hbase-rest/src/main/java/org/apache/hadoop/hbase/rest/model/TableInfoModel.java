@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInf
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import com.google.protobuf.Message;
+
 /**
  * Representation of a list of table regions.
  *
@@ -121,7 +123,7 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     TableInfo.Builder builder = TableInfo.newBuilder();
     builder.setName(name);
     for (TableRegionModel aRegion : regions) {
@@ -133,7 +135,7 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
       regionBuilder.setLocation(aRegion.getLocation());
       builder.addRegions(regionBuilder);
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override
