@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.rest.model;
 
 import static org.apache.hadoop.hbase.rest.model.CellModel.MAGIC_LENGTH;
 
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -106,7 +107,7 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     CellSet.Builder builder = CellSet.newBuilder();
     for (RowModel row : getRows()) {
       CellSet.Row.Builder rowBuilder = CellSet.Row.newBuilder();
@@ -132,7 +133,7 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
       }
       builder.addRows(rowBuilder);
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

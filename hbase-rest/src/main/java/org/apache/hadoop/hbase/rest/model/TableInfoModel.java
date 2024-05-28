@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -121,7 +122,7 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     TableInfo.Builder builder = TableInfo.newBuilder();
     builder.setName(name);
     for (TableRegionModel aRegion : regions) {
@@ -133,7 +134,7 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
       regionBuilder.setLocation(aRegion.getLocation());
       builder.addRegions(regionBuilder);
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

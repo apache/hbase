@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import javax.servlet.ServletContext;
@@ -161,14 +162,14 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     Version.Builder builder = Version.newBuilder();
     builder.setRestVersion(restVersion);
     builder.setJvmVersion(jvmVersion);
     builder.setOsVersion(osVersion);
     builder.setServerVersion(serverVersion);
     builder.setJerseyVersion(jerseyVersion);
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

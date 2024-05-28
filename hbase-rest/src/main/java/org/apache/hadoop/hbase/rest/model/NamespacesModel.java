@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.rest.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -94,10 +95,10 @@ public class NamespacesModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     Namespaces.Builder builder = Namespaces.newBuilder();
     builder.addAllNamespace(namespaces);
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override
