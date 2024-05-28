@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.rest.model;
 
 import static org.apache.hadoop.hbase.rest.model.CellModel.MAGIC_LENGTH;
 
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -34,8 +35,6 @@ import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import com.google.protobuf.Message;
 
 /**
  * Representation of a grouping of cells. May contain cells from more than one row. Encapsulates

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.rest.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;

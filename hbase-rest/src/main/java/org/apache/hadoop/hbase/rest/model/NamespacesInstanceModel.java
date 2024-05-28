@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -31,8 +32,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.NamespacePropertiesMessage.NamespaceProperties;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import com.google.protobuf.Message;
 
 /**
  * List a HBase namespace's key/value properties.

@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.protobuf.Message;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;

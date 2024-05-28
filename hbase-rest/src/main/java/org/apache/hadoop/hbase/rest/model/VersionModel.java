@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import javax.servlet.ServletContext;
@@ -27,8 +28,6 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RESTServlet;
 import org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import com.google.protobuf.Message;
 
 import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
 

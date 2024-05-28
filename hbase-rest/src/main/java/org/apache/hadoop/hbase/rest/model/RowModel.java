@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.rest.model.CellModel.MAGIC_LENGTH;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.protobuf.Message;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
