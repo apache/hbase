@@ -100,7 +100,6 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
         return null;
       }
       state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH;
-      ;
     }
     try {
       env.getRemoteDispatcher().addOperationToNode(targetServer, this);
