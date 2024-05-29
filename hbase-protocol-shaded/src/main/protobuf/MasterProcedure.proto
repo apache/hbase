@@ -612,3 +612,13 @@ message ModifyStoreFileTrackerStateData {
 message ModifyColumnFamilyStoreFileTrackerStateData {
   required bytes family = 1;
 }
+
+enum CloseExcessRegionReplicasProcedureState {
+  CLOSE_EXCESS_REGION_REPLICAS_SCHEDULE = 1;
+  CLOSE_EXCESS_REGION_REPLICAS_CONFIRM = 2;
+}
+
+message CloseExcessRegionReplicasProcedureStateData {
+  required TableName table_name = 1;
+  required uint32 new_replica_count = 2;
+}
