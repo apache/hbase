@@ -21,10 +21,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -203,6 +205,75 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
 
     }
 
+    /**
+     * This transfer objects omits the pseudo-getters in MultiRowRangeFilter.RowRange which break
+     * Jackson deserialization. It also avoids adding those as dummy JSON elements.
+     */
+    static class RowRangeModel {
+
+      protected byte[] startRow;
+
+      protected boolean startRowInclusive = true;
+
+      protected byte[] stopRow;
+
+      protected boolean stopRowInclusive = false;
+
+      public RowRangeModel() {
+      }
+
+      public RowRangeModel(MultiRowRangeFilter.RowRange rr) {
+        this.startRow = rr.getStartRow();
+        this.startRowInclusive = rr.isStartRowInclusive();
+        this.stopRow = rr.getStopRow();
+        this.stopRowInclusive = rr.isStopRowInclusive();
+      }
+
+      public MultiRowRangeFilter.RowRange build() {
+        return new MultiRowRangeFilter.RowRange(startRow, startRowInclusive, stopRow,
+          stopRowInclusive);
+      }
+
+      public byte[] getStartRow() {
+        return startRow;
+      }
+
+      public byte[] getStopRow() {
+        return stopRow;
+      }
+
+      /** Returns if start row is inclusive. */
+      public boolean isStartRowInclusive() {
+        return startRowInclusive;
+      }
+
+      /** Returns if stop row is inclusive. */
+      public boolean isStopRowInclusive() {
+        return stopRowInclusive;
+      }
+
+      @Override
+      public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + Arrays.hashCode(startRow);
+        result = prime * result + Arrays.hashCode(stopRow);
+        result = prime * result + Objects.hash(startRowInclusive, stopRowInclusive);
+        return result;
+      }
+
+      @Override
+      public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
+        RowRangeModel other = (RowRangeModel) obj;
+        return Arrays.equals(startRow, other.startRow)
+          && startRowInclusive == other.startRowInclusive && Arrays.equals(stopRow, other.stopRow)
+          && stopRowInclusive == other.stopRowInclusive;
+      }
+    }
+
     // A grab bag of fields, would have been a union if this were C.
     // These are null by default and will only be serialized if set (non null).
     @XmlAttribute
@@ -242,7 +313,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     @XmlElement
     public List<String> prefixes;
     @XmlElement
-    private List<RowRange> ranges;
+    private List<RowRangeModel> ranges;
     @XmlElement
     public List<Long> timestamps;
 
@@ -333,8 +404,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         case MultiRowRangeFilter:
           this.ranges = new ArrayList<>();
           for (RowRange range : ((MultiRowRangeFilter) filter).getRowRanges()) {
-            this.ranges.add(new RowRange(range.getStartRow(), range.isStartRowInclusive(),
-              range.getStopRow(), range.isStopRowInclusive()));
+            this.ranges.add(new RowRangeModel(range));
           }
           break;
         case PageFilter:
@@ -438,7 +508,11 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         }
           break;
         case MultiRowRangeFilter: {
-          filter = new MultiRowRangeFilter(ranges);
+          ArrayList<MultiRowRangeFilter.RowRange> rowRanges = new ArrayList<>(ranges.size());
+          for (RowRangeModel rangeModel : ranges) {
+            rowRanges.add(rangeModel.build());
+          }
+          filter = new MultiRowRangeFilter(rowRanges);
         }
           break;
         case PageFilter:
