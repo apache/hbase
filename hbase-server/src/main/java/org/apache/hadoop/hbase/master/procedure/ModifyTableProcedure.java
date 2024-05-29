@@ -524,8 +524,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
     if (newReplicaCount >= oldReplicaCount) {
       return;
     }
-    addChildProcedure(env.getAssignmentManager()
-      .createUnassignProceduresForClosingExcessRegionReplicas(getTableName(), newReplicaCount));
+    addChildProcedure(new CloseExcessRegionReplicasProcedure(getTableName(), newReplicaCount));
   }
 
   /**
