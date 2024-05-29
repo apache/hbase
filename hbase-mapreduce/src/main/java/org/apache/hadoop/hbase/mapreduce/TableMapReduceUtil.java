@@ -569,7 +569,87 @@ public class TableMapReduceUtil {
    */
   public static void initTableReducerJob(String table, Class<? extends TableReducer> reducer,
     Job job, Class partitioner) throws IOException {
-    initTableReducerJob(table, reducer, job, partitioner, null, null, null);
+    initTableReducerJob(table, reducer, job, partitioner, null);
+  }
+
+  /**
+   * Use this before submitting a TableReduce job. It will appropriately set up the JobConf.
+   * @param table         The output table.
+   * @param reducer       The reducer class to use.
+   * @param job           The current job to adjust. Make sure the passed job is carrying all
+   *                      necessary HBase configuration.
+   * @param partitioner   Partitioner to use. Pass <code>null</code> to use default partitioner.
+   * @param quorumAddress Distant cluster to write to; default is null for output to the cluster
+   *                      that is designated in <code>hbase-site.xml</code>. Set this String to the
+   *                      zookeeper ensemble of an alternate remote cluster when you would have the
+   *                      reduce write a cluster that is other than the default; e.g. copying tables
+   *                      between clusters, the source would be designated by
+   *                      <code>hbase-site.xml</code> and this param would have the ensemble address
+   *                      of the remote cluster. The format to pass is particular. Pass
+   *                      <code> &lt;hbase.zookeeper.quorum&gt;:&lt;
+   *             hbase.zookeeper.client.port&gt;:&lt;zookeeper.znode.parent&gt;
+   * </code>           such as <code>server,server2,server3:2181:/hbase</code>.
+   * @throws IOException When determining the region count fails.
+   */
+  public static void initTableReducerJob(String table, Class<? extends TableReducer> reducer,
+    Job job, Class partitioner, String quorumAddress) throws IOException {
+    initTableReducerJob(table, reducer, job, partitioner, quorumAddress, true);
+  }
+
+  /**
+   * Use this before submitting a TableReduce job. It will appropriately set up the JobConf.
+   * @param table             The output table.
+   * @param reducer           The reducer class to use.
+   * @param job               The current job to adjust. Make sure the passed job is carrying all
+   *                          necessary HBase configuration.
+   * @param partitioner       Partitioner to use. Pass <code>null</code> to use default partitioner.
+   * @param quorumAddress     Distant cluster to write to; default is null for output to the cluster
+   *                          that is designated in <code>hbase-site.xml</code>. Set this String to
+   *                          the zookeeper ensemble of an alternate remote cluster when you would
+   *                          have the reduce write a cluster that is other than the default; e.g.
+   *                          copying tables between clusters, the source would be designated by
+   *                          <code>hbase-site.xml</code> and this param would have the ensemble
+   *                          address of the remote cluster. The format to pass is particular. Pass
+   *                          <code> &lt;hbase.zookeeper.quorum&gt;:&lt;
+   *             hbase.zookeeper.client.port&gt;:&lt;zookeeper.znode.parent&gt;
+   * </code>               such as <code>server,server2,server3:2181:/hbase</code>.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured job classes via
+   *                          the distributed cache (tmpjars).
+   * @throws IOException When determining the region count fails.
+   */
+  public static void initTableReducerJob(String table, Class<? extends TableReducer> reducer,
+    Job job, Class partitioner, String quorumAddress, boolean addDependencyJars)
+    throws IOException {
+    Configuration conf = job.getConfiguration();
+    HBaseConfiguration.merge(conf, HBaseConfiguration.create(conf));
+    job.setOutputFormatClass(TableOutputFormat.class);
+    if (reducer != null) job.setReducerClass(reducer);
+    conf.set(TableOutputFormat.OUTPUT_TABLE, table);
+    conf.setStrings("io.serializations", conf.get("io.serializations"),
+      MutationSerialization.class.getName(), ResultSerialization.class.getName());
+    // If passed a quorum/ensemble address, pass it on to TableOutputFormat.
+    if (quorumAddress != null) {
+      // Calling this will validate the format
+      ZKConfig.validateClusterKey(quorumAddress);
+      conf.set(TableOutputFormat.QUORUM_ADDRESS, quorumAddress);
+    }
+    job.setOutputKeyClass(ImmutableBytesWritable.class);
+    job.setOutputValueClass(Writable.class);
+    if (partitioner == HRegionPartitioner.class) {
+      job.setPartitionerClass(HRegionPartitioner.class);
+      int regions = getRegionCount(conf, TableName.valueOf(table));
+      if (job.getNumReduceTasks() > regions) {
+        job.setNumReduceTasks(regions);
+      }
+    } else if (partitioner != null) {
+      job.setPartitionerClass(partitioner);
+    }
+
+    if (addDependencyJars) {
+      addDependencyJars(job);
+    }
+
+    initCredentials(job);
   }
 
   /**
@@ -592,12 +672,16 @@ public class TableMapReduceUtil {
    * @param serverClass   redefined hbase.regionserver.class
    * @param serverImpl    redefined hbase.regionserver.impl
    * @throws IOException When determining the region count fails.
+   * @deprecated Since 2.5.9, 2.6.1, 2.7.0, will be removed in 4.0.0. The {@code serverClass} and
+   *             {@code serverImpl} do not take effect any more, just use
+   *             {@link #initTableReducerJob(String, Class, Job, Class, String)} instead.
+   * @see #initTableReducerJob(String, Class, Job, Class, String)
    */
+  @Deprecated
   public static void initTableReducerJob(String table, Class<? extends TableReducer> reducer,
     Job job, Class partitioner, String quorumAddress, String serverClass, String serverImpl)
     throws IOException {
-    initTableReducerJob(table, reducer, job, partitioner, quorumAddress, serverClass, serverImpl,
-      true);
+    initTableReducerJob(table, reducer, job, partitioner, quorumAddress);
   }
 
   /**
@@ -622,45 +706,16 @@ public class TableMapReduceUtil {
    * @param addDependencyJars upload HBase jars and jars for any of the configured job classes via
    *                          the distributed cache (tmpjars).
    * @throws IOException When determining the region count fails.
+   * @deprecated Since 2.5.9, 2.6.1, 2.7.0, will be removed in 4.0.0. The {@code serverClass} and
+   *             {@code serverImpl} do not take effect any more, just use
+   *             {@link #initTableReducerJob(String, Class, Job, Class, String, boolean)} instead.
+   * @see #initTableReducerJob(String, Class, Job, Class, String, boolean)
    */
+  @Deprecated
   public static void initTableReducerJob(String table, Class<? extends TableReducer> reducer,
     Job job, Class partitioner, String quorumAddress, String serverClass, String serverImpl,
     boolean addDependencyJars) throws IOException {
-
-    Configuration conf = job.getConfiguration();
-    HBaseConfiguration.merge(conf, HBaseConfiguration.create(conf));
-    job.setOutputFormatClass(TableOutputFormat.class);
-    if (reducer != null) job.setReducerClass(reducer);
-    conf.set(TableOutputFormat.OUTPUT_TABLE, table);
-    conf.setStrings("io.serializations", conf.get("io.serializations"),
-      MutationSerialization.class.getName(), ResultSerialization.class.getName());
-    // If passed a quorum/ensemble address, pass it on to TableOutputFormat.
-    if (quorumAddress != null) {
-      // Calling this will validate the format
-      ZKConfig.validateClusterKey(quorumAddress);
-      conf.set(TableOutputFormat.QUORUM_ADDRESS, quorumAddress);
-    }
-    if (serverClass != null && serverImpl != null) {
-      conf.set(TableOutputFormat.REGION_SERVER_CLASS, serverClass);
-      conf.set(TableOutputFormat.REGION_SERVER_IMPL, serverImpl);
-    }
-    job.setOutputKeyClass(ImmutableBytesWritable.class);
-    job.setOutputValueClass(Writable.class);
-    if (partitioner == HRegionPartitioner.class) {
-      job.setPartitionerClass(HRegionPartitioner.class);
-      int regions = getRegionCount(conf, TableName.valueOf(table));
-      if (job.getNumReduceTasks() > regions) {
-        job.setNumReduceTasks(regions);
-      }
-    } else if (partitioner != null) {
-      job.setPartitionerClass(partitioner);
-    }
-
-    if (addDependencyJars) {
-      addDependencyJars(job);
-    }
-
-    initCredentials(job);
+    initTableReducerJob(table, reducer, job, partitioner, quorumAddress, addDependencyJars);
   }
 
   /**
