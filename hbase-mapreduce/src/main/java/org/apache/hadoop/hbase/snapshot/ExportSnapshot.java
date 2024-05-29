@@ -309,24 +309,38 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         in = new ThrottledInputStream(new BufferedInputStream(in), bandwidthMB * 1024 * 1024L);
       }
 
+      Path inputPath = inputStat.getPath();
       try {
         context.getCounter(Counter.BYTES_EXPECTED).increment(inputStat.getLen());
 
         // Ensure that the output folder is there and copy the file
         createOutputPath(outputPath.getParent());
         FSDataOutputStream out = outputFs.create(outputPath, true);
-        try {
-          copyData(context, inputStat.getPath(), in, outputPath, out, inputStat.getLen());
-        } finally {
-          out.close();
-        }
+
+        long stime = EnvironmentEdgeManager.currentTime();
+        long totalBytesWritten =
+          copyData(context, inputPath, in, outputPath, out, inputStat.getLen());
+
+        // Verify the file length and checksum
+        verifyCopyResult(inputStat, outputFs.getFileStatus(outputPath));
+
+        long etime = EnvironmentEdgeManager.currentTime();
+        LOG.info("copy completed for input=" + inputPath + " output=" + outputPath);
+        LOG
+          .info("size=" + totalBytesWritten + " (" + StringUtils.humanReadableInt(totalBytesWritten)
+            + ")" + " time=" + StringUtils.formatTimeDiff(etime, stime) + String
+              .format(" %.3fM/sec", (totalBytesWritten / ((etime - stime) / 1000.0)) / 1048576.0));
+        context.getCounter(Counter.FILES_COPIED).increment(1);
 
         // Try to Preserve attributes
         if (!preserveAttributes(outputPath, inputStat)) {
           LOG.warn("You may have to run manually chown on: " + outputPath);
         }
+      } catch (IOException e) {
+        LOG.error("Error copying " + inputPath + " to " + outputPath, e);
+        context.getCounter(Counter.COPY_FAILED).increment(1);
+        throw e;
       } finally {
-        in.close();
         injectTestFailure(context, inputInfo);
       }
     }
@@ -403,7 +417,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       return str != null && str.length() > 0;
     }
 
-    private void copyData(final Context context, final Path inputPath, final InputStream in,
+    private long copyData(final Context context, final Path inputPath, final InputStream in,
       final Path outputPath, final FSDataOutputStream out, final long inputFileSize)
       throws IOException {
       final String statusMessage =
@@ -415,7 +429,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         int reportBytes = 0;
         int bytesRead;
 
-        long stime = EnvironmentEdgeManager.currentTime();
         while ((bytesRead = in.read(buffer)) > 0) {
           out.write(buffer, 0, bytesRead);
           totalBytesWritten += bytesRead;
@@ -430,7 +443,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
             reportBytes = 0;
           }
         }
-        long etime = EnvironmentEdgeManager.currentTime();
 
         context.getCounter(Counter.BYTES_COPIED).increment(reportBytes);
         context
@@ -438,23 +450,10 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
             (totalBytesWritten / (float) inputFileSize) * 100.0f) + " from " + inputPath + " to "
             + outputPath);
 
-        // Verify that the written size match
-        if (totalBytesWritten != inputFileSize) {
-          String msg = "number of bytes copied not matching copied=" + totalBytesWritten
-            + " expected=" + inputFileSize + " for file=" + inputPath;
-          throw new IOException(msg);
-        }
-
-        LOG.info("copy completed for input=" + inputPath + " output=" + outputPath);
-        LOG
-          .info("size=" + totalBytesWritten + " (" + StringUtils.humanReadableInt(totalBytesWritten)
-            + ")" + " time=" + StringUtils.formatTimeDiff(etime, stime) + String
-              .format(" %.3fM/sec", (totalBytesWritten / ((etime - stime) / 1000.0)) / 1048576.0));
-        context.getCounter(Counter.FILES_COPIED).increment(1);
-      } catch (IOException e) {
-        LOG.error("Error copying " + inputPath + " to " + outputPath, e);
-        context.getCounter(Counter.COPY_FAILED).increment(1);
-        throw e;
+        return totalBytesWritten;
+      } finally {
+        out.close();
+        in.close();
       }
     }
 
@@ -531,6 +530,34 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       } catch (IOException e) {
         LOG.warn("Unable to get checksum for file=" + path, e);
         return null;
+      }
+    }
+
+    private void verifyCopyResult(final FileStatus inputStat, final FileStatus outputStat)
+      throws IOException {
+      long inputLen = inputStat.getLen();
+      long outputLen = outputStat.getLen();
+      Path inputPath = inputStat.getPath();
+      Path outputPath = outputStat.getPath();
+
+      if (inputLen != outputLen) {
+        throw new IOException("Mismatch in length of input:" + inputPath + " (" + inputLen
+          + ") and output:" + outputPath + " (" + outputLen + ")");
+      }
+
+      // If length==0, we will skip checksum
+      if (inputLen != 0 && verifyChecksum) {
+        FileChecksum inChecksum = getFileChecksum(inputFs, inputPath);
+        if (inChecksum == null) {
+          LOG.warn("Input file " + inputPath + " checksums are not available");
+        }
+        FileChecksum outChecksum = getFileChecksum(outputFs, outputPath);
+        if (outChecksum == null) {
+          LOG.warn("Output file " + outputPath + " checksums are not available");
+        }
+        if (inChecksum != null && outChecksum != null && !inChecksum.equals(outChecksum)) {
+          throw new IOException("Checksum mismatch between " + inputPath + " and " + outputPath);
+        }
       }
     }
 
