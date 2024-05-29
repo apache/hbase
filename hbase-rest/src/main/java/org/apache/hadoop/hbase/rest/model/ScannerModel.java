@@ -206,7 +206,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     }
 
     /**
-     * This transfer objects omits the pseudo-getters in MultiRowRangeFilter.RowRange which break
+     * This DTO omits the pseudo-getters in MultiRowRangeFilter.RowRange which break
      * Jackson deserialization. It also avoids adding those as dummy JSON elements.
      */
     static class RowRangeModel {

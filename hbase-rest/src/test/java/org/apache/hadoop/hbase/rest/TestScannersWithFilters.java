@@ -967,11 +967,10 @@ public class TestScannersWithFilters {
 
   @Test
   public void testMultiRowRangeFilter() throws Exception {
-    // Get the middle two rows from One and Two
     long expectedRows = 2;
     long expectedKeys = colsPerRow;
     List<MultiRowRangeFilter.RowRange> ranges = new ArrayList<>();
-    // Both return only the third element, as the secondscp one is deleted.
+    // Both return only the third element, as the second one is deleted during initialization.
     ranges.add(new MultiRowRangeFilter.RowRange(ROWS_ONE[1], true, ROWS_ONE[2], true));
     ranges.add(new MultiRowRangeFilter.RowRange(ROWS_TWO[0], false, ROWS_TWO[3], false));
 
