@@ -77,6 +77,12 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>andor</id>
+      <name>Andor Molnar</name>
+      <email>andor@apache.org</email>
+      <timezone>-5</timezone>
+    </developer>
+    <developer>
       <id>appy</id>
       <name>Apekshit Sharma</name>
       <email>appy@apache.org</email>
