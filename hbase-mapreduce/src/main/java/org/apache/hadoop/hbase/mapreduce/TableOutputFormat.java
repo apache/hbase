@@ -66,16 +66,26 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
    * Optional job parameter to specify a peer cluster. Used specifying remote cluster when copying
    * between hbase clusters (the source is picked up from <code>hbase-site.xml</code>).
    * @see TableMapReduceUtil#initTableReducerJob(String, Class, org.apache.hadoop.mapreduce.Job,
-   *      Class, String, String, String)
+   *      Class, String)
    */
   public static final String QUORUM_ADDRESS = OUTPUT_CONF_PREFIX + "quorum";
 
   /** Optional job parameter to specify peer cluster's ZK client port */
   public static final String QUORUM_PORT = OUTPUT_CONF_PREFIX + "quorum.port";
 
-  /** Optional specification of the rs class name of the peer cluster */
+  /**
+   * Optional specification of the rs class name of the peer cluster.
+   * @deprecated Since 2.5.9, 2.6.1 and 2.7.0, will be removed in 4.0.0. Does not take effect from
+   *             long ago, see HBASE-6044.
+   */
+  @Deprecated
   public static final String REGION_SERVER_CLASS = OUTPUT_CONF_PREFIX + "rs.class";
-  /** Optional specification of the rs impl name of the peer cluster */
+  /**
+   * Optional specification of the rs impl name of the peer cluster
+   * @deprecated Since 2.5.9, 2.6.1 and 2.7.0, will be removed in 4.0.0. Does not take effect from
+   *             long ago, see HBASE-6044.
+   */
+  @Deprecated
   public static final String REGION_SERVER_IMPL = OUTPUT_CONF_PREFIX + "rs.impl";
 
   /** The configuration. */
@@ -208,15 +218,9 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
 
     String address = otherConf.get(QUORUM_ADDRESS);
     int zkClientPort = otherConf.getInt(QUORUM_PORT, 0);
-    String serverClass = otherConf.get(REGION_SERVER_CLASS);
-    String serverImpl = otherConf.get(REGION_SERVER_IMPL);
 
     try {
       this.conf = HBaseConfiguration.createClusterConf(otherConf, address, OUTPUT_CONF_PREFIX);
-
-      if (serverClass != null) {
-        this.conf.set(HConstants.REGION_SERVER_IMPL, serverImpl);
-      }
       if (zkClientPort != 0) {
         this.conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);
       }

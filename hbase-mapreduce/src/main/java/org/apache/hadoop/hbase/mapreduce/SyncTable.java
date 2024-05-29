@@ -167,8 +167,7 @@ public class SyncTable extends Configured implements Tool {
     } else {
       // No reducers. Just write straight to table. Call initTableReducerJob
       // because it sets up the TableOutputFormat.
-      TableMapReduceUtil.initTableReducerJob(targetTableName, null, job, null, targetZkCluster,
-        null, null);
+      TableMapReduceUtil.initTableReducerJob(targetTableName, null, job, null, targetZkCluster);
 
       // would be nice to add an option for bulk load instead
     }
