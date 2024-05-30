@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
+import org.apache.hadoop.hbase.filter.MultiRowRangeFilter;
 import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
@@ -956,5 +957,19 @@ public class TestScannersWithFilters {
       new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
       new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]) };
     verifyScanFull(s, kvs);
+  }
+
+  @Test
+  public void testMultiRowRangeFilter() throws Exception {
+    long expectedRows = 2;
+    long expectedKeys = colsPerRow;
+    List<MultiRowRangeFilter.RowRange> ranges = new ArrayList<>();
+    // Both return only the third element, as the second one is deleted during initialization.
+    ranges.add(new MultiRowRangeFilter.RowRange(ROWS_ONE[1], true, ROWS_ONE[2], true));
+    ranges.add(new MultiRowRangeFilter.RowRange(ROWS_TWO[0], false, ROWS_TWO[3], false));
+
+    Scan s = new Scan();
+    s.setFilter(new MultiRowRangeFilter(ranges));
+    verifyScan(s, expectedRows, expectedKeys);
   }
 }
