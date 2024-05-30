@@ -367,7 +367,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     setupValue1();
 
     StringBuilder path = new StringBuilder();
-    Base64.Encoder encoder = Base64.getUrlEncoder();
+    Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
     path.append('/');
     path.append(TABLE);
     path.append('/');
@@ -387,7 +387,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     setupValue1();
 
     StringBuilder path = new StringBuilder();
-    Base64.Encoder encoder = Base64.getUrlEncoder();
+    Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
     path.append('/');
     path.append(TABLE);
     path.append('/');
