@@ -76,7 +76,7 @@ public class TestMultiRowResource {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
 
-  private static final Encoder base64UrlEncoder = java.util.Base64.getUrlEncoder();
+  private static final Encoder base64UrlEncoder = java.util.Base64.getUrlEncoder().withoutPadding();
 
   private static Client client;
   private static Configuration conf;
@@ -187,7 +187,7 @@ public class TestMultiRowResource {
     client.post(row_6_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_2), extraHdr);
 
     StringBuilder path = new StringBuilder();
-    Base64.Encoder encoder = Base64.getUrlEncoder();
+    Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
     path.append("/");
     path.append(TABLE);
     path.append("/multiget/?row=");

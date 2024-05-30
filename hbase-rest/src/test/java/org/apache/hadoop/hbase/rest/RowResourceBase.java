@@ -493,7 +493,7 @@ public class RowResourceBase {
   protected static Response deleteValueB64(String table, String row, String column,
     boolean useQueryString) throws IOException {
     StringBuilder path = new StringBuilder();
-    Base64.Encoder encoder = Base64.getUrlEncoder();
+    Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
     path.append('/');
     path.append(table);
     path.append('/');
@@ -538,7 +538,7 @@ public class RowResourceBase {
   protected static Response deleteRowB64(String table, String row, boolean useQueryString)
     throws IOException {
     StringBuilder path = new StringBuilder();
-    Base64.Encoder encoder = Base64.getUrlEncoder();
+    Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
     path.append('/');
     path.append(table);
     path.append('/');
