@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -307,11 +308,11 @@ public abstract class TableBackupClient {
     List<BackupImage> ancestors = new ArrayList<>();
     Set<TableName> tablesToCover = new HashSet<>(backupInfo.getTables());
 
-    // Go over the backup history list in descending order (newest to oldest)
+    // Go over the backup history list from newest to oldest
     List<BackupInfo> allHistoryList = backupManager.getBackupHistory(true);
     for (BackupInfo backup : allHistoryList) {
       // If the image has a different rootDir, it cannot be an ancestor.
-      if (!backup.getBackupRootDir().equals(backupInfo.getBackupRootDir())) {
+      if (!Objects.equals(backup.getBackupRootDir(), backupInfo.getBackupRootDir())) {
         continue;
       }
 
@@ -327,13 +328,13 @@ public abstract class TableBackupClient {
         ancestors.add(image);
         LOG.debug("Dependent incremental backup image: {BackupID={}}", image.getBackupId());
       } else {
-        if (tablesToCover.removeAll(image.getTableNames())) {
+        if (tablesToCover.removeAll(new HashSet<>(image.getTableNames()))) {
           ancestors.add(image);
           LOG.debug("Dependent full backup image: {BackupID={}}", image.getBackupId());
 
           if (tablesToCover.isEmpty()) {
             LOG.debug("Got {} ancestors for the current backup.", ancestors.size());
-            return ancestors;
+            return Collections.unmodifiableList(ancestors);
           }
         }
       }
