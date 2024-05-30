@@ -272,10 +272,9 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         }
         RowRangeModel other = (RowRangeModel) obj;
         return Arrays.equals(startRow, other.startRow)
-            && startRowInclusive == other.startRowInclusive && Arrays.equals(stopRow, other.stopRow)
-            && stopRowInclusive == other.stopRowInclusive;
+          && startRowInclusive == other.startRowInclusive && Arrays.equals(stopRow, other.stopRow)
+          && stopRowInclusive == other.stopRowInclusive;
       }
-
 
     }
 
