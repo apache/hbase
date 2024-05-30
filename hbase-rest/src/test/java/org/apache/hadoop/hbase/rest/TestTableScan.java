@@ -95,7 +95,7 @@ public class TestTableScan {
   private static int expectedRows3;
   private static Configuration conf;
 
-  private static final Encoder base64UrlEncoder = java.util.Base64.getUrlEncoder();
+  private static final Encoder base64UrlEncoder = java.util.Base64.getUrlEncoder().withoutPadding();
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
