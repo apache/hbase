@@ -112,13 +112,13 @@ public class SwitchRpcThrottleRemoteProcedure extends ServerRemoteProcedure
   }
 
   @Override
-  protected void complete(MasterProcedureEnv env, Throwable error) {
+  protected boolean complete(MasterProcedureEnv env, Throwable error) {
     if (error != null) {
       LOG.warn("Failed to switch rpc throttle to {} on server {}", rpcThrottleEnabled, targetServer,
         error);
-      this.succ = false;
+      return false;
     } else {
-      this.succ = true;
+      return true;
     }
   }
 

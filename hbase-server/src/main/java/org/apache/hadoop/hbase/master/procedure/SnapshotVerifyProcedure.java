@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotVerifyParameter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotVerifyProcedureStateData;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
@@ -77,7 +78,8 @@ public class SnapshotVerifyProcedure extends ServerRemoteProcedure
   }
 
   @Override
-  protected synchronized void complete(MasterProcedureEnv env, Throwable error) {
+  protected synchronized boolean complete(MasterProcedureEnv env, Throwable error) {
+    boolean isProcedureCompleted = false;
     try {
       if (error != null) {
         if (error instanceof RemoteProcedureException) {
@@ -85,23 +87,19 @@ public class SnapshotVerifyProcedure extends ServerRemoteProcedure
           Throwable remoteEx = unwrapRemoteProcedureException((RemoteProcedureException) error);
           if (remoteEx instanceof CorruptedSnapshotException) {
             // snapshot is corrupted, will touch a flag file and finish the procedure
-            succ = true;
+            isProcedureCompleted = true;
             SnapshotProcedure parent = env.getMasterServices().getMasterProcedureExecutor()
               .getProcedure(SnapshotProcedure.class, getParentProcId());
             if (parent != null) {
               parent.markSnapshotCorrupted();
             }
-          } else {
-            // unexpected exception in remote server, will retry on other servers
-            succ = false;
-          }
-        } else {
-          // the mostly like thing is that remote call failed, will retry on other servers
-          succ = false;
-        }
+          } // else unexpected exception in remote server, will retry on other servers,
+            // procedureCompleted will stay false
+        } // else the mostly like thing is that remote call failed, will retry on other servers,
+          // procedureCompleted will stay false
       } else {
         // remote operation finished without error
-        succ = true;
+        isProcedureCompleted = true;
       }
     } catch (IOException e) {
       // if we can't create the flag file, then mark the current procedure as FAILED
@@ -114,6 +112,7 @@ public class SnapshotVerifyProcedure extends ServerRemoteProcedure
       env.getMasterServices().getSnapshotManager().releaseSnapshotVerifyWorker(this, targetServer,
         env.getProcedureScheduler());
     }
+    return isProcedureCompleted;
   }
 
   // we will wrap remote exception into a RemoteProcedureException,
@@ -128,7 +127,9 @@ public class SnapshotVerifyProcedure extends ServerRemoteProcedure
     try {
       // if we've already known the snapshot is corrupted, then stop scheduling
       // the new procedures and the undispatched procedures
-      if (!dispatched) {
+      if (
+        state == MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH
+      ) {
         SnapshotProcedure parent = env.getMasterServices().getMasterProcedureExecutor()
           .getProcedure(SnapshotProcedure.class, getParentProcId());
         if (parent != null && parent.isSnapshotCorrupted()) {
@@ -136,14 +137,19 @@ public class SnapshotVerifyProcedure extends ServerRemoteProcedure
         }
       }
       // acquire a worker
-      if (!dispatched && targetServer == null) {
+      if (
+        state == MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH
+          && targetServer == null
+      ) {
         targetServer =
           env.getMasterServices().getSnapshotManager().acquireSnapshotVerifyWorker(this);
       }
       // send remote request
       Procedure<MasterProcedureEnv>[] res = super.execute(env);
       // retry if necessary
-      if (!dispatched) {
+      if (
+        state == MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH
+      ) {
         // the mostly like thing is that a FailedRemoteDispatchException is thrown.
         // we need to retry on another remote server
         targetServer = null;

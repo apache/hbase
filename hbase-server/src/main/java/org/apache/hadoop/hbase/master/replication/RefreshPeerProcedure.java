@@ -123,13 +123,13 @@ public class RefreshPeerProcedure extends ServerRemoteProcedure
   }
 
   @Override
-  protected void complete(MasterProcedureEnv env, Throwable error) {
+  protected boolean complete(MasterProcedureEnv env, Throwable error) {
     if (error != null) {
       LOG.warn("Refresh peer {} for {} on {} failed", peerId, type, targetServer, error);
-      this.succ = false;
+      return false;
     } else {
       LOG.info("Refresh peer {} for {} on {} suceeded", peerId, type, targetServer);
-      this.succ = true;
+      return true;
     }
   }
 

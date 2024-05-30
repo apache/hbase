@@ -80,14 +80,12 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
   protected static final Logger LOG = LoggerFactory.getLogger(ServerRemoteProcedure.class);
   protected ProcedureEvent<?> event;
   protected ServerName targetServer;
-  protected boolean dispatched;
-  protected boolean succ;
   // after remoteProcedureDone we require error field to decide the next state
   protected Throwable remoteError;
   protected MasterProcedureProtos.ServerRemoteProcedureState state =
     MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH;
 
-  protected abstract void complete(MasterProcedureEnv env, Throwable error);
+  protected abstract boolean complete(MasterProcedureEnv env, Throwable error);
 
   @Override
   protected synchronized Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
@@ -95,8 +93,7 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
     if (
       state != MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH
     ) {
-      complete(env, this.remoteError);
-      if (succ) {
+      if (complete(env, this.remoteError)) {
         return null;
       }
       state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH;
@@ -108,7 +105,6 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
         + "be retried to send to another server", this.getProcId(), targetServer);
       return null;
     }
-    dispatched = true;
     event = new ProcedureEvent<>(this);
     event.suspendIfNotReady(this);
     throw new ProcedureSuspendedException();

@@ -118,12 +118,12 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
   }
 
   @Override
-  protected void complete(MasterProcedureEnv env, Throwable error) {
+  protected boolean complete(MasterProcedureEnv env, Throwable error) {
     if (error != null) {
       LOG.warn("Failed to claim replication queue {} on server {} ", queueId, targetServer, error);
-      this.succ = false;
+      return false;
     } else {
-      this.succ = true;
+      return true;
     }
   }
 

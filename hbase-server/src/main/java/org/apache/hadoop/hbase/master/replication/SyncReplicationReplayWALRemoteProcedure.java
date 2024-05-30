@@ -73,14 +73,14 @@ public class SyncReplicationReplayWALRemoteProcedure extends ServerRemoteProcedu
       ReplaySyncReplicationWALCallable.class, builder.build().toByteArray()));
   }
 
-  protected void complete(MasterProcedureEnv env, Throwable error) {
+  protected boolean complete(MasterProcedureEnv env, Throwable error) {
     if (error != null) {
       LOG.warn("Replay wals {} on {} failed for peer id={}", wals, targetServer, peerId, error);
-      this.succ = false;
+      return false;
     } else {
       truncateWALs(env);
       LOG.info("Replay wals {} on {} succeed for peer id={}", wals, targetServer, peerId);
-      this.succ = true;
+      return true;
     }
   }
 

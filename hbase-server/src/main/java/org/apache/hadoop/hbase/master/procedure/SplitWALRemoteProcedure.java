@@ -103,21 +103,21 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
   }
 
   @Override
-  protected void complete(MasterProcedureEnv env, Throwable error) {
+  protected boolean complete(MasterProcedureEnv env, Throwable error) {
     if (error == null) {
       try {
         env.getMasterServices().getSplitWALManager().archive(walPath);
       } catch (IOException e) {
         LOG.warn("Failed split of {}; ignore...", walPath, e);
       }
-      succ = true;
+      return true;
     } else {
       if (error instanceof DoNotRetryIOException) {
         LOG.warn("Sent {} to wrong server {}, try another", walPath, targetServer, error);
-        succ = true;
+        return true;
       } else {
         LOG.warn("Failed split of {}, retry...", walPath, error);
-        succ = false;
+        return false;
       }
     }
   }
