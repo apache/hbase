@@ -264,14 +264,19 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
 
       @Override
       public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null) return false;
-        if (getClass() != obj.getClass()) return false;
+        if (this == obj) {
+          return true;
+        }
+        if (!(obj instanceof RowRangeModel)) {
+          return false;
+        }
         RowRangeModel other = (RowRangeModel) obj;
         return Arrays.equals(startRow, other.startRow)
-          && startRowInclusive == other.startRowInclusive && Arrays.equals(stopRow, other.stopRow)
-          && stopRowInclusive == other.stopRowInclusive;
+            && startRowInclusive == other.startRowInclusive && Arrays.equals(stopRow, other.stopRow)
+            && stopRowInclusive == other.stopRowInclusive;
       }
+
+
     }
 
     // A grab bag of fields, would have been a union if this were C.
