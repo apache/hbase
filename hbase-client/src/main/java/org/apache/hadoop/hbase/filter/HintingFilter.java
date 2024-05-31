@@ -21,10 +21,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Marker interface for filters that may return SEEK_NEXT_USING_HINT. This marker interface
- * indicates that in FilterListAND filterCell() must always be called if filterRowKey() returned
- * false.
+ * indicates that when it's used in a MUST_PASS_ALL FilterList then filterCell() must always be
+ * called if filterRowKey() returned false.
  */
 @InterfaceAudience.Public
 public interface HintingFilter {
-
 }
