@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
  * versions are considered for pagination.
  */
 @InterfaceAudience.Public
-public class ColumnPaginationFilter extends FilterBase {
+public class ColumnPaginationFilter extends FilterBase implements HintingFilter {
 
   private int limit = 0;
   private int offset = -1;

@@ -65,7 +65,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesP
  * I.e. fuzzy info tells the matching mask is "????_99_????_01", where at ? can be any value.
  */
 @InterfaceAudience.Public
-public class FuzzyRowFilter extends FilterBase {
+public class FuzzyRowFilter extends FilterBase implements HintingFilter {
   private static final boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
   private List<Pair<byte[], byte[]>> fuzzyKeysData;
   // Used to record whether we want to skip the current row.
