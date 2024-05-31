@@ -30,6 +30,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+
 @InterfaceAudience.Private
 /**
  * The base class for Procedures that run {@link java.util.concurrent.Callable}s on a (remote)
@@ -63,34 +65,38 @@ import org.slf4j.LoggerFactory;
  * <p>
  * If sending the operation to remote RS failed, dispatcher will call remoteCallFailed() to handle
  * this which calls remoteOperationDone with the exception. If the targetServer crashed but this
- * procedure has no response, than dispatcher will call remoteOperationFailed() which also calls
- * remoteOperationDone with the exception. If the operation is successful, then
- * remoteOperationCompleted will be called and actually calls the remoteOperationDone without
- * exception. In remoteOperationDone, we'll check if the procedure is already get wake up by others.
- * Then developer could implement complete() based on their own purpose. But basic logic is that if
- * operation succeed, set succ to true and do the clean work. If operation failed and require to
- * resend it to the same server, leave the succ as false. If operation failed and require to resend
- * it to another server, set succ to true and upper layer should be able to find out this operation
- * not work and send a operation to another server.
+ * procedure has no response or if we receive failed response, then dispatcher will call
+ * remoteOperationFailed() which also calls remoteOperationDone with the exception. If the operation
+ * is successful, then remoteOperationCompleted will be called and actually calls the
+ * remoteOperationDone without exception. In remoteOperationDone, we'll check if the procedure is
+ * already get wake up by others. Then developer could implement complete() based on their own
+ * purpose. But basic logic is that if operation succeed, set succ to true and do the clean work. If
+ * operation failed and require to resend it to the same server, leave the succ as false. If
+ * operation failed and require to resend it to another server, set succ to true and upper layer
+ * should be able to find out this operation not work and send a operation to another server.
  */
 public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv>
   implements RemoteProcedureDispatcher.RemoteProcedure<MasterProcedureEnv, ServerName> {
   protected static final Logger LOG = LoggerFactory.getLogger(ServerRemoteProcedure.class);
   protected ProcedureEvent<?> event;
   protected ServerName targetServer;
-  protected boolean dispatched;
-  protected boolean succ;
+  // after remoteProcedureDone we require error field to decide the next state
+  protected Throwable remoteError;
+  protected MasterProcedureProtos.ServerRemoteProcedureState state =
+    MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH;
 
-  protected abstract void complete(MasterProcedureEnv env, Throwable error);
+  protected abstract boolean complete(MasterProcedureEnv env, Throwable error);
 
   @Override
   protected synchronized Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
     throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
-    if (dispatched) {
-      if (succ) {
+    if (
+      state != MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH
+    ) {
+      if (complete(env, this.remoteError)) {
         return null;
       }
-      dispatched = false;
+      state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH;
     }
     try {
       env.getRemoteDispatcher().addOperationToNode(targetServer, this);
@@ -99,7 +105,6 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
         + "be retried to send to another server", this.getProcId(), targetServer);
       return null;
     }
-    dispatched = true;
     event = new ProcedureEvent<>(this);
     event.suspendIfNotReady(this);
     throw new ProcedureSuspendedException();
@@ -113,17 +118,20 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
   @Override
   public synchronized void remoteCallFailed(MasterProcedureEnv env, ServerName serverName,
     IOException exception) {
+    state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_DISPATCH_FAIL;
     remoteOperationDone(env, exception);
   }
 
   @Override
   public synchronized void remoteOperationCompleted(MasterProcedureEnv env) {
+    state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_REPORT_SUCCEED;
     remoteOperationDone(env, null);
   }
 
   @Override
   public synchronized void remoteOperationFailed(MasterProcedureEnv env,
     RemoteProcedureException error) {
+    state = MasterProcedureProtos.ServerRemoteProcedureState.SERVER_REMOTE_PROCEDURE_REPORT_FAILED;
     remoteOperationDone(env, error);
   }
 
@@ -137,7 +145,9 @@ public abstract class ServerRemoteProcedure extends Procedure<MasterProcedureEnv
         getProcId());
       return;
     }
-    complete(env, error);
+    this.remoteError = error;
+    // below persistence is added so that if report goes to last active master, it throws exception
+    env.getMasterServices().getMasterProcedureExecutor().getStore().update(this);
     event.wake(env.getProcedureScheduler());
     event = null;
   }
