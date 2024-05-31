@@ -192,6 +192,7 @@ public class FilterListWithAND extends FilterListBase {
       Filter filter = filters.get(i);
       if (filter.filterAllRemaining()) {
         rc = ReturnCode.NEXT_ROW;
+        // We need to process any remaining HintingFilters which may let us skip ahead
         i++;
         break;
       }
@@ -205,11 +206,14 @@ public class FilterListWithAND extends FilterListBase {
       // otherwise we may mess up the global state (such as offset, count..) in the following
       // sub-filters. (HBASE-20565)
       if (!isIncludeRelatedReturnCode(rc)) {
+        // We need to process any remaining HintingFilters which may let us skip ahead
         i++;
         break;
       }
     }
-    // Now process the remaining hinting filters
+    // Now process the remaining hinting filters so that we can get all hints,
+    // and seek to the farthest cell possible. This ensures that we don't spend resources to process
+    // more rows than necessary. The farthest key is computed in getNextCellHint()
     for (; i < n; i++) {
       if (hintingFilters[i]) {
         Filter filter = filters.get(i);
@@ -248,6 +252,9 @@ public class FilterListWithAND extends FilterListBase {
         // filters will have no chance to update their row state.
         anyFiltered = true;
       } else if (hintingFilters[i]) {
+        // If any of the hinting filters has returned false, then we must not filter this rowkey.
+        // Otherwise the filter doesn't get a chance to provide a seek hint, and the scan may
+        // regress into a full scan.
         anyHintingPassed = true;
       }
     }
