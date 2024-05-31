@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM --platform=linux/amd64 ubuntu:22.04 AS base_image
+FROM amd64/ubuntu:22.04 AS base_image
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
