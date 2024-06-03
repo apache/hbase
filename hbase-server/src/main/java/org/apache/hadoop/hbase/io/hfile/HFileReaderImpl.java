@@ -1040,16 +1040,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       }
     }
 
-    @Override
-    public String getKeyString() {
-      return CellUtil.toString(getKey(), false);
-    }
-
-    @Override
-    public String getValueString() {
-      return ByteBufferUtils.toStringBinary(getValue());
-    }
-
     public int compareKey(CellComparator comparator, Cell key) {
       blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen, pair);
       this.bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), currKeyLen, rowLen);
@@ -1290,7 +1280,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     // from doing).
 
     BlockCacheKey cacheKey =
-      new BlockCacheKey(name, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
+      new BlockCacheKey(path, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
     Attributes attributes = Attributes.of(BLOCK_CACHE_KEY_KEY, cacheKey.toString());
 
     boolean cacheable = cacheBlock && cacheIfCompactionsOff();
@@ -1360,9 +1350,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
         // Don't need the unpacked block back and we're storing the block in the cache compressed
         if (cacheOnly && cacheCompressed && cacheOnRead) {
-          LOG.debug("Skipping decompression of block {} in prefetch", cacheKey);
-          // Cache the block if necessary
           cacheConf.getBlockCache().ifPresent(cache -> {
+            LOG.debug("Skipping decompression of block {} in prefetch", cacheKey);
+            // Cache the block if necessary
             if (cacheable && cacheConf.shouldCacheBlockOnRead(category)) {
               cache.cacheBlock(cacheKey, hfileBlock, cacheConf.isInMemory(), cacheOnly);
             }
@@ -1571,17 +1561,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       return seeker.getCell();
     }
 
-    @Override
-    public String getKeyString() {
-      return CellUtil.toString(getKey(), false);
-    }
-
-    @Override
-    public String getValueString() {
-      ByteBuffer valueBuffer = getValue();
-      return ByteBufferUtils.toStringBinary(valueBuffer);
-    }
-
     private void assertValidSeek() {
       if (this.curBlock == null) {
         throw new NotSeekedException(reader.getPath());
@@ -1656,6 +1635,15 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   @Override
   public boolean prefetchComplete() {
     return PrefetchExecutor.isCompleted(path);
+  }
+
+  /**
+   * Returns true if block prefetching was started after waiting for specified delay, false
+   * otherwise
+   */
+  @Override
+  public boolean prefetchStarted() {
+    return PrefetchExecutor.isPrefetchStarted();
   }
 
   /**

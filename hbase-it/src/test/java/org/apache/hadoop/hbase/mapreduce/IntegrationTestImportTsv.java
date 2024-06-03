@@ -60,6 +60,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 /**
  * Validate ImportTsv + BulkLoadFiles on a distributed cluster.
@@ -85,6 +86,9 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
       {
         byte[] family = Bytes.toBytes("d");
         for (String line : Splitter.on('\n').split(simple_tsv)) {
+          if (Strings.isNullOrEmpty(line)) {
+            continue;
+          }
           String[] row = line.split("\t");
           byte[] key = Bytes.toBytes(row[0]);
           long ts = Long.parseLong(row[1]);
@@ -141,12 +145,10 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
       ToolRunner.run(new BulkLoadHFilesTool(getConf()), args));
 
     Table table = null;
-    Scan scan = new Scan() {
-      {
-        setCacheBlocks(false);
-        setCaching(1000);
-      }
-    };
+    Scan scan = new Scan();
+    scan.setCacheBlocks(false);
+    scan.setCaching(1000);
+
     try {
       table = util.getConnection().getTable(tableName);
       Iterator<Result> resultsIt = table.getScanner(scan).iterator();

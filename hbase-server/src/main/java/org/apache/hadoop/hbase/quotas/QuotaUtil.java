@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -49,7 +50,10 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TimeUnit;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.QuotaScope;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
@@ -72,6 +76,26 @@ public class QuotaUtil extends QuotaTableUtil {
   public static final String WRITE_CAPACITY_UNIT_CONF_KEY = "hbase.quota.write.capacity.unit";
   // the default one write capacity unit is 1024 bytes (1KB)
   public static final long DEFAULT_WRITE_CAPACITY_UNIT = 1024;
+
+  /*
+   * The below defaults, if configured, will be applied to otherwise unthrottled users. For example,
+   * set `hbase.quota.default.user.machine.read.size` to `1048576` in your hbase-site.xml to ensure
+   * that any given user may not query more than 1mb per second from any given machine, unless
+   * explicitly permitted by a persisted quota. All of these defaults use TimeUnit.SECONDS and
+   * QuotaScope.MACHINE.
+   */
+  public static final String QUOTA_DEFAULT_USER_MACHINE_READ_NUM =
+    "hbase.quota.default.user.machine.read.num";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_READ_SIZE =
+    "hbase.quota.default.user.machine.read.size";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_REQUEST_NUM =
+    "hbase.quota.default.user.machine.request.num";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_REQUEST_SIZE =
+    "hbase.quota.default.user.machine.request.size";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_WRITE_NUM =
+    "hbase.quota.default.user.machine.write.num";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_WRITE_SIZE =
+    "hbase.quota.default.user.machine.write.size";
 
   /** Table descriptor for Quota internal table */
   public static final TableDescriptor QUOTA_TABLE_DESC =
@@ -152,6 +176,31 @@ public class QuotaUtil extends QuotaTableUtil {
   public static void deleteRegionServerQuota(final Connection connection, final String regionServer)
     throws IOException {
     deleteQuotas(connection, getRegionServerRowKey(regionServer));
+  }
+
+  public static OperationQuota.OperationType getQuotaOperationType(ClientProtos.Action action,
+    boolean hasCondition) {
+    if (action.hasMutation()) {
+      return getQuotaOperationType(action.getMutation(), hasCondition);
+    }
+    return OperationQuota.OperationType.GET;
+  }
+
+  public static OperationQuota.OperationType
+    getQuotaOperationType(ClientProtos.MutateRequest mutateRequest) {
+    return getQuotaOperationType(mutateRequest.getMutation(), mutateRequest.hasCondition());
+  }
+
+  private static OperationQuota.OperationType
+    getQuotaOperationType(ClientProtos.MutationProto mutationProto, boolean hasCondition) {
+    ClientProtos.MutationProto.MutationType mutationType = mutationProto.getMutateType();
+    if (
+      hasCondition || mutationType == ClientProtos.MutationProto.MutationType.APPEND
+        || mutationType == ClientProtos.MutationProto.MutationType.INCREMENT
+    ) {
+      return OperationQuota.OperationType.CHECK_AND_MUTATE;
+    }
+    return OperationQuota.OperationType.MUTATE;
   }
 
   protected static void switchExceedThrottleQuota(final Connection connection,
@@ -284,10 +333,14 @@ public class QuotaUtil extends QuotaTableUtil {
       assert isUserRowKey(key);
       String user = getUserFromRowKey(key);
 
+      if (results[i].isEmpty()) {
+        userQuotas.put(user, buildDefaultUserQuotaState(connection.getConfiguration(), nowTs));
+        continue;
+      }
+
       final UserQuotaState quotaInfo = new UserQuotaState(nowTs);
       userQuotas.put(user, quotaInfo);
 
-      if (results[i].isEmpty()) continue;
       assert Bytes.equals(key, results[i].getRow());
 
       try {
@@ -319,6 +372,38 @@ public class QuotaUtil extends QuotaTableUtil {
       }
     }
     return userQuotas;
+  }
+
+  protected static UserQuotaState buildDefaultUserQuotaState(Configuration conf, long nowTs) {
+    QuotaProtos.Throttle.Builder throttleBuilder = QuotaProtos.Throttle.newBuilder();
+
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_READ_NUM)
+      .ifPresent(throttleBuilder::setReadNum);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_READ_SIZE)
+      .ifPresent(throttleBuilder::setReadSize);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_REQUEST_NUM)
+      .ifPresent(throttleBuilder::setReqNum);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_REQUEST_SIZE)
+      .ifPresent(throttleBuilder::setReqSize);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_WRITE_NUM)
+      .ifPresent(throttleBuilder::setWriteNum);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_WRITE_SIZE)
+      .ifPresent(throttleBuilder::setWriteSize);
+
+    UserQuotaState state = new UserQuotaState(nowTs);
+    QuotaProtos.Quotas defaultQuotas =
+      QuotaProtos.Quotas.newBuilder().setThrottle(throttleBuilder.build()).build();
+    state.setQuotas(defaultQuotas);
+    return state;
+  }
+
+  private static Optional<TimedQuota> buildDefaultTimedQuota(Configuration conf, String key) {
+    int defaultSoftLimit = conf.getInt(key, -1);
+    if (defaultSoftLimit == -1) {
+      return Optional.empty();
+    }
+    return Optional.of(ProtobufUtil.toTimedQuota(defaultSoftLimit,
+      java.util.concurrent.TimeUnit.SECONDS, org.apache.hadoop.hbase.quotas.QuotaScope.MACHINE));
   }
 
   public static Map<TableName, QuotaState> fetchTableQuotas(final Connection connection,

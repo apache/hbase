@@ -318,6 +318,13 @@ For more on the HBase Shell, see http://hbase.apache.org/book.html
       hbase_receiver.send :define_singleton_method, :exit, lambda { |rc = 0|
         @shell.exit(rc)
       }
+      at_exit do
+        # Non-deamon Netty threadpool in ZK ClientCnxnSocketNetty cannot be shut down otherwise
+        begin
+          hbase.shutdown
+        rescue Exception
+        end
+      end
       ::IRB::WorkSpace.new(hbase_receiver.get_binding)
     end
 
@@ -487,6 +494,7 @@ Shell.load_command_group(
     list_decommissioned_regionservers
     decommission_regionservers
     recommission_regionserver
+    truncate_region
   ],
   # TODO: remove older hlog_roll command
   aliases: {

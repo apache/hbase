@@ -125,6 +125,8 @@ public class HStoreFile implements StoreFile {
    */
   public static final byte[] SKIP_RESET_SEQ_ID = Bytes.toBytes("SKIP_RESET_SEQ_ID");
 
+  public static final byte[] HISTORICAL_KEY = Bytes.toBytes("HISTORICAL");
+
   private final StoreFileInfo fileInfo;
 
   // StoreFile.Reader
@@ -137,6 +139,16 @@ public class HStoreFile implements StoreFile {
 
   // Indicates if the file got compacted
   private volatile boolean compactedAway = false;
+
+  // Indicates if the file contains historical cell versions. This is used when
+  // hbase.enable.historical.compaction.files is set to true. In that case, compactions
+  // can generate two files, one with the live cell versions and the other with the remaining
+  // (historical) cell versions. If isHistorical is true then the hfile is historical.
+  // Historical files are skipped for regular (not raw) scans for latest row versions.
+  // When hbase.enable.historical.compaction.files is false, isHistorical will be false
+  // for all files. This means all files will be treated as live files. Historical files are
+  // generated only when hbase.enable.historical.compaction.files is true.
+  private volatile boolean isHistorical = false;
 
   // Keys for metadata stored in backing HFile.
   // Set when we obtain a Reader.
@@ -329,17 +341,16 @@ public class HStoreFile implements StoreFile {
 
   @Override
   public boolean isBulkLoadResult() {
-    boolean bulkLoadedHFile = false;
-    String fileName = this.getPath().getName();
-    int startPos = fileName.indexOf("SeqId_");
-    if (startPos != -1) {
-      bulkLoadedHFile = true;
-    }
-    return bulkLoadedHFile || (metadataMap != null && metadataMap.containsKey(BULKLOAD_TIME_KEY));
+    return StoreFileInfo.hasBulkloadSeqId(this.getPath())
+      || (metadataMap != null && metadataMap.containsKey(BULKLOAD_TIME_KEY));
   }
 
   public boolean isCompactedAway() {
     return compactedAway;
+  }
+
+  public boolean isHistorical() {
+    return isHistorical;
   }
 
   public int getRefCount() {
@@ -413,19 +424,16 @@ public class HStoreFile implements StoreFile {
     }
 
     if (isBulkLoadResult()) {
-      // generate the sequenceId from the fileName
-      // fileName is of the form <randomName>_SeqId_<id-when-loaded>_
-      String fileName = this.getPath().getName();
-      // Use lastIndexOf() to get the last, most recent bulk load seqId.
-      int startPos = fileName.lastIndexOf("SeqId_");
-      if (startPos != -1) {
-        this.sequenceid =
-          Long.parseLong(fileName.substring(startPos + 6, fileName.indexOf('_', startPos + 6)));
+      // For bulkloads, we have to parse the sequenceid from the path name
+      OptionalLong sequenceId = StoreFileInfo.getBulkloadSeqId(this.getPath());
+      if (sequenceId.isPresent()) {
+        this.sequenceid = sequenceId.getAsLong();
         // Handle reference files as done above.
         if (fileInfo.isTopReference()) {
           this.sequenceid += 1;
         }
       }
+
       // SKIP_RESET_SEQ_ID only works in bulk loaded file.
       // In mob compaction, the hfile where the cells contain the path of a new mob file is bulk
       // loaded to hbase, these cells have the same seqIds with the old ones. We do not want
@@ -463,6 +471,10 @@ public class HStoreFile implements StoreFile {
     b = metadataMap.get(EXCLUDE_FROM_MINOR_COMPACTION_KEY);
     this.excludeFromMinorCompaction = (b != null && Bytes.toBoolean(b));
 
+    b = metadataMap.get(HISTORICAL_KEY);
+    if (b != null) {
+      isHistorical = Bytes.toBoolean(b);
+    }
     BloomType hfileBloomType = initialReader.getBloomFilterType();
     if (cfBloomType != BloomType.NONE) {
       initialReader.loadBloomfilter(BlockType.GENERAL_BLOOM_META, metrics);

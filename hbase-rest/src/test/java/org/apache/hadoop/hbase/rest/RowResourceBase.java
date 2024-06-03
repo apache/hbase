@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import javax.xml.bind.JAXBContext;
@@ -43,6 +44,8 @@ import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.http.Header;
+import org.apache.http.message.BasicHeader;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -464,6 +467,15 @@ public class RowResourceBase {
     return response;
   }
 
+  protected static Response getValueXML(String url, Header[] headers) throws IOException {
+    Header[] fullHeaders = new Header[headers.length + 1];
+    for (int i = 0; i < headers.length; i++)
+      fullHeaders[i] = headers[i];
+    fullHeaders[headers.length] = new BasicHeader("Accept", Constants.MIMETYPE_XML);
+    Response response = client.get(url, fullHeaders);
+    return response;
+  }
+
   protected static Response getValueJson(String url) throws IOException {
     Response response = client.get(url, Constants.MIMETYPE_JSON);
     return response;
@@ -479,6 +491,28 @@ public class RowResourceBase {
     path.append('/');
     path.append(column);
     Response response = client.delete(path.toString());
+    Thread.yield();
+    return response;
+  }
+
+  protected static Response deleteValueB64(String table, String row, String column,
+    boolean useQueryString) throws IOException {
+    StringBuilder path = new StringBuilder();
+    Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+    path.append('/');
+    path.append(table);
+    path.append('/');
+    path.append(encoder.encodeToString(row.getBytes("UTF-8")));
+    path.append('/');
+    path.append(encoder.encodeToString(column.getBytes("UTF-8")));
+
+    Response response;
+    if (useQueryString) {
+      path.append("?e=b64");
+      response = client.delete(path.toString());
+    } else {
+      response = client.delete(path.toString(), new BasicHeader("Encoding", "b64"));
+    }
     Thread.yield();
     return response;
   }
@@ -502,6 +536,26 @@ public class RowResourceBase {
     path.append('/');
     path.append(row);
     Response response = client.delete(path.toString());
+    Thread.yield();
+    return response;
+  }
+
+  protected static Response deleteRowB64(String table, String row, boolean useQueryString)
+    throws IOException {
+    StringBuilder path = new StringBuilder();
+    Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+    path.append('/');
+    path.append(table);
+    path.append('/');
+    path.append(encoder.encodeToString(row.getBytes("UTF-8")));
+
+    Response response;
+    if (useQueryString) {
+      path.append("?e=b64");
+      response = client.delete(path.toString());
+    } else {
+      response = client.delete(path.toString(), new BasicHeader("Encoding", "b64"));
+    }
     Thread.yield();
     return response;
   }

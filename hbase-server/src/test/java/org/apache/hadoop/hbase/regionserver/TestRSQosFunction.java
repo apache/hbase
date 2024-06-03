@@ -72,5 +72,8 @@ public class TestRSQosFunction extends QosTestBase {
     checkMethod(conf, "CloseRegion", HConstants.ADMIN_QOS, qosFunction);
     checkMethod(conf, "CompactRegion", HConstants.ADMIN_QOS, qosFunction);
     checkMethod(conf, "FlushRegion", HConstants.ADMIN_QOS, qosFunction);
+    checkMethod(conf, "UpdateConfiguration", HConstants.ADMIN_QOS, qosFunction);
+    checkMethod(conf, "CompactionSwitch", HConstants.ADMIN_QOS, qosFunction);
+    checkMethod(conf, "RollWALWriter", HConstants.ADMIN_QOS, qosFunction);
   }
 }

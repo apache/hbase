@@ -28,6 +28,8 @@ import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.UniformReservoir;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
@@ -35,6 +37,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
+import java.util.Properties;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -42,8 +45,10 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.PerformanceEvaluation.RandomReadTest;
+import org.apache.hadoop.hbase.PerformanceEvaluation.Status;
 import org.apache.hadoop.hbase.PerformanceEvaluation.TestOptions;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -359,4 +364,46 @@ public class TestPerformanceEvaluation {
     assertEquals(true, options.valueRandom);
   }
 
+  @Test
+  public void testCustomTestClassOptions() throws IOException {
+    Queue<String> opts = new LinkedList<>();
+    // create custom properties that can be used for a custom test class
+    Properties commandProps = new Properties();
+    commandProps.put("prop1", "val1");
+    String cmdPropsFilePath =
+      this.getClass().getClassLoader().getResource("").getPath() + "cmd_properties.txt";
+    FileWriter writer = new FileWriter(new File(cmdPropsFilePath));
+    commandProps.store(writer, null);
+    // create opts for the custom test class - commandPropertiesFile, testClassName
+    opts.offer("--commandPropertiesFile=" + "cmd_properties.txt");
+    String testClassName = "org.apache.hadoop.hbase.TestPerformanceEvaluation$PESampleTestImpl";
+    opts.offer(testClassName);
+    opts.offer("1");
+    PerformanceEvaluation.TestOptions options = PerformanceEvaluation.parseOpts(opts);
+    assertNotNull(options);
+    assertNotNull(options.getCmdName());
+    assertEquals(testClassName, options.getCmdName());
+    assertNotNull(options.getCommandProperties());
+    assertEquals("val1", options.getCommandProperties().get("prop1"));
+  }
+
+  class PESampleTestImpl extends PerformanceEvaluation.Test {
+
+    PESampleTestImpl(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+    }
+
+    @Override
+    void onStartup() throws IOException {
+    }
+
+    @Override
+    void onTakedown() throws IOException {
+    }
+
+    @Override
+    boolean testRow(int i, long startTime) throws IOException, InterruptedException {
+      return false;
+    }
+  }
 }

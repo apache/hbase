@@ -26,13 +26,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.client.ZKClientConfig;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 
 /**
  * Utility methods for reading, and building the ZooKeeper configuration. The order and priority for
- * reading the config are as follows: (1). Property with "hbase.zookeeper.property." prefix from
- * HBase XML (2). other zookeeper related properties in HBASE XML
+ * reading the config are as follows:
+ * <ol>
+ * <li>Property with "hbase.zookeeper.property." prefix from HBase XML.</li>
+ * <li>other zookeeper related properties in HBASE XML</li>
+ * </ol>
  */
 @InterfaceAudience.Private
 public final class ZKConfig {
@@ -53,16 +57,12 @@ public final class ZKConfig {
   }
 
   /**
-   * Make a Properties object holding ZooKeeper config. Parses the corresponding config options from
-   * the HBase XML configs and generates the appropriate ZooKeeper properties.
-   * @param conf Configuration to read from.
-   * @return Properties holding mappings representing ZooKeeper config file.
+   * Directly map all the hbase.zookeeper.property.KEY properties. Synchronize on conf so no loading
+   * of configs while we iterate
    */
-  private static Properties makeZKPropsFromHbaseConfig(Configuration conf) {
+  private static Properties extractZKPropsFromHBaseConfig(final Configuration conf) {
     Properties zkProperties = new Properties();
 
-    // Directly map all of the hbase.zookeeper.property.KEY properties.
-    // Synchronize on conf so no loading of configs while we iterate
     synchronized (conf) {
       for (Entry<String, String> entry : conf) {
         String key = entry.getKey();
@@ -77,6 +77,18 @@ public final class ZKConfig {
         }
       }
     }
+
+    return zkProperties;
+  }
+
+  /**
+   * Make a Properties object holding ZooKeeper config. Parses the corresponding config options from
+   * the HBase XML configs and generates the appropriate ZooKeeper properties.
+   * @param conf Configuration to read from.
+   * @return Properties holding mappings representing ZooKeeper config file.
+   */
+  private static Properties makeZKPropsFromHbaseConfig(Configuration conf) {
+    Properties zkProperties = extractZKPropsFromHBaseConfig(conf);
 
     // If clientPort is not set, assign the default.
     if (zkProperties.getProperty(HConstants.CLIENT_PORT_STR) == null) {
@@ -310,6 +322,13 @@ public final class ZKConfig {
     public String getZnodeParent() {
       return znodeParent;
     }
+  }
+
+  public static ZKClientConfig getZKClientConfig(Configuration conf) {
+    Properties zkProperties = extractZKPropsFromHBaseConfig(conf);
+    ZKClientConfig zkClientConfig = new ZKClientConfig();
+    zkProperties.forEach((k, v) -> zkClientConfig.setProperty(k.toString(), v.toString()));
+    return zkClientConfig;
   }
 
   /**

@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -30,7 +28,9 @@ import org.apache.hadoop.hbase.client.RegionOfflineException;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -75,7 +75,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     }
   }
 
-  final Lock lock = new ReentrantLock();
+  private final RegionStateNodeLock lock;
   private final RegionInfo regionInfo;
   private final ProcedureEvent<?> event;
   private final ConcurrentMap<RegionInfo, RegionStateNode> ritMap;
@@ -106,6 +106,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     this.regionInfo = regionInfo;
     this.event = new AssignmentProcedureEvent(regionInfo);
     this.ritMap = ritMap;
+    this.lock = new RegionStateNodeLock(regionInfo);
   }
 
   /**
@@ -319,11 +320,70 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     }
   }
 
+  // The below 3 methods are for normal locking operation, where the thread owner is the current
+  // thread. Typically you just need to use these 3 methods, and use try..finally to release the
+  // lock in the finally block
+  /**
+   * @see RegionStateNodeLock#lock()
+   */
   public void lock() {
     lock.lock();
   }
 
+  /**
+   * @see RegionStateNodeLock#tryLock()
+   */
+  public boolean tryLock() {
+    return lock.tryLock();
+  }
+
+  /**
+   * @see RegionStateNodeLock#unlock()
+   */
   public void unlock() {
     lock.unlock();
+  }
+
+  // The below 3 methods are for locking region state node when executing procedures, where we may
+  // do some time consuming work under the lock, for example, updating meta. As we may suspend the
+  // procedure while holding the lock and then release it when the procedure is back, in another
+  // thread, so we need to use the procedure itself as owner, instead of the current thread. You can
+  // see the usage in TRSP, SCP, and RegionRemoteProcedureBase for more details.
+  // Notice that, this does not mean you must use these 3 methods when locking region state node in
+  // procedure, you are free to use the above 3 methods if you do not want to hold the lock when
+  // suspending the procedure.
+  /**
+   * @see RegionStateNodeLock#lock(Procedure, Runnable)
+   */
+  public void lock(Procedure<?> proc, Runnable wakeUp) throws ProcedureSuspendedException {
+    lock.lock(proc, wakeUp);
+  }
+
+  /**
+   * @see RegionStateNodeLock#tryLock(Procedure)
+   */
+  public boolean tryLock(Procedure<?> proc) {
+    return lock.tryLock(proc);
+  }
+
+  /**
+   * @see RegionStateNodeLock#unlock(Procedure)
+   */
+  public void unlock(Procedure<?> proc) {
+    lock.unlock(proc);
+  }
+
+  /**
+   * @see RegionStateNodeLock#isLocked()
+   */
+  boolean isLocked() {
+    return lock.isLocked();
+  }
+
+  /**
+   * @see RegionStateNodeLock#isLockedBy(Object)
+   */
+  public boolean isLockedBy(Procedure<?> proc) {
+    return lock.isLockedBy(proc);
   }
 }

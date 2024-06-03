@@ -34,7 +34,7 @@ public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSyncTimeRangeTracker.class);
 
-  private static final int NUM_KEYS = 10000000;
+  private static final int NUM_KEYS = 8000000;
   private static final int NUM_OF_THREADS = 20;
 
   @Override

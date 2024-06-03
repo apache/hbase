@@ -792,7 +792,7 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Unassign a Region.
-   * @param regionName Region name to assign.
+   * @param regionName Region name to unassign.
    * @throws IOException if a remote or network exception occurs
    */
   void unassign(byte[] regionName) throws IOException;
@@ -1034,6 +1034,20 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
+   * Truncate an individual region.
+   * @param regionName region to truncate
+   * @throws IOException if a remote or network exception occurs
+   */
+  void truncateRegion(byte[] regionName) throws IOException;
+
+  /**
+   * Truncate an individual region. Asynchronous operation.
+   * @param regionName region to truncate
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> truncateRegionAsync(byte[] regionName) throws IOException;
+
+  /**
    * Modify an existing table, more IRB (ruby) friendly version. Asynchronous operation. This means
    * that it may be a while before your schema change is updated across all of the table. You can
    * use Future.get(long, TimeUnit) to wait on the operation to complete. It may throw
@@ -1044,7 +1058,24 @@ public interface Admin extends Abortable, Closeable {
    * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
    *         operation to complete
    */
-  Future<Void> modifyTableAsync(TableDescriptor td) throws IOException;
+  default Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
+    return modifyTableAsync(td, true);
+  }
+
+  /**
+   * The same as {@link #modifyTableAsync(TableDescriptor td)}, except for the reopenRegions
+   * parameter, which controls whether the process of modifying the table should reopen all regions.
+   * @param td            description of the table
+   * @param reopenRegions By default, 'modifyTable' reopens all regions, potentially causing a RIT
+   *                      (Region In Transition) storm in large tables. If set to 'false', regions
+   *                      will remain unaware of the modification until they are individually
+   *                      reopened. Please note that this may temporarily result in configuration
+   *                      inconsistencies among regions.
+   * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions) throws IOException;
 
   /**
    * Change the store file tracker of the given table.
@@ -2615,4 +2646,9 @@ public interface Admin extends Abortable, Closeable {
    * Flush master local region
    */
   void flushMasterStore() throws IOException;
+
+  /**
+   * Get the list of cached files
+   */
+  List<String> getCachedFilesList(ServerName serverName) throws IOException;
 }

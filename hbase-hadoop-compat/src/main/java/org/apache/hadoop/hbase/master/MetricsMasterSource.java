@@ -70,6 +70,7 @@ public interface MetricsMasterSource extends BaseSource {
   String CLUSTER_REQUESTS_NAME = "clusterRequests";
   String CLUSTER_READ_REQUESTS_NAME = "clusterReadRequests";
   String CLUSTER_WRITE_REQUESTS_NAME = "clusterWriteRequests";
+  String OLD_WAL_DIR_SIZE_NAME = "oldWALsDirSize";
   String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
   String MASTER_START_TIME_DESC = "Master Start Time";
   String MASTER_FINISHED_INITIALIZATION_TIME_DESC =
@@ -91,6 +92,7 @@ public interface MetricsMasterSource extends BaseSource {
   String OFFLINE_REGION_COUNT_DESC = "Number of Offline Regions";
 
   String SERVER_CRASH_METRIC_PREFIX = "serverCrash";
+  String OLD_WAL_DIR_SIZE_DESC = "size of old WALs directory in bytes";
 
   /**
    * Increment the number of requests the cluster has seen.

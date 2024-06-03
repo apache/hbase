@@ -360,6 +360,19 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
   }
 
+  protected final ReplicationSourceShipper createNewShipper(String walGroupId) {
+    ReplicationSourceWALReader walReader =
+      createNewWALReader(walGroupId, getStartOffset(walGroupId));
+    ReplicationSourceShipper worker = createNewShipper(walGroupId, walReader);
+    Threads.setDaemonThreadRunning(walReader, Thread.currentThread().getName()
+      + ".replicationSource.wal-reader." + walGroupId + "," + queueId, this::retryRefreshing);
+    return worker;
+  }
+
+  protected final void startShipper(ReplicationSourceShipper worker) {
+    worker.startup(this::retryRefreshing);
+  }
+
   private void tryStartNewShipper(String walGroupId) {
     workerThreads.compute(walGroupId, (key, value) -> {
       if (value != null) {
@@ -368,14 +381,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       } else {
         LOG.debug("{} starting shipping worker for walGroupId={}", logPeerId(), walGroupId);
         ReplicationSourceShipper worker = createNewShipper(walGroupId);
-        ReplicationSourceWALReader walReader =
-          createNewWALReader(walGroupId, getStartOffset(walGroupId));
-        Threads.setDaemonThreadRunning(
-          walReader, Thread.currentThread().getName() + ".replicationSource.wal-reader."
-            + walGroupId + "," + queueId,
-          (t, e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
-        worker.setWALReader(walReader);
-        worker.startup((t, e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
+        startShipper(worker);
         return worker;
       }
     });
@@ -428,8 +434,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return fileSize;
   }
 
-  protected ReplicationSourceShipper createNewShipper(String walGroupId) {
-    return new ReplicationSourceShipper(conf, walGroupId, logQueue, this);
+  protected ReplicationSourceShipper createNewShipper(String walGroupId,
+    ReplicationSourceWALReader walReader) {
+    return new ReplicationSourceShipper(conf, walGroupId, this, walReader);
   }
 
   private ReplicationSourceWALReader createNewWALReader(String walGroupId, long startPosition) {
@@ -448,24 +455,30 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return walEntryFilter;
   }
 
-  private void uncaughtException(Thread t, Throwable e, ReplicationSourceManager manager,
-    String peerId) {
-    OOMEChecker.exitIfOOME(e, getClass().getSimpleName());
-    LOG.error("Unexpected exception in {} currentPath={}", t.getName(), getCurrentPath(), e);
+  // log the error, check if the error is OOME, or whether we should abort the server
+  private void checkError(Thread t, Throwable error) {
+    OOMEChecker.exitIfOOME(error, getClass().getSimpleName());
+    LOG.error("Unexpected exception in {} currentPath={}", t.getName(), getCurrentPath(), error);
     if (abortOnError) {
-      server.abort("Unexpected exception in " + t.getName(), e);
+      server.abort("Unexpected exception in " + t.getName(), error);
     }
-    if (manager != null) {
-      while (true) {
-        try {
-          LOG.info("Refreshing replication sources now due to previous error on thread: {}",
-            t.getName());
-          manager.refreshSources(peerId);
-          break;
-        } catch (IOException | ReplicationException e1) {
-          LOG.error("Replication sources refresh failed.", e1);
-          sleepForRetries("Sleeping before try refreshing sources again", maxRetriesMultiplier);
-        }
+  }
+
+  private void retryRefreshing(Thread t, Throwable error) {
+    checkError(t, error);
+    while (true) {
+      if (server.isAborted() || server.isStopped() || server.isStopping()) {
+        LOG.warn("Server is shutting down, give up refreshing source for peer {}", getPeerId());
+        return;
+      }
+      try {
+        LOG.info("Refreshing replication sources now due to previous error on thread: {}",
+          t.getName());
+        manager.refreshSources(getPeerId());
+        break;
+      } catch (Exception e) {
+        LOG.error("Replication sources refresh failed.", e);
+        sleepForRetries("Sleeping before try refreshing sources again", maxRetriesMultiplier);
       }
     }
   }
@@ -518,7 +531,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
    * @param sleepMultiplier by how many times the default sleeping time is augmented
    * @return True if <code>sleepMultiplier</code> is &lt; <code>maxRetriesMultiplier</code>
    */
-  protected boolean sleepForRetries(String msg, int sleepMultiplier) {
+  private boolean sleepForRetries(String msg, int sleepMultiplier) {
     try {
       if (LOG.isTraceEnabled()) {
         LOG.trace("{} {}, sleeping {} times {}", logPeerId(), msg, sleepForRetries,
@@ -601,10 +614,14 @@ public class ReplicationSource implements ReplicationSourceInterface {
       queueId, logQueue.getNumQueues(), clusterId, peerClusterId);
     initializeWALEntryFilter(peerClusterId);
     // Start workers
+    startShippers();
+    setSourceStartupStatus(false);
+  }
+
+  protected void startShippers() {
     for (String walGroupId : logQueue.getQueues().keySet()) {
       tryStartNewShipper(walGroupId);
     }
-    setSourceStartupStatus(false);
   }
 
   private synchronized void setSourceStartupStatus(boolean initializing) {
@@ -630,7 +647,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
         // keep looping in this thread until initialize eventually succeeds,
         // while the server main startup one can go on with its work.
         sourceRunning = false;
-        uncaughtException(t, e, null, null);
+        checkError(t, e);
         retryStartup.set(!this.abortOnError);
         do {
           if (retryStartup.get()) {
@@ -641,7 +658,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
               initialize();
             } catch (Throwable error) {
               setSourceStartupStatus(false);
-              uncaughtException(t, error, null, null);
+              checkError(t, error);
               retryStartup.set(!this.abortOnError);
             }
           }
@@ -665,7 +682,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     terminate(reason, cause, clearMetrics, true);
   }
 
-  public void terminate(String reason, Exception cause, boolean clearMetrics, boolean join) {
+  private void terminate(String reason, Exception cause, boolean clearMetrics, boolean join) {
     if (cause == null) {
       LOG.info("{} Closing source {} because: {}", logPeerId(), this.queueId, reason);
     } else {
@@ -684,9 +701,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
     for (ReplicationSourceShipper worker : workers) {
       worker.stopWorker();
-      if (worker.entryReader != null) {
-        worker.entryReader.setReaderRunning(false);
-      }
+      worker.entryReader.setReaderRunning(false);
     }
 
     if (this.replicationEndpoint != null) {

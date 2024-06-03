@@ -153,7 +153,12 @@ class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> modifyTable(TableDescriptor desc) {
-    return wrap(rawAdmin.modifyTable(desc));
+    return modifyTable(desc, true);
+  }
+
+  @Override
+  public CompletableFuture<Void> modifyTable(TableDescriptor desc, boolean reopenRegions) {
+    return wrap(rawAdmin.modifyTable(desc, reopenRegions));
   }
 
   @Override
@@ -384,6 +389,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> splitRegion(byte[] regionName, byte[] splitPoint) {
     return wrap(rawAdmin.splitRegion(regionName, splitPoint));
+  }
+
+  @Override
+  public CompletableFuture<Void> truncateRegion(byte[] regionName) {
+    return wrap(rawAdmin.truncateRegion(regionName));
   }
 
   @Override
@@ -989,5 +999,10 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> flushMasterStore() {
     return wrap(rawAdmin.flushMasterStore());
+  }
+
+  @Override
+  public CompletableFuture<List<String>> getCachedFilesList(ServerName serverName) {
+    return wrap(rawAdmin.getCachedFilesList(serverName));
   }
 }

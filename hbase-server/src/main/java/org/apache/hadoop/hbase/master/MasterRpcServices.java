@@ -164,6 +164,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProc
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -959,6 +961,18 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
+  public MasterProtos.TruncateRegionResponse truncateRegion(RpcController controller,
+    final MasterProtos.TruncateRegionRequest request) throws ServiceException {
+    try {
+      long procId = server.truncateRegion(ProtobufUtil.toRegionInfo(request.getRegionInfo()),
+        request.getNonceGroup(), request.getNonce());
+      return MasterProtos.TruncateRegionResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  @Override
   public ClientProtos.CoprocessorServiceResponse execMasterService(final RpcController controller,
     final ClientProtos.CoprocessorServiceRequest request) throws ServiceException {
     rpcPreCheck("execMasterService");
@@ -1530,7 +1544,8 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     throws ServiceException {
     try {
       long procId = server.modifyTable(ProtobufUtil.toTableName(req.getTableName()),
-        ProtobufUtil.toTableDescriptor(req.getTableSchema()), req.getNonceGroup(), req.getNonce());
+        ProtobufUtil.toTableDescriptor(req.getTableSchema()), req.getNonceGroup(), req.getNonce(),
+        req.getReopenRegions());
       return ModifyTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -2699,6 +2714,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     MasterProtos.AssignsResponse.Builder responseBuilder =
       MasterProtos.AssignsResponse.newBuilder();
     final boolean override = request.getOverride();
+    final boolean force = request.getForce();
     LOG.info("{} assigns, override={}", server.getClientIdAuditPrefix(), override);
     for (HBaseProtos.RegionSpecifier rs : request.getRegionList()) {
       final RegionInfo info = getRegionInfo(rs);
@@ -2706,7 +2722,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         LOG.info("Unknown region {}", rs);
         continue;
       }
-      responseBuilder.addPid(Optional.ofNullable(am.createOneAssignProcedure(info, override))
+      responseBuilder.addPid(Optional.ofNullable(am.createOneAssignProcedure(info, override, force))
         .map(pe::submitProcedure).orElse(Procedure.NO_PROC_ID));
     }
     return responseBuilder.build();
@@ -2726,6 +2742,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     MasterProtos.UnassignsResponse.Builder responseBuilder =
       MasterProtos.UnassignsResponse.newBuilder();
     final boolean override = request.getOverride();
+    final boolean force = request.getForce();
     LOG.info("{} unassigns, override={}", server.getClientIdAuditPrefix(), override);
     for (HBaseProtos.RegionSpecifier rs : request.getRegionList()) {
       final RegionInfo info = getRegionInfo(rs);
@@ -2733,8 +2750,9 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         LOG.info("Unknown region {}", rs);
         continue;
       }
-      responseBuilder.addPid(Optional.ofNullable(am.createOneUnassignProcedure(info, override))
-        .map(pe::submitProcedure).orElse(Procedure.NO_PROC_ID));
+      responseBuilder
+        .addPid(Optional.ofNullable(am.createOneUnassignProcedure(info, override, force))
+          .map(pe::submitProcedure).orElse(Procedure.NO_PROC_ID));
     }
     return responseBuilder.build();
   }
@@ -3560,6 +3578,12 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public ExecuteProceduresResponse executeProcedures(RpcController controller,
     ExecuteProceduresRequest request) throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
+  public GetCachedFilesListResponse getCachedFilesList(RpcController controller,
+    GetCachedFilesListRequest request) throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
   }
 

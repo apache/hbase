@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CON
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.TreeSet;
 import org.apache.commons.lang3.StringUtils;
@@ -173,7 +172,8 @@ public class RestoreTablesClient {
     }
 
     if (dirList.isEmpty()) {
-      LOG.warn("Nothing has changed, so there is no need to restore '" + sTable + "'");
+      LOG.info("No incremental changes since full backup for '" + sTable
+        + "', skipping incremental restore step.");
       return;
     }
 
@@ -203,19 +203,17 @@ public class RestoreTablesClient {
 
   /**
    * Restore operation. Stage 2: resolved Backup Image dependency
-   * @param backupManifestMap : tableName, Manifest
-   * @param sTableArray       The array of tables to be restored
-   * @param tTableArray       The array of mapping tables to restore to
+   * @param sTableArray The array of tables to be restored
+   * @param tTableArray The array of mapping tables to restore to
    * @throws IOException exception
    */
-  private void restore(HashMap<TableName, BackupManifest> backupManifestMap,
-    TableName[] sTableArray, TableName[] tTableArray, boolean isOverwrite) throws IOException {
+  private void restore(BackupManifest manifest, TableName[] sTableArray, TableName[] tTableArray,
+    boolean isOverwrite) throws IOException {
     TreeSet<BackupImage> restoreImageSet = new TreeSet<>();
 
     for (int i = 0; i < sTableArray.length; i++) {
       TableName table = sTableArray[i];
 
-      BackupManifest manifest = backupManifestMap.get(table);
       // Get the image list of this backup for restore in time order from old
       // to new.
       List<BackupImage> list = new ArrayList<>();
@@ -255,12 +253,10 @@ public class RestoreTablesClient {
     checkTargetTables(tTableArray, isOverwrite);
 
     // case RESTORE_IMAGES:
-    HashMap<TableName, BackupManifest> backupManifestMap = new HashMap<>();
     // check and load backup image manifest for the tables
     Path rootPath = new Path(backupRootDir);
-    HBackupFileSystem.checkImageManifestExist(backupManifestMap, sTableArray, conf, rootPath,
-      backupId);
+    BackupManifest manifest = HBackupFileSystem.getManifest(conf, rootPath, backupId);
 
-    restore(backupManifestMap, sTableArray, tTableArray, isOverwrite);
+    restore(manifest, sTableArray, tTableArray, isOverwrite);
   }
 }

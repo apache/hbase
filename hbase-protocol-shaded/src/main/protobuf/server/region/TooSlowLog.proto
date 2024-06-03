@@ -27,6 +27,7 @@ option java_outer_classname = "TooSlowLog";
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
+import "HBase.proto";
 import "client/Client.proto";
 
 message SlowLogPayload {
@@ -48,6 +49,11 @@ message SlowLogPayload {
 
   optional int64 block_bytes_scanned = 16;
   optional Scan scan = 17;
+
+  repeated NameBytesPair connection_attribute = 18;
+  repeated NameBytesPair request_attribute = 19;
+
+  optional int64 fs_read_time = 20;
 
   // SLOW_LOG is RPC call slow in nature whereas LARGE_LOG is RPC call quite large.
   // Majority of times, slow logs are also large logs and hence, ALL is combination of

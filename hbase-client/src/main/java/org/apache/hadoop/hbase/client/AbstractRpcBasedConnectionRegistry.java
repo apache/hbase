@@ -33,22 +33,17 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
@@ -79,30 +74,21 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
 
   private final int hedgedReadFanOut;
 
-  // Configured list of end points to probe the meta information from.
-  private volatile ImmutableMap<ServerName, ClientMetaService.Interface> addr2Stub;
-
   // RPC client used to talk to the masters.
-  private final RpcClient rpcClient;
+  private final ConnectionRegistryRpcStubHolder rpcStubHolder;
   private final RpcControllerFactory rpcControllerFactory;
-  private final int rpcTimeoutMs;
 
   private final RegistryEndpointsRefresher registryEndpointRefresher;
 
-  protected AbstractRpcBasedConnectionRegistry(Configuration conf,
+  protected AbstractRpcBasedConnectionRegistry(Configuration conf, User user,
     String hedgedReqsFanoutConfigName, String initialRefreshDelaySecsConfigName,
     String refreshIntervalSecsConfigName, String minRefreshIntervalSecsConfigName)
     throws IOException {
     this.hedgedReadFanOut =
       Math.max(1, conf.getInt(hedgedReqsFanoutConfigName, HEDGED_REQS_FANOUT_DEFAULT));
-    rpcTimeoutMs = (int) Math.min(Integer.MAX_VALUE,
-      conf.getLong(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
-    // XXX: we pass cluster id as null here since we do not have a cluster id yet, we have to fetch
-    // this through the master registry...
-    // This is a problem as we will use the cluster id to determine the authentication method
-    rpcClient = RpcClientFactory.createClient(conf, null);
     rpcControllerFactory = RpcControllerFactory.instantiate(conf);
-    populateStubs(getBootstrapNodes(conf));
+    rpcStubHolder = new ConnectionRegistryRpcStubHolder(conf, user, rpcControllerFactory,
+      getBootstrapNodes(conf));
     // could return null here is refresh interval is less than zero
     registryEndpointRefresher =
       RegistryEndpointsRefresher.create(conf, initialRefreshDelaySecsConfigName,
@@ -114,19 +100,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   protected abstract CompletableFuture<Set<ServerName>> fetchEndpoints();
 
   private void refreshStubs() throws IOException {
-    populateStubs(FutureUtils.get(fetchEndpoints()));
-  }
-
-  private void populateStubs(Set<ServerName> addrs) throws IOException {
-    Preconditions.checkNotNull(addrs);
-    ImmutableMap.Builder<ServerName, ClientMetaService.Interface> builder =
-      ImmutableMap.builderWithExpectedSize(addrs.size());
-    User user = User.getCurrent();
-    for (ServerName masterAddr : addrs) {
-      builder.put(masterAddr,
-        ClientMetaService.newStub(rpcClient.createRpcChannel(masterAddr, user, rpcTimeoutMs)));
-    }
-    addr2Stub = builder.build();
+    rpcStubHolder.refreshStubs(() -> FutureUtils.get(fetchEndpoints()));
   }
 
   /**
@@ -211,20 +185,25 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
 
   protected final <T extends Message> CompletableFuture<T> call(Callable<T> callable,
     Predicate<T> isValidResp, String debug) {
-    ImmutableMap<ServerName, ClientMetaService.Interface> addr2StubRef = addr2Stub;
-    Set<ServerName> servers = addr2StubRef.keySet();
-    List<ClientMetaService.Interface> stubs = new ArrayList<>(addr2StubRef.values());
-    Collections.shuffle(stubs, ThreadLocalRandom.current());
     CompletableFuture<T> future = new CompletableFuture<>();
-    groupCall(future, servers, stubs, 0, callable, isValidResp, debug,
-      new ConcurrentLinkedQueue<>());
+    FutureUtils.addListener(rpcStubHolder.getStubs(), (addr2Stub, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      Set<ServerName> servers = addr2Stub.keySet();
+      List<ClientMetaService.Interface> stubs = new ArrayList<>(addr2Stub.values());
+      Collections.shuffle(stubs, ThreadLocalRandom.current());
+      groupCall(future, servers, stubs, 0, callable, isValidResp, debug,
+        new ConcurrentLinkedQueue<>());
+    });
     return future;
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
       allowedOnPath = ".*/src/test/.*")
-  Set<ServerName> getParsedServers() {
-    return addr2Stub.keySet();
+  Set<ServerName> getParsedServers() throws IOException {
+    return FutureUtils.get(rpcStubHolder.getStubs()).keySet();
   }
 
   /**
@@ -268,7 +247,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
           (c, s, d) -> s.getActiveMaster(c, GetActiveMasterRequest.getDefaultInstance(), d),
           GetActiveMasterResponse::hasServerName, "getActiveMaster()")
         .thenApply(resp -> ProtobufUtil.toServerName(resp.getServerName())),
-      getClass().getSimpleName() + ".getClusterId");
+      getClass().getSimpleName() + ".getActiveMaster");
   }
 
   @Override
@@ -277,8 +256,8 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
       if (registryEndpointRefresher != null) {
         registryEndpointRefresher.stop();
       }
-      if (rpcClient != null) {
-        rpcClient.close();
+      if (rpcStubHolder != null) {
+        rpcStubHolder.close();
       }
     }, getClass().getSimpleName() + ".close");
   }

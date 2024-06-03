@@ -18,9 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -50,18 +48,27 @@ public class TestNettyIPC extends AbstractTestIPC {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestNettyIPC.class);
 
-  @Parameters(name = "{index}: EventLoop={0}")
-  public static Collection<Object[]> parameters() {
-    List<Object[]> params = new ArrayList<>();
-    params.add(new Object[] { "nio" });
-    params.add(new Object[] { "perClientNio" });
+  private static List<String> getEventLoopTypes() {
+    List<String> types = new ArrayList<>();
+    types.add("nio");
+    types.add("perClientNio");
     if (JVM.isLinux() && JVM.isAmd64()) {
-      params.add(new Object[] { "epoll" });
+      types.add("epoll");
+    }
+    return types;
+  }
+
+  @Parameters(name = "{index}: rpcServerImpl={0}, EventLoop={1}")
+  public static List<Object[]> parameters() {
+    List<Object[]> params = new ArrayList<>();
+    for (String eventLoopType : getEventLoopTypes()) {
+      params.add(new Object[] { SimpleRpcServer.class, eventLoopType });
+      params.add(new Object[] { NettyRpcServer.class, eventLoopType });
     }
     return params;
   }
 
-  @Parameter
+  @Parameter(1)
   public String eventLoopType;
 
   private static NioEventLoopGroup NIO;
@@ -103,13 +110,6 @@ public class TestNettyIPC extends AbstractTestIPC {
   }
 
   @Override
-  protected RpcServer createRpcServer(String name,
-    List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
-    Configuration conf, RpcScheduler scheduler) throws IOException {
-    return new NettyRpcServer(null, name, services, bindAddress, conf, scheduler, true);
-  }
-
-  @Override
   protected NettyRpcClient createRpcClientNoCodec(Configuration conf) {
     setConf(conf);
     return new NettyRpcClient(conf) {
@@ -141,9 +141,13 @@ public class TestNettyIPC extends AbstractTestIPC {
   }
 
   @Override
-  protected RpcServer createTestFailingRpcServer(String name,
-    List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
-    Configuration conf, RpcScheduler scheduler) throws IOException {
-    return new FailingNettyRpcServer(null, name, services, bindAddress, conf, scheduler);
+  protected AbstractRpcClient<?> createBadAuthRpcClient(Configuration conf) {
+    return new NettyRpcClient(conf) {
+
+      @Override
+      protected NettyRpcConnection createConnection(ConnectionId remoteId) throws IOException {
+        return new BadAuthNettyRpcConnection(this, remoteId);
+      }
+    };
   }
 }

@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.ipc.FatalConnectionException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -196,13 +197,17 @@ public final class ConnectionUtils {
     return Bytes.equals(row, EMPTY_END_ROW);
   }
 
-  static void resetController(HBaseRpcController controller, long timeoutNs, int priority) {
+  static void resetController(HBaseRpcController controller, long timeoutNs, int priority,
+    TableName tableName) {
     controller.reset();
     if (timeoutNs >= 0) {
       controller.setCallTimeout(
         (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(timeoutNs)));
     }
     controller.setPriority(priority);
+    if (tableName != null) {
+      controller.setTableName(tableName);
+    }
   }
 
   static Throwable translateException(Throwable t) {
@@ -658,5 +663,14 @@ public final class ConnectionUtils {
     } else {
       controller.setFailed(error.toString());
     }
+  }
+
+  public static boolean isUnexpectedPreambleHeaderException(IOException e) {
+    if (!(e instanceof RemoteException)) {
+      return false;
+    }
+    RemoteException re = (RemoteException) e;
+    return FatalConnectionException.class.getName().equals(re.getClassName())
+      && re.getMessage().startsWith("Expected HEADER=");
   }
 }

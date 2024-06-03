@@ -145,7 +145,7 @@ public class TestReplicationWithWALExtendedAttributes {
     connection1 = ConnectionFactory.createConnection(conf1);
     replicationAdmin = connection1.getAdmin();
     ReplicationPeerConfig rpc =
-      ReplicationPeerConfig.newBuilder().setClusterKey(utility2.getClusterKey()).build();
+      ReplicationPeerConfig.newBuilder().setClusterKey(utility2.getRpcConnnectionURI()).build();
     replicationAdmin.addReplicationPeer("2", rpc);
 
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)

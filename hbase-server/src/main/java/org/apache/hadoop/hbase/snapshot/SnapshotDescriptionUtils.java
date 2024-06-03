@@ -419,17 +419,46 @@ public final class SnapshotDescriptionUtils {
     // if this fails
     URI workingURI = workingDirFs.getUri();
     URI rootURI = fs.getUri();
+
     if (
-      (!workingURI.getScheme().equals(rootURI.getScheme()) || workingURI.getAuthority() == null
-        || !workingURI.getAuthority().equals(rootURI.getAuthority())
-        || workingURI.getUserInfo() == null
-        || !workingURI.getUserInfo().equals(rootURI.getUserInfo())
+      (shouldSkipRenameSnapshotDirectories(workingURI, rootURI)
         || !fs.rename(workingDir, snapshotDir))
         && !FileUtil.copy(workingDirFs, workingDir, fs, snapshotDir, true, true, conf)
     ) {
       throw new SnapshotCreationException("Failed to copy working directory(" + workingDir
         + ") to completed directory(" + snapshotDir + ").");
     }
+  }
+
+  static boolean shouldSkipRenameSnapshotDirectories(URI workingURI, URI rootURI) {
+    // check scheme, e.g. file, hdfs
+    if (workingURI.getScheme() == null && rootURI.getScheme() != null) {
+      return true;
+    }
+    if (workingURI.getScheme() != null && !workingURI.getScheme().equals(rootURI.getScheme())) {
+      return true;
+    }
+
+    // check Authority, e.g. localhost:port
+    if (workingURI.getAuthority() == null && rootURI.getAuthority() != null) {
+      return true;
+    }
+    if (
+      workingURI.getAuthority() != null && !workingURI.getAuthority().equals(rootURI.getAuthority())
+    ) {
+      return true;
+    }
+
+    // check UGI/userInfo
+    if (workingURI.getUserInfo() == null && rootURI.getUserInfo() != null) {
+      return true;
+    }
+    if (
+      workingURI.getUserInfo() != null && !workingURI.getUserInfo().equals(rootURI.getUserInfo())
+    ) {
+      return true;
+    }
+    return false;
   }
 
   /**

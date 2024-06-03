@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
+import java.util.Base64.Decoder;
 import java.util.List;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.javax.ws.rs.DefaultValue;
 import org.apache.hbase.thirdparty.javax.ws.rs.Encoded;
+import org.apache.hbase.thirdparty.javax.ws.rs.HeaderParam;
 import org.apache.hbase.thirdparty.javax.ws.rs.Path;
 import org.apache.hbase.thirdparty.javax.ws.rs.PathParam;
 import org.apache.hbase.thirdparty.javax.ws.rs.QueryParam;
@@ -44,6 +45,8 @@ public class TableResource extends ResourceBase {
 
   String table;
   private static final Logger LOG = LoggerFactory.getLogger(TableResource.class);
+
+  private static final Decoder base64Urldecoder = java.util.Base64.getUrlDecoder();
 
   /**
    * Constructor
@@ -94,21 +97,31 @@ public class TableResource extends ResourceBase {
     // We need the @Encoded decorator so Jersey won't urldecode before
     // the RowSpec constructor has a chance to parse
     final @PathParam("rowspec") @Encoded String rowspec, final @QueryParam("v") String versions,
-    final @QueryParam("check") String check, final @QueryParam("rr") String returnResult)
+    final @QueryParam("check") String check, final @QueryParam("rr") String returnResult,
+    final @HeaderParam("Encoding") String keyEncodingHeader,
+    final @QueryParam(Constants.KEY_ENCODING_QUERY_PARAM_NAME) String keyEncodingQuery)
     throws IOException {
-    return new RowResource(this, rowspec, versions, check, returnResult);
+    String keyEncoding = (keyEncodingHeader != null) ? keyEncodingHeader : keyEncodingQuery;
+    return new RowResource(this, rowspec, versions, check, returnResult, keyEncoding);
   }
 
+  // TODO document
   @Path("{suffixglobbingspec: .*\\*/.+}")
   public RowResource getRowResourceWithSuffixGlobbing(
     // We need the @Encoded decorator so Jersey won't urldecode before
     // the RowSpec constructor has a chance to parse
     final @PathParam("suffixglobbingspec") @Encoded String suffixglobbingspec,
     final @QueryParam("v") String versions, final @QueryParam("check") String check,
-    final @QueryParam("rr") String returnResult) throws IOException {
-    return new RowResource(this, suffixglobbingspec, versions, check, returnResult);
+    final @QueryParam("rr") String returnResult,
+    final @HeaderParam("Encoding") String keyEncodingHeader,
+    final @QueryParam(Constants.KEY_ENCODING_QUERY_PARAM_NAME) String keyEncodingQuery)
+    throws IOException {
+    String keyEncoding = (keyEncodingHeader != null) ? keyEncodingHeader : keyEncodingQuery;
+    return new RowResource(this, suffixglobbingspec, versions, check, returnResult, keyEncoding);
   }
 
+  // TODO document
+  // FIXME handle binary rowkeys (like put and delete does)
   @Path("{scanspec: .*[*]$}")
   public TableScanResource getScanResource(final @PathParam("scanspec") String scanSpec,
     @DefaultValue(Integer.MAX_VALUE + "") @QueryParam(Constants.SCAN_LIMIT) int userRequestedLimit,
@@ -121,7 +134,8 @@ public class TableResource extends ResourceBase {
     @DefaultValue(Long.MAX_VALUE + "") @QueryParam(Constants.SCAN_END_TIME) long endTime,
     @DefaultValue("true") @QueryParam(Constants.SCAN_CACHE_BLOCKS) boolean cacheBlocks,
     @DefaultValue("false") @QueryParam(Constants.SCAN_REVERSED) boolean reversed,
-    @DefaultValue("") @QueryParam(Constants.SCAN_FILTER) String paramFilter) {
+    @QueryParam(Constants.FILTER) String paramFilter,
+    @QueryParam(Constants.FILTER_B64) @Encoded String paramFilterB64) {
     try {
       Filter prefixFilter = null;
       Scan tableScan = new Scan();
@@ -165,15 +179,23 @@ public class TableResource extends ResourceBase {
         }
       }
       FilterList filterList = new FilterList();
-      if (StringUtils.isNotEmpty(paramFilter)) {
+      byte[] filterBytes = null;
+      if (paramFilterB64 != null) {
+        filterBytes = base64Urldecoder.decode(paramFilterB64);
+      } else if (paramFilter != null) {
+        filterBytes = paramFilter.getBytes();
+      }
+      if (filterBytes != null) {
+        // Note that this is a completely different representation of the filters
+        // than the JSON one used in the /table/scanner endpoint
         ParseFilter pf = new ParseFilter();
-        Filter parsedParamFilter = pf.parseFilterString(paramFilter);
+        Filter parsedParamFilter = pf.parseFilterString(filterBytes);
         if (parsedParamFilter != null) {
           filterList.addFilter(parsedParamFilter);
         }
-        if (prefixFilter != null) {
-          filterList.addFilter(prefixFilter);
-        }
+      }
+      if (prefixFilter != null) {
+        filterList.addFilter(prefixFilter);
       }
       if (filterList.size() > 0) {
         tableScan.setFilter(filterList);

@@ -81,6 +81,7 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SecureRequestCustomi
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SymlinkAllowedResourceAliasChecker;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ErrorHandler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.HandlerCollection;
@@ -114,6 +115,11 @@ public class HttpServer implements FilterContainer {
   // And in newer jetty version, they add a check when creating a server so we must follow this
   // limitation otherwise the UTs will fail
   private static final int DEFAULT_MAX_HEADER_SIZE = Character.MAX_VALUE - 1;
+
+  // Add configuration for jetty idle timeout
+  private static final String HTTP_JETTY_IDLE_TIMEOUT = "hbase.ui.connection.idleTimeout";
+  // Default jetty idle timeout
+  private static final long DEFAULT_HTTP_JETTY_IDLE_TIMEOUT = 30000;
 
   static final String FILTER_INITIALIZERS_PROPERTY = "hbase.http.filter.initializers";
   static final String HTTP_MAX_THREADS = "hbase.http.max.threads";
@@ -165,7 +171,9 @@ public class HttpServer implements FilterContainer {
       .put("jmx",
         new ServletConfig("jmx", "/jmx", "org.apache.hadoop.hbase.http.jmx.JMXJsonServlet"))
       .put("metrics",
-        new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet"))
+        // MetricsServlet is deprecated in hadoop 2.8 and removed in 3.0. We shouldn't expect it,
+        // so pass false so that we don't create a noisy warn during instantiation.
+        new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet", false))
       .put("prometheus", new ServletConfig("prometheus", "/prometheus",
         "org.apache.hadoop.hbase.http.prometheus.PrometheusHadoopServlet"))
       .build();
@@ -467,6 +475,9 @@ public class HttpServer implements FilterContainer {
 
         // default settings for connector
         listener.setAcceptQueueSize(128);
+        // config idle timeout for jetty
+        listener
+          .setIdleTimeout(conf.getLong(HTTP_JETTY_IDLE_TIMEOUT, DEFAULT_HTTP_JETTY_IDLE_TIMEOUT));
         if (Shell.WINDOWS) {
           // result of setting the SO_REUSEADDR flag is different on Windows
           // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
@@ -748,15 +759,10 @@ public class HttpServer implements FilterContainer {
       ServletContextHandler logContext = new ServletContextHandler(parent, "/logs");
       logContext.addServlet(AdminAuthorizedServlet.class, "/*");
       logContext.setResourceBase(logDir);
-
-      if (
-        conf.getBoolean(ServerConfigurationKeys.HBASE_JETTY_LOGS_SERVE_ALIASES,
-          ServerConfigurationKeys.DEFAULT_HBASE_JETTY_LOGS_SERVE_ALIASES)
-      ) {
-        Map<String, String> params = logContext.getInitParams();
-        params.put("org.mortbay.jetty.servlet.Default.aliases", "true");
-      }
       logContext.setDisplayName("logs");
+      configureAliasChecks(logContext,
+        conf.getBoolean(ServerConfigurationKeys.HBASE_JETTY_LOGS_SERVE_ALIASES,
+          ServerConfigurationKeys.DEFAULT_HBASE_JETTY_LOGS_SERVE_ALIASES));
       setContextAttributes(logContext, conf);
       addNoCacheFilter(logContext, conf);
       defaultContexts.put(logContext, true);
@@ -768,6 +774,37 @@ public class HttpServer implements FilterContainer {
     staticContext.setDisplayName("static");
     setContextAttributes(staticContext, conf);
     defaultContexts.put(staticContext, true);
+  }
+
+  /**
+   * This method configures the alias checks for the given ServletContextHandler based on the
+   * provided value of shouldServeAlias.<br>
+   * If shouldServeAlias is set to true, it checks if SymlinkAllowedResourceAliasChecker is already
+   * a part of the alias check list. If it is already a part of the list, no changes are made, else,
+   * it adds it to the list.<br>
+   * If shouldServeAlias is set to false, it clears all alias checks from the
+   * ServletContextHandler.<br>
+   * .
+   * @param context          The ServletContextHandler whose alias checks are to be configured
+   * @param shouldServeAlias Whether aliases should be allowed or not
+   */
+  private void configureAliasChecks(ServletContextHandler context, boolean shouldServeAlias) {
+    if (shouldServeAlias) {
+      Class aliasCheckerClass = SymlinkAllowedResourceAliasChecker.class;
+      // check if SymlinkAllowedResourceAliasChecker is already part of alias check list
+      // NOTE: we are doing this because this is already present in the context (by default)
+      if (context.getAliasChecks().stream().anyMatch(aliasCheckerClass::isInstance)) {
+        LOG.debug("{} is already part of alias check list", aliasCheckerClass.getName());
+      } else {
+        context.addAliasCheck(new SymlinkAllowedResourceAliasChecker(context));
+        LOG.debug("{} added to the alias check list", aliasCheckerClass.getName());
+      }
+      LOG.info("Serving aliases allowed for /logs context");
+    } else {
+      // if aliasing is disabled, then we should clear the alias check list
+      context.clearAliasChecks();
+      LOG.info("Serving aliases disabled for /logs context");
+    }
   }
 
   private void setContextAttributes(ServletContextHandler context, Configuration conf) {
@@ -811,16 +848,19 @@ public class HttpServer implements FilterContainer {
     /* register metrics servlets */
     String[] enabledServlets = conf.getStrings(METRIC_SERVLETS_CONF_KEY, METRICS_SERVLETS_DEFAULT);
     for (String enabledServlet : enabledServlets) {
-      try {
-        ServletConfig servletConfig = METRIC_SERVLETS.get(enabledServlet);
-        if (servletConfig != null) {
+      ServletConfig servletConfig = METRIC_SERVLETS.get(enabledServlet);
+      if (servletConfig != null) {
+        try {
           Class<?> clz = Class.forName(servletConfig.getClazz());
           addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
             clz.asSubclass(HttpServlet.class));
+        } catch (Exception e) {
+          if (servletConfig.isExpected()) {
+            // metrics are not critical to read/write, so an exception here shouldn't be fatal
+            // if the class was expected we should warn though
+            LOG.warn("Couldn't register the servlet " + enabledServlet, e);
+          }
         }
-      } catch (Exception e) {
-        /* shouldn't be fatal, so warn the user about it */
-        LOG.warn("Couldn't register the servlet " + enabledServlet, e);
       }
     }
   }

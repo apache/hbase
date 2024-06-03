@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutput;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper;
@@ -77,8 +78,19 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
     return new AsyncFSWAL(CommonFSUtils.getWALFileSystem(conf), this.abortable,
       CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
       getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
-      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null, eventLoopGroup,
-      channelClass, factory.getExcludeDatanodeManager().getStreamSlowMonitor(providerId));
+      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null, null, null,
+      eventLoopGroup, channelClass,
+      factory.getExcludeDatanodeManager().getStreamSlowMonitor(providerId));
+  }
+
+  @Override
+  protected WAL createRemoteWAL(RegionInfo region, FileSystem remoteFs, Path remoteWALDir,
+    String prefix, String suffix) throws IOException {
+    return new AsyncFSWAL(CommonFSUtils.getWALFileSystem(conf), this.abortable,
+      CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
+      getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, prefix, suffix,
+      remoteFs, remoteWALDir, eventLoopGroup, channelClass,
+      factory.getExcludeDatanodeManager().getStreamSlowMonitor(providerId));
   }
 
   @Override

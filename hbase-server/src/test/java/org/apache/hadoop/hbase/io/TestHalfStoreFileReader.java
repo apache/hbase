@@ -124,21 +124,22 @@ public class TestHalfStoreFileReader {
       (HalfStoreFileReader) storeFileInfo.createReader(context, cacheConf);
     storeFileInfo.getHFileInfo().initMetaAndIndex(halfreader.getHFileReader());
     halfreader.loadFileInfo();
-    final HFileScanner scanner = halfreader.getScanner(false, false);
+    try (HFileScanner scanner = halfreader.getScanner(false, false, false)) {
 
-    scanner.seekTo();
-    Cell curr;
-    do {
-      curr = scanner.getCell();
-      KeyValue reseekKv = getLastOnCol(curr);
-      int ret = scanner.reseekTo(reseekKv);
-      assertTrue("reseek to returned: " + ret, ret > 0);
-      // System.out.println(curr + ": " + ret);
-    } while (scanner.next());
+      scanner.seekTo();
+      Cell curr;
+      do {
+        curr = scanner.getCell();
+        KeyValue reseekKv = getLastOnCol(curr);
+        int ret = scanner.reseekTo(reseekKv);
+        assertTrue("reseek to returned: " + ret, ret > 0);
+        // System.out.println(curr + ": " + ret);
+      } while (scanner.next());
 
-    int ret = scanner.reseekTo(getLastOnCol(curr));
-    // System.out.println("Last reseek: " + ret);
-    assertTrue(ret > 0);
+      int ret = scanner.reseekTo(getLastOnCol(curr));
+      // System.out.println("Last reseek: " + ret);
+      assertTrue(ret > 0);
+    }
 
     halfreader.close(true);
   }
@@ -222,9 +223,14 @@ public class TestHalfStoreFileReader {
       (HalfStoreFileReader) storeFileInfo.createReader(context, cacheConfig);
     storeFileInfo.getHFileInfo().initMetaAndIndex(halfreader.getHFileReader());
     halfreader.loadFileInfo();
-    final HFileScanner scanner = halfreader.getScanner(false, false);
-    scanner.seekBefore(seekBefore);
-    return scanner.getCell();
+    try (HFileScanner scanner = halfreader.getScanner(false, false, false)) {
+      scanner.seekBefore(seekBefore);
+      if (scanner.getCell() != null) {
+        return KeyValueUtil.copyToNewKeyValue(scanner.getCell());
+      } else {
+        return null;
+      }
+    }
   }
 
   private KeyValue getLastOnCol(Cell curr) {

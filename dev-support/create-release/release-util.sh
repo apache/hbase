@@ -871,3 +871,14 @@ function get_hadoop3_version() {
     echo "${version}-hadoop3"
   fi
 }
+
+# Run mvn spotless:apply to format the code base
+# For 2.x, the generated CHANGES.md and RELEASENOTES.md may have lines end with whitespace and
+# case spotless:check failure, so we should run spotless:apply before committing
+function maven_spotless_apply() {
+  "${MVN[@]}" spotless:apply
+}
+
+function git_add_poms() {
+  find . -name pom.xml -exec git add {} \;
+}

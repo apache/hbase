@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
@@ -100,10 +101,20 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
     return new FSHLog(CommonFSUtils.getWALFileSystem(conf), abortable,
       CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
       getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
-      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
+      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null, null, null);
+  }
+
+  @Override
+  protected WAL createRemoteWAL(RegionInfo region, FileSystem remoteFs, Path remoteWALDir,
+    String prefix, String suffix) throws IOException {
+    return new FSHLog(CommonFSUtils.getWALFileSystem(conf), abortable,
+      CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
+      getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, prefix, suffix,
+      remoteFs, remoteWALDir);
   }
 
   @Override
   protected void doInit(Configuration conf) throws IOException {
   }
+
 }

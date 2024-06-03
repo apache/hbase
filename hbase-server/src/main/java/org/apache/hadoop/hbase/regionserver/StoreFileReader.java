@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -146,7 +147,8 @@ public class StoreFileReader {
   public StoreFileScanner getStoreFileScanner(boolean cacheBlocks, boolean pread,
     boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn) {
     return new StoreFileScanner(this, getScanner(cacheBlocks, pread, isCompaction), !isCompaction,
-      reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn);
+      reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn,
+      reader.getDataBlockEncoding() == DataBlockEncoding.ROW_INDEX_V1);
   }
 
   /**
@@ -181,31 +183,9 @@ public class StoreFileReader {
   }
 
   /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Do not write further code which depends
-   *             on this call. Instead use getStoreFileScanner() which uses the StoreFileScanner
-   *             class/interface which is the preferred way to scan a store with higher level
-   *             concepts.
-   * @param cacheBlocks should we cache the blocks?
-   * @param pread       use pread (for concurrent small readers)
-   * @return the underlying HFileScanner
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15296">HBASE-15296</a>
+   * Will be overridden in HalfStoreFileReader
    */
-  @Deprecated
-  public HFileScanner getScanner(boolean cacheBlocks, boolean pread) {
-    return getScanner(cacheBlocks, pread, false);
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Do not write further code which depends
-   *             on this call. Instead use getStoreFileScanner() which uses the StoreFileScanner
-   *             class/interface which is the preferred way to scan a store with higher level
-   *             concepts. should we cache the blocks? use pread (for concurrent small readers) is
-   *             scanner being used for compaction?
-   * @return the underlying HFileScanner
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15296">HBASE-15296</a>
-   */
-  @Deprecated
-  public HFileScanner getScanner(boolean cacheBlocks, boolean pread, boolean isCompaction) {
+  protected HFileScanner getScanner(boolean cacheBlocks, boolean pread, boolean isCompaction) {
     return reader.getScanner(conf, cacheBlocks, pread, isCompaction);
   }
 

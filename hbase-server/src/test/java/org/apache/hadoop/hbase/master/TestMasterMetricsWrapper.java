@@ -85,6 +85,7 @@ public class TestMasterMetricsWrapper {
     assertEquals(master.getMasterCoprocessors().length, info.getCoprocessors().length);
     assertEquals(master.getServerManager().getOnlineServersList().size(),
       info.getNumRegionServers());
+    assertEquals(master.getMasterWalManager().getOldWALsDirSize(), info.getOldWALsDirSize());
     int regionServerCount = NUM_RS;
     assertEquals(regionServerCount, info.getNumRegionServers());
 

@@ -989,6 +989,17 @@ public final class RequestConverter {
     return builder.build();
   }
 
+  public static MasterProtos.TruncateRegionRequest
+    buildTruncateRegionRequest(final RegionInfo regionInfo, final long nonceGroup, final long nonce)
+      throws DeserializationException {
+    MasterProtos.TruncateRegionRequest.Builder builder =
+      MasterProtos.TruncateRegionRequest.newBuilder();
+    builder.setRegionInfo(ProtobufUtil.toRegionInfo(regionInfo));
+    builder.setNonceGroup(nonceGroup);
+    builder.setNonce(nonce);
+    return builder.build();
+  }
+
   /**
    * Create a protocol buffer AssignRegionRequest
    * @return an AssignRegionRequest
@@ -1097,12 +1108,14 @@ public final class RequestConverter {
    * @return a ModifyTableRequest
    */
   public static ModifyTableRequest buildModifyTableRequest(final TableName tableName,
-    final TableDescriptor tableDesc, final long nonceGroup, final long nonce) {
+    final TableDescriptor tableDesc, final long nonceGroup, final long nonce,
+    final boolean reopenRegions) {
     ModifyTableRequest.Builder builder = ModifyTableRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     builder.setTableSchema(ProtobufUtil.toTableSchema(tableDesc));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
+    builder.setReopenRegions(reopenRegions);
     return builder.build();
   }
 
@@ -1577,17 +1590,17 @@ public final class RequestConverter {
 
   // HBCK2
   public static MasterProtos.AssignsRequest toAssignRegionsRequest(List<String> encodedRegionNames,
-    boolean override) {
+    boolean override, boolean force) {
     MasterProtos.AssignsRequest.Builder b = MasterProtos.AssignsRequest.newBuilder();
     return b.addAllRegion(toEncodedRegionNameRegionSpecifiers(encodedRegionNames))
-      .setOverride(override).build();
+      .setOverride(override).setForce(force).build();
   }
 
   public static MasterProtos.UnassignsRequest
-    toUnassignRegionsRequest(List<String> encodedRegionNames, boolean override) {
+    toUnassignRegionsRequest(List<String> encodedRegionNames, boolean override, boolean force) {
     MasterProtos.UnassignsRequest.Builder b = MasterProtos.UnassignsRequest.newBuilder();
     return b.addAllRegion(toEncodedRegionNameRegionSpecifiers(encodedRegionNames))
-      .setOverride(override).build();
+      .setOverride(override).setForce(force).build();
   }
 
   public static MasterProtos.ScheduleServerCrashProcedureRequest

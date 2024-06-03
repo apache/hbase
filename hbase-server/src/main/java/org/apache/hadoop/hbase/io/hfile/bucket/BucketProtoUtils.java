@@ -18,8 +18,12 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import java.io.IOException;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
@@ -28,6 +32,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
@@ -45,7 +50,7 @@ final class BucketProtoUtils {
       .setIoClass(cache.ioEngine.getClass().getName())
       .setMapClass(cache.backingMap.getClass().getName())
       .putAllDeserializers(CacheableDeserializerIdManager.save())
-      .putAllPrefetchedFiles(cache.fullyCachedFiles)
+      .putAllCachedFiles(toCachedPB(cache.fullyCachedFiles))
       .setBackingMap(BucketProtoUtils.toPB(cache.backingMap))
       .setChecksum(ByteString
         .copyFrom(((PersistentIOEngine) cache.ioEngine).calculateChecksum(cache.getAlgorithm())))
@@ -119,10 +124,12 @@ final class BucketProtoUtils {
     }
   }
 
-  static ConcurrentHashMap<BlockCacheKey, BucketEntry> fromPB(Map<Integer, String> deserializers,
-    BucketCacheProtos.BackingMap backingMap, Function<BucketEntry, Recycler> createRecycler)
-    throws IOException {
+  static Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> fromPB(
+    Map<Integer, String> deserializers, BucketCacheProtos.BackingMap backingMap,
+    Function<BucketEntry, Recycler> createRecycler) throws IOException {
     ConcurrentHashMap<BlockCacheKey, BucketEntry> result = new ConcurrentHashMap<>();
+    NavigableSet<BlockCacheKey> resultSet = new ConcurrentSkipListSet<>(Comparator
+      .comparing(BlockCacheKey::getHfileName).thenComparingLong(BlockCacheKey::getOffset));
     for (BucketCacheProtos.BackingMapEntry entry : backingMap.getEntryList()) {
       BucketCacheProtos.BlockCacheKey protoKey = entry.getKey();
       BlockCacheKey key = new BlockCacheKey(protoKey.getHfilename(), protoKey.getOffset(),
@@ -151,8 +158,9 @@ final class BucketProtoUtils {
         throw new IOException("Unknown deserializer class found: " + deserializerClass);
       }
       result.put(key, value);
+      resultSet.add(key);
     }
-    return result;
+    return new Pair<>(result, resultSet);
   }
 
   private static BlockType fromPb(BucketCacheProtos.BlockType blockType) {
@@ -184,5 +192,27 @@ final class BucketProtoUtils {
       default:
         throw new Error("Unrecognized BlockType.");
     }
+  }
+
+  static Map<String, BucketCacheProtos.RegionFileSizeMap>
+    toCachedPB(Map<String, Pair<String, Long>> prefetchedHfileNames) {
+    Map<String, BucketCacheProtos.RegionFileSizeMap> tmpMap = new HashMap<>();
+    prefetchedHfileNames.forEach((hfileName, regionPrefetchMap) -> {
+      BucketCacheProtos.RegionFileSizeMap tmpRegionFileSize =
+        BucketCacheProtos.RegionFileSizeMap.newBuilder().setRegionName(regionPrefetchMap.getFirst())
+          .setRegionCachedSize(regionPrefetchMap.getSecond()).build();
+      tmpMap.put(hfileName, tmpRegionFileSize);
+    });
+    return tmpMap;
+  }
+
+  static Map<String, Pair<String, Long>>
+    fromPB(Map<String, BucketCacheProtos.RegionFileSizeMap> prefetchHFileNames) {
+    Map<String, Pair<String, Long>> hfileMap = new HashMap<>();
+    prefetchHFileNames.forEach((hfileName, regionPrefetchMap) -> {
+      hfileMap.put(hfileName,
+        new Pair<>(regionPrefetchMap.getRegionName(), regionPrefetchMap.getRegionCachedSize()));
+    });
+    return hfileMap;
   }
 }

@@ -24,7 +24,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
-import "google/protobuf/any.proto";
+import "org/apache/hbase/thirdparty/google/protobuf/any.proto";
 import "server/ErrorHandling.proto";
 
 enum ProcedureState {
@@ -69,6 +69,10 @@ message Procedure {
 
   // whether the procedure need to be bypassed
   optional bool bypass = 17 [default = false];
+
+  // whether the procedure has been executed
+  // since we do not always maintain the stack_id now, we need a separated flag
+  optional bool executed = 18 [default = false];
 }
 
 /**

@@ -33,7 +33,7 @@
     <!--Version of protobuf that hbase uses internally (we shade our pb)
          Must match what is out in hbase-thirdparty include.
     -->
-    <internal.protobuf.version>3.21.12</internal.protobuf.version>
+    <internal.protobuf.version>4.26.1</internal.protobuf.version>
   </properties>
   <dependencies>
     <dependency>
@@ -152,7 +152,7 @@
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk15on</artifactId>
+      <artifactId>bcprov-jdk18on</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

@@ -334,11 +334,35 @@ class WALEntryStream implements Closeable {
     boolean beingWritten = pair.getSecond();
     LOG.trace("Reading WAL {}; result={}, currently open for write={}", this.currentPath, state,
       beingWritten);
+    // The below implementation needs to make sure that when beingWritten == true, we should not
+    // dequeue the current WAL file in logQueue.
     switch (state) {
       case NORMAL:
         // everything is fine, just return
         return HasNext.YES;
       case EOF_WITH_TRAILER:
+        // in readNextEntryAndRecordReaderPosition, we will acquire rollWriteLock, and we can only
+        // schedule a close writer task, in which we will write trailer, under the rollWriteLock, so
+        // typically if beingWritten == true, we should not reach here, as we need to reopen the
+        // reader after writing the trailer. The only possible way to reach here while beingWritten
+        // == true is due to the inflightWALClosures logic in AbstractFSWAL, as if the writer is
+        // still in this map, we will consider it as beingWritten, but actually, here we could make
+        // sure that the new WAL file has already been enqueued into the logQueue, so here dequeuing
+        // the current log file is safe.
+        if (beingWritten && logQueue.getQueue(walGroupId).size() <= 1) {
+          // As explained above, if we implement everything correctly, we should not arrive here.
+          // But anyway, even if we reach here due to some code changes in the future, reading
+          // the file again can make sure that we will not accidentally consider the queue as
+          // finished, and since there is a trailer, we will soon consider the file as finished
+          // and move on.
+          LOG.warn(
+            "We have reached the trailer while reading the file '{}' which is currently"
+              + " beingWritten, but it is the last file in log queue {}. This should not happen"
+              + " typically, try to read again so we will not miss anything",
+            currentPath, walGroupId);
+          return HasNext.RETRY;
+        }
+        assert !beingWritten || logQueue.getQueue(walGroupId).size() > 1;
         // we have reached the trailer, which means this WAL file has been closed cleanly and we
         // have finished reading it successfully, just move to the next WAL file and let the upper
         // layer start reading the next WAL file
@@ -436,7 +460,27 @@ class WALEntryStream implements Closeable {
    * Returns whether the file is opened for writing.
    */
   private Pair<WALTailingReader.State, Boolean> readNextEntryAndRecordReaderPosition() {
-    OptionalLong fileLength = walFileLengthProvider.getLogFileSizeIfBeingWritten(currentPath);
+    OptionalLong fileLength;
+    if (logQueue.getQueueSize(walGroupId) > 1) {
+      // if there are more than one files in queue, although it is possible that we are
+      // still trying to write the trailer of the file and it is not closed yet, we can
+      // make sure that we will not write any WAL entries to it any more, so it is safe
+      // to just let the upper layer try to read the whole file without limit
+      fileLength = OptionalLong.empty();
+    } else {
+      // if there is only one file in queue, check whether it is still being written to
+      // we must call this before actually reading from the reader, as this method will acquire the
+      // rollWriteLock. This is very important, as we will enqueue the new WAL file in postLogRoll,
+      // and before this happens, we could have already finished closing the previous WAL file. If
+      // we do not acquire the rollWriteLock and return whether the current file is being written
+      // to, we may finish reading the previous WAL file and start to read the next one, before it
+      // is enqueued into the logQueue, thus lead to an empty logQueue and make the shipper think
+      // the queue is already ended and quit. See HBASE-28114 and related issues for more details.
+      // in the future, if we want to optimize the logic here, for example, do not call this method
+      // every time, or do not acquire rollWriteLock in the implementation of this method, we need
+      // to carefully review the optimized implementation
+      fileLength = walFileLengthProvider.getLogFileSizeIfBeingWritten(currentPath);
+    }
     WALTailingReader.Result readResult = reader.next(fileLength.orElse(-1));
     long readerPos = readResult.getEntryEndPos();
     Entry readEntry = readResult.getEntry();

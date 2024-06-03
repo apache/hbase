@@ -412,8 +412,23 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.splitRegionAsync(regionName, splitPoint);
   }
 
+  @Override
+  public void truncateRegion(byte[] regionName) throws IOException {
+    admin.truncateRegion(regionName);
+  }
+
+  @Override
+  public Future<Void> truncateRegionAsync(byte[] regionName) throws IOException {
+    return admin.truncateRegionAsync(regionName);
+  }
+
   public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
-    return admin.modifyTableAsync(td);
+    return modifyTableAsync(td, true);
+  }
+
+  public Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions)
+    throws IOException {
+    return admin.modifyTableAsync(td, reopenRegions);
   }
 
   public void shutdown() throws IOException {
@@ -957,6 +972,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   @Override
   public void flushMasterStore() throws IOException {
     admin.flushMasterStore();
+  }
+
+  @Override
+  public List<String> getCachedFilesList(ServerName serverName) throws IOException {
+    return admin.getCachedFilesList(serverName);
   }
 
   @Override

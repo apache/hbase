@@ -107,6 +107,7 @@ module HBaseConstants
   VALUE = 'VALUE'.freeze
   VERSIONS = org.apache.hadoop.hbase.HConstants::VERSIONS
   VISIBILITY = 'VISIBILITY'.freeze
+  REOPEN_REGIONS = 'REOPEN_REGIONS'.freeze
 
   # aliases
   ENDKEY = STOPROW

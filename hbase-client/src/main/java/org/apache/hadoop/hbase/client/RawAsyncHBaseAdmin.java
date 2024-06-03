@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.util.FutureUtils.unwrapCompletionException
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -132,6 +133,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionS
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -692,9 +695,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> modifyTable(TableDescriptor desc) {
+    return modifyTable(desc, true);
+  }
+
+  @Override
+  public CompletableFuture<Void> modifyTable(TableDescriptor desc, boolean reopenRegions) {
     return this.<ModifyTableRequest, ModifyTableResponse> procedureCall(desc.getTableName(),
       RequestConverter.buildModifyTableRequest(desc.getTableName(), desc, ng.getNonceGroup(),
-        ng.newNonce()),
+        ng.newNonce(), reopenRegions),
       (s, c, req, done) -> s.modifyTable(c, req, done), (resp) -> resp.getProcId(),
       new ModifyTableProcedureBiConsumer(this, desc.getTableName()));
   }
@@ -1624,6 +1632,60 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> truncateRegion(byte[] regionName) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    addListener(getRegionLocation(regionName), (location, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      RegionInfo regionInfo = location.getRegion();
+      if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
+        future.completeExceptionally(new IllegalArgumentException(
+          "Can't truncate replicas directly.Replicas are auto-truncated "
+            + "when their primary is truncated."));
+        return;
+      }
+      ServerName serverName = location.getServerName();
+      if (serverName == null) {
+        future
+          .completeExceptionally(new NoServerForRegionException(Bytes.toStringBinary(regionName)));
+        return;
+      }
+      addListener(truncateRegion(regionInfo), (ret, err2) -> {
+        if (err2 != null) {
+          future.completeExceptionally(err2);
+        } else {
+          future.complete(ret);
+        }
+      });
+    });
+    return future;
+  }
+
+  private CompletableFuture<Void> truncateRegion(final RegionInfo hri) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    TableName tableName = hri.getTable();
+    final MasterProtos.TruncateRegionRequest request;
+    try {
+      request = RequestConverter.buildTruncateRegionRequest(hri, ng.getNonceGroup(), ng.newNonce());
+    } catch (DeserializationException e) {
+      future.completeExceptionally(e);
+      return future;
+    }
+    addListener(this.procedureCall(tableName, request, MasterService.Interface::truncateRegion,
+      MasterProtos.TruncateRegionResponse::getProcId,
+      new TruncateRegionProcedureBiConsumer(tableName)), (ret, err2) -> {
+        if (err2 != null) {
+          future.completeExceptionally(err2);
+        } else {
+          future.complete(ret);
+        }
+      });
+    return future;
+  }
+
+  @Override
   public CompletableFuture<Void> assign(byte[] regionName) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(getRegionInfo(regionName), (regionInfo, err) -> {
@@ -2063,8 +2125,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         }
       }
       if (tableName == null) {
-        future.completeExceptionally(new RestoreSnapshotException(
-          "Unable to find the table name for snapshot=" + snapshotName));
+        future.completeExceptionally(
+          new RestoreSnapshotException("The snapshot " + snapshotName + " does not exist."));
         return;
       }
       final TableName finalTableName = tableName;
@@ -2879,6 +2941,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     @Override
     String getOperationType() {
       return "SPLIT_REGION";
+    }
+  }
+
+  private static class TruncateRegionProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    TruncateRegionProcedureBiConsumer(TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "TRUNCATE_REGION";
     }
   }
 
@@ -3712,15 +3786,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private CompletableFuture<Void> trySyncTableToPeerCluster(TableName tableName, byte[][] splits,
     ReplicationPeerDescription peer) {
-    Configuration peerConf = null;
+    Configuration peerConf;
     try {
-      peerConf =
-        ReplicationPeerConfigUtil.getPeerClusterConfiguration(connection.getConfiguration(), peer);
+      peerConf = ReplicationPeerConfigUtil
+        .getPeerClusterConfiguration(connection.getConfiguration(), peer.getPeerConfig());
     } catch (IOException e) {
       return failedFuture(e);
     }
+    URI connectionUri =
+      ConnectionRegistryFactory.tryParseAsConnectionURI(peer.getPeerConfig().getClusterKey());
     CompletableFuture<Void> future = new CompletableFuture<>();
-    addListener(ConnectionFactory.createAsyncConnection(peerConf), (conn, err) -> {
+    addListener(ConnectionFactory.createAsyncConnection(connectionUri, peerConf), (conn, err) -> {
       if (err != null) {
         future.completeExceptionally(err);
         return;
@@ -4452,5 +4528,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         Void> call(controller, stub, request.build(),
           (s, c, req, done) -> s.flushMasterStore(c, req, done), resp -> null))
       .call();
+  }
+
+  @Override
+  public CompletableFuture<List<String>> getCachedFilesList(ServerName serverName) {
+    GetCachedFilesListRequest.Builder request = GetCachedFilesListRequest.newBuilder();
+    return this.<List<String>> newAdminCaller()
+      .action((controller, stub) -> this.<GetCachedFilesListRequest, GetCachedFilesListResponse,
+        List<String>> adminCall(controller, stub, request.build(),
+          (s, c, req, done) -> s.getCachedFilesList(c, req, done),
+          resp -> resp.getCachedFilesList()))
+      .serverName(serverName).call();
   }
 }

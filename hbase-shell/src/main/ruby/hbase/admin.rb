@@ -197,6 +197,16 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Requests a region truncate
+    def truncate_region(region_name)
+      begin
+        org.apache.hadoop.hbase.util.FutureUtils.get(@admin.truncateRegionAsync(region_name.to_java_bytes))
+      rescue java.lang.IllegalArgumentException, org.apache.hadoop.hbase.UnknownRegionException
+        @admin.truncate_region(region_name.to_java_bytes)
+      end
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Enable/disable one split or merge switch
     # Returns previous switch setting.
     def splitormerge_switch(type, enabled)
@@ -476,8 +486,6 @@ module Hbase
         'admin',
         nil
       )
-      zk = @zk_wrapper.getRecoverableZooKeeper.getZooKeeper
-      @zk_main = org.apache.zookeeper.ZooKeeperMain.new(zk)
       org.apache.hadoop.hbase.zookeeper.ZKDump.dump(@zk_wrapper)
     end
 
@@ -774,6 +782,7 @@ module Hbase
       # Get table descriptor
       tdb = TableDescriptorBuilder.newBuilder(@admin.getDescriptor(table_name))
       hasTableUpdate = false
+      reopen_regions = true
 
       # Process all args
       args.each do |arg|
@@ -782,6 +791,14 @@ module Hbase
 
         # Normalize args to support shortcut delete syntax
         arg = { METHOD => 'delete', NAME => arg['delete'] } if arg['delete']
+
+        if arg.key?(REOPEN_REGIONS)
+          if !['true', 'false'].include?(arg[REOPEN_REGIONS].downcase)
+            raise(ArgumentError, "Invalid 'REOPEN_REGIONS' for non-boolean value.")
+          end
+          reopen_regions = JBoolean.valueOf(arg[REOPEN_REGIONS])
+          arg.delete(REOPEN_REGIONS)
+        end
 
         # There are 3 possible options.
         # 1) Column family spec. Distinguished by having a NAME and no METHOD.
@@ -906,9 +923,13 @@ module Hbase
 
       # Bulk apply all table modifications.
       if hasTableUpdate
-        future = @admin.modifyTableAsync(tdb.build)
-
-        if wait == true
+        future = @admin.modifyTableAsync(tdb.build, reopen_regions)
+        if reopen_regions == false
+          puts("WARNING: You are using REOPEN_REGIONS => 'false' to modify a table, which will
+          result in inconsistencies in the configuration of online regions and other risks. If you
+          encounter any issues, use the original 'alter' command to make the modification again!")
+          future.get
+        elsif wait == true
           puts 'Updating all regions with the new schema...'
           future.get
         end
@@ -1172,7 +1193,7 @@ module Hbase
         if org.apache.hadoop.hbase.regionserver.BloomType.constants.include?(bloomtype)
           cfdb.setBloomFilterType(org.apache.hadoop.hbase.regionserver.BloomType.valueOf(bloomtype))
         else
-          raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + org.apache.hadoop.hbase.regionserver.StoreFile::BloomType.constants.join(' '))
+          raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + org.apache.hadoop.hbase.regionserver.BloomType.constants.join(' '))
         end
       end
       if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION)
@@ -1557,6 +1578,8 @@ module Hbase
     # Parse arguments and update TableDescriptorBuilder accordingly
     # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     def update_tdb_from_arg(tdb, arg)
+      tdb.setErasureCodingPolicy(arg.delete(TableDescriptorBuilder::ERASURE_CODING_POLICY)) \
+        if arg.include?(TableDescriptorBuilder::ERASURE_CODING_POLICY)
       tdb.setMaxFileSize(arg.delete(TableDescriptorBuilder::MAX_FILESIZE)) if arg.include?(TableDescriptorBuilder::MAX_FILESIZE)
       tdb.setReadOnly(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::READONLY))) if arg.include?(TableDescriptorBuilder::READONLY)
       tdb.setCompactionEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::COMPACTION_ENABLED))) if arg.include?(TableDescriptorBuilder::COMPACTION_ENABLED)

@@ -105,6 +105,12 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <!-- Required by tests using MiniMRCluster -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk18on</artifactId>
+      <scope>test</scope>
+    </dependency>
     <!-- General dependencies -->
     <dependency>
       <groupId>org.apache.commons</groupId>

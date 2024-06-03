@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionRegistry;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -213,7 +214,7 @@ public class TestTableInputFormatBase {
     }
 
     ConnectionForMergeTesting(Configuration conf, ExecutorService pool, User user,
-      Map<String, byte[]> connectionAttributes) throws IOException {
+      ConnectionRegistry registry, Map<String, byte[]> connectionAttributes) throws IOException {
     }
 
     @Override

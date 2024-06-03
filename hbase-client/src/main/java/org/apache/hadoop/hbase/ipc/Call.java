@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.ipc;
 import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.util.Map;
-import java.util.Optional;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.CellScanner;
@@ -34,6 +33,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ConnectionRegistryService;
 
 /** A call waiting for a value. */
 @InterfaceAudience.Private
@@ -84,16 +84,15 @@ class Call {
    * Builds a simplified {@link #toString()} that includes just the id and method name.
    */
   public String toShortString() {
+    // Call[id=32153218,methodName=Get]
     return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).append("id", id)
-      .append("methodName", md.getName()).toString();
+      .append("methodName", md != null ? md.getName() : "").toString();
   }
 
   @Override
   public String toString() {
-    // Call[id=32153218,methodName=Get]
     return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).appendSuper(toShortString())
-      .append("param", Optional.ofNullable(param).map(ProtobufUtil::getShortTextFormat).orElse(""))
-      .toString();
+      .append("param", param != null ? ProtobufUtil.getShortTextFormat(param) : "").toString();
   }
 
   /**
@@ -155,5 +154,9 @@ class Call {
 
   public long getStartTime() {
     return this.callStats.getStartTime();
+  }
+
+  public boolean isConnectionRegistryCall() {
+    return md.getService().equals(ConnectionRegistryService.getDescriptor());
   }
 }

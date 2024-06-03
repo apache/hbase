@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -28,7 +29,6 @@ import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.io.BoundedDelegatingInputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.util.Dictionary;
@@ -77,7 +77,7 @@ public class CompressionContext {
     private final Compression.Algorithm algorithm;
     private Compressor compressor;
     private Decompressor decompressor;
-    private BoundedDelegatingInputStream lowerIn;
+    private WALDecompressionBoundedDelegatingInputStream lowerIn;
     private ByteArrayOutputStream lowerOut;
     private InputStream compressedIn;
     private OutputStream compressedOut;
@@ -108,20 +108,17 @@ public class CompressionContext {
 
     public void decompress(InputStream in, int inLength, byte[] outArray, int outOffset,
       int outLength) throws IOException {
-
       // Our input is a sequence of bounded byte ranges (call them segments), with
       // BoundedDelegatingInputStream providing a way to switch in a new segment when the
       // previous segment has been fully consumed.
 
       // Create the input streams here the first time around.
       if (compressedIn == null) {
-        lowerIn = new BoundedDelegatingInputStream(in, inLength);
+        lowerIn = new WALDecompressionBoundedDelegatingInputStream();
         if (decompressor == null) {
           decompressor = algorithm.getDecompressor();
         }
         compressedIn = algorithm.createDecompressionStream(lowerIn, decompressor, IO_BUFFER_SIZE);
-      } else {
-        lowerIn.setDelegate(in, inLength);
       }
       if (outLength == 0) {
         // The BufferedInputStream will return earlier and skip reading anything if outLength == 0,
@@ -131,8 +128,25 @@ public class CompressionContext {
         // such as data loss when splitting wal or replicating wal.
         IOUtils.skipFully(in, inLength);
       } else {
+        lowerIn.reset(in, inLength);
         IOUtils.readFully(compressedIn, outArray, outOffset, outLength);
+        // if the uncompressed size was larger than the configured buffer size for the codec,
+        // the BlockCompressorStream will have left an extra 4 bytes hanging. This represents a size
+        // for the next segment, and it should be 0. See HBASE-28390
+        if (lowerIn.available() == 4) {
+          int remaining = rawReadInt(lowerIn);
+          assert remaining == 0;
+        }
       }
+    }
+
+    private int rawReadInt(InputStream in) throws IOException {
+      int b1 = in.read();
+      int b2 = in.read();
+      int b3 = in.read();
+      int b4 = in.read();
+      if ((b1 | b2 | b3 | b4) < 0) throw new EOFException();
+      return ((b1 << 24) + (b2 << 16) + (b3 << 8) + (b4 << 0));
     }
 
     public void clear() {

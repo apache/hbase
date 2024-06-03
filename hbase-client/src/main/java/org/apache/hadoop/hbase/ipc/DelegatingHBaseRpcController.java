@@ -143,4 +143,14 @@ public class DelegatingHBaseRpcController implements HBaseRpcController {
     throws IOException {
     delegate.notifyOnCancel(callback, action);
   }
+
+  @Override
+  public void setTableName(TableName tableName) {
+    delegate.setTableName(tableName);
+  }
+
+  @Override
+  public TableName getTableName() {
+    return delegate.getTableName();
+  }
 }

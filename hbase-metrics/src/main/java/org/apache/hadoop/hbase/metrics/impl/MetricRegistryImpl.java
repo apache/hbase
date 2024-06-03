@@ -115,6 +115,11 @@ public class MetricRegistryImpl implements MetricRegistry {
   }
 
   @Override
+  public boolean remove(String name, Metric metric) {
+    return metrics.remove(name, metric);
+  }
+
+  @Override
   public MetricRegistryInfo getMetricRegistryInfo() {
     return info;
   }

@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
+import org.apache.hadoop.hbase.util.IOExceptionRunnable;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -359,7 +360,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
    * replicas to keep up to date with the primary region files.
    */
   private void refreshStoreFilesInternal(Collection<StoreFileInfo> newFiles) throws IOException {
-    Collection<HStoreFile> currentFiles = storeFileManager.getStorefiles();
+    Collection<HStoreFile> currentFiles = storeFileManager.getStoreFiles();
     Collection<HStoreFile> compactedFiles = storeFileManager.getCompactedfiles();
     if (currentFiles == null) {
       currentFiles = Collections.emptySet();
@@ -456,11 +457,6 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
       }
     }
     return committedFiles;
-  }
-
-  @FunctionalInterface
-  public interface IOExceptionRunnable {
-    void run() throws IOException;
   }
 
   /**

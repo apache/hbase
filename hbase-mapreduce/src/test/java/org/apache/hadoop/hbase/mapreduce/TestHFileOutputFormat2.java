@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.apache.hadoop.hbase.client.ConnectionFactory.createAsyncConnection;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_TYPE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -79,6 +78,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.ConnectionRegistry;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Hbck;
 import org.apache.hadoop.hbase.client.Put;
@@ -1668,9 +1668,14 @@ public class TestHFileOutputFormat2 {
     private final Connection delegate;
 
     public ConfigurationCaptorConnection(Configuration conf, ExecutorService es, User user,
-      Map<String, byte[]> connectionAttributes) throws IOException {
+      ConnectionRegistry registry, Map<String, byte[]> connectionAttributes) throws IOException {
+      // here we do not use this registry, so close it...
+      registry.close();
+      // here we use createAsyncConnection, to avoid infinite recursive as we reset the Connection
+      // implementation in below method
       delegate =
-        FutureUtils.get(createAsyncConnection(conf, user, connectionAttributes)).toConnection();
+        FutureUtils.get(ConnectionFactory.createAsyncConnection(conf, user, connectionAttributes))
+          .toConnection();
 
       final String uuid = conf.get(UUID_KEY);
       if (uuid != null) {

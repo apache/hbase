@@ -291,6 +291,7 @@ public class MergeTableRegionsProcedure
           postRollBackMergeRegions(env);
           break;
         case MERGE_TABLE_REGIONS_PREPARE:
+          rollbackPrepareMerge(env);
           break;
         default:
           throw new UnsupportedOperationException(this + " unhandled state=" + state);
@@ -442,7 +443,7 @@ public class MergeTableRegionsProcedure
   private boolean prepareMergeRegion(final MasterProcedureEnv env) throws IOException {
     // Fail if we are taking snapshot for the given table
     TableName tn = regionsToMerge[0].getTable();
-    if (env.getMasterServices().getSnapshotManager().isTakingSnapshot(tn)) {
+    if (env.getMasterServices().getSnapshotManager().isTableTakingAnySnapshot(tn)) {
       throw new MergeRegionException("Skip merging regions "
         + RegionInfo.getShortNameToLog(regionsToMerge) + ", because we are snapshotting " + tn);
     }
@@ -512,6 +513,19 @@ public class MergeTableRegionsProcedure
     GetRegionInfoResponse response =
       AssignmentManagerUtil.getRegionInfoResponse(env, rs.getServerName(), rs.getRegion());
     return response.hasMergeable() && response.getMergeable();
+  }
+
+  /**
+   * Action for rollback a merge table after prepare merge
+   */
+  private void rollbackPrepareMerge(final MasterProcedureEnv env) throws IOException {
+    for (RegionInfo rinfo : regionsToMerge) {
+      RegionStateNode regionStateNode =
+        env.getAssignmentManager().getRegionStates().getRegionStateNode(rinfo);
+      if (regionStateNode.getState() == State.MERGING) {
+        regionStateNode.setState(State.OPEN);
+      }
+    }
   }
 
   /**
@@ -639,8 +653,20 @@ public class MergeTableRegionsProcedure
    * Rollback close regions
    **/
   private void rollbackCloseRegionsForMerge(MasterProcedureEnv env) throws IOException {
-    AssignmentManagerUtil.reopenRegionsForRollback(env, Arrays.asList(regionsToMerge),
-      getRegionReplication(env), getServerName(env));
+    // At this point we should check if region was actually closed. If it was not closed then we
+    // don't need to repoen the region and we can just change the regionNode state to OPEN.
+    // if it is alredy closed then we need to do a reopen of region
+    List<RegionInfo> toAssign = new ArrayList<>();
+    for (RegionInfo rinfo : regionsToMerge) {
+      RegionStateNode regionStateNode =
+        env.getAssignmentManager().getRegionStates().getRegionStateNode(rinfo);
+      if (regionStateNode.getState() != State.MERGING) {
+        // same as before HBASE-28405
+        toAssign.add(rinfo);
+      }
+    }
+    AssignmentManagerUtil.reopenRegionsForRollback(env, toAssign, getRegionReplication(env),
+      getServerName(env));
   }
 
   private TransitRegionStateProcedure[] createUnassignProcedures(MasterProcedureEnv env)

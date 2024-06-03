@@ -245,19 +245,20 @@ public class TestHStoreFile {
     refHsf.initReader();
     // Now confirm that I can read from the reference and that it only gets
     // keys from top half of the file.
-    HFileScanner s = refHsf.getReader().getScanner(false, false);
-    Cell kv = null;
-    for (boolean first = true; (!s.isSeeked() && s.seekTo()) || s.next();) {
-      ByteBuffer bb = ByteBuffer.wrap(((KeyValue) s.getKey()).getKey());
-      kv = KeyValueUtil.createKeyValueFromKey(bb);
-      if (first) {
-        assertTrue(Bytes.equals(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), midRow, 0,
-          midRow.length));
-        first = false;
+    try (HFileScanner s = refHsf.getReader().getScanner(false, false, false)) {
+      Cell kv = null;
+      for (boolean first = true; (!s.isSeeked() && s.seekTo()) || s.next();) {
+        ByteBuffer bb = ByteBuffer.wrap(((KeyValue) s.getKey()).getKey());
+        kv = KeyValueUtil.createKeyValueFromKey(bb);
+        if (first) {
+          assertTrue(Bytes.equals(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), midRow, 0,
+            midRow.length));
+          first = false;
+        }
       }
+      assertTrue(Bytes.equals(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), finalRow, 0,
+        finalRow.length));
     }
-    assertTrue(Bytes.equals(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), finalRow, 0,
-      finalRow.length));
   }
 
   @Test
@@ -280,7 +281,7 @@ public class TestHStoreFile {
     StoreFileReader r = file.getReader();
     assertNotNull(r);
     StoreFileScanner scanner =
-      new StoreFileScanner(r, mock(HFileScanner.class), false, false, 0, 0, false);
+      new StoreFileScanner(r, mock(HFileScanner.class), false, false, 0, 0, false, false);
 
     // Verify after instantiating scanner refCount is increased
     assertTrue("Verify file is being referenced", file.isReferencedInReads());
@@ -297,7 +298,7 @@ public class TestHStoreFile {
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.of(cf);
     when(store.getColumnFamilyDescriptor()).thenReturn(cfd);
     try (StoreFileScanner scanner =
-      new StoreFileScanner(reader, mock(HFileScanner.class), false, false, 0, 0, true)) {
+      new StoreFileScanner(reader, mock(HFileScanner.class), false, false, 0, 0, true, false)) {
       Scan scan = new Scan();
       scan.setColumnFamilyTimeRange(cf, 0, 1);
       assertFalse(scanner.shouldUseScanner(scan, store, 0));
@@ -333,11 +334,12 @@ public class TestHStoreFile {
     hsf.initReader();
 
     // Now confirm that I can read from the link
-    int count = 1;
-    HFileScanner s = hsf.getReader().getScanner(false, false);
-    s.seekTo();
-    while (s.next()) {
-      count++;
+    int count = 0;
+    try (StoreFileScanner scanner = hsf.getPreadScanner(false, Long.MAX_VALUE, 0, false)) {
+      scanner.seek(KeyValue.LOWESTKEY);
+      while (scanner.next() != null) {
+        count++;
+      }
     }
     assertEquals((LAST_CHAR - FIRST_CHAR + 1) * (LAST_CHAR - FIRST_CHAR + 1), count);
   }
@@ -395,26 +397,25 @@ public class TestHStoreFile {
     hsfA.initReader();
 
     // Now confirm that I can read from the ref to link
-    int count = 1;
-    HFileScanner s = hsfA.getReader().getScanner(false, false);
-    s.seekTo();
-    while (s.next()) {
-      count++;
+    int count = 0;
+    try (StoreFileScanner scanner = hsfA.getPreadScanner(false, Long.MAX_VALUE, 0, false)) {
+      scanner.seek(KeyValue.LOWESTKEY);
+      while (scanner.next() != null) {
+        count++;
+      }
+      assertTrue(count > 0); // read some rows here
     }
-    assertTrue(count > 0); // read some rows here
 
     // Try to open store file from link
     HStoreFile hsfB = new HStoreFile(this.fs, pathB, testConf, cacheConf, BloomType.NONE, true);
     hsfB.initReader();
 
     // Now confirm that I can read from the ref to link
-    HFileScanner sB = hsfB.getReader().getScanner(false, false);
-    sB.seekTo();
-
-    // count++ as seekTo() will advance the scanner
-    count++;
-    while (sB.next()) {
-      count++;
+    try (StoreFileScanner scanner = hsfB.getPreadScanner(false, Long.MAX_VALUE, 0, false)) {
+      scanner.seek(KeyValue.LOWESTKEY);
+      while (scanner.next() != null) {
+        count++;
+      }
     }
 
     // read the rest of the rows
@@ -454,39 +455,41 @@ public class TestHStoreFile {
       // Now test reading from the top.
       boolean first = true;
       ByteBuffer key = null;
-      HFileScanner topScanner = top.getScanner(false, false);
-      while (
-        (!topScanner.isSeeked() && topScanner.seekTo())
-          || (topScanner.isSeeked() && topScanner.next())
-      ) {
-        key = ByteBuffer.wrap(((KeyValue) topScanner.getKey()).getKey());
-
-        if (
-          (PrivateCellUtil.compare(topScanner.getReader().getComparator(), midKV, key.array(),
-            key.arrayOffset(), key.limit())) > 0
+      try (HFileScanner topScanner = top.getScanner(false, false, false)) {
+        while (
+          (!topScanner.isSeeked() && topScanner.seekTo())
+            || (topScanner.isSeeked() && topScanner.next())
         ) {
-          fail("key=" + Bytes.toStringBinary(key) + " < midkey=" + midkey);
-        }
-        if (first) {
-          first = false;
-          LOG.info("First in top: " + Bytes.toString(Bytes.toBytes(key)));
+          key = ByteBuffer.wrap(((KeyValue) topScanner.getKey()).getKey());
+
+          if (
+            (PrivateCellUtil.compare(topScanner.getReader().getComparator(), midKV, key.array(),
+              key.arrayOffset(), key.limit())) > 0
+          ) {
+            fail("key=" + Bytes.toStringBinary(key) + " < midkey=" + midkey);
+          }
+          if (first) {
+            first = false;
+            LOG.info("First in top: " + Bytes.toString(Bytes.toBytes(key)));
+          }
         }
       }
       LOG.info("Last in top: " + Bytes.toString(Bytes.toBytes(key)));
 
       first = true;
-      HFileScanner bottomScanner = bottom.getScanner(false, false);
-      while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) || bottomScanner.next()) {
-        previous = ByteBuffer.wrap(((KeyValue) bottomScanner.getKey()).getKey());
-        key = ByteBuffer.wrap(((KeyValue) bottomScanner.getKey()).getKey());
-        if (first) {
-          first = false;
-          LOG.info("First in bottom: " + Bytes.toString(Bytes.toBytes(previous)));
+      try (HFileScanner bottomScanner = bottom.getScanner(false, false, false)) {
+        while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) || bottomScanner.next()) {
+          previous = ByteBuffer.wrap(((KeyValue) bottomScanner.getKey()).getKey());
+          key = ByteBuffer.wrap(((KeyValue) bottomScanner.getKey()).getKey());
+          if (first) {
+            first = false;
+            LOG.info("First in bottom: " + Bytes.toString(Bytes.toBytes(previous)));
+          }
+          assertTrue(key.compareTo(bbMidkeyBytes) < 0);
         }
-        assertTrue(key.compareTo(bbMidkeyBytes) < 0);
-      }
-      if (previous != null) {
-        LOG.info("Last in bottom: " + Bytes.toString(Bytes.toBytes(previous)));
+        if (previous != null) {
+          LOG.info("Last in bottom: " + Bytes.toString(Bytes.toBytes(previous)));
+        }
       }
       // Remove references.
       regionFs.cleanupDaughterRegion(topHri);
@@ -507,29 +510,31 @@ public class TestHStoreFile {
       top = topF.getReader();
       // Now read from the top.
       first = true;
-      topScanner = top.getScanner(false, false);
-      KeyValue.KeyOnlyKeyValue keyOnlyKV = new KeyValue.KeyOnlyKeyValue();
-      while ((!topScanner.isSeeked() && topScanner.seekTo()) || topScanner.next()) {
-        key = ByteBuffer.wrap(((KeyValue) topScanner.getKey()).getKey());
-        keyOnlyKV.setKey(key.array(), 0 + key.arrayOffset(), key.limit());
-        assertTrue(PrivateCellUtil.compare(topScanner.getReader().getComparator(), keyOnlyKV,
-          badmidkey, 0, badmidkey.length) >= 0);
-        if (first) {
-          first = false;
-          KeyValue keyKV = KeyValueUtil.createKeyValueFromKey(key);
-          LOG.info("First top when key < bottom: " + keyKV);
-          String tmp =
-            Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength());
-          for (int i = 0; i < tmp.length(); i++) {
-            assertTrue(tmp.charAt(i) == 'a');
+      try (HFileScanner topScanner = top.getScanner(false, false, false)) {
+        KeyValue.KeyOnlyKeyValue keyOnlyKV = new KeyValue.KeyOnlyKeyValue();
+        while ((!topScanner.isSeeked() && topScanner.seekTo()) || topScanner.next()) {
+          key = ByteBuffer.wrap(((KeyValue) topScanner.getKey()).getKey());
+          keyOnlyKV.setKey(key.array(), 0 + key.arrayOffset(), key.limit());
+          assertTrue(PrivateCellUtil.compare(topScanner.getReader().getComparator(), keyOnlyKV,
+            badmidkey, 0, badmidkey.length) >= 0);
+          if (first) {
+            first = false;
+            KeyValue keyKV = KeyValueUtil.createKeyValueFromKey(key);
+            LOG.info("First top when key < bottom: " + keyKV);
+            String tmp =
+              Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength());
+            for (int i = 0; i < tmp.length(); i++) {
+              assertTrue(tmp.charAt(i) == 'a');
+            }
           }
         }
-      }
-      KeyValue keyKV = KeyValueUtil.createKeyValueFromKey(key);
-      LOG.info("Last top when key < bottom: " + keyKV);
-      String tmp = Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength());
-      for (int i = 0; i < tmp.length(); i++) {
-        assertTrue(tmp.charAt(i) == 'z');
+        KeyValue keyKV = KeyValueUtil.createKeyValueFromKey(key);
+        LOG.info("Last top when key < bottom: " + keyKV);
+        String tmp =
+          Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength());
+        for (int i = 0; i < tmp.length(); i++) {
+          assertTrue(tmp.charAt(i) == 'z');
+        }
       }
       // Remove references.
       regionFs.cleanupDaughterRegion(topHri);
@@ -545,25 +550,28 @@ public class TestHStoreFile {
       bottomF.initReader();
       bottom = bottomF.getReader();
       first = true;
-      bottomScanner = bottom.getScanner(false, false);
-      while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) || bottomScanner.next()) {
-        key = ByteBuffer.wrap(((KeyValue) bottomScanner.getKey()).getKey());
-        if (first) {
-          first = false;
-          keyKV = KeyValueUtil.createKeyValueFromKey(key);
-          LOG.info("First bottom when key > top: " + keyKV);
-          tmp = Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength());
-          for (int i = 0; i < tmp.length(); i++) {
-            assertTrue(tmp.charAt(i) == 'a');
+      try (HFileScanner bottomScanner = bottom.getScanner(false, false, false)) {
+        while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) || bottomScanner.next()) {
+          key = ByteBuffer.wrap(((KeyValue) bottomScanner.getKey()).getKey());
+          if (first) {
+            first = false;
+            KeyValue keyKV = KeyValueUtil.createKeyValueFromKey(key);
+            LOG.info("First bottom when key > top: " + keyKV);
+            String tmp =
+              Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength());
+            for (int i = 0; i < tmp.length(); i++) {
+              assertTrue(tmp.charAt(i) == 'a');
+            }
           }
         }
-      }
-      keyKV = KeyValueUtil.createKeyValueFromKey(key);
-      LOG.info("Last bottom when key > top: " + keyKV);
-      for (int i = 0; i < tmp.length(); i++) {
-        assertTrue(
-          Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength()).charAt(i)
-              == 'z');
+        KeyValue keyKV = KeyValueUtil.createKeyValueFromKey(key);
+        LOG.info("Last bottom when key > top: " + keyKV);
+        String tmp =
+          Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength());
+        for (int i = 0; i < tmp.length(); i++) {
+          assertTrue(Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength())
+            .charAt(i) == 'z');
+        }
       }
     } finally {
       if (top != null) {

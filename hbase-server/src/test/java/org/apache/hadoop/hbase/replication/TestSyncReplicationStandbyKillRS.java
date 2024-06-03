@@ -21,6 +21,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.fs.Path;
@@ -71,7 +72,7 @@ public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
     Thread t = new Thread(() -> {
       try {
         List<JVMClusterUtil.RegionServerThread> regionServers =
-          UTIL2.getMiniHBaseCluster().getLiveRegionServerThreads();
+          new ArrayList<>(UTIL2.getMiniHBaseCluster().getLiveRegionServerThreads());
         LOG.debug("Going to stop {} RSes: [{}]", regionServers.size(),
           regionServers.stream().map(rst -> rst.getRegionServer().getServerName().getServerName())
             .collect(Collectors.joining(", ")));

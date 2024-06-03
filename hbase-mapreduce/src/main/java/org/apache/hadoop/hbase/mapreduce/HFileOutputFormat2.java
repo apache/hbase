@@ -86,8 +86,8 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -162,10 +162,10 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
 
   /**
    * ExtendedCell and ExtendedCellSerialization are InterfaceAudience.Private. We expose this config
-   * package-private for internal usage for jobs like WALPlayer which need to use features of
-   * ExtendedCell.
+   * for internal usage in jobs like WALPlayer which need to use features of ExtendedCell.
    */
-  static final String EXTENDED_CELL_SERIALIZATION_ENABLED_KEY =
+  @InterfaceAudience.Private
+  public static final String EXTENDED_CELL_SERIALIZATION_ENABLED_KEY =
     "hbase.mapreduce.hfileoutputformat.extendedcell.enabled";
   static final boolean EXTENDED_CELL_SERIALIZATION_ENABLED_DEFULT = false;
 
@@ -194,7 +194,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     final TaskAttemptContext context, final OutputCommitter committer) throws IOException {
 
     // Get the path of the temporary output file
-    final Path outputDir = ((FileOutputCommitter) committer).getWorkPath();
+    final Path outputDir = ((PathOutputCommitter) committer).getWorkPath();
     final Configuration conf = context.getConfiguration();
     final boolean writeMultipleTables =
       conf.getBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY, false);

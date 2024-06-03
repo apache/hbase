@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
@@ -243,7 +245,8 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
     @Override
     protected Flow executeFromState(MasterProcedureEnv env,
-      MasterProcedureProtos.CreateTableState state) throws InterruptedException {
+      MasterProcedureProtos.CreateTableState state)
+      throws InterruptedException, ProcedureSuspendedException {
 
       if (
         !failOnce && state == MasterProcedureProtos.CreateTableState.CREATE_TABLE_WRITE_FS_LAYOUT
@@ -283,5 +286,33 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     long procId = ProcedureTestingUtility.submitAndWait(procExec,
       new CreateTableProcedureOnHDFSFailure(procExec.getEnvironment(), htd, regions));
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+  }
+
+  @Test
+  public void testCreateTableWithManyRegionReplication() throws IOException {
+    final int EXCEED_MAX_REGION_REPLICATION = 0x10001;
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    TableDescriptor tableWithManyRegionReplication = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
+      .setRegionReplication(EXCEED_MAX_REGION_REPLICATION).build();
+    RegionInfo[] regions01 =
+      ModifyRegionUtils.createRegionInfos(tableWithManyRegionReplication, null);
+    long procId01 = ProcedureTestingUtility.submitAndWait(procExec, new CreateTableProcedure(
+      procExec.getEnvironment(), tableWithManyRegionReplication, regions01));
+    Procedure<?> result01 = procExec.getResult(procId01);
+    assertTrue(result01.getException().getCause() instanceof IllegalArgumentException);
+    assertFalse(UTIL.getAdmin().tableExists(tableName));
+
+    TableDescriptor tdesc = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
+      .build();
+    RegionInfo[] regions02 = ModifyRegionUtils.createRegionInfos(tdesc, null);
+    long procId02 = ProcedureTestingUtility.submitAndWait(procExec,
+      new CreateTableProcedure(procExec.getEnvironment(), tdesc, regions02));
+    Procedure<?> result02 = procExec.getResult(procId02);
+    assertTrue(result02.isSuccess());
+    assertTrue(UTIL.getAdmin().tableExists(tableName));
   }
 }

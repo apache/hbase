@@ -63,6 +63,10 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-openssl</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
     </dependency>
     <dependency>
@@ -158,10 +162,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-examples</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-zookeeper</artifactId>
     </dependency>
     <dependency>
@@ -183,10 +183,6 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-compression-snappy</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-compression-xz</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>

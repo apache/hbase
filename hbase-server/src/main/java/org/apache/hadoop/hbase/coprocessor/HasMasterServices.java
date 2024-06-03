@@ -24,8 +24,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Mark a class that it has a MasterServices accessor. Temporary hack until core Coprocesssors are
  * integrated.
  * @see CoreCoprocessor
- * @deprecated Since 2.0.0 to be removed in 3.0.0. The hope is that by 3.0.0 we will not need this
- *             facility as CoreCoprocessors are integated into core.
+ * @deprecated Since 2.0.0 to be removed in 4.0.0. The hope was that by 3.0.0 we will not need this
+ *             facility as CoreCoprocessors are integated into core but we failed, so delay the
+ *             removal to 4.0.0.
  */
 @Deprecated
 @InterfaceAudience.Private

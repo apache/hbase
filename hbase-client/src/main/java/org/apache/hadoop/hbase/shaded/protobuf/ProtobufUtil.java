@@ -127,6 +127,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
+import org.apache.hadoop.hbase.util.ReflectedFunctionCache;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -153,6 +154,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -302,6 +305,23 @@ public final class ProtobufUtil {
 
   public static boolean isClassLoaderLoaded() {
     return classLoaderLoaded;
+  }
+
+  private static final String PARSE_FROM = "parseFrom";
+
+  // We don't bother using the dynamic CLASS_LOADER above, because currently we can't support
+  // optimizing dynamically loaded classes. We can do it once we build for java9+, see the todo
+  // in ReflectedFunctionCache
+  private static final ReflectedFunctionCache<byte[], Filter> FILTERS =
+    new ReflectedFunctionCache<>(Filter.class, byte[].class, PARSE_FROM);
+  private static final ReflectedFunctionCache<byte[], ByteArrayComparable> COMPARATORS =
+    new ReflectedFunctionCache<>(ByteArrayComparable.class, byte[].class, PARSE_FROM);
+
+  private static volatile boolean ALLOW_FAST_REFLECTION_FALLTHROUGH = true;
+
+  // Visible for tests
+  public static void setAllowFastReflectionFallthrough(boolean val) {
+    ALLOW_FAST_REFLECTION_FALLTHROUGH = val;
   }
 
   /**
@@ -1552,13 +1572,23 @@ public final class ProtobufUtil {
   public static ByteArrayComparable toComparator(ComparatorProtos.Comparator proto)
     throws IOException {
     String type = proto.getName();
-    String funcName = "parseFrom";
     byte[] value = proto.getSerializedComparator().toByteArray();
+
     try {
+      ByteArrayComparable result = COMPARATORS.getAndCallByName(type, value);
+      if (result != null) {
+        return result;
+      }
+
+      if (!ALLOW_FAST_REFLECTION_FALLTHROUGH) {
+        throw new IllegalStateException("Failed to deserialize comparator " + type
+          + " because fast reflection returned null and fallthrough is disabled");
+      }
+
       Class<?> c = Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
-      Method parseFrom = c.getMethod(funcName, byte[].class);
+      Method parseFrom = c.getMethod(PARSE_FROM, byte[].class);
       if (parseFrom == null) {
-        throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
+        throw new IOException("Unable to locate function: " + PARSE_FROM + " in type: " + type);
       }
       return (ByteArrayComparable) parseFrom.invoke(null, value);
     } catch (Exception e) {
@@ -1575,12 +1605,22 @@ public final class ProtobufUtil {
   public static Filter toFilter(FilterProtos.Filter proto) throws IOException {
     String type = proto.getName();
     final byte[] value = proto.getSerializedFilter().toByteArray();
-    String funcName = "parseFrom";
+
     try {
+      Filter result = FILTERS.getAndCallByName(type, value);
+      if (result != null) {
+        return result;
+      }
+
+      if (!ALLOW_FAST_REFLECTION_FALLTHROUGH) {
+        throw new IllegalStateException("Failed to deserialize comparator " + type
+          + " because fast reflection returned null and fallthrough is disabled");
+      }
+
       Class<?> c = Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
-      Method parseFrom = c.getMethod(funcName, byte[].class);
+      Method parseFrom = c.getMethod(PARSE_FROM, byte[].class);
       if (parseFrom == null) {
-        throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
+        throw new IOException("Unable to locate function: " + PARSE_FROM + " in type: " + type);
       }
       return (Filter) parseFrom.invoke(c, value);
     } catch (Exception e) {
@@ -1778,6 +1818,21 @@ public final class ProtobufUtil {
       throw getRemoteException(se);
     }
     return getRegionInfos(response);
+  }
+
+  /**
+   * Get the list of cached files
+   */
+  public static List<String> getCachedFilesList(final RpcController controller,
+    final AdminService.BlockingInterface admin) throws IOException {
+    GetCachedFilesListRequest request = GetCachedFilesListRequest.newBuilder().build();
+    GetCachedFilesListResponse response = null;
+    try {
+      response = admin.getCachedFilesList(controller, request);
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+    return new ArrayList<>(response.getCachedFilesList());
   }
 
   /**
@@ -2194,6 +2249,25 @@ public final class ProtobufUtil {
     }
     String params = message.getClass().toString();
     return new SlowLogParams(params);
+  }
+
+  /**
+   * Convert a list of NameBytesPair to a more readable CSV
+   */
+  public static String convertAttributesToCsv(List<NameBytesPair> attributes) {
+    if (attributes.isEmpty()) {
+      return HConstants.EMPTY_STRING;
+    }
+    return deserializeAttributes(convertNameBytesPairsToMap(attributes)).entrySet().stream()
+      .map(entry -> entry.getKey() + " = " + entry.getValue()).collect(Collectors.joining(", "));
+  }
+
+  /**
+   * Convert a map of byte array attributes to a more readable map of binary string representations
+   */
+  public static Map<String, String> deserializeAttributes(Map<String, byte[]> attributes) {
+    return attributes.entrySet().stream().collect(
+      Collectors.toMap(Map.Entry::getKey, entry -> Bytes.toStringBinary(entry.getValue())));
   }
 
   /**
@@ -3107,7 +3181,7 @@ public final class ProtobufUtil {
       int prefixLen = ProtobufMagic.lengthOfPBMagic();
       try {
         ZooKeeperProtos.Master rss =
-          ZooKeeperProtos.Master.PARSER.parseFrom(data, prefixLen, data.length - prefixLen);
+          ZooKeeperProtos.Master.parser().parseFrom(data, prefixLen, data.length - prefixLen);
         org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName sn =
           rss.getMaster();
         return ServerName.valueOf(sn.getHostName(), sn.getPort(), sn.getStartCode());
@@ -3388,8 +3462,12 @@ public final class ProtobufUtil {
         .setQueueTime(slowLogPayload.getQueueTime()).setRegionName(slowLogPayload.getRegionName())
         .setResponseSize(slowLogPayload.getResponseSize())
         .setBlockBytesScanned(slowLogPayload.getBlockBytesScanned())
+        .setFsReadTime(slowLogPayload.getFsReadTime())
         .setServerClass(slowLogPayload.getServerClass()).setStartTime(slowLogPayload.getStartTime())
-        .setUserName(slowLogPayload.getUserName());
+        .setUserName(slowLogPayload.getUserName())
+        .setRequestAttributes(convertNameBytesPairsToMap(slowLogPayload.getRequestAttributeList()))
+        .setConnectionAttributes(
+          convertNameBytesPairsToMap(slowLogPayload.getConnectionAttributeList()));
     if (slowLogPayload.hasScan()) {
       try {
         onlineLogRecord.setScan(ProtobufUtil.toScan(slowLogPayload.getScan()));
@@ -3398,6 +3476,12 @@ public final class ProtobufUtil {
       }
     }
     return onlineLogRecord.build();
+  }
+
+  private static Map<String, byte[]>
+    convertNameBytesPairsToMap(List<NameBytesPair> nameBytesPairs) {
+    return nameBytesPairs.stream().collect(Collectors.toMap(NameBytesPair::getName,
+      nameBytesPair -> nameBytesPair.getValue().toByteArray()));
   }
 
   /**

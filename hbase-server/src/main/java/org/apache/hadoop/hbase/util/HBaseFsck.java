@@ -2572,6 +2572,11 @@ public class HBaseFsck extends Configured implements Closeable {
 
   private void checkAndFixReplication() throws ReplicationException, IOException {
     ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
+
+    if (!checker.checkHasDataInQueues()) {
+      return;
+    }
+
     checker.checkUnDeletedQueues();
 
     if (checker.hasUnDeletedQueues() && this.fixReplication) {

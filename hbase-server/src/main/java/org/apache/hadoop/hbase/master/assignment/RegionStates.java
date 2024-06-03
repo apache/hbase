@@ -405,7 +405,7 @@ public class RegionStates {
   // ============================================================================================
 
   private void setServerState(ServerName serverName, ServerState state) {
-    ServerStateNode serverNode = getOrCreateServer(serverName);
+    ServerStateNode serverNode = getServerNode(serverName);
     synchronized (serverNode) {
       serverNode.setState(state);
     }
@@ -746,18 +746,16 @@ public class RegionStates {
   // ==========================================================================
 
   /**
-   * Be judicious calling this method. Do it on server register ONLY otherwise you could mess up
-   * online server accounting. TOOD: Review usage and convert to {@link #getServerNode(ServerName)}
-   * where we can.
+   * Create the ServerStateNode when registering a new region server
    */
-  public ServerStateNode getOrCreateServer(final ServerName serverName) {
-    return serverMap.computeIfAbsent(serverName, key -> new ServerStateNode(key));
+  public void createServer(ServerName serverName) {
+    serverMap.computeIfAbsent(serverName, key -> new ServerStateNode(key));
   }
 
   /**
    * Called by SCP at end of successful processing.
    */
-  public void removeServer(final ServerName serverName) {
+  public void removeServer(ServerName serverName) {
     serverMap.remove(serverName);
   }
 
@@ -776,17 +774,24 @@ public class RegionStates {
     return numServers == 0 ? 0.0 : (double) totalLoad / (double) numServers;
   }
 
-  public ServerStateNode addRegionToServer(final RegionStateNode regionNode) {
-    ServerStateNode serverNode = getOrCreateServer(regionNode.getRegionLocation());
+  public void addRegionToServer(final RegionStateNode regionNode) {
+    ServerStateNode serverNode = getServerNode(regionNode.getRegionLocation());
     serverNode.addRegion(regionNode);
-    return serverNode;
   }
 
-  public ServerStateNode removeRegionFromServer(final ServerName serverName,
+  public void removeRegionFromServer(final ServerName serverName,
     final RegionStateNode regionNode) {
-    ServerStateNode serverNode = getOrCreateServer(serverName);
-    serverNode.removeRegion(regionNode);
-    return serverNode;
+    ServerStateNode serverNode = getServerNode(serverName);
+    // here the server node could be null. For example, if there is already a TRSP for a region and
+    // at the same time, the target server is crashed and there is a SCP. The SCP will interrupt the
+    // TRSP and the TRSP will first set the region as abnormally closed and remove it from the
+    // server node. But here, this TRSP is not a child procedure of the SCP, so it is possible that
+    // the SCP finishes, thus removes the server node for this region server, before the TRSP wakes
+    // up and enter here to remove the region node from the server node, then we will get a null
+    // server node here.
+    if (serverNode != null) {
+      serverNode.removeRegion(regionNode);
+    }
   }
 
   // ==========================================================================

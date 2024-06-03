@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
@@ -583,6 +584,46 @@ public interface MasterObserver {
    */
   default void preSplitRegionAction(final ObserverContext<MasterCoprocessorEnvironment> c,
     final TableName tableName, final byte[] splitRow) throws IOException {
+  }
+
+  /**
+   * Called before the region is truncated.
+   * @param c          The environment to interact with the framework and master
+   * @param regionInfo The Region being truncated
+   */
+  @SuppressWarnings("unused")
+  default void preTruncateRegionAction(final ObserverContext<MasterCoprocessorEnvironment> c,
+    final RegionInfo regionInfo) {
+  }
+
+  /**
+   * Called before the truncate region procedure is called.
+   * @param c          The environment to interact with the framework and master
+   * @param regionInfo The Region being truncated
+   */
+  @SuppressWarnings("unused")
+  default void preTruncateRegion(final ObserverContext<MasterCoprocessorEnvironment> c,
+    RegionInfo regionInfo) {
+  }
+
+  /**
+   * Called after the truncate region procedure is called.
+   * @param c          The environment to interact with the framework and master
+   * @param regionInfo The Region being truncated
+   */
+  @SuppressWarnings("unused")
+  default void postTruncateRegion(final ObserverContext<MasterCoprocessorEnvironment> c,
+    RegionInfo regionInfo) {
+  }
+
+  /**
+   * Called post the region is truncated.
+   * @param c          The environment to interact with the framework and master
+   * @param regionInfo The Region To be truncated
+   */
+  @SuppressWarnings("unused")
+  default void postTruncateRegionAction(final ObserverContext<MasterCoprocessorEnvironment> c,
+    final RegionInfo regionInfo) {
   }
 
   /**
@@ -1832,5 +1873,25 @@ public interface MasterObserver {
    */
   default void postHasUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
     String userName, List<Permission> permissions) throws IOException {
+  }
+
+  /**
+   * Called before reloading the HMaster's {@link Configuration} from disk
+   * @param ctx           the coprocessor instance's environment
+   * @param preReloadConf the {@link Configuration} in use prior to reload
+   * @throws IOException if you need to signal an IO error
+   */
+  default void preUpdateMasterConfiguration(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    Configuration preReloadConf) throws IOException {
+  }
+
+  /**
+   * Called after reloading the HMaster's {@link Configuration} from disk
+   * @param ctx            the coprocessor instance's environment
+   * @param postReloadConf the {@link Configuration} that was loaded
+   * @throws IOException if you need to signal an IO error
+   */
+  default void postUpdateMasterConfiguration(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    Configuration postReloadConf) throws IOException {
   }
 }

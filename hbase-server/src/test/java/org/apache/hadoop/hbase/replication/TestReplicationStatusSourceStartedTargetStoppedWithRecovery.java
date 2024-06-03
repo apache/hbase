@@ -46,7 +46,10 @@ public class TestReplicationStatusSourceStartedTargetStoppedWithRecovery
 
   @Test
   public void testReplicationStatusSourceStartedTargetStoppedWithRecovery() throws Exception {
-    UTIL2.shutdownMiniHBaseCluster();
+    // stop all region servers, we need to keep the master up as the below assertions need to get
+    // cluster id from remote cluster, if master is also down, we can not get any information from
+    // the remote cluster after source cluster restarts
+    stopAllRegionServers(UTIL2);
     // add some values to cluster 1
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));

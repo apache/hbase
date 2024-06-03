@@ -80,6 +80,7 @@ public class TestHBaseInterClusterReplicationEndpointFilterEdits {
     ReplicationPeerConfig rpc = mock(ReplicationPeerConfig.class);
     when(rpc.isSerial()).thenReturn(false);
     when(replicationPeer.getPeerConfig()).thenReturn(rpc);
+    when(rpc.getClusterKey()).thenReturn("hbase+zk://localhost:2181");
     Context context = new Context(null, UTIL.getConfiguration(), UTIL.getConfiguration(), null,
       null, null, replicationPeer, null, null, null);
     endpoint = new HBaseInterClusterReplicationEndpoint();

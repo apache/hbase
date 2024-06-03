@@ -146,6 +146,7 @@ import org.apache.hadoop.hbase.master.http.MasterDumpServlet;
 import org.apache.hadoop.hbase.master.http.MasterRedirectServlet;
 import org.apache.hadoop.hbase.master.http.MasterStatusServlet;
 import org.apache.hadoop.hbase.master.http.api_v1.ResourceConfigFactory;
+import org.apache.hadoop.hbase.master.http.hbck.HbckConfigFactory;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.migrate.RollingUpgradeChore;
@@ -169,6 +170,7 @@ import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.master.procedure.TruncateRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
@@ -457,6 +459,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private SpaceQuotaSnapshotNotifier spaceQuotaSnapshotNotifier;
   private QuotaObserverChore quotaObserverChore;
   private SnapshotQuotaObserverChore snapshotQuotaChore;
+  private OldWALsDirSizeChore oldWALsDirSizeChore;
 
   private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
   private ProcedureStore procedureStore;
@@ -544,7 +547,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         HConstants.DEFAULT_HBASE_MASTER_BALANCER_MAX_RIT_PERCENT);
 
       // Do we publish the status?
-
       boolean shouldPublish =
         conf.getBoolean(HConstants.STATUS_PUBLISHED, HConstants.STATUS_PUBLISHED_DEFAULT);
       Class<? extends ClusterStatusPublisher.Publisher> publisherClass =
@@ -722,6 +724,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return rpcServices;
   }
 
+  @Override
+  protected MasterCoprocessorHost getCoprocessorHost() {
+    return getMasterCoprocessorHost();
+  }
+
   public boolean balanceSwitch(final boolean b) throws IOException {
     return getMasterRpcServices().switchBalancer(b, BalanceSwitchMode.ASYNC);
   }
@@ -754,12 +761,18 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   protected void configureInfoServer(InfoServer infoServer) {
     infoServer.addUnprivilegedServlet("master-status", "/master-status", MasterStatusServlet.class);
     infoServer.addUnprivilegedServlet("api_v1", "/api/v1/*", buildApiV1Servlet());
+    infoServer.addUnprivilegedServlet("hbck", "/hbck/*", buildHbckServlet());
 
     infoServer.setAttribute(MASTER, this);
   }
 
   private ServletHolder buildApiV1Servlet() {
     final ResourceConfig config = ResourceConfigFactory.createResourceConfig(conf, this);
+    return new ServletHolder(new ServletContainer(config));
+  }
+
+  private ServletHolder buildHbckServlet() {
+    final ResourceConfig config = HbckConfigFactory.createResourceConfig(conf, this);
     return new ServletHolder(new ServletContainer(config));
   }
 
@@ -990,7 +1003,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     masterRegion = MasterRegionFactory.create(this);
     rsListStorage = new MasterRegionServerList(masterRegion, this);
 
+    // Initialize the ServerManager and register it as a configuration observer
     this.serverManager = createServerManager(this, rsListStorage);
+    this.configurationManager.registerObserver(this.serverManager);
+
     this.syncReplicationReplayWALManager = new SyncReplicationReplayWALManager(this);
     if (
       !conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)
@@ -1163,7 +1179,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           procedureExecutor.submitProcedure(new ModifyTableProcedure(
             procedureExecutor.getEnvironment(), TableDescriptorBuilder.newBuilder(metaDesc)
               .setRegionReplication(replicasNumInConf).build(),
-            null, metaDesc, false));
+            null, metaDesc, false, true));
         }
       }
     }
@@ -1361,7 +1377,27 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     this.rollingUpgradeChore = new RollingUpgradeChore(this);
     getChoreService().scheduleChore(rollingUpgradeChore);
+
+    this.oldWALsDirSizeChore = new OldWALsDirSizeChore(this);
+    getChoreService().scheduleChore(this.oldWALsDirSizeChore);
+
     status.markComplete("Progress after master initialized complete");
+  }
+
+  /**
+   * Used for testing only to set Mock objects.
+   * @param hbckChore hbckChore
+   */
+  public void setHbckChoreForTesting(HbckChore hbckChore) {
+    this.hbckChore = hbckChore;
+  }
+
+  /**
+   * Used for testing only to set Mock objects.
+   * @param catalogJanitorChore catalogJanitorChore
+   */
+  public void setCatalogJanitorChoreForTesting(CatalogJanitor catalogJanitorChore) {
+    this.catalogJanitorChore = catalogJanitorChore;
   }
 
   private void createMissingCFsInMetaDuringUpgrade(TableDescriptor metaDescriptor)
@@ -1412,7 +1448,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     RetryCounter rc = null;
     while (!isStopped()) {
       RegionState rs = this.assignmentManager.getRegionStates().getRegionState(ri);
-      if (rs.isOpened()) {
+      if (rs != null && rs.isOpened()) {
         if (this.getServerManager().isServerOnline(rs.getServerName())) {
           return true;
         }
@@ -1893,6 +1929,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     shutdownChore(hbckChore);
     shutdownChore(regionsRecoveryChore);
     shutdownChore(rollingUpgradeChore);
+    shutdownChore(oldWALsDirSizeChore);
   }
 
   /** Returns Get remote side's InetAddress */
@@ -2568,6 +2605,36 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   @Override
+  public long truncateRegion(final RegionInfo regionInfo, final long nonceGroup, final long nonce)
+    throws IOException {
+    checkInitialized();
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          getMaster().getMasterCoprocessorHost().preTruncateRegion(regionInfo);
+
+          LOG.info(
+            getClientIdAuditPrefix() + " truncate region " + regionInfo.getRegionNameAsString());
+
+          // Execute the operation asynchronously
+          ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
+          submitProcedure(
+            new TruncateRegionProcedure(procedureExecutor.getEnvironment(), regionInfo, latch));
+          latch.await();
+
+          getMaster().getMasterCoprocessorHost().postTruncateRegion(regionInfo);
+        }
+
+        @Override
+        protected String getDescription() {
+          return "TruncateRegionProcedure";
+        }
+      });
+  }
+
+  @Override
   public long addColumn(final TableName tableName, final ColumnFamilyDescriptor column,
     final long nonceGroup, final long nonce) throws IOException {
     checkInitialized();
@@ -2684,16 +2751,20 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           MasterQuotaManager quotaManager = getMasterQuotaManager();
           if (quotaManager != null) {
             if (quotaManager.isQuotaInitialized()) {
-              SpaceQuotaSnapshot currSnapshotOfTable =
-                QuotaTableUtil.getCurrentSnapshotFromQuotaTable(getConnection(), tableName);
-              if (currSnapshotOfTable != null) {
-                SpaceQuotaStatus quotaStatus = currSnapshotOfTable.getQuotaStatus();
-                if (
-                  quotaStatus.isInViolation()
-                    && SpaceViolationPolicy.DISABLE == quotaStatus.getPolicy().orElse(null)
-                ) {
-                  throw new AccessDeniedException("Enabling the table '" + tableName
-                    + "' is disallowed due to a violated space quota.");
+              // skip checking quotas for system tables, see:
+              // https://issues.apache.org/jira/browse/HBASE-28183
+              if (!tableName.isSystemTable()) {
+                SpaceQuotaSnapshot currSnapshotOfTable =
+                  QuotaTableUtil.getCurrentSnapshotFromQuotaTable(getConnection(), tableName);
+                if (currSnapshotOfTable != null) {
+                  SpaceQuotaStatus quotaStatus = currSnapshotOfTable.getQuotaStatus();
+                  if (
+                    quotaStatus.isInViolation()
+                      && SpaceViolationPolicy.DISABLE == quotaStatus.getPolicy().orElse(null)
+                  ) {
+                    throw new AccessDeniedException("Enabling the table '" + tableName
+                      + "' is disallowed due to a violated space quota.");
+                  }
                 }
               }
             } else if (LOG.isTraceEnabled()) {
@@ -2763,6 +2834,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private long modifyTable(final TableName tableName,
     final TableDescriptorGetter newDescriptorGetter, final long nonceGroup, final long nonce,
     final boolean shouldCheckDescriptor) throws IOException {
+    return modifyTable(tableName, newDescriptorGetter, nonceGroup, nonce, shouldCheckDescriptor,
+      true);
+  }
+
+  private long modifyTable(final TableName tableName,
+    final TableDescriptorGetter newDescriptorGetter, final long nonceGroup, final long nonce,
+    final boolean shouldCheckDescriptor, final boolean reopenRegions) throws IOException {
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
         @Override
@@ -2781,7 +2859,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           // checks. This will block only the beginning of the procedure. See HBASE-19953.
           ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
           submitProcedure(new ModifyTableProcedure(procedureExecutor.getEnvironment(),
-            newDescriptor, latch, oldDescriptor, shouldCheckDescriptor));
+            newDescriptor, latch, oldDescriptor, shouldCheckDescriptor, reopenRegions));
           latch.await();
 
           getMaster().getMasterCoprocessorHost().postModifyTable(tableName, oldDescriptor,
@@ -2798,14 +2876,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   @Override
   public long modifyTable(final TableName tableName, final TableDescriptor newDescriptor,
-    final long nonceGroup, final long nonce) throws IOException {
+    final long nonceGroup, final long nonce, final boolean reopenRegions) throws IOException {
     checkInitialized();
     return modifyTable(tableName, new TableDescriptorGetter() {
       @Override
       public TableDescriptor get() throws IOException {
         return newDescriptor;
       }
-    }, nonceGroup, nonce, false);
+    }, nonceGroup, nonce, false, reopenRegions);
 
   }
 
@@ -3296,6 +3374,18 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   public void setInitialized(boolean isInitialized) {
     procedureExecutor.getEnvironment().setEventReady(initialized, isInitialized);
+  }
+
+  /**
+   * Mainly used in procedure related tests, where we will restart ProcedureExecutor and
+   * AssignmentManager, but we do not want to restart master(to speed up the test), so we need to
+   * disable rpc for a while otherwise some critical rpc requests such as
+   * reportRegionStateTransition could fail and cause region server to abort.
+   */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public void setServiceStarted(boolean started) {
+    this.serviceStarted = started;
   }
 
   @Override
@@ -4190,6 +4280,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return this.syncReplicationReplayWALManager;
   }
 
+  @Override
   public HbckChore getHbckChore() {
     return this.hbckChore;
   }

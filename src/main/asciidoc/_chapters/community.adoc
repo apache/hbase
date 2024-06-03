@@ -173,6 +173,11 @@ If this list goes out of date or you can't reach the listed person, reach out to
 | Check the https://hbase.apache.org/downloads.html[download] page
 | *NOT YET*
 
+| 2.6
+| Bryan Beaudreault
+| Check the https://hbase.apache.org/downloads.html[download] page
+| *NOT YET*
+
 |===
 
 [[hbase.commit.msg.format]]

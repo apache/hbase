@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
@@ -83,7 +84,12 @@ public class TestZooKeeperScanPolicyObserver {
 
   private void setExpireBefore(long time)
     throws KeeperException, InterruptedException, IOException {
-    ZooKeeper zk = UTIL.getZooKeeperWatcher().getRecoverableZooKeeper().getZooKeeper();
+    RecoverableZooKeeper recoverableZk = UTIL.getZooKeeperWatcher().getRecoverableZooKeeper();
+    // we need to call this for setting up the zookeeper connection
+    recoverableZk.reconnectAfterExpiration();
+    // we have to use the original ZooKeeper as the RecoverableZooKeeper will append a magic prefix
+    // for the data stored on zookeeper
+    ZooKeeper zk = recoverableZk.getZooKeeper();
     if (zk.exists(ZooKeeperScanPolicyObserver.NODE, false) == null) {
       zk.create(ZooKeeperScanPolicyObserver.NODE, Bytes.toBytes(time), ZooDefs.Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);

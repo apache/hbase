@@ -69,6 +69,9 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.reflect.TypeToken;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
+import org.apache.hbase.thirdparty.com.google.gson.GsonBuilder;
+import org.apache.hbase.thirdparty.com.google.gson.LongSerializationPolicy;
+import org.apache.hbase.thirdparty.com.google.gson.ToNumberPolicy;
 
 /**
  * Run tests that use the functionality of the Operation superclass for Puts, Gets, Deletes, Scans,
@@ -345,6 +348,101 @@ public class TestOperation {
       kvMap.get("qualifier"));
   }
 
+  /**
+   * Test the client Scan Operations' JSON encoding to ensure that produced JSON is parseable and
+   * that the details are present and not corrupted.
+   * @throws IOException if the JSON conversion fails
+   */
+  @Test
+  public void testScanOperationToJSON() throws IOException {
+    // produce a Scan Operation
+    Scan scan = new Scan().withStartRow(ROW, true);
+    scan.addColumn(FAMILY, QUALIFIER);
+    scan.withStopRow(ROW, true);
+    scan.readVersions(5);
+    scan.setBatch(10);
+    scan.setAllowPartialResults(true);
+    scan.setMaxResultsPerColumnFamily(3);
+    scan.setRowOffsetPerColumnFamily(8);
+    scan.setCaching(20);
+    scan.setMaxResultSize(50);
+    scan.setCacheBlocks(true);
+    scan.setReversed(true);
+    scan.setTimeRange(1000, 2000);
+    scan.setAsyncPrefetch(true);
+    scan.setMvccReadPoint(123);
+    scan.setLimit(5);
+    scan.setReadType(Scan.ReadType.PREAD);
+    scan.setNeedCursorResult(true);
+    scan.setFilter(SCV_FILTER);
+    scan.setReplicaId(1);
+    scan.setConsistency(Consistency.STRONG);
+    scan.setLoadColumnFamiliesOnDemand(true);
+    scan.setColumnFamilyTimeRange(FAMILY, 2000, 3000);
+    scan.setPriority(10);
+
+    // get its JSON representation, and parse it
+    String json = scan.toJSON();
+    Type typeOfHashMap = new TypeToken<Map<String, Object>>() {
+    }.getType();
+    Gson gson = new GsonBuilder().setLongSerializationPolicy(LongSerializationPolicy.STRING)
+      .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
+    Map<String, Object> parsedJSON = gson.fromJson(json, typeOfHashMap);
+    // check for the row
+    assertEquals("startRow incorrect in Scan.toJSON()", Bytes.toStringBinary(ROW),
+      parsedJSON.get("startRow"));
+    // check for the family and the qualifier.
+    List familyInfo = (List) ((Map) parsedJSON.get("families")).get(Bytes.toStringBinary(FAMILY));
+    assertNotNull("Family absent in Scan.toJSON()", familyInfo);
+    assertEquals("Qualifier absent in Scan.toJSON()", 1, familyInfo.size());
+    assertEquals("Qualifier incorrect in Scan.toJSON()", Bytes.toStringBinary(QUALIFIER),
+      familyInfo.get(0));
+    assertEquals("stopRow incorrect in Scan.toJSON()", Bytes.toStringBinary(ROW),
+      parsedJSON.get("stopRow"));
+    assertEquals("includeStartRow incorrect in Scan.toJSON()", true,
+      parsedJSON.get("includeStartRow"));
+    assertEquals("includeStopRow incorrect in Scan.toJSON()", true,
+      parsedJSON.get("includeStopRow"));
+    assertEquals("maxVersions incorrect in Scan.toJSON()", 5L, parsedJSON.get("maxVersions"));
+    assertEquals("batch incorrect in Scan.toJSON()", 10L, parsedJSON.get("batch"));
+    assertEquals("allowPartialResults incorrect in Scan.toJSON()", true,
+      parsedJSON.get("allowPartialResults"));
+    assertEquals("storeLimit incorrect in Scan.toJSON()", 3L, parsedJSON.get("storeLimit"));
+    assertEquals("storeOffset incorrect in Scan.toJSON()", 8L, parsedJSON.get("storeOffset"));
+    assertEquals("caching incorrect in Scan.toJSON()", 20L, parsedJSON.get("caching"));
+    assertEquals("maxResultSize incorrect in Scan.toJSON()", "50", parsedJSON.get("maxResultSize"));
+    assertEquals("cacheBlocks incorrect in Scan.toJSON()", true, parsedJSON.get("cacheBlocks"));
+    assertEquals("reversed incorrect in Scan.toJSON()", true, parsedJSON.get("reversed"));
+    List trList = (List) parsedJSON.get("timeRange");
+    assertEquals("timeRange incorrect in Scan.toJSON()", 2, trList.size());
+    assertEquals("timeRange incorrect in Scan.toJSON()", "1000", trList.get(0));
+    assertEquals("timeRange incorrect in Scan.toJSON()", "2000", trList.get(1));
+
+    assertEquals("asyncPrefetch incorrect in Scan.toJSON()", true, parsedJSON.get("asyncPrefetch"));
+    assertEquals("mvccReadPoint incorrect in Scan.toJSON()", "123",
+      parsedJSON.get("mvccReadPoint"));
+    assertEquals("limit incorrect in Scan.toJSON()", 5L, parsedJSON.get("limit"));
+    assertEquals("readType incorrect in Scan.toJSON()", "PREAD", parsedJSON.get("readType"));
+    assertEquals("needCursorResult incorrect in Scan.toJSON()", true,
+      parsedJSON.get("needCursorResult"));
+
+    Map colFamTimeRange = (Map) parsedJSON.get("colFamTimeRangeMap");
+    assertEquals("colFamTimeRangeMap incorrect in Scan.toJSON()", 1L, colFamTimeRange.size());
+    List testFamily = (List) colFamTimeRange.get("testFamily");
+    assertEquals("colFamTimeRangeMap incorrect in Scan.toJSON()", 2L, testFamily.size());
+    assertEquals("colFamTimeRangeMap incorrect in Scan.toJSON()", "2000", testFamily.get(0));
+    assertEquals("colFamTimeRangeMap incorrect in Scan.toJSON()", "3000", testFamily.get(1));
+
+    assertEquals("targetReplicaId incorrect in Scan.toJSON()", 1L,
+      parsedJSON.get("targetReplicaId"));
+    assertEquals("consistency incorrect in Scan.toJSON()", "STRONG", parsedJSON.get("consistency"));
+    assertEquals("loadColumnFamiliesOnDemand incorrect in Scan.toJSON()", true,
+      parsedJSON.get("loadColumnFamiliesOnDemand"));
+
+    assertEquals("priority incorrect in Scan.toJSON()", 10L, parsedJSON.get("priority"));
+
+  }
+
   @Test
   public void testPutCreationWithByteBuffer() {
     Put p = new Put(ROW);
@@ -405,5 +503,77 @@ public class TestOperation {
       Query.class, Delete.class, Increment.class, Append.class, Put.class, Get.class, Scan.class };
 
     BuilderStyleTest.assertClassesAreBuilderStyle(classes);
+  }
+
+  /**
+   * Test the client Get Operations' JSON encoding to ensure that produced JSON is parseable and
+   * that the details are present and not corrupted.
+   * @throws IOException if the JSON conversion fails
+   */
+  @Test
+  public void testGetOperationToJSON() throws IOException {
+    // produce a Scan Operation
+    Get get = new Get(ROW);
+    get.addColumn(FAMILY, QUALIFIER);
+    get.readVersions(5);
+    get.setMaxResultsPerColumnFamily(3);
+    get.setRowOffsetPerColumnFamily(8);
+    get.setCacheBlocks(true);
+    get.setMaxResultsPerColumnFamily(5);
+    get.setRowOffsetPerColumnFamily(9);
+    get.setCheckExistenceOnly(true);
+    get.setTimeRange(1000, 2000);
+    get.setFilter(SCV_FILTER);
+    get.setReplicaId(1);
+    get.setConsistency(Consistency.STRONG);
+    get.setLoadColumnFamiliesOnDemand(true);
+    get.setColumnFamilyTimeRange(FAMILY, 2000, 3000);
+    get.setPriority(10);
+
+    // get its JSON representation, and parse it
+    String json = get.toJSON();
+    Type typeOfHashMap = new TypeToken<Map<String, Object>>() {
+    }.getType();
+    Gson gson = new GsonBuilder().setLongSerializationPolicy(LongSerializationPolicy.STRING)
+      .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
+    Map<String, Object> parsedJSON = gson.fromJson(json, typeOfHashMap);
+    // check for the row
+    assertEquals("row incorrect in Get.toJSON()", Bytes.toStringBinary(ROW), parsedJSON.get("row"));
+    // check for the family and the qualifier.
+    List familyInfo = (List) ((Map) parsedJSON.get("families")).get(Bytes.toStringBinary(FAMILY));
+    assertNotNull("Family absent in Get.toJSON()", familyInfo);
+    assertEquals("Qualifier absent in Get.toJSON()", 1, familyInfo.size());
+    assertEquals("Qualifier incorrect in Get.toJSON()", Bytes.toStringBinary(QUALIFIER),
+      familyInfo.get(0));
+
+    assertEquals("maxVersions incorrect in Get.toJSON()", 5L, parsedJSON.get("maxVersions"));
+
+    assertEquals("storeLimit incorrect in Get.toJSON()", 5L, parsedJSON.get("storeLimit"));
+    assertEquals("storeOffset incorrect in Get.toJSON()", 9L, parsedJSON.get("storeOffset"));
+
+    assertEquals("cacheBlocks incorrect in Get.toJSON()", true, parsedJSON.get("cacheBlocks"));
+
+    List trList = (List) parsedJSON.get("timeRange");
+    assertEquals("timeRange incorrect in Get.toJSON()", 2, trList.size());
+    assertEquals("timeRange incorrect in Get.toJSON()", "1000", trList.get(0));
+    assertEquals("timeRange incorrect in Get.toJSON()", "2000", trList.get(1));
+
+    Map colFamTimeRange = (Map) parsedJSON.get("colFamTimeRangeMap");
+    assertEquals("colFamTimeRangeMap incorrect in Get.toJSON()", 1L, colFamTimeRange.size());
+    List testFamily = (List) colFamTimeRange.get("testFamily");
+    assertEquals("colFamTimeRangeMap incorrect in Get.toJSON()", 2L, testFamily.size());
+    assertEquals("colFamTimeRangeMap incorrect in Get.toJSON()", "2000", testFamily.get(0));
+    assertEquals("colFamTimeRangeMap incorrect in Get.toJSON()", "3000", testFamily.get(1));
+
+    assertEquals("targetReplicaId incorrect in Get.toJSON()", 1L,
+      parsedJSON.get("targetReplicaId"));
+    assertEquals("consistency incorrect in Get.toJSON()", "STRONG", parsedJSON.get("consistency"));
+    assertEquals("loadColumnFamiliesOnDemand incorrect in Get.toJSON()", true,
+      parsedJSON.get("loadColumnFamiliesOnDemand"));
+
+    assertEquals("priority incorrect in Get.toJSON()", 10L, parsedJSON.get("priority"));
+    assertEquals("checkExistenceOnly incorrect in Get.toJSON()", true,
+      parsedJSON.get("checkExistenceOnly"));
+
   }
 }

@@ -37,6 +37,7 @@ pipeline {
     OUTPUT_DIR_RELATIVE_JDK8_HADOOP2 = 'output-jdk8-hadoop2'
     OUTPUT_DIR_RELATIVE_JDK8_HADOOP3 = 'output-jdk8-hadoop3'
     OUTPUT_DIR_RELATIVE_JDK11_HADOOP3 = 'output-jdk11-hadoop3'
+    OUTPUT_DIR_RELATIVE_JDK17_HADOOP3 = 'output-jdk17-hadoop3'
 
     PROJECT = 'hbase'
     PROJECT_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
@@ -91,7 +92,7 @@ pipeline {
                   rm -rf "${YETUS_DIR}"
                   "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
                       --working-dir "${WORKSPACE}/downloads-yetus" \
-                      --keys 'https://www.apache.org/dist/yetus/KEYS' \
+                      --keys 'https://downloads.apache.org/yetus/KEYS' \
                       --verify-tar-gz \
                       "${WORKSPACE}/yetus-${YETUS_RELEASE}-bin.tar.gz" \
                       "yetus/${YETUS_RELEASE}/apache-yetus-${YETUS_RELEASE}-bin.tar.gz"
@@ -138,7 +139,7 @@ pipeline {
               echo "Ensure we have a copy of Hadoop ${HADOOP2_VERSION}"
               "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
                   --working-dir "${WORKSPACE}/downloads-hadoop-2" \
-                  --keys 'http://www.apache.org/dist/hadoop/common/KEYS' \
+                  --keys 'https://downloads.apache.org/hadoop/common/KEYS' \
                   --verify-tar-gz \
                   "${WORKSPACE}/hadoop-${HADOOP2_VERSION}-bin.tar.gz" \
                   "hadoop/common/hadoop-${HADOOP2_VERSION}/hadoop-${HADOOP2_VERSION}.tar.gz"
@@ -152,7 +153,7 @@ pipeline {
         }
         stage ('hadoop 3 cache') {
           environment {
-            HADOOP3_VERSION="3.1.1"
+            HADOOP3_VERSION="3.3.5"
           }
           steps {
             // directory must be unique for each parallel stage, because jenkins runs them in the same workspace :(
@@ -166,7 +167,7 @@ pipeline {
               echo "Ensure we have a copy of Hadoop ${HADOOP3_VERSION}"
               "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
                   --working-dir "${WORKSPACE}/downloads-hadoop-3" \
-                  --keys 'http://www.apache.org/dist/hadoop/common/KEYS' \
+                  --keys 'https://downloads.apache.org/hadoop/common/KEYS' \
                   --verify-tar-gz \
                   "${WORKSPACE}/hadoop-${HADOOP3_VERSION}-bin.tar.gz" \
                   "hadoop/common/hadoop-${HADOOP3_VERSION}/hadoop-${HADOOP3_VERSION}.tar.gz"
@@ -188,6 +189,7 @@ pipeline {
         stash name: 'jdk8-hadoop2-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}/doesn't-match"
         stash name: 'jdk8-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}/doesn't-match"
         stash name: 'jdk11-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}/doesn't-match"
+        stash name: 'jdk17-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}/doesn't-match"
         stash name: 'srctarball-result', allowEmpty: true, includes: "output-srctarball/doesn't-match"
       }
     }
@@ -628,6 +630,123 @@ pipeline {
             }
           }
         }
+
+        stage ('yetus jdk17 hadoop3 checks') {
+          when {
+            anyOf {
+              branch 'master';branch 'branch-3'
+            }
+          }
+          agent {
+            node {
+              label 'hbase'
+            }
+          }
+          environment {
+            BASEDIR = "${env.WORKSPACE}/component"
+            TESTS = "${env.DEEP_CHECKS}"
+            OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}"
+            OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}"
+            SET_JAVA_HOME = "/usr/lib/jvm/java-17"
+            // Activates hadoop 3.0 profile in maven runs.
+            HADOOP_PROFILE = '3.0'
+            SKIP_ERRORPRONE = true
+          }
+          steps {
+            // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              echo '(x) {color:red}-1 jdk17 hadoop3 checks{color}' >"${OUTPUT_DIR}/commentfile"
+              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
+            '''
+            unstash 'yetus'
+            dir('component') {
+              checkout scm
+            }
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+              "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+              echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+              ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
+            '''
+            script {
+              def ret = sh(
+                returnStatus: true,
+                script: '''#!/usr/bin/env bash
+                  set -e
+                  declare -i status=0
+                  if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                    echo '(/) {color:green}+1 jdk17 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                  else
+                    echo '(x) {color:red}-1 jdk17 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                    status=1
+                  fi
+                  echo "-- For more information [see jdk17 report|${BUILD_URL}JDK17_20Nightly_20Build_20Report_20_28Hadoop3_29/]" >> "${OUTPUT_DIR}/commentfile"
+                  exit "${status}"
+                '''
+              )
+              if (ret != 0) {
+                // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                // test output. See HBASE-26339 for more details.
+                currentBuild.result = 'UNSTABLE'
+              }
+            }
+          }
+          post {
+            always {
+              stash name: 'jdk17-hadoop3-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
+              junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
+              // zip surefire reports.
+              sh '''#!/bin/bash -e
+                if [ -d "${OUTPUT_DIR}/archiver" ]; then
+                  count=$(find "${OUTPUT_DIR}/archiver" -type f | wc -l)
+                  if [[ 0 -ne ${count} ]]; then
+                    echo "zipping ${count} archived files"
+                    zip -q -m -r "${OUTPUT_DIR}/test_logs.zip" "${OUTPUT_DIR}/archiver"
+                  else
+                    echo "No archived files, skipping compressing."
+                  fi
+                else
+                  echo "No archiver directory, skipping compressing."
+                fi
+              '''
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/test_logs.zip"
+                    )
+                  ]
+                )
+              ])
+              // remove the big test logs zip file, store the nightlies url in test_logs.html
+              sh '''#!/bin/bash -e
+                if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
+                  echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
+                  rm -rf "${OUTPUT_DIR}/test_logs.zip"
+                  python3 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
+                else
+                  echo "No test_logs.zip, skipping"
+                fi
+              '''
+              // Has to be relative to WORKSPACE.
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              publishHTML target: [
+                allowMissing         : true,
+                keepAll              : true,
+                alwaysLinkToLastBuild: true,
+                // Has to be relative to WORKSPACE.
+                reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
+                reportFiles          : 'console-report.html',
+                reportName           : 'JDK17 Nightly Build Report (Hadoop3)'
+              ]
+            }
+          }
+        }
+
         // This is meant to mimic what a release manager will do to create RCs.
         // See http://hbase.apache.org/book.html#maven.release
         // TODO (HBASE-23870): replace this with invocation of the release tool
@@ -657,10 +776,15 @@ pipeline {
               rm -rf "unpacked_src_tarball" && mkdir "unpacked_src_tarball"
               rm -rf "hbase-install" && mkdir "hbase-install"
               rm -rf "hbase-client" && mkdir "hbase-client"
+              rm -rf "hbase-hadoop3-install"
+              rm -rf "hbase-hadoop3-client"
               rm -rf "hadoop-2" && mkdir "hadoop-2"
               rm -rf "hadoop-3" && mkdir "hadoop-3"
               rm -rf ".m2-for-repo" && mkdir ".m2-for-repo"
               rm -rf ".m2-for-src" && mkdir ".m2-for-src"
+              # remove old hadoop tarballs in workspace
+              rm -rf hadoop-2*.tar.gz
+              rm -rf hadoop-3*.tar.gz
               echo "(x) {color:red}-1 source release artifact{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-srctarball/commentfile
               echo "(x) {color:red}-1 client integration test{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-integration/commentfile
             '''
@@ -688,14 +812,23 @@ pipeline {
             """
             echo "unpacking the hbase bin tarball into 'hbase-install' and the client tarball into 'hbase-client'"
             sh '''#!/bin/bash -e
-              if [ 2 -ne $(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | wc -l) ]; then
+              if [ 2 -ne $(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | grep -v hadoop3 | wc -l) ]; then
                 echo '(x) {color:red}-1 testing binary artifact{color}\n-- source tarball did not produce the expected binaries.' >>output-srctarball/commentfile
                 exit 1
               fi
-              install_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | sort | head -n 1)
+              install_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | grep -v client-bin | grep -v hadoop3)
               tar --strip-component=1 -xzf "${install_artifact}" -C "hbase-install"
-              client_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | sort | tail -n 1)
+              client_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-client-bin.tar.gz | grep -v hadoop3)
               tar --strip-component=1 -xzf "${client_artifact}" -C "hbase-client"
+              if [ 2 -eq $(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-hadoop3-*-bin.tar.gz | wc -l) ]; then
+                echo "hadoop3 artifacts available, unpacking the hbase hadoop3 bin tarball into 'hbase-hadoop3-install' and the client hadoop3 tarball into 'hbase-hadoop3-client'"
+                mkdir hbase-hadoop3-install
+                mkdir hbase-hadoop3-client
+                hadoop3_install_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-hadoop3-*-bin.tar.gz | grep -v client-bin)
+                tar --strip-component=1 -xzf "${hadoop3_install_artifact}" -C "hbase-hadoop3-install"
+                hadoop3_client_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-hadoop3-*-client-bin.tar.gz)
+                tar --strip-component=1 -xzf "${hadoop3_client_artifact}" -C "hbase-hadoop3-client"
+              fi
             '''
             unstash 'hadoop-2'
             sh '''#!/bin/bash -xe
@@ -726,11 +859,20 @@ pipeline {
               echo "Attempting to use run an instance on top of Hadoop 3."
               artifact=$(ls -1 "${WORKSPACE}"/hadoop-3*.tar.gz | head -n 1)
               tar --strip-components=1 -xzf "${artifact}" -C "hadoop-3"
+              # we need to patch some files otherwise minicluster will fail to start, see MAPREDUCE-7471
+              ${BASEDIR}/dev-support/patch-hadoop3.sh hadoop-3
+              hbase_install_dir="hbase-install"
+              hbase_client_dir="hbase-client"
+              if [ -d "hbase-hadoop3-install" ]; then
+                echo "run hadoop3 client integration test against hbase hadoop3 binaries"
+                hbase_install_dir="hbase-hadoop3-install"
+                hbase_client_dir="hbase-hadoop3-client"
+              fi
               if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
                   --single-process \
                   --working-dir output-integration/hadoop-3 \
-                  --hbase-client-install hbase-client \
-                  hbase-install \
+                  --hbase-client-install ${hbase_client_dir} \
+                  ${hbase_install_dir} \
                   hadoop-3/bin/hadoop \
                   hadoop-3/share/hadoop/yarn/timelineservice \
                   hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
@@ -745,8 +887,8 @@ pipeline {
                   --single-process \
                   --hadoop-client-classpath hadoop-3/share/hadoop/client/hadoop-client-api-*.jar:hadoop-3/share/hadoop/client/hadoop-client-runtime-*.jar \
                   --working-dir output-integration/hadoop-3-shaded \
-                  --hbase-client-install hbase-client \
-                  hbase-install \
+                  --hbase-client-install ${hbase_client_dir} \
+                  ${hbase_install_dir} \
                   hadoop-3/bin/hadoop \
                   hadoop-3/share/hadoop/yarn/timelineservice \
                   hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \

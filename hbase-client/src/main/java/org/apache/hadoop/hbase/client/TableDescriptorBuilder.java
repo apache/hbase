@@ -144,6 +144,14 @@ public class TableDescriptorBuilder {
     new Bytes(Bytes.toBytes(REGION_MEMSTORE_REPLICATION));
 
   /**
+   * If non-null, the HDFS erasure coding policy to set on the data dir of the table
+   */
+  public static final String ERASURE_CODING_POLICY = "ERASURE_CODING_POLICY";
+  private static final Bytes ERASURE_CODING_POLICY_KEY =
+    new Bytes(Bytes.toBytes(ERASURE_CODING_POLICY));
+
+  private static final String DEFAULT_ERASURE_CODING_POLICY = null;
+  /**
    * Used by shell/rest interface to access this metadata attribute which denotes if the table
    * should be treated by region normalizer.
    */
@@ -226,6 +234,8 @@ public class TableDescriptorBuilder {
     DEFAULT_VALUES.put(DURABILITY, DEFAULT_DURABLITY.name()); // use the enum name
     DEFAULT_VALUES.put(REGION_REPLICATION, String.valueOf(DEFAULT_REGION_REPLICATION));
     DEFAULT_VALUES.put(PRIORITY, String.valueOf(DEFAULT_PRIORITY));
+    // Setting ERASURE_CODING_POLICY to NULL so that it is not considered as metadata
+    DEFAULT_VALUES.put(ERASURE_CODING_POLICY, String.valueOf(DEFAULT_ERASURE_CODING_POLICY));
     DEFAULT_VALUES.keySet().stream().map(s -> new Bytes(Bytes.toBytes(s)))
       .forEach(RESERVED_KEYWORDS::add);
     RESERVED_KEYWORDS.add(IS_META_KEY);
@@ -490,6 +500,11 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public TableDescriptorBuilder setErasureCodingPolicy(String policy) {
+    desc.setErasureCodingPolicy(policy);
+    return this;
+  }
+
   public TableDescriptorBuilder setRegionMemStoreReplication(boolean memstoreReplication) {
     desc.setRegionMemStoreReplication(memstoreReplication);
     return this;
@@ -746,6 +761,28 @@ public class TableDescriptorBuilder {
      */
     public ModifyableTableDescriptor setReadOnly(final boolean readOnly) {
       return setValue(READONLY_KEY, Boolean.toString(readOnly));
+    }
+
+    /**
+     * The HDFS erasure coding policy for a table. This will be set on the data dir of the table,
+     * and is an alternative to normal replication which takes less space at the cost of locality.
+     * @return the current policy, or null if undefined
+     */
+    @Override
+    public String getErasureCodingPolicy() {
+      return getValue(ERASURE_CODING_POLICY);
+    }
+
+    /**
+     * Sets the HDFS erasure coding policy for the table. This will be propagated to HDFS for the
+     * data dir of the table. Erasure coding is an alternative to normal replication which takes
+     * less space at the cost of locality. The policy must be available and enabled on the hdfs
+     * cluster before being set.
+     * @param policy the policy to set, or null to disable erasure coding
+     * @return the modifyable TD
+     */
+    public ModifyableTableDescriptor setErasureCodingPolicy(String policy) {
+      return setValue(ERASURE_CODING_POLICY_KEY, policy);
     }
 
     /**
@@ -1341,26 +1378,6 @@ public class TableDescriptorBuilder {
       String value = cp.getJarPath().orElse("") + "|" + cp.getClassName() + "|"
         + Integer.toString(cp.getPriority()) + "|" + kvString.toString();
       return setCoprocessorToMap(value);
-    }
-
-    /**
-     * Add a table coprocessor to this table. The coprocessor type must be
-     * org.apache.hadoop.hbase.coprocessor.RegionObserver or Endpoint. It won't check if the class
-     * can be loaded or not. Whether a coprocessor is loadable or not will be determined when a
-     * region is opened.
-     * @param specStr The Coprocessor specification all in in one String
-     * @return the modifyable TD
-     * @deprecated used by HTableDescriptor and admin.rb. As of release 2.0.0, this will be removed
-     *             in HBase 3.0.0.
-     */
-    @Deprecated
-    public ModifyableTableDescriptor setCoprocessorWithSpec(final String specStr)
-      throws IOException {
-      CoprocessorDescriptor cpDesc =
-        toCoprocessorDescriptor(specStr).orElseThrow(() -> new IllegalArgumentException(
-          "Format does not match " + CP_HTD_ATTR_VALUE_PATTERN + ": " + specStr));
-      checkHasCoprocessor(cpDesc.getClassName());
-      return setCoprocessorToMap(specStr);
     }
 
     private void checkHasCoprocessor(final String className) throws IOException {

@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -93,7 +93,6 @@ public class BackupAdminImpl implements BackupAdmin {
   public int deleteBackups(String[] backupIds) throws IOException {
 
     int totalDeleted = 0;
-    Map<String, HashSet<TableName>> allTablesMap = new HashMap<>();
 
     boolean deleteSessionStarted;
     boolean snapshotDone;
@@ -129,20 +128,16 @@ public class BackupAdminImpl implements BackupAdmin {
       }
       snapshotDone = true;
       try {
+        List<String> affectedBackupRootDirs = new ArrayList<>();
         for (int i = 0; i < backupIds.length; i++) {
           BackupInfo info = sysTable.readBackupInfo(backupIds[i]);
-          if (info != null) {
-            String rootDir = info.getBackupRootDir();
-            HashSet<TableName> allTables = allTablesMap.get(rootDir);
-            if (allTables == null) {
-              allTables = new HashSet<>();
-              allTablesMap.put(rootDir, allTables);
-            }
-            allTables.addAll(info.getTableNames());
-            totalDeleted += deleteBackup(backupIds[i], sysTable);
+          if (info == null) {
+            continue;
           }
+          affectedBackupRootDirs.add(info.getBackupRootDir());
+          totalDeleted += deleteBackup(backupIds[i], sysTable);
         }
-        finalizeDelete(allTablesMap, sysTable);
+        finalizeDelete(affectedBackupRootDirs, sysTable);
         // Finish
         sysTable.finishDeleteOperation();
         // delete snapshot
@@ -175,26 +170,23 @@ public class BackupAdminImpl implements BackupAdmin {
 
   /**
    * Updates incremental backup set for every backupRoot
-   * @param tablesMap map [backupRoot: {@code Set<TableName>}]
-   * @param table     backup system table
+   * @param backupRoots backupRoots for which to revise the incremental backup set
+   * @param table       backup system table
    * @throws IOException if a table operation fails
    */
-  private void finalizeDelete(Map<String, HashSet<TableName>> tablesMap, BackupSystemTable table)
+  private void finalizeDelete(List<String> backupRoots, BackupSystemTable table)
     throws IOException {
-    for (String backupRoot : tablesMap.keySet()) {
+    for (String backupRoot : backupRoots) {
       Set<TableName> incrTableSet = table.getIncrementalBackupTableSet(backupRoot);
-      Map<TableName, ArrayList<BackupInfo>> tableMap =
+      Map<TableName, List<BackupInfo>> tableMap =
         table.getBackupHistoryForTableSet(incrTableSet, backupRoot);
-      for (Map.Entry<TableName, ArrayList<BackupInfo>> entry : tableMap.entrySet()) {
-        if (entry.getValue() == null) {
-          // No more backups for a table
-          incrTableSet.remove(entry.getKey());
-        }
-      }
+
+      // Keep only the tables that are present in other backups
+      incrTableSet.retainAll(tableMap.keySet());
+
+      table.deleteIncrementalBackupTableSet(backupRoot);
       if (!incrTableSet.isEmpty()) {
         table.addIncrementalBackupTableSet(incrTableSet, backupRoot);
-      } else { // empty
-        table.deleteIncrementalBackupTableSet(backupRoot);
       }
     }
   }
@@ -498,16 +490,15 @@ public class BackupAdminImpl implements BackupAdmin {
   @Override
   public void restore(RestoreRequest request) throws IOException {
     if (request.isCheck()) {
-      HashMap<TableName, BackupManifest> backupManifestMap = new HashMap<>();
       // check and load backup image manifest for the tables
       Path rootPath = new Path(request.getBackupRootDir());
       String backupId = request.getBackupId();
       TableName[] sTableArray = request.getFromTables();
-      HBackupFileSystem.checkImageManifestExist(backupManifestMap, sTableArray,
-        conn.getConfiguration(), rootPath, backupId);
+      BackupManifest manifest =
+        HBackupFileSystem.getManifest(conn.getConfiguration(), rootPath, backupId);
 
       // Check and validate the backup image and its dependencies
-      if (BackupUtils.validate(backupManifestMap, conn.getConfiguration())) {
+      if (BackupUtils.validate(Arrays.asList(sTableArray), manifest, conn.getConfiguration())) {
         LOG.info(CHECK_OK);
       } else {
         LOG.error(CHECK_FAILED);

@@ -25,12 +25,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -280,10 +282,15 @@ public class TestReplicationBase {
     return hbaseAdmin.listReplicationPeers().stream().anyMatch(p -> peerId.equals(p.getPeerId()));
   }
 
+  // can be override in tests, in case you need to use zk based uri, or the old style uri
+  protected String getClusterKey(HBaseTestingUtil util) throws Exception {
+    return util.getRpcConnnectionURI();
+  }
+
   protected final void addPeer(String peerId, TableName tableName) throws Exception {
     if (!peerExist(peerId)) {
       ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer())
+        .setClusterKey(getClusterKey(UTIL2)).setSerial(isSerialPeer())
         .setReplicationEndpointImpl(ReplicationEndpointTest.class.getName());
       if (isSyncPeer()) {
         FileSystem fs2 = UTIL2.getTestFileSystem();
@@ -367,6 +374,14 @@ public class TestReplicationBase {
     assertEquals(NB_ROWS_IN_BATCH, res1.length);
 
     waitForReplication(NB_ROWS_IN_BATCH, NB_RETRIES);
+  }
+
+  protected static void stopAllRegionServers(HBaseTestingUtil util) throws IOException {
+    List<ServerName> rses = util.getMiniHBaseCluster().getRegionServerThreads().stream()
+      .map(t -> t.getRegionServer().getServerName()).collect(Collectors.toList());
+    for (ServerName rs : rses) {
+      util.getMiniHBaseCluster().stopRegionServer(rs);
+    }
   }
 
   @AfterClass

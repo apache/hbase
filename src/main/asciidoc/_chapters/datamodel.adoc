@@ -238,6 +238,23 @@ create 'bar', 'fam'
 ----
 ====
 
+[[namespace_table]]
+=== About hbase:namespace table
+We used to have a system table called `hbase:namespace` for storing the namespace information.
+
+It introduced some painful bugs in the past, especially that it may hang the master startup thus
+hang the whole cluster. This is because meta table also has a namespace, so it depends on namespace
+table. But namespace table also depends on meta table as meta table stores the location of all
+regions. This is a cyclic dependency so sometimes namespace and meta table will wait for each other
+to online and hang the master start up.
+
+It is not easy to fix so in 3.0.0, we decided to completely remove the `hbase:namespace` table and
+fold its content into the `ns` family in `hbase:meta` table. When upgrading from 2.x to 3.x, the
+migration will be done automatically and the `hbase:namespace` table will be disabled after the
+migration is done. You are free to leave it there for sometime and finally drop it.
+
+For more tails, please see https://issues.apache.org/jira/browse/HBASE-21154[HBASE-21154].
+
 == Table
 
 Tables are declared up front at schema definition time.

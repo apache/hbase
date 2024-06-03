@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -25,8 +25,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class SimpleSaslAuthenticationProvider extends BuiltInSaslAuthenticationProvider {
-  public static final SaslAuthMethod SASL_AUTH_METHOD =
-    new SaslAuthMethod("SIMPLE", (byte) 80, "", AuthenticationMethod.SIMPLE);
+
+  public static final SaslAuthMethod SASL_AUTH_METHOD = createSaslAuthMethod(AuthMethod.SIMPLE);
 
   @Override
   public SaslAuthMethod getSaslAuthMethod() {

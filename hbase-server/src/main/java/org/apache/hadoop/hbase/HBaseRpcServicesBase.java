@@ -310,6 +310,7 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   }
 
   @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public UpdateConfigurationResponse updateConfiguration(RpcController controller,
     UpdateConfigurationRequest request) throws ServiceException {
     try {

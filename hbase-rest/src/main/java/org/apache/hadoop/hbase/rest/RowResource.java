@@ -72,10 +72,10 @@ public class RowResource extends ResourceBase {
    * Constructor
    */
   public RowResource(TableResource tableResource, String rowspec, String versions, String check,
-    String returnResult) throws IOException {
+    String returnResult, String keyEncoding) throws IOException {
     super();
     this.tableResource = tableResource;
-    this.rowspec = new RowSpec(rowspec);
+    this.rowspec = new RowSpec(rowspec, keyEncoding);
     if (versions != null) {
       this.rowspec.setMaxVersions(Integer.parseInt(versions));
     }
@@ -112,8 +112,7 @@ public class RowResource extends ResourceBase {
           rowKey = CellUtil.cloneRow(value);
           rowModel = new RowModel(rowKey);
         }
-        rowModel.addCell(new CellModel(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value),
-          value.getTimestamp(), CellUtil.cloneValue(value)));
+        rowModel.addCell(new CellModel(value));
         if (++count > rowspec.getMaxValues()) {
           break;
         }
@@ -711,8 +710,7 @@ public class RowResource extends ResourceBase {
         CellSetModel rModel = new CellSetModel();
         RowModel rRowModel = new RowModel(result.getRow());
         for (Cell cell : result.listCells()) {
-          rRowModel.addCell(new CellModel(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell),
-            cell.getTimestamp(), CellUtil.cloneValue(cell)));
+          rRowModel.addCell(new CellModel(cell));
         }
         rModel.addRow(rRowModel);
         servlet.getMetrics().incrementSucessfulAppendRequests(1);
@@ -803,8 +801,7 @@ public class RowResource extends ResourceBase {
         CellSetModel rModel = new CellSetModel();
         RowModel rRowModel = new RowModel(result.getRow());
         for (Cell cell : result.listCells()) {
-          rRowModel.addCell(new CellModel(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell),
-            cell.getTimestamp(), CellUtil.cloneValue(cell)));
+          rRowModel.addCell(new CellModel(cell));
         }
         rModel.addRow(rowModel);
         servlet.getMetrics().incrementSucessfulIncrementRequests(1);

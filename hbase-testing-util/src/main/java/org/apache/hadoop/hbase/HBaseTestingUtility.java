@@ -171,16 +171,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 @Deprecated
 public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
-  /**
-   * System property key to get test directory value. Name is as it is because mini dfs has
-   * hard-codings to put test data here. It should NOT be used directly in HBase, as it's a property
-   * used in mini dfs.
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Can be used only with mini dfs.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19410">HBASE-19410</a>
-   */
-  @Deprecated
-  private static final String TEST_DIRECTORY_KEY = "test.build.data";
-
   public static final String REGIONS_PER_SERVER_KEY = "hbase.test.regions-per-server";
   /**
    * The default number of regions per regionserver when creating a pre-split table.
@@ -372,13 +362,12 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Home our data in a dir under {@link #DEFAULT_BASE_TEST_DIRECTORY}. Give it a random name so can
-   * have many concurrent tests running if we need to. It needs to amend the
-   * {@link #TEST_DIRECTORY_KEY} System property, as it's what minidfscluster bases it data dir on.
-   * Moding a System property is not the way to do concurrent instances -- another instance could
-   * grab the temporary value unintentionally -- but not anything can do about it at moment; single
-   * instance only is how the minidfscluster works. We also create the underlying directory names
-   * for hadoop.log.dir, mapreduce.cluster.local.dir and hadoop.tmp.dir, and set the values in the
-   * conf, and as a system property for hadoop.tmp.dir (We do not create them!).
+   * have many concurrent tests running if we need to. Moding a System property is not the way to do
+   * concurrent instances -- another instance could grab the temporary value unintentionally -- but
+   * not anything can do about it at moment; single instance only is how the minidfscluster works.
+   * We also create the underlying directory names for hadoop.log.dir, mapreduce.cluster.local.dir
+   * and hadoop.tmp.dir, and set the values in the conf, and as a system property for hadoop.tmp.dir
+   * (We do not create them!).
    * @return The calculated data test build directory, if newly-created.
    */
   @Override
@@ -663,8 +652,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   private void createDirsAndSetProperties() throws IOException {
     setupClusterTestDir();
-    conf.set(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
-    System.setProperty(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
+    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, clusterTestDir.getCanonicalPath());
     createDirAndSetProperty("test.cache.data");
     createDirAndSetProperty("hadoop.tmp.dir");
     hadoopLogDir = createDirAndSetProperty("hadoop.log.dir");
@@ -1066,7 +1054,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     miniClusterRunning = true;
 
     setupClusterTestDir();
-    System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestDir.getPath());
 
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
@@ -3541,6 +3528,24 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     }
   }
 
+  public String getRpcConnnectionURI() throws UnknownHostException {
+    return "hbase+rpc://" + MasterRegistry.getMasterAddr(conf);
+  }
+
+  public String getZkConnectionURI() {
+    return "hbase+zk://" + conf.get(HConstants.ZOOKEEPER_QUORUM) + ":"
+      + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT)
+      + conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+  }
+
+  /**
+   * Get the zk based cluster key for this cluster.
+   * @deprecated since 2.7.0, will be removed in 4.0.0. Now we use connection uri to specify the
+   *             connection info of a cluster. Keep here only for compatibility.
+   * @see #getRpcConnnectionURI()
+   * @see #getZkConnectionURI()
+   */
+  @Deprecated
   public String getClusterKey() {
     return conf.get(HConstants.ZOOKEEPER_QUORUM) + ":" + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT)
       + ":"

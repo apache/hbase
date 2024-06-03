@@ -137,12 +137,21 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       return count;
     }
     preambleBuffer.flip();
-    if (!processPreamble(preambleBuffer)) {
-      return -1;
+    PreambleResponse resp = processPreamble(preambleBuffer);
+    switch (resp) {
+      case SUCCEED:
+        preambleBuffer = null; // do not need it anymore
+        connectionPreambleRead = true;
+        return count;
+      case CONTINUE:
+        // wait for the next preamble header
+        preambleBuffer.clear();
+        return count;
+      case CLOSE:
+        return -1;
+      default:
+        throw new IllegalArgumentException("Unknown preamble response: " + resp);
     }
-    preambleBuffer = null; // do not need it anymore
-    connectionPreambleRead = true;
-    return count;
   }
 
   private int read4Bytes() throws IOException {

@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Properties;
 import java.util.Queue;
 import java.util.Random;
 import java.util.TreeMap;
@@ -180,11 +181,16 @@ public class PerformanceEvaluation extends Configured implements Tool {
     addCommandDescriptor(RandomScanWithRange10000Test.class, "scanRange10000",
       "Run random seek scan with both start and stop row (max 10000 rows)");
     addCommandDescriptor(RandomWriteTest.class, "randomWrite", "Run random write test");
+    addCommandDescriptor(RandomDeleteTest.class, "randomDelete", "Run random delete test");
     addCommandDescriptor(SequentialReadTest.class, "sequentialRead", "Run sequential read test");
     addCommandDescriptor(SequentialWriteTest.class, "sequentialWrite", "Run sequential write test");
+    addCommandDescriptor(SequentialDeleteTest.class, "sequentialDelete",
+      "Run sequential delete test");
     addCommandDescriptor(MetaWriteTest.class, "metaWrite",
       "Populate meta table;used with 1 thread; to be cleaned up by cleanMeta");
     addCommandDescriptor(ScanTest.class, "scan", "Run scan test (read every row)");
+    addCommandDescriptor(ReverseScanTest.class, "reverseScan",
+      "Run reverse scan test (read every row)");
     addCommandDescriptor(FilteredScanTest.class, "filterScan",
       "Run scan test using a filter to find a specific row based on it's value "
         + "(make sure to use --rows=20)");
@@ -349,7 +355,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     boolean needsDelete = false, exists = admin.tableExists(tableName);
     boolean isReadCmd = opts.cmdName.toLowerCase(Locale.ROOT).contains("read")
       || opts.cmdName.toLowerCase(Locale.ROOT).contains("scan");
-    if (!exists && isReadCmd) {
+    boolean isDeleteCmd = opts.cmdName.toLowerCase(Locale.ROOT).contains("delete");
+    if (!exists && (isReadCmd || isDeleteCmd)) {
       throw new IllegalStateException(
         "Must specify an existing table for read commands. Run a write command first.");
     }
@@ -360,10 +367,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
     // {RegionSplitPolicy,replica count} does not match requested, or when the
     // number of column families does not match requested.
     if (
-      (exists && opts.presplitRegions != DEFAULT_OPTS.presplitRegions)
+      (exists && opts.presplitRegions != DEFAULT_OPTS.presplitRegions
+        && opts.presplitRegions != admin.getRegions(tableName).size())
         || (!isReadCmd && desc != null
           && !StringUtils.equals(desc.getRegionSplitPolicyClassName(), opts.splitPolicy))
-        || (!isReadCmd && desc != null && desc.getRegionReplication() != opts.replicas)
+        || (!(isReadCmd || isDeleteCmd) && desc != null
+          && desc.getRegionReplication() != opts.replicas)
         || (desc != null && desc.getColumnFamilyCount() != opts.families)
     ) {
       needsDelete = true;
@@ -728,6 +737,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     boolean cacheBlocks = true;
     Scan.ReadType scanReadType = Scan.ReadType.DEFAULT;
     long bufferSize = 2l * 1024l * 1024l;
+    Properties commandProperties;
 
     public TestOptions() {
     }
@@ -784,6 +794,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.cacheBlocks = that.cacheBlocks;
       this.scanReadType = that.scanReadType;
       this.bufferSize = that.bufferSize;
+      this.commandProperties = that.commandProperties;
+    }
+
+    public Properties getCommandProperties() {
+      return commandProperties;
     }
 
     public int getCaching() {
@@ -1149,10 +1164,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected final Configuration conf;
     protected final TestOptions opts;
 
-    private final Status status;
+    protected final Status status;
 
     private String testName;
-    private Histogram latencyHistogram;
+    protected Histogram latencyHistogram;
     private Histogram replicaLatencyHistogram;
     private Histogram valueSizeHistogram;
     private Histogram rpcCallsHistogram;
@@ -2061,6 +2076,18 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   }
 
+  static class RandomDeleteTest extends SequentialDeleteTest {
+    RandomDeleteTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+    }
+
+    @Override
+    protected byte[] generateRow(final int i) {
+      return getRandomRow(this.rand, opts.totalRows);
+    }
+
+  }
+
   static class ScanTest extends TableTest {
     private ResultScanner testScanner;
 
@@ -2082,6 +2109,49 @@ public class PerformanceEvaluation extends Configured implements Tool {
         Scan scan = new Scan().withStartRow(format(opts.startRow)).setCaching(opts.caching)
           .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
           .setReadType(opts.scanReadType).setScanMetricsEnabled(true);
+        for (int family = 0; family < opts.families; family++) {
+          byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+          if (opts.addColumns) {
+            for (int column = 0; column < opts.columns; column++) {
+              byte[] qualifier = column == 0 ? COLUMN_ZERO : Bytes.toBytes("" + column);
+              scan.addColumn(familyName, qualifier);
+            }
+          } else {
+            scan.addFamily(familyName);
+          }
+        }
+        if (opts.filterAll) {
+          scan.setFilter(new FilterAllFilter());
+        }
+        this.testScanner = table.getScanner(scan);
+      }
+      Result r = testScanner.next();
+      updateValueSize(r);
+      return true;
+    }
+  }
+
+  static class ReverseScanTest extends TableTest {
+    private ResultScanner testScanner;
+
+    ReverseScanTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+    }
+
+    @Override
+    void testTakedown() throws IOException {
+      if (this.testScanner != null) {
+        this.testScanner.close();
+      }
+      super.testTakedown();
+    }
+
+    @Override
+    boolean testRow(final int i, final long startTime) throws IOException {
+      if (this.testScanner == null) {
+        Scan scan = new Scan().setCaching(opts.caching).setCacheBlocks(opts.cacheBlocks)
+          .setAsyncPrefetch(opts.asyncPrefetch).setReadType(opts.scanReadType)
+          .setScanMetricsEnabled(true).setReversed(true);
         for (int family = 0; family < opts.families; family++) {
           byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
           if (opts.addColumns) {
@@ -2353,6 +2423,34 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
+  static class SequentialDeleteTest extends BufferedMutatorTest {
+
+    SequentialDeleteTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+    }
+
+    protected byte[] generateRow(final int i) {
+      return format(i);
+    }
+
+    @Override
+    boolean testRow(final int i, final long startTime) throws IOException {
+      byte[] row = generateRow(i);
+      Delete delete = new Delete(row);
+      for (int family = 0; family < opts.families; family++) {
+        byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
+        delete.addFamily(familyName);
+      }
+      delete.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
+      if (opts.autoFlush) {
+        table.delete(delete);
+      } else {
+        mutator.mutate(delete);
+      }
+      return true;
+    }
+  }
+
   /*
    * Insert fake regions into meta table with contiguous split keys.
    */
@@ -2581,7 +2679,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       System.err.println(message);
     }
     System.err.print("Usage: hbase " + shortName);
-    System.err.println("  <OPTIONS> [-D<property=value>]* <command> <nclients>");
+    System.err.println("  <OPTIONS> [-D<property=value>]* <command|class> <nclients>");
     System.err.println();
     System.err.println("General Options:");
     System.err.println(
@@ -2681,6 +2779,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
     for (CmdDescriptor command : COMMANDS.values()) {
       System.err.println(String.format(" %-20s %s", command.getName(), command.getDescription()));
     }
+    System.err.println();
+    System.err.println("Class:");
+    System.err.println("To run any custom implementation of PerformanceEvaluation.Test, "
+      + "provide the classname of the implementaion class in place of "
+      + "command name and it will be loaded at runtime from classpath.:");
+    System.err.println("Please consider to contribute back "
+      + "this custom test impl into a builtin PE command for the benefit of the community");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" nclients        Integer. Required. Total number of clients "
@@ -2976,6 +3081,20 @@ public class PerformanceEvaluation extends Configured implements Tool {
         continue;
       }
 
+      final String commandPropertiesFile = "--commandPropertiesFile=";
+      if (cmd.startsWith(commandPropertiesFile)) {
+        String fileName = String.valueOf(cmd.substring(commandPropertiesFile.length()));
+        Properties properties = new Properties();
+        try {
+          properties
+            .load(PerformanceEvaluation.class.getClassLoader().getResourceAsStream(fileName));
+          opts.commandProperties = properties;
+        } catch (IOException e) {
+          LOG.error("Failed to load metricIds from properties file", e);
+        }
+        continue;
+      }
+
       validateParsedOpts(opts);
 
       if (isCommandClass(cmd)) {
@@ -3089,7 +3208,20 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   private static boolean isCommandClass(String cmd) {
-    return COMMANDS.containsKey(cmd);
+    return COMMANDS.containsKey(cmd) || isCustomTestClass(cmd);
+  }
+
+  private static boolean isCustomTestClass(String cmd) {
+    Class<? extends Test> cmdClass;
+    try {
+      cmdClass =
+        (Class<? extends Test>) PerformanceEvaluation.class.getClassLoader().loadClass(cmd);
+      addCommandDescriptor(cmdClass, cmd, "custom command");
+      return true;
+    } catch (Throwable th) {
+      LOG.info("No class found for command: " + cmd, th);
+      return false;
+    }
   }
 
   private static Class<? extends TestBase> determineCommandClass(String cmd) {

@@ -392,7 +392,8 @@ public class SplitTableRegionProcedure
           postRollBackSplitRegion(env);
           break;
         case SPLIT_TABLE_REGION_PREPARE:
-          break; // nothing to do
+          rollbackPrepareSplit(env);
+          break;
         default:
           throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
@@ -505,7 +506,8 @@ public class SplitTableRegionProcedure
   public boolean prepareSplitRegion(final MasterProcedureEnv env) throws IOException {
     // Fail if we are taking snapshot for the given table
     if (
-      env.getMasterServices().getSnapshotManager().isTakingSnapshot(getParentRegion().getTable())
+      env.getMasterServices().getSnapshotManager()
+        .isTableTakingAnySnapshot(getParentRegion().getTable())
     ) {
       setFailure(new IOException("Skip splitting region " + getParentRegion().getShortNameToLog()
         + ", because we are taking snapshot for the table " + getParentRegion().getTable()));
@@ -569,6 +571,18 @@ public class SplitTableRegionProcedure
     // Since we have the lock and the master is coordinating the operation
     // we are always able to split the region
     return true;
+  }
+
+  /**
+   * Rollback prepare split region
+   * @param env MasterProcedureEnv
+   */
+  private void rollbackPrepareSplit(final MasterProcedureEnv env) {
+    RegionStateNode parentRegionStateNode =
+      env.getAssignmentManager().getRegionStates().getRegionStateNode(getParentRegion());
+    if (parentRegionStateNode.getState() == State.SPLITTING) {
+      parentRegionStateNode.setState(State.OPEN);
+    }
   }
 
   /**

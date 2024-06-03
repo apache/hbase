@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
-import java.util.OptionalLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -72,62 +71,16 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   private CacheStats cacheStats;
   private CacheStats l1Stats = null;
   private CacheStats l2Stats = null;
-
-  private volatile long numStores = 0;
   private volatile long numWALFiles = 0;
   private volatile long walFileSize = 0;
-  private volatile long numStoreFiles = 0;
-  private volatile long memstoreSize = 0;
-  private volatile long onHeapMemstoreSize = 0;
-  private volatile long offHeapMemstoreSize = 0;
-  private volatile long storeFileSize = 0;
-  private volatile double storeFileSizeGrowthRate = 0;
-  private volatile long maxStoreFileCount = 0;
-  private volatile long maxStoreFileAge = 0;
-  private volatile long minStoreFileAge = 0;
-  private volatile long avgStoreFileAge = 0;
-  private volatile long numReferenceFiles = 0;
-  private volatile double requestsPerSecond = 0.0;
-  private volatile long readRequestsCount = 0;
-  private volatile double readRequestsRatePerSecond = 0;
-  private volatile long cpRequestsCount = 0;
-  private volatile long filteredReadRequestsCount = 0;
-  private volatile long writeRequestsCount = 0;
-  private volatile double writeRequestsRatePerSecond = 0;
-  private volatile long checkAndMutateChecksFailed = 0;
-  private volatile long checkAndMutateChecksPassed = 0;
-  private volatile long storefileIndexSize = 0;
-  private volatile long totalStaticIndexSize = 0;
-  private volatile long totalStaticBloomSize = 0;
-  private volatile long bloomFilterRequestsCount = 0;
-  private volatile long bloomFilterNegativeResultsCount = 0;
-  private volatile long bloomFilterEligibleRequestsCount = 0;
-  private volatile long numMutationsWithoutWAL = 0;
-  private volatile long dataInMemoryWithoutWAL = 0;
-  private volatile double percentFileLocal = 0;
-  private volatile double percentFileLocalSecondaryRegions = 0;
-  private volatile long flushedCellsCount = 0;
-  private volatile long compactedCellsCount = 0;
-  private volatile long majorCompactedCellsCount = 0;
-  private volatile long flushedCellsSize = 0;
-  private volatile long compactedCellsSize = 0;
-  private volatile long majorCompactedCellsSize = 0;
-  private volatile long cellsCountCompactedToMob = 0;
-  private volatile long cellsCountCompactedFromMob = 0;
-  private volatile long cellsSizeCompactedToMob = 0;
-  private volatile long cellsSizeCompactedFromMob = 0;
-  private volatile long mobFlushCount = 0;
-  private volatile long mobFlushedCellsCount = 0;
-  private volatile long mobFlushedCellsSize = 0;
-  private volatile long mobScanCellsCount = 0;
-  private volatile long mobScanCellsSize = 0;
   private volatile long mobFileCacheAccessCount = 0;
   private volatile long mobFileCacheMissCount = 0;
   private volatile double mobFileCacheHitRatio = 0;
   private volatile long mobFileCacheEvictedCount = 0;
   private volatile long mobFileCacheCount = 0;
-  private volatile long blockedRequestsCount = 0L;
-  private volatile long averageRegionSize = 0L;
+
+  private volatile RegionMetricAggregate aggregate = new RegionMetricAggregate(null);
+
   protected final Map<String, ArrayList<Long>> requestsCountCache =
     new ConcurrentHashMap<String, ArrayList<Long>>();
 
@@ -249,7 +202,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
   @Override
   public long getTotalRowActionRequestCount() {
-    return readRequestsCount + writeRequestsCount;
+    return aggregate.readRequestsCount + aggregate.writeRequestsCount;
   }
 
   @Override
@@ -462,7 +415,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
   @Override
   public long getNumStores() {
-    return numStores;
+    return aggregate.numStores;
   }
 
   @Override
@@ -491,92 +444,92 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
   @Override
   public long getNumStoreFiles() {
-    return numStoreFiles;
+    return aggregate.numStoreFiles;
   }
 
   @Override
   public long getMaxStoreFiles() {
-    return maxStoreFileCount;
+    return aggregate.maxStoreFileCount;
   }
 
   @Override
   public long getMaxStoreFileAge() {
-    return maxStoreFileAge;
+    return aggregate.maxStoreFileAge;
   }
 
   @Override
   public long getMinStoreFileAge() {
-    return minStoreFileAge;
+    return aggregate.minStoreFileAge;
   }
 
   @Override
   public long getAvgStoreFileAge() {
-    return avgStoreFileAge;
+    return aggregate.avgStoreFileAge;
   }
 
   @Override
   public long getNumReferenceFiles() {
-    return numReferenceFiles;
+    return aggregate.numReferenceFiles;
   }
 
   @Override
   public long getMemStoreSize() {
-    return memstoreSize;
+    return aggregate.memstoreSize;
   }
 
   @Override
   public long getOnHeapMemStoreSize() {
-    return onHeapMemstoreSize;
+    return aggregate.onHeapMemstoreSize;
   }
 
   @Override
   public long getOffHeapMemStoreSize() {
-    return offHeapMemstoreSize;
+    return aggregate.offHeapMemstoreSize;
   }
 
   @Override
   public long getStoreFileSize() {
-    return storeFileSize;
+    return aggregate.storeFileSize;
   }
 
   @Override
   public double getStoreFileSizeGrowthRate() {
-    return storeFileSizeGrowthRate;
+    return aggregate.storeFileSizeGrowthRate;
   }
 
   @Override
   public double getRequestsPerSecond() {
-    return requestsPerSecond;
+    return aggregate.requestsPerSecond;
   }
 
   @Override
   public long getReadRequestsCount() {
-    return readRequestsCount;
+    return aggregate.readRequestsCount;
   }
 
   @Override
   public long getCpRequestsCount() {
-    return cpRequestsCount;
+    return aggregate.cpRequestsCount;
   }
 
   @Override
   public double getReadRequestsRatePerSecond() {
-    return readRequestsRatePerSecond;
+    return aggregate.readRequestsRatePerSecond;
   }
 
   @Override
   public long getFilteredReadRequestsCount() {
-    return filteredReadRequestsCount;
+    return aggregate.filteredReadRequestsCount;
   }
 
   @Override
   public long getWriteRequestsCount() {
-    return writeRequestsCount;
+    return aggregate.writeRequestsCount;
   }
 
   @Override
   public double getWriteRequestsRatePerSecond() {
-    return writeRequestsRatePerSecond;
+    return aggregate.writeRequestsRatePerSecond;
   }
 
   @Override
@@ -606,62 +559,62 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
   @Override
   public long getCheckAndMutateChecksFailed() {
-    return checkAndMutateChecksFailed;
+    return aggregate.checkAndMutateChecksFailed;
   }
 
   @Override
   public long getCheckAndMutateChecksPassed() {
-    return checkAndMutateChecksPassed;
+    return aggregate.checkAndMutateChecksPassed;
   }
 
   @Override
   public long getStoreFileIndexSize() {
-    return storefileIndexSize;
+    return aggregate.storefileIndexSize;
   }
 
   @Override
   public long getTotalStaticIndexSize() {
-    return totalStaticIndexSize;
+    return aggregate.totalStaticIndexSize;
   }
 
   @Override
   public long getTotalStaticBloomSize() {
-    return totalStaticBloomSize;
+    return aggregate.totalStaticBloomSize;
   }
 
   @Override
   public long getBloomFilterRequestsCount() {
-    return bloomFilterRequestsCount;
+    return aggregate.bloomFilterRequestsCount;
   }
 
   @Override
   public long getBloomFilterNegativeResultsCount() {
-    return bloomFilterNegativeResultsCount;
+    return aggregate.bloomFilterNegativeResultsCount;
   }
 
   @Override
   public long getBloomFilterEligibleRequestsCount() {
-    return bloomFilterEligibleRequestsCount;
+    return aggregate.bloomFilterEligibleRequestsCount;
   }
 
   @Override
   public long getNumMutationsWithoutWAL() {
-    return numMutationsWithoutWAL;
+    return aggregate.numMutationsWithoutWAL;
   }
 
   @Override
   public long getDataInMemoryWithoutWAL() {
-    return dataInMemoryWithoutWAL;
+    return aggregate.dataInMemoryWithoutWAL;
   }
 
   @Override
   public double getPercentFileLocal() {
-    return percentFileLocal;
+    return aggregate.percentFileLocal;
   }
 
   @Override
   public double getPercentFileLocalSecondaryRegions() {
-    return percentFileLocalSecondaryRegions;
+    return aggregate.percentFileLocalSecondaryRegions;
   }
 
   @Override
@@ -674,77 +627,77 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
   @Override
   public long getFlushedCellsCount() {
-    return flushedCellsCount;
+    return aggregate.flushedCellsCount;
   }
 
   @Override
   public long getCompactedCellsCount() {
-    return compactedCellsCount;
+    return aggregate.compactedCellsCount;
   }
 
   @Override
   public long getMajorCompactedCellsCount() {
-    return majorCompactedCellsCount;
+    return aggregate.majorCompactedCellsCount;
   }
 
   @Override
   public long getFlushedCellsSize() {
-    return flushedCellsSize;
+    return aggregate.flushedCellsSize;
   }
 
   @Override
   public long getCompactedCellsSize() {
-    return compactedCellsSize;
+    return aggregate.compactedCellsSize;
   }
 
   @Override
   public long getMajorCompactedCellsSize() {
-    return majorCompactedCellsSize;
+    return aggregate.majorCompactedCellsSize;
   }
 
   @Override
   public long getCellsCountCompactedFromMob() {
-    return cellsCountCompactedFromMob;
+    return aggregate.cellsCountCompactedFromMob;
   }
 
   @Override
   public long getCellsCountCompactedToMob() {
-    return cellsCountCompactedToMob;
+    return aggregate.cellsCountCompactedToMob;
   }
 
   @Override
   public long getCellsSizeCompactedFromMob() {
-    return cellsSizeCompactedFromMob;
+    return aggregate.cellsSizeCompactedFromMob;
   }
 
   @Override
   public long getCellsSizeCompactedToMob() {
-    return cellsSizeCompactedToMob;
+    return aggregate.cellsSizeCompactedToMob;
   }
 
   @Override
   public long getMobFlushCount() {
-    return mobFlushCount;
+    return aggregate.mobFlushCount;
   }
 
   @Override
   public long getMobFlushedCellsCount() {
-    return mobFlushedCellsCount;
+    return aggregate.mobFlushedCellsCount;
   }
 
   @Override
   public long getMobFlushedCellsSize() {
-    return mobFlushedCellsSize;
+    return aggregate.mobFlushedCellsSize;
   }
 
   @Override
   public long getMobScanCellsCount() {
-    return mobScanCellsCount;
+    return aggregate.mobScanCellsCount;
   }
 
   @Override
   public long getMobScanCellsSize() {
-    return mobScanCellsSize;
+    return aggregate.mobScanCellsSize;
   }
 
   @Override
@@ -777,6 +730,247 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     return regionServer.getRpcServices().getScannersCount();
   }
 
+  private static final class RegionMetricAggregate {
+    private long numStores = 0;
+    private long numStoreFiles = 0;
+    private long memstoreSize = 0;
+    private long onHeapMemstoreSize = 0;
+    private long offHeapMemstoreSize = 0;
+    private long storeFileSize = 0;
+    private double storeFileSizeGrowthRate = 0;
+    private long maxStoreFileCount = 0;
+    private long maxStoreFileAge = 0;
+    private long minStoreFileAge = Long.MAX_VALUE;
+    private long avgStoreFileAge = 0;
+    private long numReferenceFiles = 0;
+
+    private long cpRequestsCount = 0;
+    private double requestsPerSecond = 0.0;
+    private long readRequestsCount = 0;
+    private double readRequestsRatePerSecond = 0;
+    private long filteredReadRequestsCount = 0;
+    private long writeRequestsCount = 0;
+    private double writeRequestsRatePerSecond = 0;
+    private long checkAndMutateChecksFailed = 0;
+    private long checkAndMutateChecksPassed = 0;
+    private long storefileIndexSize = 0;
+    private long totalStaticIndexSize = 0;
+    private long totalStaticBloomSize = 0;
+    private long bloomFilterRequestsCount = 0;
+    private long bloomFilterNegativeResultsCount = 0;
+    private long bloomFilterEligibleRequestsCount = 0;
+    private long numMutationsWithoutWAL = 0;
+    private long dataInMemoryWithoutWAL = 0;
+    private double percentFileLocal = 0;
+    private double percentFileLocalSecondaryRegions = 0;
+    private long flushedCellsCount = 0;
+    private long compactedCellsCount = 0;
+    private long majorCompactedCellsCount = 0;
+    private long flushedCellsSize = 0;
+    private long compactedCellsSize = 0;
+    private long majorCompactedCellsSize = 0;
+    private long cellsCountCompactedToMob = 0;
+    private long cellsCountCompactedFromMob = 0;
+    private long cellsSizeCompactedToMob = 0;
+    private long cellsSizeCompactedFromMob = 0;
+    private long mobFlushCount = 0;
+    private long mobFlushedCellsCount = 0;
+    private long mobFlushedCellsSize = 0;
+    private long mobScanCellsCount = 0;
+    private long mobScanCellsSize = 0;
+    private long blockedRequestsCount = 0L;
+    private long averageRegionSize = 0L;
+    private long totalReadRequestsDelta = 0;
+    private long totalWriteRequestsDelta = 0;
+
+    private RegionMetricAggregate(RegionMetricAggregate other) {
+      if (other != null) {
+        requestsPerSecond = other.requestsPerSecond;
+        readRequestsRatePerSecond = other.readRequestsRatePerSecond;
+        writeRequestsRatePerSecond = other.writeRequestsRatePerSecond;
+      }
+    }
+
+    private void aggregate(HRegionServer regionServer,
+      Map<String, ArrayList<Long>> requestsCountCache) {
+      HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
+      HDFSBlocksDistribution hdfsBlocksDistributionSecondaryRegions = new HDFSBlocksDistribution();
+
+      long avgAgeNumerator = 0;
+      long numHFiles = 0;
+      int regionCount = 0;
+
+      for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
+        Deltas deltas = calculateReadWriteDeltas(r, requestsCountCache);
+        totalReadRequestsDelta += deltas.readRequestsCountDelta;
+        totalWriteRequestsDelta += deltas.writeRequestsCountDelta;
+
+        numMutationsWithoutWAL += r.getNumMutationsWithoutWAL();
+        dataInMemoryWithoutWAL += r.getDataInMemoryWithoutWAL();
+        cpRequestsCount += r.getCpRequestsCount();
+        readRequestsCount += r.getReadRequestsCount();
+        filteredReadRequestsCount += r.getFilteredReadRequestsCount();
+        writeRequestsCount += r.getWriteRequestsCount();
+        checkAndMutateChecksFailed += r.getCheckAndMutateChecksFailed();
+        checkAndMutateChecksPassed += r.getCheckAndMutateChecksPassed();
+        blockedRequestsCount += r.getBlockedRequestsCount();
+
+        StoreFileStats storeFileStats = aggregateStores(r.getStores());
+        numHFiles += storeFileStats.numHFiles;
+        avgAgeNumerator += storeFileStats.avgAgeNumerator;
+
+        HDFSBlocksDistribution distro = r.getHDFSBlocksDistribution();
+        hdfsBlocksDistribution.add(distro);
+        if (r.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
+          hdfsBlocksDistributionSecondaryRegions.add(distro);
+        }
+
+        regionCount++;
+      }
+
+      float localityIndex =
+        hdfsBlocksDistribution.getBlockLocalityIndex(regionServer.getServerName().getHostname());
+      percentFileLocal = Double.isNaN(localityIndex) ? 0 : (localityIndex * 100);
+
+      float localityIndexSecondaryRegions = hdfsBlocksDistributionSecondaryRegions
+        .getBlockLocalityIndex(regionServer.getServerName().getHostname());
+      percentFileLocalSecondaryRegions =
+        Double.isNaN(localityIndexSecondaryRegions) ? 0 : (localityIndexSecondaryRegions * 100);
+
+      if (regionCount > 0) {
+        averageRegionSize = (memstoreSize + storeFileSize) / regionCount;
+      }
+
+      // if there were no store files, we'll never have updated this with Math.min
+      // so set it to 0, which is a better value to display in case of no storefiles
+      if (minStoreFileAge == Long.MAX_VALUE) {
+        this.minStoreFileAge = 0;
+      }
+
+      if (numHFiles != 0) {
+        avgStoreFileAge = avgAgeNumerator / numHFiles;
+      }
+    }
+
+    private static final class Deltas {
+      private final long readRequestsCountDelta;
+      private final long writeRequestsCountDelta;
+
+      private Deltas(long readRequestsCountDelta, long writeRequestsCountDelta) {
+        this.readRequestsCountDelta = readRequestsCountDelta;
+        this.writeRequestsCountDelta = writeRequestsCountDelta;
+      }
+    }
+
+    private Deltas calculateReadWriteDeltas(HRegion r,
+      Map<String, ArrayList<Long>> requestsCountCache) {
+      String encodedRegionName = r.getRegionInfo().getEncodedName();
+      long currentReadRequestsCount = r.getReadRequestsCount();
+      long currentWriteRequestsCount = r.getWriteRequestsCount();
+      if (requestsCountCache.containsKey(encodedRegionName)) {
+        long lastReadRequestsCount = requestsCountCache.get(encodedRegionName).get(0);
+        long lastWriteRequestsCount = requestsCountCache.get(encodedRegionName).get(1);
+
+        // Update cache for our next comparison
+        requestsCountCache.get(encodedRegionName).set(0, currentReadRequestsCount);
+        requestsCountCache.get(encodedRegionName).set(1, currentWriteRequestsCount);
+
+        long readRequestsDelta = currentReadRequestsCount - lastReadRequestsCount;
+        long writeRequestsDelta = currentWriteRequestsCount - lastWriteRequestsCount;
+        return new Deltas(readRequestsDelta, writeRequestsDelta);
+      } else {
+        // List[0] -> readRequestCount
+        // List[1] -> writeRequestCount
+        ArrayList<Long> requests = new ArrayList<Long>(2);
+        requests.add(currentReadRequestsCount);
+        requests.add(currentWriteRequestsCount);
+        requestsCountCache.put(encodedRegionName, requests);
+        return new Deltas(currentReadRequestsCount, currentWriteRequestsCount);
+      }
+    }
+
+    public void updateRates(long timeSinceLastRun, long expectedPeriod, long lastStoreFileSize) {
+      requestsPerSecond =
+        (totalReadRequestsDelta + totalWriteRequestsDelta) / (timeSinceLastRun / 1000.0);
+
+      double readRequestsRatePerMilliSecond = (double) totalReadRequestsDelta / expectedPeriod;
+      double writeRequestsRatePerMilliSecond = (double) totalWriteRequestsDelta / expectedPeriod;
+
+      readRequestsRatePerSecond = readRequestsRatePerMilliSecond * 1000.0;
+      writeRequestsRatePerSecond = writeRequestsRatePerMilliSecond * 1000.0;
+
+      long intervalStoreFileSize = storeFileSize - lastStoreFileSize;
+      storeFileSizeGrowthRate = (double) intervalStoreFileSize * 1000.0 / expectedPeriod;
+    }
+
+    private static final class StoreFileStats {
+      private final long numHFiles;
+      private final long avgAgeNumerator;
+
+      private StoreFileStats(long numHFiles, long avgAgeNumerator) {
+        this.numHFiles = numHFiles;
+        this.avgAgeNumerator = avgAgeNumerator;
+      }
+    }
+
+    private StoreFileStats aggregateStores(List<HStore> stores) {
+      numStores += stores.size();
+      long numHFiles = 0;
+      long avgAgeNumerator = 0;
+      for (Store store : stores) {
+        numStoreFiles += store.getStorefilesCount();
+        memstoreSize += store.getMemStoreSize().getDataSize();
+        onHeapMemstoreSize += store.getMemStoreSize().getHeapSize();
+        offHeapMemstoreSize += store.getMemStoreSize().getOffHeapSize();
+        storeFileSize += store.getStorefilesSize();
+        maxStoreFileCount = Math.max(maxStoreFileCount, store.getStorefilesCount());
+
+        maxStoreFileAge =
+          Math.max(store.getMaxStoreFileAge().orElse(maxStoreFileAge), maxStoreFileAge);
+        minStoreFileAge =
+          Math.min(store.getMinStoreFileAge().orElse(minStoreFileAge), minStoreFileAge);
+
+        long storeHFiles = store.getNumHFiles();
+        numHFiles += storeHFiles;
+        numReferenceFiles += store.getNumReferenceFiles();
+
+        OptionalDouble storeAvgStoreFileAge = store.getAvgStoreFileAge();
+        if (storeAvgStoreFileAge.isPresent()) {
+          avgAgeNumerator =
+            (long) (avgAgeNumerator + storeAvgStoreFileAge.getAsDouble() * storeHFiles);
+        }
+
+        storefileIndexSize += store.getStorefilesRootLevelIndexSize();
+        totalStaticBloomSize += store.getTotalStaticBloomSize();
+        totalStaticIndexSize += store.getTotalStaticIndexSize();
+        bloomFilterRequestsCount += store.getBloomFilterRequestsCount();
+        bloomFilterNegativeResultsCount += store.getBloomFilterNegativeResultsCount();
+        bloomFilterEligibleRequestsCount += store.getBloomFilterEligibleRequestsCount();
+        flushedCellsCount += store.getFlushedCellsCount();
+        compactedCellsCount += store.getCompactedCellsCount();
+        majorCompactedCellsCount += store.getMajorCompactedCellsCount();
+        flushedCellsSize += store.getFlushedCellsSize();
+        compactedCellsSize += store.getCompactedCellsSize();
+        majorCompactedCellsSize += store.getMajorCompactedCellsSize();
+        if (store instanceof HMobStore) {
+          HMobStore mobStore = (HMobStore) store;
+          cellsCountCompactedToMob += mobStore.getCellsCountCompactedToMob();
+          cellsCountCompactedFromMob += mobStore.getCellsCountCompactedFromMob();
+          cellsSizeCompactedToMob += mobStore.getCellsSizeCompactedToMob();
+          cellsSizeCompactedFromMob += mobStore.getCellsSizeCompactedFromMob();
+          mobFlushCount += mobStore.getMobFlushCount();
+          mobFlushedCellsCount += mobStore.getMobFlushedCellsCount();
+          mobFlushedCellsSize += mobStore.getMobFlushedCellsSize();
+          mobScanCellsCount += mobStore.getMobScanCellsCount();
+          mobScanCellsSize += mobStore.getMobScanCellsSize();
+        }
+      }
+
+      return new StoreFileStats(numHFiles, avgAgeNumerator);
+    }
+
+  }
+
   /**
    * This is the runnable that will be executed on the executor every PERIOD number of seconds It
    * will take metrics/numbers from all of the regions and use them to compute point in time
@@ -790,170 +984,8 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     @Override
     synchronized public void run() {
       try {
-        HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
-        HDFSBlocksDistribution hdfsBlocksDistributionSecondaryRegions =
-          new HDFSBlocksDistribution();
-
-        long tempNumStores = 0, tempNumStoreFiles = 0, tempStoreFileSize = 0;
-        long tempMemstoreSize = 0, tempOnHeapMemstoreSize = 0, tempOffHeapMemstoreSize = 0;
-        long tempMaxStoreFileAge = 0, tempNumReferenceFiles = 0;
-        long tempMaxStoreFileCount = 0;
-        long avgAgeNumerator = 0, numHFiles = 0;
-        long tempMinStoreFileAge = Long.MAX_VALUE;
-        long tempFilteredReadRequestsCount = 0, tempCpRequestsCount = 0;
-        long tempCheckAndMutateChecksFailed = 0;
-        long tempCheckAndMutateChecksPassed = 0;
-        long tempStorefileIndexSize = 0;
-        long tempTotalStaticIndexSize = 0;
-        long tempTotalStaticBloomSize = 0;
-        long tempBloomFilterRequestsCount = 0;
-        long tempBloomFilterNegativeResultsCount = 0;
-        long tempBloomFilterEligibleRequestsCount = 0;
-        long tempNumMutationsWithoutWAL = 0;
-        long tempDataInMemoryWithoutWAL = 0;
-        double tempPercentFileLocal = 0;
-        double tempPercentFileLocalSecondaryRegions = 0;
-        long tempFlushedCellsCount = 0;
-        long tempCompactedCellsCount = 0;
-        long tempMajorCompactedCellsCount = 0;
-        long tempFlushedCellsSize = 0;
-        long tempCompactedCellsSize = 0;
-        long tempMajorCompactedCellsSize = 0;
-        long tempCellsCountCompactedToMob = 0;
-        long tempCellsCountCompactedFromMob = 0;
-        long tempCellsSizeCompactedToMob = 0;
-        long tempCellsSizeCompactedFromMob = 0;
-        long tempMobFlushCount = 0;
-        long tempMobFlushedCellsCount = 0;
-        long tempMobFlushedCellsSize = 0;
-        long tempMobScanCellsCount = 0;
-        long tempMobScanCellsSize = 0;
-        long tempBlockedRequestsCount = 0;
-        int regionCount = 0;
-
-        long tempReadRequestsCount = 0;
-        long tempWriteRequestsCount = 0;
-        long currentReadRequestsCount = 0;
-        long currentWriteRequestsCount = 0;
-        long lastReadRequestsCount = 0;
-        long lastWriteRequestsCount = 0;
-        long readRequestsDelta = 0;
-        long writeRequestsDelta = 0;
-        long totalReadRequestsDelta = 0;
-        long totalWriteRequestsDelta = 0;
-        String encodedRegionName;
-        for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
-          encodedRegionName = r.getRegionInfo().getEncodedName();
-          currentReadRequestsCount = r.getReadRequestsCount();
-          currentWriteRequestsCount = r.getWriteRequestsCount();
-          if (requestsCountCache.containsKey(encodedRegionName)) {
-            lastReadRequestsCount = requestsCountCache.get(encodedRegionName).get(0);
-            lastWriteRequestsCount = requestsCountCache.get(encodedRegionName).get(1);
-            readRequestsDelta = currentReadRequestsCount - lastReadRequestsCount;
-            writeRequestsDelta = currentWriteRequestsCount - lastWriteRequestsCount;
-            totalReadRequestsDelta += readRequestsDelta;
-            totalWriteRequestsDelta += writeRequestsDelta;
-            // Update cache for our next comparision
-            requestsCountCache.get(encodedRegionName).set(0, currentReadRequestsCount);
-            requestsCountCache.get(encodedRegionName).set(1, currentWriteRequestsCount);
-          } else {
-            // List[0] -> readRequestCount
-            // List[1] -> writeRequestCount
-            ArrayList<Long> requests = new ArrayList<Long>(2);
-            requests.add(currentReadRequestsCount);
-            requests.add(currentWriteRequestsCount);
-            requestsCountCache.put(encodedRegionName, requests);
-            totalReadRequestsDelta += currentReadRequestsCount;
-            totalWriteRequestsDelta += currentWriteRequestsCount;
-          }
-          tempReadRequestsCount += r.getReadRequestsCount();
-          tempWriteRequestsCount += r.getWriteRequestsCount();
-          tempNumMutationsWithoutWAL += r.getNumMutationsWithoutWAL();
-          tempDataInMemoryWithoutWAL += r.getDataInMemoryWithoutWAL();
-          tempCpRequestsCount += r.getCpRequestsCount();
-          tempFilteredReadRequestsCount += r.getFilteredReadRequestsCount();
-          tempCheckAndMutateChecksFailed += r.getCheckAndMutateChecksFailed();
-          tempCheckAndMutateChecksPassed += r.getCheckAndMutateChecksPassed();
-          tempBlockedRequestsCount += r.getBlockedRequestsCount();
-          List<? extends Store> storeList = r.getStores();
-          tempNumStores += storeList.size();
-          for (Store store : storeList) {
-            tempNumStoreFiles += store.getStorefilesCount();
-            tempMemstoreSize += store.getMemStoreSize().getDataSize();
-            tempOnHeapMemstoreSize += store.getMemStoreSize().getHeapSize();
-            tempOffHeapMemstoreSize += store.getMemStoreSize().getOffHeapSize();
-            tempStoreFileSize += store.getStorefilesSize();
-
-            tempMaxStoreFileCount = Math.max(tempMaxStoreFileCount, store.getStorefilesCount());
-
-            OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
-            if (
-              storeMaxStoreFileAge.isPresent()
-                && storeMaxStoreFileAge.getAsLong() > tempMaxStoreFileAge
-            ) {
-              tempMaxStoreFileAge = storeMaxStoreFileAge.getAsLong();
-            }
-
-            OptionalLong storeMinStoreFileAge = store.getMinStoreFileAge();
-            if (
-              storeMinStoreFileAge.isPresent()
-                && storeMinStoreFileAge.getAsLong() < tempMinStoreFileAge
-            ) {
-              tempMinStoreFileAge = storeMinStoreFileAge.getAsLong();
-            }
-
-            long storeHFiles = store.getNumHFiles();
-            numHFiles += storeHFiles;
-            tempNumReferenceFiles += store.getNumReferenceFiles();
-
-            OptionalDouble storeAvgStoreFileAge = store.getAvgStoreFileAge();
-            if (storeAvgStoreFileAge.isPresent()) {
-              avgAgeNumerator =
-                (long) (avgAgeNumerator + storeAvgStoreFileAge.getAsDouble() * storeHFiles);
-            }
-
-            tempStorefileIndexSize += store.getStorefilesRootLevelIndexSize();
-            tempTotalStaticBloomSize += store.getTotalStaticBloomSize();
-            tempTotalStaticIndexSize += store.getTotalStaticIndexSize();
-            tempBloomFilterRequestsCount += store.getBloomFilterRequestsCount();
-            tempBloomFilterNegativeResultsCount += store.getBloomFilterNegativeResultsCount();
-            tempBloomFilterEligibleRequestsCount += store.getBloomFilterEligibleRequestsCount();
-            tempFlushedCellsCount += store.getFlushedCellsCount();
-            tempCompactedCellsCount += store.getCompactedCellsCount();
-            tempMajorCompactedCellsCount += store.getMajorCompactedCellsCount();
-            tempFlushedCellsSize += store.getFlushedCellsSize();
-            tempCompactedCellsSize += store.getCompactedCellsSize();
-            tempMajorCompactedCellsSize += store.getMajorCompactedCellsSize();
-            if (store instanceof HMobStore) {
-              HMobStore mobStore = (HMobStore) store;
-              tempCellsCountCompactedToMob += mobStore.getCellsCountCompactedToMob();
-              tempCellsCountCompactedFromMob += mobStore.getCellsCountCompactedFromMob();
-              tempCellsSizeCompactedToMob += mobStore.getCellsSizeCompactedToMob();
-              tempCellsSizeCompactedFromMob += mobStore.getCellsSizeCompactedFromMob();
-              tempMobFlushCount += mobStore.getMobFlushCount();
-              tempMobFlushedCellsCount += mobStore.getMobFlushedCellsCount();
-              tempMobFlushedCellsSize += mobStore.getMobFlushedCellsSize();
-              tempMobScanCellsCount += mobStore.getMobScanCellsCount();
-              tempMobScanCellsSize += mobStore.getMobScanCellsSize();
-            }
-          }
-
-          HDFSBlocksDistribution distro = r.getHDFSBlocksDistribution();
-          hdfsBlocksDistribution.add(distro);
-          if (r.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
-            hdfsBlocksDistributionSecondaryRegions.add(distro);
-          }
-          regionCount++;
-        }
-
-        float localityIndex =
-          hdfsBlocksDistribution.getBlockLocalityIndex(regionServer.getServerName().getHostname());
-        tempPercentFileLocal = Double.isNaN(tempBlockedRequestsCount) ? 0 : (localityIndex * 100);
-
-        float localityIndexSecondaryRegions = hdfsBlocksDistributionSecondaryRegions
-          .getBlockLocalityIndex(regionServer.getServerName().getHostname());
-        tempPercentFileLocalSecondaryRegions =
-          Double.isNaN(localityIndexSecondaryRegions) ? 0 : (localityIndexSecondaryRegions * 100);
+        RegionMetricAggregate newVal = new RegionMetricAggregate(aggregate);
+        newVal.aggregate(regionServer, requestsCountCache);
 
         // Compute the number of requests per second
         long currentTime = EnvironmentEdgeManager.currentTime();
@@ -963,24 +995,14 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
         if (lastRan == 0) {
           lastRan = currentTime - period;
         }
+
+        long timeSinceLastRun = currentTime - lastRan;
         // If we've time traveled keep the last requests per second.
-        if ((currentTime - lastRan) > 0) {
-          requestsPerSecond =
-            (totalReadRequestsDelta + totalWriteRequestsDelta) / ((currentTime - lastRan) / 1000.0);
-
-          double readRequestsRatePerMilliSecond = (double) totalReadRequestsDelta / period;
-          double writeRequestsRatePerMilliSecond = (double) totalWriteRequestsDelta / period;
-
-          readRequestsRatePerSecond = readRequestsRatePerMilliSecond * 1000.0;
-          writeRequestsRatePerSecond = writeRequestsRatePerMilliSecond * 1000.0;
-
-          long intervalStoreFileSize = tempStoreFileSize - lastStoreFileSize;
-          storeFileSizeGrowthRate = (double) intervalStoreFileSize * 1000.0 / period;
-
-          lastStoreFileSize = tempStoreFileSize;
+        if (timeSinceLastRun > 0) {
+          newVal.updateRates(timeSinceLastRun, period, lastStoreFileSize);
         }
 
-        lastRan = currentTime;
+        aggregate = newVal;
 
         List<WALProvider> providers = regionServer.getWalFactory().getAllWALProviders();
         for (WALProvider provider : providers) {
@@ -988,58 +1010,6 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
           walFileSize += provider.getLogFileSize();
         }
 
-        // Copy over computed values so that no thread sees half computed values.
-        numStores = tempNumStores;
-        numStoreFiles = tempNumStoreFiles;
-        memstoreSize = tempMemstoreSize;
-        onHeapMemstoreSize = tempOnHeapMemstoreSize;
-        offHeapMemstoreSize = tempOffHeapMemstoreSize;
-        storeFileSize = tempStoreFileSize;
-        maxStoreFileCount = tempMaxStoreFileCount;
-        maxStoreFileAge = tempMaxStoreFileAge;
-        if (regionCount > 0) {
-          averageRegionSize = (memstoreSize + storeFileSize) / regionCount;
-        }
-        if (tempMinStoreFileAge != Long.MAX_VALUE) {
-          minStoreFileAge = tempMinStoreFileAge;
-        }
-
-        if (numHFiles != 0) {
-          avgStoreFileAge = avgAgeNumerator / numHFiles;
-        }
-
-        numReferenceFiles = tempNumReferenceFiles;
-        readRequestsCount = tempReadRequestsCount;
-        cpRequestsCount = tempCpRequestsCount;
-        filteredReadRequestsCount = tempFilteredReadRequestsCount;
-        writeRequestsCount = tempWriteRequestsCount;
-        checkAndMutateChecksFailed = tempCheckAndMutateChecksFailed;
-        checkAndMutateChecksPassed = tempCheckAndMutateChecksPassed;
-        storefileIndexSize = tempStorefileIndexSize;
-        totalStaticIndexSize = tempTotalStaticIndexSize;
-        totalStaticBloomSize = tempTotalStaticBloomSize;
-        bloomFilterRequestsCount = tempBloomFilterRequestsCount;
-        bloomFilterNegativeResultsCount = tempBloomFilterNegativeResultsCount;
-        bloomFilterEligibleRequestsCount = tempBloomFilterEligibleRequestsCount;
-        numMutationsWithoutWAL = tempNumMutationsWithoutWAL;
-        dataInMemoryWithoutWAL = tempDataInMemoryWithoutWAL;
-        percentFileLocal = tempPercentFileLocal;
-        percentFileLocalSecondaryRegions = tempPercentFileLocalSecondaryRegions;
-        flushedCellsCount = tempFlushedCellsCount;
-        compactedCellsCount = tempCompactedCellsCount;
-        majorCompactedCellsCount = tempMajorCompactedCellsCount;
-        flushedCellsSize = tempFlushedCellsSize;
-        compactedCellsSize = tempCompactedCellsSize;
-        majorCompactedCellsSize = tempMajorCompactedCellsSize;
-        cellsCountCompactedToMob = tempCellsCountCompactedToMob;
-        cellsCountCompactedFromMob = tempCellsCountCompactedFromMob;
-        cellsSizeCompactedToMob = tempCellsSizeCompactedToMob;
-        cellsSizeCompactedFromMob = tempCellsSizeCompactedFromMob;
-        mobFlushCount = tempMobFlushCount;
-        mobFlushedCellsCount = tempMobFlushedCellsCount;
-        mobFlushedCellsSize = tempMobFlushedCellsSize;
-        mobScanCellsCount = tempMobScanCellsCount;
-        mobScanCellsSize = tempMobScanCellsSize;
         mobFileCacheAccessCount = mobFileCache != null ? mobFileCache.getAccessCount() : 0L;
         mobFileCacheMissCount = mobFileCache != null ? mobFileCache.getMissCount() : 0L;
         mobFileCacheHitRatio = mobFileCache != null ? mobFileCache.getHitRatio() : 0.0;
@@ -1048,7 +1018,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
         }
         mobFileCacheEvictedCount = mobFileCache != null ? mobFileCache.getEvictedFileCount() : 0L;
         mobFileCacheCount = mobFileCache != null ? mobFileCache.getCacheSize() : 0;
-        blockedRequestsCount = tempBlockedRequestsCount;
+
+        lastStoreFileSize = aggregate.storeFileSize;
+        lastRan = currentTime;
       } catch (Throwable e) {
         LOG.warn("Caught exception! Will suppress and retry.", e);
       }
@@ -1094,12 +1066,12 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
   @Override
   public long getBlockedRequestsCount() {
-    return blockedRequestsCount;
+    return aggregate.blockedRequestsCount;
   }
 
   @Override
   public long getAverageRegionSize() {
-    return averageRegionSize;
+    return aggregate.averageRegionSize;
   }
 
   @Override
@@ -1225,5 +1197,10 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   @Override
   public long getByteBuffAllocatorUsedBufferCount() {
     return this.allocator.getUsedBufferCount();
+  }
+
+  // Visible for testing
+  long getPeriod() {
+    return period;
   }
 }

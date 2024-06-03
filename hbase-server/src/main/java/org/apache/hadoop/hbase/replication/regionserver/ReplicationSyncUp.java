@@ -272,11 +272,12 @@ public class ReplicationSyncUp extends Configured implements Tool {
       getConf().setClass(ReplicationStorageFactory.REPLICATION_QUEUE_IMPL,
         OfflineTableReplicationQueueStorage.class, ReplicationQueueStorage.class);
       DummyServer server = new DummyServer(getConf(), zkw);
-      replication.initialize(server, fs, new Path(logDir, server.toString()), oldLogDir,
-        new WALFactory(conf,
-          ServerName
-            .valueOf(getClass().getSimpleName() + ",16010," + EnvironmentEdgeManager.currentTime()),
-          null, false));
+      replication
+        .initialize(server, fs, new Path(logDir, server.toString()), oldLogDir,
+          new WALFactory(conf,
+            ServerName.valueOf(
+              getClass().getSimpleName() + ",16010," + EnvironmentEdgeManager.currentTime()),
+            null));
       ReplicationSourceManager manager = replication.getReplicationManager();
       manager.init();
       Set<ServerName> regionServers = listRegionServers(fs, logDir);

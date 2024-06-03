@@ -69,6 +69,12 @@ public interface Constants {
   String REST_DNS_NAMESERVER = "hbase.rest.dns.nameserver";
   String REST_DNS_INTERFACE = "hbase.rest.dns.interface";
 
+  String REST_SCANNERCACHE_SIZE = "hbase.rest.scannercache.size";
+  final int DEFAULT_REST_SCANNERCACHE_SIZE = 10000;
+
+  String REST_SCANNERCACHE_EXPIRE_TIME = "hbase.rest.scannercache.expire.time";
+  final long DEFAULT_REST_SCANNERCACHE_EXPIRE_TIME_MS = 60 * 60 * 1000;
+
   String FILTER_CLASSES = "hbase.rest.filter.classes";
   String SCAN_START_ROW = "startrow";
   String SCAN_END_ROW = "endrow";
@@ -79,12 +85,20 @@ public interface Constants {
   String SCAN_BATCH_SIZE = "batchsize";
   String SCAN_LIMIT = "limit";
   String SCAN_FETCH_SIZE = "hbase.rest.scan.fetchsize";
-  String SCAN_FILTER = "filter";
+  String FILTER = "filter";
+  /**
+   * @deprecated Since 2.4.18/2.5.9/2.6.0, will be removed in 4.0.0. Please use {@link #FILTER}
+   *             instead.
+   */
+  @Deprecated
+  String SCAN_FILTER = FILTER;
+  String FILTER_B64 = "filter_b64";
   String SCAN_REVERSED = "reversed";
   String SCAN_CACHE_BLOCKS = "cacheblocks";
   String CUSTOM_FILTERS = "hbase.rest.custom.filters";
 
   String ROW_KEYS_PARAM_NAME = "row";
+  String KEY_ENCODING_QUERY_PARAM_NAME = "e";
   /**
    * If this query parameter is present when processing row or scanner resources, it disables server
    * side block caching

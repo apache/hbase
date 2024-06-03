@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
@@ -80,6 +81,12 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
+  public long truncateRegion(RegionInfo regionInfo, long nonceGroup, long nonce)
+    throws IOException {
+    return 0;
+  }
+
+  @Override
   public long createTable(final TableDescriptor desc, final byte[][] splitKeys,
     final long nonceGroup, final long nonce) throws IOException {
     // no-op
@@ -108,6 +115,11 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public CatalogJanitor getCatalogJanitor() {
+    return null;
+  }
+
+  @Override
+  public HbckChore getHbckChore() {
     return null;
   }
 
@@ -254,6 +266,12 @@ public class MockNoopMasterServices implements MasterServices {
   @Override
   public long modifyTable(final TableName tableName, final TableDescriptor descriptor,
     final long nonceGroup, final long nonce) throws IOException {
+    return -1;
+  }
+
+  @Override
+  public long modifyTable(TableName tableName, TableDescriptor descriptor, long nonceGroup,
+    long nonce, boolean reopenRegions) throws IOException {
     return -1;
   }
 

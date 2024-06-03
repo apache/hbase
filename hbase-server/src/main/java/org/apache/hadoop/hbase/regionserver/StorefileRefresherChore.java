@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.Map;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
@@ -81,8 +82,13 @@ public class StorefileRefresherChore extends ScheduledChore {
   @Override
   protected void chore() {
     for (Region r : regionServer.getOnlineRegionsLocalContext()) {
-      if (!r.isReadOnly()) {
-        // skip checking for this region if it can accept writes
+      if (
+        !r.isReadOnly() || r.getRegionInfo().getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID
+          || r.getTableDescriptor().isReadOnly()
+      ) {
+        // Skip checking for this region if it can accept writes.
+        // The refresher is only for refreshing secondary replicas. And if the table is readonly,
+        // meaning no writes to the primary replica, skip checking the secondary replicas as well.
         continue;
       }
       // don't refresh unless enabled for all files, or it the meta region

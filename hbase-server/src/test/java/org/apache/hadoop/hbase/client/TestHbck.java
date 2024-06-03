@@ -250,11 +250,20 @@ public class TestHbck {
       for (long pid : pids) {
         assertEquals(Procedure.NO_PROC_ID, pid);
       }
-      // If we pass override, then we should be able to unassign EVEN THOUGH Regions already
+      // Rerun the unassign with override. Should fail for all Regions since they already
+      // unassigned; failed
+      // unassign will manifest as all pids being -1 (ever since HBASE-24885).
+      pids = hbck.unassigns(
+        regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()), true, false);
+      waitOnPids(pids);
+      for (long pid : pids) {
+        assertEquals(Procedure.NO_PROC_ID, pid);
+      }
+      // If we pass force, then we should be able to unassign EVEN THOUGH Regions already
       // unassigned.... makes for a mess but operator might want to do this at an extreme when
       // doing fixup of broke cluster.
       pids = hbck.unassigns(
-        regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()), true);
+        regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()), true, true);
       waitOnPids(pids);
       for (long pid : pids) {
         assertNotEquals(Procedure.NO_PROC_ID, pid);
@@ -282,6 +291,12 @@ public class TestHbck {
           .getRegionStates().getRegionState(ri.getEncodedName());
         LOG.info("RS: {}", rs.toString());
         assertTrue(rs.toString(), rs.isOpened());
+      }
+      // Rerun the assign with override. Should fail for all Regions since they already assigned
+      pids = hbck.assigns(
+        regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()), true, false);
+      for (long pid : pids) {
+        assertEquals(Procedure.NO_PROC_ID, pid);
       }
       // What happens if crappy region list passed?
       pids = hbck.assigns(

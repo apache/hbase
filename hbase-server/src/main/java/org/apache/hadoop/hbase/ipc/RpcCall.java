@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
+import java.util.Map;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -27,7 +29,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
 /**
@@ -83,7 +84,28 @@ public interface RpcCall extends RpcCallContext {
   /** Returns The request header of this call. */
   RequestHeader getHeader();
 
-  ConnectionHeader getConnectionHeader();
+  /**
+   * Returns the map of attributes specified when building the Connection.
+   * @see org.apache.hadoop.hbase.client.ConnectionFactory#createConnection(Configuration,
+   *      ExecutorService, User, Map)
+   */
+  Map<String, byte[]> getConnectionAttributes();
+
+  /**
+   * Returns the map of attributes specified when building the request. This map is lazily evaluated
+   * so if you only need a single attribute then it may be cheaper to use
+   * {@link #getRequestAttribute(String)}
+   * @see org.apache.hadoop.hbase.client.TableBuilder#setRequestAttribute(String, byte[])
+   */
+  Map<String, byte[]> getRequestAttributes();
+
+  /**
+   * Returns a single request attribute value, or null if no value is present. If you need many
+   * request attributes then you should fetch the lazily evaluated map via
+   * {@link #getRequestAttributes()}
+   * @see org.apache.hadoop.hbase.client.TableBuilder#setRequestAttribute(String, byte[])
+   */
+  byte[] getRequestAttribute(String key);
 
   /** Returns Port of remote address in this call */
   int getRemotePort();
@@ -110,4 +132,8 @@ public interface RpcCall extends RpcCallContext {
 
   /** Returns A short string format of this call without possibly lengthy params */
   String toShortString();
+
+  void updateFsReadTime(long latencyMillis);
+
+  long getFsReadTime();
 }

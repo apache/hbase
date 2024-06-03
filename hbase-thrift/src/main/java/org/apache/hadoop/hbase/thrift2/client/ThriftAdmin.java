@@ -726,12 +726,27 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public void truncateRegion(byte[] regionName) throws IOException {
+    throw new NotImplementedException("Truncate Region not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Future<Void> truncateRegionAsync(byte[] regionName) {
+    throw new NotImplementedException("Truncate Region Async not supported in ThriftAdmin");
+  }
+
+  @Override
   public Future<Void> splitRegionAsync(byte[] regionName, byte[] splitPoint) {
     throw new NotImplementedException("splitRegionAsync not supported in ThriftAdmin");
   }
 
   @Override
   public Future<Void> modifyTableAsync(TableDescriptor td) {
+    throw new NotImplementedException("modifyTableAsync not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions) {
     throw new NotImplementedException("modifyTableAsync not supported in ThriftAdmin");
   }
 
@@ -1333,6 +1348,11 @@ public class ThriftAdmin implements Admin {
   @Override
   public void flushMasterStore() throws IOException {
     throw new NotImplementedException("flushMasterStore not supported in ThriftAdmin");
+  }
+
+  @Override
+  public List<String> getCachedFilesList(ServerName serverName) throws IOException {
+    throw new NotImplementedException("getCachedFilesList not supported in ThriftAdmin");
   }
 
   @Override

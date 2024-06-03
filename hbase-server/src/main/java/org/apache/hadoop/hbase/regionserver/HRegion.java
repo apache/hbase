@@ -458,6 +458,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private final CellComparator cellComparator;
 
+  private final int minBlockSizeBytes;
+
   /**
    * @return The smallest mvcc readPoint across all the scanners in this region. Writes older than
    *         this readPoint, are included in every read operation.
@@ -916,6 +918,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           .remove(getRegionInfo().getEncodedName());
       }
     }
+
+    minBlockSizeBytes = Arrays.stream(this.htableDescriptor.getColumnFamilies())
+      .mapToInt(ColumnFamilyDescriptor::getBlocksize).min().orElse(HConstants.DEFAULT_BLOCKSIZE);
   }
 
   private void setHTableSpecificConf() {
@@ -2045,6 +2050,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public Configuration getReadOnlyConfiguration() {
     return new ReadOnlyConfiguration(this.conf);
+  }
+
+  @Override
+  public int getMinBlockSizeBytes() {
+    return minBlockSizeBytes;
   }
 
   private ThreadPoolExecutor getStoreOpenAndCloseThreadPool(final String threadNamePrefix) {
@@ -4026,7 +4036,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       assert mutation instanceof Increment || mutation instanceof Append;
       Get get = new Get(mutation.getRow());
       CellScanner cellScanner = mutation.cellScanner();
-      while (!cellScanner.advance()) {
+      while (cellScanner.advance()) {
         Cell cell = cellScanner.current();
         get.addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell));
       }
@@ -5646,15 +5656,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           currentReplaySeqId =
             (key.getOrigLogSeqNum() > 0) ? key.getOrigLogSeqNum() : currentEditSeqId;
 
-          // Start coprocessor replay here. The coprocessor is for each WALEdit
-          // instead of a KeyValue.
-          if (coprocessorHost != null) {
-            status.setStatus("Running pre-WAL-restore hook in coprocessors");
-            if (coprocessorHost.preWALRestore(this.getRegionInfo(), key, val)) {
-              // if bypass this wal entry, ignore it ...
-              continue;
-            }
-          }
           boolean checkRowWithinBoundary = false;
           // Check this edit is for this region.
           if (
@@ -5722,10 +5723,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           if (flush) {
             internalFlushcache(null, currentEditSeqId, stores.values(), status, false,
               FlushLifeCycleTracker.DUMMY);
-          }
-
-          if (coprocessorHost != null) {
-            coprocessorHost.postWALRestore(this.getRegionInfo(), key, val);
           }
         }
 

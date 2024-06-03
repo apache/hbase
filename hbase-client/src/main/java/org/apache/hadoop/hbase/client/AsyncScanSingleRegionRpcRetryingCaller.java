@@ -230,7 +230,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   // Notice that, the public methods of this class is supposed to be called by upper layer only, and
   // package private methods can only be called within the implementation of
   // AsyncScanSingleRegionRpcRetryingCaller.
-  private final class ScanResumerImpl implements AdvancedScanResultConsumer.ScanResumer {
+  @InterfaceAudience.Private
+  final class ScanResumerImpl implements AdvancedScanResultConsumer.ScanResumer {
 
     // INITIALIZED -> SUSPENDED -> RESUMED
     // INITIALIZED -> RESUMED
@@ -250,6 +251,18 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
     @Override
     public void resume() {
+      doResume(false);
+    }
+
+    /**
+     * This method is used when {@link ScanControllerImpl#suspend} had ever been called to get a
+     * {@link ScanResumerImpl}, but now user stops scan and does not need any more scan results.
+     */
+    public void terminate() {
+      doResume(true);
+    }
+
+    private void doResume(boolean stopScan) {
       // just used to fix findbugs warnings. In fact, if resume is called before prepare, then we
       // just return at the first if condition without loading the resp and numValidResuls field. If
       // resume is called after suspend, then it is also safe to just reference resp and
@@ -274,7 +287,11 @@ class AsyncScanSingleRegionRpcRetryingCaller {
         localResp = this.resp;
         localNumberOfCompleteRows = this.numberOfCompleteRows;
       }
-      completeOrNext(localResp, localNumberOfCompleteRows);
+      if (stopScan) {
+        stopScan(localResp);
+      } else {
+        completeOrNext(localResp, localNumberOfCompleteRows);
+      }
     }
 
     private void scheduleRenewLeaseTask() {
@@ -354,7 +371,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private void closeScanner() {
     incRPCCallsMetrics(scanMetrics, regionServerRemote);
-    resetController(controller, rpcTimeoutNs, HConstants.HIGH_QOS);
+    resetController(controller, rpcTimeoutNs, HConstants.HIGH_QOS, loc.getRegion().getTable());
     ScanRequest req = RequestConverter.buildScanRequest(this.scannerId, 0, true, false);
     stub.scan(controller, req, resp -> {
       if (controller.failed()) {
@@ -536,12 +553,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     }
     ScanControllerState state = scanController.destroy();
     if (state == ScanControllerState.TERMINATED) {
-      if (resp.getMoreResultsInRegion()) {
-        // we have more results in region but user request to stop the scan, so we need to close the
-        // scanner explicitly.
-        closeScanner();
-      }
-      completeNoMoreResults();
+      stopScan(resp);
       return;
     }
     int numberOfCompleteRows = resultCache.numberOfCompleteRows() - numberOfCompleteRowsBefore;
@@ -551,6 +563,15 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       }
     }
     completeOrNext(resp, numberOfCompleteRows);
+  }
+
+  private void stopScan(ScanResponse resp) {
+    if (resp.getMoreResultsInRegion()) {
+      // we have more results in region but user request to stop the scan, so we need to close the
+      // scanner explicitly.
+      closeScanner();
+    }
+    completeNoMoreResults();
   }
 
   private void call() {
@@ -574,7 +595,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     if (tries > 1) {
       incRPCRetriesMetrics(scanMetrics, regionServerRemote);
     }
-    resetController(controller, callTimeoutNs, priority);
+    resetController(controller, callTimeoutNs, priority, loc.getRegion().getTable());
     ScanRequest req = RequestConverter.buildScanRequest(scannerId, scan.getCaching(), false,
       nextCallSeq, scan.isScanMetricsEnabled(), false, scan.getLimit());
     final Context context = Context.current();
@@ -596,7 +617,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   private void renewLease() {
     incRPCCallsMetrics(scanMetrics, regionServerRemote);
     nextCallSeq++;
-    resetController(controller, rpcTimeoutNs, priority);
+    resetController(controller, rpcTimeoutNs, priority, loc.getRegion().getTable());
     ScanRequest req =
       RequestConverter.buildScanRequest(scannerId, 0, false, nextCallSeq, false, true, -1);
     stub.scan(controller, req, resp -> {

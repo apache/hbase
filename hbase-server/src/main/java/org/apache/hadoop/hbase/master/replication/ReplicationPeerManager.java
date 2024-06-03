@@ -39,11 +39,16 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.ConnectionRegistryFactory;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -402,6 +407,57 @@ public class ReplicationPeerManager implements ConfigurationObserver {
     queueStorage.removePeerFromHFileRefs(peerId);
   }
 
+  private void checkClusterKey(String clusterKey, ReplicationEndpoint endpoint)
+    throws DoNotRetryIOException {
+    if (endpoint != null && !(endpoint instanceof HBaseReplicationEndpoint)) {
+      return;
+    }
+    // Endpoints implementing HBaseReplicationEndpoint need to check cluster key
+    URI connectionUri = ConnectionRegistryFactory.tryParseAsConnectionURI(clusterKey);
+    try {
+      if (connectionUri != null) {
+        ConnectionRegistryFactory.validate(connectionUri);
+      } else {
+        ZKConfig.validateClusterKey(clusterKey);
+      }
+    } catch (IOException e) {
+      throw new DoNotRetryIOException("Invalid cluster key: " + clusterKey, e);
+    }
+    if (endpoint != null && endpoint.canReplicateToSameCluster()) {
+      return;
+    }
+    // make sure we do not replicate to same cluster
+    String peerClusterId;
+    try {
+      if (connectionUri != null) {
+        // fetch cluster id through standard admin API
+        try (Connection conn = ConnectionFactory.createConnection(connectionUri, conf);
+          Admin admin = conn.getAdmin()) {
+          peerClusterId =
+            admin.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.CLUSTER_ID)).getClusterId();
+        }
+      } else {
+        // Create the peer cluster config for get peer cluster id
+        Configuration peerConf = HBaseConfiguration.createClusterConf(conf, clusterKey);
+        try (ZKWatcher zkWatcher = new ZKWatcher(peerConf, this + "check-peer-cluster-id", null)) {
+          peerClusterId = ZKClusterId.readClusterIdZNode(zkWatcher);
+        }
+      }
+    } catch (IOException | KeeperException e) {
+      // we just want to check whether we will replicate to the same cluster, so if we get an error
+      // while getting the cluster id of the peer cluster, it means we are not connecting to
+      // ourselves, as we are still alive. So here we just log the error and continue
+      LOG.warn("Can't get peerClusterId for clusterKey=" + clusterKey, e);
+      return;
+    }
+    // In rare case, zookeeper setting may be messed up. That leads to the incorrect
+    // peerClusterId value, which is the same as the source clusterId
+    if (clusterId.equals(peerClusterId)) {
+      throw new DoNotRetryIOException("Invalid cluster key: " + clusterKey
+        + ", should not replicate to itself for HBaseInterClusterReplicationEndpoint");
+    }
+  }
+
   private void checkPeerConfig(ReplicationPeerConfig peerConfig) throws DoNotRetryIOException {
     String replicationEndpointImpl = peerConfig.getReplicationEndpointImpl();
     ReplicationEndpoint endpoint = null;
@@ -416,14 +472,7 @@ public class ReplicationPeerManager implements ConfigurationObserver {
           e);
       }
     }
-    // Endpoints implementing HBaseReplicationEndpoint need to check cluster key
-    if (endpoint == null || endpoint instanceof HBaseReplicationEndpoint) {
-      checkClusterKey(peerConfig.getClusterKey());
-      // Check if endpoint can replicate to the same cluster
-      if (endpoint == null || !endpoint.canReplicateToSameCluster()) {
-        checkSameClusterKey(peerConfig.getClusterKey());
-      }
-    }
+    checkClusterKey(peerConfig.getClusterKey(), endpoint);
 
     if (peerConfig.replicateAllUserTables()) {
       // If replicate_all flag is true, it means all user tables will be replicated to peer cluster.
@@ -560,33 +609,6 @@ public class ReplicationPeerManager implements ConfigurationObserver {
             + " could not be created. Failing add/update peer operation.", e);
         }
       }
-    }
-  }
-
-  private void checkClusterKey(String clusterKey) throws DoNotRetryIOException {
-    try {
-      ZKConfig.validateClusterKey(clusterKey);
-    } catch (IOException e) {
-      throw new DoNotRetryIOException("Invalid cluster key: " + clusterKey, e);
-    }
-  }
-
-  private void checkSameClusterKey(String clusterKey) throws DoNotRetryIOException {
-    String peerClusterId = "";
-    try {
-      // Create the peer cluster config for get peer cluster id
-      Configuration peerConf = HBaseConfiguration.createClusterConf(conf, clusterKey);
-      try (ZKWatcher zkWatcher = new ZKWatcher(peerConf, this + "check-peer-cluster-id", null)) {
-        peerClusterId = ZKClusterId.readClusterIdZNode(zkWatcher);
-      }
-    } catch (IOException | KeeperException e) {
-      throw new DoNotRetryIOException("Can't get peerClusterId for clusterKey=" + clusterKey, e);
-    }
-    // In rare case, zookeeper setting may be messed up. That leads to the incorrect
-    // peerClusterId value, which is the same as the source clusterId
-    if (clusterId.equals(peerClusterId)) {
-      throw new DoNotRetryIOException("Invalid cluster key: " + clusterKey
-        + ", should not replicate to itself for HBaseInterClusterReplicationEndpoint");
     }
   }
 
@@ -797,7 +819,7 @@ public class ReplicationPeerManager implements ConfigurationObserver {
   /**
    * Submit the migration tasks to the given {@code executor}.
    */
-  CompletableFuture<?> migrateQueuesFromZk(ZKWatcher zookeeper, ExecutorService executor) {
+  CompletableFuture<Void> migrateQueuesFromZk(ZKWatcher zookeeper, ExecutorService executor) {
     // the replication queue table creation is asynchronous and will be triggered by addPeer, so
     // here we need to manually initialize it since we will not call addPeer.
     try {

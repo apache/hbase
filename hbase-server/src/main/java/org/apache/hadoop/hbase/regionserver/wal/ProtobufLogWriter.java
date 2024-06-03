@@ -100,13 +100,18 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter implements FSHL
 
   @Override
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-    short replication, long blockSize, StreamSlowMonitor monitor)
+    short replication, long blockSize, StreamSlowMonitor monitor, boolean noLocalWrite)
     throws IOException, StreamLacksCapabilityException {
     FSDataOutputStreamBuilder<?, ?> builder = fs.createFile(path).overwrite(overwritable)
       .bufferSize(bufferSize).replication(replication).blockSize(blockSize);
     if (builder instanceof DistributedFileSystem.HdfsDataOutputStreamBuilder) {
-      this.output =
-        ((DistributedFileSystem.HdfsDataOutputStreamBuilder) builder).replicate().build();
+      DistributedFileSystem.HdfsDataOutputStreamBuilder dfsBuilder =
+        (DistributedFileSystem.HdfsDataOutputStreamBuilder) builder;
+      dfsBuilder.replicate();
+      if (noLocalWrite) {
+        dfsBuilder.noLocalWrite();
+      }
+      this.output = dfsBuilder.build();
     } else {
       this.output = builder.build();
     }

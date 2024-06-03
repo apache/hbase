@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.procedure2;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -36,8 +38,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  * NOT thread-safe. Needs external concurrency control: e.g. uses in MasterProcedureScheduler are
  * guarded by schedLock(). <br/>
  * There is no need of 'volatile' keyword for member variables because of memory synchronization
- * guarantees of locks (see 'Memory Synchronization',
- * http://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/Lock.html) <br/>
+ * guarantees of locks (see
+ * <a href="http://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/Lock.html">Memory
+ * Synchronization</a>) <br/>
  * We do not implement Lock interface because we need exclusive and shared locking, and also because
  * try-lock functions require procedure id. <br/>
  * We do not use ReentrantReadWriteLock directly because of its high memory overhead.
@@ -182,7 +185,7 @@ public class LockAndQueue implements LockStatus {
 
   @Override
   public String toString() {
-    return "exclusiveLockOwner=" + (hasExclusiveLock() ? getExclusiveLockProcIdOwner() : "NONE")
-      + ", sharedLockCount=" + getSharedLockCount() + ", waitingProcCount=" + queue.size();
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+      .appendSuper(describeLockStatus()).append("waitingProcCount", queue.size()).build();
   }
 }

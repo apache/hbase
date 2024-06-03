@@ -157,7 +157,7 @@ public abstract class AbstractMemStore implements MemStore {
     Cell toAdd = maybeCloneWithAllocator(currentActive, cell, false);
     boolean mslabUsed = (toAdd != cell);
     // This cell data is backed by the same byte[] where we read request in RPC(See
-    // HBASE-15180). By default MSLAB is ON and we might have copied cell to MSLAB area. If
+    // HBASE-15180). By default, MSLAB is ON and we might have copied cell to MSLAB area. If
     // not we must do below deep copy. Or else we will keep referring to the bigger chunk of
     // memory and prevent it from getting GCed.
     // Copy to MSLAB would not have happened if
@@ -374,6 +374,15 @@ public abstract class AbstractMemStore implements MemStore {
 
   ImmutableSegment getSnapshot() {
     return snapshot;
+  }
+
+  @Override
+  public void close() {
+    // active should never be null
+    active.close();
+    // for snapshot, either it is empty, where we do not reference any real segment which contains a
+    // memstore lab, or it is during snapshot, where we will clear it when calling clearSnapshot, so
+    // we do not need to close it here
   }
 
   /** Returns an ordered list of segments from most recent to oldest in memstore */

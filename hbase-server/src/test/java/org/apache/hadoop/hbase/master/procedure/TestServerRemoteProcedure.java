@@ -88,7 +88,7 @@ public class TestServerRemoteProcedure {
     master.start(2, rsDispatcher);
     am = master.getAssignmentManager();
     master.getServerManager().getOnlineServersList().stream()
-      .forEach(serverName -> am.getRegionStates().getOrCreateServer(serverName));
+      .forEach(serverName -> am.getRegionStates().createServer(serverName));
   }
 
   @After
@@ -199,9 +199,8 @@ public class TestServerRemoteProcedure {
     }
 
     @Override
-    public void complete(MasterProcedureEnv env, Throwable error) {
-      this.succ = true;
-      return;
+    public boolean complete(MasterProcedureEnv env, Throwable error) {
+      return true;
     }
 
     @Override

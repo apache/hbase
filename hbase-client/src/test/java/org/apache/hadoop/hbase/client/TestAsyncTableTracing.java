@@ -209,37 +209,37 @@ public class TestAsyncTableTracing {
       }
     }).when(stub).get(any(HBaseRpcController.class), any(GetRequest.class), any());
     final User user = UserProvider.instantiate(CONF).getCurrent();
-    conn =
-      new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF), "test", null, user) {
+    conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF, user), "test", null,
+      user) {
 
-        @Override
-        AsyncRegionLocator getLocator() {
-          AsyncRegionLocator locator = mock(AsyncRegionLocator.class);
-          Answer<CompletableFuture<HRegionLocation>> answer =
-            new Answer<CompletableFuture<HRegionLocation>>() {
+      @Override
+      AsyncRegionLocator getLocator() {
+        AsyncRegionLocator locator = mock(AsyncRegionLocator.class);
+        Answer<CompletableFuture<HRegionLocation>> answer =
+          new Answer<CompletableFuture<HRegionLocation>>() {
 
-              @Override
-              public CompletableFuture<HRegionLocation> answer(InvocationOnMock invocation)
-                throws Throwable {
-                TableName tableName = invocation.getArgument(0);
-                RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
-                ServerName serverName = ServerName.valueOf("rs", 16010, 12345);
-                HRegionLocation loc = new HRegionLocation(info, serverName);
-                return CompletableFuture.completedFuture(loc);
-              }
-            };
-          doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
-            any(RegionLocateType.class), anyLong());
-          doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
-            anyInt(), any(RegionLocateType.class), anyLong());
-          return locator;
-        }
+            @Override
+            public CompletableFuture<HRegionLocation> answer(InvocationOnMock invocation)
+              throws Throwable {
+              TableName tableName = invocation.getArgument(0);
+              RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
+              ServerName serverName = ServerName.valueOf("rs", 16010, 12345);
+              HRegionLocation loc = new HRegionLocation(info, serverName);
+              return CompletableFuture.completedFuture(loc);
+            }
+          };
+        doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
+          any(RegionLocateType.class), anyLong());
+        doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
+          anyInt(), any(RegionLocateType.class), anyLong());
+        return locator;
+      }
 
-        @Override
-        ClientService.Interface getRegionServerStub(ServerName serverName) throws IOException {
-          return stub;
-        }
-      };
+      @Override
+      ClientService.Interface getRegionServerStub(ServerName serverName) throws IOException {
+        return stub;
+      }
+    };
     table = conn.getTable(TableName.valueOf("table"), ForkJoinPool.commonPool());
   }
 

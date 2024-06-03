@@ -397,12 +397,12 @@ public abstract class AbstractTestFSWAL {
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     long filenum = EnvironmentEdgeManager.currentTime();
     Path path = wal.computeFilename(filenum);
-    wal.createWriterInstance(path);
+    wal.createWriterInstance(FS, path);
     Path parent = path.getParent();
     path = wal.computeFilename(filenum + 1);
     Path newPath = new Path(parent.getParent(), parent.getName() + "-splitting");
     FS.rename(parent, newPath);
-    wal.createWriterInstance(path);
+    wal.createWriterInstance(FS, path);
     fail("It should fail to create the new WAL");
   }
 
@@ -624,7 +624,7 @@ public abstract class AbstractTestFSWAL {
       }, startHoldingForAppend, closeFinished, holdAppend);
 
       // now check the region's unflushed seqIds.
-      long seqId = wal.getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+      long seqId = getEarliestMemStoreSeqNum(wal, region.getRegionInfo().getEncodedNameAsBytes());
       assertEquals("Found seqId for the region which is already closed", HConstants.NO_SEQNUM,
         seqId);
     } finally {
@@ -632,6 +632,16 @@ public abstract class AbstractTestFSWAL {
       region.close();
       wal.close();
     }
+  }
+
+  public static long getEarliestMemStoreSeqNum(WAL wal, byte[] encodedRegionName) {
+    if (wal != null) {
+      if (wal instanceof AbstractFSWAL) {
+        return ((AbstractFSWAL<?>) wal).getSequenceIdAccounting()
+          .getLowestSequenceId(encodedRegionName);
+      }
+    }
+    return HConstants.NO_SEQNUM;
   }
 
   private static final Set<byte[]> STORES_TO_FLUSH =

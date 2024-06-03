@@ -26,9 +26,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.InnerStoreCellComparator;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -206,8 +204,7 @@ public class FixedFileTrailer {
       .setTotalUncompressedBytes(totalUncompressedBytes).setDataIndexCount(dataIndexCount)
       .setMetaIndexCount(metaIndexCount).setEntryCount(entryCount)
       .setNumDataIndexLevels(numDataIndexLevels).setFirstDataBlockOffset(firstDataBlockOffset)
-      .setLastDataBlockOffset(lastDataBlockOffset)
-      .setComparatorClassName(getHBase1CompatibleName(comparatorClassName))
+      .setLastDataBlockOffset(lastDataBlockOffset).setComparatorClassName(comparatorClassName)
       .setCompressionCodec(compressionCodec.ordinal());
     if (encryptionKey != null) {
       builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(encryptionKey));
@@ -216,8 +213,7 @@ public class FixedFileTrailer {
   }
 
   /**
-   * Write trailer data as protobuf. NOTE: we run a translation on the comparator name and will
-   * serialize the old hbase-1.x where it makes sense. See {@link #getHBase1CompatibleName(String)}.
+   * Write trailer data as protobuf.
    */
   void serializeAsPB(DataOutputStream output) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -269,7 +265,7 @@ public class FixedFileTrailer {
     // read PB and skip padding
     int start = inputStream.available();
     HFileProtos.FileTrailerProto trailerProto =
-      HFileProtos.FileTrailerProto.PARSER.parseDelimitedFrom(inputStream);
+      HFileProtos.FileTrailerProto.parser().parseDelimitedFrom(inputStream);
     int size = start - inputStream.available();
     inputStream.skip(getTrailerSize() - NOT_PB_SIZE - size);
 
@@ -553,56 +549,15 @@ public class FixedFileTrailer {
     }
   }
 
-  /**
-   * If a 'standard' Comparator, write the old name for the Comparator when we serialize rather than
-   * the new name; writing the new name will make it so newly-written hfiles are not parseable by
-   * hbase-1.x, a facility we'd like to preserve across rolling upgrade and hbase-1.x clusters
-   * reading hbase-2.x produce.
-   * <p>
-   * The Comparators in hbase-2.x work the same as they did in hbase-1.x; they compare KeyValues. In
-   * hbase-2.x they were renamed making use of the more generic 'Cell' nomenclature to indicate that
-   * we intend to move away from KeyValues post hbase-2. A naming change is not reason enough to
-   * make it so hbase-1.x cannot read hbase-2.x files given the structure goes unchanged (hfile v3).
-   * So, lets write the old names for Comparators into the hfile tails in hbase-2. Here is where we
-   * do the translation. {@link #getComparatorClass(String)} does translation going the other way.
-   * <p>
-   * The translation is done on the serialized Protobuf only.
-   * </p>
-   * @param comparator String class name of the Comparator used in this hfile.
-   * @return What to store in the trailer as our comparator name.
-   * @see #getComparatorClass(String)
-   * @since hbase-2.0.0.
-   * @deprecated Since hbase-2.0.0. Will be removed in hbase-3.0.0.
-   */
-  @Deprecated
-  private String getHBase1CompatibleName(final String comparator) {
-    if (
-      comparator.equals(CellComparatorImpl.class.getName())
-        || comparator.equals(InnerStoreCellComparator.class.getName())
-    ) {
-      return KeyValue.COMPARATOR.getClass().getName();
-    }
-    if (comparator.equals(MetaCellComparator.class.getName())) {
-      return KeyValue.META_COMPARATOR.getClass().getName();
-    }
-    return comparator;
-  }
-
   @SuppressWarnings("unchecked")
   private static Class<? extends CellComparator> getComparatorClass(String comparatorClassName)
     throws IOException {
     Class<? extends CellComparator> comparatorKlass;
     // for BC
-    if (
-      comparatorClassName.equals(KeyValue.COMPARATOR.getLegacyKeyComparatorName())
-        || comparatorClassName.equals(KeyValue.COMPARATOR.getClass().getName())
-        || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator"))
-    ) {
+    if (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator")) {
       comparatorKlass = InnerStoreCellComparator.class;
     } else if (
-      comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
-        || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())
-        || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator"))
+      comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator")
         || (comparatorClassName
           .equals("org.apache.hadoop.hbase.CellComparatorImpl$MetaCellComparator"))
         || (comparatorClassName.equals("org.apache.hadoop.hbase.MetaCellComparator"))

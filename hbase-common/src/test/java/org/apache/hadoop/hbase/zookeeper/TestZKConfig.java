@@ -22,15 +22,19 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Properties;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestZKConfig {
@@ -38,6 +42,12 @@ public class TestZKConfig {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestZKConfig.class);
+
+  /** Supported ZooKeeper client TLS properties */
+  private static final Set<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES = ImmutableSet.of(
+    "client.secure", "clientCnxnSocket", "ssl.keyStore.location", "ssl.keyStore.password",
+    "ssl.keyStore.passwordPath", "ssl.keyStore.type", "ssl.trustStore.location",
+    "ssl.trustStore.password", "ssl.trustStore.passwordPath", "ssl.trustStore.type");
 
   @Test
   public void testZKConfigLoading() throws Exception {
@@ -88,6 +98,23 @@ public class TestZKConfig {
     testKey("server1:2182,server1:2183,server1", 2181, "/hbase", true);
     // mix of same server/different port and different server
     testKey("server1:2182,server2:2183,server1", 2181, "/hbase", true);
+  }
+
+  @Test
+  public void testZooKeeperTlsProperties() {
+    // Arrange
+    Configuration conf = HBaseConfiguration.create();
+    for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
+      conf.set(HConstants.ZK_CFG_PROPERTY_PREFIX + p, p);
+    }
+
+    // Act
+    ZKClientConfig zkClientConfig = ZKConfig.getZKClientConfig(conf);
+
+    // Assert
+    for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
+      assertEquals("Invalid or unset system property: " + p, p, zkClientConfig.getProperty(p));
+    }
   }
 
   private void testKey(String ensemble, int port, String znode) throws IOException {

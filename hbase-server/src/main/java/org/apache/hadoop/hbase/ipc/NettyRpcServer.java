@@ -17,17 +17,22 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.DEFAULT_HBASE_SERVER_NETTY_TLS_WRAP_SIZE;
 import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_ENABLED;
 import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT;
+import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_WRAP_SIZE;
 import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.net.ssl.SSLPeerUnverifiedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HBaseServerBase;
@@ -58,7 +63,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.ServerChannel;
 import org.apache.hbase.thirdparty.io.netty.channel.WriteBufferWaterMark;
 import org.apache.hbase.thirdparty.io.netty.channel.group.ChannelGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.group.DefaultChannelGroup;
-import org.apache.hbase.thirdparty.io.netty.handler.codec.FixedLengthFrameDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.OptionalSslHandler;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslHandler;
@@ -162,13 +166,15 @@ public class NettyRpcServer extends RpcServer {
           ch.config().setWriteBufferWaterMark(writeBufferWaterMark);
           ch.config().setAllocator(channelAllocator);
           ChannelPipeline pipeline = ch.pipeline();
-          FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
-          preambleDecoder.setSingleDecode(true);
-          if (conf.getBoolean(HBASE_SERVER_NETTY_TLS_ENABLED, false)) {
-            initSSL(pipeline, conf.getBoolean(HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, true));
-          }
+
           NettyServerRpcConnection conn = createNettyServerRpcConnection(ch);
-          pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder)
+
+          if (conf.getBoolean(HBASE_SERVER_NETTY_TLS_ENABLED, false)) {
+            initSSL(pipeline, conn, conf.getBoolean(HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, true));
+          }
+          pipeline
+            .addLast(NettyRpcServerPreambleHandler.DECODER_NAME,
+              NettyRpcServerPreambleHandler.createDecoder())
             .addLast(new NettyRpcServerPreambleHandler(NettyRpcServer.this, conn))
             // We need NettyRpcServerResponseEncoder here because NettyRpcServerPreambleHandler may
             // send RpcResponse to client.
@@ -376,7 +382,7 @@ public class NettyRpcServer extends RpcServer {
     return allChannels.size();
   }
 
-  private void initSSL(ChannelPipeline p, boolean supportPlaintext)
+  private void initSSL(ChannelPipeline p, NettyServerRpcConnection conn, boolean supportPlaintext)
     throws X509Exception, IOException {
     SslContext nettySslContext = getSslContext();
 
@@ -408,8 +414,41 @@ public class NettyRpcServer extends RpcServer {
         sslHandler = nettySslContext.newHandler(p.channel().alloc());
       }
 
+      sslHandler.setWrapDataSize(
+        conf.getInt(HBASE_SERVER_NETTY_TLS_WRAP_SIZE, DEFAULT_HBASE_SERVER_NETTY_TLS_WRAP_SIZE));
+
+      sslHandler.handshakeFuture()
+        .addListener(future -> sslHandshakeCompleteHandler(conn, sslHandler, remoteAddress));
+
       p.addLast("ssl", sslHandler);
       LOG.debug("SSL handler added for channel: {}", p.channel());
+    }
+  }
+
+  static void sslHandshakeCompleteHandler(NettyServerRpcConnection conn, SslHandler sslHandler,
+    SocketAddress remoteAddress) {
+    try {
+      Certificate[] certificates = sslHandler.engine().getSession().getPeerCertificates();
+      if (certificates != null && certificates.length > 0) {
+        X509Certificate[] x509Certificates = new X509Certificate[certificates.length];
+        for (int i = 0; i < x509Certificates.length; i++) {
+          x509Certificates[i] = (X509Certificate) certificates[i];
+        }
+        conn.clientCertificateChain = x509Certificates;
+      } else if (sslHandler.engine().getNeedClientAuth()) {
+        LOG.debug(
+          "Could not get peer certificate on TLS connection from {}, although one is required",
+          remoteAddress);
+      }
+    } catch (SSLPeerUnverifiedException e) {
+      if (sslHandler.engine().getNeedClientAuth()) {
+        LOG.debug(
+          "Could not get peer certificate on TLS connection from {}, although one is required",
+          remoteAddress, e);
+      }
+    } catch (Exception e) {
+      LOG.debug("Unexpected error getting peer certificate for TLS connection from {}",
+        remoteAddress, e);
     }
   }
 

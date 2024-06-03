@@ -43,7 +43,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
@@ -84,7 +86,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  * <ul>
  * <li>1. Backup sessions rowkey= "session:"+backupId; value =serialized BackupInfo</li>
  * <li>2. Backup start code rowkey = "startcode:"+backupRoot; value = startcode</li>
- * <li>3. Incremental backup set rowkey="incrbackupset:"+backupRoot; value=[list of tables]</li>
+ * <li>3. Incremental backup set rowkey="incrbackupset:"+backupRoot; table="meta:"+tablename of
+ * include table; value=empty</li>
  * <li>4. Table-RS-timestamp map rowkey="trslm:"+backupRoot+table_name; value = map[RS-> last WAL
  * timestamp]</li>
  * <li>5. RS - WAL ts map rowkey="rslogts:"+backupRoot +server; value = last WAL timestamp</li>
@@ -202,14 +205,25 @@ public final class BackupSystemTable implements Closeable {
       Configuration conf = connection.getConfiguration();
       if (!admin.tableExists(tableName)) {
         TableDescriptor backupHTD = BackupSystemTable.getSystemTableDescriptor(conf);
-        admin.createTable(backupHTD);
+        createSystemTable(admin, backupHTD);
       }
       if (!admin.tableExists(bulkLoadTableName)) {
         TableDescriptor blHTD = BackupSystemTable.getSystemTableForBulkLoadedDataDescriptor(conf);
-        admin.createTable(blHTD);
+        createSystemTable(admin, blHTD);
       }
       waitForSystemTable(admin, tableName);
       waitForSystemTable(admin, bulkLoadTableName);
+    }
+  }
+
+  private void createSystemTable(Admin admin, TableDescriptor descriptor) throws IOException {
+    try {
+      admin.createTable(descriptor);
+    } catch (TableExistsException e) {
+      // swallow because this class is initialized in concurrent environments (i.e. bulkloads),
+      // so may be subject to race conditions where one caller succeeds in creating the
+      // table and others fail because it now exists
+      LOG.debug("Table {} already exists, ignoring", descriptor.getTableName(), e);
     }
   }
 
@@ -225,7 +239,14 @@ public final class BackupSystemTable implements Closeable {
       }
     }
     if (!exists) {
-      admin.createNamespace(ns);
+      try {
+        admin.createNamespace(ns);
+      } catch (NamespaceExistException e) {
+        // swallow because this class is initialized in concurrent environments (i.e. bulkloads),
+        // so may be subject to race conditions where one caller succeeds in creating the
+        // namespace and others fail because it now exists
+        LOG.debug("Namespace {} already exists, ignoring", ns.getName(), e);
+      }
     }
   }
 
@@ -819,23 +840,25 @@ public final class BackupSystemTable implements Closeable {
     return tableHistory;
   }
 
-  public Map<TableName, ArrayList<BackupInfo>> getBackupHistoryForTableSet(Set<TableName> set,
+  /**
+   * Goes through all backup history corresponding to the provided root folder, and collects all
+   * backup info mentioning each of the provided tables.
+   * @param set        the tables for which to collect the {@code BackupInfo}
+   * @param backupRoot backup destination path to retrieve backup history for
+   * @return a map containing (a subset of) the provided {@code TableName}s, mapped to a list of at
+   *         least one {@code BackupInfo}
+   * @throws IOException if getting the backup history fails
+   */
+  public Map<TableName, List<BackupInfo>> getBackupHistoryForTableSet(Set<TableName> set,
     String backupRoot) throws IOException {
     List<BackupInfo> history = getBackupHistory(backupRoot);
-    Map<TableName, ArrayList<BackupInfo>> tableHistoryMap = new HashMap<>();
-    for (Iterator<BackupInfo> iterator = history.iterator(); iterator.hasNext();) {
-      BackupInfo info = iterator.next();
-      if (!backupRoot.equals(info.getBackupRootDir())) {
-        continue;
-      }
+    Map<TableName, List<BackupInfo>> tableHistoryMap = new HashMap<>();
+    for (BackupInfo info : history) {
       List<TableName> tables = info.getTableNames();
       for (TableName tableName : tables) {
         if (set.contains(tableName)) {
-          ArrayList<BackupInfo> list = tableHistoryMap.get(tableName);
-          if (list == null) {
-            list = new ArrayList<>();
-            tableHistoryMap.put(tableName, list);
-          }
+          List<BackupInfo> list =
+            tableHistoryMap.computeIfAbsent(tableName, k -> new ArrayList<>());
           list.add(info);
         }
       }
@@ -1418,11 +1441,7 @@ public final class BackupSystemTable implements Closeable {
    */
   private Scan createScanForReadLogTimestampMap(String backupRoot) {
     Scan scan = new Scan();
-    byte[] startRow = rowkey(TABLE_RS_LOG_MAP_PREFIX, backupRoot);
-    byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
-    stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
-    scan.withStartRow(startRow);
-    scan.withStopRow(stopRow);
+    scan.setStartStopRowForPrefixScan(rowkey(TABLE_RS_LOG_MAP_PREFIX, backupRoot, NULL));
     scan.addFamily(BackupSystemTable.META_FAMILY);
 
     return scan;
@@ -1459,11 +1478,7 @@ public final class BackupSystemTable implements Closeable {
    */
   private Scan createScanForReadRegionServerLastLogRollResult(String backupRoot) {
     Scan scan = new Scan();
-    byte[] startRow = rowkey(RS_LOG_TS_PREFIX, backupRoot);
-    byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
-    stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
-    scan.withStartRow(startRow);
-    scan.withStopRow(stopRow);
+    scan.setStartStopRowForPrefixScan(rowkey(RS_LOG_TS_PREFIX, backupRoot, NULL));
     scan.addFamily(BackupSystemTable.META_FAMILY);
     scan.readVersions(1);
 

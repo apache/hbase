@@ -22,6 +22,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -1128,5 +1130,31 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     } finally {
       schedUnlock();
     }
+  }
+
+  private void serverBucketToString(ToStringBuilder builder, String queueName, Queue<?> queue) {
+    int size = queueSize(queue);
+    if (size != 0) {
+      builder.append(queueName, queue);
+    }
+  }
+
+  @Override
+  public String toString() {
+    ToStringBuilder builder =
+      new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).appendSuper(super.toString());
+    schedLock();
+    try {
+      for (int i = 0; i < serverBuckets.length; i++) {
+        serverBucketToString(builder, "serverBuckets[" + i + "]", serverBuckets[i]);
+      }
+      builder.append("tableMap", tableMap);
+      builder.append("peerMap", peerMap);
+      builder.append("metaMap", metaMap);
+      builder.append("globalMap", globalMap);
+    } finally {
+      schedUnlock();
+    }
+    return builder.build();
   }
 }

@@ -20,16 +20,12 @@ package org.apache.hadoop.hbase.wal;
 import java.util.Arrays;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -42,9 +38,6 @@ public class TestCompressedWAL extends CompressedWALTestBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCompressedWAL.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   @Parameter
   public String walProvider;
@@ -64,12 +57,6 @@ public class TestCompressedWAL extends CompressedWALTestBase {
   @After
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @Test
-  public void test() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName().replaceAll("[^a-zA-Z0-9]", "_"));
-    doTest(tableName);
   }
 
 }

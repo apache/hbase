@@ -380,7 +380,7 @@ public final class MasterRegion {
       params.archivedWalSuffix(), params.rollPeriodMs(), params.flushSize());
     walRoller.start();
 
-    WALFactory walFactory = new WALFactory(conf, server.getServerName(), server, false);
+    WALFactory walFactory = new WALFactory(conf, server.getServerName(), server);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
     Path initializingFlag = new Path(tableDir, INITIALIZING_FLAG);
     Path initializedFlag = new Path(tableDir, INITIALIZED_FLAG);

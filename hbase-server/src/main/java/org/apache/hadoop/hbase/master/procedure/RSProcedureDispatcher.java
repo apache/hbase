@@ -22,11 +22,13 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import javax.security.sasl.SaslException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.ipc.RpcConnectionConstants;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
@@ -287,17 +289,15 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           numberOfAttemptsSoFar);
         return false;
       }
-      // This exception is thrown in the rpc framework, where we can make sure that the call has not
-      // been executed yet, so it is safe to mark it as fail. Especially for open a region, we'd
-      // better choose another region server.
+      // This category of exceptions is thrown in the rpc framework, where we can make sure
+      // that the call has not been executed yet, so it is safe to mark it as fail.
+      // Especially for open a region, we'd better choose another region server.
       // Notice that, it is safe to quit only if this is the first time we send request to region
       // server. Maybe the region server has accepted our request the first time, and then there is
-      // a network error which prevents we receive the response, and the second time we hit a
-      // CallQueueTooBigException, obviously it is not safe to quit here, otherwise it may lead to a
-      // double assign...
-      if (e instanceof CallQueueTooBigException && numberOfAttemptsSoFar == 0) {
-        LOG.warn("request to {} failed due to {}, try={}, this usually because"
-          + " server is overloaded, give up", serverName, e.toString(), numberOfAttemptsSoFar);
+      // a network error which prevents we receive the response, and the second time we hit
+      // this category of exceptions, obviously it is not safe to quit here, otherwise it may lead
+      // to a double assign...
+      if (numberOfAttemptsSoFar == 0 && unableToConnectToServer(e)) {
         return false;
       }
       // Always retry for other exception types if the region server is not dead yet.
@@ -328,6 +328,47 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           10 * 1000),
         TimeUnit.MILLISECONDS);
       return true;
+    }
+
+    /**
+     * The category of exceptions where we can ensure that the request has not yet been received
+     * and/or processed by the target regionserver yet and hence we can determine whether it is safe
+     * to choose different regionserver as the target.
+     * @param e IOException thrown by the underlying rpc framework.
+     * @return true if the exception belongs to the category where the regionserver has not yet
+     *         received the request yet.
+     */
+    private boolean unableToConnectToServer(IOException e) {
+      if (e instanceof CallQueueTooBigException) {
+        LOG.warn("request to {} failed due to {}, try={}, this usually because"
+          + " server is overloaded, give up", serverName, e, numberOfAttemptsSoFar);
+        return true;
+      }
+      if (isSaslError(e)) {
+        LOG.warn("{} is not reachable; give up after first attempt", serverName, e);
+        return true;
+      }
+      return false;
+    }
+
+    private boolean isSaslError(IOException e) {
+      Throwable cause = e;
+      while (true) {
+        if (cause instanceof IOException) {
+          IOException unwrappedCause = unwrapException((IOException) cause);
+          if (
+            unwrappedCause instanceof SaslException
+              || (unwrappedCause.getMessage() != null && unwrappedCause.getMessage()
+                .contains(RpcConnectionConstants.RELOGIN_IS_IN_PROGRESS))
+          ) {
+            return true;
+          }
+        }
+        cause = cause.getCause();
+        if (cause == null) {
+          return false;
+        }
+      }
     }
 
     private long getMaxWaitTime() {

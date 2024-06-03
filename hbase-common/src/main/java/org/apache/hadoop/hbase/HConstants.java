@@ -153,6 +153,13 @@ public final class HConstants {
   /** Default value for the balancer period */
   public static final int DEFAULT_HBASE_BALANCER_PERIOD = 300000;
 
+  /** Config for the oldWALs directory size updater period */
+  public static final String HBASE_OLDWAL_DIR_SIZE_UPDATER_PERIOD =
+    "hbase.master.oldwals.dir.updater.period";
+
+  /** Default value for the oldWALs directory size updater period */
+  public static final int DEFAULT_HBASE_OLDWAL_DIR_SIZE_UPDATER_PERIOD = 300000;
+
   /**
    * Config key for enable/disable automatically separate child regions to different region servers
    * in the procedure of split regions. One child will be kept to the server where parent region is
@@ -1336,6 +1343,18 @@ public final class HConstants {
   public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
 
   /**
+   * If the chosen ioengine can persist its state across restarts, the path to the file to persist
+   * to. This file is NOT the data file. It is a file into which we will serialize the map of what
+   * is in the data file. For example, if you pass the following argument as
+   * BUCKET_CACHE_IOENGINE_KEY ("hbase.bucketcache.ioengine"),
+   * <code>file:/tmp/bucketcache.data </code>, then we will write the bucketcache data to the file
+   * <code>/tmp/bucketcache.data</code> but the metadata on where the data is in the supplied file
+   * is an in-memory map that needs to be persisted across restarts. Where to store this in-memory
+   * state is what you supply here: e.g. <code>/tmp/bucketcache.map</code>.
+   */
+  public static final String BUCKET_CACHE_PERSISTENT_PATH_KEY = "hbase.bucketcache.persistent.path";
+
+  /**
    * HConstants for fast fail on the client side follow
    */
   /**
@@ -1602,6 +1621,20 @@ public final class HConstants {
    * Default value of {@link #HBASE_SERVER_USEIP_ENABLED_KEY}
    */
   public final static boolean HBASE_SERVER_USEIP_ENABLED_DEFAULT = false;
+
+  /**
+   * Should the HMaster reject hosts of decommissioned RegionServers, bypass matching their port and
+   * startcode parts of their ServerName or not? When True, the HMaster will reject a RegionServer's
+   * request to `reportForDuty` if it's hostname exists in the list of decommissioned RegionServers
+   * it maintains internally. Added in HBASE-28342.
+   */
+  public final static String REJECT_DECOMMISSIONED_HOSTS_KEY =
+    "hbase.master.reject.decommissioned.hosts";
+
+  /**
+   * Default value of {@link #REJECT_DECOMMISSIONED_HOSTS_KEY}
+   */
+  public final static boolean REJECT_DECOMMISSIONED_HOSTS_DEFAULT = false;
 
   private HConstants() {
     // Can't be instantiated with this ctor.

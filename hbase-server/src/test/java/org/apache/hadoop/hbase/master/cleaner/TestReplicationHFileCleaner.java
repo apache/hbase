@@ -109,8 +109,8 @@ public class TestReplicationHFileCleaner {
   public void setup() throws ReplicationException, IOException {
     root = TEST_UTIL.getDataTestDirOnTestFS();
     rp.getPeerStorage().addPeer(peerId,
-      ReplicationPeerConfig.newBuilder().setClusterKey(TEST_UTIL.getClusterKey()).build(), true,
-      SyncReplicationState.NONE);
+      ReplicationPeerConfig.newBuilder().setClusterKey(TEST_UTIL.getRpcConnnectionURI()).build(),
+      true, SyncReplicationState.NONE);
   }
 
   @After
