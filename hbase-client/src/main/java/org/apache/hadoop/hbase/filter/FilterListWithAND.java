@@ -192,8 +192,7 @@ public class FilterListWithAND extends FilterListBase {
       Filter filter = filters.get(i);
       if (filter.filterAllRemaining()) {
         rc = ReturnCode.NEXT_ROW;
-        // We need to process any remaining HintingFilters which may let us skip ahead
-        i++;
+        // See comment right after this loop
         break;
       }
       ReturnCode localRC;
@@ -206,19 +205,22 @@ public class FilterListWithAND extends FilterListBase {
       // otherwise we may mess up the global state (such as offset, count..) in the following
       // sub-filters. (HBASE-20565)
       if (!isIncludeRelatedReturnCode(rc)) {
-        // We need to process any remaining HintingFilters which may let us skip ahead
-        i++;
+        // See comment right after this loop
         break;
       }
     }
-    // Now process the remaining hinting filters so that we can get all hints,
-    // and seek to the farthest cell possible. This ensures that we don't spend resources to process
-    // more rows than necessary. The farthest key is computed in getNextCellHint()
-    for (; i < n; i++) {
-      if (hintingFilters[i]) {
-        Filter filter = filters.get(i);
-        if (filter.filterCell(c) == ReturnCode.SEEK_NEXT_USING_HINT) {
-          seekHintFilters.add(filter);
+    // We have the preliminary return code. However, if there are remaining uncalled hintingFilters,
+    // they may return hints that allow us to seek ahead and skip reading and processing a lot of
+    // cells.
+    // Process the remaining hinting filters so that we can get all seek hints.
+    // The farthest key is computed in getNextCellHint()
+    if (++i < n) {
+      for (; i < n; i++) {
+        if (hintingFilters[i]) {
+          Filter filter = filters.get(i);
+          if (filter.filterCell(c) == ReturnCode.SEEK_NEXT_USING_HINT) {
+            seekHintFilters.add(filter);
+          }
         }
       }
     }
@@ -242,23 +244,28 @@ public class FilterListWithAND extends FilterListBase {
     if (isEmpty()) {
       return super.filterRowKey(firstRowCell);
     }
-    boolean anyFiltered = false;
+    boolean anyRowKeyFiltered = false;
     boolean anyHintingPassed = false;
     for (int i = 0, n = filters.size(); i < n; i++) {
       Filter filter = filters.get(i);
-      if (filter.filterAllRemaining() || filter.filterRowKey(firstRowCell)) {
+      if (filter.filterAllRemaining()) {
+        // We don't need to care about any later filters, as we end the scan immediately.
+        // TODO PHOENIX-7322 in the normal code path, filterAllRemaining() always gets checked
+        // before filterRowKey(). We should be able to remove this check.
+        return true;
+      } else if (filter.filterRowKey(firstRowCell)) {
         // Can't just return true here, because there are some filters (such as PrefixFilter) which
         // will catch the row changed event by filterRowKey(). If we return early here, those
         // filters will have no chance to update their row state.
-        anyFiltered = true;
+        anyRowKeyFiltered = true;
       } else if (hintingFilters[i]) {
-        // If any of the hinting filters has returned false, then we must not filter this rowkey.
-        // Otherwise the filter doesn't get a chance to provide a seek hint, and the scan may
+        // If a hinting filters has returned false, then we must not filter this rowkey.
+        // Otherwise this sub-filter doesn't get a chance to provide a seek hint, and the scan may
         // regress into a full scan.
         anyHintingPassed = true;
       }
     }
-    return anyFiltered && !anyHintingPassed;
+    return anyRowKeyFiltered && !anyHintingPassed;
   }
 
   @Override
