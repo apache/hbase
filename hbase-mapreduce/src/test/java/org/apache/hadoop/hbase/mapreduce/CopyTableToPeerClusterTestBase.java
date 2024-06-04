@@ -19,32 +19,23 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertFalse;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 /**
  * Test CopyTable between clusters
  */
-@Category({ MapReduceTests.class, LargeTests.class })
-public class TestCopyTableToPeerCluster extends CopyTableTestBase {
+public abstract class CopyTableToPeerClusterTestBase extends CopyTableTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCopyTableToPeerCluster.class);
+  protected static final HBaseTestingUtil UTIL1 = new HBaseTestingUtil();
 
-  private static final HBaseTestingUtil UTIL1 = new HBaseTestingUtil();
-
-  private static final HBaseTestingUtil UTIL2 = new HBaseTestingUtil();
+  protected static final HBaseTestingUtil UTIL2 = new HBaseTestingUtil();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -80,7 +71,7 @@ public class TestCopyTableToPeerCluster extends CopyTableTestBase {
 
   @Override
   protected String[] getPeerClusterOptions() throws Exception {
-    return new String[] { "--peer.adr=" + UTIL2.getClusterKey() };
+    return new String[] { "--peer.uri=" + UTIL2.getRpcConnnectionURI() };
   }
 
   /**
@@ -118,9 +109,9 @@ public class TestCopyTableToPeerCluster extends CopyTableTestBase {
     TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
     try (Table t1 = UTIL1.createTable(tableName1, FAMILY_A);
       Table t2 = UTIL2.createTable(tableName2, FAMILY_A)) {
-      assertFalse(runCopy(UTIL1.getConfiguration(),
-        new String[] { "--new.name=" + tableName2.getNameAsString(), "--bulkload",
-          "--peer.adr=" + UTIL2.getClusterKey(), tableName1.getNameAsString() }));
+      String[] args = ArrayUtils.addAll(getPeerClusterOptions(),
+        "--new.name=" + tableName2.getNameAsString(), "--bulkload", tableName1.getNameAsString());
+      assertFalse(runCopy(UTIL1.getConfiguration(), args));
     } finally {
       UTIL1.deleteTable(tableName1);
       UTIL2.deleteTable(tableName2);
@@ -135,14 +126,13 @@ public class TestCopyTableToPeerCluster extends CopyTableTestBase {
     try (Table t1 = UTIL1.createTable(tableName1, FAMILY_A);
       Table t2 = UTIL2.createTable(tableName2, FAMILY_A)) {
       UTIL1.getAdmin().snapshot(snapshot, tableName1);
-      assertFalse(runCopy(UTIL1.getConfiguration(),
-        new String[] { "--new.name=" + tableName2.getNameAsString(), "--snapshot",
-          "--peer.adr=" + UTIL2.getClusterKey(), snapshot }));
+      String[] args = ArrayUtils.addAll(getPeerClusterOptions(),
+        "--new.name=" + tableName2.getNameAsString(), "--snapshot", snapshot);
+      assertFalse(runCopy(UTIL1.getConfiguration(), args));
     } finally {
       UTIL1.getAdmin().deleteSnapshot(snapshot);
       UTIL1.deleteTable(tableName1);
       UTIL2.deleteTable(tableName2);
     }
-
   }
 }

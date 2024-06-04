@@ -18,6 +18,9 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -54,12 +57,24 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
 
   /**
+   * Optional job parameter to specify a peer cluster. Used specifying remote cluster when copying
+   * between hbase clusters (the source is picked up from <code>hbase-site.xml</code>).
+   * @see TableMapReduceUtil#initTableReducerJob(String, Class, org.apache.hadoop.mapreduce.Job,
+   *      Class, java.net.URI)
+   */
+  public static final String OUTPUT_CLUSTER = "hbase.mapred.outputcluster";
+
+  /**
    * Prefix for configuration property overrides to apply in {@link #setConf(Configuration)}. For
    * keys matching this prefix, the prefix is stripped, and the value is set in the configuration
    * with the resulting key, ie. the entry "hbase.mapred.output.key1 = value1" would be set in the
    * configuration as "key1 = value1". Use this to set properties which should only be applied to
    * the {@code TableOutputFormat} configuration and not the input configuration.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. You do not need to use this way for
+   *             specifying configurations any more, you can specify any configuration with the
+   *             connection uri's queries specified by the {@link #OUTPUT_CLUSTER} parameter.
    */
+  @Deprecated
   public static final String OUTPUT_CONF_PREFIX = "hbase.mapred.output.";
 
   /**
@@ -67,10 +82,19 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
    * between hbase clusters (the source is picked up from <code>hbase-site.xml</code>).
    * @see TableMapReduceUtil#initTableReducerJob(String, Class, org.apache.hadoop.mapreduce.Job,
    *      Class, String)
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Use {@link #OUTPUT_CLUSTER} to specify the
+   *             peer cluster instead.
    */
+  @Deprecated
   public static final String QUORUM_ADDRESS = OUTPUT_CONF_PREFIX + "quorum";
 
-  /** Optional job parameter to specify peer cluster's ZK client port */
+  /**
+   * Optional job parameter to specify peer cluster's ZK client port.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. You do not need to use this way for
+   *             specifying configurations any more, you can specify any configuration with the
+   *             connection uri's queries specified by the {@link #OUTPUT_CLUSTER} parameter.
+   */
+  @Deprecated
   public static final String QUORUM_PORT = OUTPUT_CONF_PREFIX + "quorum.port";
 
   /**
@@ -91,6 +115,23 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
   /** The configuration. */
   private Configuration conf = null;
 
+  private static Connection createConnection(Configuration conf) throws IOException {
+    String outputCluster = conf.get(OUTPUT_CLUSTER);
+    if (!StringUtils.isBlank(outputCluster)) {
+      URI uri;
+      try {
+        uri = new URI(outputCluster);
+      } catch (URISyntaxException e) {
+        throw new IOException(
+          "malformed connection uri: " + outputCluster + ", please check config " + OUTPUT_CLUSTER,
+          e);
+      }
+      return ConnectionFactory.createConnection(uri, conf);
+    } else {
+      return ConnectionFactory.createConnection(conf);
+    }
+  }
+
   /**
    * Writes the reducer output to an HBase table.
    */
@@ -99,13 +140,9 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
     private Connection connection;
     private BufferedMutator mutator;
 
-    /**
-     *
-    *
-     */
     public TableRecordWriter() throws IOException {
+      this.connection = createConnection(conf);
       String tableName = conf.get(OUTPUT_TABLE);
-      this.connection = ConnectionFactory.createConnection(conf);
       this.mutator = connection.getBufferedMutator(TableName.valueOf(tableName));
       LOG.info("Created table instance for " + tableName);
     }
@@ -175,8 +212,7 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
       hConf = context.getConfiguration();
     }
 
-    try (Connection connection = ConnectionFactory.createConnection(hConf);
-      Admin admin = connection.getAdmin()) {
+    try (Connection connection = createConnection(hConf); Admin admin = connection.getAdmin()) {
       TableName tableName = TableName.valueOf(hConf.get(OUTPUT_TABLE));
       if (!admin.tableExists(tableName)) {
         throw new TableNotFoundException(

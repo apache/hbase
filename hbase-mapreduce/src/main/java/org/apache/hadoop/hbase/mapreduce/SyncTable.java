@@ -18,8 +18,11 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.Iterator;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -65,7 +68,17 @@ public class SyncTable extends Configured implements Tool {
   static final String SOURCE_HASH_DIR_CONF_KEY = "sync.table.source.hash.dir";
   static final String SOURCE_TABLE_CONF_KEY = "sync.table.source.table.name";
   static final String TARGET_TABLE_CONF_KEY = "sync.table.target.table.name";
+  static final String SOURCE_URI_CONF_KEY = "sync.table.source.uri";
+  /**
+   * @deprecated Since 3.0.0, will be removed in 4.0.0 Use {@link #SOURCE_URI_CONF_KEY} instead.
+   */
+  @Deprecated
   static final String SOURCE_ZK_CLUSTER_CONF_KEY = "sync.table.source.zk.cluster";
+  static final String TARGET_URI_CONF_KEY = "sync.table.target.uri";
+  /**
+   * @deprecated Since 3.0.0, will be removed in 4.0.0 Use {@link #TARGET_URI_CONF_KEY} instead.
+   */
+  @Deprecated
   static final String TARGET_ZK_CLUSTER_CONF_KEY = "sync.table.target.zk.cluster";
   static final String DRY_RUN_CONF_KEY = "sync.table.dry.run";
   static final String DO_DELETES_CONF_KEY = "sync.table.do.deletes";
@@ -76,7 +89,17 @@ public class SyncTable extends Configured implements Tool {
   String sourceTableName;
   String targetTableName;
 
+  URI sourceUri;
+  /**
+   * @deprecated Since 3.0.0, will be removed in 4.0.0 Use {@link #sourceUri} instead.
+   */
+  @Deprecated
   String sourceZkCluster;
+  URI targetUri;
+  /**
+   * @deprecated Since 3.0.0, will be removed in 4.0.0 Use {@link #targetUri} instead.
+   */
+  @Deprecated
   String targetZkCluster;
   boolean dryRun;
   boolean doDeletes = true;
@@ -89,9 +112,9 @@ public class SyncTable extends Configured implements Tool {
     super(conf);
   }
 
-  private void initCredentialsForHBase(String zookeeper, Job job) throws IOException {
+  private void initCredentialsForHBase(String clusterKey, Job job) throws IOException {
     Configuration peerConf =
-      HBaseConfiguration.createClusterConf(job.getConfiguration(), zookeeper);
+      HBaseConfiguration.createClusterConf(job.getConfiguration(), clusterKey);
     TableMapReduceUtil.initCredentialsForCluster(job, peerConf);
   }
 
@@ -142,11 +165,17 @@ public class SyncTable extends Configured implements Tool {
     jobConf.set(SOURCE_HASH_DIR_CONF_KEY, sourceHashDir.toString());
     jobConf.set(SOURCE_TABLE_CONF_KEY, sourceTableName);
     jobConf.set(TARGET_TABLE_CONF_KEY, targetTableName);
-    if (sourceZkCluster != null) {
+    if (sourceUri != null) {
+      jobConf.set(SOURCE_URI_CONF_KEY, sourceUri.toString());
+      TableMapReduceUtil.initCredentialsForCluster(job, jobConf, sourceUri);
+    } else if (sourceZkCluster != null) {
       jobConf.set(SOURCE_ZK_CLUSTER_CONF_KEY, sourceZkCluster);
       initCredentialsForHBase(sourceZkCluster, job);
     }
-    if (targetZkCluster != null) {
+    if (targetUri != null) {
+      jobConf.set(TARGET_URI_CONF_KEY, targetUri.toString());
+      TableMapReduceUtil.initCredentialsForCluster(job, jobConf, targetUri);
+    } else if (targetZkCluster != null) {
       jobConf.set(TARGET_ZK_CLUSTER_CONF_KEY, targetZkCluster);
       initCredentialsForHBase(targetZkCluster, job);
     }
@@ -165,8 +194,11 @@ public class SyncTable extends Configured implements Tool {
     } else {
       // No reducers. Just write straight to table. Call initTableReducerJob
       // because it sets up the TableOutputFormat.
-      TableMapReduceUtil.initTableReducerJob(targetTableName, null, job, null, targetZkCluster);
-
+      if (targetUri != null) {
+        TableMapReduceUtil.initTableReducerJob(targetTableName, null, job, null, targetUri);
+      } else {
+        TableMapReduceUtil.initTableReducerJob(targetTableName, null, job, null, targetZkCluster);
+      }
       // would be nice to add an option for bulk load instead
     }
 
@@ -214,9 +246,10 @@ public class SyncTable extends Configured implements Tool {
     protected void setup(Context context) throws IOException {
       Configuration conf = context.getConfiguration();
       sourceHashDir = new Path(conf.get(SOURCE_HASH_DIR_CONF_KEY));
-      sourceConnection = openConnection(conf, SOURCE_ZK_CLUSTER_CONF_KEY, null);
-      targetConnection =
-        openConnection(conf, TARGET_ZK_CLUSTER_CONF_KEY, TableOutputFormat.OUTPUT_CONF_PREFIX);
+      sourceConnection =
+        openConnection(conf, SOURCE_URI_CONF_KEY, SOURCE_ZK_CLUSTER_CONF_KEY, null);
+      targetConnection = openConnection(conf, TARGET_URI_CONF_KEY, TARGET_ZK_CLUSTER_CONF_KEY,
+        TableOutputFormat.OUTPUT_CONF_PREFIX);
       sourceTable = openTable(sourceConnection, conf, SOURCE_TABLE_CONF_KEY);
       targetTable = openTable(targetConnection, conf, TARGET_TABLE_CONF_KEY);
       dryRun = conf.getBoolean(DRY_RUN_CONF_KEY, false);
@@ -241,12 +274,22 @@ public class SyncTable extends Configured implements Tool {
       targetHasher.ignoreTimestamps = ignoreTimestamp;
     }
 
-    private static Connection openConnection(Configuration conf, String zkClusterConfKey,
-      String configPrefix) throws IOException {
-      String zkCluster = conf.get(zkClusterConfKey);
-      Configuration clusterConf =
-        HBaseConfiguration.createClusterConf(conf, zkCluster, configPrefix);
-      return ConnectionFactory.createConnection(clusterConf);
+    private static Connection openConnection(Configuration conf, String uriConfKey,
+      String zkClusterConfKey, String configPrefix) throws IOException {
+      String uri = conf.get(uriConfKey);
+      if (!StringUtils.isBlank(uri)) {
+        try {
+          return ConnectionFactory.createConnection(new URI(uri), conf);
+        } catch (URISyntaxException e) {
+          throw new IOException(
+            "malformed connection uri: " + uri + ", please check config " + uriConfKey, e);
+        }
+      } else {
+        String zkCluster = conf.get(zkClusterConfKey);
+        Configuration clusterConf =
+          HBaseConfiguration.createClusterConf(conf, zkCluster, configPrefix);
+        return ConnectionFactory.createConnection(clusterConf);
+      }
     }
 
     private static Table openTable(Connection connection, Configuration conf,
@@ -747,10 +790,18 @@ public class SyncTable extends Configured implements Tool {
     System.err.println();
     System.err.println("Options:");
 
+    System.err.println(" sourceuri        Cluster connection uri of the source table");
+    System.err.println("                  (defaults to cluster in classpath's config)");
     System.err.println(" sourcezkcluster  ZK cluster key of the source table");
+    System.err.println("                  (defaults to cluster in classpath's config)");
+    System.err.println("                  Do not take effect if sourceuri is specified");
+    System.err.println("                  Deprecated, please use sourceuri instead");
+    System.err.println(" targeturi        Cluster connection uri of the target table");
     System.err.println("                  (defaults to cluster in classpath's config)");
     System.err.println(" targetzkcluster  ZK cluster key of the target table");
     System.err.println("                  (defaults to cluster in classpath's config)");
+    System.err.println("                  Do not take effect if targeturi is specified");
+    System.err.println("                  Deprecated, please use targeturi instead");
     System.err.println(" dryrun           if true, output counters but no writes");
     System.err.println("                  (defaults to false)");
     System.err.println(" doDeletes        if false, does not perform deletes");
@@ -792,10 +843,21 @@ public class SyncTable extends Configured implements Tool {
           printUsage(null);
           return false;
         }
+        final String sourceUriKey = "--sourceuri=";
+        if (cmd.startsWith(sourceUriKey)) {
+          sourceUri = new URI(cmd.substring(sourceUriKey.length()));
+          continue;
+        }
 
         final String sourceZkClusterKey = "--sourcezkcluster=";
         if (cmd.startsWith(sourceZkClusterKey)) {
           sourceZkCluster = cmd.substring(sourceZkClusterKey.length());
+          continue;
+        }
+
+        final String targetUriKey = "--targeturi=";
+        if (cmd.startsWith(targetUriKey)) {
+          targetUri = new URI(cmd.substring(targetUriKey.length()));
           continue;
         }
 
