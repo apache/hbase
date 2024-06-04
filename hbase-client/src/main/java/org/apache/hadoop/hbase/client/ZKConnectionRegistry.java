@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
@@ -72,22 +73,28 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   private final ReadOnlyZKClient zk;
 
   private final ZNodePaths znodePaths;
+  private final Configuration conf;
 
-  private static final long expectedTimeout = 120000;
-  private static final int maxAttempts = 5;
-  private static final long pauseNs = 100000;
+  public static final String EXPECTED_TIMEOUT = "expected.timeout";
+  public static final int DEFAULT_EXPECTED_TIMEOUT = 200000;
+  public static final String MAX_ATTEMPTS = "max.attempts";
+  public static final int DEFAULT_MAX_ATTEMPTS = 5;
+  public static final String PAUSE_NS = "pause.ns";
+  public static final long DEFAULT_PAUSE_NS = 100000;
 
 
   // User not used, but for rpc based registry we need it
   ZKConnectionRegistry(Configuration conf, User ignored) {
     this.znodePaths = new ZNodePaths(conf);
     this.zk = new ReadOnlyZKClient(conf);
+    this.conf = conf;
     if (NEEDS_LOG_WARN) {
       synchronized (WARN_LOCK) {
         if (NEEDS_LOG_WARN) {
           LOG.warn(
             "ZKConnectionRegistry is deprecated. See https://hbase.apache.org/book.html#client.rpcconnectionregistry");
           NEEDS_LOG_WARN = false;
+
         }
       }
     }
@@ -106,13 +113,16 @@ class ZKConnectionRegistry implements ConnectionRegistry {
       TimerTask pollingTask = new TimerTask() {
         int tries = 0;
         long startTime = EnvironmentEdgeManager.currentTime();
-        long endTime = startTime + expectedTimeout;
-        long maxPauseTime = expectedTimeout / maxAttempts;
+        long endTime = startTime + conf.getInt(EXPECTED_TIMEOUT, DEFAULT_EXPECTED_TIMEOUT);
+        long maxPauseTime =
+          conf.getInt(EXPECTED_TIMEOUT, DEFAULT_EXPECTED_TIMEOUT) /
+            conf.getInt(MAX_ATTEMPTS, DEFAULT_MAX_ATTEMPTS);;
+
 
         @Override
         public void run(Timeout timeout) throws Exception {
           if (EnvironmentEdgeManager.currentTime() < endTime) {
-            addListener(zk.get(path), (data, error) -> {
+            addListener(zk.getWithTimeout(path, endTime), (data, error) -> {
               if (error != null) {
                 future.completeExceptionally(error);
                 return;
@@ -126,15 +136,16 @@ class ZKConnectionRegistry implements ConnectionRegistry {
               } else {
                 // retry again after pauseTime.
                 long pauseTime =
-                  ConnectionUtils.getPauseTime(TimeUnit.NANOSECONDS.toMillis(pauseNs), ++tries);
+                  ConnectionUtils.getPauseTime(TimeUnit.NANOSECONDS
+                      .toMillis(conf.getLong(PAUSE_NS, DEFAULT_PAUSE_NS)), ++tries);
                 pauseTime = Math.min(pauseTime, maxPauseTime);
                 AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, pauseTime,
                   TimeUnit.MICROSECONDS);
               }
             });
           } else {
-            future.completeExceptionally(new IOException("Procedure wasn't completed in "
-              + "expectedTime:" + expectedTimeout + " ms"));
+            future.completeExceptionally(new TimeoutException("Procedure wasn't completed in "
+              + "expectedTime:" + conf.getInt(EXPECTED_TIMEOUT, DEFAULT_EXPECTED_TIMEOUT) + " ms"));
           }
         }
       };
@@ -259,14 +270,15 @@ class ZKConnectionRegistry implements ConnectionRegistry {
       TimerTask pollingTask = new TimerTask() {
         int tries = 0;
         long startTime = EnvironmentEdgeManager.currentTime();
-        long endTime = startTime + expectedTimeout;
-        long maxPauseTime = expectedTimeout / maxAttempts;
+        long endTime = startTime + conf.getInt(EXPECTED_TIMEOUT, DEFAULT_EXPECTED_TIMEOUT);
+        long maxPauseTime = conf.getInt(EXPECTED_TIMEOUT, DEFAULT_EXPECTED_TIMEOUT) /
+          conf.getInt(MAX_ATTEMPTS, DEFAULT_MAX_ATTEMPTS);
 
         @Override
         public void run(Timeout timeout) throws Exception {
           if (EnvironmentEdgeManager.currentTime() < endTime) {
             addListener(
-              zk.list(znodePaths.baseZNode).thenApply(children -> children.stream()
+              zk.listWithTimeout(znodePaths.baseZNode, endTime).thenApply(children -> children.stream()
                 .filter(c -> getZNodePaths().isMetaZNodePrefix(c)).collect(Collectors.toList())),
               (metaReplicaZNodes, error) -> {
               if (error != null) {
@@ -278,15 +290,16 @@ class ZKConnectionRegistry implements ConnectionRegistry {
               } else {
                 // retry again after pauseTime.
                 long pauseTime =
-                  ConnectionUtils.getPauseTime(TimeUnit.NANOSECONDS.toMillis(pauseNs), ++tries);
+                  ConnectionUtils.getPauseTime(TimeUnit.NANOSECONDS
+                    .toMillis(conf.getLong(PAUSE_NS, DEFAULT_PAUSE_NS)), ++tries);
                 pauseTime = Math.min(pauseTime, maxPauseTime);
                 AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, pauseTime,
                   TimeUnit.MICROSECONDS);
               }
             });
           } else {
-            future.completeExceptionally(new IOException("Procedure wasn't completed in "
-            + "expectedTime:" + expectedTimeout + " ms"));
+            future.completeExceptionally(new TimeoutException("Procedure wasn't completed in "
+            + "expectedTime:" + conf.getInt(EXPECTED_TIMEOUT, DEFAULT_EXPECTED_TIMEOUT) + " ms"));
           }
         }
       };

@@ -253,6 +253,18 @@ public final class ReadOnlyZKClient implements Closeable {
     }
   }
 
+  public CompletableFuture<byte[]> getWithTimeout(String path, long timeout) {
+    CompletableFuture<byte[]> future = get(path);
+    while(timeout > 0){
+      if(future.isCancelled() || future.isDone() || future.isCompletedExceptionally()){
+        return future;
+      }
+      --timeout;
+    }
+    future.completeExceptionally(new KeeperException.OperationTimeoutException());
+    return future;
+  }
+
   public CompletableFuture<byte[]> get(String path) {
     if (closed.get()) {
       return FutureUtils.failedFuture(new DoNotRetryIOException("Client already closed"));
@@ -269,6 +281,18 @@ public final class ReadOnlyZKClient implements Closeable {
     return future;
   }
 
+  public CompletableFuture<Stat> existsWithTimeout(String path, int timeout) {
+    CompletableFuture<Stat> future = exists(path);
+    while(timeout > 0){
+      if(future.isCancelled() || future.isDone() || future.isCompletedExceptionally()){
+        return future;
+      }
+      --timeout;
+    }
+    future.completeExceptionally(new KeeperException.OperationTimeoutException());
+    return future;
+  }
+
   public CompletableFuture<Stat> exists(String path) {
     if (closed.get()) {
       return FutureUtils.failedFuture(new DoNotRetryIOException("Client already closed"));
@@ -281,6 +305,18 @@ public final class ReadOnlyZKClient implements Closeable {
         zk.exists(path, false, (rc, path, ctx, stat) -> onComplete(zk, rc, stat, false), null);
       }
     });
+    return future;
+  }
+
+  public CompletableFuture<List<String>> listWithTimeout(String path, long timeout) {
+    CompletableFuture<List<String>> future = list(path);
+    while(timeout > 0){
+      if(future.isCancelled() || future.isDone() || future.isCompletedExceptionally()){
+        return future;
+      }
+      --timeout;
+    }
+    future.completeExceptionally(new KeeperException.OperationTimeoutException());
     return future;
   }
 
