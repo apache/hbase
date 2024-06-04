@@ -138,8 +138,7 @@ public class RefreshPeerProcedure extends ServerRemoteProcedure
 
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    RefreshPeerStateData.Builder builder =
-      RefreshPeerStateData.newBuilder();
+    RefreshPeerStateData.Builder builder = RefreshPeerStateData.newBuilder();
     if (this.remoteError != null) {
       ErrorHandlingProtos.ForeignExceptionMessage fem =
         ForeignExceptionUtil.toProtoForeignException(remoteError);
