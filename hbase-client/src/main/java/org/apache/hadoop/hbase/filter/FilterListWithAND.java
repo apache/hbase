@@ -250,7 +250,7 @@ public class FilterListWithAND extends FilterListBase {
       Filter filter = filters.get(i);
       if (filter.filterAllRemaining()) {
         // We don't need to care about any later filters, as we end the scan immediately.
-        // TODO PHOENIX-7322 in the normal code path, filterAllRemaining() always gets checked
+        // TODO HBASE-28633 in the normal code path, filterAllRemaining() always gets checked
         // before filterRowKey(). We should be able to remove this check.
         return true;
       } else if (filter.filterRowKey(firstRowCell)) {
@@ -259,7 +259,8 @@ public class FilterListWithAND extends FilterListBase {
         // filters will have no chance to update their row state.
         anyRowKeyFiltered = true;
       } else if (hintingFilters[i]) {
-        // If a hinting filters has returned false, then we must not filter this rowkey.
+        // If filterRowKey returns false and this is a hinting filter, then we must not filter this
+        // rowkey.
         // Otherwise this sub-filter doesn't get a chance to provide a seek hint, and the scan may
         // regress into a full scan.
         anyHintingPassed = true;
