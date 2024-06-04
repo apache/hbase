@@ -644,6 +644,12 @@ public class TestFilterList {
     }
   }
 
+  private static class HintingMockFilter extends MockFilter implements HintingFilter {
+    public HintingMockFilter(ReturnCode targetRetCode) {
+      super(targetRetCode);
+    }
+  }
+
   @Test
   public void testShouldPassCurrentCellToFilter() throws IOException {
     KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("fam"), Bytes.toBytes("a"), 1,
@@ -729,7 +735,7 @@ public class TestFilterList {
     MockFilter filter3 = new MockFilter(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW);
     MockFilter filter4 = new MockFilter(ReturnCode.NEXT_COL);
     MockFilter filter5 = new MockFilter(ReturnCode.SKIP);
-    MockFilter filter6 = new MockFilter(ReturnCode.SEEK_NEXT_USING_HINT);
+    MockFilter filter6 = new HintingMockFilter(ReturnCode.SEEK_NEXT_USING_HINT);
     MockFilter filter7 = new MockFilter(ReturnCode.NEXT_ROW);
 
     FilterList filterList = new FilterList(Operator.MUST_PASS_ALL, filter1, filter2);
@@ -739,10 +745,10 @@ public class TestFilterList {
     assertEquals(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, filterList.filterCell(kv1));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL, filter4, filter5, filter6);
-    assertEquals(ReturnCode.NEXT_COL, filterList.filterCell(kv1));
+    assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL, filter4, filter6);
-    assertEquals(ReturnCode.NEXT_COL, filterList.filterCell(kv1));
+    assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL, filter3, filter1);
     assertEquals(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, filterList.filterCell(kv1));
@@ -767,7 +773,7 @@ public class TestFilterList {
     MockFilter filter3 = new MockFilter(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW);
     MockFilter filter4 = new MockFilter(ReturnCode.NEXT_COL);
     MockFilter filter5 = new MockFilter(ReturnCode.SKIP);
-    MockFilter filter6 = new MockFilter(ReturnCode.SEEK_NEXT_USING_HINT);
+    MockFilter filter6 = new HintingMockFilter(ReturnCode.SEEK_NEXT_USING_HINT);
     FilterList filterList = new FilterList(Operator.MUST_PASS_ONE, filter1, filter2);
     assertEquals(ReturnCode.INCLUDE, filterList.filterCell(kv1));
 
