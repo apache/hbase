@@ -867,6 +867,15 @@ public class TestNamedQueueRecorder {
       }
 
       @Override
+      public CallType getCallType() {
+        return CallType.NONE;
+      }
+
+      @Override
+      public void setCallType(CallType type) {
+      }
+
+      @Override
       public void updateFsReadTime(long latencyMillis) {
 
       }
