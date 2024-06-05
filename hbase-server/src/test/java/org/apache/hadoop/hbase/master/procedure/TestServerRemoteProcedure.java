@@ -199,9 +199,8 @@ public class TestServerRemoteProcedure {
     }
 
     @Override
-    public void complete(MasterProcedureEnv env, Throwable error) {
-      this.succ = true;
-      return;
+    public boolean complete(MasterProcedureEnv env, Throwable error) {
+      return true;
     }
 
     @Override

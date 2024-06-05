@@ -28,11 +28,13 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.replication.regionserver.RefreshPeerCallable;
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerModificationType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RefreshPeerParameter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RefreshPeerStateData;
@@ -108,13 +110,13 @@ public class RefreshPeerProcedure extends ServerRemoteProcedure
   }
 
   @Override
-  protected void complete(MasterProcedureEnv env, Throwable error) {
+  protected boolean complete(MasterProcedureEnv env, Throwable error) {
     if (error != null) {
       LOG.warn("Refresh peer {} for {} on {} failed", peerId, type, targetServer, error);
-      this.succ = false;
+      return false;
     } else {
       LOG.info("Refresh peer {} for {} on {} suceeded", peerId, type, targetServer);
-      this.succ = true;
+      return true;
     }
   }
 
@@ -136,9 +138,14 @@ public class RefreshPeerProcedure extends ServerRemoteProcedure
 
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    serializer.serialize(
-      RefreshPeerStateData.newBuilder().setPeerId(peerId).setType(toPeerModificationType(type))
-        .setTargetServer(ProtobufUtil.toServerName(targetServer)).build());
+    RefreshPeerStateData.Builder builder = RefreshPeerStateData.newBuilder();
+    if (this.remoteError != null) {
+      ErrorHandlingProtos.ForeignExceptionMessage fem =
+        ForeignExceptionUtil.toProtoForeignException(remoteError);
+      builder.setError(fem);
+    }
+    serializer.serialize(builder.setPeerId(peerId).setType(toPeerModificationType(type))
+      .setTargetServer(ProtobufUtil.toServerName(targetServer)).setState(state).build());
   }
 
   @Override
@@ -147,5 +154,9 @@ public class RefreshPeerProcedure extends ServerRemoteProcedure
     peerId = data.getPeerId();
     type = toPeerOperationType(data.getType());
     targetServer = ProtobufUtil.toServerName(data.getTargetServer());
+    state = data.getState();
+    if (data.hasError()) {
+      this.remoteError = ForeignExceptionUtil.toException(data.getError());
+    }
   }
 }
