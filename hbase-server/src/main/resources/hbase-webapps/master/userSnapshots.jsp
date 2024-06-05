@@ -20,6 +20,7 @@
 <%@ page contentType="text/plain;charset=UTF-8"
  import="java.util.List"
  import="java.util.Date"
+ import="org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils"
  import="org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription"
  import="org.apache.hadoop.hbase.master.HMaster"
  import="org.apache.hadoop.hbase.TableName"
@@ -38,6 +39,7 @@
         <th>Creation Time</th>
         <th>Owner</th>
         <th>TTL</th>
+        <th>Expired</th>
     </tr>
     <% for (SnapshotDescription snapshotDesc : snapshots){ %>
     <% TableName snapshotTable = TableName.valueOf(snapshotDesc.getTable()); %>
@@ -50,6 +52,9 @@
 
         <td>
           <%= snapshotDesc.getTtl() == 0 ? "FOREVER": PrettyPrinter.format(String.valueOf(snapshotDesc.getTtl()), PrettyPrinter.Unit.TIME_INTERVAL) %>
+        </td>
+        <td>
+          <%= SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDesc.getTtl(), snapshotDesc.getCreationTime(), System.currentTimeMillis()) ? "Yes" : "No" %>
         </td>
     </tr>
     <% } %>
