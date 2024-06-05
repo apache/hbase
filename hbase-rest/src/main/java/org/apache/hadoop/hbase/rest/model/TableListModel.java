@@ -24,8 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.xml.bind.annotation.XmlElementRef;
 import javax.xml.bind.annotation.XmlRootElement;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -101,7 +101,7 @@ public class TableListModel implements Serializable, ProtobufMessageHandler {
   @Override
   public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
     TableList.Builder builder = TableList.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, message);
     for (String table : builder.getNameList()) {
       this.add(new TableModel(table));
     }
