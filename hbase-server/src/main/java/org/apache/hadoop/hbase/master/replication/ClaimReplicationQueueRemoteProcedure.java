@@ -28,11 +28,13 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.replication.regionserver.ClaimReplicationQueueCallable;
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ClaimReplicationQueueRemoteParameter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ClaimReplicationQueueRemoteStateData;
 
@@ -84,13 +86,13 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
   }
 
   @Override
-  protected void complete(MasterProcedureEnv env, Throwable error) {
+  protected boolean complete(MasterProcedureEnv env, Throwable error) {
     if (error != null) {
       LOG.warn("Failed to claim replication queue {} of crashed server on server {} ", queue,
         crashedServer, targetServer, error);
-      this.succ = false;
+      return false;
     } else {
-      this.succ = true;
+      return true;
     }
   }
 
@@ -111,9 +113,15 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
 
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    serializer.serialize(ClaimReplicationQueueRemoteStateData.newBuilder()
-      .setCrashedServer(ProtobufUtil.toServerName(crashedServer)).setQueue(queue)
-      .setTargetServer(ProtobufUtil.toServerName(targetServer)).build());
+    ClaimReplicationQueueRemoteStateData.Builder builder = ClaimReplicationQueueRemoteStateData
+      .newBuilder().setCrashedServer(ProtobufUtil.toServerName(crashedServer)).setQueue(queue)
+      .setTargetServer(ProtobufUtil.toServerName(targetServer)).setState(state);
+    if (this.remoteError != null) {
+      ErrorHandlingProtos.ForeignExceptionMessage fem =
+        ForeignExceptionUtil.toProtoForeignException(remoteError);
+      builder.setError(fem);
+    }
+    serializer.serialize(builder.build());
   }
 
   @Override
@@ -123,5 +131,9 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
     crashedServer = ProtobufUtil.toServerName(data.getCrashedServer());
     queue = data.getQueue();
     targetServer = ProtobufUtil.toServerName(data.getTargetServer());
+    state = data.getState();
+    if (data.hasError()) {
+      this.remoteError = ForeignExceptionUtil.toException(data.getError());
+    }
   }
 }
