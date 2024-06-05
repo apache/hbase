@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.Message;
+import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.rest.model.CellModel;
@@ -44,5 +47,19 @@ public final class RestUtil {
       rowModel.addCell(new CellModel(r.rawCells()[i]));
     }
     return rowModel;
+  }
+
+  /**
+   * Copied from org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil to avoid shading conflicts
+   * between hbase-shaded-client and hbase-rest in HBase 2.x. This version of protobuf's mergeFrom
+   * avoids the hard-coded 64MB limit for decoding buffers when working with byte arrays
+   * @param builder current message builder
+   * @param b       byte array
+   */
+  public static void mergeFrom(Message.Builder builder, byte[] b) throws IOException {
+    final CodedInputStream codedInput = CodedInputStream.newInstance(b);
+    codedInput.setSizeLimit(b.length);
+    builder.mergeFrom(codedInput);
+    codedInput.checkLastTagWas(0);
   }
 }

@@ -37,8 +37,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableSchemaMessage.TableSchema;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -285,7 +285,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   @Override
   public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
     TableSchema.Builder builder = TableSchema.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, message);
     this.setName(builder.getName());
     for (TableSchema.Attribute attr : builder.getAttrsList()) {
       this.addAttribute(attr.getName(), attr.getValue());

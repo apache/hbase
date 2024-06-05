@@ -25,8 +25,8 @@ import java.util.List;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -140,7 +140,7 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
   @Override
   public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
     TableInfo.Builder builder = TableInfo.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, message);
     setName(builder.getName());
     for (TableInfo.Region region : builder.getRegionsList()) {
       add(
