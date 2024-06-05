@@ -34,8 +34,8 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -218,7 +218,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   @Override
   public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
     Cell.Builder builder = Cell.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, message);
     setColumn(builder.getColumn().toByteArray());
     setValue(builder.getData().toByteArray());
     if (builder.hasTimestamp()) {

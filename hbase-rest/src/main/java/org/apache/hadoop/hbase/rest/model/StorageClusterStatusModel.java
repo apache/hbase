@@ -27,8 +27,8 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -693,7 +693,7 @@ public class StorageClusterStatusModel implements Serializable, ProtobufMessageH
   @Override
   public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
     StorageClusterStatus.Builder builder = StorageClusterStatus.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, message);
     if (builder.hasRegions()) {
       regions = builder.getRegions();
     }

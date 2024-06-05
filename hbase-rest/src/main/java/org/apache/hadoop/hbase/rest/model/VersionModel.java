@@ -23,9 +23,9 @@ import java.io.Serializable;
 import javax.servlet.ServletContext;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RESTServlet;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -175,7 +175,7 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
   @Override
   public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
     Version.Builder builder = Version.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, message);
     if (builder.hasRestVersion()) {
       restVersion = builder.getRestVersion();
     }
