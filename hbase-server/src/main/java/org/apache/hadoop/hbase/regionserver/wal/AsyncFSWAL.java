@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
-import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -208,15 +207,5 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   protected AsyncWriter createCombinedWriter(AsyncWriter localWriter, AsyncWriter remoteWriter) {
     // put remote writer first as usually it will cost more time to finish, so we write to it first
     return CombinedAsyncWriter.create(remoteWriter, localWriter);
-  }
-
-  @Override
-  protected void recoverLease(FileSystem fs, Path p, Configuration conf) {
-    try {
-      RecoverLeaseFSUtils.recoverFileLease(fs, p, conf, null);
-    } catch (IOException ex) {
-      LOG.warn("Unable to recover lease after several attempts. Give up.", ex);
-      throw new RuntimeException(ex);
-    }
   }
 }
