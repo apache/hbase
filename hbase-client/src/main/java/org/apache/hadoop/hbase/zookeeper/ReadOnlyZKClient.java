@@ -32,6 +32,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.client.AsyncConnectionImpl;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
+import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -41,6 +47,7 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 /**
  * A very simple read only zookeeper implementation without watcher support.
@@ -74,6 +81,11 @@ public final class ReadOnlyZKClient implements Closeable {
   private final int retryIntervalMs;
 
   private final int keepAliveTimeMs;
+
+  public static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
+    new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d").setDaemon(true)
+      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+    10, TimeUnit.MILLISECONDS);
 
   private static abstract class Task implements Delayed {
 
@@ -253,15 +265,25 @@ public final class ReadOnlyZKClient implements Closeable {
     }
   }
 
-  public CompletableFuture<byte[]> getWithTimeout(String path, long timeout) {
+  public CompletableFuture<byte[]> getWithTimeout(String path, long endTime) {
     CompletableFuture<byte[]> future = get(path);
-    while(timeout > 0){
-      if(future.isCancelled() || future.isDone() || future.isCompletedExceptionally()){
-        return future;
+    TimerTask timerTask = new TimerTask() {
+      @Override
+      public void run(Timeout timeout) throws Exception {
+        if (EnvironmentEdgeManager.currentTime() > endTime) {
+          if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
+            future.completeExceptionally(
+              new DoNotRetryIOException("Zookeeper get could not be completed by " + endTime));
+          }
+        } else {
+          if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
+            RETRY_TIMER.newTimeout(this, 10, TimeUnit.MILLISECONDS);
+          }
+        }
       }
-      --timeout;
-    }
-    future.completeExceptionally(new KeeperException.OperationTimeoutException());
+    };
+
+    RETRY_TIMER.newTimeout(timerTask, 1, TimeUnit.MILLISECONDS);
     return future;
   }
 
@@ -281,15 +303,25 @@ public final class ReadOnlyZKClient implements Closeable {
     return future;
   }
 
-  public CompletableFuture<Stat> existsWithTimeout(String path, int timeout) {
+  public CompletableFuture<Stat> existsWithTimeout(String path, int endTime) {
     CompletableFuture<Stat> future = exists(path);
-    while(timeout > 0){
-      if(future.isCancelled() || future.isDone() || future.isCompletedExceptionally()){
-        return future;
+    TimerTask timerTask = new TimerTask() {
+      @Override
+      public void run(Timeout timeout) throws Exception {
+        if (EnvironmentEdgeManager.currentTime() > endTime) {
+          if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
+            future.completeExceptionally(
+              new DoNotRetryIOException("Zookeeper get could not be completed by " + endTime));
+          }
+        } else {
+          if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
+            RETRY_TIMER.newTimeout(this, 10, TimeUnit.MILLISECONDS);
+          }
+        }
       }
-      --timeout;
-    }
-    future.completeExceptionally(new KeeperException.OperationTimeoutException());
+    };
+
+    RETRY_TIMER.newTimeout(timerTask, 1, TimeUnit.MILLISECONDS);
     return future;
   }
 
@@ -308,15 +340,25 @@ public final class ReadOnlyZKClient implements Closeable {
     return future;
   }
 
-  public CompletableFuture<List<String>> listWithTimeout(String path, long timeout) {
+  public CompletableFuture<List<String>> listWithTimeout(String path, long endTime) {
     CompletableFuture<List<String>> future = list(path);
-    while(timeout > 0){
-      if(future.isCancelled() || future.isDone() || future.isCompletedExceptionally()){
-        return future;
+    TimerTask timerTask = new TimerTask() {
+      @Override
+      public void run(Timeout timeout) throws Exception {
+        if (EnvironmentEdgeManager.currentTime() > endTime) {
+          if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
+            future.completeExceptionally(
+              new DoNotRetryIOException("Zookeeper get could not be completed by " + endTime));
+          }
+        } else {
+          if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
+            RETRY_TIMER.newTimeout(this, 10, TimeUnit.MILLISECONDS);
+          }
+        }
       }
-      --timeout;
-    }
-    future.completeExceptionally(new KeeperException.OperationTimeoutException());
+    };
+
+    RETRY_TIMER.newTimeout(timerTask, 1, TimeUnit.MILLISECONDS);
     return future;
   }
 
