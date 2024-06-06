@@ -19,8 +19,12 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -271,8 +275,8 @@ public abstract class TableBackupClient {
    * @param backupInfo The current backup info
    * @throws IOException exception
    */
-  protected void addManifest(BackupInfo backupInfo, BackupManager backupManager, BackupType type,
-    Configuration conf) throws IOException {
+  protected void addManifest(BackupInfo backupInfo, BackupType type, Configuration conf)
+    throws IOException {
     // set the overall backup phase : store manifest
     backupInfo.setPhase(BackupPhase.STORE_MANIFEST);
 
@@ -281,11 +285,63 @@ public abstract class TableBackupClient {
       // set the table region server start and end timestamps for incremental backup
       manifest.setIncrTimestampMap(backupInfo.getIncrTimestampMap());
     }
-    ArrayList<BackupImage> ancestors = backupManager.getAncestors(backupInfo);
+    List<BackupImage> ancestors = getAncestors(backupInfo);
     for (BackupImage image : ancestors) {
       manifest.addDependentImage(image);
     }
     manifest.store(conf);
+  }
+
+  /**
+   * Gets the direct ancestors of the currently being created backup.
+   * @param backupInfo The backup info for the backup being created
+   */
+  protected List<BackupImage> getAncestors(BackupInfo backupInfo) throws IOException {
+    LOG.debug("Getting the direct ancestors of the current backup {}", backupInfo.getBackupId());
+
+    // Full backups do not have ancestors
+    if (backupInfo.getType() == BackupType.FULL) {
+      LOG.debug("Current backup is a full backup, no direct ancestor for it.");
+      return Collections.emptyList();
+    }
+
+    List<BackupImage> ancestors = new ArrayList<>();
+    Set<TableName> tablesToCover = new HashSet<>(backupInfo.getTables());
+
+    // Go over the backup history list from newest to oldest
+    List<BackupInfo> allHistoryList = backupManager.getBackupHistory(true);
+    for (BackupInfo backup : allHistoryList) {
+      // If the image has a different rootDir, it cannot be an ancestor.
+      if (!Objects.equals(backup.getBackupRootDir(), backupInfo.getBackupRootDir())) {
+        continue;
+      }
+
+      BackupImage.Builder builder = BackupImage.newBuilder();
+      BackupImage image = builder.withBackupId(backup.getBackupId()).withType(backup.getType())
+        .withRootDir(backup.getBackupRootDir()).withTableList(backup.getTableNames())
+        .withStartTime(backup.getStartTs()).withCompleteTime(backup.getCompleteTs()).build();
+
+      // The ancestors consist of the most recent FULL backups that cover the list of tables
+      // required in the new backup and all INCREMENTAL backups that came after one of those FULL
+      // backups.
+      if (backup.getType().equals(BackupType.INCREMENTAL)) {
+        ancestors.add(image);
+        LOG.debug("Dependent incremental backup image: {BackupID={}}", image.getBackupId());
+      } else {
+        if (tablesToCover.removeAll(new HashSet<>(image.getTableNames()))) {
+          ancestors.add(image);
+          LOG.debug("Dependent full backup image: {BackupID={}}", image.getBackupId());
+
+          if (tablesToCover.isEmpty()) {
+            LOG.debug("Got {} ancestors for the current backup.", ancestors.size());
+            return Collections.unmodifiableList(ancestors);
+          }
+        }
+      }
+    }
+
+    throw new IllegalStateException(
+      "Unable to find full backup that contains tables: " + tablesToCover);
   }
 
   /**
@@ -312,15 +368,15 @@ public abstract class TableBackupClient {
    * @param backupInfo backup info
    * @throws IOException exception
    */
-  protected void completeBackup(final Connection conn, BackupInfo backupInfo,
-    BackupManager backupManager, BackupType type, Configuration conf) throws IOException {
+  protected void completeBackup(final Connection conn, BackupInfo backupInfo, BackupType type,
+    Configuration conf) throws IOException {
     // set the complete timestamp of the overall backup
     backupInfo.setCompleteTs(EnvironmentEdgeManager.currentTime());
     // set overall backup status: complete
     backupInfo.setState(BackupState.COMPLETE);
     backupInfo.setProgress(100);
     // add and store the manifest for the backup
-    addManifest(backupInfo, backupManager, type, conf);
+    addManifest(backupInfo, type, conf);
 
     // compose the backup complete data
     String backupCompleteData =
