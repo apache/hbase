@@ -92,9 +92,7 @@ public class SyncTable extends Configured implements Tool {
   private void initCredentialsForHBase(String zookeeper, Job job) throws IOException {
     Configuration peerConf =
       HBaseConfiguration.createClusterConf(job.getConfiguration(), zookeeper);
-    if ("kerberos".equalsIgnoreCase(peerConf.get("hbase.security.authentication"))) {
-      TableMapReduceUtil.initCredentialsForCluster(job, peerConf);
-    }
+    TableMapReduceUtil.initCredentialsForCluster(job, peerConf);
   }
 
   public Job createSubmittableJob(String[] args) throws IOException {
@@ -172,12 +170,6 @@ public class SyncTable extends Configured implements Tool {
       // would be nice to add an option for bulk load instead
     }
 
-    // Obtain an authentication token, for the specified cluster, on behalf of the current user
-    if (sourceZkCluster != null) {
-      Configuration peerConf =
-        HBaseConfiguration.createClusterConf(job.getConfiguration(), sourceZkCluster);
-      TableMapReduceUtil.initCredentialsForCluster(job, peerConf);
-    }
     return job;
   }
 
@@ -220,7 +212,6 @@ public class SyncTable extends Configured implements Tool {
 
     @Override
     protected void setup(Context context) throws IOException {
-
       Configuration conf = context.getConfiguration();
       sourceHashDir = new Path(conf.get(SOURCE_HASH_DIR_CONF_KEY));
       sourceConnection = openConnection(conf, SOURCE_ZK_CLUSTER_CONF_KEY, null);
@@ -292,9 +283,7 @@ public class SyncTable extends Configured implements Tool {
         }
       } catch (Throwable t) {
         mapperException = t;
-        Throwables.propagateIfInstanceOf(t, IOException.class);
-        Throwables.propagateIfInstanceOf(t, InterruptedException.class);
-        Throwables.propagate(t);
+        throw t;
       }
     }
 
@@ -693,9 +682,9 @@ public class SyncTable extends Configured implements Tool {
 
       // propagate first exception
       if (mapperException != null) {
-        Throwables.propagateIfInstanceOf(mapperException, IOException.class);
-        Throwables.propagateIfInstanceOf(mapperException, InterruptedException.class);
-        Throwables.propagate(mapperException);
+        Throwables.throwIfInstanceOf(mapperException, IOException.class);
+        Throwables.throwIfInstanceOf(mapperException, InterruptedException.class);
+        Throwables.throwIfUnchecked(mapperException);
       }
     }
 
