@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.NamespacesMessage.Namespaces;
@@ -104,9 +105,10 @@ public class NamespacesModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     Namespaces.Builder builder = Namespaces.newBuilder();
-    builder.mergeFrom(message);
+    builder.mergeFrom(cis);
+    cis.checkLastTagWas(0);
     namespaces = builder.getNamespaceList();
     return this;
   }

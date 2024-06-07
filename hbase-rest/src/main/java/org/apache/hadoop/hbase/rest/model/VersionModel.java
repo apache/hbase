@@ -26,10 +26,10 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RESTServlet;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
 
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.VersionMessage.Version;
 
 /**
@@ -174,9 +174,10 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     Version.Builder builder = Version.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    builder.mergeFrom(cis);
+    cis.checkLastTagWas(0);
     if (builder.hasRestVersion()) {
       restVersion = builder.getRestVersion();
     }
