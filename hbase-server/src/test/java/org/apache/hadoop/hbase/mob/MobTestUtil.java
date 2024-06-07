@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -115,11 +114,17 @@ public class MobTestUtil {
    * @param table to get the scanner
    * @return the number of rows
    */
-  public static int countMobRows(HBaseTestingUtility util, Table table) throws IOException {
+  public static int countMobRows(Table table) throws IOException {
     Scan scan = new Scan();
     // Do not retrieve the mob data when scanning
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
-    return util.countRows(table, scan);
+    try (ResultScanner results = table.getScanner(scan)) {
+      int count = 0;
+      while (results.next() != null) {
+        count++;
+      }
+      return count;
+    }
   }
 
   public static Path generateMOBFileForRegion(Configuration conf, TableName tableName,
