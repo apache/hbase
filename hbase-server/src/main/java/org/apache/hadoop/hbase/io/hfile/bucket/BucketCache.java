@@ -1698,7 +1698,7 @@ public class BucketCache implements BlockCache, HeapSize {
   public int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
     fileNotFullyCached(hfileName);
     Set<BlockCacheKey> keySet = getAllCacheKeysForFile(hfileName, initOffset, endOffset);
-    LOG.info("found {} blocks for file {}, starting offset: {}, end offset: {}", keySet.size(),
+    LOG.debug("found {} blocks for file {}, starting offset: {}, end offset: {}", keySet.size(),
       hfileName, initOffset, endOffset);
     int numEvicted = 0;
     for (BlockCacheKey key : keySet) {
