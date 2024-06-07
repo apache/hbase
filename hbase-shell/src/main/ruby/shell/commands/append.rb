@@ -32,18 +32,56 @@ t to table 't1', the corresponding command would be:
 
   hbase> t.append 'r1', 'c1', 'value', ATTRIBUTES=>{'mykey'=>'myvalue'}
   hbase> t.append 'r1', 'c1', 'value', {VISIBILITY=>'PRIVATE|SECRET'}
+
+Alternately, we can run the following commands for appending cell values for
+multiple columns at specified table/row coordinates.
+
+  hbase> append 't1', 'r1', {'c1'=>'value1', 'c2'=>'value2'}, {ATTRIBUTES=>{'mykey'=>'myvalue'}}
+  hbase> append 't1', 'r1', {'c1'=>'value1', 'c2'=>'value2'}, {VISIBILITY=>'PRIVATE|SECRET'}
+
+The same commands also can be run on a table reference.
+
+  hbase> t.append 'r1', {'c1'=>'value1', 'c2'=>'value2'}, {ATTRIBUTES=>{'mykey'=>'myvalue'}}
+  hbase> t.append 'r1', {'c1'=>'value1', 'c2'=>'value2'}, {VISIBILITY=>'PRIVATE|SECRET'}
+
 EOF
       end
 
-      def command(table_name, row, column, value, args = {})
+      # Executes an append command on a specified table.
+      #
+      # @param table_name [String] The name of the table
+      # @param row [String] The row key
+      # @param column [String, Hash] The column name or a hash of column names and values
+      # @param value [String, Hash] The value to append or a hash of column names and values
+      # @param args [Hash] optional arguments
+      def command(table_name, row, column, value = value_omitted = {}, args = args_omitted = {})
         table = table(table_name)
         @start_time = Time.now
-        append(table, row, column, value, args)
+        # Conditional block to omit passing optional arguments explicitly
+        if !value_omitted.nil?
+          # value field was not passed (will reach only for multi column append)
+          append(table, row, column)
+        elsif !args_omitted.nil?
+          # args field was not passed (must not be passed for multi column append)
+          append(table, row, column, value)
+        else
+          append(table, row, column, value, args)
+        end
       end
 
-      def append(table, row, column, value, args = {})
-        if current_value = table._append_internal(row, column, value, args)
-          puts "CURRENT VALUE = #{current_value}"
+      def append(table, row, column, value = value_omitted = {}, args = args_omitted = {})
+        if column.is_a?(Hash)
+          # args field must not be passed; already contained in value field
+          raise(ArgumentError, 'wrong number of arguments') if args_omitted.nil?
+          if current_values = table._append_multi_column_internal(row, column, value)
+            puts "CURRENT VALUES = #{current_values}"
+          end
+        else
+          # value field must be passed by user
+          raise(ArgumentError, 'wrong number of arguments') unless value_omitted.nil?
+          if current_value = table._append_internal(row, column, value, args)
+            puts "CURRENT VALUE = #{current_value}"
+          end
         end
       end
     end
