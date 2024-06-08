@@ -242,6 +242,42 @@ module Hbase
     define_test "get_counter should return nil for non-existent counters" do
       assert_nil(@test_table._get_counter_internal(12345, 'x:qqqq'))
     end
+
+    define_test "should work with qualifiers with colons" do
+      rowkey = "123"
+
+      # Two columns with multiple colons in their qualifiers with the same prefix
+      col1 = "x:foo:bar:c1"
+      col2 = "x:foo:bar:c2"
+
+      # Make sure that no data is present
+      @test_table.deleteall(rowkey)
+
+      # Put two columns with colons in their qualifiers
+      @test_table.put(rowkey, col1, org.apache.hadoop.hbase.util.Bytes.toBytes(1))
+      @test_table.put(rowkey, col2, org.apache.hadoop.hbase.util.Bytes.toBytes(2))
+      assert_equal(2, @test_table._get_internal(rowkey).length)
+
+      # Increment the second column by 10 => 2 + 10 => 12
+      @test_table.incr(rowkey, col2, 10)
+      assert_equal(12, @test_table._get_counter_internal(rowkey, col2))
+
+      # Check the counter value using toLong converter
+      %w[:toLong :c(org.apache.hadoop.hbase.util.Bytes).toLong].each do |suffix|
+        res = @test_table._get_internal(rowkey, { COLUMNS => [col2 + suffix] })
+        assert_not_nil(res)
+        assert_kind_of(Hash, res)
+        assert_not_nil(/value=12/.match(res[col2]))
+      end
+
+      # Delete the first column
+      @test_table.delete(rowkey, col1)
+      assert_equal(1, @test_table._get_internal(rowkey).length)
+
+      # Append twice to the deleted column
+      @test_table.append(rowkey, col1, '123')
+      assert_equal("123123", @test_table._append_internal(rowkey, col1, '123'))
+    end
   end
 
   # Complex data management methods tests
