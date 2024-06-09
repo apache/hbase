@@ -314,8 +314,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
         LOG.warn("{} is aborted or stopped, for safety we still need to"
           + " wait until it is fully dead, try={}", serverName, numberOfAttemptsSoFar);
       } else {
-        LOG.warn("request to {} failed due to {}, try={}, retrying...", serverName, e.toString(),
-          numberOfAttemptsSoFar);
+        LOG.warn("request to {} failed due to {}, try={}, retrying... , request params: {}", serverName, e.toString(),
+          numberOfAttemptsSoFar, request.build());
       }
       numberOfAttemptsSoFar++;
       // Add some backoff here as the attempts rise otherwise if a stuck condition, will fill logs
