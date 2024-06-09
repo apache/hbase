@@ -827,6 +827,8 @@ public final class CellUtil {
   }
 
   public static Cell cloneIfNecessary(Cell cell) {
-    return (cell instanceof ByteBufferExtendedCell ? KeyValueUtil.copyToNewKeyValue(cell) : cell);
+    return (cell instanceof ByteBufferExtendedCell
+      ? KeyValueUtil.copyToNewKeyValue((ExtendedCell) cell)
+      : cell);
   }
 }

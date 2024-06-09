@@ -24,7 +24,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -66,7 +66,7 @@ public class MobFile {
    * @param cacheMobBlocks Should this scanner cache blocks.
    * @return The cell in the mob file.
    */
-  public MobCell readCell(Cell search, boolean cacheMobBlocks) throws IOException {
+  public MobCell readCell(ExtendedCell search, boolean cacheMobBlocks) throws IOException {
     return readCell(search, cacheMobBlocks, sf.getMaxMemStoreTS());
   }
 
@@ -77,7 +77,8 @@ public class MobFile {
    * @param readPt         the read point.
    * @return The cell in the mob file.
    */
-  public MobCell readCell(Cell search, boolean cacheMobBlocks, long readPt) throws IOException {
+  public MobCell readCell(ExtendedCell search, boolean cacheMobBlocks, long readPt)
+    throws IOException {
     StoreFileScanner scanner = null;
     boolean succ = false;
     try {

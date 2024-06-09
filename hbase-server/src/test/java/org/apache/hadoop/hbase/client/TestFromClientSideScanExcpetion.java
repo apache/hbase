@@ -32,8 +32,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -153,7 +153,7 @@ public class TestFromClientSideScanExcpetion {
       for (KeyValueScanner scanner : scanners) {
         newScanners.add(new DelegatingKeyValueScanner(scanner) {
           @Override
-          public boolean reseek(Cell key) throws IOException {
+          public boolean reseek(ExtendedCell key) throws IOException {
             if (ON.get()) {
               REQ_COUNT.incrementAndGet();
               if (!THROW_ONCE.get() || REQ_COUNT.get() == 1) {

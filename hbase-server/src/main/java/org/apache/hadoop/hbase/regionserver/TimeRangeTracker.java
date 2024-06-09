@@ -23,7 +23,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -103,7 +103,7 @@ public abstract class TimeRangeTracker {
    * of the key.
    * @param cell the Cell to include
    */
-  public void includeTimestamp(final Cell cell) {
+  public void includeTimestamp(final ExtendedCell cell) {
     includeTimestamp(cell.getTimestamp());
     if (PrivateCellUtil.isDeleteColumnOrFamily(cell)) {
       includeTimestamp(0);

@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -58,16 +59,16 @@ public class TestKeyValueHeap {
   private byte[] col5 = Bytes.toBytes("col5");
 
   // Variable name encoding. kv<row#><fam#><col#>
-  Cell kv111 = new KeyValue(row1, fam1, col1, data);
-  Cell kv112 = new KeyValue(row1, fam1, col2, data);
-  Cell kv113 = new KeyValue(row1, fam1, col3, data);
-  Cell kv114 = new KeyValue(row1, fam1, col4, data);
-  Cell kv115 = new KeyValue(row1, fam1, col5, data);
-  Cell kv121 = new KeyValue(row1, fam2, col1, data);
-  Cell kv122 = new KeyValue(row1, fam2, col2, data);
-  Cell kv211 = new KeyValue(row2, fam1, col1, data);
-  Cell kv212 = new KeyValue(row2, fam1, col2, data);
-  Cell kv213 = new KeyValue(row2, fam1, col3, data);
+  ExtendedCell kv111 = new KeyValue(row1, fam1, col1, data);
+  ExtendedCell kv112 = new KeyValue(row1, fam1, col2, data);
+  ExtendedCell kv113 = new KeyValue(row1, fam1, col3, data);
+  ExtendedCell kv114 = new KeyValue(row1, fam1, col4, data);
+  ExtendedCell kv115 = new KeyValue(row1, fam1, col5, data);
+  ExtendedCell kv121 = new KeyValue(row1, fam2, col1, data);
+  ExtendedCell kv122 = new KeyValue(row1, fam2, col2, data);
+  ExtendedCell kv211 = new KeyValue(row2, fam1, col1, data);
+  ExtendedCell kv212 = new KeyValue(row2, fam1, col2, data);
+  ExtendedCell kv213 = new KeyValue(row2, fam1, col3, data);
 
   TestScanner s1 = new TestScanner(Arrays.asList(kv115, kv211, kv212));
   TestScanner s2 = new TestScanner(Arrays.asList(kv111, kv112));
@@ -121,7 +122,7 @@ public class TestKeyValueHeap {
 
     // Creating KeyValueHeap
     try (KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR)) {
-      Cell seekKv = new KeyValue(row2, fam1, null, null);
+      ExtendedCell seekKv = new KeyValue(row2, fam1, null, null);
       kvh.seek(seekKv);
 
       List<Cell> actual = Arrays.asList(kvh.peek());
@@ -195,8 +196,8 @@ public class TestKeyValueHeap {
 
   @Test
   public void testPriorityId() throws IOException {
-    Cell kv113A = new KeyValue(row1, fam1, col3, Bytes.toBytes("aaa"));
-    Cell kv113B = new KeyValue(row1, fam1, col3, Bytes.toBytes("bbb"));
+    ExtendedCell kv113A = new KeyValue(row1, fam1, col3, Bytes.toBytes("aaa"));
+    ExtendedCell kv113B = new KeyValue(row1, fam1, col3, Bytes.toBytes("bbb"));
     TestScanner scan1 = new TestScanner(Arrays.asList(kv111, kv112, kv113A), 1);
     TestScanner scan2 = new TestScanner(Arrays.asList(kv113B), 2);
     List<Cell> expected = Arrays.asList(kv111, kv112, kv113B, kv113A);
@@ -212,11 +213,11 @@ public class TestKeyValueHeap {
     private boolean closed = false;
     private long scannerOrder = 0;
 
-    public TestScanner(List<Cell> list) {
+    public TestScanner(List<ExtendedCell> list) {
       super(list);
     }
 
-    public TestScanner(List<Cell> list, long scannerOrder) {
+    public TestScanner(List<ExtendedCell> list, long scannerOrder) {
       this(list);
       this.scannerOrder = scannerOrder;
     }
@@ -240,7 +241,7 @@ public class TestKeyValueHeap {
     private int closedNum = 0;
     private boolean realSeekDone = true;
 
-    public SeekTestScanner(List<Cell> list) {
+    public SeekTestScanner(List<ExtendedCell> list) {
       super(list);
     }
 

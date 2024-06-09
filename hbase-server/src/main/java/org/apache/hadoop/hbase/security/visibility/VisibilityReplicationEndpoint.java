@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -75,7 +76,9 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
       for (Entry entry : entries) {
         WALEdit newEdit = new WALEdit();
         ArrayList<Cell> cells = entry.getEdit().getCells();
-        for (Cell cell : cells) {
+        for (Cell c : cells) {
+          assert c instanceof ExtendedCell;
+          ExtendedCell cell = (ExtendedCell) c;
           if (cell.getTagsLength() > 0) {
             visTags.clear();
             nonVisTags.clear();

@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -255,7 +256,7 @@ public class TestSecureBulkLoadManager {
     Put put = new Put(key);
     put.addColumn(FAMILY, COLUMN, value);
     for (Cell c : put.get(FAMILY, COLUMN)) {
-      writer.append(c);
+      writer.append((ExtendedCell) c);
     }
 
     writer.close();

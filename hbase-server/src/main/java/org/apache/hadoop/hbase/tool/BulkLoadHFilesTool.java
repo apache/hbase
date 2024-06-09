@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -825,7 +826,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
         halfReader.getStoreFileScanner(false, false, false, Long.MAX_VALUE, 0, false)) {
         scanner.seek(KeyValue.LOWESTKEY);
         for (;;) {
-          Cell cell = scanner.next();
+          ExtendedCell cell = scanner.next();
           if (cell == null) {
             break;
           }

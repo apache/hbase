@@ -30,6 +30,7 @@ import java.util.function.IntConsumer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -49,12 +50,12 @@ public class StoreFileScanner implements KeyValueScanner {
   // the reader it comes from:
   private final StoreFileReader reader;
   private final HFileScanner hfs;
-  private Cell cur = null;
+  private ExtendedCell cur = null;
   private boolean closed = false;
 
   private boolean realSeekDone;
   private boolean delayedReseek;
-  private Cell delayedSeekKV;
+  private ExtendedCell delayedSeekKV;
 
   private final boolean enforceMVCC;
   private final boolean hasMVCCInfo;
@@ -193,13 +194,13 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public Cell peek() {
+  public ExtendedCell peek() {
     return cur;
   }
 
   @Override
-  public Cell next() throws IOException {
-    Cell retKey = cur;
+  public ExtendedCell next() throws IOException {
+    ExtendedCell retKey = cur;
 
     try {
       // only seek if we aren't at the end. cur == null implies 'end'.
@@ -219,7 +220,7 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean seek(Cell key) throws IOException {
+  public boolean seek(ExtendedCell key) throws IOException {
     if (seekCount != null) seekCount.increment();
 
     try {
@@ -248,7 +249,7 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean reseek(Cell key) throws IOException {
+  public boolean reseek(ExtendedCell key) throws IOException {
     if (seekCount != null) seekCount.increment();
 
     try {
@@ -275,7 +276,7 @@ public class StoreFileScanner implements KeyValueScanner {
     }
   }
 
-  protected void setCurrentCell(Cell newVal) throws IOException {
+  protected void setCurrentCell(ExtendedCell newVal) throws IOException {
     this.cur = newVal;
     if (this.cur != null && this.reader.isBulkLoaded() && !this.reader.isSkipResetSeqId()) {
       PrivateCellUtil.setSequenceId(cur, this.reader.getSequenceID());
@@ -315,7 +316,7 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   /** Returns false if not found or if k is after the end. */
-  public static boolean seekAtOrAfter(HFileScanner s, Cell k) throws IOException {
+  public static boolean seekAtOrAfter(HFileScanner s, ExtendedCell k) throws IOException {
     int result = s.seekTo(k);
     if (result < 0) {
       if (result == HConstants.INDEX_KEY_MAGIC) {
@@ -333,7 +334,7 @@ public class StoreFileScanner implements KeyValueScanner {
     return true;
   }
 
-  static boolean reseekAtOrAfter(HFileScanner s, Cell k) throws IOException {
+  static boolean reseekAtOrAfter(HFileScanner s, ExtendedCell k) throws IOException {
     // This function is similar to seekAtOrAfter function
     int result = s.reseekTo(k);
     if (result <= 0) {
@@ -375,7 +376,8 @@ public class StoreFileScanner implements KeyValueScanner {
    * the next row/column and use OLDEST_TIMESTAMP in the seek key.
    */
   @Override
-  public boolean requestSeek(Cell kv, boolean forward, boolean useBloom) throws IOException {
+  public boolean requestSeek(ExtendedCell kv, boolean forward, boolean useBloom)
+    throws IOException {
     if (kv.getFamilyLength() == 0) {
       useBloom = false;
     }
@@ -498,7 +500,7 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean seekToPreviousRow(Cell originalKey) throws IOException {
+  public boolean seekToPreviousRow(ExtendedCell originalKey) throws IOException {
     try {
       if (isFastSeekingEncoding) {
         return seekToPreviousRowStateless(originalKey);
@@ -528,7 +530,7 @@ public class StoreFileScanner implements KeyValueScanner {
   private boolean seekToPreviousRowWithHint() throws IOException {
     do {
       // Using our existing seek hint, set our next seek hint
-      Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(previousRow);
+      ExtendedCell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(previousRow);
       seekBeforeAndSaveKeyToPreviousRow(firstKeyOfPreviousRow);
 
       // Reseek back to our initial seek hint (i.e. what we think is the start of the
@@ -560,13 +562,13 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   private boolean seekToPreviousRowWithoutHint(Cell originalKey) throws IOException {
     // Rewind to the cell before the beginning of this row
-    Cell keyAtBeginningOfRow = PrivateCellUtil.createFirstOnRow(originalKey);
+    ExtendedCell keyAtBeginningOfRow = PrivateCellUtil.createFirstOnRow(originalKey);
     if (!seekBefore(keyAtBeginningOfRow)) {
       return false;
     }
 
     // Rewind before this row and save what we find as a seek hint
-    Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getCell());
+    ExtendedCell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getCell());
     seekBeforeAndSaveKeyToPreviousRow(firstKeyOfPreviousRow);
 
     // Seek back to the start of the previous row
@@ -598,15 +600,15 @@ public class StoreFileScanner implements KeyValueScanner {
    * It should be used if the cost for seeking is lower i.e. when using a fast seeking data block
    * encoding like RIV1.
    */
-  private boolean seekToPreviousRowStateless(Cell originalKey) throws IOException {
-    Cell key = originalKey;
+  private boolean seekToPreviousRowStateless(ExtendedCell originalKey) throws IOException {
+    ExtendedCell key = originalKey;
     do {
-      Cell keyAtBeginningOfRow = PrivateCellUtil.createFirstOnRow(key);
+      ExtendedCell keyAtBeginningOfRow = PrivateCellUtil.createFirstOnRow(key);
       if (!seekBefore(keyAtBeginningOfRow)) {
         return false;
       }
 
-      Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getCell());
+      ExtendedCell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getCell());
       if (!seekAtOrAfter(firstKeyOfPreviousRow)) {
         return false;
       }
@@ -618,7 +620,7 @@ public class StoreFileScanner implements KeyValueScanner {
     } while (true);
   }
 
-  private boolean seekBefore(Cell seekKey) throws IOException {
+  private boolean seekBefore(ExtendedCell seekKey) throws IOException {
     if (seekCount != null) {
       seekCount.increment();
     }
@@ -638,7 +640,7 @@ public class StoreFileScanner implements KeyValueScanner {
    * being null again via this method, that's because there doesn't exist a row before the seek
    * target in the storefile (i.e. we're at the beginning of the storefile)
    */
-  private void seekBeforeAndSaveKeyToPreviousRow(Cell seekKey) throws IOException {
+  private void seekBeforeAndSaveKeyToPreviousRow(ExtendedCell seekKey) throws IOException {
     if (seekCount != null) {
       seekCount.increment();
     }
@@ -653,7 +655,7 @@ public class StoreFileScanner implements KeyValueScanner {
     }
   }
 
-  private boolean seekAtOrAfter(Cell seekKey) throws IOException {
+  private boolean seekAtOrAfter(ExtendedCell seekKey) throws IOException {
     if (seekCount != null) {
       seekCount.increment();
     }
@@ -665,7 +667,7 @@ public class StoreFileScanner implements KeyValueScanner {
     return true;
   }
 
-  private boolean reseekAtOrAfter(Cell seekKey) throws IOException {
+  private boolean reseekAtOrAfter(ExtendedCell seekKey) throws IOException {
     if (seekCount != null) {
       seekCount.increment();
     }
@@ -700,7 +702,7 @@ public class StoreFileScanner implements KeyValueScanner {
     if (!lastRow.isPresent()) {
       return false;
     }
-    Cell seekKey = PrivateCellUtil.createFirstOnRow(lastRow.get());
+    ExtendedCell seekKey = PrivateCellUtil.createFirstOnRow(lastRow.get());
     if (seek(seekKey)) {
       return true;
     } else {
@@ -709,7 +711,7 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean backwardSeek(Cell key) throws IOException {
+  public boolean backwardSeek(ExtendedCell key) throws IOException {
     seek(key);
     if (cur == null || getComparator().compareRows(cur, key) > 0) {
       return seekToPreviousRow(key);
@@ -718,7 +720,7 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public Cell getNextIndexedKey() {
+  public ExtendedCell getNextIndexedKey() {
     return hfs.getNextIndexedKey();
   }
 

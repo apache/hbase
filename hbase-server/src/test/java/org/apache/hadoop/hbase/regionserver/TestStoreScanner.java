@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -113,7 +114,7 @@ public class TestStoreScanner {
    * to test scan does the right thing as it we do Gets, StoreScanner#optimize, and what we do on
    * (faked) block boundaries.
    */
-  private static final Cell[] CELL_GRID = new Cell[] {
+  private static final ExtendedCell[] CELL_GRID = new ExtendedCell[] {
     ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(ONE).setFamily(CF)
       .setQualifier(ONE).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
       .build(),
@@ -193,7 +194,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    public Cell peek() {
+    public ExtendedCell peek() {
       this.count.incrementAndGet();
       return super.peek();
     }
@@ -230,7 +231,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    protected boolean trySkipToNextRow(Cell cell) throws IOException {
+    protected boolean trySkipToNextRow(ExtendedCell cell) throws IOException {
       boolean optimized = super.trySkipToNextRow(cell);
       LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
         + ", optimized=" + optimized);
@@ -241,7 +242,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    protected boolean trySkipToNextColumn(Cell cell) throws IOException {
+    protected boolean trySkipToNextColumn(ExtendedCell cell) throws IOException {
       boolean optimized = super.trySkipToNextColumn(cell);
       LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
         + ", optimized=" + optimized);
@@ -252,7 +253,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    public Cell getNextIndexedKey() {
+    public ExtendedCell getNextIndexedKey() {
       // Fake block boundaries by having index of next block change as we go through scan.
       return count.get() > CELL_GRID_BLOCK4_BOUNDARY
         ? PrivateCellUtil.createFirstOnRow(CELL_GRID[CELL_GRID_BLOCK5_BOUNDARY])
@@ -266,7 +267,7 @@ public class TestStoreScanner {
 
   private static final int CELL_WITH_VERSIONS_BLOCK2_BOUNDARY = 4;
 
-  private static final Cell[] CELL_WITH_VERSIONS = new Cell[] {
+  private static final ExtendedCell[] CELL_WITH_VERSIONS = new ExtendedCell[] {
     ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(ONE).setFamily(CF)
       .setQualifier(ONE).setTimestamp(2L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
       .build(),
@@ -298,7 +299,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    protected boolean trySkipToNextColumn(Cell cell) throws IOException {
+    protected boolean trySkipToNextColumn(ExtendedCell cell) throws IOException {
       boolean optimized = super.trySkipToNextColumn(cell);
       LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
         + ", optimized=" + optimized);
@@ -309,7 +310,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    public Cell getNextIndexedKey() {
+    public ExtendedCell getNextIndexedKey() {
       // Fake block boundaries by having index of next block change as we go through scan.
       return PrivateCellUtil
         .createFirstOnRow(CELL_WITH_VERSIONS[CELL_WITH_VERSIONS_BLOCK2_BOUNDARY]);
@@ -327,7 +328,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    protected boolean trySkipToNextColumn(Cell cell) throws IOException {
+    protected boolean trySkipToNextColumn(ExtendedCell cell) throws IOException {
       boolean optimized = super.trySkipToNextColumn(cell);
       LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
         + ", optimized=" + optimized);
@@ -338,7 +339,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    public Cell getNextIndexedKey() {
+    public ExtendedCell getNextIndexedKey() {
       return null;
     }
   }

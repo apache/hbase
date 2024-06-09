@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -441,7 +442,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       region.checkInterrupt();
 
       // Let's see what we have in the storeHeap.
-      Cell current = this.storeHeap.peek();
+      ExtendedCell current = this.storeHeap.peek();
 
       boolean shouldStop = shouldStop(current);
       // When has filter row is true it means that the all the cells for a particular row must be
@@ -651,7 +652,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   }
 
   /** Returns true when the joined heap may have data for the current row */
-  private boolean joinedHeapMayHaveData(Cell currentRowCell) throws IOException {
+  private boolean joinedHeapMayHaveData(ExtendedCell currentRowCell) throws IOException {
     Cell nextJoinedKv = joinedHeap.peek();
     boolean matchCurrentRow =
       nextJoinedKv != null && CellUtil.matchingRows(nextJoinedKv, currentRowCell);
@@ -660,7 +661,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     // If the next value in the joined heap does not match the current row, try to seek to the
     // correct row
     if (!matchCurrentRow) {
-      Cell firstOnCurrentRow = PrivateCellUtil.createFirstOnRow(currentRowCell);
+      ExtendedCell firstOnCurrentRow = PrivateCellUtil.createFirstOnRow(currentRowCell);
       boolean seekSuccessful = this.joinedHeap.requestSeek(firstOnCurrentRow, true, true);
       matchAfterSeek = seekSuccessful && joinedHeap.peek() != null
         && CellUtil.matchingRows(joinedHeap.peek(), currentRowCell);
@@ -776,7 +777,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       }
       boolean result = false;
       region.startRegionOperation();
-      Cell kv = PrivateCellUtil.createFirstOnRow(row, 0, (short) row.length);
+      ExtendedCell kv = PrivateCellUtil.createFirstOnRow(row, 0, (short) row.length);
       try {
         // use request seek to make use of the lazy seek option. See HBASE-5520
         result = this.storeHeap.requestSeek(kv, true, true);

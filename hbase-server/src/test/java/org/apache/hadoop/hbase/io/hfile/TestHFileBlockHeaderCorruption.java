@@ -44,9 +44,10 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilder;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -465,7 +466,8 @@ public class TestHFileBlockHeaderCorruption {
         HFile.getWriterFactory(testingUtility.getConfiguration(), CacheConfig.DISABLED)
           .withPath(hfs, path).withFileContext(context);
 
-      CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.DEEP_COPY);
+      ExtendedCellBuilder cellBuilder =
+        ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
       Random rand = new Random(Instant.now().toEpochMilli());
       byte[] family = Bytes.toBytes("f");
       try (HFile.Writer writer = factory.create()) {
@@ -473,7 +475,7 @@ public class TestHFileBlockHeaderCorruption {
           byte[] row = RandomKeyValueUtil.randomOrderedFixedLengthKey(rand, i, 100);
           byte[] qualifier = RandomKeyValueUtil.randomRowOrQualifier(rand);
           byte[] value = RandomKeyValueUtil.randomValue(rand);
-          Cell cell = cellBuilder.setType(Cell.Type.Put).setRow(row).setFamily(family)
+          ExtendedCell cell = cellBuilder.setType(Cell.Type.Put).setRow(row).setFamily(family)
             .setQualifier(qualifier).setValue(value).build();
           writer.append(cell);
           cellBuilder.clear();

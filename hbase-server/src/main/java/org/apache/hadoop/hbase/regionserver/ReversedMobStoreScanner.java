@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mob.MobCell;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -73,9 +74,10 @@ public class ReversedMobStoreScanner extends ReversedStoreScanner {
       long mobKVSize = 0;
       for (int i = 0; i < outResult.size(); i++) {
         Cell cell = outResult.get(i);
+        assert cell instanceof ExtendedCell;
         if (MobUtils.isMobReferenceCell(cell)) {
-          MobCell mobCell =
-            mobStore.resolve(cell, cacheMobBlocks, readPt, readEmptyValueOnMobCellMiss);
+          MobCell mobCell = mobStore.resolve((ExtendedCell) cell, cacheMobBlocks, readPt,
+            readEmptyValueOnMobCellMiss);
           mobKVCount++;
           mobKVSize += mobCell.getCell().getValueLength();
           outResult.set(i, mobCell.getCell());
