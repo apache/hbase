@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -299,7 +300,9 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
       boolean modifiedTagFound = false;
       Pair<Boolean, Tag> pair = new Pair<>(false, null);
       for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-        pair = checkForReservedVisibilityTagPresence(cellScanner.current(), pair);
+        Cell cell = cellScanner.current();
+        assert cell instanceof ExtendedCell;
+        pair = checkForReservedVisibilityTagPresence((ExtendedCell) cell, pair);
         if (!pair.getFirst()) {
           // Don't disallow reserved tags if authorization is disabled
           if (authorizationEnabled) {
@@ -337,21 +340,23 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
             }
           }
           if (visibilityTags != null) {
-            List<Cell> updatedCells = new ArrayList<>();
+            List<ExtendedCell> updatedCells = new ArrayList<>();
             for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-              Cell cell = cellScanner.current();
+              Cell ce = cellScanner.current();
+              assert ce instanceof ExtendedCell;
+              ExtendedCell cell = (ExtendedCell) ce;
               List<Tag> tags = PrivateCellUtil.getTags(cell);
               if (modifiedTagFound) {
                 // Rewrite the tags by removing the modified tags.
                 removeReplicationVisibilityTag(tags);
               }
               tags.addAll(visibilityTags);
-              Cell updatedCell = PrivateCellUtil.createCell(cell, tags);
+              ExtendedCell updatedCell = PrivateCellUtil.createCell(cell, tags);
               updatedCells.add(updatedCell);
             }
             m.getFamilyCellMap().clear();
             // Clear and add new Cells to the Mutation.
-            for (Cell cell : updatedCells) {
+            for (ExtendedCell cell : updatedCells) {
               if (m instanceof Put) {
                 Put p = (Put) m;
                 p.add(cell);
@@ -429,7 +434,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
    * @return If the boolean is false then it indicates that the cell has a RESERVERD_VIS_TAG and
    *         with boolean as true, not null tag indicates that a string modified tag was found.
    */
-  private Pair<Boolean, Tag> checkForReservedVisibilityTagPresence(Cell cell,
+  private Pair<Boolean, Tag> checkForReservedVisibilityTagPresence(ExtendedCell cell,
     Pair<Boolean, Tag> pair) throws IOException {
     if (pair == null) {
       pair = new Pair<>(false, null);
@@ -630,8 +635,8 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     List<Pair<Cell, Cell>> cellPairs) throws IOException {
     List<Pair<Cell, Cell>> resultPairs = new ArrayList<>(cellPairs.size());
     for (Pair<Cell, Cell> pair : cellPairs) {
-      resultPairs
-        .add(new Pair<>(pair.getFirst(), createNewCellWithTags(mutation, pair.getSecond())));
+      resultPairs.add(new Pair<>(pair.getFirst(),
+        createNewCellWithTags(mutation, (ExtendedCell) pair.getSecond())));
     }
     return resultPairs;
   }
@@ -642,13 +647,13 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     List<Pair<Cell, Cell>> cellPairs) throws IOException {
     List<Pair<Cell, Cell>> resultPairs = new ArrayList<>(cellPairs.size());
     for (Pair<Cell, Cell> pair : cellPairs) {
-      resultPairs
-        .add(new Pair<>(pair.getFirst(), createNewCellWithTags(mutation, pair.getSecond())));
+      resultPairs.add(new Pair<>(pair.getFirst(),
+        createNewCellWithTags(mutation, (ExtendedCell) pair.getSecond())));
     }
     return resultPairs;
   }
 
-  private Cell createNewCellWithTags(Mutation mutation, Cell newCell) throws IOException {
+  private Cell createNewCellWithTags(Mutation mutation, ExtendedCell newCell) throws IOException {
     List<Tag> tags = Lists.newArrayList();
     CellVisibility cellVisibility = null;
     try {
@@ -982,7 +987,12 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     @Override
     public ReturnCode filterCell(final Cell cell) throws IOException {
       List<Tag> putVisTags = new ArrayList<>();
-      Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);
+      Byte putCellVisTagsFormat = null;
+      if (cell instanceof ExtendedCell) {
+        putCellVisTagsFormat =
+          VisibilityUtils.extractVisibilityTags((ExtendedCell) cell, putVisTags);
+      }
+
       if (putVisTags.isEmpty() && deleteCellVisTags.isEmpty()) {
         // Early out if there are no tags in the cell
         return ReturnCode.INCLUDE;

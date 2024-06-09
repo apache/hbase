@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
@@ -163,7 +164,7 @@ public class TestHalfStoreFileReader {
     w.close();
 
     HFile.Reader r = HFile.createReader(fs, p, cacheConf, true, conf);
-    Cell midKV = r.midKey().get();
+    ExtendedCell midKV = r.midKey().get();
     byte[] midkey = CellUtil.cloneRow(midKV);
 
     Reference bottom = new Reference(midkey, Reference.Range.bottom);
@@ -212,7 +213,7 @@ public class TestHalfStoreFileReader {
     assertNull(foundKeyValue);
   }
 
-  private Cell doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, Cell seekBefore,
+  private Cell doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, ExtendedCell seekBefore,
     CacheConfig cacheConfig) throws IOException {
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, p).build();
     StoreFileInfo storeFileInfo =

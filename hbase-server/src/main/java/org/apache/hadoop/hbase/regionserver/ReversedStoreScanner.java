@@ -23,6 +23,7 @@ import java.util.NavigableSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -58,7 +59,7 @@ public class ReversedStoreScanner extends StoreScanner implements KeyValueScanne
   }
 
   @Override
-  protected void seekScanners(List<? extends KeyValueScanner> scanners, Cell seekKey,
+  protected void seekScanners(List<? extends KeyValueScanner> scanners, ExtendedCell seekKey,
     boolean isLazy, boolean isParallelSeek) throws IOException {
     // Seek all scanners to the start of the Row (or if the exact matching row
     // key does not exist, then to the start of the previous matching Row).
@@ -74,7 +75,7 @@ public class ReversedStoreScanner extends StoreScanner implements KeyValueScanne
   }
 
   @Override
-  protected boolean seekToNextRow(Cell kv) throws IOException {
+  protected boolean seekToNextRow(ExtendedCell kv) throws IOException {
     return seekToPreviousRow(kv);
   }
 
@@ -82,7 +83,7 @@ public class ReversedStoreScanner extends StoreScanner implements KeyValueScanne
    * Do a backwardSeek in a reversed StoreScanner(scan backward)
    */
   @Override
-  protected boolean seekAsDirection(Cell kv) throws IOException {
+  protected boolean seekAsDirection(ExtendedCell kv) throws IOException {
     return backwardSeek(kv);
   }
 
@@ -98,17 +99,17 @@ public class ReversedStoreScanner extends StoreScanner implements KeyValueScanne
   }
 
   @Override
-  public boolean reseek(Cell kv) throws IOException {
+  public boolean reseek(ExtendedCell kv) throws IOException {
     throw new IllegalStateException("reseek cannot be called on ReversedStoreScanner");
   }
 
   @Override
-  public boolean seek(Cell key) throws IOException {
+  public boolean seek(ExtendedCell key) throws IOException {
     throw new IllegalStateException("seek cannot be called on ReversedStoreScanner");
   }
 
   @Override
-  public boolean seekToPreviousRow(Cell key) throws IOException {
+  public boolean seekToPreviousRow(ExtendedCell key) throws IOException {
     if (checkFlushed()) {
       reopenAfterFlush();
     }
@@ -116,7 +117,7 @@ public class ReversedStoreScanner extends StoreScanner implements KeyValueScanne
   }
 
   @Override
-  public boolean backwardSeek(Cell key) throws IOException {
+  public boolean backwardSeek(ExtendedCell key) throws IOException {
     if (checkFlushed()) {
       reopenAfterFlush();
     }

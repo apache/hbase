@@ -21,9 +21,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.Tag;
@@ -47,7 +47,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
   /**
    * This tag is used for the DELETE cell which has no visibility label.
    */
-  private static final List<Tag> EMPTY_TAG = Collections.EMPTY_LIST;
+  private static final List<Tag> EMPTY_TAG = Collections.emptyList();
   // Its better to track the visibility tags in delete based on each type. Create individual
   // data structures for tracking each of them. This would ensure that there is no tracking based
   // on time and also would handle all cases where deletefamily or deletecolumns is specified with
@@ -70,7 +70,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
   }
 
   @Override
-  public void add(Cell delCell) {
+  public void add(ExtendedCell delCell) {
     // Cannot call super.add because need to find if the delete needs to be considered
     long timestamp = delCell.getTimestamp();
     byte type = delCell.getTypeByte();
@@ -110,7 +110,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
     extractDeleteCellVisTags(delCell, KeyValue.Type.codeToType(type));
   }
 
-  private boolean extractDeleteCellVisTags(Cell delCell, Type type) {
+  private boolean extractDeleteCellVisTags(ExtendedCell delCell, Type type) {
     // If tag is present in the delete
     boolean hasVisTag = false;
     Byte deleteCellVisTagsFormat = null;
@@ -178,7 +178,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
   }
 
   @Override
-  public DeleteResult isDeleted(Cell cell) {
+  public DeleteResult isDeleted(ExtendedCell cell) {
     long timestamp = cell.getTimestamp();
     try {
       if (hasFamilyStamp) {

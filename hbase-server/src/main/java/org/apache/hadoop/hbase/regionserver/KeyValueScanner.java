@@ -21,7 +21,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.function.IntConsumer;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -38,27 +38,27 @@ public interface KeyValueScanner extends Shipper, Closeable {
    * The byte array represents for NO_NEXT_INDEXED_KEY; The actual value is irrelevant because this
    * is always compared by reference.
    */
-  public static final Cell NO_NEXT_INDEXED_KEY = new KeyValue();
+  public static final ExtendedCell NO_NEXT_INDEXED_KEY = new KeyValue();
 
   /**
    * Look at the next Cell in this scanner, but do not iterate scanner. NOTICE: The returned cell
    * has not been passed into ScanQueryMatcher. So it may not be what the user need.
    * @return the next Cell
    */
-  Cell peek();
+  ExtendedCell peek();
 
   /**
    * Return the next Cell in this scanner, iterating the scanner
    * @return the next Cell
    */
-  Cell next() throws IOException;
+  ExtendedCell next() throws IOException;
 
   /**
    * Seek the scanner at or after the specified KeyValue.
    * @param key seek value
    * @return true if scanner has values left, false if end of scanner
    */
-  boolean seek(Cell key) throws IOException;
+  boolean seek(ExtendedCell key) throws IOException;
 
   /**
    * Reseek the scanner at or after the specified KeyValue. This method is guaranteed to seek at or
@@ -67,7 +67,7 @@ public interface KeyValueScanner extends Shipper, Closeable {
    * @param key seek value (should be non-null)
    * @return true if scanner has values left, false if end of scanner
    */
-  boolean reseek(Cell key) throws IOException;
+  boolean reseek(ExtendedCell key) throws IOException;
 
   /**
    * Get the order of this KeyValueScanner. This is only relevant for StoreFileScanners. This is
@@ -105,7 +105,7 @@ public interface KeyValueScanner extends Shipper, Closeable {
    * @param forward  do a forward-only "reseek" instead of a random-access seek
    * @param useBloom whether to enable multi-column Bloom filter optimization
    */
-  boolean requestSeek(Cell kv, boolean forward, boolean useBloom) throws IOException;
+  boolean requestSeek(ExtendedCell kv, boolean forward, boolean useBloom) throws IOException;
 
   /**
    * We optimize our store scanners by checking the most recent store file first, so we sometimes
@@ -148,7 +148,7 @@ public interface KeyValueScanner extends Shipper, Closeable {
    * @param key seek KeyValue
    * @return true if the scanner is at the valid KeyValue, false if such KeyValue does not exist
    */
-  public boolean backwardSeek(Cell key) throws IOException;
+  public boolean backwardSeek(ExtendedCell key) throws IOException;
 
   /**
    * Seek the scanner at the first Cell of the row which is the previous row of specified key
@@ -156,7 +156,7 @@ public interface KeyValueScanner extends Shipper, Closeable {
    * @return true if the scanner at the first valid Cell of previous row, false if not existing such
    *         Cell
    */
-  public boolean seekToPreviousRow(Cell key) throws IOException;
+  public boolean seekToPreviousRow(ExtendedCell key) throws IOException;
 
   /**
    * Seek the scanner at the first KeyValue of last row
@@ -169,5 +169,5 @@ public interface KeyValueScanner extends Shipper, Closeable {
    *         between last key of current block and first key of next block.. see
    *         HFileWriterImpl#getMidpoint, or null if not known.
    */
-  public Cell getNextIndexedKey();
+  public ExtendedCell getNextIndexedKey();
 }

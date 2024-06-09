@@ -32,8 +32,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -158,9 +158,9 @@ public class HStoreFile implements StoreFile {
   private long maxMemstoreTS = -1;
 
   // firstKey, lastkey and cellComparator will be set when openReader.
-  private Optional<Cell> firstKey;
+  private Optional<ExtendedCell> firstKey;
 
-  private Optional<Cell> lastKey;
+  private Optional<ExtendedCell> lastKey;
 
   private CellComparator comparator;
 
@@ -169,12 +169,12 @@ public class HStoreFile implements StoreFile {
   }
 
   @Override
-  public Optional<Cell> getFirstKey() {
+  public Optional<ExtendedCell> getFirstKey() {
     return firstKey;
   }
 
   @Override
-  public Optional<Cell> getLastKey() {
+  public Optional<ExtendedCell> getLastKey() {
     return lastKey;
   }
 
