@@ -49,11 +49,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilder;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -494,16 +494,17 @@ public class TestHFile {
         .withCompression(Compression.Algorithm.NONE).withCompressTags(false).build();
     HFileWriterImpl writer =
       new HFileWriterImpl(conf, cacheConf, path, mockedOutputStream, fileContext);
-    CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+    ExtendedCellBuilder cellBuilder =
+      ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     byte[] row = Bytes.toBytes("foo");
     byte[] qualifier = Bytes.toBytes("qualifier");
     byte[] cf = Bytes.toBytes(columnFamily);
     byte[] val = Bytes.toBytes("fooVal");
     long firstTS = 100L;
     long secondTS = 101L;
-    Cell firstCell = cellBuilder.setRow(row).setValue(val).setTimestamp(firstTS)
+    ExtendedCell firstCell = cellBuilder.setRow(row).setValue(val).setTimestamp(firstTS)
       .setQualifier(qualifier).setFamily(cf).setType(Cell.Type.Put).build();
-    Cell secondCell = cellBuilder.setRow(row).setValue(val).setTimestamp(secondTS)
+    ExtendedCell secondCell = cellBuilder.setRow(row).setValue(val).setTimestamp(secondTS)
       .setQualifier(qualifier).setFamily(cf).setType(Cell.Type.Put).build();
     // second Cell will sort "higher" than the first because later timestamps should come first
     writer.append(firstCell);
@@ -783,18 +784,22 @@ public class TestHFile {
 
   @Test
   public void testShortMidpointSameQual() {
-    Cell left = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"), 11,
-      KeyValue.Type.Maximum.getCode(), HConstants.EMPTY_BYTE_ARRAY);
-    Cell right = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"), 9,
-      KeyValue.Type.Maximum.getCode(), HConstants.EMPTY_BYTE_ARRAY);
-    Cell mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
+    ExtendedCell left =
+      ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(Bytes.toBytes("a"))
+        .setFamily(Bytes.toBytes("a")).setQualifier(Bytes.toBytes("a")).setTimestamp(11)
+        .setType(Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build();
+    ExtendedCell right =
+      ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(Bytes.toBytes("a"))
+        .setFamily(Bytes.toBytes("a")).setQualifier(Bytes.toBytes("a")).setTimestamp(9)
+        .setType(Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build();
+    ExtendedCell mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
     assertTrue(
       PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) <= 0);
     assertTrue(
       PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) == 0);
   }
 
-  private Cell getCell(byte[] row, byte[] family, byte[] qualifier) {
+  private ExtendedCell getCell(byte[] row, byte[] family, byte[] qualifier) {
     return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
       .setFamily(family).setQualifier(qualifier).setTimestamp(HConstants.LATEST_TIMESTAMP)
       .setType(KeyValue.Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build();
@@ -802,61 +807,61 @@ public class TestHFile {
 
   @Test
   public void testGetShortMidpoint() {
-    Cell left = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
-    Cell right = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
-    Cell mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
+    ExtendedCell left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    ExtendedCell right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    ExtendedCell mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
     assertTrue(
       PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) <= 0);
     assertTrue(
       PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
 
-    left = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
-    right = CellUtil.createCell(Bytes.toBytes("b"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("b"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
     assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
     assertTrue(
       PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
 
-    left = CellUtil.createCell(Bytes.toBytes("g"), Bytes.toBytes("a"), Bytes.toBytes("a"));
-    right = CellUtil.createCell(Bytes.toBytes("i"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    left = getCell(Bytes.toBytes("g"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("i"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
     assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
     assertTrue(
       PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
 
-    left = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
-    right = CellUtil.createCell(Bytes.toBytes("bbbbbbb"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("bbbbbbb"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
     assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
     assertTrue(
       PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
     assertEquals(1, mid.getRowLength());
 
-    left = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
-    right = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("a"));
+    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
     assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
     assertTrue(
       PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
 
-    left = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
-    right = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("aaaaaaaa"), Bytes.toBytes("b"));
+    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("a"), Bytes.toBytes("aaaaaaaa"), Bytes.toBytes("b"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
     assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
     assertTrue(
       PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
     assertEquals(2, mid.getFamilyLength());
 
-    left = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
-    right = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("aaaaaaaaa"));
+    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("aaaaaaaaa"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
     assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
     assertTrue(
       PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
     assertEquals(2, mid.getQualifierLength());
 
-    left = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
-    right = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("b"));
+    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("b"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
     assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
     assertTrue(
@@ -879,8 +884,8 @@ public class TestHFile {
 
     // Assert that if meta comparator, it returns the right cell -- i.e. no
     // optimization done.
-    left = CellUtil.createCell(Bytes.toBytes("g"), Bytes.toBytes("a"), Bytes.toBytes("a"));
-    right = CellUtil.createCell(Bytes.toBytes("i"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    left = getCell(Bytes.toBytes("g"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("i"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(MetaCellComparator.META_COMPARATOR, left, right);
     assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
     assertTrue(

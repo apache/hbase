@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -506,7 +507,7 @@ public abstract class AbstractTestWALReplay {
         final AtomicInteger countOfRestoredEdits = new AtomicInteger(0);
         HRegion region3 = new HRegion(basedir, wal3, newFS, newConf, hri, htd, null) {
           @Override
-          protected void restoreEdit(HStore s, Cell cell, MemStoreSizing memstoreSizing) {
+          protected void restoreEdit(HStore s, ExtendedCell cell, MemStoreSizing memstoreSizing) {
             super.restoreEdit(s, cell, memstoreSizing);
             countOfRestoredEdits.incrementAndGet();
           }

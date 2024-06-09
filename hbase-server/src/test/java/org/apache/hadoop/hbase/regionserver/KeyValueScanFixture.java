@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 
@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.util.CollectionBackedScanner;
  * file scanner.
  */
 public class KeyValueScanFixture extends CollectionBackedScanner {
-  public KeyValueScanFixture(CellComparator comparator, Cell... cells) {
+  public KeyValueScanFixture(CellComparator comparator, ExtendedCell... cells) {
     super(comparator, cells);
   }
 

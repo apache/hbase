@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
@@ -90,7 +90,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   }
 
   @Override
-  public void encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  public void encode(ExtendedCell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
     throws IOException {
     this.encoding.getEncoder().encode(cell, encodingCtx, out);
   }

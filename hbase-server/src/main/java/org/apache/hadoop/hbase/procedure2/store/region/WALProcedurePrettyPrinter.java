@@ -27,6 +27,7 @@ import java.util.Map;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
@@ -102,7 +103,7 @@ public class WALProcedurePrettyPrinter extends AbstractHBaseTool {
         out.println(
           String.format(KEY_TMPL, sequenceId, FORMATTER.format(Instant.ofEpochMilli(writeTime))));
         for (Cell cell : edit.getCells()) {
-          Map<String, Object> op = WALPrettyPrinter.toStringMap(cell);
+          Map<String, Object> op = WALPrettyPrinter.toStringMap((ExtendedCell) cell);
           if (
             !Bytes.equals(PROC_FAMILY, 0, PROC_FAMILY.length, cell.getFamilyArray(),
               cell.getFamilyOffset(), cell.getFamilyLength())

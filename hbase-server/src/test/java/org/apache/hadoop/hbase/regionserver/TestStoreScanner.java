@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.CellUtil.createCell;
 import static org.apache.hadoop.hbase.KeyValueTestUtil.create;
 import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
 import static org.junit.Assert.assertEquals;
@@ -36,9 +35,12 @@ import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -112,32 +114,74 @@ public class TestStoreScanner {
    * to test scan does the right thing as it we do Gets, StoreScanner#optimize, and what we do on
    * (faked) block boundaries.
    */
-  private static final Cell[] CELL_GRID =
-    new Cell[] { createCell(ONE, CF, ONE, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(ONE, CF, TWO, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(ONE, CF, THREE, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(ONE, CF, FOUR, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      // Offset 4 CELL_GRID_BLOCK2_BOUNDARY
-      createCell(TWO, CF, ONE, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(TWO, CF, TWO, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(TWO, CF, THREE, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(TWO, CF, FOUR, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(TWO_POINT_TWO, CF, ZERO, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(TWO_POINT_TWO, CF, ZERO_POINT_ZERO, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(TWO_POINT_TWO, CF, FIVE, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      // Offset 11! CELL_GRID_BLOCK3_BOUNDARY
-      createCell(THREE, CF, ONE, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(THREE, CF, TWO, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(THREE, CF, THREE, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(THREE, CF, FOUR, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      // Offset 15 CELL_GRID_BLOCK4_BOUNDARY
-      createCell(FOUR, CF, ONE, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(FOUR, CF, TWO, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(FOUR, CF, THREE, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(FOUR, CF, FOUR, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      // Offset 19 CELL_GRID_BLOCK5_BOUNDARY
-      createCell(FOUR, CF, FIVE, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(FIVE, CF, ZERO, 1L, KeyValue.Type.Put.getCode(), VALUE), };
+  private static final ExtendedCell[] CELL_GRID = new ExtendedCell[] {
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(ONE).setFamily(CF)
+      .setQualifier(ONE).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(ONE).setFamily(CF)
+      .setQualifier(TWO).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(ONE).setFamily(CF)
+      .setQualifier(THREE).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(ONE).setFamily(CF)
+      .setQualifier(FOUR).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    // Offset 4 CELL_GRID_BLOCK2_BOUNDARY
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(TWO).setFamily(CF)
+      .setQualifier(ONE).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(TWO).setFamily(CF)
+      .setQualifier(TWO).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(TWO).setFamily(CF)
+      .setQualifier(THREE).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(TWO).setFamily(CF)
+      .setQualifier(FOUR).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(TWO_POINT_TWO).setFamily(CF)
+      .setQualifier(ZERO).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(TWO_POINT_TWO).setFamily(CF)
+      .setQualifier(ZERO_POINT_ZERO).setTimestamp(1L).setType(KeyValue.Type.Put.getCode())
+      .setValue(VALUE).build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(TWO_POINT_TWO).setFamily(CF)
+      .setQualifier(FIVE).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    // Offset 11! CELL_GRID_BLOCK3_BOUNDARY
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(THREE).setFamily(CF)
+      .setQualifier(ONE).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(THREE).setFamily(CF)
+      .setQualifier(TWO).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(THREE).setFamily(CF)
+      .setQualifier(THREE).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(THREE).setFamily(CF)
+      .setQualifier(FOUR).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    // Offset 15 CELL_GRID_BLOCK4_BOUNDARY
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(FOUR).setFamily(CF)
+      .setQualifier(ONE).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(FOUR).setFamily(CF)
+      .setQualifier(TWO).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(FOUR).setFamily(CF)
+      .setQualifier(THREE).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(FOUR).setFamily(CF)
+      .setQualifier(FOUR).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    // Offset 19 CELL_GRID_BLOCK5_BOUNDARY
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(FOUR).setFamily(CF)
+      .setQualifier(FIVE).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(FIVE).setFamily(CF)
+      .setQualifier(ZERO).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(), };
 
   private static class KeyValueHeapWithCount extends KeyValueHeap {
 
@@ -150,7 +194,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    public Cell peek() {
+    public ExtendedCell peek() {
       this.count.incrementAndGet();
       return super.peek();
     }
@@ -187,7 +231,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    protected boolean trySkipToNextRow(Cell cell) throws IOException {
+    protected boolean trySkipToNextRow(ExtendedCell cell) throws IOException {
       boolean optimized = super.trySkipToNextRow(cell);
       LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
         + ", optimized=" + optimized);
@@ -198,7 +242,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    protected boolean trySkipToNextColumn(Cell cell) throws IOException {
+    protected boolean trySkipToNextColumn(ExtendedCell cell) throws IOException {
       boolean optimized = super.trySkipToNextColumn(cell);
       LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
         + ", optimized=" + optimized);
@@ -209,7 +253,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    public Cell getNextIndexedKey() {
+    public ExtendedCell getNextIndexedKey() {
       // Fake block boundaries by having index of next block change as we go through scan.
       return count.get() > CELL_GRID_BLOCK4_BOUNDARY
         ? PrivateCellUtil.createFirstOnRow(CELL_GRID[CELL_GRID_BLOCK5_BOUNDARY])
@@ -223,14 +267,26 @@ public class TestStoreScanner {
 
   private static final int CELL_WITH_VERSIONS_BLOCK2_BOUNDARY = 4;
 
-  private static final Cell[] CELL_WITH_VERSIONS =
-    new Cell[] { createCell(ONE, CF, ONE, 2L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(ONE, CF, ONE, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(ONE, CF, TWO, 2L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(ONE, CF, TWO, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      // Offset 4 CELL_WITH_VERSIONS_BLOCK2_BOUNDARY
-      createCell(TWO, CF, ONE, 1L, KeyValue.Type.Put.getCode(), VALUE),
-      createCell(TWO, CF, TWO, 1L, KeyValue.Type.Put.getCode(), VALUE), };
+  private static final ExtendedCell[] CELL_WITH_VERSIONS = new ExtendedCell[] {
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(ONE).setFamily(CF)
+      .setQualifier(ONE).setTimestamp(2L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(ONE).setFamily(CF)
+      .setQualifier(ONE).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(ONE).setFamily(CF)
+      .setQualifier(TWO).setTimestamp(2L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(ONE).setFamily(CF)
+      .setQualifier(TWO).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    // Offset 4 CELL_WITH_VERSIONS_BLOCK2_BOUNDARY
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(TWO).setFamily(CF)
+      .setQualifier(ONE).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(),
+    ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(TWO).setFamily(CF)
+      .setQualifier(TWO).setTimestamp(1L).setType(KeyValue.Type.Put.getCode()).setValue(VALUE)
+      .build(), };
 
   private static class CellWithVersionsStoreScanner extends StoreScanner {
     // Count of how often optimize is called and of how often it does an optimize.
@@ -243,7 +299,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    protected boolean trySkipToNextColumn(Cell cell) throws IOException {
+    protected boolean trySkipToNextColumn(ExtendedCell cell) throws IOException {
       boolean optimized = super.trySkipToNextColumn(cell);
       LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
         + ", optimized=" + optimized);
@@ -254,7 +310,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    public Cell getNextIndexedKey() {
+    public ExtendedCell getNextIndexedKey() {
       // Fake block boundaries by having index of next block change as we go through scan.
       return PrivateCellUtil
         .createFirstOnRow(CELL_WITH_VERSIONS[CELL_WITH_VERSIONS_BLOCK2_BOUNDARY]);
@@ -272,7 +328,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    protected boolean trySkipToNextColumn(Cell cell) throws IOException {
+    protected boolean trySkipToNextColumn(ExtendedCell cell) throws IOException {
       boolean optimized = super.trySkipToNextColumn(cell);
       LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
         + ", optimized=" + optimized);
@@ -283,7 +339,7 @@ public class TestStoreScanner {
     }
 
     @Override
-    public Cell getNextIndexedKey() {
+    public ExtendedCell getNextIndexedKey() {
       return null;
     }
   };
