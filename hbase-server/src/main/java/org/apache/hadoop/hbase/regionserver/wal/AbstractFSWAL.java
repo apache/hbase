@@ -2028,7 +2028,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       RecoverLeaseFSUtils.recoverFileLease(fs, p, conf, null);
     } catch (IOException ex) {
       LOG.error("Unable to recover lease after several attempts. Give up.", ex);
-      throw new RuntimeException(ex);
     }
   }
 
