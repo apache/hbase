@@ -27,7 +27,6 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.InnerStoreCellComparator;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -266,7 +265,7 @@ public class FixedFileTrailer {
     // read PB and skip padding
     int start = inputStream.available();
     HFileProtos.FileTrailerProto trailerProto =
-      HFileProtos.FileTrailerProto.PARSER.parseDelimitedFrom(inputStream);
+      HFileProtos.FileTrailerProto.parser().parseDelimitedFrom(inputStream);
     int size = start - inputStream.available();
     inputStream.skip(getTrailerSize() - NOT_PB_SIZE - size);
 
@@ -555,16 +554,10 @@ public class FixedFileTrailer {
     throws IOException {
     Class<? extends CellComparator> comparatorKlass;
     // for BC
-    if (
-      comparatorClassName.equals(KeyValue.COMPARATOR.getLegacyKeyComparatorName())
-        || comparatorClassName.equals(KeyValue.COMPARATOR.getClass().getName())
-        || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator"))
-    ) {
+    if (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator")) {
       comparatorKlass = InnerStoreCellComparator.class;
     } else if (
-      comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
-        || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())
-        || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator"))
+      comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator")
         || (comparatorClassName
           .equals("org.apache.hadoop.hbase.CellComparatorImpl$MetaCellComparator"))
         || (comparatorClassName.equals("org.apache.hadoop.hbase.MetaCellComparator"))

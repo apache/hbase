@@ -86,7 +86,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  * <ul>
  * <li>1. Backup sessions rowkey= "session:"+backupId; value =serialized BackupInfo</li>
  * <li>2. Backup start code rowkey = "startcode:"+backupRoot; value = startcode</li>
- * <li>3. Incremental backup set rowkey="incrbackupset:"+backupRoot; value=[list of tables]</li>
+ * <li>3. Incremental backup set rowkey="incrbackupset:"+backupRoot; table="meta:"+tablename of
+ * include table; value=empty</li>
  * <li>4. Table-RS-timestamp map rowkey="trslm:"+backupRoot+table_name; value = map[RS-> last WAL
  * timestamp]</li>
  * <li>5. RS - WAL ts map rowkey="rslogts:"+backupRoot +server; value = last WAL timestamp</li>
@@ -839,23 +840,25 @@ public final class BackupSystemTable implements Closeable {
     return tableHistory;
   }
 
-  public Map<TableName, ArrayList<BackupInfo>> getBackupHistoryForTableSet(Set<TableName> set,
+  /**
+   * Goes through all backup history corresponding to the provided root folder, and collects all
+   * backup info mentioning each of the provided tables.
+   * @param set        the tables for which to collect the {@code BackupInfo}
+   * @param backupRoot backup destination path to retrieve backup history for
+   * @return a map containing (a subset of) the provided {@code TableName}s, mapped to a list of at
+   *         least one {@code BackupInfo}
+   * @throws IOException if getting the backup history fails
+   */
+  public Map<TableName, List<BackupInfo>> getBackupHistoryForTableSet(Set<TableName> set,
     String backupRoot) throws IOException {
     List<BackupInfo> history = getBackupHistory(backupRoot);
-    Map<TableName, ArrayList<BackupInfo>> tableHistoryMap = new HashMap<>();
-    for (Iterator<BackupInfo> iterator = history.iterator(); iterator.hasNext();) {
-      BackupInfo info = iterator.next();
-      if (!backupRoot.equals(info.getBackupRootDir())) {
-        continue;
-      }
+    Map<TableName, List<BackupInfo>> tableHistoryMap = new HashMap<>();
+    for (BackupInfo info : history) {
       List<TableName> tables = info.getTableNames();
       for (TableName tableName : tables) {
         if (set.contains(tableName)) {
-          ArrayList<BackupInfo> list = tableHistoryMap.get(tableName);
-          if (list == null) {
-            list = new ArrayList<>();
-            tableHistoryMap.put(tableName, list);
-          }
+          List<BackupInfo> list =
+            tableHistoryMap.computeIfAbsent(tableName, k -> new ArrayList<>());
           list.add(info);
         }
       }

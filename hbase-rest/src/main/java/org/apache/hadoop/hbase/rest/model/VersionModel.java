@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RESTServlet;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -162,14 +163,14 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     Version.Builder builder = Version.newBuilder();
     builder.setRestVersion(restVersion);
     builder.setJvmVersion(jvmVersion);
     builder.setOsVersion(osVersion);
     builder.setServerVersion(serverVersion);
     builder.setJerseyVersion(jerseyVersion);
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import static org.apache.hadoop.hbase.rest.model.CellModel.MAGIC_LENGTH;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -29,6 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -69,7 +72,7 @@ import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.CellSetMessage.Cel
  * </pre>
  */
 @XmlRootElement(name = "CellSet")
-@XmlAccessorType(XmlAccessType.FIELD)
+@XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Private
 public class CellSetModel implements Serializable, ProtobufMessageHandler {
   private static final long serialVersionUID = 1L;
@@ -106,15 +109,25 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     CellSet.Builder builder = CellSet.newBuilder();
     for (RowModel row : getRows()) {
       CellSet.Row.Builder rowBuilder = CellSet.Row.newBuilder();
-      rowBuilder.setKey(UnsafeByteOperations.unsafeWrap(row.getKey()));
+      if (row.getKeyLength() == MAGIC_LENGTH) {
+        rowBuilder.setKey(UnsafeByteOperations.unsafeWrap(row.getKey()));
+      } else {
+        rowBuilder.setKey(UnsafeByteOperations.unsafeWrap(row.getKeyArray(), row.getKeyOffset(),
+          row.getKeyLength()));
+      }
       for (CellModel cell : row.getCells()) {
         Cell.Builder cellBuilder = Cell.newBuilder();
         cellBuilder.setColumn(UnsafeByteOperations.unsafeWrap(cell.getColumn()));
-        cellBuilder.setData(UnsafeByteOperations.unsafeWrap(cell.getValue()));
+        if (cell.getValueLength() == MAGIC_LENGTH) {
+          cellBuilder.setData(UnsafeByteOperations.unsafeWrap(cell.getValue()));
+        } else {
+          cellBuilder.setData(UnsafeByteOperations.unsafeWrap(cell.getValueArray(),
+            cell.getValueOffset(), cell.getValueLength()));
+        }
         if (cell.hasUserTimestamp()) {
           cellBuilder.setTimestamp(cell.getTimestamp());
         }
@@ -122,7 +135,7 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
       }
       builder.addRows(rowBuilder);
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override

@@ -77,6 +77,12 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>andor</id>
+      <name>Andor Molnar</name>
+      <email>andor@apache.org</email>
+      <timezone>-5</timezone>
+    </developer>
+    <developer>
       <id>appy</id>
       <name>Apekshit Sharma</name>
       <email>appy@apache.org</email>
@@ -826,7 +832,7 @@
       modules and cause trouble if we only rely on transitive dependencies.
     -->
     <netty3.version>3.10.6.Final</netty3.version>
-    <netty4.version>4.1.100.Final</netty4.version>
+    <netty4.version>4.1.108.Final</netty4.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.13.0</audience-annotations.version>
     <!--
@@ -850,8 +856,8 @@
       Note that the version of jackson-[annotations,core,databind] must be kept in sync with the
       version of jackson-jaxrs-json-provider shipped in hbase-thirdparty.
     -->
-    <jackson.version>2.16.1</jackson.version>
-    <jackson.databind.version>2.16.1</jackson.databind.version>
+    <jackson.version>2.17.0</jackson.version>
+    <jackson.databind.version>2.17.0</jackson.databind.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
@@ -877,7 +883,7 @@
     <joni.version>2.2.1</joni.version>
     <jcodings.version>1.0.58</jcodings.version>
     <spy.version>2.12.2</spy.version>
-    <bouncycastle.version>1.76</bouncycastle.version>
+    <bouncycastle.version>1.78</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
@@ -892,7 +898,7 @@
     -->
     <checkstyle.version>8.29</checkstyle.version>
     <exec.maven.version>3.1.0</exec.maven.version>
-    <error-prone.version>2.16</error-prone.version>
+    <error-prone.version>2.26.1</error-prone.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
     <maven.antrun.version>1.8</maven.antrun.version>
@@ -913,7 +919,7 @@
     <spotless.version>2.27.2</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
-    <aircompressor.version>0.24</aircompressor.version>
+    <aircompressor.version>0.27</aircompressor.version>
     <brotli4j.version>1.11.0</brotli4j.version>
     <lz4.version>1.8.0</lz4.version>
     <snappy.version>1.1.10.4</snappy.version>
@@ -924,7 +930,7 @@
         databind] must be kept in sync with the version of jackson-jaxrs-json-provider shipped in
         hbase-thirdparty.
     -->
-    <hbase-thirdparty.version>4.1.6</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.7</hbase-thirdparty.version>
     <!-- Coverage properties -->
     <jacoco.version>0.8.8</jacoco.version>
     <jacocoArgLine/>
@@ -2515,6 +2521,7 @@
                     <bannedImport>org.apache.commons.cli.**</bannedImport>
                     <bannedImport>org.apache.commons.collections.**</bannedImport>
                     <bannedImport>org.apache.commons.collections4.**</bannedImport>
+                    <bannedImport>org.apache.hadoop.thirdparty.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">

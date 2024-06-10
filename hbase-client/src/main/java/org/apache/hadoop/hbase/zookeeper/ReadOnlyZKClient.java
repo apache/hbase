@@ -44,6 +44,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +87,9 @@ public final class ReadOnlyZKClient implements Closeable {
     new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d").setDaemon(true)
       .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
     10, TimeUnit.MILLISECONDS);
+
+  private final ZKClientConfig zkClientConfig;
+
 
   private static abstract class Task implements Delayed {
 
@@ -148,10 +152,12 @@ public final class ReadOnlyZKClient implements Closeable {
     this.retryIntervalMs =
       conf.getInt(RECOVERY_RETRY_INTERVAL_MILLIS, DEFAULT_RECOVERY_RETRY_INTERVAL_MILLIS);
     this.keepAliveTimeMs = conf.getInt(KEEPALIVE_MILLIS, DEFAULT_KEEPALIVE_MILLIS);
+    this.zkClientConfig = ZKConfig.getZKClientConfig(conf);
     LOG.debug(
-      "Connect {} to {} with session timeout={}ms, retries {}, "
-        + "retry interval {}ms, keepAlive={}ms",
-      getId(), connectString, sessionTimeoutMs, maxRetries, retryIntervalMs, keepAliveTimeMs);
+      "Connect {} to {} with session timeout={}ms, retries={}, "
+        + "retry interval={}ms, keepAlive={}ms, zk client config={}",
+      getId(), connectString, sessionTimeoutMs, maxRetries, retryIntervalMs, keepAliveTimeMs,
+      zkClientConfig);
     Threads.setDaemonThreadRunning(new Thread(this::run),
       "ReadOnlyZKClient-" + connectString + "@" + getId());
   }
@@ -394,7 +400,7 @@ public final class ReadOnlyZKClient implements Closeable {
     // may be closed when session expired
     if (zookeeper == null || !zookeeper.getState().isAlive()) {
       zookeeper = new ZooKeeper(connectString, sessionTimeoutMs, e -> {
-      });
+      }, zkClientConfig);
     }
     return zookeeper;
   }

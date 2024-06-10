@@ -303,10 +303,11 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
 
   private ScannerIdGenerator scannerIdGenerator;
   private final ConcurrentMap<String, RegionScannerHolder> scanners = new ConcurrentHashMap<>();
-  // Hold the name of a closed scanner for a while. This is used to keep compatible for old clients
-  // which may send next or close request to a region scanner which has already been exhausted. The
-  // entries will be removed automatically after scannerLeaseTimeoutPeriod.
-  private final Cache<String, String> closedScanners;
+  // Hold the name and last sequence number of a closed scanner for a while. This is used
+  // to keep compatible for old clients which may send next or close request to a region
+  // scanner which has already been exhausted. The entries will be removed automatically
+  // after scannerLeaseTimeoutPeriod.
+  private final Cache<String, Long> closedScanners;
   /**
    * The lease timeout period for client scanners (milliseconds).
    */
@@ -2089,7 +2090,6 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())
           ? region.getCoprocessorHost()
           : null; // do not invoke coprocessors if this is a secondary region replica
-      List<Pair<WALKey, WALEdit>> walEntries = new ArrayList<>();
 
       // Skip adding the edits to WAL if this is a secondary region replica
       boolean isPrimary = RegionReplicaUtil.isDefaultReplica(region.getRegionInfo());
@@ -2111,18 +2111,6 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         Pair<WALKey, WALEdit> walEntry = (coprocessorHost == null) ? null : new Pair<>();
         List<MutationReplay> edits =
           WALSplitUtil.getMutationsFromWALEntry(entry, cells, walEntry, durability);
-        if (coprocessorHost != null) {
-          // Start coprocessor replay here. The coprocessor is for each WALEdit instead of a
-          // KeyValue.
-          if (
-            coprocessorHost.preWALRestore(region.getRegionInfo(), walEntry.getFirst(),
-              walEntry.getSecond())
-          ) {
-            // if bypass this log entry, ignore it ...
-            continue;
-          }
-          walEntries.add(walEntry);
-        }
         if (edits != null && !edits.isEmpty()) {
           // HBASE-17924
           // sort to improve lock efficiency
@@ -2144,13 +2132,6 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       WAL wal = region.getWAL();
       if (wal != null) {
         wal.sync();
-      }
-
-      if (coprocessorHost != null) {
-        for (Pair<WALKey, WALEdit> entry : walEntries) {
-          coprocessorHost.postWALRestore(region.getRegionInfo(), entry.getFirst(),
-            entry.getSecond());
-        }
       }
       return ReplicateWALEntryResponse.newBuilder().build();
     } catch (IOException ie) {
@@ -3103,8 +3084,18 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     RegionScannerHolder rsh = this.scanners.get(scannerName);
     if (rsh == null) {
       // just ignore the next or close request if scanner does not exists.
-      if (closedScanners.getIfPresent(scannerName) != null) {
-        throw SCANNER_ALREADY_CLOSED;
+      Long lastCallSeq = closedScanners.getIfPresent(scannerName);
+      if (lastCallSeq != null) {
+        // Check the sequence number to catch if the last call was incorrectly retried.
+        // The only allowed scenario is when the scanner is exhausted and one more scan
+        // request arrives - in this case returning 0 rows is correct.
+        if (request.hasNextCallSeq() && request.getNextCallSeq() != lastCallSeq + 1) {
+          throw new OutOfOrderScannerNextException("Expected nextCallSeq for closed request: "
+            + (lastCallSeq + 1) + " But the nextCallSeq got from client: "
+            + request.getNextCallSeq() + "; request=" + TextFormat.shortDebugString(request));
+        } else {
+          throw SCANNER_ALREADY_CLOSED;
+        }
       } else {
         LOG.warn("Client tried to access missing scanner " + scannerName);
         throw new UnknownScannerException(
@@ -3710,7 +3701,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       }
       if (!builder.getMoreResults() || !builder.getMoreResultsInRegion() || closeScanner) {
         scannerClosed = true;
-        closeScanner(region, scanner, scannerName, rpcCall);
+        closeScanner(region, scanner, scannerName, rpcCall, false);
       }
 
       // There's no point returning to a timed out client. Throwing ensures scanner is closed
@@ -3726,7 +3717,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         // The scanner state might be left in a dirty state, so we will tell the Client to
         // fail this RPC and close the scanner while opening up another one from the start of
         // row that the client has last seen.
-        closeScanner(region, scanner, scannerName, rpcCall);
+        closeScanner(region, scanner, scannerName, rpcCall, true);
 
         // If it is a DoNotRetryIOException already, throw as it is. Unfortunately, DNRIOE is
         // used in two different semantics.
@@ -3790,7 +3781,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   }
 
   private void closeScanner(HRegion region, RegionScanner scanner, String scannerName,
-    RpcCallContext context) throws IOException {
+    RpcCallContext context, boolean isError) throws IOException {
     if (region.getCoprocessorHost() != null) {
       if (region.getCoprocessorHost().preScannerClose(scanner)) {
         // bypass the actual close.
@@ -3807,7 +3798,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       if (region.getCoprocessorHost() != null) {
         region.getCoprocessorHost().postScannerClose(scanner);
       }
-      closedScanners.put(scannerName, scannerName);
+      if (!isError) {
+        closedScanners.put(scannerName, rsh.getNextCallSeq());
+      }
     }
   }
 

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -118,7 +119,7 @@ public class TestReseekTo {
       long start = System.nanoTime();
       scanner.seekTo(new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"),
         Bytes.toBytes("qual"), Bytes.toBytes(value)));
-      assertEquals(value, scanner.getValueString());
+      assertEquals(value, ByteBufferUtils.toStringBinary(scanner.getValue()));
     }
 
     scanner.seekTo();
@@ -128,7 +129,7 @@ public class TestReseekTo {
       long start = System.nanoTime();
       scanner.reseekTo(new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"),
         Bytes.toBytes("qual"), Bytes.toBytes(value)));
-      assertEquals("i is " + i, value, scanner.getValueString());
+      assertEquals("i is " + i, value, ByteBufferUtils.toStringBinary(scanner.getValue()));
     }
 
     reader.close();

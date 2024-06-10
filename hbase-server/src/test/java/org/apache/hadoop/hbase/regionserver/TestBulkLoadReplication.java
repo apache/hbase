@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -170,8 +171,9 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     BULK_LOADS_COUNT = new AtomicInteger(0);
   }
 
-  private ReplicationPeerConfig getPeerConfigForCluster(HBaseTestingUtil util) {
-    return ReplicationPeerConfig.newBuilder().setClusterKey(util.getClusterKey())
+  private ReplicationPeerConfig getPeerConfigForCluster(HBaseTestingUtil util)
+    throws UnknownHostException {
+    return ReplicationPeerConfig.newBuilder().setClusterKey(util.getRpcConnnectionURI())
       .setSerial(isSerialPeer()).build();
   }
 
@@ -185,7 +187,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
             cluster.getConfiguration());
           cp = r.getCoprocessorHost()
             .findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
-          cp.clusterName = cluster.getClusterKey();
+          cp.clusterName = cluster.getRpcConnnectionURI();
         }
       } catch (Exception e) {
         LOG.error(e.getMessage(), e);

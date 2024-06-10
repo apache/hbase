@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import static org.apache.hadoop.hbase.rest.model.CellModel.MAGIC_LENGTH;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.IOException;
 import java.io.Serializable;
@@ -34,6 +36,8 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
 /**
  * Representation of a row. A row is a related set of cells, grouped by common row key. RowModels do
  * not appear in results by themselves. They are always encapsulated within CellSetModels.
@@ -49,14 +53,17 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </pre>
  */
 @XmlRootElement(name = "Row")
-@XmlAccessorType(XmlAccessType.FIELD)
+@XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Private
 public class RowModel implements ProtobufMessageHandler, Serializable {
   private static final long serialVersionUID = 1L;
 
-  @JsonProperty("key")
-  @XmlAttribute
+  // If keyLength = -1, this represents the key
+  // If keyLength <> -1, this represents the base array, and key is determined by offset and length
   private byte[] key;
+
+  private int keyOffset = 0;
+  private int keyLength = MAGIC_LENGTH;
 
   @JsonProperty("Cell")
   @XmlElement(name = "Cell")
@@ -81,7 +88,18 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
    * @param key the row key
    */
   public RowModel(final byte[] key) {
+    setKey(key);
+    cells = new ArrayList<>();
+  }
+
+  /**
+   * Constructor
+   * @param key the row key as represented in the Cell
+   */
+  public RowModel(final byte[] key, int keyOffset, int keyLength) {
     this.key = key;
+    this.keyOffset = keyOffset;
+    this.keyLength = keyLength;
     cells = new ArrayList<>();
   }
 
@@ -100,7 +118,17 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
    * @param cells the cells
    */
   public RowModel(final byte[] key, final List<CellModel> cells) {
-    this.key = key;
+    this(key);
+    this.cells = cells;
+  }
+
+  /**
+   * Constructor
+   * @param key   the row key
+   * @param cells the cells
+   */
+  public RowModel(final byte[] key, int keyOffset, int keyLength, final List<CellModel> cells) {
+    this(key, keyOffset, keyLength);
     this.cells = cells;
   }
 
@@ -113,15 +141,38 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
   }
 
   /** Returns the row key */
+  @XmlAttribute
+  @JsonProperty("key")
   public byte[] getKey() {
+    if (keyLength == MAGIC_LENGTH) {
+      return key;
+    } else {
+      byte[] retKey = new byte[keyLength];
+      System.arraycopy(key, keyOffset, retKey, 0, keyLength);
+      return retKey;
+    }
+  }
+
+  /** Returns the backing row key array */
+  public byte[] getKeyArray() {
     return key;
   }
 
   /**
    * @param key the row key
    */
+  @JsonProperty("key")
   public void setKey(byte[] key) {
     this.key = key;
+    this.keyLength = MAGIC_LENGTH;
+  }
+
+  public int getKeyOffset() {
+    return keyOffset;
+  }
+
+  public int getKeyLength() {
+    return keyLength;
   }
 
   /** Returns the cells */
@@ -130,7 +181,7 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     // there is no standalone row protobuf message
     throw new UnsupportedOperationException("no protobuf equivalent to RowModel");
   }
@@ -153,16 +204,17 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
       return false;
     }
     RowModel rowModel = (RowModel) obj;
-    return new EqualsBuilder().append(key, rowModel.key).append(cells, rowModel.cells).isEquals();
+    return new EqualsBuilder().append(getKey(), rowModel.getKey()).append(cells, rowModel.cells)
+      .isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder().append(key).append(cells).toHashCode();
+    return new HashCodeBuilder().append(getKey()).append(cells).toHashCode();
   }
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this).append("key", key).append("cells", cells).toString();
+    return new ToStringBuilder(this).append("key", getKey()).append("cells", cells).toString();
   }
 }

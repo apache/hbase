@@ -86,8 +86,8 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
     TEST_UTIL.startMiniCluster();
-    KEY_ONE = TEST_UTIL.getClusterKey() + "-test1";
-    KEY_TWO = TEST_UTIL.getClusterKey() + "-test2";
+    KEY_ONE = TEST_UTIL.getZkConnectionURI() + "-test1";
+    KEY_TWO = TEST_UTIL.getZkConnectionURI() + "-test2";
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 

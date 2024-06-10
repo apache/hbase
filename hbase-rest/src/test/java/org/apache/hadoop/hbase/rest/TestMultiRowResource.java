@@ -21,11 +21,11 @@ import static org.junit.Assert.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Base64.Encoder;
 import java.util.Collection;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
@@ -77,10 +77,9 @@ public class TestMultiRowResource {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
 
+  private static final Encoder base64UrlEncoder = java.util.Base64.getUrlEncoder().withoutPadding();
+
   private static Client client;
-  private static JAXBContext context;
-  private static Marshaller marshaller;
-  private static Unmarshaller unmarshaller;
   private static Configuration conf;
 
   private static Header extraHdr = null;
@@ -105,9 +104,6 @@ public class TestMultiRowResource {
     extraHdr = new BasicHeader(RESTServer.REST_CSRF_CUSTOM_HEADER_DEFAULT, "");
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(conf);
-    context = JAXBContext.newInstance(CellModel.class, CellSetModel.class, RowModel.class);
-    marshaller = context.createMarshaller();
-    unmarshaller = context.createUnmarshaller();
     client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
     Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(TABLE)) {
@@ -195,7 +191,7 @@ public class TestMultiRowResource {
     client.post(row_6_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_2), extraHdr);
 
     StringBuilder path = new StringBuilder();
-    Base64.Encoder encoder = Base64.getUrlEncoder();
+    Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
     path.append("/");
     path.append(TABLE);
     path.append("/multiget/?row=");
@@ -340,4 +336,71 @@ public class TestMultiRowResource {
     client.delete(row_5_url, extraHdr);
     client.delete(row_6_url, extraHdr);
   }
+
+  @Test
+  public void testMultiCellGetFilterJSON() throws IOException {
+    String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
+    String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
+
+    StringBuilder path = new StringBuilder();
+    path.append("/");
+    path.append(TABLE);
+    path.append("/multiget/?row=");
+    path.append(ROW_1);
+    path.append("&row=");
+    path.append(ROW_2);
+
+    if (csrfEnabled) {
+      Response response = client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1));
+      assertEquals(400, response.getCode());
+    }
+
+    client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1), extraHdr);
+    client.post(row_6_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_2), extraHdr);
+
+    Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
+    assertEquals(200, response.getCode());
+    assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
+
+    // If the filter is used, then we get the same result
+    String positivePath = path.toString() + ("&" + Constants.FILTER_B64 + "=" + base64UrlEncoder
+      .encodeToString("PrefixFilter('testrow')".getBytes(StandardCharsets.UTF_8.toString())));
+    response = client.get(positivePath, Constants.MIMETYPE_JSON);
+    checkMultiCellGetJSON(response);
+
+    // Same with non binary clean param
+    positivePath = path.toString() + ("&" + Constants.FILTER + "="
+      + URLEncoder.encode("PrefixFilter('testrow')", StandardCharsets.UTF_8.name()));
+    response = client.get(positivePath, Constants.MIMETYPE_JSON);
+    checkMultiCellGetJSON(response);
+
+    // This filter doesn't match the found rows
+    String negativePath = path.toString() + ("&" + Constants.FILTER_B64 + "=" + base64UrlEncoder
+      .encodeToString("PrefixFilter('notfound')".getBytes(StandardCharsets.UTF_8.toString())));
+    response = client.get(negativePath, Constants.MIMETYPE_JSON);
+    assertEquals(404, response.getCode());
+
+    // Same with non binary clean param
+    negativePath = path.toString() + ("&" + Constants.FILTER + "="
+      + URLEncoder.encode("PrefixFilter('notfound')", StandardCharsets.UTF_8.name()));
+    response = client.get(negativePath, Constants.MIMETYPE_JSON);
+    assertEquals(404, response.getCode());
+
+    // Check with binary parameters
+    // positive case
+    positivePath = path.toString() + ("&" + Constants.FILTER_B64 + "=" + base64UrlEncoder
+      .encodeToString(Bytes.toBytesBinary("ColumnRangeFilter ('\\x00', true, '\\xff', true)")));
+    response = client.get(positivePath, Constants.MIMETYPE_JSON);
+    checkMultiCellGetJSON(response);
+
+    // negative case
+    negativePath = path.toString() + ("&" + Constants.FILTER_B64 + "=" + base64UrlEncoder
+      .encodeToString(Bytes.toBytesBinary("ColumnRangeFilter ('\\x00', true, '1', false)")));
+    response = client.get(negativePath, Constants.MIMETYPE_JSON);
+    assertEquals(404, response.getCode());
+
+    client.delete(row_5_url, extraHdr);
+    client.delete(row_6_url, extraHdr);
+  }
+
 }

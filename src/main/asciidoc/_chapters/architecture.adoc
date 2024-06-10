@@ -2579,7 +2579,7 @@ create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class'
 +
 [source,sql]
 ----
-alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'rg.apache.hadoop.hbase.regionserver.DefaultStoreEngine'}
+alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DefaultStoreEngine'}
 ----
 
 . Enable the table.

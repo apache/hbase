@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.util.HashSet;
 import java.util.List;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
@@ -29,6 +33,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category(LargeTests.class)
 public class TestFullBackup extends TestBackupBase {
@@ -56,6 +62,11 @@ public class TestFullBackup extends TestBackupBase {
         String backupId = data.getBackupId();
         assertTrue(checkSucceeded(backupId));
       }
+
+      BackupInfo newestBackup = backups.get(0);
+      BackupManifest manifest =
+        HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR), newestBackup.getBackupId());
+      assertEquals(Sets.newHashSet(table1, table2), new HashSet<>(manifest.getTableList()));
     }
     LOG.info("backup complete");
   }

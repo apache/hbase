@@ -136,7 +136,7 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public Collection<HStoreFile> getStorefiles() {
+  public Collection<HStoreFile> getStoreFiles() {
     return state.allFilesCached;
   }
 
@@ -300,7 +300,7 @@ public class StripeStoreFileManager
 
   @Override
   public Collection<HStoreFile> getFilesForScan(byte[] startRow, boolean includeStartRow,
-    byte[] stopRow, boolean includeStopRow) {
+    byte[] stopRow, boolean includeStopRow, boolean onlyLatestVersion) {
     if (state.stripeFiles.isEmpty()) {
       return state.level0Files; // There's just L0.
     }

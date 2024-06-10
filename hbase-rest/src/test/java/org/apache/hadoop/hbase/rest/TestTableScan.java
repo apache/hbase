@@ -34,6 +34,7 @@ import java.io.Serializable;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64.Encoder;
 import java.util.Collections;
 import java.util.List;
 import javax.xml.bind.JAXBContext;
@@ -93,6 +94,8 @@ public class TestTableScan {
   private static int expectedRows2;
   private static int expectedRows3;
   private static Configuration conf;
+
+  private static final Encoder base64UrlEncoder = java.util.Base64.getUrlEncoder().withoutPadding();
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
@@ -447,7 +450,33 @@ public class TestTableScan {
     builder.append("&");
     builder.append(Constants.SCAN_END_ROW + "=aay");
     builder.append("&");
-    builder.append(Constants.SCAN_FILTER + "=" + URLEncoder.encode("PrefixFilter('aab')", "UTF-8"));
+    builder.append(Constants.FILTER + "=" + URLEncoder.encode("PrefixFilter('aab')", "UTF-8"));
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
+    Unmarshaller ush = ctx.createUnmarshaller();
+    CellSetModel model = (CellSetModel) ush.unmarshal(response.getStream());
+    int count = TestScannerResource.countCellSet(model);
+    assertEquals(1, count);
+    assertEquals("aab",
+      new String(model.getRows().get(0).getCells().get(0).getValue(), StandardCharsets.UTF_8));
+  }
+
+  // This only tests the Base64Url encoded filter definition.
+  // base64 encoded row values are not implemented for this endpoint
+  @Test
+  public void testSimpleFilterBase64() throws IOException, JAXBException {
+    StringBuilder builder = new StringBuilder();
+    builder.append("/*");
+    builder.append("?");
+    builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
+    builder.append("&");
+    builder.append(Constants.SCAN_START_ROW + "=aaa");
+    builder.append("&");
+    builder.append(Constants.SCAN_END_ROW + "=aay");
+    builder.append("&");
+    builder.append(Constants.FILTER_B64 + "=" + base64UrlEncoder
+      .encodeToString("PrefixFilter('aab')".getBytes(StandardCharsets.UTF_8.toString())));
     Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
@@ -464,8 +493,8 @@ public class TestTableScan {
     StringBuilder builder = new StringBuilder();
     builder.append("/abc*");
     builder.append("?");
-    builder.append(
-      Constants.SCAN_FILTER + "=" + URLEncoder.encode("QualifierFilter(=,'binary:1')", "UTF-8"));
+    builder
+      .append(Constants.FILTER + "=" + URLEncoder.encode("QualifierFilter(=,'binary:1')", "UTF-8"));
     Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
@@ -482,7 +511,7 @@ public class TestTableScan {
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
-    builder.append(Constants.SCAN_FILTER + "="
+    builder.append(Constants.FILTER + "="
       + URLEncoder.encode("PrefixFilter('abc') AND QualifierFilter(=,'binary:1')", "UTF-8"));
     Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
@@ -502,7 +531,7 @@ public class TestTableScan {
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
     builder.append("&");
-    builder.append(Constants.SCAN_FILTER + "=" + URLEncoder.encode("CustomFilter('abc')", "UTF-8"));
+    builder.append(Constants.FILTER + "=" + URLEncoder.encode("CustomFilter('abc')", "UTF-8"));
     Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
@@ -521,7 +550,7 @@ public class TestTableScan {
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
     builder.append("&");
-    builder.append(Constants.SCAN_FILTER + "=" + URLEncoder.encode("CustomFilter('abc')", "UTF-8"));
+    builder.append(Constants.FILTER + "=" + URLEncoder.encode("CustomFilter('abc')", "UTF-8"));
     Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);

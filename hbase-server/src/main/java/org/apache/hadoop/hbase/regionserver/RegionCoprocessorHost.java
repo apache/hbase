@@ -909,8 +909,9 @@ public class RegionCoprocessorHost
    * @param get      - the get that could be used Note that the get only does not specify the family
    *                 and qualifier that should be used
    * @return true if default processing should be bypassed
-   * @deprecated In hbase-2.0.0. Will be removed in hbase-3.0.0. Added explicitly for a single
-   *             Coprocessor for its needs only. Will be removed.
+   * @deprecated In hbase-2.0.0. Will be removed in hbase-4.0.0. Added explicitly for a single
+   *             Coprocessor for its needs only. Will be removed. VisibilityController still needs
+   *             this, need to change the logic there first.
    */
   @Deprecated
   public boolean prePrepareTimeStampForDeleteVersion(final Mutation mutation, final Cell kv,
@@ -1382,39 +1383,6 @@ public class RegionCoprocessorHost
       @Override
       public void call(RegionObserver observer) throws IOException {
         observer.postReplayWALs(this, info, edits);
-      }
-    });
-  }
-
-  /**
-   * Supports Coprocessor 'bypass'.
-   * @return true if default behavior should be bypassed, false otherwise
-   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced with
-   *             something that doesn't expose IntefaceAudience.Private classes.
-   */
-  @Deprecated
-  public boolean preWALRestore(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
-    throws IOException {
-    return execOperation(
-      coprocEnvironments.isEmpty() ? null : new RegionObserverOperationWithoutResult(true) {
-        @Override
-        public void call(RegionObserver observer) throws IOException {
-          observer.preWALRestore(this, info, logKey, logEdit);
-        }
-      });
-  }
-
-  /**
-   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced with
-   *             something that doesn't expose IntefaceAudience.Private classes.
-   */
-  @Deprecated
-  public void postWALRestore(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
-    throws IOException {
-    execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperationWithoutResult() {
-      @Override
-      public void call(RegionObserver observer) throws IOException {
-        observer.postWALRestore(this, info, logKey, logEdit);
       }
     });
   }

@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -102,8 +103,10 @@ public class TestSerialization {
 
     long l = 0;
     try {
-      l = KeyValue.oswrite(kv_0, dos, false);
-      l += KeyValue.oswrite(kv_1, dos, false);
+      ByteBufferUtils.putInt(dos, kv_0.getSerializedSize(false));
+      l = (long) kv_0.write(dos, false) + Bytes.SIZEOF_INT;
+      ByteBufferUtils.putInt(dos, kv_1.getSerializedSize(false));
+      l += (long) kv_1.write(dos, false) + Bytes.SIZEOF_INT;
       assertEquals(100L, l);
     } catch (IOException e) {
       fail("Unexpected IOException" + e.getMessage());

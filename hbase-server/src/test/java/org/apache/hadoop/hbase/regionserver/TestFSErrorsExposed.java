@@ -99,26 +99,26 @@ public class TestFSErrorsExposed {
       BloomType.NONE, true);
     sf.initReader();
     StoreFileReader reader = sf.getReader();
-    HFileScanner scanner = reader.getScanner(false, true);
+    try (HFileScanner scanner = reader.getScanner(false, true, false)) {
+      FaultyInputStream inStream = faultyfs.inStreams.get(0).get();
+      assertNotNull(inStream);
 
-    FaultyInputStream inStream = faultyfs.inStreams.get(0).get();
-    assertNotNull(inStream);
+      scanner.seekTo();
+      // Do at least one successful read
+      assertTrue(scanner.next());
 
-    scanner.seekTo();
-    // Do at least one successful read
-    assertTrue(scanner.next());
+      faultyfs.startFaults();
 
-    faultyfs.startFaults();
-
-    try {
-      int scanned = 0;
-      while (scanner.next()) {
-        scanned++;
+      try {
+        int scanned = 0;
+        while (scanner.next()) {
+          scanned++;
+        }
+        fail("Scanner didn't throw after faults injected");
+      } catch (IOException ioe) {
+        LOG.info("Got expected exception", ioe);
+        assertTrue(ioe.getMessage().contains("Fault"));
       }
-      fail("Scanner didn't throw after faults injected");
-    } catch (IOException ioe) {
-      LOG.info("Got expected exception", ioe);
-      assertTrue(ioe.getMessage().contains("Fault"));
     }
     reader.close(true); // end of test so evictOnClose
   }
@@ -147,27 +147,32 @@ public class TestFSErrorsExposed {
       Collections.singletonList(sf), false, true, false, false,
       // 0 is passed as readpoint because this test operates on HStoreFile directly
       0);
-    KeyValueScanner scanner = scanners.get(0);
-
-    FaultyInputStream inStream = faultyfs.inStreams.get(0).get();
-    assertNotNull(inStream);
-
-    scanner.seek(KeyValue.LOWESTKEY);
-    // Do at least one successful read
-    assertNotNull(scanner.next());
-    faultyfs.startFaults();
-
     try {
-      int scanned = 0;
-      while (scanner.next() != null) {
-        scanned++;
+      KeyValueScanner scanner = scanners.get(0);
+
+      FaultyInputStream inStream = faultyfs.inStreams.get(0).get();
+      assertNotNull(inStream);
+
+      scanner.seek(KeyValue.LOWESTKEY);
+      // Do at least one successful read
+      assertNotNull(scanner.next());
+      faultyfs.startFaults();
+
+      try {
+        int scanned = 0;
+        while (scanner.next() != null) {
+          scanned++;
+        }
+        fail("Scanner didn't throw after faults injected");
+      } catch (IOException ioe) {
+        LOG.info("Got expected exception", ioe);
+        assertTrue(ioe.getMessage().contains("Could not iterate"));
       }
-      fail("Scanner didn't throw after faults injected");
-    } catch (IOException ioe) {
-      LOG.info("Got expected exception", ioe);
-      assertTrue(ioe.getMessage().contains("Could not iterate"));
+    } finally {
+      for (StoreFileScanner scanner : scanners) {
+        scanner.close();
+      }
     }
-    scanner.close();
   }
 
   /**
@@ -202,13 +207,13 @@ public class TestFSErrorsExposed {
         // Load some data
         util.loadTable(table, fam, false);
         util.flush();
-        util.countRows(table);
+        HBaseTestingUtil.countRows(table);
 
         // Kill the DFS cluster
         util.getDFSCluster().shutdownDataNodes();
 
         try {
-          util.countRows(table);
+          HBaseTestingUtil.countRows(table);
           fail("Did not fail to count after removing data");
         } catch (Exception e) {
           LOG.info("Got expected error", e);

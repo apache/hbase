@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.util.FutureUtils.unwrapCompletionException
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -2124,8 +2125,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         }
       }
       if (tableName == null) {
-        future.completeExceptionally(new RestoreSnapshotException(
-          "Unable to find the table name for snapshot=" + snapshotName));
+        future.completeExceptionally(
+          new RestoreSnapshotException("The snapshot " + snapshotName + " does not exist."));
         return;
       }
       final TableName finalTableName = tableName;
@@ -3785,15 +3786,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private CompletableFuture<Void> trySyncTableToPeerCluster(TableName tableName, byte[][] splits,
     ReplicationPeerDescription peer) {
-    Configuration peerConf = null;
+    Configuration peerConf;
     try {
-      peerConf =
-        ReplicationPeerConfigUtil.getPeerClusterConfiguration(connection.getConfiguration(), peer);
+      peerConf = ReplicationPeerConfigUtil
+        .getPeerClusterConfiguration(connection.getConfiguration(), peer.getPeerConfig());
     } catch (IOException e) {
       return failedFuture(e);
     }
+    URI connectionUri =
+      ConnectionRegistryFactory.tryParseAsConnectionURI(peer.getPeerConfig().getClusterKey());
     CompletableFuture<Void> future = new CompletableFuture<>();
-    addListener(ConnectionFactory.createAsyncConnection(peerConf), (conn, err) -> {
+    addListener(ConnectionFactory.createAsyncConnection(connectionUri, peerConf), (conn, err) -> {
       if (err != null) {
         future.completeExceptionally(err);
         return;

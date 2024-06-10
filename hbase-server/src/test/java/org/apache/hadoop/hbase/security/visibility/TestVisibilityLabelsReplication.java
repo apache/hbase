@@ -189,7 +189,7 @@ public class TestVisibilityLabelsReplication {
 
     admin = TEST_UTIL.getAdmin();
     ReplicationPeerConfig rpc =
-      ReplicationPeerConfig.newBuilder().setClusterKey(TEST_UTIL1.getClusterKey()).build();
+      ReplicationPeerConfig.newBuilder().setClusterKey(TEST_UTIL1.getRpcConnnectionURI()).build();
     admin.addReplicationPeer("2", rpc);
 
     Admin hBaseAdmin = TEST_UTIL.getAdmin();
