@@ -84,9 +84,9 @@ public final class ReadOnlyZKClient implements Closeable {
   private final int keepAliveTimeMs;
 
   public static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
-    new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d").setDaemon(true)
+    new ThreadFactoryBuilder().setNameFormat("Read-Only-ZKClient-Retry-Timer-pool-%d").setDaemon(true)
       .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
-    10, TimeUnit.MILLISECONDS);
+    1, TimeUnit.MILLISECONDS);
 
   private final ZKClientConfig zkClientConfig;
 
@@ -283,7 +283,7 @@ public final class ReadOnlyZKClient implements Closeable {
           }
         } else {
           if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
-            RETRY_TIMER.newTimeout(this, 10, TimeUnit.MILLISECONDS);
+            RETRY_TIMER.newTimeout(this, 1, TimeUnit.MILLISECONDS);
           }
         }
       }
@@ -321,7 +321,7 @@ public final class ReadOnlyZKClient implements Closeable {
           }
         } else {
           if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
-            RETRY_TIMER.newTimeout(this, 10, TimeUnit.MILLISECONDS);
+            RETRY_TIMER.newTimeout(this, 1, TimeUnit.MILLISECONDS);
           }
         }
       }
@@ -358,7 +358,7 @@ public final class ReadOnlyZKClient implements Closeable {
           }
         } else {
           if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
-            RETRY_TIMER.newTimeout(this, 10, TimeUnit.MILLISECONDS);
+            RETRY_TIMER.newTimeout(this, 1, TimeUnit.MILLISECONDS);
           }
         }
       }
