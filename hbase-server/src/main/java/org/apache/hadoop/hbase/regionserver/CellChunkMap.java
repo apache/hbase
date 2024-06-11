@@ -27,18 +27,28 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * CellChunkMap is an array of serialized representations of Cell (pointing to Chunks with full Cell
- * data) and can be allocated both off-heap and on-heap. CellChunkMap is a byte array (chunk)
- * holding all that is needed to access a Cell, which is actually saved on another deeper chunk. Per
- * Cell we have a reference to this deeper byte array B (chunk ID, integer), offset in bytes in B
- * (integer), length in bytes in B (integer) and seqID of the cell (long). In order to save
- * reference to byte array we use the Chunk's ID given by ChunkCreator. The CellChunkMap memory
- * layout on chunk A relevant to a deeper byte array B, holding the actual cell data: < header >
- * <--------------- first Cell -----------------> <-- second Cell ...
+ * data) and can be allocated both off-heap and on-heap.
+ * <p>
+ * CellChunkMap is a byte array (chunk) holding all that is needed to access a Cell, which is
+ * actually saved on another deeper chunk. Per Cell we have a reference to this deeper byte array B
+ * (chunk ID, integer), offset in bytes in B (integer), length in bytes in B (integer) and seqID of
+ * the cell (long). In order to save reference to byte array we use the Chunk's ID given by
+ * ChunkCreator.
+ * <p>
+ * The CellChunkMap memory layout on chunk A relevant to a deeper byte array B, holding the actual
+ * cell data:
+ *
+ * <pre>
+ *
+ * < header > <---------------     first Cell     -----------------> <-- second Cell ...
  * --------------------------------------------------------------------------------------- ...
- * integer | integer | integer | integer | long | 4 bytes | 4 bytes | 4 bytes | 4 bytes | 8 bytes |
- * ChunkID | chunkID of | offset in B | length of | sequence | ... of this | chunk B with | where
- * Cell's | Cell's | ID of | chunk A | Cell data | data starts | data in B | the Cell |
+ *  integer  | integer      | integer      | integer     | long     |
+ *  4 bytes  | 4 bytes      | 4 bytes      | 4 bytes     | 8 bytes  |
+ *  ChunkID  | chunkID of   | offset in B  | length of   | sequence |          ...
+ *  of this  | chunk B with | where Cell's | Cell's      | ID of    |
+ *  chunk A  | Cell data    | data starts  | data in B   | the Cell |
  * --------------------------------------------------------------------------------------- ...
+ * </pre>
  */
 @InterfaceAudience.Private
 public class CellChunkMap extends CellFlatMap {
@@ -71,7 +81,7 @@ public class CellChunkMap extends CellFlatMap {
     }
   }
 
-  /*
+  /**
    * To be used by base (CellFlatMap) class only to create a sub-CellFlatMap Should be used only to
    * create only CellChunkMap from CellChunkMap
    */
