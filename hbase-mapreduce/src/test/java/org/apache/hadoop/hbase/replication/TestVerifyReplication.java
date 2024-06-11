@@ -150,6 +150,16 @@ public class TestVerifyReplication extends TestReplicationBase {
     Scan scan = new Scan();
     ResultScanner rs = htable2.getScanner(scan);
     Put put = null;
+
+    int numRowOnlyInPeer = 10;
+    for (int i = 0; i < numRowOnlyInPeer; i++) {
+      //the row keys of redundant data(start with prefix "+") in peer table are all smaller than
+      //the first row key of source table
+      put = new Put(Bytes.toBytes("+" + i));
+      put.addColumn(famName, row, Bytes.toBytes("only in peer"));
+      htable2.put(put);
+    }
+
     for (Result result : rs) {
       put = new Put(result.getRow());
       Cell firstVal = result.rawCells()[0];
@@ -159,7 +169,7 @@ public class TestVerifyReplication extends TestReplicationBase {
     }
     Delete delete = new Delete(put.getRow());
     htable2.delete(delete);
-    runVerifyReplication(args, 0, NB_ROWS_IN_BATCH);
+    runVerifyReplication(args, 0, NB_ROWS_IN_BATCH + numRowOnlyInPeer);
   }
 
   /**

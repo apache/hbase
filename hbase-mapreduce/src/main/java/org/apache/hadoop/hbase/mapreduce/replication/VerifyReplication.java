@@ -218,7 +218,15 @@ public class VerifyReplication extends Configured implements Tool {
         TableName peerTableName = TableName.valueOf(peerName);
         replicatedConnection = ConnectionFactory.createConnection(peerConf);
         replicatedTable = replicatedConnection.getTable(peerTableName);
-        scan.withStartRow(value.getRow());
+
+        byte[] startRow = null;
+        if (tableSplit instanceof TableSnapshotInputFormat.TableSnapshotRegionSplit) {
+          startRow = ((TableSnapshotInputFormat.TableSnapshotRegionSplit) tableSplit).getRegion()
+            .getStartKey();
+        } else {
+          startRow = ((TableSplit) tableSplit).getStartRow();
+        }
+        scan.withStartRow(startRow);
 
         byte[] endRow = null;
         if (tableSplit instanceof TableSnapshotInputFormat.TableSnapshotRegionSplit) {
