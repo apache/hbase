@@ -29,6 +29,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
@@ -107,8 +108,7 @@ public class NamespacesModel implements Serializable, ProtobufMessageHandler {
   @Override
   public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     Namespaces.Builder builder = Namespaces.newBuilder();
-    builder.mergeFrom(cis);
-    cis.checkLastTagWas(0);
+    RestUtil.mergeFrom(builder, cis);
     namespaces = builder.getNamespaceList();
     return this;
   }

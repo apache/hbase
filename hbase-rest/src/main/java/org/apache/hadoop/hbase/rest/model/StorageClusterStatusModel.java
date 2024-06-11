@@ -27,6 +27,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -715,8 +716,7 @@ public class StorageClusterStatusModel implements Serializable, ProtobufMessageH
   @Override
   public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     StorageClusterStatus.Builder builder = StorageClusterStatus.newBuilder();
-    builder.mergeFrom(cis);
-    cis.checkLastTagWas(0);
+    RestUtil.mergeFrom(builder, cis);
     if (builder.hasRegions()) {
       regions = builder.getRegions();
     }

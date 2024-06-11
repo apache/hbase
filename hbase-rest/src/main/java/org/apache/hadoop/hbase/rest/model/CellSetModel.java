@@ -29,6 +29,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
@@ -141,8 +142,7 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
   @Override
   public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     CellSet.Builder builder = CellSet.newBuilder();
-    builder.mergeFrom(cis);
-    cis.checkLastTagWas(0);
+    RestUtil.mergeFrom(builder, cis);
     for (CellSet.Row row : builder.getRowsList()) {
       RowModel rowModel = new RowModel(row.getKey().toByteArray());
       for (Cell cell : row.getValuesList()) {
