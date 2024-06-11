@@ -117,8 +117,8 @@ public class MetricsAssignmentManagerSourceImpl extends BaseSourceImpl
   }
 
   @Override
-  public void setRITOldestAge(final long ritCount) {
-    ritOldestAgeGauge.set(ritCount);
+  public void setRITOldestAge(final long ritOldestAge) {
+    ritOldestAgeGauge.set(ritOldestAge);
   }
 
   @Override
