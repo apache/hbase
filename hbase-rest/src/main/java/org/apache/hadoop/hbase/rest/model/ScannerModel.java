@@ -67,17 +67,18 @@ import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.ScannerMessage.Scanner;
 
 /**
@@ -925,9 +926,9 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     Scanner.Builder builder = Scanner.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     if (builder.hasStartRow()) {
       startRow = builder.getStartRow().toByteArray();
     }

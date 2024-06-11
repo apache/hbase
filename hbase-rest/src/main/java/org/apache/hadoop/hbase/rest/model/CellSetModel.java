@@ -29,12 +29,13 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.CellMessage.Cell;
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.CellSetMessage.CellSet;
 
@@ -139,9 +140,9 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     CellSet.Builder builder = CellSet.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     for (CellSet.Row row : builder.getRowsList()) {
       RowModel rowModel = new RowModel(row.getKey().toByteArray());
       for (Cell cell : row.getValuesList()) {

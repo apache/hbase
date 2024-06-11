@@ -25,12 +25,13 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.TableInfoMessage.TableInfo;
 
 /**
@@ -140,9 +141,9 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     TableInfo.Builder builder = TableInfo.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     setName(builder.getName());
     for (TableInfo.Region region : builder.getRegionsList()) {
       add(
