@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.rest.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
@@ -904,9 +905,9 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     Scanner.Builder builder = Scanner.newBuilder();
-    RestUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     if (builder.hasStartRow()) {
       startRow = builder.getStartRow().toByteArray();
     }
