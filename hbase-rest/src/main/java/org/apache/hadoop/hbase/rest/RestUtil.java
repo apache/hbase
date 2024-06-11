@@ -17,11 +17,15 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 @InterfaceAudience.Private
 public final class RestUtil {
@@ -44,5 +48,18 @@ public final class RestUtil {
       rowModel.addCell(new CellModel(r.rawCells()[i]));
     }
     return rowModel;
+  }
+
+  /**
+   * Merges the object from codedInput, then calls checkLastTagWas. This is based on
+   * ProtobufUtil.mergeFrom, but we have already taken care of setSizeLimit() before calling, so
+   * only the checkLastTagWas() call is retained.
+   * @param builder    protobuf object builder
+   * @param codedInput encoded object data
+   */
+  public static void mergeFrom(Message.Builder builder, CodedInputStream codedInput)
+    throws IOException {
+    builder.mergeFrom(codedInput);
+    codedInput.checkLastTagWas(0);
   }
 }
