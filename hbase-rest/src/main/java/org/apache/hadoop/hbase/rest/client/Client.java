@@ -523,8 +523,8 @@ public class Client {
 
     Configuration sslConf = new Configuration();
     // Type is the Java default, we use the same JVM to read this back
-    sslConf.set("ssl.client.keystore.location", trustStoreFile.getAbsolutePath());
-    sslConf.set("ssl.client.keystore.password", password);
+    sslConf.set("ssl.client.truststore.location", trustStoreFile.getAbsolutePath());
+    sslConf.set("ssl.client.truststore.password", password);
     return sslConf;
   }
 
