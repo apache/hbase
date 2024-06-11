@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
@@ -99,9 +100,9 @@ public class TableListModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     TableList.Builder builder = TableList.newBuilder();
-    RestUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     for (String table : builder.getNameList()) {
       this.add(new TableModel(table));
     }

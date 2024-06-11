@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.rest.model;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
@@ -283,9 +284,9 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     TableSchema.Builder builder = TableSchema.newBuilder();
-    RestUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     this.setName(builder.getName());
     for (TableSchema.Attribute attr : builder.getAttrsList()) {
       this.addAttribute(attr.getName(), attr.getValue());

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.rest.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
@@ -691,9 +692,9 @@ public class StorageClusterStatusModel implements Serializable, ProtobufMessageH
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     StorageClusterStatus.Builder builder = StorageClusterStatus.newBuilder();
-    RestUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     if (builder.hasRegions()) {
       regions = builder.getRegions();
     }
