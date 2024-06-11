@@ -308,6 +308,10 @@ public class AsyncConnectionImpl implements AsyncConnection {
       () -> createAdminServerStub(serverName));
   }
 
+  void removeAdminStub(ServerName serverName) {
+    adminStubs.remove(getStubKey(AdminService.getDescriptor().getName(), serverName));
+  }
+
   CompletableFuture<MasterService.Interface> getMasterStub() {
     return ConnectionUtils.getOrFetch(masterStub, masterStubMakeFuture, false, () -> {
       CompletableFuture<MasterService.Interface> future = new CompletableFuture<>();
