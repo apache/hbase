@@ -50,15 +50,14 @@ public final class RestUtil {
   }
 
   /**
-   * Copied from org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil to avoid shading conflicts
-   * between hbase-shaded-client and hbase-rest in HBase 2.x. This version of protobuf's mergeFrom
-   * avoids the hard-coded 64MB limit for decoding buffers when working with byte arrays
-   * @param builder current message builder
-   * @param b       byte array
+   * Merges the object from codedInput, then calls checkLastTagWas. This is based on
+   * ProtobufUtil.mergeFrom, but we have already taken care of setSizeLimit() before calling, so
+   * only the checkLastTagWas() call is retained.
+   * @param builder    protobuf object builder
+   * @param codedInput encoded object data
    */
-  public static void mergeFrom(Message.Builder builder, byte[] b) throws IOException {
-    final CodedInputStream codedInput = CodedInputStream.newInstance(b);
-    codedInput.setSizeLimit(b.length);
+  public static void mergeFrom(Message.Builder builder, CodedInputStream codedInput)
+    throws IOException {
     builder.mergeFrom(codedInput);
     codedInput.checkLastTagWas(0);
   }

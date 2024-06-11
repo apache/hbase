@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
@@ -30,6 +31,7 @@ import javax.xml.bind.annotation.XmlTransient;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.NamespacePropertiesMessage.NamespaceProperties;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -155,9 +157,9 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     NamespaceProperties.Builder builder = NamespaceProperties.newBuilder();
-    builder.mergeFrom(message);
+    RestUtil.mergeFrom(builder, cis);
     List<NamespaceProperties.Property> properties = builder.getPropsList();
     for (NamespaceProperties.Property property : properties) {
       addProperty(property.getKey(), property.getValue());

@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -46,7 +48,7 @@ public interface ProtobufMessageHandler {
   }
 
   /**
-   * Returns the protobuf represention of the model in a byte array Use
+   * Returns the protobuf represention of the model in a byte array. Use
    * {@link org.apache.hadoop.hbase.rest.ProtobufMessageHandler#writeProtobufOutput(OutputStream)}
    * for better performance
    * @return the protobuf encoded object in a byte array
@@ -62,15 +64,28 @@ public interface ProtobufMessageHandler {
   Message messageFromObject();
 
   /**
-   * Initialize the model from a protobuf representation.
+   * Initialize the model from a protobuf representation. Use
+   * {@link org.apache.hadoop.hbase.rest.ProtobufMessageHandler#getObjectFromMessage(InputStream)}
+   * for better performance
    * @param message the raw bytes of the protobuf message
    * @return reference to self for convenience
    */
-  // TODO implement proper stream handling for unmarshalling.
-  // Using byte array here lets us use ProtobufUtil.mergeFrom in the implementations to
-  // avoid the CodedOutputStream size limitation, but is slow
-  // and memory intensive. We could use the ProtobufUtil.mergeFrom() variant that takes
-  // an inputStream and sets the size limit to maxInt.
-  // This would help both on the client side, and when processing large Puts on the server.
-  ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException;
+  default ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+    final CodedInputStream codedInput = CodedInputStream.newInstance(message);
+    codedInput.setSizeLimit(message.length);
+    return getObjectFromMessage(codedInput);
+  }
+
+  /**
+   * Initialize the model from a protobuf representation.
+   * @param is InputStream providing the protobuf message
+   * @return reference to self for convenience
+   */
+  default ProtobufMessageHandler getObjectFromMessage(InputStream is) throws IOException {
+    final CodedInputStream codedInput = CodedInputStream.newInstance(is);
+    codedInput.setSizeLimit(Integer.MAX_VALUE);
+    return getObjectFromMessage(codedInput);
+  }
+
+  ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException;
 }

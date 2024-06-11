@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIMITER;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
@@ -216,9 +217,9 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     Cell.Builder builder = Cell.newBuilder();
-    RestUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     setColumn(builder.getColumn().toByteArray());
     setValue(builder.getData().toByteArray());
     if (builder.hasTimestamp()) {

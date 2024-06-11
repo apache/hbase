@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.rest.model;
 import static org.apache.hadoop.hbase.rest.model.CellModel.MAGIC_LENGTH;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
@@ -186,7 +187,7 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream is) throws IOException {
     // there is no standalone row protobuf message
     throw new UnsupportedOperationException("no protobuf equivalent to RowModel");
   }

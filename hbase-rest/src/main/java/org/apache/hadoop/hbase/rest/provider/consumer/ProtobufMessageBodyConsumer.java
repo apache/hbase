@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.rest.provider.consumer;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
@@ -59,23 +58,10 @@ public class ProtobufMessageBodyConsumer implements MessageBodyReader<ProtobufMe
     ProtobufMessageHandler obj = null;
     try {
       obj = type.getDeclaredConstructor().newInstance();
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      byte[] buffer = new byte[4096];
-      int read;
-      do {
-        read = inputStream.read(buffer, 0, buffer.length);
-        if (read > 0) {
-          baos.write(buffer, 0, read);
-        }
-      } while (read > 0);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(getClass() + ": read " + baos.size() + " bytes from " + inputStream);
-      }
-      obj = obj.getObjectFromMessage(baos.toByteArray());
+      return obj.getObjectFromMessage(inputStream);
     } catch (InstantiationException | NoSuchMethodException | InvocationTargetException
       | IllegalAccessException e) {
       throw new WebApplicationException(e);
     }
-    return obj;
   }
 }
