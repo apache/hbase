@@ -85,7 +85,10 @@ public final class SimpleKdcServerUtil {
         if (kdc != null) {
           kdc.stop();
         }
-        if (ke.getCause() != null && ke.getCause() instanceof BindException) {
+        if (
+          (ke.getCause() != null && ke.getCause() instanceof BindException)
+            || (ke.getMessage().contains("Address already in use (Bind failed)"))
+        ) {
           LOG.info("Clashed using port {}; getting a new random port", kdcPort);
           continue;
         } else {
