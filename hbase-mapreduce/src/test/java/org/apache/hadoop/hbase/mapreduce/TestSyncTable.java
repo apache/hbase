@@ -121,11 +121,17 @@ public class TestSyncTable {
 
   @Test
   public void testSyncTableToPeerCluster() throws Exception {
-    testSyncTable(UTIL1, UTIL2, "--sourcezkcluster=" + UTIL1.getClusterKey());
+    testSyncTable(UTIL1, UTIL2, "--sourceuri=" + UTIL1.getRpcConnnectionURI());
   }
 
   @Test
   public void testSyncTableFromSourceToPeerCluster() throws Exception {
+    testSyncTable(UTIL2, UTIL1, "--sourceuri=" + UTIL2.getRpcConnnectionURI(),
+      "--targeturi=" + UTIL1.getZkConnectionURI());
+  }
+
+  @Test
+  public void testSyncTableFromSourceToPeerClusterWithClusterKey() throws Exception {
     testSyncTable(UTIL2, UTIL1, "--sourcezkcluster=" + UTIL2.getClusterKey(),
       "--targetzkcluster=" + UTIL1.getClusterKey());
   }
@@ -185,7 +191,7 @@ public class TestSyncTable {
     writeTestData(UTIL1, sourceTableName, UTIL2, targetTableName, current - 1000, current);
     hashSourceTable(UTIL1, sourceTableName, testDir, "--ignoreTimestamps=true");
     Counters syncCounters = syncTables(UTIL2.getConfiguration(), sourceTableName, targetTableName,
-      testDir, "--ignoreTimestamps=true", "--sourcezkcluster=" + UTIL1.getClusterKey());
+      testDir, "--ignoreTimestamps=true", "--sourceuri=" + UTIL1.getRpcConnnectionURI());
     assertEqualTables(90, UTIL1, sourceTableName, UTIL2, targetTableName, true);
 
     assertEquals(50, syncCounters.findCounter(Counter.ROWSWITHDIFFS).getValue());
