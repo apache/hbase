@@ -62,8 +62,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
- * We moved some of {@link TestVerifyReplication}'s tests here because it could take too long to
- * complete. In here we have miscellaneous.
+ * We moved some of {@link TestVerifyReplicationZkClusterKey}'s tests here because it could take too
+ * long to complete. In here we have miscellaneous.
  */
 @Category({ ReplicationTests.class, LargeTests.class })
 public class TestVerifyReplicationAdjunct extends TestReplicationBase {
@@ -171,7 +171,7 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     assertEquals(5, res1[0].getColumnCells(famName, qualifierName).size());
 
     String[] args = new String[] { "--versions=100", PEER_ID, tableName.getNameAsString() };
-    TestVerifyReplication.runVerifyReplication(args, 0, 1);
+    TestVerifyReplicationZkClusterKey.runVerifyReplication(args, 0, 1);
   }
 
   // VerifyReplication should honor versions option
@@ -237,7 +237,7 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
       assertEquals(3, res1[0].getColumnCells(famName, qualifierName).size());
 
       String[] args = new String[] { "--versions=100", PEER_ID, tableName.getNameAsString() };
-      TestVerifyReplication.runVerifyReplication(args, 0, 1);
+      TestVerifyReplicationZkClusterKey.runVerifyReplication(args, 0, 1);
     } finally {
       hbaseAdmin.enableReplicationPeer(PEER_ID);
     }
@@ -254,7 +254,7 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     waitForReplication(NB_ROWS_IN_BATCH * 4, NB_RETRIES * 4);
     String[] args =
       new String[] { "--row-prefixes=prefixrow,secondrow", PEER_ID, tableName.getNameAsString() };
-    TestVerifyReplication.runVerifyReplication(args, NB_ROWS_IN_BATCH * 2, 0);
+    TestVerifyReplicationZkClusterKey.runVerifyReplication(args, NB_ROWS_IN_BATCH * 2, 0);
   }
 
   @Test
@@ -317,9 +317,9 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
       "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
       "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), "2",
       tableName.getNameAsString() };
-    TestVerifyReplication.runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
-    TestVerifyReplication.checkRestoreTmpDir(CONF1, temPath1, 1);
-    TestVerifyReplication.checkRestoreTmpDir(CONF2, temPath2, 1);
+    TestVerifyReplicationZkClusterKey.runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
+    TestVerifyReplicationZkClusterKey.checkRestoreTmpDir(CONF1, temPath1, 1);
+    TestVerifyReplicationZkClusterKey.checkRestoreTmpDir(CONF2, temPath2, 1);
 
     Scan scan = new Scan();
     ResultScanner rs = htable2.getScanner(scan);
@@ -347,9 +347,9 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
       "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
       "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), "2",
       tableName.getNameAsString() };
-    TestVerifyReplication.runVerifyReplication(args, 0, NB_ROWS_IN_BATCH);
-    TestVerifyReplication.checkRestoreTmpDir(CONF1, temPath1, 2);
-    TestVerifyReplication.checkRestoreTmpDir(CONF2, temPath2, 2);
+    TestVerifyReplicationZkClusterKey.runVerifyReplication(args, 0, NB_ROWS_IN_BATCH);
+    TestVerifyReplicationZkClusterKey.checkRestoreTmpDir(CONF1, temPath1, 2);
+    TestVerifyReplicationZkClusterKey.checkRestoreTmpDir(CONF2, temPath2, 2);
   }
 
   @AfterClass
