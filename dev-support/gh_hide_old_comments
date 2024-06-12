@@ -22,6 +22,8 @@ trap 'exit 1' ERR
 
 # the user_id of the buildbot that leaves the comments we want to hide.
 declare USER_ID="${USER_ID:-49303554}"
+declare REPO="${REPO:-apache/hbase}"
+declare JOB_NAME="${JOB_NAME:-HBase-PreCommit-GitHub-PR}"
 
 function fetch_comments {
     local pr="$1"
@@ -30,7 +32,7 @@ function fetch_comments {
     gh api \
        -H "Accept: application/vnd.github+json" \
        -H "X-GitHub-Api-Version: 2022-11-28" \
-       "/repos/apache/hbase/issues/${pr}/comments?per_page=100" \
+       "/repos/${REPO}/issues/${pr}/comments?per_page=100" \
        > "${comments_file}"
     echo "${comments_file}"
 }
@@ -64,7 +66,7 @@ function identify_most_recent_build_number {
 .[] \
 | select(.user.id == ${USER_ID}) \
 | .body \
-| capture("Base-PreCommit-GitHub-PR/job/PR-${pr}/(?<buildnum>[0-9]+)/") \
+| capture("${JOB_NAME}/job/PR-${pr}/(?<buildnum>[0-9]+)/") \
 | .buildnum
 EOF
 
@@ -81,7 +83,7 @@ function identify_old_comment_ids {
     read -r -d '' jq_filter << EOF || :
 .[] \
 | select(.user.id == ${USER_ID}) \
-| { node_id, buildnum: (.body | capture("Base-PreCommit-GitHub-PR/job/PR-${pr}/(?<buildnum>[0-9]+)/") | .buildnum | tonumber) } \
+| { node_id, buildnum: (.body | capture("${JOB_NAME}/job/PR-${pr}/(?<buildnum>[0-9]+)/") | .buildnum | tonumber) } \
 | select(.buildnum < (${most_recent_build_number} | tonumber)) \
 | .node_id
 EOF
