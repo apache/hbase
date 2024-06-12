@@ -258,33 +258,32 @@ public class BlockCacheUtil {
    * @return the resulting HFileBlock instance without checksum.
    */
   public static HFileBlock getBlockForCaching(CacheConfig cacheConf, HFileBlock block) {
-    HFileContext newContext =
-      new HFileContextBuilder().withBlockSize(block.getHFileContext().getBlocksize())
-        .withBytesPerCheckSum(0).withChecksumType(ChecksumType.NULL) // no checksums in cached data
-        .withCompression(block.getHFileContext().getCompression())
-        .withDataBlockEncoding(block.getHFileContext().getDataBlockEncoding())
-        .withHBaseCheckSum(block.getHFileContext().isUseHBaseChecksum())
-        .withCompressTags(block.getHFileContext().isCompressTags())
-        .withIncludesMvcc(block.getHFileContext().isIncludesMvcc())
-        .withIncludesTags(block.getHFileContext().isIncludesTags())
-        .withColumnFamily(block.getHFileContext().getColumnFamily())
-        .withTableName(block.getHFileContext().getTableName()).build();
-    // Build the HFileBlock.
-    HFileBlockBuilder builder = new HFileBlockBuilder();
-    ByteBuff buff = block.getBufferReadOnly();
     // Calculate how many bytes we need for checksum on the tail of the block.
     int numBytes = cacheConf.shouldCacheCompressed(block.getBlockType().getCategory())
       ? 0
       : (int) ChecksumUtil.numBytes(block.getOnDiskDataSizeWithHeader(),
         block.getHFileContext().getBytesPerChecksum());
+    ByteBuff buff = block.getBufferReadOnly();
+    HFileBlockBuilder builder = new HFileBlockBuilder();
     return builder.withBlockType(block.getBlockType())
       .withOnDiskSizeWithoutHeader(block.getOnDiskSizeWithoutHeader())
       .withUncompressedSizeWithoutHeader(block.getUncompressedSizeWithoutHeader())
       .withPrevBlockOffset(block.getPrevBlockOffset()).withByteBuff(buff)
       .withFillHeader(FILL_HEADER).withOffset(block.getOffset()).withNextBlockOnDiskSize(-1)
       .withOnDiskDataSizeWithHeader(block.getOnDiskDataSizeWithHeader() + numBytes)
-      .withHFileContext(newContext).withByteBuffAllocator(cacheConf.getByteBuffAllocator())
-      .withShared(!buff.hasArray()).build();
+      .withHFileContext(cloneContext(block.getHFileContext()))
+      .withByteBuffAllocator(cacheConf.getByteBuffAllocator()).withShared(!buff.hasArray()).build();
+  }
+
+  public static HFileContext cloneContext(HFileContext context) {
+    HFileContext newContext = new HFileContextBuilder().withBlockSize(context.getBlocksize())
+      .withBytesPerCheckSum(0).withChecksumType(ChecksumType.NULL) // no checksums in cached data
+      .withCompression(context.getCompression())
+      .withDataBlockEncoding(context.getDataBlockEncoding())
+      .withHBaseCheckSum(context.isUseHBaseChecksum()).withCompressTags(context.isCompressTags())
+      .withIncludesMvcc(context.isIncludesMvcc()).withIncludesTags(context.isIncludesTags())
+      .withColumnFamily(context.getColumnFamily()).withTableName(context.getTableName()).build();
+    return newContext;
   }
 
   /**

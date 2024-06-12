@@ -364,7 +364,7 @@ public class HalfStoreFileReader extends StoreFileReader {
   @Override
   public void close(boolean evictOnClose) throws IOException {
     if (closed.compareAndSet(false, true)) {
-      if (evictOnClose && StoreFileInfo.isReference(this.reader.getPath())) {
+      if (evictOnClose) {
         final HFileReaderImpl.HFileScannerImpl s =
           (HFileReaderImpl.HFileScannerImpl) super.getScanner(false, true, false);
         final String reference = this.reader.getHFileInfo().getHFileContext().getHFileName();
