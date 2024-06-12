@@ -746,8 +746,8 @@ be changed for particular daemons via the HBase UI.
 If you are running HBase in standalone mode, you don't need to configure anything for your client
 to work provided that they are all on the same machine.
 
-Starting release 3.0.0, the default connection registry has been switched to a master based
-implementation. Refer to <<client.masterregistry>> for more details about what a connection
+Starting release 3.0.0, the default connection registry has been switched to a rpc based
+implementation. Refer to <<client.rpcconnectionregistry>> for more details about what a connection
 registry is and implications of this change. Depending on your HBase version, following is the
 expected minimal client configuration.
 
@@ -772,11 +772,11 @@ before they can do anything. This can be configured in the client configuration 
 </configuration>
 ----
 
-==== Starting 3.0.0 release
+==== Starting from 3.0.0 release
 
-The default implementation was switched to a master based connection registry. With this
-implementation, clients always contact the active or stand-by master RPC end points to fetch the
-connection registry information. This means that the clients should have access to the list of
+The default implementation was switched to a rpc based connection registry. With this
+implementation, by default clients contact the active or stand-by master RPC end points to fetch
+the connection registry information. This means that the clients should have access to the list of
 active and master end points before they can do anything. This can be configured in the client
 configuration xml as follows:
 
@@ -796,8 +796,22 @@ configuration xml as follows:
 The configuration value for _hbase.masters_ is a comma separated list of _host:port_ values. If no
 port value is specified, the default of _16000_ is assumed.
 
-Usually this configuration is kept out in the _hbase-site.xml_ and is picked up by the client from
-the `CLASSPATH`.
+Of course you are free to specify bootstrap nodes other than masters, like:
+[source,xml]
+----
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<property>
+    <name>hbase.client.bootstrap.servers</name>
+    <value>server1:16020,server2:16020,server3:16020</value>
+</property>
+----
+
+The configuration value for _hbase.client.bootstrap.servers_ is a comma separated list of
+_host:port_ values. Notice that port must be specified here.
+
+Usually these configurations are kept out in the _hbase-site.xml_ and is picked up by the client
+from the `CLASSPATH`.
 
 If you are configuring an IDE to run an HBase client, you should include the _conf/_ directory on
 your classpath so _hbase-site.xml_ settings can be found (or add _src/test/resources_ to pick up
@@ -827,14 +841,15 @@ in the content of the first _hbase-site.xml_ found on the client's `CLASSPATH`, 
 the _hbase.X.X.X.jar_). It is also possible to specify configuration directly without having to
 read from a _hbase-site.xml_.
 
-For example, to set the ZooKeeper ensemble for the cluster programmatically do as follows:
+For example, to set the ZooKeeper ensemble or bootstrap nodes for the cluster programmatically
+do as follows:
 
 [source,java]
 ----
 Configuration config = HBaseConfiguration.create();
 config.set("hbase.zookeeper.quorum", "localhost");  // Until 2.x.y versions
 // ---- or ----
-config.set("hbase.masters", "localhost:1234"); // Starting 3.0.0 version
+config.set("hbase.client.bootstrap.servers", "localhost:1234"); // Starting 3.0.0 version
 ----
 
 [[config_timeouts]]
