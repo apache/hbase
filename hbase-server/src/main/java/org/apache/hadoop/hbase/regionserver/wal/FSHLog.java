@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -455,15 +456,23 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       writer.close();
       span.addEvent("writer closed");
     } catch (IOException ioe) {
-      int errors = closeErrorCount.incrementAndGet();
-      boolean hasUnflushedEntries = isUnflushedEntries();
-      if (syncCloseCall && (hasUnflushedEntries || (errors > this.closeErrorsTolerated))) {
-        LOG.error("Close of WAL " + path + " failed. Cause=\"" + ioe.getMessage() + "\", errors="
-          + errors + ", hasUnflushedEntries=" + hasUnflushedEntries);
-        throw ioe;
+      LOG.warn("close old writer failed.", ioe);
+      try {
+        RecoverLeaseFSUtils.recoverFileLease(fs, path, conf, null);
+      } catch (IOException ex) {
+        LOG.error("Unable to recover lease after several attempts. Give up.", ex);
+
+        int errors = closeErrorCount.incrementAndGet();
+        boolean hasUnflushedEntries = isUnflushedEntries();
+        if (syncCloseCall && (hasUnflushedEntries || (errors > this.closeErrorsTolerated))) {
+          LOG.error(
+            "Close of WAL " + path + " failed. Cause=\"" + ioe.getMessage() + "\", errors=" + errors
+              + ", hasUnflushedEntries=" + hasUnflushedEntries);
+          throw ioe;
+        }
+        LOG.warn("Riding over failed WAL close of " + path +
+          "; THIS FILE WAS NOT CLOSED BUT ALL EDITS SYNCED SO SHOULD BE OK", ioe);
       }
-      LOG.warn("Riding over failed WAL close of " + path
-        + "; THIS FILE WAS NOT CLOSED BUT ALL EDITS SYNCED SO SHOULD BE OK", ioe);
     }
   }
 
