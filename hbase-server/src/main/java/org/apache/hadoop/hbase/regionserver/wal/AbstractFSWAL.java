@@ -96,6 +96,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -2022,13 +2023,22 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
   }
 
+  private void recoverLease(FileSystem fs, Path p, Configuration conf) {
+    try {
+      RecoverLeaseFSUtils.recoverFileLease(fs, p, conf, null);
+    } catch (IOException ex) {
+      LOG.error("Unable to recover lease after several attempts. Give up.", ex);
+    }
+  }
+
   protected final void closeWriter(W writer, Path path) {
     inflightWALClosures.put(path.getName(), writer);
     closeExecutor.execute(() -> {
       try {
         writer.close();
       } catch (IOException e) {
-        LOG.warn("close old writer failed", e);
+        LOG.warn("close old writer failed.", e);
+        recoverLease(this.fs, path, conf);
       } finally {
         // call this even if the above close fails, as there is no other chance we can set closed to
         // true, it will not cause big problems.
