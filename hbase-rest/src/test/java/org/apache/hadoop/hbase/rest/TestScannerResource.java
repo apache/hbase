@@ -393,4 +393,10 @@ public class TestScannerResource {
     response = client.get(scannerURI, Constants.MIMETYPE_PROTOBUF);
     assertEquals(410, response.getCode());
   }
+
+  @Test
+  public void deleteNonExistent() throws IOException {
+    Response response = client.delete("/" + TABLE + "/scanner/NONEXISTENT_SCAN");
+    assertEquals(404, response.getCode());
+  }
 }
