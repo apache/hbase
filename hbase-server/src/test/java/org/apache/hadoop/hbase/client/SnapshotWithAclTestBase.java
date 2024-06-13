@@ -119,7 +119,7 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     verifyConfiguration(conf);
     // Enable EXEC permission checking
     conf.setBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY, true);
-    conf.set(HConstants.SNAPSHOT_RESTORE_FAILSAFE_NAME,
+    TEST_UTIL.getConfiguration().set(HConstants.SNAPSHOT_RESTORE_FAILSAFE_NAME,
       "hbase-failsafe-{snapshot.name}-{restore.timestamp}");
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
