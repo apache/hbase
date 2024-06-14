@@ -69,10 +69,27 @@ public class SecurityHeadersFilter implements Filter {
   public void destroy() {
   }
 
+  /**
+   * @param conf     configuration
+   * @param isSecure use secure defaults if 'true'
+   * @return default parameters, as a map
+   */
   public static Map<String, String> getDefaultParameters(Configuration conf, boolean isSecure) {
     Map<String, String> params = new HashMap<>();
     params.put("hsts", conf.get("hbase.http.filter.hsts.value", isSecure ? DEFAULT_HSTS : ""));
     params.put("csp", conf.get("hbase.http.filter.csp.value", isSecure ? DEFAULT_CSP : ""));
     return params;
   }
+
+  /**
+   * @param conf configuration
+   * @return default parameters, as a map
+   * @deprecated Use {@link SecurityHeadersFilter#getDefaultParameters(Configuration, boolean)}
+   *             instead.
+   */
+  @Deprecated
+  public static Map<String, String> getDefaultParameters(Configuration conf) {
+    return getDefaultParameters(conf, false);
+  }
+
 }
