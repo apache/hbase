@@ -278,7 +278,8 @@ public class CanaryTool implements Tool, Canary {
       stopped = true;
     }
 
-    @Override public boolean isStopped() {
+    @Override
+    public boolean isStopped() {
       return stopped;
     }
   }
@@ -1137,8 +1138,8 @@ public class CanaryTool implements Tool, Canary {
   }
 
   /**
-   * Return a CanaryTool.Sink object containing the detailed results of the canary run.
-   * The Sink may not have been created if a Monitor thread is not yet running.
+   * Return a CanaryTool.Sink object containing the detailed results of the canary run. The Sink may
+   * not have been created if a Monitor thread is not yet running.
    * @return the active Sink if one exists, null otherwise.
    */
   public Sink getActiveSink() {
