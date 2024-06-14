@@ -135,8 +135,8 @@ public class TestCanaryTool {
   }
 
   /**
-   * When CanaryTool times out, it should stop scanning and shutdown quickly and gracefully.
-   * This test helps to confirm that threadpools do not continue executing work after the canary
+   * When CanaryTool times out, it should stop scanning and shutdown quickly and gracefully. This
+   * test helps to confirm that threadpools do not continue executing work after the canary
    * finishes. It also verifies sink behavior and measures correct failure counts in the sink.
    * @throws Exception if it can't create a table, communicate with minicluster, or run the canary.
    */
@@ -146,7 +146,7 @@ public class TestCanaryTool {
     // Do not notify HMaster or META. CanaryTool will scan and receive NotServingRegionExceptions.
     final TableName tableName = TableName.valueOf(name.getMethodName());
     // Close the unused Table reference returned by createMultiRegionTable.
-    testingUtility.createMultiRegionTable(tableName, new byte[][] {FAMILY}).close();
+    testingUtility.createMultiRegionTable(tableName, new byte[][] { FAMILY }).close();
     List<RegionInfo> regions = testingUtility.getAdmin().getRegions(tableName);
     assertTrue("verify table has multiple regions", regions.size() > 1);
     HRegionServer regionserver = testingUtility.getMiniHBaseCluster().getRegionServer(0);
@@ -175,8 +175,7 @@ public class TestCanaryTool {
     assertEquals("verify canary timed out with TIMEOUT_ERROR_EXIT_CODE", 3, retCode);
     assertEquals("verify only the first region failed", 1, sink.getReadFailureCount());
     assertEquals("verify no successful reads", 0, sink.getReadSuccessCount());
-    assertEquals("verify we were attempting to scan all regions",
-      regions.size(),
+    assertEquals("verify we were attempting to scan all regions", regions.size(),
       ((CanaryTool.RegionStdOutSink) sink).getTotalExpectedRegions());
   }
 
