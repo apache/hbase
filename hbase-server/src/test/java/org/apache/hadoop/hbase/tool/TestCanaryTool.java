@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -150,7 +151,7 @@ public class TestCanaryTool {
     assertTrue("verify table has multiple regions", regions.size() > 1);
     HRegionServer regionserver = testingUtility.getMiniHBaseCluster().getRegionServer(0);
     for (RegionInfo region : regions) {
-      closeRegion(testingUtility, regionserver, region);
+      closeRegion(testingUtility, regionserver, new HRegionInfo(region));
     }
 
     // Run CanaryTool with 1 thread. This thread will attempt to scan the first region.
