@@ -41,7 +41,7 @@
   <version>${revision}</version>
   <packaging>pom</packaging>
   <name>Apache HBase</name>
-  <description>Apache HBase is the Hadoop database. Use it when you need
+  <description>Apache HBase® is the Hadoop database. Use it when you need
     random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
     of commodity hardware.</description>
@@ -2259,6 +2259,30 @@
               <failIfNoMatch>false</failIfNoMatch>
             </configuration>
           </execution>
+          <execution>
+            <id>set-current-year</id>
+            <goals>
+              <goal>timestamp-property</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <name>current.year</name>
+              <pattern>yyyy</pattern>
+              <unit>year</unit>
+            </configuration>
+          </execution>
+          <execution>
+            <id>set-current-date</id>
+            <goals>
+              <goal>timestamp-property</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <name>current.date</name>
+              <pattern>yyyy-MM-dd</pattern>
+              <unit>day</unit>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -3028,7 +3052,7 @@
               <destDir>devapidocs</destDir>
               <name>Developer API</name>
               <description>The full HBase API, including private and unstable APIs</description>
-              <doctitle>Apache HBase™ ${project.version} API</doctitle>
+              <doctitle>Apache HBase® ${project.version} API</doctitle>
               <sourceFileExcludes>
                 <exclude>**/generated/*</exclude>
                 <exclude>**/protobuf/*</exclude>
@@ -3079,7 +3103,7 @@
               <destDir>testdevapidocs</destDir>
               <name>Test Developer API</name>
               <description>The full HBase API test code, including private and unstable APIs</description>
-              <testDoctitle>Apache HBase™ ${project.version} Test API</testDoctitle>
+              <testDoctitle>Apache HBase® ${project.version} Test API</testDoctitle>
               <sourceFileExcludes>
                 <exclude>**/generated/*</exclude>
                 <exclude>**/protobuf/*</exclude>
@@ -3139,7 +3163,7 @@
               <destDir>apidocs</destDir>
               <name>User API</name>
               <description>The HBase Application Programmer's API</description>
-              <doctitle>Apache HBase™ ${project.version} API</doctitle>
+              <doctitle>Apache HBase® ${project.version} API</doctitle>
               <excludePackageNames>org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:*.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.metrics2*:org.apache.hadoop.hbase.io.compress*</excludePackageNames>
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
@@ -3197,7 +3221,7 @@
               <destDir>testapidocs</destDir>
               <name>Test User API</name>
               <description>The HBase Application Programmer's API test code</description>
-              <testDoctitle>Apache HBase™ ${project.version} Test API</testDoctitle>
+              <testDoctitle>Apache HBase® ${project.version} Test API</testDoctitle>
               <excludePackageNames>org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:*.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.metrics2*:org.apache.hadoop.hbase.io.compress*</excludePackageNames>
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
