@@ -119,11 +119,6 @@ public class SwitchRpcThrottleProcedure
   }
 
   @Override
-  protected SwitchRpcThrottleState getCurrentState() {
-    return super.getCurrentState();
-  }
-
-  @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     serializer.serialize(
