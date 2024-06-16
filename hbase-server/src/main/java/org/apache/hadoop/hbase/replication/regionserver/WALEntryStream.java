@@ -219,6 +219,7 @@ class WALEntryStream implements Closeable {
             // we will read from the beginning so we should always clear the compression context
             reader.resetTo(-1, true);
           }
+          return HasNext.YES;
         } catch (IOException e) {
           LOG.warn("Failed to reset reader {} to pos {}, reset compression={}", currentPath,
             currentPositionOfEntry, state.resetCompression(), e);
