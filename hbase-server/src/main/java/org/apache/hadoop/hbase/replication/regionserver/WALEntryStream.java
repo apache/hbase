@@ -220,7 +220,6 @@ class WALEntryStream implements Closeable {
             // we will read from the beginning so we should always clear the compression context
             reader.resetTo(-1, true);
           }
-          return HasNext.YES;
         } catch (FileNotFoundException e) {
           // For now, this could happen only when reading meta wal for meta replicas.
           // In this case, raising UncheckedIOException will let the endpoint deal with resetting
