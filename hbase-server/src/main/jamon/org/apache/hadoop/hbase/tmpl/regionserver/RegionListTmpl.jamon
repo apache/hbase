@@ -38,6 +38,7 @@
         org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
         org.apache.hadoop.hbase.client.RegionReplicaUtil;
         org.apache.hadoop.hbase.regionserver.MetricsRegionWrapper;
+        org.apache.hadoop.util.StringUtils;
         org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 </%import>
 <%if (onlineRegions != null && onlineRegions.size() > 0) %>
@@ -172,6 +173,7 @@
             <th>Bloom Size</th>
             <th>Data Locality</th>
             <th>Len Of Biggest Cell</th>
+            <th>% Cached</th>
         </tr>
     </thead>
 
@@ -237,6 +239,7 @@
             <td><% bloomSizeStr %></td>
             <td><% load.getDataLocality() %></td>
             <td><% String.format("%,1d", lenOfBiggestCellInRegion) %></td>
+            <td><% StringUtils.formatPercent(load.getCurrentRegionCachedRatio(), 2) %></td>
             </%if>
         </tr>
         </%for>

@@ -233,6 +233,10 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
         this.regionWrapper.getNumReferenceFiles());
       mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
         MetricsRegionServerSource.STOREFILE_SIZE_DESC), this.regionWrapper.getStoreFileSize());
+      mrb.addGauge(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.CURRENT_REGION_CACHE_RATIO,
+          MetricsRegionServerSource.CURRENT_REGION_CACHE_RATIO_DESC),
+        this.regionWrapper.getCurrentRegionCacheRatio());
       mrb.addCounter(
         Interns.info(regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
           MetricsRegionSource.COMPACTIONS_COMPLETED_DESC),

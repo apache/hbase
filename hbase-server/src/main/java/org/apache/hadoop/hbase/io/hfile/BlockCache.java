@@ -154,18 +154,13 @@ public interface BlockCache extends Iterable<CachedBlock> {
   /**
    * Notifies the cache implementation that the given file has been fully cached (all its blocks
    * made into the cache).
-   * @param fileName the file that has been completely cached.
+   * @param fileName        the file that has been completely cached.
+   * @param totalBlockCount the total of blocks cached for this file.
+   * @param dataBlockCount  number of DATA block type cached.
+   * @param size            the size, in bytes, cached.
    */
   default void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
     long size) {
-    // noop
-  }
-
-  /**
-   * Notifies the cache implementation that the given file had a block evicted
-   * @param fileName the file had a block evicted.
-   */
-  default void notifyFileBlockEvicted(String fileName) {
     // noop
   }
 
@@ -228,6 +223,16 @@ public interface BlockCache extends Iterable<CachedBlock> {
    *         contains a map of all files that have been fully cached.
    */
   default Optional<Map<String, Pair<String, Long>>> getFullyCachedFiles() {
+    return Optional.empty();
+  }
+
+  /**
+   * Returns an Optional containing a map of regions and the percentage of how much of it has been
+   * cached so far.
+   * @return empty optional if this method is not supported, otherwise the returned optional
+   *         contains a map of current regions caching percentage.
+   */
+  default Optional<Map<String, Long>> getRegionCachedInfo() {
     return Optional.empty();
   }
 }
