@@ -168,6 +168,15 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     BYTES_COPIED
   }
 
+  /**
+   * Indicates the checksum comparison result.
+   */
+  public enum ChecksumComparison {
+    TRUE, // checksum comparison is compatible and true.
+    FALSE, // checksum comparison is compatible and false.
+    INCOMPATIBLE, // checksum comparison is not compatible.
+  }
+
   private static class ExportMapper
     extends Mapper<BytesWritable, NullWritable, NullWritable, NullWritable> {
     private static final Logger LOG = LoggerFactory.getLogger(ExportMapper.class);
@@ -533,6 +542,9 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       }
     }
 
+    /**
+     * Utility to compare the file length and checksums for the paths specified.
+     */
     private void verifyCopyResult(final FileStatus inputStat, final FileStatus outputStat)
       throws IOException {
       long inputLen = inputStat.getLen();
@@ -547,18 +559,62 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
       // If length==0, we will skip checksum
       if (inputLen != 0 && verifyChecksum) {
-        FileChecksum inChecksum = getFileChecksum(inputFs, inputPath);
-        if (inChecksum == null) {
-          LOG.warn("Input file " + inputPath + " checksums are not available");
-        }
-        FileChecksum outChecksum = getFileChecksum(outputFs, outputPath);
-        if (outChecksum == null) {
-          LOG.warn("Output file " + outputPath + " checksums are not available");
-        }
-        if (inChecksum != null && outChecksum != null && !inChecksum.equals(outChecksum)) {
-          throw new IOException("Checksum mismatch between " + inputPath + " and " + outputPath);
+        FileChecksum inChecksum = getFileChecksum(inputFs, inputStat.getPath());
+        FileChecksum outChecksum = getFileChecksum(outputFs, outputStat.getPath());
+
+        ChecksumComparison checksumComparison = verifyChecksum(inChecksum, outChecksum);
+        if (!checksumComparison.equals(ChecksumComparison.TRUE)) {
+          StringBuilder errMessage = new StringBuilder("Checksum mismatch between ")
+            .append(inputPath).append(" and ").append(outputPath).append(".");
+
+          boolean addSkipHint = false;
+          String inputScheme = inputFs.getScheme();
+          String outputScheme = outputFs.getScheme();
+          if (!inputScheme.equals(outputScheme)) {
+            errMessage.append(" Input and output filesystems are of different types.\n")
+              .append("Their checksum algorithms may be incompatible.");
+            addSkipHint = true;
+          } else if (inputStat.getBlockSize() != outputStat.getBlockSize()) {
+            errMessage.append(" Input and output differ in block-size.");
+            addSkipHint = true;
+          } else if (
+            inChecksum != null && outChecksum != null
+              && !inChecksum.getAlgorithmName().equals(outChecksum.getAlgorithmName())
+          ) {
+            errMessage.append(" Input and output checksum algorithms are of different types.");
+            addSkipHint = true;
+          }
+          if (addSkipHint) {
+            errMessage
+              .append(" You can choose file-level checksum validation via "
+                + "-Ddfs.checksum.combine.mode=COMPOSITE_CRC when block-sizes"
+                + " or filesystems are different.")
+              .append(" Or you can skip checksum-checks altogether with --no-checksum-verify.\n")
+              .append(" (NOTE: By skipping checksums, one runs the risk of "
+                + "masking data-corruption during file-transfer.)\n");
+          }
+          throw new IOException(errMessage.toString());
         }
       }
+    }
+
+    /**
+     * Utility to compare checksums
+     */
+    private ChecksumComparison verifyChecksum(final FileChecksum inChecksum,
+      final FileChecksum outChecksum) {
+      // If the input or output checksum is null, or the algorithms of input and output are not
+      // equal, that means there is no comparison
+      // and return not compatible. else if matched, return compatible with the matched result.
+      if (
+        inChecksum == null || outChecksum == null
+          || !inChecksum.getAlgorithmName().equals(outChecksum.getAlgorithmName())
+      ) {
+        return ChecksumComparison.INCOMPATIBLE;
+      } else if (inChecksum.equals(outChecksum)) {
+        return ChecksumComparison.TRUE;
+      }
+      return ChecksumComparison.FALSE;
     }
 
     /**
