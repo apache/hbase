@@ -63,6 +63,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -115,7 +116,7 @@ public class Client {
 
   private void initialize(Cluster cluster, Configuration conf, boolean sslEnabled, boolean sticky,
     Optional<KeyStore> trustStore, Optional<String> userName, Optional<String> password,
-    Optional<String> bearerToken) {
+    Optional<String> bearerToken, Optional<HttpClientConnectionManager> connManager) {
     this.cluster = cluster;
     this.conf = conf;
     this.sslEnabled = sslEnabled;
@@ -178,6 +179,10 @@ public class Client {
       extraHeaders.put(HttpHeaders.AUTHORIZATION, "Bearer " + bearerToken.get());
     }
 
+    if (connManager.isPresent()) {
+      httpClientBuilder.setConnectionManager(connManager.get());
+    }
+
     this.httpClient = httpClientBuilder.build();
     setSticky(sticky);
   }
@@ -201,7 +206,7 @@ public class Client {
    */
   public Client(Cluster cluster, boolean sslEnabled) {
     initialize(cluster, HBaseConfiguration.create(), sslEnabled, false, Optional.empty(),
-      Optional.empty(), Optional.empty(), Optional.empty());
+      Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
   }
 
   /**
@@ -214,7 +219,7 @@ public class Client {
    */
   public Client(Cluster cluster, Configuration conf, boolean sslEnabled) {
     initialize(cluster, conf, sslEnabled, false, Optional.empty(), Optional.empty(),
-      Optional.empty(), Optional.empty());
+      Optional.empty(), Optional.empty(), Optional.empty());
   }
 
   /**
@@ -238,7 +243,11 @@ public class Client {
    * or BEARER authentication in sticky mode, which does not use the old faulty load balancing
    * logic, and enables correct session handling. If neither userName/password, nor the bearer token
    * is specified, the client falls back to SPNEGO auth. The loadTrustsore static method can be used
-   * to load a local trustStore file. This is the preferred constructor to use.
+   * to load a local TrustStore file. If connManager is specified, it must be fully configured. Even
+   * then, the TrustStore related parameters must be specified because they are also used for SPNEGO
+   * authentication which uses a separate HTTP client implementation. Specifying the
+   * HttpClientConnectionManager is an experimental feature. It exposes the internal HTTP library
+   * details, and may be changed/removed when the library is updated or replaced.
    * @param cluster     the cluster definition
    * @param conf        HBase/Hadoop configuration
    * @param sslEnabled  use HTTPS
@@ -247,10 +256,19 @@ public class Client {
    * @param password    for BASIC auth
    * @param bearerToken for BEAERER auth
    */
+  @InterfaceAudience.Private
+  public Client(Cluster cluster, Configuration conf, boolean sslEnabled,
+    Optional<KeyStore> trustStore, Optional<String> userName, Optional<String> password,
+    Optional<String> bearerToken, Optional<HttpClientConnectionManager> connManager) {
+    initialize(cluster, conf, sslEnabled, true, trustStore, userName, password, bearerToken,
+      connManager);
+  }
+
   public Client(Cluster cluster, Configuration conf, boolean sslEnabled,
     Optional<KeyStore> trustStore, Optional<String> userName, Optional<String> password,
     Optional<String> bearerToken) {
-    initialize(cluster, conf, sslEnabled, true, trustStore, userName, password, bearerToken);
+    initialize(cluster, conf, sslEnabled, true, trustStore, userName, password, bearerToken,
+      Optional.empty());
   }
 
   /**
@@ -269,7 +287,7 @@ public class Client {
     Optional<String> trustStorePassword, Optional<String> trustStoreType) {
     KeyStore trustStore = loadTruststore(trustStorePath, trustStorePassword, trustStoreType);
     initialize(cluster, conf, true, false, Optional.of(trustStore), Optional.empty(),
-      Optional.empty(), Optional.empty());
+      Optional.empty(), Optional.empty(), Optional.empty());
   }
 
   /**
@@ -969,5 +987,19 @@ public class Client {
     public ClientTrustStoreInitializationException(String message, Throwable cause) {
       super(message, cause);
     }
+  }
+
+  public void close() {
+    try {
+      // We may not have set an explicit connection manager, so we need to use this.
+      httpClient.getConnectionManager().shutdown();
+    } catch (Exception e) {
+      LOG.info("Exception while shutting down connection manager", e);
+    }
+  }
+
+  @Override
+  public void finalize() {
+    close();
   }
 }
