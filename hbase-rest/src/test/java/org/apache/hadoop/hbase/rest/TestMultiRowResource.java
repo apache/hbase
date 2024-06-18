@@ -220,6 +220,17 @@ public class TestMultiRowResource {
   }
 
   @Test
+  public void testMultiCellGetNoKeys() throws IOException {
+    StringBuilder path = new StringBuilder();
+    path.append("/");
+    path.append(TABLE);
+    path.append("/multiget");
+
+    Response response = client.get(path.toString(), Constants.MIMETYPE_XML);
+    assertEquals(404, response.getCode());
+  }
+
+  @Test
   public void testMultiCellGetXML() throws IOException {
     String row_5_url = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String row_6_url = "/" + TABLE + "/" + ROW_2 + "/" + COLUMN_2;
