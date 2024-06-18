@@ -98,19 +98,21 @@ public class MultiRowResource extends ResourceBase implements Constants {
         parsedParamFilter = pf.parseFilterString(filterBytes);
       }
       List<RowSpec> rowSpecs = new ArrayList<>();
-      for (String rk : params.get(ROW_KEYS_PARAM_NAME)) {
-        RowSpec rowSpec = new RowSpec(rk, keyEncoding);
+      if (params.containsKey(ROW_KEYS_PARAM_NAME)) {
+        for (String rk : params.get(ROW_KEYS_PARAM_NAME)) {
+          RowSpec rowSpec = new RowSpec(rk, keyEncoding);
 
-        if (this.versions != null) {
-          rowSpec.setMaxVersions(this.versions);
-        }
-
-        if (this.columns != null) {
-          for (int i = 0; i < this.columns.length; i++) {
-            rowSpec.addColumn(Bytes.toBytes(this.columns[i]));
+          if (this.versions != null) {
+            rowSpec.setMaxVersions(this.versions);
           }
+
+          if (this.columns != null) {
+            for (int i = 0; i < this.columns.length; i++) {
+              rowSpec.addColumn(Bytes.toBytes(this.columns[i]));
+            }
+          }
+          rowSpecs.add(rowSpec);
         }
-        rowSpecs.add(rowSpec);
       }
 
       MultiRowResultReader reader = new MultiRowResultReader(this.tableResource.getName(), rowSpecs,
