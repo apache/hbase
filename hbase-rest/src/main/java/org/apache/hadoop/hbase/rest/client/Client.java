@@ -179,9 +179,7 @@ public class Client {
       extraHeaders.put(HttpHeaders.AUTHORIZATION, "Bearer " + bearerToken.get());
     }
 
-    if (connManager.isPresent()) {
-      httpClientBuilder.setConnectionManager(connManager.get());
-    }
+    connManager.ifPresent(httpClientBuilder::setConnectionManager);
 
     this.httpClient = httpClientBuilder.build();
     setSticky(sticky);
