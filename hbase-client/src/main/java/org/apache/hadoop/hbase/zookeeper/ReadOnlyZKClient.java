@@ -83,11 +83,6 @@ public final class ReadOnlyZKClient implements Closeable {
 
   private final int keepAliveTimeMs;
 
-  public static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
-    new ThreadFactoryBuilder().setNameFormat("Read-Only-ZKClient-Retry-Timer-pool-%d").setDaemon(true)
-      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
-    1, TimeUnit.MILLISECONDS);
-
   private final ZKClientConfig zkClientConfig;
 
 
@@ -271,25 +266,19 @@ public final class ReadOnlyZKClient implements Closeable {
     }
   }
 
-  public CompletableFuture<byte[]> getWithTimeout(String path, long endTime) {
+  public CompletableFuture<byte[]> getWithTimeout(String path, long endTime, HashedWheelTimer retryTimer) {
     CompletableFuture<byte[]> future = get(path);
     TimerTask timerTask = new TimerTask() {
       @Override
       public void run(Timeout timeout) throws Exception {
-        if (EnvironmentEdgeManager.currentTime() > endTime) {
-          if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
-            future.completeExceptionally(
-              new DoNotRetryIOException("Zookeeper get could not be completed by " + endTime));
-          }
-        } else {
-          if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
-            RETRY_TIMER.newTimeout(this, 1, TimeUnit.MILLISECONDS);
-          }
+        if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
+          future.completeExceptionally(
+            new DoNotRetryIOException("Zookeeper get could not be completed by " + endTime));
         }
       }
     };
 
-    RETRY_TIMER.newTimeout(timerTask, 1, TimeUnit.MILLISECONDS);
+    retryTimer.newTimeout(timerTask, endTime + 1, TimeUnit.MILLISECONDS);
     return future;
   }
 
@@ -309,25 +298,18 @@ public final class ReadOnlyZKClient implements Closeable {
     return future;
   }
 
-  public CompletableFuture<Stat> existsWithTimeout(String path, int endTime) {
+  public CompletableFuture<Stat> existsWithTimeout(String path, long endTime, HashedWheelTimer retryTimer) {
     CompletableFuture<Stat> future = exists(path);
     TimerTask timerTask = new TimerTask() {
       @Override
       public void run(Timeout timeout) throws Exception {
-        if (EnvironmentEdgeManager.currentTime() > endTime) {
           if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
             future.completeExceptionally(
               new DoNotRetryIOException("Zookeeper get could not be completed by " + endTime));
           }
-        } else {
-          if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
-            RETRY_TIMER.newTimeout(this, 1, TimeUnit.MILLISECONDS);
-          }
-        }
       }
     };
-
-    RETRY_TIMER.newTimeout(timerTask, 1, TimeUnit.MILLISECONDS);
+    retryTimer.newTimeout(timerTask, endTime + 1, TimeUnit.MILLISECONDS);
     return future;
   }
 
@@ -346,25 +328,19 @@ public final class ReadOnlyZKClient implements Closeable {
     return future;
   }
 
-  public CompletableFuture<List<String>> listWithTimeout(String path, long endTime) {
+  public CompletableFuture<List<String>> listWithTimeout(String path, long endTime, HashedWheelTimer retryTimer) {
     CompletableFuture<List<String>> future = list(path);
     TimerTask timerTask = new TimerTask() {
       @Override
       public void run(Timeout timeout) throws Exception {
-        if (EnvironmentEdgeManager.currentTime() > endTime) {
           if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
             future.completeExceptionally(
               new DoNotRetryIOException("Zookeeper get could not be completed by " + endTime));
           }
-        } else {
-          if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
-            RETRY_TIMER.newTimeout(this, 1, TimeUnit.MILLISECONDS);
-          }
-        }
       }
     };
 
-    RETRY_TIMER.newTimeout(timerTask, 1, TimeUnit.MILLISECONDS);
+    retryTimer.newTimeout(timerTask, endTime + 1, TimeUnit.MILLISECONDS);
     return future;
   }
 

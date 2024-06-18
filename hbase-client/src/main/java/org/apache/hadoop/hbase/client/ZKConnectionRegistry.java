@@ -75,12 +75,8 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   private final ZNodePaths znodePaths;
   private final Configuration conf;
 
-  public static final String EXPECTED_TIMEOUT = "expected.timeout";
-  public static final int DEFAULT_EXPECTED_TIMEOUT = 200000;
-  public static final String MAX_ATTEMPTS = "max.attempts";
-  public static final int DEFAULT_MAX_ATTEMPTS = 5;
-  public static final String PAUSE_NS = "pause.ns";
-  public static final long DEFAULT_PAUSE_NS = 100000;
+  public static final String ZK_REGISTRY_ASYNC_GET_TIMEOUT = "zookeeper.registry.async.get.timeout";
+  public static final int DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT = 60000; // 1 min
 
 
   // User not used, but for rpc based registry we need it
@@ -110,48 +106,20 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   private <T> CompletableFuture<T> getAndConvert(String path, Converter<T> converter) {
     CompletableFuture<T> future = new CompletableFuture<>();
-      TimerTask pollingTask = new TimerTask() {
-        int tries = 0;
-        long startTime = EnvironmentEdgeManager.currentTime();
-        long endTime = startTime + conf.getInt(EXPECTED_TIMEOUT, DEFAULT_EXPECTED_TIMEOUT);
-        long maxPauseTime =
-          conf.getInt(EXPECTED_TIMEOUT, DEFAULT_EXPECTED_TIMEOUT) /
-            conf.getInt(MAX_ATTEMPTS, DEFAULT_MAX_ATTEMPTS);;
-
-
-        @Override
-        public void run(Timeout timeout) throws Exception {
-          if (EnvironmentEdgeManager.currentTime() < endTime) {
-            addListener(zk.getWithTimeout(path, endTime), (data, error) -> {
-              if (error != null) {
-                future.completeExceptionally(error);
-                return;
-              }
-              if (data != null  && data.length > 0) {
-                try {
-                  future.complete(converter.convert(data));
-                } catch (Exception e) {
-                  future.completeExceptionally(e);
-                }
-              } else {
-                // retry again after pauseTime.
-                long pauseTime =
-                  ConnectionUtils.getPauseTime(TimeUnit.NANOSECONDS
-                      .toMillis(conf.getLong(PAUSE_NS, DEFAULT_PAUSE_NS)), ++tries);
-                pauseTime = Math.min(pauseTime, maxPauseTime);
-                AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, pauseTime,
-                  TimeUnit.MICROSECONDS);
-              }
-            });
-          } else {
-            future.completeExceptionally(new TimeoutException("Procedure wasn't completed in "
-              + "expectedTime:" + conf.getInt(EXPECTED_TIMEOUT, DEFAULT_EXPECTED_TIMEOUT) + " ms"));
-          }
+    addListener(zk.getWithTimeout(path,
+        conf.getInt(ZK_REGISTRY_ASYNC_GET_TIMEOUT, DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT),
+        AsyncConnectionImpl.RETRY_TIMER),
+      (data, error) -> {
+        if (error != null) {
+          future.completeExceptionally(error);
+          return;
         }
-      };
-      // Queue the polling task into RETRY_TIMER to poll procedure state asynchronously.
-      AsyncConnectionImpl.RETRY_TIMER.newTimeout(pollingTask, 1, TimeUnit.MILLISECONDS);
-
+        try {
+          future.complete(converter.convert(data));
+        } catch (Exception e) {
+          future.completeExceptionally(e);
+        }
+      });
     return future;
   }
 
@@ -267,45 +235,18 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
     return tracedFuture(() -> {
       CompletableFuture<RegionLocations> future = new CompletableFuture<>();
-      TimerTask pollingTask = new TimerTask() {
-        int tries = 0;
-        long startTime = EnvironmentEdgeManager.currentTime();
-        long endTime = startTime + conf.getInt(EXPECTED_TIMEOUT, DEFAULT_EXPECTED_TIMEOUT);
-        long maxPauseTime = conf.getInt(EXPECTED_TIMEOUT, DEFAULT_EXPECTED_TIMEOUT) /
-          conf.getInt(MAX_ATTEMPTS, DEFAULT_MAX_ATTEMPTS);
-
-        @Override
-        public void run(Timeout timeout) throws Exception {
-          if (EnvironmentEdgeManager.currentTime() < endTime) {
-            addListener(
-              zk.listWithTimeout(znodePaths.baseZNode, endTime).thenApply(children -> children.stream()
-                .filter(c -> getZNodePaths().isMetaZNodePrefix(c)).collect(Collectors.toList())),
-              (metaReplicaZNodes, error) -> {
-              if (error != null) {
-                future.completeExceptionally(error);
-                return;
-              }
-              if (metaReplicaZNodes != null && !metaReplicaZNodes.isEmpty()) {
-                getMetaRegionLocation(future, metaReplicaZNodes);
-              } else {
-                // retry again after pauseTime.
-                long pauseTime =
-                  ConnectionUtils.getPauseTime(TimeUnit.NANOSECONDS
-                    .toMillis(conf.getLong(PAUSE_NS, DEFAULT_PAUSE_NS)), ++tries);
-                pauseTime = Math.min(pauseTime, maxPauseTime);
-                AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, pauseTime,
-                  TimeUnit.MICROSECONDS);
-              }
-            });
-          } else {
-            future.completeExceptionally(new TimeoutException("Procedure wasn't completed in "
-            + "expectedTime:" + conf.getInt(EXPECTED_TIMEOUT, DEFAULT_EXPECTED_TIMEOUT) + " ms"));
+      addListener(
+        zk.listWithTimeout(znodePaths.baseZNode,
+          conf.getInt(ZK_REGISTRY_ASYNC_GET_TIMEOUT, DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT),
+          AsyncConnectionImpl.RETRY_TIMER).thenApply(children -> children.stream()
+          .filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
+        (metaReplicaZNodes, error) -> {
+          if (error != null) {
+            future.completeExceptionally(error);
+            return;
           }
-        }
-      };
-      // Queue the polling task into RETRY_TIMER to poll procedure state asynchronously.
-      AsyncConnectionImpl.RETRY_TIMER.newTimeout(pollingTask, 1, TimeUnit.MILLISECONDS);
-
+          getMetaRegionLocation(future, metaReplicaZNodes);
+        });
       return future;
     }, "ZKConnectionRegistry.getMetaRegionLocations");
   }
