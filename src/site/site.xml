@@ -33,9 +33,9 @@
          my end-user's GAV for ease of releasing this to maven central
          until the upstream update happens and is released.
          See HBASE-14785 and HBASE-21005 for more info. -->
-    <groupId>com.github.joshelser</groupId>
+    <groupId>org.apache.maven.skins</groupId>
     <artifactId>maven-fluido-skin</artifactId>
-    <version>1.7.1-HBase</version>
+    <version>1.12.0</version>
   </skin>
   <custom>
     <fluidoSkin>
@@ -50,6 +50,11 @@
       <sourceLineNumbersEnabled>false</sourceLineNumbersEnabled>
       <skipGenerationDate>true</skipGenerationDate>
       <breadcrumbDivider>»</breadcrumbDivider>
+      <gitHub>
+        <projectId>apache/hbase</projectId>
+        <ribbonOrientation>right</ribbonOrientation>
+        <ribbonColor>red</ribbonColor>
+      </gitHub>
     </fluidoSkin>
   </custom>
   <bannerLeft>
@@ -67,7 +72,7 @@
     <src>images/hbase_logo_with_orca_large.png</src>
     <href>http://hbase.apache.org/</href>
   </bannerRight>
-  <publishDate position="bottom"/>
+  <publishDate position="none"/>
   <version position="none"/>
   <body>
     <head>
@@ -152,5 +157,17 @@
       <item name="How Apache Works" href="http://www.apache.org/foundation/how-it-works.html" target="_blank" />
       <item name="Sponsoring Apache" href="http://www.apache.org/foundation/sponsorship.html" target="_blank" />
     </menu>
-    </body>
+    <footer>
+      <![CDATA[
+      <div style="float: left">
+        Copyright ©2007–${current.year} <a href="https://www.apache.org">The Apache Software Foundation</a>. All rights reserved.<br>
+        Apache HBase, HBase, Apache, the Apache HBase logo and the ASF logo are either registered trademarks or trademarks of the Apache Software Foundation.
+        All other marks mentioned may be trademarks or registered trademarks of their respective owners.
+      </div>
+      <div style="float: right">
+        Last Published: ${current.date}
+      </div>
+      ]]>
+    </footer>
+  </body>
 </project>
