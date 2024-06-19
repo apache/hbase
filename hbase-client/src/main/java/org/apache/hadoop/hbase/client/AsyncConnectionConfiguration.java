@@ -149,10 +149,11 @@ class AsyncConnectionConfiguration {
   private final int maxKeyValueSize;
 
   AsyncConnectionConfiguration(Configuration conf) {
-    this.metaOperationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
-      conf.getLong(HBASE_CLIENT_META_OPERATION_TIMEOUT, DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT));
-    this.operationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
-      conf.getLong(HBASE_CLIENT_OPERATION_TIMEOUT, DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT));
+    long operationTimeoutMs =
+      conf.getLong(HBASE_CLIENT_OPERATION_TIMEOUT, DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+    this.operationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(operationTimeoutMs);
+    this.metaOperationTimeoutNs = TimeUnit.MILLISECONDS
+      .toNanos(conf.getLong(HBASE_CLIENT_META_OPERATION_TIMEOUT, operationTimeoutMs));
     long rpcTimeoutMs = conf.getLong(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT);
     this.rpcTimeoutNs = TimeUnit.MILLISECONDS.toNanos(rpcTimeoutMs);
     long readRpcTimeoutMillis = conf.getLong(HBASE_RPC_READ_TIMEOUT_KEY, rpcTimeoutMs);
