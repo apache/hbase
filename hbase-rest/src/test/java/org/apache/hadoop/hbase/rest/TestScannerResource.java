@@ -387,4 +387,9 @@ public class TestScannerResource {
     assertTrue("got " + response.getCode(), response.getCode() == 410);
   }
 
+  @Test
+  public void deleteNonExistent() throws IOException {
+    Response response = client.delete("/" + TABLE + "/scanner/NONEXISTENT_SCAN");
+    assertEquals(404, response.getCode());
+  }
 }
