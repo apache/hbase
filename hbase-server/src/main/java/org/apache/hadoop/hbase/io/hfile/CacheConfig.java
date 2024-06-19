@@ -73,6 +73,8 @@ public class CacheConfig implements PropagatingConfigurationObserver {
    */
   public static final String EVICT_BLOCKS_ON_CLOSE_KEY = "hbase.rs.evictblocksonclose";
 
+  public static final String EVICT_BLOCKS_ON_SPLIT_KEY = "hbase.rs.evictblocksonsplit";
+
   /**
    * Configuration key to prefetch all blocks of a given file into the block cache when the file is
    * opened.
@@ -108,6 +110,7 @@ public class CacheConfig implements PropagatingConfigurationObserver {
   public static final boolean DEFAULT_CACHE_INDEXES_ON_WRITE = false;
   public static final boolean DEFAULT_CACHE_BLOOMS_ON_WRITE = false;
   public static final boolean DEFAULT_EVICT_ON_CLOSE = false;
+  public static final boolean DEFAULT_EVICT_ON_SPLIT = true;
   public static final boolean DEFAULT_CACHE_DATA_COMPRESSED = false;
   public static final boolean DEFAULT_PREFETCH_ON_OPEN = false;
   public static final boolean DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE = false;
