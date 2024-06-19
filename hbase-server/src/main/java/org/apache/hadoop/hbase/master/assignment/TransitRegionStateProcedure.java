@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_EVICT_ON_CLOSE;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_EVICT_ON_SPLIT;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_CLOSE_KEY;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_SPLIT_KEY;
 import static org.apache.hadoop.hbase.master.LoadBalancer.BOGUS_SERVER_NAME;
 import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.FORCE_REGION_RETAINMENT;
 
@@ -369,12 +371,15 @@ public class TransitRegionStateProcedure
     }
   }
 
-  private void closeRegionAfterUpdatingMeta(RegionStateNode regionNode) {
-    CloseRegionProcedure closeProc = isSplit
-      ? new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(), assignCandidate,
-        true)
-      : new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(), assignCandidate,
-        evictCache);
+  private void closeRegionAfterUpdatingMeta(MasterProcedureEnv env, RegionStateNode regionNode) {
+    CloseRegionProcedure closeProc =
+      isSplit
+        ? new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(),
+          assignCandidate,
+          env.getMasterConfiguration().getBoolean(EVICT_BLOCKS_ON_SPLIT_KEY,
+            DEFAULT_EVICT_ON_SPLIT))
+        : new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(),
+          assignCandidate, evictCache);
     addChildProcedure(closeProc);
     setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED);
   }
@@ -383,7 +388,7 @@ public class TransitRegionStateProcedure
     throws IOException, ProcedureSuspendedException {
     if (
       ProcedureFutureUtil.checkFuture(this, this::getFuture, this::setFuture,
-        () -> closeRegionAfterUpdatingMeta(regionNode))
+        () -> closeRegionAfterUpdatingMeta(env, regionNode))
     ) {
       return;
     }
@@ -391,7 +396,7 @@ public class TransitRegionStateProcedure
       // this is the normal case
       ProcedureFutureUtil.suspendIfNecessary(this, this::setFuture,
         env.getAssignmentManager().regionClosing(regionNode), env,
-        () -> closeRegionAfterUpdatingMeta(regionNode));
+        () -> closeRegionAfterUpdatingMeta(env, regionNode));
     } else {
       forceNewPlan = true;
       regionNode.setRegionLocation(null);

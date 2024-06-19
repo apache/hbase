@@ -68,7 +68,7 @@ public class StoreFileReader {
   protected BloomFilter deleteFamilyBloomFilter = null;
   private BloomFilterMetrics bloomFilterMetrics = null;
   protected BloomType bloomFilterType;
-  private final HFile.Reader reader;
+  protected final HFile.Reader reader;
   protected long sequenceID = -1;
   protected TimeRange timeRange = null;
   private byte[] lastBloomKey;
