@@ -235,4 +235,15 @@ public interface BlockCache extends Iterable<CachedBlock> {
   default Optional<Map<String, Long>> getRegionCachedInfo() {
     return Optional.empty();
   }
+
+  /**
+   * Evict all blocks for the given file name between the passed offset values.
+   * @param hfileName  The file for which blocks should be evicted.
+   * @param initOffset the initial offset for the range of blocks to be evicted.
+   * @param endOffset  the end offset for the range of blocks to be evicted.
+   * @return number of blocks evicted.
+   */
+  default int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
+    return 0;
+  }
 }
