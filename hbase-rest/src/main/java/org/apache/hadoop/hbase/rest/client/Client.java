@@ -996,8 +996,4 @@ public class Client {
     }
   }
 
-  @Override
-  protected void finalize() {
-    close();
-  }
 }
