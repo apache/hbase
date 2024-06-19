@@ -161,6 +161,11 @@ public class ScannerInstanceResource extends ResourceBase {
     }
     servlet.getMetrics().incrementRequests(1);
     try {
+      if (generator == null) {
+        servlet.getMetrics().incrementFailedGetRequests(1);
+        return Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
+          .entity("Not found" + CRLF).build();
+      }
       Cell value = generator.next();
       if (value == null) {
         if (LOG.isTraceEnabled()) {
@@ -198,6 +203,11 @@ public class ScannerInstanceResource extends ResourceBase {
     if (servlet.isReadOnly()) {
       return Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT)
         .entity("Forbidden" + CRLF).build();
+    }
+    if (generator == null) {
+      servlet.getMetrics().incrementFailedDeleteRequests(1);
+      return Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
+        .entity("Not found" + CRLF).build();
     }
     if (ScannerResource.delete(id)) {
       servlet.getMetrics().incrementSucessfulDeleteRequests(1);
