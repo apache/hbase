@@ -66,6 +66,7 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.cookie.BasicClientCookie;
@@ -89,7 +90,7 @@ public class Client {
 
   private static final Logger LOG = LoggerFactory.getLogger(Client.class);
 
-  private HttpClient httpClient;
+  private CloseableHttpClient httpClient;
   private Cluster cluster;
   private Integer lastNodeId;
   private boolean sticky = false;
@@ -989,15 +990,14 @@ public class Client {
 
   public void close() {
     try {
-      // We may not have set an explicit connection manager, so we need to use this.
-      httpClient.getConnectionManager().shutdown();
+      httpClient.close();
     } catch (Exception e) {
       LOG.info("Exception while shutting down connection manager", e);
     }
   }
 
   @Override
-  public void finalize() {
+  protected void finalize() {
     close();
   }
 }
