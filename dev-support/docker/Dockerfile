@@ -43,6 +43,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
     rsync='3.2.3-*' \
     tar='1.34+dfsg-*' \
     wget='1.21.2-*' \
+# for validating xml files with xmllint
+    libxml2-dev='2.9.13+dfsg-*' \
+    libxml2-utils='2.9.13+dfsg-*' \
 # install the dependencies required in order to enable the sundry precommit
 # checks/features provided by Yetus plugins.
     bats='1.2.1-*' \

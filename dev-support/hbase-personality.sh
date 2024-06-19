@@ -890,6 +890,62 @@ function hbase_javac_logfilter
   ${GREP} -E '\[(ERROR|WARNING)\] /.*\.java:' "${input}" | sort > "${output}"
 }
 
+######################################
+
+# Override the default xml_postcompile to use xmllint instead of jrunscript because the javascript
+# engine has been removed from JDK starting from JDK15
+# https://openjdk.org/jeps/372
+function hbase_xml_postcompile
+{
+  declare repostatus=$1
+  declare i
+  declare count
+
+  if ! verify_needed_test xml; then
+    return 0
+  fi
+
+  if [[ "${repostatus}" = branch ]]; then
+    return 0
+  fi
+
+  big_console_header "XML verification: ${BUILDMODE}"
+
+  start_clock
+
+  pushd "${BASEDIR}" >/dev/null || return 1
+  for i in "${CHANGED_FILES[@]}"; do
+    if [[ ${i} =~ \.xml$ && -f ${i} ]]; then
+      if ! "xmllint" --noout "${i}" > "${PATCH_DIR}/xml.txt.tmp" 2>&1; then
+        {
+          echo ""
+          echo "${i}:"
+          echo ""
+          cat "${PATCH_DIR}/xml.txt.tmp"
+        } >> "${PATCH_DIR}/xml.txt"
+        ((count=count+1))
+        XML_FILES+=("${i}")
+      fi
+    fi
+  done
+
+  popd >/dev/null || return 1
+
+  if [[ -f "${PATCH_DIR}/xml.txt.tmp" ]]; then
+    rm "${PATCH_DIR}/xml.txt.tmp"
+  fi
+
+  if [[ ${count} -gt 0 ]]; then
+    add_vote_table -1 xml "${BUILDMODEMSG} has ${count} ill-formed XML file(s)."
+    add_footer_table xml "@@BASE@@/xml.txt"
+    populate_test_table "XML" "Parsing Error(s):" "${XML_FILES[@]}"
+    return 1
+  fi
+
+  add_vote_table +1 xml "${BUILDMODEMSG} has no ill-formed XML file."
+  return 0
+}
+
 ## This is named so that yetus will check us right after running tests.
 ## Essentially, we check for normal failures and then we look for zombies.
 #function hbase_unit_logfilter
