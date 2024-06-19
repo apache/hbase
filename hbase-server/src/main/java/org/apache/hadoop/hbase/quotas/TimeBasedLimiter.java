@@ -241,6 +241,27 @@ public class TimeBasedLimiter implements QuotaLimiter {
   }
 
   @Override
+  public long getRequestNumLimit() {
+    long readAndWriteLimit = readReqsLimiter.getLimit() + writeReqsLimiter.getLimit();
+
+    if (readAndWriteLimit < 0) { // handle overflow
+      readAndWriteLimit = Long.MAX_VALUE;
+    }
+
+    return Math.min(reqsLimiter.getLimit(), readAndWriteLimit);
+  }
+
+  @Override
+  public long getReadNumLimit() {
+    return readReqsLimiter.getLimit();
+  }
+
+  @Override
+  public long getWriteNumLimit() {
+    return writeReqsLimiter.getLimit();
+  }
+
+  @Override
   public long getReadAvailable() {
     return readSizeLimiter.getAvailable();
   }
