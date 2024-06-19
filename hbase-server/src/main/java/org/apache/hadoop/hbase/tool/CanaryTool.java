@@ -198,6 +198,10 @@ public class CanaryTool implements Tool, Canary {
     long getWriteSuccessCount();
 
     long incWriteSuccessCount();
+
+    void stop();
+
+    boolean isStopped();
   }
 
   /**
@@ -208,6 +212,7 @@ public class CanaryTool implements Tool, Canary {
         readSuccessCount = new AtomicLong(0), writeSuccessCount = new AtomicLong(0);
     private Map<String, String> readFailures = new ConcurrentHashMap<>();
     private Map<String, String> writeFailures = new ConcurrentHashMap<>();
+    private volatile boolean stopped = false;
 
     @Override
     public long getReadFailureCount() {
@@ -267,6 +272,15 @@ public class CanaryTool implements Tool, Canary {
     @Override
     public long incWriteSuccessCount() {
       return writeSuccessCount.incrementAndGet();
+    }
+
+    public void stop() {
+      stopped = true;
+    }
+
+    @Override
+    public boolean isStopped() {
+      return stopped;
     }
   }
 
@@ -444,6 +458,9 @@ public class CanaryTool implements Tool, Canary {
 
     @Override
     public Void call() throws Exception {
+      if (this.sink.isStopped()) {
+        return null;
+      }
       ZooKeeper zooKeeper = null;
       try {
         zooKeeper = new ZooKeeper(host, timeout, EmptyWatcher.instance);
@@ -498,6 +515,9 @@ public class CanaryTool implements Tool, Canary {
 
     @Override
     public Void call() {
+      if (this.sink.isStopped()) {
+        return null;
+      }
       switch (taskType) {
         case READ:
           return read();
@@ -685,6 +705,9 @@ public class CanaryTool implements Tool, Canary {
 
     @Override
     public Void call() {
+      if (this.sink.isStopped()) {
+        return null;
+      }
       TableName tableName = null;
       Table table = null;
       Get get = null;
@@ -1075,6 +1098,7 @@ public class CanaryTool implements Tool, Canary {
             if (currentTimeLength > timeout) {
               LOG.error("The monitor is running too long (" + currentTimeLength
                 + ") after timeout limit:" + timeout + " will be killed itself !!");
+              monitorThread.interrupt();
               if (monitor.initialized) {
                 return TIMEOUT_ERROR_EXIT_CODE;
               } else {
@@ -1111,6 +1135,15 @@ public class CanaryTool implements Tool, Canary {
   @Override
   public Map<String, String> getWriteFailures() {
     return sink.getWriteFailures();
+  }
+
+  /**
+   * Return a CanaryTool.Sink object containing the detailed results of the canary run. The Sink may
+   * not have been created if a Monitor thread is not yet running.
+   * @return the active Sink if one exists, null otherwise.
+   */
+  public Sink getActiveSink() {
+    return sink;
   }
 
   private void printUsageAndExit() {
@@ -1159,10 +1192,11 @@ public class CanaryTool implements Tool, Canary {
 
   Sink getSink(Configuration configuration, Class clazz) {
     // In test context, this.sink might be set. Use it if non-null. For testing.
-    return this.sink != null
-      ? this.sink
-      : (Sink) ReflectionUtils
+    if (this.sink == null) {
+      this.sink = (Sink) ReflectionUtils
         .newInstance(configuration.getClass("hbase.canary.sink.class", clazz, Sink.class));
+    }
+    return this.sink;
   }
 
   /**
@@ -1366,6 +1400,7 @@ public class CanaryTool implements Tool, Canary {
 
     @Override
     public void close() throws IOException {
+      this.sink.stop();
       if (this.admin != null) {
         this.admin.close();
       }
