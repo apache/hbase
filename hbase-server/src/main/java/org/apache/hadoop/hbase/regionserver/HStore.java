@@ -1453,6 +1453,10 @@ public class HStore
     // Before we do compaction, try to get rid of unneeded files to simplify things.
     removeUnneededFiles();
 
+    if (this.region.getTableDescriptor().isCompactionOnlyExpiredFile()) {
+      return Optional.empty();
+    }
+
     final CompactionContext compaction = storeEngine.createCompaction();
     CompactionRequestImpl request = null;
     this.storeEngine.readLock();
