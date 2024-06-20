@@ -89,4 +89,6 @@ RUN git clone --depth 1 -b ${BRANCH_OR_TAG} https://github.com/apache/hbase.git 
 ENV HBASE_HOME /root/hbase-bin
 ENV PATH "/root/hbase-bin/bin:${PATH}"
 
+# for test hadolint
+
 CMD ["/bin/bash", "-c", "start-hbase.sh; hbase shell"]

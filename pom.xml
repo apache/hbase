@@ -27,6 +27,7 @@
   'mvn package'.  If you are interested in the full story, see
   https://issues.apache.org/jira/browse/HBASE-6795.
 
+for triggering test
 -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
