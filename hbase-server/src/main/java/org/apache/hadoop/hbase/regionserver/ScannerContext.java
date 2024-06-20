@@ -130,7 +130,7 @@ public class ScannerContext {
     }
 
     // Progress fields are initialized to 0
-    progress = new ProgressFields(0, 0, 0, 0);
+    progress = new ProgressFields(0, 0, 0, 0, 0);
 
     this.keepProgress = keepProgress;
     this.scannerState = DEFAULT_STATE;
@@ -220,6 +220,13 @@ public class ScannerContext {
     }
   }
 
+  void incrementFilteredRowsProgress(int filteredRows) {
+    if (filteredRows > 0) {
+      long curFilteredRows = progress.getFilteredRows();
+      progress.setFilteredRows(curFilteredRows + filteredRows);
+    }
+  }
+
   int getBatchProgress() {
     return progress.getBatch();
   }
@@ -234,6 +241,10 @@ public class ScannerContext {
 
   long getBlockSizeProgress() {
     return progress.getBlockSize();
+  }
+
+  long getFilterRowsProgress() {
+    return progress.getFilteredRows();
   }
 
   void setProgress(int batchProgress, long sizeProgress, long heapSizeProgress) {
@@ -257,7 +268,7 @@ public class ScannerContext {
    * filtered.
    */
   void clearProgress() {
-    progress.setFields(0, 0, 0, getBlockSizeProgress());
+    progress.setFields(0, 0, 0, getBlockSizeProgress(), getFilterRowsProgress());
   }
 
   /**
@@ -467,6 +478,7 @@ public class ScannerContext {
     MORE_VALUES(true, false),
     NO_MORE_VALUES(false, false),
     SIZE_LIMIT_REACHED(true, true),
+    FILTERED_ROWS_LIMIT_REACHED(true, true),
 
     /**
      * Special case of size limit reached to indicate that the size limit was reached in the middle
@@ -735,6 +747,7 @@ public class ScannerContext {
 
     private static int DEFAULT_BATCH = -1;
     private static long DEFAULT_SIZE = -1L;
+    private static long DEFAULT_ROWS = -1L;
 
     // The batch limit will always be enforced between cells, thus, there isn't a field to hold the
     // batch scope
@@ -748,19 +761,22 @@ public class ScannerContext {
     // The total amount of block bytes that have been loaded in order to process cells for the
     // request.
     long blockSize = DEFAULT_SIZE;
+    // The total amount of rows that have been filtered in order to process this scan request.
+    long filteredRows = DEFAULT_ROWS;
 
-    ProgressFields(int batch, long size, long heapSize, long blockSize) {
-      setFields(batch, size, heapSize, blockSize);
+    ProgressFields(int batch, long size, long heapSize, long blockSize, long filteredRows) {
+      setFields(batch, size, heapSize, blockSize, filteredRows);
     }
 
     /**
      * Set all fields together.
      */
-    void setFields(int batch, long dataSize, long heapSize, long blockSize) {
+    void setFields(int batch, long dataSize, long heapSize, long blockSize, long filteredRows) {
       setBatch(batch);
       setDataSize(dataSize);
       setHeapSize(heapSize);
       setBlockSize(blockSize);
+      setFilteredRows(filteredRows);
     }
 
     int getBatch() {
@@ -783,12 +799,20 @@ public class ScannerContext {
       return this.blockSize;
     }
 
+    long getFilteredRows() {
+      return this.filteredRows;
+    }
+
     void setDataSize(long dataSize) {
       this.dataSize = dataSize;
     }
 
     void setBlockSize(long blockSize) {
       this.blockSize = blockSize;
+    }
+
+    void setFilteredRows(long filteredRows) {
+      this.filteredRows = filteredRows;
     }
 
     void setHeapSize(long heapSize) {
@@ -811,6 +835,9 @@ public class ScannerContext {
 
       sb.append(", blockSize:");
       sb.append(blockSize);
+
+      sb.append(", filteredRows:");
+      sb.append(filteredRows);
 
       sb.append("}");
       return sb.toString();

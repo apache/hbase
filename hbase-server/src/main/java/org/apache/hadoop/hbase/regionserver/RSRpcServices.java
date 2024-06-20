@@ -1367,6 +1367,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       s instanceof RpcCallback ? (RpcCallback) s : new RegionScannerCloseCallBack(s);
     RegionScannerHolder rsh = new RegionScannerHolder(s, r, closeCallback, shippedCallback,
       needCursor, fullRegionScan, getRemoteClientIpAndPort(), getUserName());
+    s.setName(scannerName);
     RegionScannerHolder existing = scanners.putIfAbsent(scannerName, rsh);
     assert existing == null : "scannerId must be unique within regionserver's whole lifecycle! "
       + scannerName + ", " + existing;
@@ -3358,6 +3359,11 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         contextBuilder.setTimeLimit(timeScope, timeLimit);
         contextBuilder.setTrackMetrics(trackMetrics);
         ScannerContext scannerContext = contextBuilder.build();
+
+        RegionScannerLimiter regionScannerLimiter =
+          ((HRegionServer) region.rsServices).getRegionScannerLimiter();
+        regionScannerLimiter.setFilterRowsLimitReached(scanner.getName(), false);
+
         boolean limitReached = false;
         while (numOfResults < maxResults) {
           // Reset the batch progress to 0 before every call to RegionScanner#nextRaw. The
@@ -3433,7 +3439,10 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
           boolean sizeLimitReached = scannerContext.checkSizeLimit(LimitScope.BETWEEN_ROWS);
           boolean timeLimitReached = scannerContext.checkTimeLimit(LimitScope.BETWEEN_ROWS);
           boolean resultsLimitReached = numOfResults >= maxResults;
-          limitReached = sizeLimitReached || timeLimitReached || resultsLimitReached;
+          boolean filterRowsLimitReached =
+            regionScannerLimiter.isFilterRowsLimitReached(scanner.getName());
+          limitReached =
+            sizeLimitReached || timeLimitReached || resultsLimitReached || filterRowsLimitReached;
 
           if (limitReached || !moreRows) {
             // With block size limit, we may exceed size limit without collecting any results.
@@ -3444,7 +3453,10 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
             // there are more values to be read server side. If there aren't more values,
             // marking it as a heartbeat is wasteful because the client will need to issue
             // another ScanRequest only to realize that they already have all the values
-            if (moreRows && (timeLimitReached || sizeLimitReachedWithoutResults)) {
+            if (
+              moreRows
+                && (timeLimitReached || sizeLimitReachedWithoutResults || filterRowsLimitReached)
+            ) {
               // Heartbeat messages occur when the time limit has been reached, or size limit has
               // been reached before collecting any results. This can happen for heavily filtered
               // scans which scan over too many blocks.
