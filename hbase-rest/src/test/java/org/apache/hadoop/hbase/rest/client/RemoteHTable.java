@@ -62,7 +62,7 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.rest.Constants;
+import org.apache.hadoop.hbase.rest.ProtobufHttpEntity;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
@@ -70,6 +70,11 @@ import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -316,29 +321,32 @@ public class RemoteHTable implements Table {
 
   private Result[] getResults(String spec) throws IOException {
     for (int i = 0; i < maxRetries; i++) {
-      Response response = client.get(spec, Constants.MIMETYPE_PROTOBUF);
-      int code = response.getCode();
-      switch (code) {
-        case 200:
-          CellSetModel model = new CellSetModel();
-          model.getObjectFromMessage(response.getBody());
-          Result[] results = buildResultFromModel(model);
-          if (results.length > 0) {
-            return results;
-          }
-          // fall through
-        case 404:
-          return new Result[0];
+      HttpGet httpGet = new HttpGet(spec);
+      try (CloseableHttpResponse response =
+        client.execute(httpGet, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+        int code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 200:
+            CellSetModel model = new CellSetModel();
+            model.getObjectFromMessage(response.getEntity().getContent());
+            Result[] results = buildResultFromModel(model);
+            if (results.length > 0) {
+              return results;
+            }
+            // fall through
+          case 404:
+            return new Result[0];
 
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException("get request returned " + code);
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException("get request returned " + code);
+        }
       }
     }
     throw new IOException("get request timed out");
@@ -370,21 +378,24 @@ public class RemoteHTable implements Table {
     sb.append('/');
     sb.append(toURLEncodedBytes(put.getRow()));
     for (int i = 0; i < maxRetries; i++) {
-      Response response =
-        client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-      int code = response.getCode();
-      switch (code) {
-        case 200:
-          return;
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException("put request failed with " + code);
+      HttpPut httpPut = new HttpPut(sb.toString());
+      httpPut.setEntity(new ProtobufHttpEntity(model));
+      try (CloseableHttpResponse response =
+        client.execute(httpPut, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+        int code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 200:
+            return;
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException("put request failed with " + code);
+        }
       }
     }
     throw new IOException("put request timed out");
@@ -425,21 +436,24 @@ public class RemoteHTable implements Table {
     sb.append(Bytes.toString(name));
     sb.append("/$multiput"); // can be any nonexistent row
     for (int i = 0; i < maxRetries; i++) {
-      Response response =
-        client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-      int code = response.getCode();
-      switch (code) {
-        case 200:
-          return;
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException("multiput request failed with " + code);
+      HttpPut httpPut = new HttpPut(sb.toString());
+      httpPut.setEntity(new ProtobufHttpEntity(model));
+      try (CloseableHttpResponse response =
+        client.execute(httpPut, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+        int code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 200:
+            return;
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException("multiput request failed with " + code);
+        }
       }
     }
     throw new IOException("multiput request timed out");
@@ -450,20 +464,23 @@ public class RemoteHTable implements Table {
     String spec = buildRowSpec(delete.getRow(), delete.getFamilyCellMap(), delete.getTimestamp(),
       delete.getTimestamp(), 1);
     for (int i = 0; i < maxRetries; i++) {
-      Response response = client.delete(spec);
-      int code = response.getCode();
-      switch (code) {
-        case 200:
-          return;
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException("delete request failed with " + code);
+      HttpDelete httpDelete = new HttpDelete(spec);
+      try (CloseableHttpResponse response =
+        client.execute(httpDelete, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+        int code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 200:
+            return;
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException("delete request failed with " + code);
+        }
       }
     }
     throw new IOException("delete request timed out");
@@ -488,22 +505,25 @@ public class RemoteHTable implements Table {
     sb.append('/');
     sb.append("schema");
     for (int i = 0; i < maxRetries; i++) {
-      Response response = client.get(sb.toString(), Constants.MIMETYPE_PROTOBUF);
-      int code = response.getCode();
-      switch (code) {
-        case 200:
-          TableSchemaModel schema = new TableSchemaModel();
-          schema.getObjectFromMessage(response.getBody());
-          return schema.getTableDescriptor();
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException("schema request returned " + code);
+      HttpGet httpGet = new HttpGet(sb.toString());
+      try (CloseableHttpResponse response =
+        client.execute(httpGet, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+        int code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 200:
+            TableSchemaModel schema = new TableSchemaModel();
+            schema.getObjectFromMessage(response.getEntity().getContent());
+            return schema.getTableDescriptor();
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException("schema request returned " + code);
+        }
       }
     }
     throw new IOException("schema request timed out");
@@ -528,22 +548,25 @@ public class RemoteHTable implements Table {
       sb.append('/');
       sb.append("scanner");
       for (int i = 0; i < maxRetries; i++) {
-        Response response =
-          client.post(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-        int code = response.getCode();
-        switch (code) {
-          case 201:
-            uri = response.getLocation();
-            return;
-          case 509:
-            try {
-              Thread.sleep(sleepTime);
-            } catch (InterruptedException e) {
-              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-            }
-            break;
-          default:
-            throw new IOException("scan request failed with " + code);
+        HttpPost httpPost = new HttpPost(sb.toString());
+        httpPost.setEntity(new ProtobufHttpEntity(model));
+        try (CloseableHttpResponse response =
+          client.execute(httpPost, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+          int code = response.getStatusLine().getStatusCode();
+          switch (code) {
+            case 201:
+              uri = response.getFirstHeader("Location").getValue();
+              return;
+            case 509:
+              try {
+                Thread.sleep(sleepTime);
+              } catch (InterruptedException e) {
+                throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+              }
+              break;
+            default:
+              throw new IOException("scan request failed with " + code);
+          }
         }
       }
       throw new IOException("scan request timed out");
@@ -552,25 +575,28 @@ public class RemoteHTable implements Table {
     public Result[] nextBatch() throws IOException {
       StringBuilder sb = new StringBuilder(uri);
       for (int i = 0; i < maxRetries; i++) {
-        Response response = client.get(sb.toString(), Constants.MIMETYPE_PROTOBUF);
-        int code = response.getCode();
-        switch (code) {
-          case 200:
-            CellSetModel model = new CellSetModel();
-            model.getObjectFromMessage(response.getBody());
-            return buildResultFromModel(model);
-          case 204:
-          case 206:
-            return null;
-          case 509:
-            try {
-              Thread.sleep(sleepTime);
-            } catch (InterruptedException e) {
-              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-            }
-            break;
-          default:
-            throw new IOException("scanner.next request failed with " + code);
+        HttpGet httpGet = new HttpGet(sb.toString());
+        try (CloseableHttpResponse response =
+          client.execute(httpGet, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+          int code = response.getStatusLine().getStatusCode();
+          switch (code) {
+            case 200:
+              CellSetModel model = new CellSetModel();
+              model.getObjectFromMessage(response.getEntity().getContent());
+              return buildResultFromModel(model);
+            case 204:
+            case 206:
+              return null;
+            case 509:
+              try {
+                Thread.sleep(sleepTime);
+              } catch (InterruptedException e) {
+                throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+              }
+              break;
+            default:
+              throw new IOException("scanner.next request failed with " + code);
+          }
         }
       }
       throw new IOException("scanner.next request timed out");
@@ -701,23 +727,26 @@ public class RemoteHTable implements Table {
     sb.append("?check=put");
 
     for (int i = 0; i < maxRetries; i++) {
-      Response response =
-        client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-      int code = response.getCode();
-      switch (code) {
-        case 200:
-          return true;
-        case 304: // NOT-MODIFIED
-          return false;
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (final InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException("checkAndPut request failed with " + code);
+      HttpPut httpPut = new HttpPut(sb.toString());
+      httpPut.setEntity(new ProtobufHttpEntity(model));
+      try (CloseableHttpResponse response =
+        client.execute(httpPut, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+        int code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 200:
+            return true;
+          case 304: // NOT-MODIFIED
+            return false;
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (final InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException("checkAndPut request failed with " + code);
+        }
       }
     }
     throw new IOException("checkAndPut request timed out");
@@ -737,23 +766,26 @@ public class RemoteHTable implements Table {
     sb.append("?check=delete");
 
     for (int i = 0; i < maxRetries; i++) {
-      Response response =
-        client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-      int code = response.getCode();
-      switch (code) {
-        case 200:
-          return true;
-        case 304: // NOT-MODIFIED
-          return false;
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (final InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException("checkAndDelete request failed with " + code);
+      HttpPut httpPut = new HttpPut(sb.toString());
+      httpPut.setEntity(new ProtobufHttpEntity(model));
+      try (CloseableHttpResponse response =
+        client.execute(httpPut, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+        int code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 200:
+            return true;
+          case 304: // NOT-MODIFIED
+            return false;
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (final InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException("checkAndDelete request failed with " + code);
+        }
       }
     }
     throw new IOException("checkAndDelete request timed out");
