@@ -217,7 +217,7 @@ public class TestNamespacesInstanceResource {
 
     response = client.get(namespacePath, Constants.MIMETYPE_PROTOBUF);
     assertEquals(200, response.getCode());
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     checkNamespaceProperties(model.getProperties(), nsProperties);
 
     // Check get namespace tables as XML, JSON and Protobuf.
@@ -238,7 +238,7 @@ public class TestNamespacesInstanceResource {
     response = client.get(namespacePath, Constants.MIMETYPE_PROTOBUF);
     assertEquals(200, response.getCode());
     tablemodel.setTables(new ArrayList<>());
-    tablemodel.getObjectFromMessage(response.getBody());
+    tablemodel.getObjectFromMessage(response.getStream());
     checkNamespaceTables(tablemodel.getTables(), nsTables);
 
     // Check cannot delete namespace via REST because it contains tables.

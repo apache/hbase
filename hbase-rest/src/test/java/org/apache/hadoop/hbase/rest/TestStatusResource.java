@@ -126,13 +126,13 @@ public class TestStatusResource {
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     StorageClusterStatusModel model = new StorageClusterStatusModel();
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     validate(model);
     response = client.get("/status/cluster", Constants.MIMETYPE_PROTOBUF_IETF);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
     model = new StorageClusterStatusModel();
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     validate(model);
   }
 }

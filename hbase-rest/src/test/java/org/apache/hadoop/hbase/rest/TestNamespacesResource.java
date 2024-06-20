@@ -169,7 +169,7 @@ public class TestNamespacesResource {
     // Check that REST GET finds only default namespaces via PB and default Accept header.
     response = client.get(schemaPath, Constants.MIMETYPE_PROTOBUF);
     assertEquals(200, response.getCode());
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     testNamespacesModel.checkModel(model, "hbase", "default");
     response = client.get(schemaPath);
     assertEquals(200, response.getCode());
@@ -178,7 +178,7 @@ public class TestNamespacesResource {
     createNamespaceViaAdmin(admin, NAMESPACE1);
     response = client.get(schemaPath, Constants.MIMETYPE_PROTOBUF);
     assertEquals(200, response.getCode());
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     testNamespacesModel.checkModel(model, NAMESPACE1, "hbase", "default");
     response = client.get(schemaPath);
     assertEquals(200, response.getCode());
@@ -187,7 +187,7 @@ public class TestNamespacesResource {
     createNamespaceViaAdmin(admin, NAMESPACE2);
     response = client.get(schemaPath, Constants.MIMETYPE_PROTOBUF);
     assertEquals(200, response.getCode());
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     testNamespacesModel.checkModel(model, NAMESPACE1, NAMESPACE2, "hbase", "default");
     response = client.get(schemaPath);
     assertEquals(200, response.getCode());
@@ -196,7 +196,7 @@ public class TestNamespacesResource {
     admin.deleteNamespace(NAMESPACE1);
     response = client.get(schemaPath, Constants.MIMETYPE_PROTOBUF);
     assertEquals(200, response.getCode());
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     testNamespacesModel.checkModel(model, NAMESPACE2, "hbase", "default");
     response = client.get(schemaPath);
     assertEquals(200, response.getCode());

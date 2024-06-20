@@ -20,9 +20,11 @@ package org.apache.hadoop.hbase.rest.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import javax.xml.bind.UnmarshalException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -30,8 +32,13 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.rest.Constants;
 import org.apache.hadoop.hbase.rest.model.StorageClusterVersionModel;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.ProtocolVersion;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.message.BasicStatusLine;
+import org.apache.http.protocol.HTTP;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -55,10 +62,20 @@ public class TestXmlParsing {
     final String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
       + "<ClusterVersion Version=\"2.0.0\"/>";
     Client client = mock(Client.class);
-    RemoteAdmin admin = new RemoteAdmin(client, HBaseConfiguration.create(), null);
-    Response resp = new Response(200, null, Bytes.toBytes(xml));
 
-    when(client.get("/version/cluster", Constants.MIMETYPE_XML)).thenReturn(resp);
+    HttpEntity entity = mock(HttpEntity.class);
+    when(entity.getContent()).thenReturn(new ByteArrayInputStream(xml.getBytes()));
+    when(entity.getContentType())
+      .thenReturn(new BasicHeader(HTTP.CONTENT_TYPE, Constants.MIMETYPE_XML));
+
+    CloseableHttpResponse response = mock(CloseableHttpResponse.class);
+    when(response.getStatusLine())
+      .thenReturn(new BasicStatusLine(new ProtocolVersion("Http", 1, 0), 200, "OK"));
+    when(response.getEntity()).thenReturn(entity);
+
+    when(client.execute(any(), any())).thenReturn(response);
+
+    RemoteAdmin admin = new RemoteAdmin(client, HBaseConfiguration.create(), null);
 
     StorageClusterVersionModel cv = admin.getClusterVersion();
     assertEquals("2.0.0", cv.getVersion());
@@ -70,10 +87,20 @@ public class TestXmlParsing {
       + " <!DOCTYPE foo [ <!ENTITY xxe SYSTEM \"/tmp/foo\"> ] >"
       + " <ClusterVersion>&xee;</ClusterVersion>";
     Client client = mock(Client.class);
-    RemoteAdmin admin = new RemoteAdmin(client, HBaseConfiguration.create(), null);
-    Response resp = new Response(200, null, Bytes.toBytes(externalEntitiesXml));
 
-    when(client.get("/version/cluster", Constants.MIMETYPE_XML)).thenReturn(resp);
+    HttpEntity entity = mock(HttpEntity.class);
+    when(entity.getContent()).thenReturn(new ByteArrayInputStream(externalEntitiesXml.getBytes()));
+    when(entity.getContentType())
+      .thenReturn(new BasicHeader(HTTP.CONTENT_TYPE, Constants.MIMETYPE_XML));
+
+    CloseableHttpResponse response = mock(CloseableHttpResponse.class);
+    when(response.getStatusLine())
+      .thenReturn(new BasicStatusLine(new ProtocolVersion("Http", 1, 0), 200, "OK"));
+    when(response.getEntity()).thenReturn(entity);
+
+    when(client.execute(any(), any())).thenReturn(response);
+
+    RemoteAdmin admin = new RemoteAdmin(client, HBaseConfiguration.create(), null);
 
     try {
       admin.getClusterVersion();

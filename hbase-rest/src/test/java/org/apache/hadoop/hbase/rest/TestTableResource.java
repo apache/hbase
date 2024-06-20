@@ -203,13 +203,13 @@ public class TestTableResource {
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     TableListModel model = new TableListModel();
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     checkTableList(model);
     response = client.get("/", Constants.MIMETYPE_PROTOBUF_IETF);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
     model = new TableListModel();
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     checkTableList(model);
   }
 
@@ -243,13 +243,13 @@ public class TestTableResource {
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     TableInfoModel model = new TableInfoModel();
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     checkTableInfo(model);
     response = client.get("/" + TABLE + "/regions", Constants.MIMETYPE_PROTOBUF_IETF);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
     model = new TableInfoModel();
-    model.getObjectFromMessage(response.getBody());
+    model.getObjectFromMessage(response.getStream());
     checkTableInfo(model);
   }
 
