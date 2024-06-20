@@ -56,6 +56,7 @@ import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
@@ -96,7 +97,7 @@ public class Client {
   private boolean sticky = false;
   private Configuration conf;
   private boolean sslEnabled;
-  private HttpResponse resp;
+  private CloseableHttpResponse resp;
   private HttpGet httpGet = null;
   private HttpClientContext stickyContext = null;
   private BasicCredentialsProvider provider;
@@ -107,6 +108,16 @@ public class Client {
   private static final String AUTH_COOKIE = "hadoop.auth";
   private static final String AUTH_COOKIE_EQ = AUTH_COOKIE + "=";
   private static final String COOKIE = "Cookie";
+
+  public static final Header ACCEPT_PROTOBUF_HEADER =
+    new BasicHeader("Accept", Constants.MIMETYPE_PROTOBUF);
+  public static final Header ACCEPT_XML_HEADER = new BasicHeader("Accept", Constants.MIMETYPE_XML);
+  public static final Header ACCEPT_JSON_HEADER =
+    new BasicHeader("Accept", Constants.MIMETYPE_JSON);
+
+  public static final Header[] ACCEPT_PROTOBUF_HEADER_ARR = new Header[] { ACCEPT_PROTOBUF_HEADER };
+  public static final Header[] ACCEPT_XML_HEADER_ARR = new Header[] { ACCEPT_XML_HEADER };
+  public static final Header[] ACCEPT_JSON_HEADER_ARR = new Header[] { ACCEPT_JSON_HEADER };
 
   /**
    * Default Constructor
@@ -319,6 +330,7 @@ public class Client {
    * Shut down the client. Close any open persistent connections.
    */
   public void shutdown() {
+    close();
   }
 
   /** Returns the wrapped HttpClient */
@@ -368,8 +380,8 @@ public class Client {
    * @param path    the properly urlencoded path
    * @return the HTTP response code
    */
-  public HttpResponse executePathOnly(Cluster cluster, HttpUriRequest method, Header[] headers,
-    String path) throws IOException {
+  public CloseableHttpResponse executePathOnly(Cluster cluster, HttpUriRequest method,
+    Header[] headers, String path) throws IOException {
     IOException lastException;
     if (cluster.nodes.size() < 1) {
       throw new IOException("Cluster is empty");
@@ -428,7 +440,7 @@ public class Client {
    * @param uri     a properly urlencoded URI
    * @return the HTTP response code
    */
-  public HttpResponse executeURI(HttpUriRequest method, Header[] headers, String uri)
+  public CloseableHttpResponse executeURI(HttpUriRequest method, Header[] headers, String uri)
     throws IOException {
     // method.setURI(new URI(uri, true));
     for (Map.Entry<String, String> e : extraHeaders.entrySet()) {
@@ -473,14 +485,31 @@ public class Client {
    * Execute a transaction method. Will call either <tt>executePathOnly</tt> or <tt>executeURI</tt>
    * depending on whether a path only is supplied in 'path', or if a complete URI is passed instead,
    * respectively.
+   * @param method  the HTTP method
+   * @param headers HTTP header values to send
+   * @param path    the properly urlencoded path or URI
+   * @return the HTTP response code
+   */
+  public CloseableHttpResponse execute(Cluster cluster, HttpUriRequest method, Header[] headers,
+    String path) throws IOException {
+    if (path.startsWith("/")) {
+      return executePathOnly(cluster, method, headers, path);
+    }
+    return executeURI(method, headers, path);
+  }
+
+  /**
+   * Execute a transaction method. Will call either <tt>executePathOnly</tt> or <tt>executeURI</tt>
+   * depending on whether a path only is supplied in 'path', or if a complete URI is passed instead,
+   * respectively.
    * @param cluster the cluster definition
    * @param method  the HTTP method
    * @param headers HTTP header values to send
    * @param path    the properly urlencoded path or URI
    * @return the HTTP response code
    */
-  public HttpResponse execute(Cluster cluster, HttpUriRequest method, Header[] headers, String path)
-    throws IOException {
+  public CloseableHttpResponse execute(HttpUriRequest method, Header[] headers) throws IOException {
+    String path = method.getURI().toASCIIString();
     if (path.startsWith("/")) {
       return executePathOnly(cluster, method, headers, path);
     }
@@ -623,7 +652,7 @@ public class Client {
   public Response head(Cluster cluster, String path, Header[] headers) throws IOException {
     HttpHead method = new HttpHead(path);
     try {
-      HttpResponse resp = execute(cluster, method, null, path);
+      CloseableHttpResponse resp = execute(cluster, method, null, path);
       return new Response(resp.getStatusLine().getStatusCode(), resp.getAllHeaders(), null);
     } finally {
       method.releaseConnection();
@@ -730,7 +759,7 @@ public class Client {
       httpGet.releaseConnection();
     }
     httpGet = new HttpGet(path);
-    HttpResponse resp = execute(c, httpGet, headers, path);
+    CloseableHttpResponse resp = execute(c, httpGet, headers, path);
     return new Response(resp.getStatusLine().getStatusCode(), resp.getAllHeaders(), resp,
       resp.getEntity() == null ? null : resp.getEntity().getContent());
   }
@@ -820,7 +849,7 @@ public class Client {
     HttpPut method = new HttpPut(path);
     try {
       method.setEntity(new ByteArrayEntity(content));
-      HttpResponse resp = execute(cluster, method, headers, path);
+      CloseableHttpResponse resp = execute(cluster, method, headers, path);
       headers = resp.getAllHeaders();
       content = getResponseBody(resp);
       return new Response(resp.getStatusLine().getStatusCode(), headers, content);
@@ -914,7 +943,7 @@ public class Client {
     HttpPost method = new HttpPost(path);
     try {
       method.setEntity(new ByteArrayEntity(content));
-      HttpResponse resp = execute(cluster, method, headers, path);
+      CloseableHttpResponse resp = execute(cluster, method, headers, path);
       headers = resp.getAllHeaders();
       content = getResponseBody(resp);
       return new Response(resp.getStatusLine().getStatusCode(), headers, content);
@@ -952,7 +981,7 @@ public class Client {
   public Response delete(Cluster cluster, String path) throws IOException {
     HttpDelete method = new HttpDelete(path);
     try {
-      HttpResponse resp = execute(cluster, method, null, path);
+      CloseableHttpResponse resp = execute(cluster, method, null, path);
       Header[] headers = resp.getAllHeaders();
       byte[] content = getResponseBody(resp);
       return new Response(resp.getStatusLine().getStatusCode(), headers, content);
@@ -972,7 +1001,7 @@ public class Client {
     HttpDelete method = new HttpDelete(path);
     try {
       Header[] headers = { extraHdr };
-      HttpResponse resp = execute(cluster, method, headers, path);
+      CloseableHttpResponse resp = execute(cluster, method, headers, path);
       headers = resp.getAllHeaders();
       byte[] content = getResponseBody(resp);
       return new Response(resp.getStatusLine().getStatusCode(), headers, content);
