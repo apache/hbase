@@ -153,7 +153,7 @@ public class TestExportSnapshotAdjunct {
     conf.setInt("mapreduce.map.maxattempts", 3);
     TestExportSnapshot.testExportFileSystemState(conf, tableName, Bytes.toBytes(snapshotName),
       Bytes.toBytes(snapshotName), tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyDir, true,
-      false, null, true);
+      false, null, true, false);
   }
 
   /**
@@ -170,6 +170,6 @@ public class TestExportSnapshotAdjunct {
     conf.setInt("mapreduce.map.maxattempts", 3);
     TestExportSnapshot.testExportFileSystemState(conf, tableName, Bytes.toBytes(snapshotName),
       Bytes.toBytes(snapshotName), tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyDir, true,
-      false, null, false);
+      false, null, false, false);
   }
 }
