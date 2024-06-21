@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -123,27 +125,8 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       return Collections.emptyList();
     }
     for (FileStatus file : files) {
-      String fn = file.getPath().getName();
-      if (fn.startsWith(WALProcedureStore.LOG_PREFIX)) {
+      if (canDeleteFile(addressToLastBackupMap, file.getPath())) {
         filteredFiles.add(file);
-        continue;
-      }
-
-      try {
-        Address walServerAddress =
-          Address.fromString(BackupUtils.parseHostNameFromLogFile(file.getPath()));
-        long walTimestamp = WAL.getTimestamp(file.getPath().getName());
-
-        if (
-          !addressToLastBackupMap.containsKey(walServerAddress)
-            || addressToLastBackupMap.get(walServerAddress) >= walTimestamp
-        ) {
-          filteredFiles.add(file);
-        }
-      } catch (Exception ex) {
-        LOG.warn(
-          "Error occurred while filtering file: {} with error: {}. Ignoring cleanup of this log",
-          file.getPath(), ex.getMessage());
       }
     }
 
@@ -175,5 +158,40 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
   @Override
   public boolean isStopped() {
     return this.stopped;
+  }
+
+  protected static boolean canDeleteFile(Map<Address, Long> addressToLastBackupMap, Path path) {
+    if (isHMasterWAL(path)) {
+      return true;
+    }
+
+    try {
+      String hostname = BackupUtils.parseHostNameFromLogFile(path);
+      if (hostname == null) {
+        LOG.warn(
+          "Cannot parse hostname from RegionServer WAL file: {}. Ignoring cleanup of this log",
+          path);
+        return false;
+      }
+      Address walServerAddress = Address.fromString(hostname);
+      long walTimestamp = WAL.getTimestamp(path.getName());
+
+      if (
+        !addressToLastBackupMap.containsKey(walServerAddress)
+          || addressToLastBackupMap.get(walServerAddress) >= walTimestamp
+      ) {
+        return true;
+      }
+    } catch (Exception ex) {
+      LOG.warn("Error occurred while filtering file: {}. Ignoring cleanup of this log", path, ex);
+      return false;
+    }
+    return false;
+  }
+
+  private static boolean isHMasterWAL(Path path) {
+    String fn = path.getName();
+    return fn.startsWith(WALProcedureStore.LOG_PREFIX)
+      || fn.endsWith(MasterRegionFactory.ARCHIVED_WAL_SUFFIX);
   }
 }
