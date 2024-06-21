@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -122,7 +123,7 @@ public class CompressionTest {
       HFile.getWriterFactoryNoCache(conf).withPath(fs, path).withFileContext(context).create();
     // Write any-old Cell...
     final byte[] rowKey = Bytes.toBytes("compressiontestkey");
-    Cell c = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(rowKey)
+    ExtendedCell c = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(rowKey)
       .setFamily(HConstants.EMPTY_BYTE_ARRAY).setQualifier(HConstants.EMPTY_BYTE_ARRAY)
       .setTimestamp(HConstants.LATEST_TIMESTAMP).setType(KeyValue.Type.Maximum.getCode())
       .setValue(Bytes.toBytes("compressiontestval")).build();

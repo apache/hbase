@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -167,7 +168,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
     }
 
     @Override
-    public void append(Cell cell) throws IOException {
+    public void append(ExtendedCell cell) throws IOException {
       if (currentWriter == null && existingWriters.isEmpty()) {
         // First append ever, do a sanity check.
         sanityCheckLeft(this.boundaries.get(0), cell);
@@ -292,7 +293,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
     }
 
     @Override
-    public void append(Cell cell) throws IOException {
+    public void append(ExtendedCell cell) throws IOException {
       // If we are waiting for opportunity to close and we started writing different row,
       // discard the writer and stop waiting.
       boolean doCreateWriter = false;

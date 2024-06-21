@@ -73,7 +73,7 @@ public class HFilePerformanceEvaluation {
     return w;
   }
 
-  static Cell createCell(final int i) {
+  static ExtendedCell createCell(final int i) {
     return createCell(i, HConstants.EMPTY_BYTE_ARRAY);
   }
 
@@ -84,18 +84,18 @@ public class HFilePerformanceEvaluation {
    * @param value Value to use
    * @return Created Cell.
    */
-  static Cell createCell(final int i, final byte[] value) {
+  static ExtendedCell createCell(final int i, final byte[] value) {
     return createCell(format(i), value);
   }
 
-  static Cell createCell(final byte[] keyRow) {
+  static ExtendedCell createCell(final byte[] keyRow) {
     return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(keyRow)
       .setFamily(HConstants.EMPTY_BYTE_ARRAY).setQualifier(HConstants.EMPTY_BYTE_ARRAY)
       .setTimestamp(HConstants.LATEST_TIMESTAMP).setType(KeyValue.Type.Maximum.getCode())
       .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
   }
 
-  static Cell createCell(final byte[] keyRow, final byte[] value) {
+  static ExtendedCell createCell(final byte[] keyRow, final byte[] value) {
     return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(keyRow)
       .setFamily(HConstants.EMPTY_BYTE_ARRAY).setQualifier(HConstants.EMPTY_BYTE_ARRAY)
       .setTimestamp(HConstants.LATEST_TIMESTAMP).setType(KeyValue.Type.Maximum.getCode())
@@ -465,7 +465,7 @@ public class HFilePerformanceEvaluation {
       HFileScanner scanner = this.reader.getScanner(conf, false, false);
       byte[] b = getRandomRow();
       // System.out.println("Random row: " + new String(b));
-      Cell c = createCell(b);
+      ExtendedCell c = createCell(b);
       if (scanner.seekTo(c) != 0) {
         LOG.info("Nonexistent row: " + new String(b));
         return;

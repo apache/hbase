@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
@@ -70,7 +70,7 @@ public abstract class CompactionScanQueryMatcher extends ScanQueryMatcher {
   }
 
   @Override
-  public boolean moreRowsMayExistAfter(Cell cell) {
+  public boolean moreRowsMayExistAfter(ExtendedCell cell) {
     return true;
   }
 
@@ -81,7 +81,7 @@ public abstract class CompactionScanQueryMatcher extends ScanQueryMatcher {
   }
 
   @Override
-  public Cell getNextKeyHint(Cell cell) throws IOException {
+  public ExtendedCell getNextKeyHint(ExtendedCell cell) throws IOException {
     // no filter, so no key hint.
     return null;
   }
@@ -91,7 +91,7 @@ public abstract class CompactionScanQueryMatcher extends ScanQueryMatcher {
     deletes.reset();
   }
 
-  protected final void trackDelete(Cell cell) {
+  protected final void trackDelete(ExtendedCell cell) {
     // If keepDeletedCells is true, then we only remove cells by versions or TTL during
     // compaction, so we do not need to track delete here.
     // If keepDeletedCells is TTL and the delete marker is expired, then we can make sure that the

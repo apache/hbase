@@ -25,8 +25,9 @@ import java.util.OptionalLong;
 import java.util.TreeMap;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -192,10 +193,10 @@ public class MockHStoreFile extends HStoreFile {
       }
 
       @Override
-      public Optional<Cell> getLastKey() {
+      public Optional<ExtendedCell> getLastKey() {
         if (splitPoint != null) {
           return Optional
-            .of(CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setType(Cell.Type.Put)
+            .of(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setType(Cell.Type.Put)
               .setRow(Arrays.copyOf(splitPoint, splitPoint.length + 1)).build());
         } else {
           return Optional.empty();
@@ -203,9 +204,9 @@ public class MockHStoreFile extends HStoreFile {
       }
 
       @Override
-      public Optional<Cell> midKey() throws IOException {
+      public Optional<ExtendedCell> midKey() throws IOException {
         if (splitPoint != null) {
-          return Optional.of(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+          return Optional.of(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
             .setType(Cell.Type.Put).setRow(splitPoint).build());
         } else {
           return Optional.empty();
@@ -213,9 +214,9 @@ public class MockHStoreFile extends HStoreFile {
       }
 
       @Override
-      public Optional<Cell> getFirstKey() {
+      public Optional<ExtendedCell> getFirstKey() {
         if (splitPoint != null) {
-          return Optional.of(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+          return Optional.of(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
             .setType(Cell.Type.Put).setRow(splitPoint, 0, splitPoint.length - 1).build());
         } else {
           return Optional.empty();

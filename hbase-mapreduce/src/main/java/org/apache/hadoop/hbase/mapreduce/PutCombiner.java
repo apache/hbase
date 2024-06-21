@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Put;
@@ -62,7 +63,7 @@ public class PutCombiner<K> extends Reducer<K, Put, K, Put> {
           List<Cell> cells = familyMap.get(entry.getKey());
           List<Cell> kvs = (cells != null) ? (List<Cell>) cells : null;
           for (Cell cell : entry.getValue()) {
-            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+            KeyValue kv = KeyValueUtil.ensureKeyValue((ExtendedCell) cell);
             curSize += kv.heapSize();
             if (kvs != null) {
               kvs.add(kv);

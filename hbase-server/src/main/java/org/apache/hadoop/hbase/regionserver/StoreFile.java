@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.OptionalLong;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -42,12 +42,12 @@ public interface StoreFile {
   /**
    * Get the first key in this store file.
    */
-  Optional<Cell> getFirstKey();
+  Optional<ExtendedCell> getFirstKey();
 
   /**
    * Get the last key in this store file.
    */
-  Optional<Cell> getLastKey();
+  Optional<ExtendedCell> getLastKey();
 
   /**
    * Get the comparator for comparing two cells.

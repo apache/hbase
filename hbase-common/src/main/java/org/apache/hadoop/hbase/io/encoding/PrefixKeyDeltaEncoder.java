@@ -22,7 +22,7 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -42,7 +42,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
   @Override
-  public int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingContext,
+  public int internalEncode(ExtendedCell cell, HFileBlockDefaultEncodingContext encodingContext,
     DataOutputStream out) throws IOException {
     int klength = KeyValueUtil.keyLength(cell);
     int vlength = cell.getValueLength();
@@ -69,7 +69,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     return size;
   }
 
-  private void writeKeyExcludingCommon(Cell cell, int commonPrefix, DataOutputStream out)
+  private void writeKeyExcludingCommon(ExtendedCell cell, int commonPrefix, DataOutputStream out)
     throws IOException {
     short rLen = cell.getRowLength();
     if (commonPrefix < rLen + KeyValue.ROW_LENGTH_SIZE) {
@@ -162,7 +162,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public Cell getFirstKeyCellInBlock(ByteBuff block) {
+  public ExtendedCell getFirstKeyCellInBlock(ByteBuff block) {
     block.mark();
     block.position(Bytes.SIZEOF_INT);
     int keyLength = ByteBuff.readCompressedInt(block);

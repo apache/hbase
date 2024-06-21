@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -86,15 +87,14 @@ public class CellArrayImmutableSegment extends ImmutableSegment {
   // Create CellSet based on CellArrayMap from compacting iterator
   private void initializeCellSet(int numOfCells, MemStoreSegmentsIterator iterator,
     MemStoreCompactionStrategy.Action action) {
-
     boolean merge = (action == MemStoreCompactionStrategy.Action.MERGE
       || action == MemStoreCompactionStrategy.Action.MERGE_COUNT_UNIQUE_KEYS);
-    Cell[] cells = new Cell[numOfCells]; // build the Cell Array
+    ExtendedCell[] cells = new ExtendedCell[numOfCells]; // build the Cell Array
     int i = 0;
     int numUniqueKeys = 0;
     Cell prev = null;
     while (iterator.hasNext()) {
-      Cell c = iterator.next();
+      ExtendedCell c = iterator.next();
       // The scanner behind the iterator is doing all the elimination logic
       if (merge) {
         // if this is merge we just move the Cell object without copying MSLAB
@@ -126,8 +126,8 @@ public class CellArrayImmutableSegment extends ImmutableSegment {
       numUniqueKeys = CellSet.UNKNOWN_NUM_UNIQUES;
     }
     // build the immutable CellSet
-    CellArrayMap cam = new CellArrayMap(getComparator(), cells, 0, i, false);
-    this.setCellSet(null, new CellSet(cam, numUniqueKeys)); // update the CellSet of this Segment
+    CellArrayMap<ExtendedCell> cam = new CellArrayMap<>(getComparator(), cells, 0, i, false);
+    this.setCellSet(null, new CellSet<>(cam, numUniqueKeys)); // update the CellSet of this Segment
   }
 
   /*------------------------------------------------------------------------*/
@@ -135,12 +135,12 @@ public class CellArrayImmutableSegment extends ImmutableSegment {
   // (without compacting iterator)
   // We do not consider cells bigger than chunks!
   private void reinitializeCellSet(int numOfCells, KeyValueScanner segmentScanner,
-    CellSet oldCellSet, MemStoreCompactionStrategy.Action action) {
-    Cell[] cells = new Cell[numOfCells]; // build the Cell Array
-    Cell curCell;
+    CellSet<ExtendedCell> oldCellSet, MemStoreCompactionStrategy.Action action) {
+    ExtendedCell[] cells = new ExtendedCell[numOfCells]; // build the Cell Array
+    ExtendedCell curCell;
     int idx = 0;
     int numUniqueKeys = 0;
-    Cell prev = null;
+    ExtendedCell prev = null;
     try {
       while ((curCell = segmentScanner.next()) != null) {
         cells[idx++] = curCell;
@@ -165,9 +165,9 @@ public class CellArrayImmutableSegment extends ImmutableSegment {
       numUniqueKeys = CellSet.UNKNOWN_NUM_UNIQUES;
     }
     // build the immutable CellSet
-    CellArrayMap cam = new CellArrayMap(getComparator(), cells, 0, idx, false);
+    CellArrayMap<ExtendedCell> cam = new CellArrayMap<>(getComparator(), cells, 0, idx, false);
     // update the CellSet of this Segment
-    this.setCellSet(oldCellSet, new CellSet(cam, numUniqueKeys));
+    this.setCellSet(oldCellSet, new CellSet<>(cam, numUniqueKeys));
   }
 
 }

@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore.IndexType;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -112,7 +111,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
   }
 
   @Override
-  public Cell copyCellInto(Cell cell) {
+  public ExtendedCell copyCellInto(ExtendedCell cell) {
     // See head of copyBBECellInto for how it differs from copyCellInto
     return (cell instanceof ByteBufferExtendedCell)
       ? copyBBECellInto((ByteBufferExtendedCell) cell, maxAlloc)
@@ -125,7 +124,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
    * MSLAB, during this process, the big cells are copied into MSLAB using this method.
    */
   @Override
-  public Cell forceCopyOfBigCellInto(Cell cell) {
+  public ExtendedCell forceCopyOfBigCellInto(ExtendedCell cell) {
     int size = Segment.getCellLength(cell);
     Preconditions.checkArgument(size >= 0, "negative size");
     if (size + ChunkCreator.SIZEOF_CHUNK_HEADER <= dataChunkSize) {
@@ -145,7 +144,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
    * it was too big. Uses less CPU. See HBASE-20875 for evidence.
    * @see #copyCellInto(Cell, int)
    */
-  private Cell copyBBECellInto(ByteBufferExtendedCell cell, int maxAlloc) {
+  private ExtendedCell copyBBECellInto(ByteBufferExtendedCell cell, int maxAlloc) {
     int size = cell.getSerializedSize();
     Preconditions.checkArgument(size >= 0, "negative size");
     // Callers should satisfy large allocations from JVM heap so limit fragmentation.
@@ -179,7 +178,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
   /**
    * @see #copyBBECellInto(ByteBufferExtendedCell, int)
    */
-  private Cell copyCellInto(Cell cell, int maxAlloc) {
+  private ExtendedCell copyCellInto(ExtendedCell cell, int maxAlloc) {
     int size = Segment.getCellLength(cell);
     Preconditions.checkArgument(size >= 0, "negative size");
     // Callers should satisfy large allocations directly from JVM since they
@@ -216,16 +215,10 @@ public class MemStoreLABImpl implements MemStoreLAB {
    * out of it
    * @see #copyBBECToChunkCell(ByteBufferExtendedCell, ByteBuffer, int, int)
    */
-  private static Cell copyToChunkCell(Cell cell, ByteBuffer buf, int offset, int len) {
+  private static ExtendedCell copyToChunkCell(ExtendedCell cell, ByteBuffer buf, int offset,
+    int len) {
     int tagsLen = cell.getTagsLength();
-    if (cell instanceof ExtendedCell) {
-      ((ExtendedCell) cell).write(buf, offset);
-    } else {
-      // Normally all Cell impls within Server will be of type ExtendedCell. Just considering the
-      // other case also. The data fragments within Cell is copied into buf as in KeyValue
-      // serialization format only.
-      KeyValueUtil.appendTo(cell, buf, offset, true);
-    }
+    cell.write(buf, offset);
     return createChunkCell(buf, offset, len, tagsLen, cell.getSequenceId());
   }
 
@@ -234,14 +227,14 @@ public class MemStoreLABImpl implements MemStoreLAB {
    * out of it
    * @see #copyToChunkCell(Cell, ByteBuffer, int, int)
    */
-  private static Cell copyBBECToChunkCell(ByteBufferExtendedCell cell, ByteBuffer buf, int offset,
-    int len) {
+  private static ExtendedCell copyBBECToChunkCell(ByteBufferExtendedCell cell, ByteBuffer buf,
+    int offset, int len) {
     int tagsLen = cell.getTagsLength();
     cell.write(buf, offset);
     return createChunkCell(buf, offset, len, tagsLen, cell.getSequenceId());
   }
 
-  private static Cell createChunkCell(ByteBuffer buf, int offset, int len, int tagsLen,
+  private static ExtendedCell createChunkCell(ByteBuffer buf, int offset, int len, int tagsLen,
     long sequenceId) {
     // TODO : write the seqid here. For writing seqId we should create a new cell type so
     // that seqId is not used as the state

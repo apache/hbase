@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.function.IntConsumer;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -33,7 +33,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
 
   @Override
-  public boolean requestSeek(Cell kv, boolean forward, boolean useBloom) throws IOException {
+  public boolean requestSeek(ExtendedCell kv, boolean forward, boolean useBloom)
+    throws IOException {
     return doRealSeek(this, kv, forward);
   }
 
@@ -47,7 +48,7 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
     throw new NotImplementedException("enforceSeek must not be called on a " + "non-lazy scanner");
   }
 
-  public static boolean doRealSeek(KeyValueScanner scanner, Cell kv, boolean forward)
+  public static boolean doRealSeek(KeyValueScanner scanner, ExtendedCell kv, boolean forward)
     throws IOException {
     return forward ? scanner.reseek(kv) : scanner.seek(kv);
   }
@@ -76,7 +77,7 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
   }
 
   @Override
-  public Cell getNextIndexedKey() {
+  public ExtendedCell getNextIndexedKey() {
     return null;
   }
 

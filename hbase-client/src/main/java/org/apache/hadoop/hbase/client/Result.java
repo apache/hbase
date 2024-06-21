@@ -125,19 +125,19 @@ public class Result implements CellScannable, CellScanner {
    * <strong>Note:</strong> You must ensure that the keyvalues are already sorted.
    * @param cells List of cells
    */
-  public static Result create(List<Cell> cells) {
+  public static Result create(List<? extends Cell> cells) {
     return create(cells, null);
   }
 
-  public static Result create(List<Cell> cells, Boolean exists) {
+  public static Result create(List<? extends Cell> cells, Boolean exists) {
     return create(cells, exists, false);
   }
 
-  public static Result create(List<Cell> cells, Boolean exists, boolean stale) {
+  public static Result create(List<? extends Cell> cells, Boolean exists, boolean stale) {
     return create(cells, exists, stale, false);
   }
 
-  public static Result create(List<Cell> cells, Boolean exists, boolean stale,
+  public static Result create(List<? extends Cell> cells, Boolean exists, boolean stale,
     boolean mayHaveMoreCellsInRow) {
     if (exists != null) {
       return new Result(null, exists, stale, mayHaveMoreCellsInRow);

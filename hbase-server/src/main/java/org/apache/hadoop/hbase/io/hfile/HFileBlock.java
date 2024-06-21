@@ -40,7 +40,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
@@ -894,7 +894,7 @@ public class HFileBlock implements Cacheable {
     /**
      * Writes the Cell to this block
      */
-    void write(Cell cell) throws IOException {
+    void write(ExtendedCell cell) throws IOException {
       expectState(State.WRITING);
       this.dataBlockEncoder.encode(cell, dataBlockEncodingCtx, this.userDataStream);
     }
