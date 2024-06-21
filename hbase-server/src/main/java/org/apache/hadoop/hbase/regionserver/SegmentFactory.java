@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -139,7 +140,7 @@ public final class SegmentFactory {
   private MutableSegment generateMutableSegment(final Configuration conf, CellComparator comparator,
     MemStoreLAB memStoreLAB, MemStoreSizing memstoreSizing) {
     // TBD use configuration to set type of segment
-    CellSet set = new CellSet(comparator);
+    CellSet<ExtendedCell> set = new CellSet<>(comparator);
     return new MutableSegment(set, comparator, memStoreLAB, memstoreSizing);
   }
 

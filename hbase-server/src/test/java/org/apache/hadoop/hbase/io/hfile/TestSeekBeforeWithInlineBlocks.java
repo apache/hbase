@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -104,7 +105,7 @@ public class TestSeekBeforeWithInlineBlocks {
           conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE, BLOOM_BLOCK_SIZE);
           conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
 
-          Cell[] cells = new Cell[NUM_KV];
+          ExtendedCell[] cells = new ExtendedCell[NUM_KV];
 
           Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), String.format(
             "testMultiIndexLevelRandomHFileWithBlooms-%s-%s-%s", hfileVersion, bloomType, testI));
@@ -163,13 +164,15 @@ public class TestSeekBeforeWithInlineBlocks {
     }
   }
 
-  private void checkSeekBefore(Cell[] cells, HFileScanner scanner, int i) throws IOException {
+  private void checkSeekBefore(ExtendedCell[] cells, HFileScanner scanner, int i)
+    throws IOException {
     assertEquals(
       "Failed to seek to the key before #" + i + " (" + CellUtil.getCellKeyAsString(cells[i]) + ")",
       true, scanner.seekBefore(cells[i]));
   }
 
-  private void checkNoSeekBefore(Cell[] cells, HFileScanner scanner, int i) throws IOException {
+  private void checkNoSeekBefore(ExtendedCell[] cells, HFileScanner scanner, int i)
+    throws IOException {
     assertEquals("Incorrectly succeeded in seeking to before first key ("
       + CellUtil.getCellKeyAsString(cells[i]) + ")", false, scanner.seekBefore(cells[i]));
   }

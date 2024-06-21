@@ -99,7 +99,7 @@ public class KeyValueUtil {
    * The position will be set to the beginning of the new ByteBuffer
    * @return the Bytebuffer containing the key part of the cell
    */
-  public static ByteBuffer copyKeyToNewByteBuffer(final Cell cell) {
+  public static ByteBuffer copyKeyToNewByteBuffer(final ExtendedCell cell) {
     byte[] bytes = new byte[keyLength(cell)];
     appendKeyTo(cell, bytes, 0);
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
@@ -110,7 +110,7 @@ public class KeyValueUtil {
    * Copies the key to a new KeyValue
    * @return the KeyValue that consists only the key part of the incoming cell
    */
-  public static KeyValue toNewKeyCell(final Cell cell) {
+  public static KeyValue toNewKeyCell(final ExtendedCell cell) {
     byte[] bytes = new byte[keyLength(cell)];
     appendKeyTo(cell, bytes, 0);
     KeyValue kv = new KeyValue.KeyOnlyKeyValue(bytes, 0, bytes.length);
@@ -163,7 +163,7 @@ public class KeyValueUtil {
   /**
    * Copy the Cell content into the passed buf in KeyValue serialization format.
    */
-  public static int appendTo(Cell cell, ByteBuffer buf, int offset, boolean withTags) {
+  public static int appendTo(ExtendedCell cell, ByteBuffer buf, int offset, boolean withTags) {
     offset = ByteBufferUtils.putInt(buf, offset, keyLength(cell));// Key length
     offset = ByteBufferUtils.putInt(buf, offset, cell.getValueLength());// Value length
     offset = appendKeyTo(cell, buf, offset);
@@ -176,7 +176,7 @@ public class KeyValueUtil {
     return offset;
   }
 
-  public static int appendKeyTo(Cell cell, ByteBuffer buf, int offset) {
+  public static int appendKeyTo(ExtendedCell cell, ByteBuffer buf, int offset) {
     offset = ByteBufferUtils.putShort(buf, offset, cell.getRowLength());// RK length
     offset = CellUtil.copyRowTo(cell, buf, offset);// Row bytes
     offset = ByteBufferUtils.putByte(buf, offset, cell.getFamilyLength());// CF length
@@ -433,10 +433,10 @@ public class KeyValueUtil {
   }
 
   @Deprecated
-  public static List<KeyValue> ensureKeyValues(List<Cell> cells) {
-    List<KeyValue> lazyList = Lists.transform(cells, new Function<Cell, KeyValue>() {
+  public static List<KeyValue> ensureKeyValues(List<ExtendedCell> cells) {
+    List<KeyValue> lazyList = Lists.transform(cells, new Function<ExtendedCell, KeyValue>() {
       @Override
-      public KeyValue apply(Cell arg0) {
+      public KeyValue apply(ExtendedCell arg0) {
         return KeyValueUtil.ensureKeyValue(arg0);
       }
     });

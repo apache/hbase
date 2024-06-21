@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -497,7 +498,8 @@ public final class MobUtils {
    *                     snapshot.
    * @return The mob reference KeyValue.
    */
-  public static Cell createMobRefCell(Cell cell, byte[] fileName, Tag tableNameTag) {
+  public static ExtendedCell createMobRefCell(ExtendedCell cell, byte[] fileName,
+    Tag tableNameTag) {
     // Append the tags to the KeyValue.
     // The key is same, the value is the filename of the mob file
     List<Tag> tags = new ArrayList<>();
@@ -512,7 +514,8 @@ public final class MobUtils {
     return createMobRefCell(cell, fileName, TagUtil.fromList(tags));
   }
 
-  public static Cell createMobRefCell(Cell cell, byte[] fileName, byte[] refCellTags) {
+  public static ExtendedCell createMobRefCell(ExtendedCell cell, byte[] fileName,
+    byte[] refCellTags) {
     byte[] refValue = Bytes.add(Bytes.toBytes(cell.getValueLength()), fileName);
     return PrivateCellUtil.createCell(cell, refValue, TagUtil.concatTags(refCellTags, cell));
   }

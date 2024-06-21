@@ -36,7 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * and set and won't throw ConcurrentModificationException when iterating.
  */
 @InterfaceAudience.Private
-public class CellSet implements NavigableSet<Cell> {
+public class CellSet<T extends Cell> implements NavigableSet<T> {
 
   public static final int UNKNOWN_NUM_UNIQUES = -1;
   // Implemented on top of a {@link java.util.concurrent.ConcurrentSkipListMap}
@@ -44,127 +44,127 @@ public class CellSet implements NavigableSet<Cell> {
   // is not already present.", this implementation "Adds the specified element to this set EVEN
   // if it is already present overwriting what was there previous".
   // Otherwise, has same attributes as ConcurrentSkipListSet
-  private final NavigableMap<Cell, Cell> delegatee; ///
+  private final NavigableMap<T, T> delegatee; ///
 
   private final int numUniqueKeys;
 
-  public CellSet(final CellComparator c) {
+  public CellSet(CellComparator c) {
     this.delegatee = new ConcurrentSkipListMap<>(c.getSimpleComparator());
     this.numUniqueKeys = UNKNOWN_NUM_UNIQUES;
   }
 
-  CellSet(final NavigableMap<Cell, Cell> m, int numUniqueKeys) {
+  CellSet(final NavigableMap<T, T> m, int numUniqueKeys) {
     this.delegatee = m;
     this.numUniqueKeys = numUniqueKeys;
   }
 
-  CellSet(final NavigableMap<Cell, Cell> m) {
+  CellSet(final NavigableMap<T, T> m) {
     this.delegatee = m;
     this.numUniqueKeys = UNKNOWN_NUM_UNIQUES;
   }
 
-  NavigableMap<Cell, Cell> getDelegatee() {
+  NavigableMap<T, T> getDelegatee() {
     return delegatee;
   }
 
   @Override
-  public Cell ceiling(Cell e) {
+  public T ceiling(T e) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
   @Override
-  public Iterator<Cell> descendingIterator() {
+  public Iterator<T> descendingIterator() {
     return this.delegatee.descendingMap().values().iterator();
   }
 
   @Override
-  public NavigableSet<Cell> descendingSet() {
+  public NavigableSet<T> descendingSet() {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
   @Override
-  public Cell floor(Cell e) {
+  public T floor(T e) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
   @Override
-  public SortedSet<Cell> headSet(final Cell toElement) {
+  public SortedSet<T> headSet(final T toElement) {
     return headSet(toElement, false);
   }
 
   @Override
-  public NavigableSet<Cell> headSet(final Cell toElement, boolean inclusive) {
-    return new CellSet(this.delegatee.headMap(toElement, inclusive), UNKNOWN_NUM_UNIQUES);
+  public NavigableSet<T> headSet(final T toElement, boolean inclusive) {
+    return new CellSet<>(this.delegatee.headMap(toElement, inclusive), UNKNOWN_NUM_UNIQUES);
   }
 
   @Override
-  public Cell higher(Cell e) {
+  public T higher(T e) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
   @Override
-  public Iterator<Cell> iterator() {
+  public Iterator<T> iterator() {
     return this.delegatee.values().iterator();
   }
 
   @Override
-  public Cell lower(Cell e) {
+  public T lower(T e) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
   @Override
-  public Cell pollFirst() {
+  public T pollFirst() {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
   @Override
-  public Cell pollLast() {
+  public T pollLast() {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
   @Override
-  public SortedSet<Cell> subSet(Cell fromElement, Cell toElement) {
+  public SortedSet<T> subSet(T fromElement, T toElement) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
   @Override
-  public NavigableSet<Cell> subSet(Cell fromElement, boolean fromInclusive, Cell toElement,
+  public NavigableSet<T> subSet(Cell fromElement, boolean fromInclusive, Cell toElement,
     boolean toInclusive) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
   @Override
-  public SortedSet<Cell> tailSet(Cell fromElement) {
+  public SortedSet<T> tailSet(T fromElement) {
     return tailSet(fromElement, true);
   }
 
   @Override
-  public NavigableSet<Cell> tailSet(Cell fromElement, boolean inclusive) {
-    return new CellSet(this.delegatee.tailMap(fromElement, inclusive), UNKNOWN_NUM_UNIQUES);
+  public NavigableSet<T> tailSet(T fromElement, boolean inclusive) {
+    return new CellSet<>(this.delegatee.tailMap(fromElement, inclusive), UNKNOWN_NUM_UNIQUES);
   }
 
   @Override
-  public Comparator<? super Cell> comparator() {
+  public Comparator<? super T> comparator() {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
   @Override
-  public Cell first() {
+  public T first() {
     return this.delegatee.firstEntry().getValue();
   }
 
   @Override
-  public Cell last() {
+  public T last() {
     return this.delegatee.lastEntry().getValue();
   }
 
   @Override
-  public boolean add(Cell e) {
+  public boolean add(T e) {
     return this.delegatee.put(e, e) == null;
   }
 
   @Override
-  public boolean addAll(Collection<? extends Cell> c) {
+  public boolean addAll(Collection<? extends T> c) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 

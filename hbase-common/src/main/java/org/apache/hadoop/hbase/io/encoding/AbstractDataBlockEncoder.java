@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -50,7 +50,7 @@ public abstract class AbstractDataBlockEncoder implements DataBlockEncoder {
     }
   }
 
-  protected Cell createFirstKeyCell(ByteBuffer key, int keyLength) {
+  protected ExtendedCell createFirstKeyCell(ByteBuffer key, int keyLength) {
     if (key.hasArray()) {
       return new KeyValue.KeyOnlyKeyValue(key.array(), key.arrayOffset() + key.position(),
         keyLength);

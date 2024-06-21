@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -3243,18 +3244,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * <p/>
    * Caller should have the row and region locks.
    */
-  private void prepareDeleteTimestamps(Mutation mutation, Map<byte[], List<Cell>> familyMap,
+  private void prepareDeleteTimestamps(Mutation mutation, Map<byte[], List<ExtendedCell>> familyMap,
     byte[] byteNow) throws IOException {
-    for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
+    for (Map.Entry<byte[], List<ExtendedCell>> e : familyMap.entrySet()) {
 
       byte[] family = e.getKey();
-      List<Cell> cells = e.getValue();
+      List<ExtendedCell> cells = e.getValue();
       assert cells instanceof RandomAccess;
 
       Map<byte[], Integer> kvCount = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       int listSize = cells.size();
       for (int i = 0; i < listSize; i++) {
-        Cell cell = cells.get(i);
+        ExtendedCell cell = cells.get(i);
         // Check if time is LATEST, change to time of most recent addition if so
         // This is expensive.
         if (
@@ -3340,7 +3341,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     protected final OperationStatus[] retCodeDetails;
     protected final WALEdit[] walEditsFromCoprocessors;
     // reference family cell maps directly so coprocessors can mutate them if desired
-    protected final Map<byte[], List<Cell>>[] familyCellMaps;
+    protected final Map<byte[], List<ExtendedCell>>[] familyCellMaps;
     // For Increment/Append operations
     protected final Result[] results;
 
@@ -3509,7 +3510,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
         if (mutation instanceof Put || mutation instanceof Delete) {
           // store the family map reference to allow for mutations
-          familyCellMaps[index] = mutation.getFamilyCellMap();
+          // we know that in mutation, only ExtendedCells are allow so here we do a fake cast, to
+          // simplify later logic
+          familyCellMaps[index] = (Map) mutation.getFamilyCellMap();
         }
 
         // store durability for the batch (highest durability of all operations in the batch)
@@ -3715,19 +3718,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     protected void addNonSkipWALMutationsToWALEdit(
       final MiniBatchOperationInProgress<Mutation> miniBatchOp, WALEdit walEdit,
-      List<Cell> cellsFromCP, Map<byte[], List<Cell>> familyCellMap) {
+      List<Cell> cellsFromCP, Map<byte[], List<ExtendedCell>> familyCellMap) {
       doAddCellsToWALEdit(walEdit, cellsFromCP, familyCellMap);
     }
 
     protected static void doAddCellsToWALEdit(WALEdit walEdit, List<Cell> cellsFromCP,
-      Map<byte[], List<Cell>> familyCellMap) {
+      Map<byte[], List<ExtendedCell>> familyCellMap) {
       walEdit.add(cellsFromCP);
-      walEdit.add(familyCellMap);
+      walEdit.add((Map) familyCellMap);
     }
 
     protected abstract void cacheSkipWALMutationForRegionReplication(
       final MiniBatchOperationInProgress<Mutation> miniBatchOp,
-      List<Pair<NonceKey, WALEdit>> walEdits, Map<byte[], List<Cell>> familyCellMap);
+      List<Pair<NonceKey, WALEdit>> walEdits, Map<byte[], List<ExtendedCell>> familyCellMap);
 
     /**
      * This method completes mini-batch operations by calling postBatchMutate() CP hook (if
@@ -3782,11 +3785,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * also does <b>not</b> check the families for validity.
      * @param familyMap Map of Cells by family
      */
-    protected void applyFamilyMapToMemStore(Map<byte[], List<Cell>> familyMap,
+    protected void applyFamilyMapToMemStore(Map<byte[], List<ExtendedCell>> familyMap,
       MemStoreSizing memstoreAccounting) {
-      for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
+      for (Map.Entry<byte[], List<ExtendedCell>> e : familyMap.entrySet()) {
         byte[] family = e.getKey();
-        List<Cell> cells = e.getValue();
+        List<ExtendedCell> cells = e.getValue();
         assert cells instanceof RandomAccess;
         region.applyToMemStore(region.getStore(family), cells, false, memstoreAccounting);
       }
@@ -3965,7 +3968,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             return true;
           }
 
-          List<Cell> results = returnResults ? new ArrayList<>(mutation.size()) : null;
+          List<ExtendedCell> results = returnResults ? new ArrayList<>(mutation.size()) : null;
           familyCellMaps[index] = reckonDeltas(mutation, results, timestamp);
           this.results[index] = results != null ? Result.create(results) : Result.EMPTY_RESULT;
 
@@ -4055,19 +4058,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return get;
     }
 
-    private Map<byte[], List<Cell>> reckonDeltas(Mutation mutation, List<Cell> results, long now)
-      throws IOException {
+    private Map<byte[], List<ExtendedCell>> reckonDeltas(Mutation mutation,
+      List<ExtendedCell> results, long now) throws IOException {
       assert mutation instanceof Increment || mutation instanceof Append;
-      Map<byte[], List<Cell>> ret = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      Map<byte[], List<ExtendedCell>> ret = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       // Process a Store/family at a time.
       for (Map.Entry<byte[], List<Cell>> entry : mutation.getFamilyCellMap().entrySet()) {
         final byte[] columnFamilyName = entry.getKey();
-        List<Cell> deltas = entry.getValue();
+        List<ExtendedCell> deltas = (List) entry.getValue();
         // Reckon for the Store what to apply to WAL and MemStore.
-        List<Cell> toApply =
+        List<ExtendedCell> toApply =
           reckonDeltasByStore(region.stores.get(columnFamilyName), mutation, now, deltas, results);
         if (!toApply.isEmpty()) {
-          for (Cell cell : toApply) {
+          for (ExtendedCell cell : toApply) {
             HStore store = region.getStore(cell);
             if (store == null) {
               region.checkFamily(CellUtil.cloneFamily(cell));
@@ -4092,11 +4095,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * @return Resulting Cells after <code>deltas</code> have been applied to current values. Side
      *         effect is our filling out of the <code>results</code> List.
      */
-    private List<Cell> reckonDeltasByStore(HStore store, Mutation mutation, long now,
-      List<Cell> deltas, List<Cell> results) throws IOException {
+    private List<ExtendedCell> reckonDeltasByStore(HStore store, Mutation mutation, long now,
+      List<ExtendedCell> deltas, List<ExtendedCell> results) throws IOException {
       assert mutation instanceof Increment || mutation instanceof Append;
       byte[] columnFamily = store.getColumnFamilyDescriptor().getName();
-      List<Pair<Cell, Cell>> cellPairs = new ArrayList<>(deltas.size());
+      List<Pair<ExtendedCell, ExtendedCell>> cellPairs = new ArrayList<>(deltas.size());
 
       // Sort the cells so that they match the order that they appear in the Get results.
       // Otherwise, we won't be able to find the existing values if the cells are not specified
@@ -4105,7 +4108,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       // Get previous values for all columns in this family.
       Get get = new Get(mutation.getRow());
-      for (Cell cell : deltas) {
+      for (ExtendedCell cell : deltas) {
         get.addColumn(columnFamily, CellUtil.cloneQualifier(cell));
       }
       TimeRange tr;
@@ -4122,14 +4125,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       try (RegionScanner scanner = region.getScanner(new Scan(get))) {
         // NOTE: Please don't use HRegion.get() instead,
         // because it will copy cells to heap. See HBASE-26036
-        List<Cell> currentValues = new ArrayList<>();
-        scanner.next(currentValues);
+        List<ExtendedCell> currentValues = new ArrayList<>();
+        scanner.next((List) currentValues);
         // Iterate the input columns and update existing values if they were found, otherwise
         // add new column initialized to the delta amount
         int currentValuesIndex = 0;
         for (int i = 0; i < deltas.size(); i++) {
-          Cell delta = deltas.get(i);
-          Cell currentValue = null;
+          ExtendedCell delta = deltas.get(i);
+          ExtendedCell currentValue = null;
           if (
             currentValuesIndex < currentValues.size()
               && CellUtil.matchingQualifier(currentValues.get(currentValuesIndex), delta)
@@ -4140,7 +4143,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             }
           }
           // Switch on whether this an increment or an append building the new Cell to apply.
-          Cell newCell;
+          ExtendedCell newCell;
           if (mutation instanceof Increment) {
             long deltaAmount = getLongValue(delta);
             final long newValue =
@@ -4174,14 +4177,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (region.coprocessorHost != null) {
           // Here the operation must be increment or append.
           cellPairs = mutation instanceof Increment
-            ? region.coprocessorHost.postIncrementBeforeWAL(mutation, cellPairs)
-            : region.coprocessorHost.postAppendBeforeWAL(mutation, cellPairs);
+            ? region.coprocessorHost.postIncrementBeforeWAL(mutation, (List) cellPairs)
+            : region.coprocessorHost.postAppendBeforeWAL(mutation, (List) cellPairs);
         }
       }
       return cellPairs.stream().map(Pair::getSecond).collect(Collectors.toList());
     }
 
-    private static Cell reckonDelta(final Cell delta, final Cell currentCell,
+    private static ExtendedCell reckonDelta(final Cell delta, final Cell currentCell,
       final byte[] columnFamily, final long now, Mutation mutation, Function<Cell, byte[]> supplier)
       throws IOException {
       // Forward any tags found on the delta.
@@ -4201,7 +4204,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       } else {
         tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
         PrivateCellUtil.updateLatestStamp(delta, now);
-        return CollectionUtils.isEmpty(tags) ? delta : PrivateCellUtil.createCell(delta, tags);
+        assert delta instanceof ExtendedCell;
+        ExtendedCell deltaCell = (ExtendedCell) delta;
+        return CollectionUtils.isEmpty(tags)
+          ? deltaCell
+          : PrivateCellUtil.createCell(deltaCell, tags);
       }
     }
 
@@ -4234,7 +4241,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     @Override
     protected void cacheSkipWALMutationForRegionReplication(
       MiniBatchOperationInProgress<Mutation> miniBatchOp,
-      List<Pair<NonceKey, WALEdit>> nonceKeyAndWALEdits, Map<byte[], List<Cell>> familyCellMap) {
+      List<Pair<NonceKey, WALEdit>> nonceKeyAndWALEdits,
+      Map<byte[], List<ExtendedCell>> familyCellMap) {
       if (!this.regionReplicateEnable) {
         return;
       }
@@ -4251,7 +4259,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           this.createWALEditForReplicateSkipWAL(miniBatchOp, nonceKeyAndWALEdits);
         miniBatchOp.setWalEditForReplicateIfExistsSkipWAL(walEditForReplicateIfExistsSkipWAL);
       }
-      walEditForReplicateIfExistsSkipWAL.add(familyCellMap);
+      walEditForReplicateIfExistsSkipWAL.add((Map) familyCellMap);
 
     }
 
@@ -4270,7 +4278,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     @Override
     protected void addNonSkipWALMutationsToWALEdit(
       final MiniBatchOperationInProgress<Mutation> miniBatchOp, WALEdit walEdit,
-      List<Cell> cellsFromCP, Map<byte[], List<Cell>> familyCellMap) {
+      List<Cell> cellsFromCP, Map<byte[], List<ExtendedCell>> familyCellMap) {
 
       super.addNonSkipWALMutationsToWALEdit(miniBatchOp, walEdit, cellsFromCP, familyCellMap);
       WALEdit walEditForReplicateIfExistsSkipWAL =
@@ -4514,7 +4522,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           // Returned mutations from coprocessor correspond to the Mutation at index i. We can
           // directly add the cells from those mutations to the familyMaps of this mutation.
-          Map<byte[], List<Cell>> cpFamilyMap = cpMutation.getFamilyCellMap();
+          Map<byte[], List<ExtendedCell>> cpFamilyMap = (Map) cpMutation.getFamilyCellMap();
           region.rewriteCellTags(cpFamilyMap, mutation);
           // will get added to the memStore later
           mergeFamilyMaps(familyCellMaps[i], cpFamilyMap);
@@ -4523,7 +4531,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // If the corresponding mutation contains the SKIP_WAL, we shouldn't count the
           // cells of returned mutation.
           if (region.getEffectiveDurability(mutation.getDurability()) != Durability.SKIP_WAL) {
-            for (List<Cell> cells : cpFamilyMap.values()) {
+            for (List<ExtendedCell> cells : cpFamilyMap.values()) {
               miniBatchOp.addCellCount(cells.size());
             }
           }
@@ -4532,10 +4540,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       });
     }
 
-    private void mergeFamilyMaps(Map<byte[], List<Cell>> familyMap,
-      Map<byte[], List<Cell>> toBeMerged) {
-      for (Map.Entry<byte[], List<Cell>> entry : toBeMerged.entrySet()) {
-        List<Cell> cells = familyMap.get(entry.getKey());
+    private void mergeFamilyMaps(Map<byte[], List<ExtendedCell>> familyMap,
+      Map<byte[], List<ExtendedCell>> toBeMerged) {
+      for (Map.Entry<byte[], List<ExtendedCell>> entry : toBeMerged.entrySet()) {
+        List<ExtendedCell> cells = familyMap.get(entry.getKey());
         if (cells == null) {
           familyMap.put(entry.getKey(), entry.getValue());
         } else {
@@ -4667,7 +4675,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     @Override
     protected void cacheSkipWALMutationForRegionReplication(
       MiniBatchOperationInProgress<Mutation> miniBatchOp, List<Pair<NonceKey, WALEdit>> walEdits,
-      Map<byte[], List<Cell>> familyCellMap) {
+      Map<byte[], List<ExtendedCell>> familyCellMap) {
       // There is no action to do if current region is secondary replica
     }
 
@@ -5086,14 +5094,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           byte[] byteTs = Bytes.toBytes(ts);
           if (mutation != null) {
             if (mutation instanceof Put) {
-              updateCellTimestamps(mutation.getFamilyCellMap().values(), byteTs);
+              updateCellTimestamps((Iterable) mutation.getFamilyCellMap().values(), byteTs);
             }
             // And else 'delete' is not needed since it already does a second get, and sets the
             // timestamp from get (see prepareDeleteTimestamps).
           } else {
             for (Mutation m : rowMutations.getMutations()) {
               if (m instanceof Put) {
-                updateCellTimestamps(m.getFamilyCellMap().values(), byteTs);
+                updateCellTimestamps((Iterable) m.getFamilyCellMap().values(), byteTs);
               }
             }
             // And else 'delete' is not needed since it already does a second get, and sets the
@@ -5204,12 +5212,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     manifest.addRegion(this);
   }
 
-  private void updateSequenceId(final Iterable<List<Cell>> cellItr, final long sequenceId)
+  private void updateSequenceId(final Iterable<List<ExtendedCell>> cellItr, final long sequenceId)
     throws IOException {
-    for (List<Cell> cells : cellItr) {
-      if (cells == null) return;
-      for (Cell cell : cells) {
-        PrivateCellUtil.setSequenceId(cell, sequenceId);
+    for (List<ExtendedCell> cells : cellItr) {
+      if (cells == null) {
+        return;
+      }
+      for (ExtendedCell cell : cells) {
+        cell.setSequenceId(sequenceId);
       }
     }
   }
@@ -5218,10 +5228,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Replace any cell timestamps set to {@link org.apache.hadoop.hbase.HConstants#LATEST_TIMESTAMP}
    * provided current timestamp.
    */
-  private static void updateCellTimestamps(final Iterable<List<Cell>> cellItr, final byte[] now)
-    throws IOException {
-    for (List<Cell> cells : cellItr) {
-      if (cells == null) continue;
+  private static void updateCellTimestamps(final Iterable<List<ExtendedCell>> cellItr,
+    final byte[] now) throws IOException {
+    for (List<ExtendedCell> cells : cellItr) {
+      if (cells == null) {
+        continue;
+      }
       // Optimization: 'foreach' loop is not used. See:
       // HBASE-12023 HRegion.applyFamilyMapToMemstore creates too many iterator objects
       assert cells instanceof RandomAccess;
@@ -5235,7 +5247,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Possibly rewrite incoming cell tags.
    */
-  private void rewriteCellTags(Map<byte[], List<Cell>> familyMap, final Mutation m) {
+  private void rewriteCellTags(Map<byte[], List<ExtendedCell>> familyMap, final Mutation m) {
     // Check if we have any work to do and early out otherwise
     // Update these checks as more logic is added here
     if (m.getTTL() == Long.MAX_VALUE) {
@@ -5243,12 +5255,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     // From this point we know we have some work to do
-    for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
-      List<Cell> cells = e.getValue();
+    for (Map.Entry<byte[], List<ExtendedCell>> e : familyMap.entrySet()) {
+      List<ExtendedCell> cells = e.getValue();
       assert cells instanceof RandomAccess;
       int listSize = cells.size();
       for (int i = 0; i < listSize; i++) {
-        Cell cell = cells.get(i);
+        ExtendedCell cell = cells.get(i);
         List<Tag> newTags = TagUtil.carryForwardTags(null, cell);
         newTags = TagUtil.carryForwardTTLTag(newTags, m.getTTL());
         // Rewrite the cell with the updated set of tags
@@ -5318,7 +5330,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *              set; when set we will run operations that make sense in the increment/append
    *              scenario but that do not make sense otherwise.
    */
-  private void applyToMemStore(HStore store, List<Cell> cells, boolean delta,
+  private void applyToMemStore(HStore store, List<ExtendedCell> cells, boolean delta,
     MemStoreSizing memstoreAccounting) {
     // Any change in how we update Store/MemStore needs to also be done in other applyToMemStore!!!!
     boolean upsert = delta && store.getColumnFamilyDescriptor().getMaxVersions() == 1;
@@ -5666,7 +5678,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           boolean flush = false;
           MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
-          for (Cell cell : val.getCells()) {
+          for (Cell c : val.getCells()) {
+            assert c instanceof ExtendedCell;
+            ExtendedCell cell = (ExtendedCell) c;
             // Check this edit is for me. Also, guard against writing the special
             // METACOLUMN info such as HBASE::CACHEFLUSH entries
             if (WALEdit.isMetaEditFamily(cell)) {
@@ -6518,10 +6532,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * <li>We will advance MVCC in the caller directly.</li>
    * </ol>
    */
-  private void replayWALBatchMutate(Map<byte[], List<Cell>> family2Cells) throws IOException {
+  private void replayWALBatchMutate(Map<byte[], List<ExtendedCell>> family2Cells)
+    throws IOException {
     startRegionOperation(Operation.REPLAY_BATCH_MUTATE);
     try {
-      for (Map.Entry<byte[], List<Cell>> entry : family2Cells.entrySet()) {
+      for (Map.Entry<byte[], List<ExtendedCell>> entry : family2Cells.entrySet()) {
         applyToMemStore(getStore(entry.getKey()), entry.getValue(), false, memStoreSizing);
       }
     } finally {
@@ -6667,13 +6682,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         return;
       }
-      Map<byte[], List<Cell>> family2Cells = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      Map<byte[], List<ExtendedCell>> family2Cells = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (int i = 0; i < count; i++) {
         // Throw index out of bounds if our cell count is off
         if (!cells.advance()) {
           throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
         }
-        Cell cell = cells.current();
+        Cell c = cells.current();
+        assert c instanceof ExtendedCell;
+        ExtendedCell cell = (ExtendedCell) c;
         if (WALEdit.isMetaEditFamily(cell)) {
           // If there is meta edit, i.e, we have done flush/compaction/open, then we need to apply
           // the previous cells first, and then replay the special meta edit. The meta edit is like
@@ -6868,7 +6885,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param s    Store to add edit too.
    * @param cell Cell to add.
    */
-  protected void restoreEdit(HStore s, Cell cell, MemStoreSizing memstoreAccounting) {
+  protected void restoreEdit(HStore s, ExtendedCell cell, MemStoreSizing memstoreAccounting) {
     s.add(cell, memstoreAccounting);
   }
 

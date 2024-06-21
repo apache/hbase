@@ -281,7 +281,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       }
     }
 
-    public Cell toCell() {
+    public ExtendedCell toCell() {
       // Buffer backing the value and tags part from the HFileBlock's buffer
       // When tag compression in use, this will be only the value bytes area.
       ByteBuffer valAndTagsBuffer;
@@ -304,7 +304,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       }
     }
 
-    private Cell toOnheapCell(ByteBuffer valAndTagsBuffer, int vOffset,
+    private ExtendedCell toOnheapCell(ByteBuffer valAndTagsBuffer, int vOffset,
       int tagsLenSerializationSize) {
       byte[] tagsArray = HConstants.EMPTY_BYTE_ARRAY;
       int tOffset = 0;
@@ -326,7 +326,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
         this.tagsLength);
     }
 
-    private Cell toOffheapCell(ByteBuffer valAndTagsBuffer, int vOffset,
+    private ExtendedCell toOffheapCell(ByteBuffer valAndTagsBuffer, int vOffset,
       int tagsLenSerializationSize) {
       ByteBuffer tagsBuf = HConstants.EMPTY_BYTE_BUFFER;
       int tOffset = 0;
@@ -825,7 +825,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
-    public int compareKey(CellComparator comparator, Cell key) {
+    public int compareKey(CellComparator comparator, ExtendedCell key) {
       keyOnlyKV.setKey(current.keyBuffer, 0, current.keyLength);
       return PrivateCellUtil.compareKeyIgnoresMvcc(comparator, key, keyOnlyKV);
     }
@@ -853,7 +853,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
-    public Cell getKey() {
+    public ExtendedCell getKey() {
       byte[] key = new byte[current.keyLength];
       System.arraycopy(current.keyBuffer, 0, key, 0, current.keyLength);
       return new KeyValue.KeyOnlyKeyValue(key);
@@ -869,7 +869,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
-    public Cell getCell() {
+    public ExtendedCell getCell() {
       return current.toCell();
     }
 
@@ -927,7 +927,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
-    public int seekToKeyInBlock(Cell seekCell, boolean seekBefore) {
+    public int seekToKeyInBlock(ExtendedCell seekCell, boolean seekBefore) {
       int rowCommonPrefix = 0;
       int familyCommonPrefix = 0;
       int qualCommonPrefix = 0;
@@ -1020,7 +1020,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       return 1;
     }
 
-    private int compareTypeBytes(Cell key, Cell right) {
+    private int compareTypeBytes(ExtendedCell key, ExtendedCell right) {
       if (
         key.getFamilyLength() + key.getQualifierLength() == 0
           && key.getTypeByte() == KeyValue.Type.Minimum.getCode()
@@ -1129,7 +1129,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
   }
 
   /** Returns unencoded size added */
-  protected final int afterEncodingKeyValue(Cell cell, DataOutputStream out,
+  protected final int afterEncodingKeyValue(ExtendedCell cell, DataOutputStream out,
     HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
     int size = 0;
     if (encodingCtx.getHFileContext().isIncludesTags()) {
@@ -1245,7 +1245,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
   }
 
   @Override
-  public void encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  public void encode(ExtendedCell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
     throws IOException {
     EncodingState state = encodingCtx.getEncodingState();
     int posBeforeEncode = out.size();
@@ -1253,8 +1253,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     state.postCellEncode(encodedKvSize, out.size() - posBeforeEncode);
   }
 
-  public abstract int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingCtx,
-    DataOutputStream out) throws IOException;
+  public abstract int internalEncode(ExtendedCell cell,
+    HFileBlockDefaultEncodingContext encodingCtx, DataOutputStream out) throws IOException;
 
   @Override
   public void endBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out,

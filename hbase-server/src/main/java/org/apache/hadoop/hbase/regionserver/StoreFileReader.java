@@ -31,6 +31,7 @@ import java.util.SortedSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -430,8 +431,8 @@ public class StoreFileReader {
    * @return true if there is overlap, false otherwise
    */
   public boolean passesKeyRangeFilter(Scan scan) {
-    Optional<Cell> firstKeyKV = this.getFirstKey();
-    Optional<Cell> lastKeyKV = this.getLastKey();
+    Optional<ExtendedCell> firstKeyKV = this.getFirstKey();
+    Optional<ExtendedCell> lastKeyKV = this.getLastKey();
     if (!firstKeyKV.isPresent() || !lastKeyKV.isPresent()) {
       // the file is empty
       return false;
@@ -557,7 +558,7 @@ public class StoreFileReader {
     this.deleteFamilyBloomFilter = null;
   }
 
-  public Optional<Cell> getLastKey() {
+  public Optional<ExtendedCell> getLastKey() {
     return reader.getLastKey();
   }
 
@@ -565,7 +566,7 @@ public class StoreFileReader {
     return reader.getLastRowKey();
   }
 
-  public Optional<Cell> midKey() throws IOException {
+  public Optional<ExtendedCell> midKey() throws IOException {
     return reader.midKey();
   }
 
@@ -585,7 +586,7 @@ public class StoreFileReader {
     return deleteFamilyCnt;
   }
 
-  public Optional<Cell> getFirstKey() {
+  public Optional<ExtendedCell> getFirstKey() {
     return reader.getFirstKey();
   }
 

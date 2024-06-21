@@ -267,7 +267,7 @@ public class WALEdit implements HeapSize {
   }
 
   @InterfaceAudience.Private
-  public WALEdit add(List<Cell> cells) {
+  public WALEdit add(List<? extends Cell> cells) {
     if (cells == null || cells.isEmpty()) {
       return this;
     }

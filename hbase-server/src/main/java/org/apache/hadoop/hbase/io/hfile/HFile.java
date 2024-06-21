@@ -32,8 +32,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.MetricsIO;
@@ -395,15 +395,15 @@ public final class HFile {
 
     HFileBlock getMetaBlock(String metaBlockName, boolean cacheBlock) throws IOException;
 
-    Optional<Cell> getLastKey();
+    Optional<ExtendedCell> getLastKey();
 
-    Optional<Cell> midKey() throws IOException;
+    Optional<ExtendedCell> midKey() throws IOException;
 
     long length();
 
     long getEntries();
 
-    Optional<Cell> getFirstKey();
+    Optional<ExtendedCell> getFirstKey();
 
     long indexSize();
 

@@ -26,8 +26,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
@@ -168,10 +168,10 @@ public class TextSortReducer
             }
             // Creating the KV which needs to be directly written to HFiles. Using the Facade
             // KVCreator for creation of kvs.
-            Cell cell = this.kvCreator.create(lineBytes, parsed.getRowKeyOffset(),
-              parsed.getRowKeyLength(), parser.getFamily(i), 0, parser.getFamily(i).length,
-              parser.getQualifier(i), 0, parser.getQualifier(i).length, ts, lineBytes,
-              parsed.getColumnOffset(i), parsed.getColumnLength(i), tags);
+            ExtendedCell cell = (ExtendedCell) this.kvCreator.create(lineBytes,
+              parsed.getRowKeyOffset(), parsed.getRowKeyLength(), parser.getFamily(i), 0,
+              parser.getFamily(i).length, parser.getQualifier(i), 0, parser.getQualifier(i).length,
+              ts, lineBytes, parsed.getColumnOffset(i), parsed.getColumnLength(i), tags);
             KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
             kvs.add(kv);
             curSize += kv.heapSize();

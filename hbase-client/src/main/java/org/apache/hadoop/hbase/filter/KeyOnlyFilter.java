@@ -26,9 +26,11 @@ import java.util.Objects;
 import java.util.Optional;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -144,7 +146,7 @@ public class KeyOnlyFilter extends FilterBase {
     return Objects.hash(this.lenAsVal);
   }
 
-  static class KeyOnlyCell implements Cell {
+  static class KeyOnlyCell implements ExtendedCell {
     private Cell cell;
     private int keyLen;
     private boolean lenAsVal;
@@ -266,6 +268,21 @@ public class KeyOnlyFilter extends FilterBase {
     @Override
     public long heapSize() {
       return cell.heapSize();
+    }
+
+    @Override
+    public void setSequenceId(long seqId) throws IOException {
+      PrivateCellUtil.setSequenceId(cell, seqId);
+    }
+
+    @Override
+    public void setTimestamp(long ts) throws IOException {
+      PrivateCellUtil.setTimestamp(cell, ts);
+    }
+
+    @Override
+    public void setTimestamp(byte[] ts) throws IOException {
+      PrivateCellUtil.setTimestamp(cell, ts);
     }
   }
 
