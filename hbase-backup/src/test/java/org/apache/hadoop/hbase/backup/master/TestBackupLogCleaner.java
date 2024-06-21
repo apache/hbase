@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.backup.master;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupType;
@@ -131,5 +133,22 @@ public class TestBackupLogCleaner extends TestBackupBase {
 
       conn.close();
     }
+  }
+
+  @Test
+  public void testCleansUpHMasterWal() {
+    Path path = new Path("/hbase/MasterData/WALs/hmaster,60000,1718808578163");
+    assertTrue(BackupLogCleaner.canDeleteFile(Collections.emptyMap(), path));
+  }
+
+  @Test
+  public void testCleansUpArchivedHMasterWal() {
+    Path normalPath =
+      new Path("/hbase/oldWALs/hmaster%2C60000%2C1716224062663.1716247552189$masterlocalwal$");
+    assertTrue(BackupLogCleaner.canDeleteFile(Collections.emptyMap(), normalPath));
+
+    Path masterPath = new Path(
+      "/hbase/MasterData/oldWALs/hmaster%2C60000%2C1716224062663.1716247552189$masterlocalwal$");
+    assertTrue(BackupLogCleaner.canDeleteFile(Collections.emptyMap(), masterPath));
   }
 }
