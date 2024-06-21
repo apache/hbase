@@ -206,10 +206,14 @@ public final class BackupSystemTable implements Closeable {
       if (!admin.tableExists(tableName)) {
         TableDescriptor backupHTD = BackupSystemTable.getSystemTableDescriptor(conf);
         createSystemTable(admin, backupHTD);
+      } else if (!admin.isTableEnabled(tableName)) {
+        admin.enableTable(tableName);
       }
       if (!admin.tableExists(bulkLoadTableName)) {
         TableDescriptor blHTD = BackupSystemTable.getSystemTableForBulkLoadedDataDescriptor(conf);
         createSystemTable(admin, blHTD);
+      } else if (!admin.isTableEnabled(bulkLoadTableName)) {
+        admin.enableTable(bulkLoadTableName);
       }
       waitForSystemTable(admin, tableName);
       waitForSystemTable(admin, bulkLoadTableName);
