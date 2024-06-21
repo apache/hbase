@@ -32,12 +32,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.client.AsyncConnectionImpl;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -266,19 +263,18 @@ public final class ReadOnlyZKClient implements Closeable {
     }
   }
 
-  public CompletableFuture<byte[]> getWithTimeout(String path, long endTime, HashedWheelTimer retryTimer) {
-    CompletableFuture<byte[]> future = get(path);
-    TimerTask timerTask = new TimerTask() {
-      @Override
-      public void run(Timeout timeout) throws Exception {
-        if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
-          future.completeExceptionally(
-            new DoNotRetryIOException("Zookeeper get could not be completed by " + endTime));
-        }
+  private static TimerTask getTimerTask(final long timeoutMs, final CompletableFuture<?> future, final String api) {
+    return timeout -> {
+      if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
+        future.completeExceptionally(new DoNotRetryIOException( "Zookeeper " + api + " could not be completed in " + timeoutMs + " ms"));
       }
     };
+  }
 
-    retryTimer.newTimeout(timerTask, endTime + 1, TimeUnit.MILLISECONDS);
+  public CompletableFuture<byte[]> getWithTimeout(final String path, final long timeoutMs, final HashedWheelTimer retryTimer) {
+    CompletableFuture<byte[]> future = get(path);
+    TimerTask timerTask = getTimerTask(timeoutMs, future, "GET");
+    retryTimer.newTimeout(timerTask, timeoutMs + 1, TimeUnit.MILLISECONDS);
     return future;
   }
 
@@ -298,18 +294,10 @@ public final class ReadOnlyZKClient implements Closeable {
     return future;
   }
 
-  public CompletableFuture<Stat> existsWithTimeout(String path, long endTime, HashedWheelTimer retryTimer) {
+  public CompletableFuture<Stat> existsWithTimeout(String path, long timeoutMs, HashedWheelTimer retryTimer) {
     CompletableFuture<Stat> future = exists(path);
-    TimerTask timerTask = new TimerTask() {
-      @Override
-      public void run(Timeout timeout) throws Exception {
-          if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
-            future.completeExceptionally(
-              new DoNotRetryIOException("Zookeeper get could not be completed by " + endTime));
-          }
-      }
-    };
-    retryTimer.newTimeout(timerTask, endTime + 1, TimeUnit.MILLISECONDS);
+    TimerTask timerTask = getTimerTask(timeoutMs, future, "EXISTS");
+    retryTimer.newTimeout(timerTask, timeoutMs + 1, TimeUnit.MILLISECONDS);
     return future;
   }
 
@@ -328,19 +316,10 @@ public final class ReadOnlyZKClient implements Closeable {
     return future;
   }
 
-  public CompletableFuture<List<String>> listWithTimeout(String path, long endTime, HashedWheelTimer retryTimer) {
+  public CompletableFuture<List<String>> listWithTimeout(String path, long timeoutMs, HashedWheelTimer retryTimer) {
     CompletableFuture<List<String>> future = list(path);
-    TimerTask timerTask = new TimerTask() {
-      @Override
-      public void run(Timeout timeout) throws Exception {
-          if (!future.isCancelled() && !future.isDone() && !future.isCompletedExceptionally()) {
-            future.completeExceptionally(
-              new DoNotRetryIOException("Zookeeper get could not be completed by " + endTime));
-          }
-      }
-    };
-
-    retryTimer.newTimeout(timerTask, endTime + 1, TimeUnit.MILLISECONDS);
+    TimerTask timerTask = getTimerTask(timeoutMs, future, "LIST");
+    retryTimer.newTimeout(timerTask, timeoutMs + 1, TimeUnit.MILLISECONDS);
     return future;
   }
 
