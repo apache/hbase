@@ -2816,6 +2816,13 @@ public class HBaseAdmin implements Admin {
           String msg = "Restore snapshot=" + snapshotName + " failed. Rollback to snapshot="
             + failSafeSnapshotSnapshotName + " succeeded.";
           LOG.error(msg, e);
+          try {
+            LOG.info("Deleting restore-failsafe snapshot: {}", failSafeSnapshotSnapshotName);
+            deleteSnapshot(failSafeSnapshotSnapshotName);
+          } catch (IOException deleteSnapshotException) {
+            LOG.error("Unable to remove the failsafe snapshot: {}", failSafeSnapshotSnapshotName,
+              deleteSnapshotException);
+          }
           throw new RestoreSnapshotException(msg, e);
         } catch (IOException ex) {
           String msg = "Failed to restore and rollback to snapshot=" + failSafeSnapshotSnapshotName;
