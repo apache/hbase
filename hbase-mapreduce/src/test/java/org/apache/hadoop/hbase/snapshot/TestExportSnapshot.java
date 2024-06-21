@@ -228,6 +228,23 @@ public class TestExportSnapshot {
   }
 
   @Test
+  public void testExportWithChecksum() throws Exception {
+    // Test different schemes: input scheme is hdfs:// and output scheme is file://
+    // The checksum verification will fail
+    Path copyLocalDir = getLocalDestinationDir(TEST_UTIL);
+    testExportFileSystemState(TEST_UTIL.getConfiguration(), tableName, snapshotName, snapshotName,
+      tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyLocalDir, false, false,
+      getBypassRegionPredicate(), false, true);
+
+    // Test same schemes: input scheme is hdfs:// and output scheme is hdfs://
+    // The checksum verification will success
+    Path copyHdfsDir = getHdfsDestinationDir();
+    testExportFileSystemState(TEST_UTIL.getConfiguration(), tableName, snapshotName, snapshotName,
+      tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyHdfsDir, false, false,
+      getBypassRegionPredicate(), true, true);
+  }
+
+  @Test
   public void testExportWithTargetName() throws Exception {
     final byte[] targetName = Bytes.toBytes("testExportWithTargetName");
     testExportFileSystemState(tableName, snapshotName, targetName, tableNumFiles);
@@ -282,7 +299,7 @@ public class TestExportSnapshot {
     throws Exception {
     testExportFileSystemState(TEST_UTIL.getConfiguration(), tableName, snapshotName, targetName,
       filesExpected, TEST_UTIL.getDefaultRootDirPath(), copyDir, overwrite, resetTtl,
-      getBypassRegionPredicate(), true);
+      getBypassRegionPredicate(), true, false);
   }
 
   /**
@@ -291,8 +308,8 @@ public class TestExportSnapshot {
   protected static void testExportFileSystemState(final Configuration conf,
     final TableName tableName, final byte[] snapshotName, final byte[] targetName,
     final int filesExpected, final Path srcDir, Path rawTgtDir, final boolean overwrite,
-    final boolean resetTtl, final RegionPredicate bypassregionPredicate, boolean success)
-    throws Exception {
+    final boolean resetTtl, final RegionPredicate bypassregionPredicate, final boolean success,
+    final boolean checksumVerify) throws Exception {
     FileSystem tgtFs = rawTgtDir.getFileSystem(conf);
     FileSystem srcFs = srcDir.getFileSystem(conf);
     Path tgtDir = rawTgtDir.makeQualified(tgtFs.getUri(), tgtFs.getWorkingDirectory());
@@ -312,6 +329,9 @@ public class TestExportSnapshot {
     }
     if (resetTtl) {
       opts.add("--reset-ttl");
+    }
+    if (!checksumVerify) {
+      opts.add("--no-checksum-verify");
     }
 
     // Export Snapshot
