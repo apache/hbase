@@ -560,7 +560,7 @@ public final class CellUtil {
    */
   @Deprecated
   public static Cell createCell(Cell cell, List<Tag> tags) {
-    return PrivateCellUtil.createCell(cell, tags);
+    return PrivateCellUtil.createCell((ExtendedCell) cell, tags);
   }
 
   /**
@@ -571,7 +571,7 @@ public final class CellUtil {
    */
   @Deprecated
   public static Cell createCell(Cell cell, byte[] tags) {
-    return PrivateCellUtil.createCell(cell, tags);
+    return PrivateCellUtil.createCell((ExtendedCell) cell, tags);
   }
 
   /**
@@ -581,7 +581,7 @@ public final class CellUtil {
    */
   @Deprecated
   public static Cell createCell(Cell cell, byte[] value, byte[] tags) {
-    return PrivateCellUtil.createCell(cell, value, tags);
+    return PrivateCellUtil.createCell((ExtendedCell) cell, value, tags);
   }
 
   /** Returns CellScanner interface over <code>cellIterables</code> */
@@ -1690,6 +1690,8 @@ public final class CellUtil {
   }
 
   public static Cell cloneIfNecessary(Cell cell) {
-    return (cell instanceof ByteBufferExtendedCell ? KeyValueUtil.copyToNewKeyValue(cell) : cell);
+    return (cell instanceof ByteBufferExtendedCell
+      ? KeyValueUtil.copyToNewKeyValue((ExtendedCell) cell)
+      : cell);
   }
 }

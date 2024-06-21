@@ -22,8 +22,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -55,7 +55,7 @@ public interface DataBlockEncoder {
    * Encodes a KeyValue. After the encode, {@link EncodingState#postCellEncode(int, int)} needs to
    * be called to keep track of the encoded and unencoded data size
    */
-  void encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  void encode(ExtendedCell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
     throws IOException;
 
   /**
@@ -81,7 +81,7 @@ public interface DataBlockEncoder {
    * @param block encoded block we want index, the position will not change
    * @return First key in block as a cell.
    */
-  Cell getFirstKeyCellInBlock(ByteBuff block);
+  ExtendedCell getFirstKeyCellInBlock(ByteBuff block);
 
   /**
    * Create a HFileBlock seeker which find KeyValues within a block.
@@ -119,7 +119,7 @@ public interface DataBlockEncoder {
      * From the current position creates a cell using the key part of the current buffer
      * @return key at current position
      */
-    Cell getKey();
+    ExtendedCell getKey();
 
     /**
      * Does a shallow copy of the value at the current position. A shallow copy is possible because
@@ -129,7 +129,7 @@ public interface DataBlockEncoder {
     ByteBuffer getValueShallowCopy();
 
     /** Returns the Cell at the current position. Includes memstore timestamp. */
-    Cell getCell();
+    ExtendedCell getCell();
 
     /** Set position to beginning of given block */
     void rewind();
@@ -154,12 +154,12 @@ public interface DataBlockEncoder {
      *                   Does not matter in case of an inexact match.
      * @return 0 on exact match, 1 on inexact match.
      */
-    int seekToKeyInBlock(Cell key, boolean seekBefore);
+    int seekToKeyInBlock(ExtendedCell key, boolean seekBefore);
 
     /**
      * Compare the given key against the current key
      * @return -1 is the passed key is smaller than the current key, 0 if equal and 1 if greater
      */
-    public int compareKey(CellComparator comparator, Cell key);
+    public int compareKey(CellComparator comparator, ExtendedCell key);
   }
 }

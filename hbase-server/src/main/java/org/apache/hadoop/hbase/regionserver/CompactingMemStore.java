@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
@@ -306,7 +307,7 @@ public class CompactingMemStore extends AbstractMemStore {
    * @return true iff can proceed with applying the update
    */
   @Override
-  protected boolean preUpdate(MutableSegment currentActive, Cell cell,
+  protected boolean preUpdate(MutableSegment currentActive, ExtendedCell cell,
     MemStoreSizing memstoreSizing) {
     if (currentActive.sharedLock()) {
       if (checkAndAddToActiveSize(currentActive, cell, memstoreSizing)) {
@@ -621,8 +622,8 @@ public class CompactingMemStore extends AbstractMemStore {
    * @param cell Find the row that comes after this one. If null, we return the first.
    * @return Next row or null if none found.
    */
-  Cell getNextRow(final Cell cell) {
-    Cell lowest = null;
+  ExtendedCell getNextRow(final ExtendedCell cell) {
+    ExtendedCell lowest = null;
     List<Segment> segments = getSegments();
     for (Segment segment : segments) {
       if (lowest == null) {

@@ -38,7 +38,7 @@ public interface RawCell extends Cell {
    * @return the byte[] having the tags
    */
   default byte[] cloneTags() {
-    return PrivateCellUtil.cloneTags(this);
+    return PrivateCellUtil.cloneTags((ExtendedCell) this);
   }
 
   /**
@@ -46,7 +46,7 @@ public interface RawCell extends Cell {
    * @return a list of tags
    */
   default Iterator<Tag> getTags() {
-    return PrivateCellUtil.tagsIterator(this);
+    return PrivateCellUtil.tagsIterator((ExtendedCell) this);
   }
 
   /**
@@ -55,7 +55,7 @@ public interface RawCell extends Cell {
    * @return the specific tag if available or null
    */
   default Optional<Tag> getTag(byte type) {
-    return PrivateCellUtil.getTag(this, type);
+    return PrivateCellUtil.getTag((ExtendedCell) this, type);
   }
 
   /**
@@ -71,6 +71,6 @@ public interface RawCell extends Cell {
 
   /** Returns A new cell which is having the extra tags also added to it. */
   public static Cell createCell(Cell cell, List<Tag> tags) {
-    return PrivateCellUtil.createCell(cell, tags);
+    return PrivateCellUtil.createCell((ExtendedCell) cell, tags);
   }
 }

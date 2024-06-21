@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -81,7 +82,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
 
   @Override
   @SuppressWarnings("ByteBufferBackingArray")
-  public Cell getKey() {
+  public ExtendedCell getKey() {
     if (current.keyBuffer.hasArray()) {
       return new KeyValue.KeyOnlyKeyValue(current.keyBuffer.array(),
         current.keyBuffer.arrayOffset() + current.keyBuffer.position(), current.keyLength);
@@ -103,7 +104,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
   }
 
   @Override
-  public Cell getCell() {
+  public ExtendedCell getCell() {
     return current.toCell();
   }
 
@@ -164,7 +165,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
   }
 
   @Override
-  public int seekToKeyInBlock(Cell seekCell, boolean seekBefore) {
+  public int seekToKeyInBlock(ExtendedCell seekCell, boolean seekBefore) {
     previous.invalidate();
     int index = binarySearch(seekCell, seekBefore);
     if (index < 0) {
@@ -230,7 +231,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
   }
 
   @Override
-  public int compareKey(CellComparator comparator, Cell key) {
+  public int compareKey(CellComparator comparator, ExtendedCell key) {
     return PrivateCellUtil.compareKeyIgnoresMvcc(comparator, key, current.currentKey);
   }
 
@@ -343,8 +344,8 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
       return kvBufSize;
     }
 
-    public Cell toCell() {
-      Cell ret;
+    public ExtendedCell toCell() {
+      ExtendedCell ret;
       int cellBufSize = getCellBufSize();
       long seqId = 0L;
       if (includesMvcc()) {

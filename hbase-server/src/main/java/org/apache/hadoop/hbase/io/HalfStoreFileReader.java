@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.Optional;
 import java.util.function.IntConsumer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -58,9 +58,9 @@ public class HalfStoreFileReader extends StoreFileReader {
   // i.e. empty column and a timestamp of LATEST_TIMESTAMP.
   protected final byte[] splitkey;
 
-  private final Cell splitCell;
+  private final ExtendedCell splitCell;
 
-  private Optional<Cell> firstKey = Optional.empty();
+  private Optional<ExtendedCell> firstKey = Optional.empty();
 
   private boolean firstKeySeeked = false;
 
@@ -100,8 +100,10 @@ public class HalfStoreFileReader extends StoreFileReader {
       public boolean atEnd = false;
 
       @Override
-      public Cell getKey() {
-        if (atEnd) return null;
+      public ExtendedCell getKey() {
+        if (atEnd) {
+          return null;
+        }
         return delegate.getKey();
       }
 
@@ -114,7 +116,9 @@ public class HalfStoreFileReader extends StoreFileReader {
 
       @Override
       public ByteBuffer getValue() {
-        if (atEnd) return null;
+        if (atEnd) {
+          return null;
+        }
 
         return delegate.getValue();
       }
@@ -127,8 +131,10 @@ public class HalfStoreFileReader extends StoreFileReader {
       }
 
       @Override
-      public Cell getCell() {
-        if (atEnd) return null;
+      public ExtendedCell getCell() {
+        if (atEnd) {
+          return null;
+        }
 
         return delegate.getCell();
       }
@@ -187,7 +193,7 @@ public class HalfStoreFileReader extends StoreFileReader {
       }
 
       @Override
-      public int seekTo(Cell key) throws IOException {
+      public int seekTo(ExtendedCell key) throws IOException {
         if (top) {
           if (PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) < 0) {
             return -1;
@@ -209,10 +215,9 @@ public class HalfStoreFileReader extends StoreFileReader {
       }
 
       @Override
-      public int reseekTo(Cell key) throws IOException {
+      public int reseekTo(ExtendedCell key) throws IOException {
         // This function is identical to the corresponding seekTo function
-        // except
-        // that we call reseekTo (and not seekTo) on the delegate.
+        // except that we call reseekTo (and not seekTo) on the delegate.
         if (top) {
           if (PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) < 0) {
             return -1;
@@ -237,9 +242,9 @@ public class HalfStoreFileReader extends StoreFileReader {
       }
 
       @Override
-      public boolean seekBefore(Cell key) throws IOException {
+      public boolean seekBefore(ExtendedCell key) throws IOException {
         if (top) {
-          Optional<Cell> fk = getFirstKey();
+          Optional<ExtendedCell> fk = getFirstKey();
           if (
             fk.isPresent()
               && PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, fk.get()) <= 0
@@ -265,7 +270,7 @@ public class HalfStoreFileReader extends StoreFileReader {
       }
 
       @Override
-      public Cell getNextIndexedKey() {
+      public ExtendedCell getNextIndexedKey() {
         return null;
       }
 
@@ -292,7 +297,7 @@ public class HalfStoreFileReader extends StoreFileReader {
   }
 
   @Override
-  public Optional<Cell> getLastKey() {
+  public Optional<ExtendedCell> getLastKey() {
     if (top) {
       return super.getLastKey();
     }
@@ -313,13 +318,13 @@ public class HalfStoreFileReader extends StoreFileReader {
   }
 
   @Override
-  public Optional<Cell> midKey() throws IOException {
+  public Optional<ExtendedCell> midKey() throws IOException {
     // Returns null to indicate file is not splitable.
     return Optional.empty();
   }
 
   @Override
-  public Optional<Cell> getFirstKey() {
+  public Optional<ExtendedCell> getFirstKey() {
     if (!firstKeySeeked) {
       HFileScanner scanner = getScanner(true, true, false);
       try {

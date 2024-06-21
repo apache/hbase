@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -232,7 +233,9 @@ public class WALCellCodec implements Codec {
     }
 
     @Override
-    public void write(Cell cell) throws IOException {
+    public void write(Cell c) throws IOException {
+      assert c instanceof ExtendedCell;
+      ExtendedCell cell = (ExtendedCell) c;
       // We first write the KeyValue infrastructure as VInts.
       StreamUtils.writeRawVInt32(out, KeyValueUtil.keyLength(cell));
       StreamUtils.writeRawVInt32(out, cell.getValueLength());

@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -353,8 +354,8 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
         }
 
         // we now have the proper WAL writer. full steam ahead
-        PrivateCellUtil.updateLatestStamp(cell, this.now);
-        wl.writer.append(kv);
+        PrivateCellUtil.updateLatestStamp(kv, this.now);
+        wl.writer.append((ExtendedCell) kv);
         wl.written += length;
 
         // Copy the row so we know when a row transition.

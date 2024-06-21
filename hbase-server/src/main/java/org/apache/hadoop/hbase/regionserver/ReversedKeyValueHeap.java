@@ -23,6 +23,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -43,22 +44,23 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
   }
 
   @Override
-  public boolean seek(Cell seekKey) throws IOException {
+  public boolean seek(ExtendedCell seekKey) throws IOException {
     throw new IllegalStateException("seek cannot be called on ReversedKeyValueHeap");
   }
 
   @Override
-  public boolean reseek(Cell seekKey) throws IOException {
+  public boolean reseek(ExtendedCell seekKey) throws IOException {
     throw new IllegalStateException("reseek cannot be called on ReversedKeyValueHeap");
   }
 
   @Override
-  public boolean requestSeek(Cell key, boolean forward, boolean useBloom) throws IOException {
+  public boolean requestSeek(ExtendedCell key, boolean forward, boolean useBloom)
+    throws IOException {
     throw new IllegalStateException("requestSeek cannot be called on ReversedKeyValueHeap");
   }
 
   @Override
-  public boolean seekToPreviousRow(Cell seekKey) throws IOException {
+  public boolean seekToPreviousRow(ExtendedCell seekKey) throws IOException {
     if (current == null) {
       return false;
     }
@@ -87,7 +89,7 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
   }
 
   @Override
-  public boolean backwardSeek(Cell seekKey) throws IOException {
+  public boolean backwardSeek(ExtendedCell seekKey) throws IOException {
     if (current == null) {
       return false;
     }
@@ -116,12 +118,12 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
   }
 
   @Override
-  public Cell next() throws IOException {
+  public ExtendedCell next() throws IOException {
     if (this.current == null) {
       return null;
     }
-    Cell kvReturn = this.current.next();
-    Cell kvNext = this.current.peek();
+    ExtendedCell kvReturn = this.current.next();
+    ExtendedCell kvNext = this.current.peek();
     if (kvNext == null || this.comparator.kvComparator.compareRows(kvNext, kvReturn) > 0) {
       if (this.current.seekToPreviousRow(kvReturn)) {
         this.heap.add(this.current);
