@@ -40,7 +40,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -104,7 +104,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -169,7 +169,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -233,7 +233,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -298,7 +298,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -366,7 +366,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -442,7 +442,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -506,7 +506,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -571,7 +571,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -635,7 +635,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -693,7 +693,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -750,7 +750,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -800,7 +800,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{success}}));
       {
-        foreach my $iter29 (@{$self->{success}}) 
+        foreach my $iter29 (@{$self->{success}})
         {
           $xfer += $output->writeString($iter29);
         }
@@ -847,7 +847,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -915,7 +915,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -969,7 +969,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRUCT, scalar(keys %{$self->{success}}));
       {
-        while( my ($kiter37,$viter38) = each %{$self->{success}}) 
+        while( my ($kiter37,$viter38) = each %{$self->{success}})
         {
           $xfer += $output->writeString($kiter37);
           $xfer += ${viter38}->write($output);
@@ -1017,7 +1017,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -1085,7 +1085,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -1136,7 +1136,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter45 (@{$self->{success}}) 
+        foreach my $iter45 (@{$self->{success}})
         {
           $xfer += ${iter45}->write($output);
         }
@@ -1187,7 +1187,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -1242,7 +1242,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{columnFamilies}}));
       {
-        foreach my $iter52 (@{$self->{columnFamilies}}) 
+        foreach my $iter52 (@{$self->{columnFamilies}})
         {
           $xfer += ${iter52}->write($output);
         }
@@ -1292,7 +1292,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -1381,7 +1381,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -1445,7 +1445,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -1522,7 +1522,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -1601,7 +1601,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter60,$viter61) = each %{$self->{attributes}}) 
+        while( my ($kiter60,$viter61) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter60);
           $xfer += $output->writeString($viter61);
@@ -1648,7 +1648,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -1699,7 +1699,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter68 (@{$self->{success}}) 
+        foreach my $iter68 (@{$self->{success}})
         {
           $xfer += ${iter68}->write($output);
         }
@@ -1762,7 +1762,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -1852,7 +1852,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter76,$viter77) = each %{$self->{attributes}}) 
+        while( my ($kiter76,$viter77) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter76);
           $xfer += $output->writeString($viter77);
@@ -1899,7 +1899,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -1950,7 +1950,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter84 (@{$self->{success}}) 
+        foreach my $iter84 (@{$self->{success}})
         {
           $xfer += ${iter84}->write($output);
         }
@@ -2017,7 +2017,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -2118,7 +2118,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter92,$viter93) = each %{$self->{attributes}}) 
+        while( my ($kiter92,$viter93) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter92);
           $xfer += $output->writeString($viter93);
@@ -2165,7 +2165,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -2216,7 +2216,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter100 (@{$self->{success}}) 
+        foreach my $iter100 (@{$self->{success}})
         {
           $xfer += ${iter100}->write($output);
         }
@@ -2271,7 +2271,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -2339,7 +2339,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter108,$viter109) = each %{$self->{attributes}}) 
+        while( my ($kiter108,$viter109) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter108);
           $xfer += $output->writeString($viter109);
@@ -2386,7 +2386,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -2437,7 +2437,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter116 (@{$self->{success}}) 
+        foreach my $iter116 (@{$self->{success}})
         {
           $xfer += ${iter116}->write($output);
         }
@@ -2496,7 +2496,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -2582,7 +2582,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{columns}}));
       {
-        foreach my $iter130 (@{$self->{columns}}) 
+        foreach my $iter130 (@{$self->{columns}})
         {
           $xfer += $output->writeString($iter130);
         }
@@ -2596,7 +2596,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter131,$viter132) = each %{$self->{attributes}}) 
+        while( my ($kiter131,$viter132) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter131);
           $xfer += $output->writeString($viter132);
@@ -2643,7 +2643,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -2694,7 +2694,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter139 (@{$self->{success}}) 
+        foreach my $iter139 (@{$self->{success}})
         {
           $xfer += ${iter139}->write($output);
         }
@@ -2753,7 +2753,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -2832,7 +2832,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter147,$viter148) = each %{$self->{attributes}}) 
+        while( my ($kiter147,$viter148) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter147);
           $xfer += $output->writeString($viter148);
@@ -2879,7 +2879,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -2930,7 +2930,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter155 (@{$self->{success}}) 
+        foreach my $iter155 (@{$self->{success}})
         {
           $xfer += ${iter155}->write($output);
         }
@@ -2993,7 +2993,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -3085,7 +3085,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{columns}}));
       {
-        foreach my $iter169 (@{$self->{columns}}) 
+        foreach my $iter169 (@{$self->{columns}})
         {
           $xfer += $output->writeString($iter169);
         }
@@ -3104,7 +3104,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter170,$viter171) = each %{$self->{attributes}}) 
+        while( my ($kiter170,$viter171) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter170);
           $xfer += $output->writeString($viter171);
@@ -3151,7 +3151,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -3202,7 +3202,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter178 (@{$self->{success}}) 
+        foreach my $iter178 (@{$self->{success}})
         {
           $xfer += ${iter178}->write($output);
         }
@@ -3257,7 +3257,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -3332,7 +3332,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{rows}}));
       {
-        foreach my $iter192 (@{$self->{rows}}) 
+        foreach my $iter192 (@{$self->{rows}})
         {
           $xfer += $output->writeString($iter192);
         }
@@ -3346,7 +3346,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter193,$viter194) = each %{$self->{attributes}}) 
+        while( my ($kiter193,$viter194) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter193);
           $xfer += $output->writeString($viter194);
@@ -3393,7 +3393,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -3444,7 +3444,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter201 (@{$self->{success}}) 
+        foreach my $iter201 (@{$self->{success}})
         {
           $xfer += ${iter201}->write($output);
         }
@@ -3503,7 +3503,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -3596,7 +3596,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{rows}}));
       {
-        foreach my $iter221 (@{$self->{rows}}) 
+        foreach my $iter221 (@{$self->{rows}})
         {
           $xfer += $output->writeString($iter221);
         }
@@ -3610,7 +3610,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{columns}}));
       {
-        foreach my $iter222 (@{$self->{columns}}) 
+        foreach my $iter222 (@{$self->{columns}})
         {
           $xfer += $output->writeString($iter222);
         }
@@ -3624,7 +3624,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter223,$viter224) = each %{$self->{attributes}}) 
+        while( my ($kiter223,$viter224) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter223);
           $xfer += $output->writeString($viter224);
@@ -3671,7 +3671,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -3722,7 +3722,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter231 (@{$self->{success}}) 
+        foreach my $iter231 (@{$self->{success}})
         {
           $xfer += ${iter231}->write($output);
         }
@@ -3781,7 +3781,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -3862,7 +3862,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{rows}}));
       {
-        foreach my $iter245 (@{$self->{rows}}) 
+        foreach my $iter245 (@{$self->{rows}})
         {
           $xfer += $output->writeString($iter245);
         }
@@ -3881,7 +3881,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter246,$viter247) = each %{$self->{attributes}}) 
+        while( my ($kiter246,$viter247) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter246);
           $xfer += $output->writeString($viter247);
@@ -3928,7 +3928,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -3979,7 +3979,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter254 (@{$self->{success}}) 
+        foreach my $iter254 (@{$self->{success}})
         {
           $xfer += ${iter254}->write($output);
         }
@@ -4042,7 +4042,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -4141,7 +4141,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{rows}}));
       {
-        foreach my $iter274 (@{$self->{rows}}) 
+        foreach my $iter274 (@{$self->{rows}})
         {
           $xfer += $output->writeString($iter274);
         }
@@ -4155,7 +4155,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{columns}}));
       {
-        foreach my $iter275 (@{$self->{columns}}) 
+        foreach my $iter275 (@{$self->{columns}})
         {
           $xfer += $output->writeString($iter275);
         }
@@ -4174,7 +4174,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter276,$viter277) = each %{$self->{attributes}}) 
+        while( my ($kiter276,$viter277) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter276);
           $xfer += $output->writeString($viter277);
@@ -4221,7 +4221,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -4272,7 +4272,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter284 (@{$self->{success}}) 
+        foreach my $iter284 (@{$self->{success}})
         {
           $xfer += ${iter284}->write($output);
         }
@@ -4331,7 +4331,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -4418,7 +4418,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{mutations}}));
       {
-        foreach my $iter298 (@{$self->{mutations}}) 
+        foreach my $iter298 (@{$self->{mutations}})
         {
           $xfer += ${iter298}->write($output);
         }
@@ -4432,7 +4432,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter299,$viter300) = each %{$self->{attributes}}) 
+        while( my ($kiter299,$viter300) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter299);
           $xfer += $output->writeString($viter300);
@@ -4479,7 +4479,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -4572,7 +4572,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -4665,7 +4665,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{mutations}}));
       {
-        foreach my $iter314 (@{$self->{mutations}}) 
+        foreach my $iter314 (@{$self->{mutations}})
         {
           $xfer += ${iter314}->write($output);
         }
@@ -4684,7 +4684,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter315,$viter316) = each %{$self->{attributes}}) 
+        while( my ($kiter315,$viter316) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter315);
           $xfer += $output->writeString($viter316);
@@ -4731,7 +4731,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -4816,7 +4816,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -4892,7 +4892,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{rowBatches}}));
       {
-        foreach my $iter330 (@{$self->{rowBatches}}) 
+        foreach my $iter330 (@{$self->{rowBatches}})
         {
           $xfer += ${iter330}->write($output);
         }
@@ -4906,7 +4906,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter331,$viter332) = each %{$self->{attributes}}) 
+        while( my ($kiter331,$viter332) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter331);
           $xfer += $output->writeString($viter332);
@@ -4953,7 +4953,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -5042,7 +5042,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -5124,7 +5124,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{rowBatches}}));
       {
-        foreach my $iter346 (@{$self->{rowBatches}}) 
+        foreach my $iter346 (@{$self->{rowBatches}})
         {
           $xfer += ${iter346}->write($output);
         }
@@ -5143,7 +5143,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter347,$viter348) = each %{$self->{attributes}}) 
+        while( my ($kiter347,$viter348) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter347);
           $xfer += $output->writeString($viter348);
@@ -5190,7 +5190,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -5279,7 +5279,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -5384,7 +5384,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -5484,7 +5484,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -5563,7 +5563,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter356,$viter357) = each %{$self->{attributes}}) 
+        while( my ($kiter356,$viter357) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter356);
           $xfer += $output->writeString($viter357);
@@ -5606,7 +5606,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -5687,7 +5687,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -5777,7 +5777,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter365,$viter366) = each %{$self->{attributes}}) 
+        while( my ($kiter365,$viter366) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter365);
           $xfer += $output->writeString($viter366);
@@ -5820,7 +5820,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -5893,7 +5893,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -5961,7 +5961,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter374,$viter375) = each %{$self->{attributes}}) 
+        while( my ($kiter374,$viter375) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter374);
           $xfer += $output->writeString($viter375);
@@ -6004,7 +6004,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -6069,7 +6069,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -6134,7 +6134,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -6199,7 +6199,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -6243,7 +6243,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{increments}}));
       {
-        foreach my $iter382 (@{$self->{increments}}) 
+        foreach my $iter382 (@{$self->{increments}})
         {
           $xfer += ${iter382}->write($output);
         }
@@ -6285,7 +6285,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -6362,7 +6362,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -6441,7 +6441,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter390,$viter391) = each %{$self->{attributes}}) 
+        while( my ($kiter390,$viter391) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter390);
           $xfer += $output->writeString($viter391);
@@ -6484,7 +6484,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -6557,7 +6557,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -6626,7 +6626,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter399,$viter400) = each %{$self->{attributes}}) 
+        while( my ($kiter399,$viter400) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter399);
           $xfer += $output->writeString($viter400);
@@ -6673,7 +6673,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -6761,7 +6761,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -6847,7 +6847,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{columns}}));
       {
-        foreach my $iter414 (@{$self->{columns}}) 
+        foreach my $iter414 (@{$self->{columns}})
         {
           $xfer += $output->writeString($iter414);
         }
@@ -6861,7 +6861,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter415,$viter416) = each %{$self->{attributes}}) 
+        while( my ($kiter415,$viter416) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter415);
           $xfer += $output->writeString($viter416);
@@ -6908,7 +6908,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -7000,7 +7000,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -7097,7 +7097,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{columns}}));
       {
-        foreach my $iter430 (@{$self->{columns}}) 
+        foreach my $iter430 (@{$self->{columns}})
         {
           $xfer += $output->writeString($iter430);
         }
@@ -7111,7 +7111,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter431,$viter432) = each %{$self->{attributes}}) 
+        while( my ($kiter431,$viter432) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter431);
           $xfer += $output->writeString($viter432);
@@ -7158,7 +7158,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -7246,7 +7246,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -7332,7 +7332,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{columns}}));
       {
-        foreach my $iter446 (@{$self->{columns}}) 
+        foreach my $iter446 (@{$self->{columns}})
         {
           $xfer += $output->writeString($iter446);
         }
@@ -7346,7 +7346,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter447,$viter448) = each %{$self->{attributes}}) 
+        while( my ($kiter447,$viter448) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter447);
           $xfer += $output->writeString($viter448);
@@ -7393,7 +7393,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -7485,7 +7485,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -7577,7 +7577,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{columns}}));
       {
-        foreach my $iter462 (@{$self->{columns}}) 
+        foreach my $iter462 (@{$self->{columns}})
         {
           $xfer += $output->writeString($iter462);
         }
@@ -7596,7 +7596,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter463,$viter464) = each %{$self->{attributes}}) 
+        while( my ($kiter463,$viter464) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter463);
           $xfer += $output->writeString($viter464);
@@ -7643,7 +7643,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -7739,7 +7739,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -7842,7 +7842,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRING, scalar(@{$self->{columns}}));
       {
-        foreach my $iter478 (@{$self->{columns}}) 
+        foreach my $iter478 (@{$self->{columns}})
         {
           $xfer += $output->writeString($iter478);
         }
@@ -7861,7 +7861,7 @@ sub write {
     {
       $xfer += $output->writeMapBegin(TType::STRING, TType::STRING, scalar(keys %{$self->{attributes}}));
       {
-        while( my ($kiter479,$viter480) = each %{$self->{attributes}}) 
+        while( my ($kiter479,$viter480) = each %{$self->{attributes}})
         {
           $xfer += $output->writeString($kiter479);
           $xfer += $output->writeString($viter480);
@@ -7908,7 +7908,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -7984,7 +7984,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -8056,7 +8056,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -8114,7 +8114,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter487 (@{$self->{success}}) 
+        foreach my $iter487 (@{$self->{success}})
         {
           $xfer += ${iter487}->write($output);
         }
@@ -8170,7 +8170,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -8253,7 +8253,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -8311,7 +8311,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter494 (@{$self->{success}}) 
+        foreach my $iter494 (@{$self->{success}})
         {
           $xfer += ${iter494}->write($output);
         }
@@ -8363,7 +8363,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -8431,7 +8431,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -8516,7 +8516,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -8606,7 +8606,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -8657,7 +8657,7 @@ sub write {
     {
       $xfer += $output->writeListBegin(TType::STRUCT, scalar(@{$self->{success}}));
       {
-        foreach my $iter501 (@{$self->{success}}) 
+        foreach my $iter501 (@{$self->{success}})
         {
           $xfer += ${iter501}->write($output);
         }
@@ -8704,7 +8704,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -8772,7 +8772,7 @@ sub read {
   my $ftype = 0;
   my $fid   = 0;
   $xfer += $input->readStructBegin(\$fname);
-  while (1) 
+  while (1)
   {
     $xfer += $input->readFieldBegin(\$fname, \$ftype, \$fid);
     if ($ftype == TType::STOP) {
@@ -11887,7 +11887,7 @@ sub process_enableTable {
     my $result = new Hbase::Hbase_enableTable_result();
     eval {
       $self->{handler}->enableTable($args->tableName);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('enableTable', TMessageType::REPLY, $seqid);
@@ -11904,7 +11904,7 @@ sub process_disableTable {
     my $result = new Hbase::Hbase_disableTable_result();
     eval {
       $self->{handler}->disableTable($args->tableName);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('disableTable', TMessageType::REPLY, $seqid);
@@ -11921,7 +11921,7 @@ sub process_isTableEnabled {
     my $result = new Hbase::Hbase_isTableEnabled_result();
     eval {
       $result->{success} = $self->{handler}->isTableEnabled($args->tableName);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('isTableEnabled', TMessageType::REPLY, $seqid);
@@ -11938,7 +11938,7 @@ sub process_compact {
     my $result = new Hbase::Hbase_compact_result();
     eval {
       $self->{handler}->compact($args->tableNameOrRegionName);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('compact', TMessageType::REPLY, $seqid);
@@ -11955,7 +11955,7 @@ sub process_majorCompact {
     my $result = new Hbase::Hbase_majorCompact_result();
     eval {
       $self->{handler}->majorCompact($args->tableNameOrRegionName);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('majorCompact', TMessageType::REPLY, $seqid);
@@ -11972,7 +11972,7 @@ sub process_getTableNames {
     my $result = new Hbase::Hbase_getTableNames_result();
     eval {
       $result->{success} = $self->{handler}->getTableNames();
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getTableNames', TMessageType::REPLY, $seqid);
@@ -11989,7 +11989,7 @@ sub process_getColumnDescriptors {
     my $result = new Hbase::Hbase_getColumnDescriptors_result();
     eval {
       $result->{success} = $self->{handler}->getColumnDescriptors($args->tableName);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getColumnDescriptors', TMessageType::REPLY, $seqid);
@@ -12006,7 +12006,7 @@ sub process_getTableRegions {
     my $result = new Hbase::Hbase_getTableRegions_result();
     eval {
       $result->{success} = $self->{handler}->getTableRegions($args->tableName);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getTableRegions', TMessageType::REPLY, $seqid);
@@ -12023,11 +12023,11 @@ sub process_createTable {
     my $result = new Hbase::Hbase_createTable_result();
     eval {
       $self->{handler}->createTable($args->tableName, $args->columnFamilies);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
-        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){ 
+        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){
       $result->{ia} = $@;
-        }; if( UNIVERSAL::isa($@,'Hbase::AlreadyExists') ){ 
+        }; if( UNIVERSAL::isa($@,'Hbase::AlreadyExists') ){
       $result->{exist} = $@;
     }
     $output->writeMessageBegin('createTable', TMessageType::REPLY, $seqid);
@@ -12044,7 +12044,7 @@ sub process_deleteTable {
     my $result = new Hbase::Hbase_deleteTable_result();
     eval {
       $self->{handler}->deleteTable($args->tableName);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('deleteTable', TMessageType::REPLY, $seqid);
@@ -12061,7 +12061,7 @@ sub process_get {
     my $result = new Hbase::Hbase_get_result();
     eval {
       $result->{success} = $self->{handler}->get($args->tableName, $args->row, $args->column, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('get', TMessageType::REPLY, $seqid);
@@ -12078,7 +12078,7 @@ sub process_getVer {
     my $result = new Hbase::Hbase_getVer_result();
     eval {
       $result->{success} = $self->{handler}->getVer($args->tableName, $args->row, $args->column, $args->numVersions, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getVer', TMessageType::REPLY, $seqid);
@@ -12095,7 +12095,7 @@ sub process_getVerTs {
     my $result = new Hbase::Hbase_getVerTs_result();
     eval {
       $result->{success} = $self->{handler}->getVerTs($args->tableName, $args->row, $args->column, $args->timestamp, $args->numVersions, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getVerTs', TMessageType::REPLY, $seqid);
@@ -12112,7 +12112,7 @@ sub process_getRow {
     my $result = new Hbase::Hbase_getRow_result();
     eval {
       $result->{success} = $self->{handler}->getRow($args->tableName, $args->row, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getRow', TMessageType::REPLY, $seqid);
@@ -12129,7 +12129,7 @@ sub process_getRowWithColumns {
     my $result = new Hbase::Hbase_getRowWithColumns_result();
     eval {
       $result->{success} = $self->{handler}->getRowWithColumns($args->tableName, $args->row, $args->columns, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getRowWithColumns', TMessageType::REPLY, $seqid);
@@ -12146,7 +12146,7 @@ sub process_getRowTs {
     my $result = new Hbase::Hbase_getRowTs_result();
     eval {
       $result->{success} = $self->{handler}->getRowTs($args->tableName, $args->row, $args->timestamp, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getRowTs', TMessageType::REPLY, $seqid);
@@ -12163,7 +12163,7 @@ sub process_getRowWithColumnsTs {
     my $result = new Hbase::Hbase_getRowWithColumnsTs_result();
     eval {
       $result->{success} = $self->{handler}->getRowWithColumnsTs($args->tableName, $args->row, $args->columns, $args->timestamp, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getRowWithColumnsTs', TMessageType::REPLY, $seqid);
@@ -12180,7 +12180,7 @@ sub process_getRows {
     my $result = new Hbase::Hbase_getRows_result();
     eval {
       $result->{success} = $self->{handler}->getRows($args->tableName, $args->rows, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getRows', TMessageType::REPLY, $seqid);
@@ -12197,7 +12197,7 @@ sub process_getRowsWithColumns {
     my $result = new Hbase::Hbase_getRowsWithColumns_result();
     eval {
       $result->{success} = $self->{handler}->getRowsWithColumns($args->tableName, $args->rows, $args->columns, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getRowsWithColumns', TMessageType::REPLY, $seqid);
@@ -12214,7 +12214,7 @@ sub process_getRowsTs {
     my $result = new Hbase::Hbase_getRowsTs_result();
     eval {
       $result->{success} = $self->{handler}->getRowsTs($args->tableName, $args->rows, $args->timestamp, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getRowsTs', TMessageType::REPLY, $seqid);
@@ -12231,7 +12231,7 @@ sub process_getRowsWithColumnsTs {
     my $result = new Hbase::Hbase_getRowsWithColumnsTs_result();
     eval {
       $result->{success} = $self->{handler}->getRowsWithColumnsTs($args->tableName, $args->rows, $args->columns, $args->timestamp, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getRowsWithColumnsTs', TMessageType::REPLY, $seqid);
@@ -12248,9 +12248,9 @@ sub process_mutateRow {
     my $result = new Hbase::Hbase_mutateRow_result();
     eval {
       $self->{handler}->mutateRow($args->tableName, $args->row, $args->mutations, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
-        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){ 
+        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){
       $result->{ia} = $@;
     }
     $output->writeMessageBegin('mutateRow', TMessageType::REPLY, $seqid);
@@ -12267,9 +12267,9 @@ sub process_mutateRowTs {
     my $result = new Hbase::Hbase_mutateRowTs_result();
     eval {
       $self->{handler}->mutateRowTs($args->tableName, $args->row, $args->mutations, $args->timestamp, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
-        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){ 
+        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){
       $result->{ia} = $@;
     }
     $output->writeMessageBegin('mutateRowTs', TMessageType::REPLY, $seqid);
@@ -12286,9 +12286,9 @@ sub process_mutateRows {
     my $result = new Hbase::Hbase_mutateRows_result();
     eval {
       $self->{handler}->mutateRows($args->tableName, $args->rowBatches, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
-        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){ 
+        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){
       $result->{ia} = $@;
     }
     $output->writeMessageBegin('mutateRows', TMessageType::REPLY, $seqid);
@@ -12305,9 +12305,9 @@ sub process_mutateRowsTs {
     my $result = new Hbase::Hbase_mutateRowsTs_result();
     eval {
       $self->{handler}->mutateRowsTs($args->tableName, $args->rowBatches, $args->timestamp, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
-        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){ 
+        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){
       $result->{ia} = $@;
     }
     $output->writeMessageBegin('mutateRowsTs', TMessageType::REPLY, $seqid);
@@ -12324,9 +12324,9 @@ sub process_atomicIncrement {
     my $result = new Hbase::Hbase_atomicIncrement_result();
     eval {
       $result->{success} = $self->{handler}->atomicIncrement($args->tableName, $args->row, $args->column, $args->value);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
-        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){ 
+        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){
       $result->{ia} = $@;
     }
     $output->writeMessageBegin('atomicIncrement', TMessageType::REPLY, $seqid);
@@ -12343,7 +12343,7 @@ sub process_deleteAll {
     my $result = new Hbase::Hbase_deleteAll_result();
     eval {
       $self->{handler}->deleteAll($args->tableName, $args->row, $args->column, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('deleteAll', TMessageType::REPLY, $seqid);
@@ -12360,7 +12360,7 @@ sub process_deleteAllTs {
     my $result = new Hbase::Hbase_deleteAllTs_result();
     eval {
       $self->{handler}->deleteAllTs($args->tableName, $args->row, $args->column, $args->timestamp, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('deleteAllTs', TMessageType::REPLY, $seqid);
@@ -12377,7 +12377,7 @@ sub process_deleteAllRow {
     my $result = new Hbase::Hbase_deleteAllRow_result();
     eval {
       $self->{handler}->deleteAllRow($args->tableName, $args->row, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('deleteAllRow', TMessageType::REPLY, $seqid);
@@ -12394,7 +12394,7 @@ sub process_increment {
     my $result = new Hbase::Hbase_increment_result();
     eval {
       $self->{handler}->increment($args->increment);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('increment', TMessageType::REPLY, $seqid);
@@ -12411,7 +12411,7 @@ sub process_incrementRows {
     my $result = new Hbase::Hbase_incrementRows_result();
     eval {
       $self->{handler}->incrementRows($args->increments);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('incrementRows', TMessageType::REPLY, $seqid);
@@ -12428,7 +12428,7 @@ sub process_deleteAllRowTs {
     my $result = new Hbase::Hbase_deleteAllRowTs_result();
     eval {
       $self->{handler}->deleteAllRowTs($args->tableName, $args->row, $args->timestamp, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('deleteAllRowTs', TMessageType::REPLY, $seqid);
@@ -12445,7 +12445,7 @@ sub process_scannerOpenWithScan {
     my $result = new Hbase::Hbase_scannerOpenWithScan_result();
     eval {
       $result->{success} = $self->{handler}->scannerOpenWithScan($args->tableName, $args->scan, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('scannerOpenWithScan', TMessageType::REPLY, $seqid);
@@ -12462,7 +12462,7 @@ sub process_scannerOpen {
     my $result = new Hbase::Hbase_scannerOpen_result();
     eval {
       $result->{success} = $self->{handler}->scannerOpen($args->tableName, $args->startRow, $args->columns, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('scannerOpen', TMessageType::REPLY, $seqid);
@@ -12479,7 +12479,7 @@ sub process_scannerOpenWithStop {
     my $result = new Hbase::Hbase_scannerOpenWithStop_result();
     eval {
       $result->{success} = $self->{handler}->scannerOpenWithStop($args->tableName, $args->startRow, $args->stopRow, $args->columns, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('scannerOpenWithStop', TMessageType::REPLY, $seqid);
@@ -12496,7 +12496,7 @@ sub process_scannerOpenWithPrefix {
     my $result = new Hbase::Hbase_scannerOpenWithPrefix_result();
     eval {
       $result->{success} = $self->{handler}->scannerOpenWithPrefix($args->tableName, $args->startAndPrefix, $args->columns, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('scannerOpenWithPrefix', TMessageType::REPLY, $seqid);
@@ -12513,7 +12513,7 @@ sub process_scannerOpenTs {
     my $result = new Hbase::Hbase_scannerOpenTs_result();
     eval {
       $result->{success} = $self->{handler}->scannerOpenTs($args->tableName, $args->startRow, $args->columns, $args->timestamp, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('scannerOpenTs', TMessageType::REPLY, $seqid);
@@ -12530,7 +12530,7 @@ sub process_scannerOpenWithStopTs {
     my $result = new Hbase::Hbase_scannerOpenWithStopTs_result();
     eval {
       $result->{success} = $self->{handler}->scannerOpenWithStopTs($args->tableName, $args->startRow, $args->stopRow, $args->columns, $args->timestamp, $args->attributes);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('scannerOpenWithStopTs', TMessageType::REPLY, $seqid);
@@ -12547,9 +12547,9 @@ sub process_scannerGet {
     my $result = new Hbase::Hbase_scannerGet_result();
     eval {
       $result->{success} = $self->{handler}->scannerGet($args->id);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
-        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){ 
+        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){
       $result->{ia} = $@;
     }
     $output->writeMessageBegin('scannerGet', TMessageType::REPLY, $seqid);
@@ -12566,9 +12566,9 @@ sub process_scannerGetList {
     my $result = new Hbase::Hbase_scannerGetList_result();
     eval {
       $result->{success} = $self->{handler}->scannerGetList($args->id, $args->nbRows);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
-        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){ 
+        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){
       $result->{ia} = $@;
     }
     $output->writeMessageBegin('scannerGetList', TMessageType::REPLY, $seqid);
@@ -12585,9 +12585,9 @@ sub process_scannerClose {
     my $result = new Hbase::Hbase_scannerClose_result();
     eval {
       $self->{handler}->scannerClose($args->id);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
-        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){ 
+        }; if( UNIVERSAL::isa($@,'Hbase::IllegalArgument') ){
       $result->{ia} = $@;
     }
     $output->writeMessageBegin('scannerClose', TMessageType::REPLY, $seqid);
@@ -12604,7 +12604,7 @@ sub process_getRowOrBefore {
     my $result = new Hbase::Hbase_getRowOrBefore_result();
     eval {
       $result->{success} = $self->{handler}->getRowOrBefore($args->tableName, $args->row, $args->family);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getRowOrBefore', TMessageType::REPLY, $seqid);
@@ -12621,7 +12621,7 @@ sub process_getRegionInfo {
     my $result = new Hbase::Hbase_getRegionInfo_result();
     eval {
       $result->{success} = $self->{handler}->getRegionInfo($args->row);
-    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){ 
+    }; if( UNIVERSAL::isa($@,'Hbase::IOError') ){
       $result->{io} = $@;
     }
     $output->writeMessageBegin('getRegionInfo', TMessageType::REPLY, $seqid);

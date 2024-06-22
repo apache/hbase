@@ -31,7 +31,7 @@ message BulkDeleteRequest {
   required DeleteType deleteType = 2;
   optional uint64 timestamp = 3;
   required uint32 rowBatchSize = 4;
-  
+
   enum DeleteType {
     ROW = 0;
     FAMILY = 1;
@@ -41,7 +41,7 @@ message BulkDeleteRequest {
 }
 
 message BulkDeleteResponse {
-  required uint64 rowsDeleted = 1; 
+  required uint64 rowsDeleted = 1;
   optional uint64 versionsDeleted = 2;
 }
 

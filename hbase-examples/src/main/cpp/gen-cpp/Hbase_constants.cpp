@@ -14,4 +14,3 @@ HbaseConstants::HbaseConstants() {
 }
 
 }}}} // namespace
-

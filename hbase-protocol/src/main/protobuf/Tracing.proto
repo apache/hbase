@@ -24,9 +24,9 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 //Used to pass through the information necessary to continue
-//a trace after an RPC is made. All we need is the traceid 
+//a trace after an RPC is made. All we need is the traceid
 //(so we know the overarching trace this message is a part of), and
-//the id of the current span when this message was sent, so we know 
+//the id of the current span when this message was sent, so we know
 //what span caused the new span we will create when this message is received.
 message RPCTInfo {
   optional int64 trace_id = 1;
