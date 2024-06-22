@@ -890,6 +890,46 @@ function hbase_javac_logfilter
   ${GREP} -E '\[(ERROR|WARNING)\] /.*\.java:' "${input}" | sort > "${output}"
 }
 
+######################################
+
+## @description  Confirm site pre-patch
+## @audience     private
+## @stability    stable
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+# Override the default mvnsite_postcompile to add an extra 'mvn install' step before running
+# 'mvn site', as it may introduce NPE under java 11
+function hbase_mvnsite_postcompile
+{
+  declare repostatus=$1
+  declare result=0
+
+  if [[ ${BUILDTOOL} != maven ]]; then
+    return 0
+  fi
+
+  if ! verify_needed_test mvnsite; then
+    return 0
+  fi
+
+  if [[ "${repostatus}" = branch ]]; then
+    big_console_header "maven site verification: ${PATCH_BRANCH}"
+  else
+    big_console_header "maven site verification: ${BUILDMODE}"
+  fi
+
+  personality_modules_wrapper "${repostatus}" mvnsite
+  modules_workers "${repostatus}" mvnsite clean install -DskipTests
+  modules_workers "${repostatus}" mvnsite clean site site:stage
+  result=$?
+  modules_messages "${repostatus}" mvnsite true
+  if [[ ${result} != 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
 ## This is named so that yetus will check us right after running tests.
 ## Essentially, we check for normal failures and then we look for zombies.
 #function hbase_unit_logfilter
