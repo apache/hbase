@@ -53,6 +53,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
     ruby=1:3.0* \
     ruby-dev=1:3.0* \
     shellcheck='0.8.0-*' \
+    libxml2-dev='2.9.13+dfsg-*' \
+    libxml2-utils='2.9.13+dfsg-*' \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* \
