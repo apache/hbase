@@ -354,7 +354,7 @@ are combined counts. Request count is sum of hits and misses.</p>
         <td><% TraditionalBinaryPrefix.long2String(bc.getCurrentDataSize(), "B", 1) %></td>
         <td>Size of DATA Blocks</td>
     </tr>
-</%if> 
+</%if>
 <%if lru %>
     <tr>
         <td>Size of Index Blocks</td>
@@ -393,4 +393,3 @@ Increase that value to get a complete picture.
 </%if>
 </p>
 </%def>
-

@@ -108,5 +108,3 @@ Given this compatibility matrix,
 * Mini clusters tests simulating real world scenarios (like stale meta/master etc) should be added.
 * Consider making this the default registry implementation and let the code bakein for a while before release.
 * Deploy the bits on a real distributed cluster and test a long running application that is heavy on these RPCs and inject faults.
-
-

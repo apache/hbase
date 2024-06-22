@@ -316,7 +316,7 @@ message ServerLoad {
    * The metrics for write requests on this region server
    */
   optional uint64 write_requests_count = 14;
- 
+
   /**
    * The active monitored tasks
    */

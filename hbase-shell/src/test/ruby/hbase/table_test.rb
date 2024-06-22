@@ -105,7 +105,7 @@ module Hbase
       @test_name = "hbase_shell_tests_table"
       create_test_table(@test_name)
       @test_table = table(@test_name)
-      
+
       # Insert data to perform delete operations
       @test_table.put("102", "x:a", "2", 1212)
       @test_table.put(103, "x:a", "3", 1214)
@@ -144,7 +144,7 @@ module Hbase
     define_test "put should work with integer values" do
       @test_table.put("123", "x:a", 4)
     end
-    
+
     define_test "put should work with attributes" do
        @test_table.put("123", "x:a", 4, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
     end
@@ -301,7 +301,7 @@ module Hbase
 
       @test_table.put(2, "x:a", 11)
       @test_table.put(2, "x:b", 12, @test_ts)
-      
+
       @test_table.put(3, "x:a", 21, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
       @test_table.put(3, "x:b", 22, @test_ts, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
     end
@@ -358,7 +358,7 @@ module Hbase
       assert_not_nil(res['x:a'])
       assert_not_nil(res['x:b'])
     end
-    
+
     define_test "get should work for data written with Attributes" do
       res = @test_table._get_internal('3')
       assert_not_nil(res)
@@ -407,7 +407,7 @@ module Hbase
       assert_not_nil(res['x:a'])
       assert_not_nil(res['x:b'])
     end
-    
+
     define_test "get should work with hash columns spec and an array of strings COLUMNS parameter with AUTHORIZATIONS" do
       res = @test_table._get_internal('1', COLUMNS => [ 'x:a', 'x:b' ], AUTHORIZATIONS=>['PRIVATE'])
       assert_not_nil(res)
@@ -441,7 +441,7 @@ module Hbase
       res = @test_table._get_internal('1', TIMESTAMP => 1234, AUTHORIZATIONS=>['PRIVATE'])
       assert_nil(res)
     end
-    
+
     define_test "get should fail with hash columns spec and strange COLUMN value" do
       assert_raise(ArgumentError) do
         @test_table._get_internal('1', COLUMN => {})
@@ -489,7 +489,7 @@ module Hbase
       @test_table._get_internal('1') { |col, val| res[col] = val }
       assert_equal([ 'x:\x11', 'x:a', 'x:b' ], res.keys.sort)
     end
-    
+
     define_test "get should support COLUMNS with value CONVERTER information" do
         @test_table.put(1, "x:c", [1024].pack('N'))
         @test_table.put(1, "x:d", [98].pack('N'))
@@ -630,7 +630,7 @@ module Hbase
       assert_not_nil(res['1']['x:b'])
       assert_nil(res['2'])
     end
-    
+
     define_test "scan should support REVERSED parameter" do
       res = @test_table._scan_internal REVERSED => true
       assert_not_nil(res)
@@ -674,7 +674,7 @@ module Hbase
       assert_not_nil(res['2']['x:a'])
       assert_not_nil(res['2']['x:b'])
     end
-    
+
     define_test "scan should support COLUMNS parameter with a single column name" do
       res = @test_table._scan_internal COLUMNS => 'x:a'
       assert_not_nil(res)
@@ -781,7 +781,7 @@ module Hbase
       res = @test_table._scan_internal { |row, cells| rows[row] = cells }
       assert_equal([rows.keys.size,false], res)
     end
-    
+
     define_test "scan should support COLUMNS with value CONVERTER information" do
       @test_table.put(1, "x:c", [1024].pack('N'))
       @test_table.put(1, "x:d", [98].pack('N'))

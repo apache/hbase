@@ -26,12 +26,12 @@ $(document).ready(
         location.hash = $(e.target).attr('href').substr(1).replace(prefix, "");
         $(this).tab('show');
     });
-            
+
     if (location.hash !== '') {
       var tabItem = $('a[href="' + location.hash.replace("#", "#"+prefix) + '"]');
       tabItem.tab('show');
-      $(document).scrollTop(0);  
-      return false;  
+      $(document).scrollTop(0);
+      return false;
     }
     return true;
   }

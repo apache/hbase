@@ -16,13 +16,13 @@
  */
 
 /**
- * mlockall_agent is a simple VM Agent that allows to lock the address space of 
+ * mlockall_agent is a simple VM Agent that allows to lock the address space of
  * the process. This avoids the process' memory eviction under pressure.
  *
- * One example is when on the same machine you run the Region Server and 
- * some map-reduce tasks, some unused data in the region server may get swapped 
+ * One example is when on the same machine you run the Region Server and
+ * some map-reduce tasks, some unused data in the region server may get swapped
  * and this affects the region server performance.
- * 
+ *
  * You can load the agent by adding it as a jvm option:
  * export HBASE_REGIONSERVER_OPTS="-agentpath:./libmlockall_agent.so=user=hbase"
  */
@@ -66,7 +66,7 @@ static int parse_options (const char *options, opts_t *parsed) {
     optr = NULL;
     save2 = NULL;
 
-    key = strtok_r(tok, "=", &save2);    
+    key = strtok_r(tok, "=", &save2);
     val = strtok_r(NULL, "=", &save2);
     if (!strcmp(key, "user")) {
       parsed->user = strdup(val);
@@ -145,4 +145,3 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
 
   return(0);
 }
-
