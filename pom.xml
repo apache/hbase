@@ -2845,12 +2845,30 @@
               <includes>
                 <include>**/*.xml</include>
                 <include>**/*.sh</include>
+                <include>**/*.cmd</include>
                 <include>**/*.py</include>
                 <include>**/Jenkinsfile*</include>
                 <include>**/*.md</include>
                 <include>*.md</include>
                 <include>**/*.txt</include>
                 <include>*.txt</include>
+                <include>**/*.c</include>
+                <include>**/*.cpp</include>
+                <include>**/*.rb</include>
+                <include>**/*.pl</include>
+                <include>**/*.pm</include>
+                <include>**/*.php</include>
+                <include>**/*.js</include>
+                <include>**/*.css</include>
+                <include>**/*.jsp</include>
+                <include>**/*.html</include>
+                <include>**/*.jamon</include>
+                <include>**/*.proto</include>
+                <include>**/*.thrift</include>
+                <include>**/*.adoc</include>
+                <include>**/*.rdf</include>
+                <include>**/*.xsd</include>
+                <include>**/package-info.java</include>
               </includes>
               <excludes>
                 <exclude>**/target/**</exclude>
