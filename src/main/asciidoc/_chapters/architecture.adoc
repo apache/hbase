@@ -851,7 +851,7 @@ See <<arch.catalog.meta>> for more information on the meta table.
 
 _MasterProcWAL is replaced in hbase-2.3.0 by an alternate Procedure Store implementation; see
 <<in-master-procedure-store-region>>. This section pertains to hbase-2.0.0 through hbase-2.2.x_
- 
+
 HMaster records administrative operations and their running states, such as the handling of a crashed server,
 table creation, and other DDLs, into a Procedure Store. The Procedure Store WALs are stored under the
 MasterProcWALs directory. The Master WALs are not like RegionServer WALs. Keeping up the Master WAL allows
@@ -2731,7 +2731,7 @@ To control these for stripe compactions, use `hbase.store.stripe.compaction.minF
 FIFO compaction policy selects only files which have all cells expired. The column family *MUST* have non-default TTL.
 Essentially, FIFO compactor only collects expired store files.
 
-Because we don't do any real compaction, we do not use CPU and IO (disk and network) and evict hot data from a block cache. 
+Because we don't do any real compaction, we do not use CPU and IO (disk and network) and evict hot data from a block cache.
 As a result, both RW throughput and latency can be improved.
 
 [[ops.fifo.when]]

@@ -20,4 +20,3 @@ under the License.
 = Bulk Loads in Apache HBase (TM)
 
 This page has been retired.  The contents have been moved to the link:book.html#arch.bulk.load[Bulk Loading] section in the Reference Guide.
-

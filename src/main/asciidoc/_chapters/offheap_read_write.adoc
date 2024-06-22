@@ -62,7 +62,7 @@ process. This should be bigger than the off-heap BC size to accommodate usage by
 such as Server RPC buffer pool and short-circuit reads (See discussion in <<bc.example>>).
 
 Please keep in mind that there is no default for `hbase.bucketcache.ioengine` which means the `BlockCache` is OFF by default
-(See <<direct.memory>>). 
+(See <<direct.memory>>).
 
 This is all you need to do to enable off-heap read path. Most buffers in HBase are already off-heap. With BC off-heap,
 the read pipeline will copy data between HDFS and the server socket -- caveat <<hbase.ipc.server.reservoir.initial.max>> --
@@ -139,7 +139,7 @@ it out to the offheap BucketCache.  We can observe much GC pressure when cache h
 link:https://issues.apache.org/jira/browse/HBASE-21879[HBASE-21879] addresses this issue (Requires hbase-2.3.x/hbase-3.x).
 It depends on there being a supporting HDFS being in place (hadoop-2.10.x or hadoop-3.3.x) and it may require patching
 HBase itself (as of this writing); see
-link:https://issues.apache.org/jira/browse/HBASE-21879[HBASE-21879 Read HFile's block to ByteBuffer directly instead of to byte for reducing young gc purpose]. 
+link:https://issues.apache.org/jira/browse/HBASE-21879[HBASE-21879 Read HFile's block to ByteBuffer directly instead of to byte for reducing young gc purpose].
 Appropriately setup, reads from HDFS can be into offheap buffers passed offheap to the offheap BlockCache to cache.
 
 For more details about the design and performance improvement, please see the
@@ -222,4 +222,3 @@ The decision to flush a MemStore considers both the on-heap and off-heap usage o
 compare them against the region flush size (128MB, by default). Globally, on-heap size occupancy of all memstores are tracked as well as off-heap size. When any of
 these sizes breache the lower mark (`hbase.regionserver.global.memstore.size.lower.limit`) or the maximum size `hbase.regionserver.global.memstore.size`), all
 regions are selected for forced flushes.
-

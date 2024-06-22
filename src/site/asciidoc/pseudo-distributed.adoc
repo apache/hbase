@@ -20,4 +20,3 @@ under the License.
 
 = Running Apache HBase (TM) in pseudo-distributed mode
 This page has been retired.  The contents have been moved to the link:book.html#distributed[Distributed Operation: Pseudo- and Fully-distributed modes] section in the Reference Guide.
-

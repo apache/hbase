@@ -1587,4 +1587,3 @@ You can avoid this problem by reducing the chunk size a bit to 2047KB as below.
 ----
 hbase.hregion.memstore.mslab.chunksize 2096128
 ----
-

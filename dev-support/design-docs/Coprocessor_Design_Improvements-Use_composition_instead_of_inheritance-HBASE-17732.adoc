@@ -253,5 +253,3 @@ which have hardened over years can be marked IS.Stable.
 “getService()” method. So WALCoprocessor which cannot support service doesn’t have one. That may
 look minor thing. But if our design can cleanly convey what is and isn’t supported, that’s beautiful
 and powerful and helpful for downstream developers.
-
-

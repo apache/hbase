@@ -438,4 +438,3 @@ Syntax Highlighting::
 +
 Several syntax types are supported. The most interesting ones for the HBase
 Reference Guide are `java`, `xml`, `sql`, and `bash`.
-

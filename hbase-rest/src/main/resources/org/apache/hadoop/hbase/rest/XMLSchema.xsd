@@ -21,7 +21,7 @@
 <schema targetNamespace="ModelSchema" elementFormDefault="qualified" xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="ModelSchema">
 
     <element name="Version" type="tns:Version"></element>
-    
+
     <complexType name="Version">
       <attribute name="REST" type="string"></attribute>
       <attribute name="JVM" type="string"></attribute>
@@ -31,7 +31,7 @@
     </complexType>
 
     <element name="TableList" type="tns:TableList"></element>
-    
+
     <complexType name="TableList">
         <sequence>
             <element name="table" type="tns:Table" maxOccurs="unbounded" minOccurs="1"></element>
@@ -45,7 +45,7 @@
     </complexType>
 
     <element name="TableInfo" type="tns:TableInfo"></element>
-    
+
     <complexType name="TableInfo">
         <sequence>
             <element name="region" type="tns:TableRegion" maxOccurs="unbounded" minOccurs="1"></element>
@@ -62,7 +62,7 @@
     </complexType>
 
     <element name="TableSchema" type="tns:TableSchema"></element>
-    
+
     <complexType name="TableSchema">
         <sequence>
             <element name="column" type="tns:ColumnSchema" maxOccurs="unbounded" minOccurs="1"></element>
@@ -92,7 +92,7 @@
             <element name="cell" type="tns:Cell" maxOccurs="unbounded" minOccurs="1"></element>
         </sequence>
     </complexType>
- 
+
     <element name="Cell" type="tns:Cell"></element>
 
     <complexType name="Cell">
@@ -107,7 +107,7 @@
     </complexType>
 
     <element name="Scanner" type="tns:Scanner"></element>
-    
+
     <complexType name="Scanner">
         <sequence>
             <element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"></element>
@@ -134,7 +134,7 @@
     <element name="StorageClusterStatus"
         type="tns:StorageClusterStatus">
     </element>
-    
+
     <complexType name="StorageClusterStatus">
         <sequence>
             <element name="liveNode" type="tns:Node"

@@ -97,7 +97,7 @@ October 12th, 2010:: HBase-related presentations by core contributors and users 
 
 October 11th, 2010:: link:http://www.meetup.com/hbaseusergroup/calendar/14606174/[HUG-NYC: HBase User Group NYC Edition] (Night before Hadoop World)
 June 30th, 2010:: link:http://www.meetup.com/hbaseusergroup/calendar/13562846/[Apache HBase Contributor Workshop] (Day after Hadoop Summit)
-May 10th, 2010:: Apache HBase graduates from Hadoop sub-project to Apache Top Level Project 
+May 10th, 2010:: Apache HBase graduates from Hadoop sub-project to Apache Top Level Project
 
 April 19, 2010:: Signup for link:http://www.meetup.com/hbaseusergroup/calendar/12689490/[HBase User Group Meeting, HUG10] hosted by Trend Micro
 
@@ -118,4 +118,3 @@ June, 2009::  HBase at HadoopSummit2009 and at NOSQL: See the link:https://hbase
 March 3rd, 2009 :: HUG6 -- link:http://www.meetup.com/hbaseusergroup/calendar/9764004/[HBase User Group 6]
 
 January 30th, 2009:: LA Hbackathon: link:http://www.meetup.com/hbasela/calendar/9450876/[HBase January Hackathon Los Angeles] at link:http://streamy.com[Streamy] in Manhattan Beach
-

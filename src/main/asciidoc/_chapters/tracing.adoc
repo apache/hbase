@@ -54,4 +54,3 @@ NOTE: The https://github.com/open-telemetry/opentelemetry-java/blob/v1.0.1/expor
 === Performance Impact
 
 According to the result in https://issues.apache.org/jira/browse/HBASE-25658[HBASE-25658], the performance impact is minimal. Of course the test cluster is not under heavy load, so if you find out that enabling tracing would impact the performance, try to lower the sampling rate. See documentation for configuring https://github.com/open-telemetry/opentelemetry-java/blob/main/sdk-extensions/autoconfigure/README.md#sampler[sampler] for more details.
-

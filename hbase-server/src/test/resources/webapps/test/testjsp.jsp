@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?><%!
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file 
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
@@ -17,5 +17,5 @@
  * limitations under the License.
  */
 %>
-<%@ page contentType="text/html; charset=UTF-8" %> 
+<%@ page contentType="text/html; charset=UTF-8" %>
 Hello world!

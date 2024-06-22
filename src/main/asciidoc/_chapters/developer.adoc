@@ -682,14 +682,14 @@ purged along with the container when the build is done.
 
 The script will:
 
- * Set version to the release version 
+ * Set version to the release version
  * Updates RELEASENOTES.md and CHANGES.md
  * Tag the RC
- * Set version to next SNAPSHOT version. 
- * Builds, signs, and hashes all artifacts. 
+ * Set version to next SNAPSHOT version.
+ * Builds, signs, and hashes all artifacts.
  * Generates the api compatibility report
- * Pushes release tgzs to the dev dir in a apache dist. 
- * Pushes to repository.apache.org staging. 
+ * Pushes release tgzs to the dev dir in a apache dist.
+ * Pushes to repository.apache.org staging.
  * Creates vote email template.
 
 The _dev-support/create-release/do-release-docker.sh_ Release Candidate (RC)
@@ -1258,7 +1258,7 @@ Also, keep in mind that if you are running tests in the `hbase-server` module yo
 
 Apache HBase unit tests must carry a Category annotation and
 as of `hbase-2.0.0`, must be stamped with the HBase `ClassRule`.
-Here is an example of what a Test Class looks like with a 
+Here is an example of what a Test Class looks like with a
 Category and ClassRule included:
 
 [source,java]
@@ -1477,7 +1477,7 @@ As of hbase-2.0.0, we have purged all per-test-method timeouts: i.e.
   }
 ----
 They are discouraged and don't make much sense given we are timing
-base of how long the whole Test Fixture/Class/Suite takes and 
+base of how long the whole Test Fixture/Class/Suite takes and
 that the variance in how long a test method takes varies wildly
 dependent upon context (loaded Apache Infrastructure versus
 developer machine with nothing else running on it).

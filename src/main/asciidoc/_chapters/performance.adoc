@@ -521,7 +521,7 @@ byte[][] splits = ...;   // create your own splits
 admin.createTable(table, splits);
 ----
 
-You can achieve a similar effect using the HBase Shell to create tables by specifying split options. 
+You can achieve a similar effect using the HBase Shell to create tables by specifying split options.
 
 [source]
 ----

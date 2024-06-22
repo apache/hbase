@@ -28,4 +28,3 @@ create "people-name", "INDEX"
   put "people", id, "attributes:email", email
   put "people", id, "attributes:phone", phone
 end
-  

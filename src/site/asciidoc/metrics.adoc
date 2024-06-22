@@ -41,9 +41,9 @@ The _jvm_ context is useful for long-term stats on running hbase jvms -- memory 
 
 == Using with JMX
 
-In addition to the standard output contexts supported by the Hadoop 
-metrics package, you can also export HBase metrics via Java Management 
-Extensions (JMX).  This will allow viewing HBase stats in JConsole or 
+In addition to the standard output contexts supported by the Hadoop
+metrics package, you can also export HBase metrics via Java Management
+Extensions (JMX).  This will allow viewing HBase stats in JConsole or
 any other JMX client.
 
 === Enable HBase stats collection
@@ -67,7 +67,7 @@ rpc.period=60
 === Setup JMX Remote Access
 
 For remote access, you will need to configure JMX remote passwords and access profiles.  Create the files:
-`$HBASE_HOME/conf/jmxremote.passwd` (set permissions 
+`$HBASE_HOME/conf/jmxremote.passwd` (set permissions
         to 600):: +
 ----
 monitorRole monitorpass
@@ -98,5 +98,4 @@ After restarting the processes you want to monitor, you should now be able to ru
 
 == Understanding HBase Metrics
 
-For more information on understanding HBase metrics, see the link:book.html#hbase_metrics[metrics section] in the Apache HBase Reference Guide. 
-
+For more information on understanding HBase metrics, see the link:book.html#hbase_metrics[metrics section] in the Apache HBase Reference Guide.

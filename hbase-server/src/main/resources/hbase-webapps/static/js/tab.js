@@ -30,12 +30,12 @@ $(document).ready(
   $.ajax({url:"/userSnapshots.jsp", success:function(result){
     $("#tab_userSnapshots").html(result);
   }});
-            
+
     if (location.hash !== '') {
       var tabItem = $('a[href="' + location.hash.replace("#", "#"+prefix) + '"]');
       tabItem.tab('show');
-      $(document).scrollTop(0);  
-      return false;  
+      $(document).scrollTop(0);
+      return false;
     }
     return true;
   }

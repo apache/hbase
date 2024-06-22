@@ -42,4 +42,3 @@ message ExportResponse {
   required uint64 rowCount = 1;
   required uint64 cellCount = 2;
 }
-
