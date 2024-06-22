@@ -31,7 +31,7 @@ pipeline {
     disableConcurrentBuilds()
   }
   environment {
-    YETUS_RELEASE = '0.12.0'
+    YETUS_RELEASE = '0.15.0'
     // where we'll write everything from different steps. Need a copy here so the final step can check for success/failure.
     OUTPUT_DIR_RELATIVE_GENERAL = 'output-general'
     OUTPUT_DIR_RELATIVE_JDK8_HADOOP2 = 'output-jdk8-hadoop2'
@@ -42,12 +42,12 @@ pipeline {
     PROJECT_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
     PERSONALITY_FILE = 'tools/personality.sh'
     // This section of the docs tells folks not to use the javadoc tag. older branches have our old version of the check for said tag.
-    AUTHOR_IGNORE_LIST = 'src/main/asciidoc/_chapters/developer.adoc,dev-support/test-patch.sh'
-    WHITESPACE_IGNORE_LIST = '.*/generated/.*'
+    AUTHOR_IGNORE_LIST = 'src/main/asciidoc/_chapters/developer.adoc'
+    BLANKS_IGNORE_LIST = '.*/generated/.*'
     // output from surefire; sadly the archive function in yetus only works on file names.
     ARCHIVE_PATTERN_LIST = 'TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump'
     // These tests currently have known failures. Once they burn down to 0, remove from here so that new problems will cause a failure.
-    TESTS_FILTER = 'cc,checkstyle,javac,javadoc,pylint,shellcheck,whitespace,perlcritic,ruby-lint,rubocop,mvnsite'
+    TESTS_FILTER = 'checkstyle,javac,javadoc,pylint,shellcheck,shelldocs,blanks,perlcritic,ruby-lint,rubocop'
     EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/output/excludes"
       // TODO does hadoopcheck need to be jdk specific?
     SHALLOW_CHECKS = 'all,-shadedjars,-unit' // run by the 'yetus general check'
