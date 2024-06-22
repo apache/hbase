@@ -49,12 +49,12 @@
       master.getMasterRpcServices().runHbckChore(null, null);
     } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
       out.write("Failed generating a new hbck_chore report; using cache; try again or run hbck_chore_run in the shell: " + se.getMessage() + "\n");
-    } 
+    }
     try {
       master.getMasterRpcServices().runCatalogScan(null, null);
     } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
       out.write("Failed generating a new catalogjanitor report; using cache; try again or run catalogjanitor_run in the shell: " + se.getMessage() + "\n");
-    } 
+    }
   }
   HbckChore hbckChore = master.getHbckChore();
   HbckReport hbckReport = hbckChore == null ? null : hbckChore.getLastReport();
@@ -96,7 +96,7 @@
         we display the reports cached from the last time the reports were run.
         Reports are run by Chores that are hosted by the Master on a cadence.
         You can also run them on demand from the hbase shell: invoke <em>catalogjanitor_run</em>
-        and/or <em>hbck_chore_run</em>. 
+        and/or <em>hbck_chore_run</em>.
         ServerNames will be links if server is live, italic if dead, and plain if unknown.</span></p>
     </div>
   </div>

@@ -26,7 +26,7 @@ message TableSchema {
   message Attribute {
     required string name = 1;
     required string value = 2;
-  }  
+  }
   repeated Attribute attrs = 2;
   repeated ColumnSchema columns = 3;
   // optional helpful encodings of commonly used attributes

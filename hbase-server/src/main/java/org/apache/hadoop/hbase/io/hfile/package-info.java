@@ -29,7 +29,7 @@
  * using {@link org.apache.hadoop.hbase.io.hfile.CombinedBlockCache}, BucketCache is used as
  * a host for data blocks with meta blocks in an instance of LruBlockCache.  BucketCache
  * can also be onheap, offheap, and file-backed.
- * 
+ *
  * <h1>Which BlockCache should I use?</h1>
  * By default LruBlockCache is on.  If you would like to cache more, and offheap (offheap
  * usually means less GC headache), try enabling * BucketCache. Fetching will always

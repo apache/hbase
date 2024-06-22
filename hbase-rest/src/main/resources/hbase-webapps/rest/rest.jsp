@@ -119,4 +119,3 @@ String listenPort = conf.get("hbase.rest.port", "8080");
 <script src="/static/js/tab.js" type="text/javascript"></script>
 </body>
 </html>
-

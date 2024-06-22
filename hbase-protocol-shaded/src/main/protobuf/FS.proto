@@ -43,4 +43,3 @@ message Reference {
   }
   required Range range = 2;
 }
-

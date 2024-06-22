@@ -13072,5 +13072,3 @@ class Hbase_getRegionInfo_result {
   }
 
 }
-
-

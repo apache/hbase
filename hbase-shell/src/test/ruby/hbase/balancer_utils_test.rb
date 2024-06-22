@@ -56,7 +56,7 @@ module Hbase
       assert(!request.isDryRun())
       assert(request.isIgnoreRegionsInTransition())
     end
-    
+
     define_test "should parse 'ignore_rit' string" do
       request = create_balance_request('ignore_rit')
       assert(!request.isDryRun())

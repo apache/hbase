@@ -7,9 +7,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,7 @@ $GLOBALS['THRIFT_ROOT'] = '/Users/irubin/Thrift/thrift-20080411p1/lib/php/src';
 
 require_once( $GLOBALS['THRIFT_ROOT'].'/Thrift.php' );
 
-# Something is wrong with this. Is this the PHP way of doing things? 
+# Something is wrong with this. Is this the PHP way of doing things?
 # Old versions of thrift seemingly worked with just a couple includes.
 require_once( $GLOBALS['THRIFT_ROOT'].'/type/TMessageType.php' );
 require_once( $GLOBALS['THRIFT_ROOT'].'/type/TType.php' );
@@ -42,7 +42,7 @@ if (mkdir($GLOBALS['THRIFT_ROOT'].'/packages/Hbase', 0770, true)) {
   $files = scandir('gen-php/Hbase');
   foreach ($files as $file) {
     if (preg_match("/.*php$/", $file)) {
-      copy("./gen-php/Hbase/$file", $GLOBALS['THRIFT_ROOT']."/packages/Hbase/$file"); 
+      copy("./gen-php/Hbase/$file", $GLOBALS['THRIFT_ROOT']."/packages/Hbase/$file");
     }
   }
 }
@@ -56,8 +56,8 @@ use Thrift\Protocol\TBinaryProtocol;
 use Hbase\HbaseClient;
 use Hbase\ColumnDescriptor;
 use Hbase\Mutation;
- 
- 
+
+
 function printRow( $rowresult ) {
   echo( "row: {$rowresult->row}, cols: \n" );
   $values = $rowresult->columns;
@@ -244,7 +244,7 @@ for ($e=100; $e>=0; $e--) {
   );
   $client->mutateRow( $t, $row, $mutations, $dummy_attributes );
   printRow( $client->getRow( $t, $row, $dummy_attributes ));
-  
+
   $mutations = array(
     new Mutation( array(
       'column' => 'entry:num',
@@ -261,7 +261,7 @@ for ($e=100; $e>=0; $e--) {
   $versions = $client->getVer( $t, $row, "entry:num", 10, $dummy_attributes );
   echo( "row: {$row}, values: \n" );
   foreach ( $versions as $v ) echo( "  {$v->value};\n" );
-  
+
   try {
     $client->get( $t, $row, "entry:foo", $dummy_attributes );
     throw new Exception ( "shouldn't get here! " );
@@ -285,11 +285,10 @@ try {
   $client->scannerClose( $scanner );
   echo( "Scanner finished\n" );
 }
-  
+
 $transport->close();
 
 ?>
 </pre>
 </body>
 </html>
-

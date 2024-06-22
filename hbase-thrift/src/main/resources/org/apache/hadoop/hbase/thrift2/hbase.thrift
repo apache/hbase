@@ -223,8 +223,8 @@ struct TIncrement {
   7: optional bool returnResults
 }
 
-/* 
- * Used to perform append operation 
+/*
+ * Used to perform append operation
  */
 struct TAppend {
   1: required binary row,
