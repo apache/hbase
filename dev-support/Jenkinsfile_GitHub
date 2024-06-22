@@ -36,14 +36,16 @@ pipeline {
         YETUS_REL = 'yetus'
         DOCKERFILE_REL = "${SRC_REL}/dev-support/docker/Dockerfile"
         YETUS_DRIVER_REL = "${SRC_REL}/dev-support/jenkins_precommit_github_yetus.sh"
-        // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION = 'rel/0.12.0'
+        YETUS_VERSION = '0.15.0'
         GENERAL_CHECK_PLUGINS = 'all,-javadoc,-jira,-shadedjars,-unit'
         JDK_SPECIFIC_PLUGINS = 'compile,github,htmlout,javac,javadoc,maven,mvninstall,shadedjars,unit'
+        // This section of the docs tells folks not to use the javadoc tag. older branches have our old version of the check for said tag.
+        AUTHOR_IGNORE_LIST = 'src/main/asciidoc/_chapters/developer.adoc'
+        BLANKS_IGNORE_LIST = '.*/generated/.*'
         // output from surefire; sadly the archive function in yetus only works on file names.
         ARCHIVE_PATTERN_LIST = 'TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump'
         // These tests currently have known failures. Once they burn down to 0, remove from here so that new problems will cause a failure.
-        TESTS_FILTER = 'cc,checkstyle,javac,javadoc,pylint,shellcheck,whitespace,perlcritic,ruby-lint,rubocop,mvnsite'
+        TESTS_FILTER = 'checkstyle,javac,javadoc,pylint,shellcheck,shelldocs,blanks,perlcritic,ruby-lint,rubocop'
         EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase-Find-Flaky-Tests/job/${CHANGE_TARGET}/lastSuccessfulBuild/artifact/output/excludes"
         // set build parallel
         BUILD_THREAD = 4
@@ -102,11 +104,11 @@ pipeline {
                             checkout scm
                         }
                         dir("${YETUSDIR}") {
-                            checkout([
-                              $class           : 'GitSCM',
-                              branches         : [[name: "${YETUS_VERSION}"]],
-                              userRemoteConfigs: [[url: 'https://github.com/apache/yetus.git']]]
-                            )
+                            sh'''#!/usr/bin/env bash
+                              wget https://dlcdn.apache.org/yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
+                              tar --strip-components=1 -xzf apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
+                              rm apache-yetus-${YETUS_VERSION}-bin.tar.gz
+                            '''
                         }
                         dir("${WORKDIR}") {
                             withCredentials([
@@ -229,11 +231,11 @@ pipeline {
                             checkout scm
                         }
                         dir("${YETUSDIR}") {
-                            checkout([
-                              $class           : 'GitSCM',
-                              branches         : [[name: "${YETUS_VERSION}"]],
-                              userRemoteConfigs: [[url: 'https://github.com/apache/yetus.git']]]
-                            )
+                            sh'''#!/usr/bin/env bash
+                              wget https://dlcdn.apache.org/yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
+                              tar --strip-components=1 -xzf apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
+                              rm apache-yetus-${YETUS_VERSION}-bin.tar.gz
+                            '''
                         }
                         dir("${WORKDIR}") {
                             withCredentials([
@@ -365,11 +367,11 @@ pipeline {
                             checkout scm
                         }
                         dir("${YETUSDIR}") {
-                            checkout([
-                              $class           : 'GitSCM',
-                              branches         : [[name: "${YETUS_VERSION}"]],
-                              userRemoteConfigs: [[url: 'https://github.com/apache/yetus.git']]]
-                            )
+                            sh'''#!/usr/bin/env bash
+                              wget https://dlcdn.apache.org/yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
+                              tar --strip-components=1 -xzf apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
+                              rm apache-yetus-${YETUS_VERSION}-bin.tar.gz
+                            '''
                         }
                         dir("${WORKDIR}") {
                             withCredentials([
@@ -493,22 +495,19 @@ pipeline {
                         SKIP_ERRORPRONE = true
                     }
                     when {
-			allOf {
-                            // this will return true if the pipeline is building a change request, such as a GitHub pull request.
-                            changeRequest()
-                            expression { env.CHANGE_TARGET in ['master', 'branch-3'] }
-			}
+                        // this will return true if the pipeline is building a change request, such as a GitHub pull request.
+                        changeRequest()
                     }
                     steps {
                         dir("${SOURCEDIR}") {
                             checkout scm
                         }
                         dir("${YETUSDIR}") {
-                            checkout([
-                              $class           : 'GitSCM',
-                              branches         : [[name: "${YETUS_VERSION}"]],
-                              userRemoteConfigs: [[url: 'https://github.com/apache/yetus.git']]]
-                            )
+                            sh'''#!/usr/bin/env bash
+                              wget https://dlcdn.apache.org/yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
+                              tar --strip-components=1 -xzf apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
+                              rm apache-yetus-${YETUS_VERSION}-bin.tar.gz
+                            '''
                         }
                         dir("${WORKDIR}") {
                             withCredentials([
