@@ -43,14 +43,14 @@ message AggregateResponse {
    * The AggregateService methods all have a response that either is a Pair
    * or a simple object. When it is a Pair both first_part and second_part
    * have defined values (and the second_part is not present in the response
-   * when the response is not a pair). Refer to the AggregateImplementation 
-   * class for an overview of the AggregateResponse object constructions. 
-   */ 
+   * when the response is not a pair). Refer to the AggregateImplementation
+   * class for an overview of the AggregateResponse object constructions.
+   */
   repeated bytes first_part = 1;
   optional bytes second_part = 2;
 }
 
-/** Refer to the AggregateImplementation class for an overview of the 
+/** Refer to the AggregateImplementation class for an overview of the
  *  AggregateService method implementations and their functionality.
  */
 service AggregateService {

@@ -47,7 +47,7 @@ if "%distMode%"=="false" (
   if "%distMode%"=="true" (
      @echo This is not implemented yet. Stay tuned.
      @rem call %HBASE_BIN_PATH%\hbase-daemons.cmd --config "${HBASE_CONF_DIR}" start zookeeper
-     @rem call %HBASE_BIN_PATH%\hbase-daemon.cmd --config "${HBASE_CONF_DIR}" start master 
+     @rem call %HBASE_BIN_PATH%\hbase-daemon.cmd --config "${HBASE_CONF_DIR}" start master
 
     @rem call %HBASE_BIN_PATH%\hbase-daemons.cmd --config "%HBASE_CONF_DIR%" --hosts "%HBASE_REGIONSERVERS%" start regionserver
     @rem call %HBASE_BIN_PATH%\hbase-daemons.cmd --config "%HBASE_CONF_DIR%" --hosts "%HBASE_BACKUP_MASTERS%" start master-backup

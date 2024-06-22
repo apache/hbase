@@ -27,7 +27,7 @@
 @rem The maximum amount of heap to use. Default is left to JVM default.
 @rem set HBASE_HEAPSIZE=1000
 
-@rem Uncomment below if you intend to use off heap cache. For example, to allocate 8G of 
+@rem Uncomment below if you intend to use off heap cache. For example, to allocate 8G of
 @rem offheap, set the value to "8G".
 @rem set HBASE_OFFHEAPSIZE=1000
 

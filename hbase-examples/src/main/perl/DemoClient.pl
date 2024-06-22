@@ -6,9 +6,9 @@
 #   to you under the Apache License, Version 2.0 (the
 #   "License"); you may not use this file except in compliance
 #   with the License.  You may obtain a copy of the License at
-#  
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #   Unless required by applicable law or agreed to in writing, software
 #   distributed under the License is distributed on an "AS IS" BASIS,
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -199,14 +199,14 @@ for (my $e = 100; $e > 0; $e--)
 	$mutations = [
 		Hbase::Mutation->new ( { column => "entry:num", value => "0" } ),
 		Hbase::Mutation->new ( { column => "entry:foo", value => "FOO" } ),
-		];	
+		];
 	$client->mutateRow ( $demo_table, $row, $mutations, %dummy_attributes );
 	printRow ( $client->getRow ( $demo_table, $row, %dummy_attributes ) );
 
 	$mutations = [
 		Hbase::Mutation->new ( { column => "entry:foo", isDelete => 1 } ),
 		Hbase::Mutation->new ( { column => "entry:num", value => -1 } ),
-		];	
+		];
 	$client->mutateRow ( $demo_table, $row, $mutations, %dummy_attributes );
 	printRow ( $client->getRow ( $demo_table, $row, %dummy_attributes ) );
 
@@ -217,7 +217,7 @@ for (my $e = 100; $e > 0; $e--)
 	$client->mutateRow ( $demo_table, $row, $mutations, %dummy_attributes );
 	printRow ( $client->getRow ( $demo_table, $row, %dummy_attributes ) );
 
-	$mutations = [ 
+	$mutations = [
 		Hbase::Mutation->new ( { column => "entry:num", value => -999 } ),
 		Hbase::Mutation->new ( { column => "entry:sqr", isDelete => 1 } ),
 		];
@@ -285,4 +285,3 @@ if ($@)
 $transport->close ();
 
 exit 0;
-

@@ -36,7 +36,7 @@ message VisibilityLabel {
 }
 
 message VisibilityLabelsResponse {
-  repeated RegionActionResult result = 1; 
+  repeated RegionActionResult result = 1;
 }
 
 message SetAuthsRequest {

@@ -16134,4 +16134,3 @@ std::shared_ptr< ::apache::thrift::TProcessor > HbaseProcessorFactory::getProces
   return processor;
 }
 }}}} // namespace
-

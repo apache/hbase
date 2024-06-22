@@ -125,4 +125,3 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
      </div>
    </section>
  </%if>
-

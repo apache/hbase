@@ -17,7 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Instructions: 
+# Instructions:
 # Modify the import string below to point to {$THRIFT_HOME}/lib/rb/lib.
 
 # You will need to modify this import string:
@@ -66,7 +66,7 @@ client.getTableNames().sort.each do |name|
       puts "    disabling table: #{name}"
       client.disableTable(name)
     end
-    puts "    deleting table: #{name}" 
+    puts "    deleting table: #{name}"
     client.deleteTable(name)
   end
 end
@@ -144,7 +144,7 @@ end
 puts "Starting scanner..."
 scanner = client.scannerOpen(t, "", ["entry:"], dummy_attributes)
 begin
-  while (true) 
+  while (true)
     printRow(client.scannerGet(scanner))
   end
 rescue Apache::Hadoop::Hbase::Thrift::NotFound => nf
@@ -203,7 +203,7 @@ end
   mutations << m
   client.mutateRow(t, row, mutations, dummy_attributes, dummy_attributes)
   printRow(client.getRow(t, row, dummy_attributes))
-  
+
   mutations = []
   m = Apache::Hadoop::Hbase::Thrift::Mutation.new
   m.column = "entry:num"
@@ -221,8 +221,8 @@ end
   versions.each do |v|
     print "#{v.value}; "
   end
-  puts ""    
-  
+  puts ""
+
   begin
     client.get(t, row, "entry:foo", dummy_attributes)
     raise "shouldn't get here!"
@@ -231,7 +231,7 @@ end
   end
 
   puts ""
-end 
+end
 
 columns = []
 client.getColumnDescriptors(t).each do |col, desc|
@@ -242,12 +242,12 @@ end
 puts "Starting scanner..."
 scanner = client.scannerOpenWithStop(t, "00020", "00040", columns, dummy_attributes)
 begin
-  while (true) 
+  while (true)
     printRow(client.scannerGet(scanner, dummy_attributes))
   end
 rescue Apache::Hadoop::Hbase::Thrift::NotFound => nf
   client.scannerClose(scanner)
   puts "Scanner finished"
 end
-  
+
 transport.close()

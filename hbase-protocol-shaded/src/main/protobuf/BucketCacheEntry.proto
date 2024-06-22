@@ -86,4 +86,3 @@ message RegionFileSizeMap {
   required string region_name = 1;
   required uint64 region_cached_size = 2;
 }
-
