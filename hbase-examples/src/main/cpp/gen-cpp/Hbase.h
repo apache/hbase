@@ -9,7 +9,7 @@
 
 #include <thrift/TDispatchProcessor.h>
 #include "Hbase_types.h"
-
+     
 namespace apache { namespace hadoop { namespace hbase { namespace thrift {
 
 class HbaseIf {
