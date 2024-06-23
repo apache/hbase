@@ -42,7 +42,8 @@ declare -a required_envs=(
   "TESTS_FILTER"
   "YETUSDIR"
   "AUTHOR_IGNORE_LIST"
-  "BLANKS_IGNORE_LIST"
+  "BLANKS_EOL_IGNORE_FILE"
+  "BLANKS_TABS_IGNORE_FILE"
 )
 # Validate params
 for required_env in "${required_envs[@]}"; do
@@ -112,8 +113,8 @@ YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
 YETUS_ARGS+=("--mvn-custom-repos")
 YETUS_ARGS+=("--java-home=${SET_JAVA_HOME}")
 YETUS_ARGS+=("--author-ignore-list=${AUTHOR_IGNORE_LIST}")
-YETUS_ARGS+=("--blanks-eol-ignore-list=${BLANKS_IGNORE_LIST}")
-YETUS_ARGS+=("--blanks-tabs-ignore-list=${BLANKS_IGNORE_LIST}*")
+YETUS_ARGS+=("--blanks-eol-ignore-file=${BLANKS_EOL_IGNORE_FILE}")
+YETUS_ARGS+=("--blanks-tabs-ignore-file=${BLANKS_TABS_IGNORE_FILE}*")
 YETUS_ARGS+=("--tests-filter=${TESTS_FILTER}")
 YETUS_ARGS+=("--personality=${SOURCEDIR}/dev-support/hbase-personality.sh")
 YETUS_ARGS+=("--quick-hadoopcheck")
