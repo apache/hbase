@@ -43,7 +43,8 @@ pipeline {
     PERSONALITY_FILE = 'tools/personality.sh'
     // This section of the docs tells folks not to use the javadoc tag. older branches have our old version of the check for said tag.
     AUTHOR_IGNORE_LIST = 'src/main/asciidoc/_chapters/developer.adoc'
-    BLANKS_IGNORE_LIST = '.*/generated/.*'
+    BLANKS_EOL_IGNORE_FILE = 'dev-support/blanks-eol-ignore.txt'
+    BLANKS_TABS_IGNORE_FILE = 'dev-support/blanks-tabs-ignore.txt'
     // output from surefire; sadly the archive function in yetus only works on file names.
     ARCHIVE_PATTERN_LIST = 'TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump'
     // These tests currently have known failures. Once they burn down to 0, remove from here so that new problems will cause a failure.
