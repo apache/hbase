@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
@@ -206,15 +207,13 @@ public final class BackupSystemTable implements Closeable {
       if (!admin.tableExists(tableName)) {
         TableDescriptor backupHTD = BackupSystemTable.getSystemTableDescriptor(conf);
         createSystemTable(admin, backupHTD);
-      } else if (!admin.isTableEnabled(tableName)) {
-        admin.enableTable(tableName);
       }
+      ensureTableEnabled(admin, tableName);
       if (!admin.tableExists(bulkLoadTableName)) {
         TableDescriptor blHTD = BackupSystemTable.getSystemTableForBulkLoadedDataDescriptor(conf);
         createSystemTable(admin, blHTD);
-      } else if (!admin.isTableEnabled(bulkLoadTableName)) {
-        admin.enableTable(bulkLoadTableName);
       }
+      ensureTableEnabled(admin, bulkLoadTableName);
       waitForSystemTable(admin, tableName);
       waitForSystemTable(admin, bulkLoadTableName);
     }
@@ -1892,5 +1891,15 @@ public final class BackupSystemTable implements Closeable {
       sb.append(ss);
     }
     return Bytes.toBytes(sb.toString());
+  }
+
+  private static void ensureTableEnabled(Admin admin, TableName tableName) throws IOException {
+    if (!admin.isTableEnabled(tableName)) {
+      try {
+        admin.enableTable(tableName);
+      } catch (TableNotDisabledException ignored) {
+        LOG.info("Table {} is not disabled, ignoring enable request", tableName);
+      }
+    }
   }
 }
