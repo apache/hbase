@@ -27,6 +27,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ReplicationPeerStorage {
 
   /**
+   * When the peer has no creation time, this constant is set to 1 by default
+   */
+  long NO_CREATE_TIME = -1;
+
+  /**
    * Add a replication peer.
    * @throws ReplicationException if there are errors accessing the storage service.
    */
@@ -69,6 +74,11 @@ public interface ReplicationPeerStorage {
    * @throws ReplicationException if there are errors accessing the storage service.
    */
   ReplicationPeerConfig getPeerConfig(String peerId) throws ReplicationException;
+
+  /**
+   * Get the peer create time of a replication peer.
+   */
+  long getPeerCreateTime(String peerId);
 
   /**
    * Set the new sync replication state that we are going to transit to.

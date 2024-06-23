@@ -77,6 +77,8 @@ public class FSReplicationPeerStorage implements ReplicationPeerStorage {
 
   static final String SYNC_REPLICATION_STATE_FILE = "sync-rep-state";
 
+  static final String CREATE_TIME_FILE = "create_time";
+
   static final byte[] NONE_STATE_BYTES =
     SyncReplicationState.toByteArray(SyncReplicationState.NONE);
 
@@ -111,6 +113,7 @@ public class FSReplicationPeerStorage implements ReplicationPeerStorage {
       if (!enabled) {
         fs.createNewFile(new Path(peerDir, DISABLED_FILE));
       }
+      fs.createNewFile(new Path(peerDir, CREATE_TIME_FILE));
       write(fs, peerDir, SYNC_REPLICATION_STATE_FILE,
         SyncReplicationState.toByteArray(syncReplicationState, SyncReplicationState.NONE));
       // write the peer config data at last, so when loading, if we can not load the peer_config, we
@@ -225,6 +228,19 @@ public class FSReplicationPeerStorage implements ReplicationPeerStorage {
       throw new ReplicationException(
         "Failed to parse replication peer config for peer with id=" + peerId, e);
     }
+  }
+
+  @Override
+  public long getPeerCreateTime(String peerId) {
+    Path createTimeFile = new Path(getPeerDir(peerId), CREATE_TIME_FILE);
+    try {
+      if (fs.exists(createTimeFile)) {
+        return fs.getFileStatus(createTimeFile).getModificationTime();
+      }
+    } catch (IOException e) {
+      LOG.warn("Unable to get create time of the peer: " + peerId, e);
+    }
+    return NO_CREATE_TIME;
   }
 
   private Pair<SyncReplicationState, SyncReplicationState> getStateAndNewState(String peerId)
