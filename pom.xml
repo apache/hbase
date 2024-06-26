@@ -791,7 +791,7 @@
     <tar.name>${project.build.finalName}.tar.gz</tar.name>
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm</maven.build.timestamp.format>
     <buildDate>${maven.build.timestamp}</buildDate>
-    <compileSource>1.8</compileSource>
+    <compileSource>17</compileSource>
     <releaseTarget>8</releaseTarget>
     <!-- Build dependencies -->
     <!-- The $revision feature is introduced in 3.5.0 -->
