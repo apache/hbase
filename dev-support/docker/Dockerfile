@@ -112,6 +112,13 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk11.tar.gz "${OPENJDK11_URL}" && \
   echo "${OPENJDK11_SHA256} */tmp/adoptopenjdk11.tar.gz" | sha256sum -c -
 
+FROM base_image AS openjdk17_download_image
+ENV OPENJDK17_URL 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.10%2B7/OpenJDK17U-jdk_x64_linux_hotspot_17.0.10_7.tar.gz'
+ENV OPENJDK17_SHA256 'a8fd07e1e97352e97e330beb20f1c6b351ba064ca7878e974c7d68b8a5c1b378'
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk17.tar.gz "${OPENJDK17_URL}" && \
+  echo "${OPENJDK17_SHA256} */tmp/adoptopenjdk17.tar.gz" | sha256sum -c -
+
 ##
 # build the final image
 #
@@ -159,6 +166,14 @@ RUN mkdir -p /usr/lib/jvm && \
   ln -s "/usr/lib/jvm/$(basename "$(tar -tf /tmp/adoptopenjdk11.tar.gz | head -n1)")" /usr/lib/jvm/java-11-adoptopenjdk && \
   ln -s /usr/lib/jvm/java-11-adoptopenjdk /usr/lib/jvm/java-11 && \
   rm /tmp/adoptopenjdk11.tar.gz
+
+# hadolint ignore=DL3010
+COPY --from=openjdk17_download_image /tmp/adoptopenjdk17.tar.gz /tmp/adoptopenjdk17.tar.gz
+RUN mkdir -p /usr/lib/jvm && \
+  tar xzf /tmp/adoptopenjdk17.tar.gz -C /usr/lib/jvm && \
+  ln -s "/usr/lib/jvm/$(basename "$(tar -tf /tmp/adoptopenjdk17.tar.gz | head -n1)")" /usr/lib/jvm/java-17-adoptopenjdk && \
+  ln -s /usr/lib/jvm/java-17-adoptopenjdk /usr/lib/jvm/java-17 && \
+  rm /tmp/adoptopenjdk17.tar.gz
 
 # configure default environment for Yetus. Yetus in dockermode seems to require
 # these values to be specified here; the various --foo-path flags do not
