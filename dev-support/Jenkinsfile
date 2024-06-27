@@ -758,11 +758,6 @@ pipeline {
               label 'hbase-large'
             }
           }
-          tools {
-            maven 'maven_latest'
-            // this needs to be set to the jdk that ought to be used to build releases on the branch the Jenkinsfile is stored in.
-            jdk "jdk_1.8_latest"
-          }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
             BRANCH = "${env.BRANCH_NAME}"
@@ -797,21 +792,25 @@ pipeline {
               echo "got the following saved stats in 'output-srctarball/machine'"
               ls -lh "output-srctarball/machine"
             '''
-            sh """#!/bin/bash -e
+            sh '''#!/bin/bash -e
               echo "Checking the steps for an RM to make a source artifact, then a binary artifact."
-              if "${env.BASEDIR}/dev-support/hbase_nightly_source-artifact.sh" \
+              docker build -t hbase-integration-test -f "${BASEDIR}/dev-support/docker/Dockerfile" .
+              docker run --rm -v "${WORKSPACE}":/hbase -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro \
+                  -u `id -u`:`id -g` -e JAVA_HOME="/usr/lib/jvm/java-17" --workdir=/hbase hbase-integration-test \
+                  "component/dev-support/hbase_nightly_source-artifact.sh" \
                   --intermediate-file-dir output-srctarball \
                   --unpack-temp-dir unpacked_src_tarball \
                   --maven-m2-initial .m2-for-repo \
                   --maven-m2-src-build .m2-for-src \
                   --clean-source-checkout \
-                  "${env.BASEDIR}" ; then
+                  component
+              if [ $? -eq 0 ]; then
                 echo '(/) {color:green}+1 source release artifact{color}\n-- See build output for details.' >output-srctarball/commentfile
               else
                 echo '(x) {color:red}-1 source release artifact{color}\n-- See build output for details.' >output-srctarball/commentfile
                 exit 1
               fi
-            """
+            '''
             echo "unpacking the hbase bin tarball into 'hbase-install' and the client tarball into 'hbase-client'"
             sh '''#!/bin/bash -e
               if [ 2 -ne $(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | grep -v hadoop3 | wc -l) ]; then
@@ -834,21 +833,25 @@ pipeline {
             '''
             unstash 'hadoop-2'
             sh '''#!/bin/bash -xe
-              if [[ "${BRANCH}" = branch-2* ]]; then
+              if [[ "${BRANCH}" == *"branch-2"* ]]; then
                 echo "Attempting to use run an instance on top of Hadoop 2."
                 artifact=$(ls -1 "${WORKSPACE}"/hadoop-2*.tar.gz | head -n 1)
                 tar --strip-components=1 -xzf "${artifact}" -C "hadoop-2"
-                if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
+                docker build -t hbase-integration-test -f "${BASEDIR}/dev-support/docker/Dockerfile" .
+                docker run --rm -v "${WORKSPACE}":/hbase -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro \
+                    -u `id -u`:`id -g` -e JAVA_HOME="/usr/lib/jvm/java-8" --workdir=/hbase hbase-integration-test \
+                    component/dev-support/hbase_nightly_pseudo-distributed-test.sh \
                     --single-process \
                     --working-dir output-integration/hadoop-2 \
                     --hbase-client-install "hbase-client" \
-                    "hbase-install" \
-                    "hadoop-2/bin/hadoop" \
+                    hbase-install \
+                    hadoop-2/bin/hadoop \
                     hadoop-2/share/hadoop/yarn/timelineservice \
                     hadoop-2/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
                     hadoop-2/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
                     hadoop-2/bin/mapred \
-                    >output-integration/hadoop-2.log 2>&1 ; then
+                    >output-integration/hadoop-2.log 2>&1
+                if [ $? -ne 0 ]; then
                   echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 2. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-2.log]. (note that this means we didn't run on Hadoop 3)" >output-integration/commentfile
                   exit 2
                 fi
@@ -870,7 +873,12 @@ pipeline {
                 hbase_install_dir="hbase-hadoop3-install"
                 hbase_client_dir="hbase-hadoop3-client"
               fi
-              if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
+              docker build -t hbase-integration-test -f "${BASEDIR}/dev-support/docker/Dockerfile" .
+              docker run --rm -v "${WORKSPACE}":/hbase -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro \
+                  -u `id -u`:`id -g` -e JAVA_HOME="/usr/lib/jvm/java-17" \
+                  -e HADOOP_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED" \
+                  --workdir=/hbase hbase-integration-test \
+                  component/dev-support/hbase_nightly_pseudo-distributed-test.sh \
                   --single-process \
                   --working-dir output-integration/hadoop-3 \
                   --hbase-client-install ${hbase_client_dir} \
@@ -880,12 +888,17 @@ pipeline {
                   hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
                   hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
                   hadoop-3/bin/mapred \
-                  >output-integration/hadoop-3.log 2>&1 ; then
+                  >output-integration/hadoop-3.log 2>&1
+              if [ $? -ne 0 ]; then
                 echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 3. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-3.log]. (note that this means we didn't check the Hadoop 3 shaded client)" >output-integration/commentfile
                 exit 2
               fi
               echo "Attempting to use run an instance on top of Hadoop 3, relying on the Hadoop client artifacts for the example client program."
-              if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
+              docker run --rm -v "${WORKSPACE}":/hbase -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro \
+                  -u `id -u`:`id -g` -e JAVA_HOME="/usr/lib/jvm/java-17" \
+                  -e HADOOP_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED" \
+                  --workdir=/hbase hbase-integration-test \
+                  component/dev-support/hbase_nightly_pseudo-distributed-test.sh \
                   --single-process \
                   --hadoop-client-classpath hadoop-3/share/hadoop/client/hadoop-client-api-*.jar:hadoop-3/share/hadoop/client/hadoop-client-runtime-*.jar \
                   --working-dir output-integration/hadoop-3-shaded \
@@ -896,7 +909,8 @@ pipeline {
                   hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
                   hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
                   hadoop-3/bin/mapred \
-                  >output-integration/hadoop-3-shaded.log 2>&1 ; then
+                  >output-integration/hadoop-3-shaded.log 2>&1
+              if [ $? -ne 0 ]; then
                 echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 3 using Hadoop's shaded client. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-3-shaded.log]." >output-integration/commentfile
                 exit 2
               fi
