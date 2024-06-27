@@ -54,6 +54,10 @@ pipeline {
             mvn_args=("${mvn_args[@]}" -X)
             set -x
           fi
+          # need to build against hadoop 3.0 profile for branch-2 when using jdk 11+
+          if [[ "${BRANCH_NAME}" == *"branch-2"* ]]; then
+            mvn_args=("${mvn_args[@]}" -Dhadoop.profile=3.0)
+          fi
           curl "${curl_args[@]}" -o includes.txt "${JENKINS_URL}/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/output/includes"
           if [ -s includes.txt ]; then
             rm -rf local-repository/org/apache/hbase
