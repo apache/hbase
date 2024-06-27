@@ -465,13 +465,12 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         int errors = closeErrorCount.incrementAndGet();
         boolean hasUnflushedEntries = isUnflushedEntries();
         if (syncCloseCall && (hasUnflushedEntries || (errors > this.closeErrorsTolerated))) {
-          LOG.error(
-            "Close of WAL " + path + " failed. Cause=\"" + ioe.getMessage() + "\", errors=" + errors
-              + ", hasUnflushedEntries=" + hasUnflushedEntries);
+          LOG.error("Close of WAL " + path + " failed. Cause=\"" + ioe.getMessage() + "\", errors="
+            + errors + ", hasUnflushedEntries=" + hasUnflushedEntries);
           throw ioe;
         }
-        LOG.warn("Riding over failed WAL close of " + path +
-          "; THIS FILE WAS NOT CLOSED BUT ALL EDITS SYNCED SO SHOULD BE OK", ioe);
+        LOG.warn("Riding over failed WAL close of " + path
+          + "; THIS FILE WAS NOT CLOSED BUT ALL EDITS SYNCED SO SHOULD BE OK", ioe);
       }
     }
   }
