@@ -205,8 +205,8 @@ pipeline {
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
             TESTS = "${env.SHALLOW_CHECKS}"
-            SET_JAVA_HOME = "/usr/lib/jvm/java-11"
-            JAVA8_HOME="/usr/lib/jvm/java-8"
+            SET_JAVA_HOME = getJavaHomeForYetusGeneralCheck(env.BRANCH_NAME)
+            JAVA8_HOME = "/usr/lib/jvm/java-8"
             // Activates hadoop 3.0 profile in maven runs.
             HADOOP_PROFILE = '3.0'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_GENERAL}"
@@ -307,7 +307,7 @@ pipeline {
             }
           }
           when {
-            branch 'branch-2*'
+            branch '*branch-2*'
           }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
@@ -416,6 +416,9 @@ pipeline {
             node {
               label 'hbase'
             }
+          }
+          when {
+            branch '*branch-2*'
           }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
@@ -527,6 +530,9 @@ pipeline {
               label 'hbase'
             }
           }
+          when {
+            branch '*branch-2*'
+          }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
             TESTS = "${env.DEEP_CHECKS}"
@@ -633,11 +639,6 @@ pipeline {
         }
 
         stage ('yetus jdk17 hadoop3 checks') {
-          when {
-            anyOf {
-              branch 'master';branch 'branch-3'
-            }
-          }
           agent {
             node {
               label 'hbase'
@@ -943,12 +944,14 @@ pipeline {
            unstash 'jdk8-hadoop2-result'
            unstash 'jdk8-hadoop3-result'
            unstash 'jdk11-hadoop3-result'
+           unstash 'jdk17-hadoop3-result'
            unstash 'srctarball-result'
            sh "printenv"
            def results = ["${env.OUTPUT_DIR_RELATIVE_GENERAL}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}/commentfile",
+                          "${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}/commentfile",
                           'output-srctarball/commentfile',
                           'output-integration/commentfile']
            echo env.BRANCH_NAME
@@ -1017,4 +1020,13 @@ List<String> getJirasToComment(CharSequence source, List<String> seen) {
     }
   }
   return seen
+}
+@NonCPS
+String getJavaHomeForYetusGeneralCheck(String branchName) {
+  // for 2.x, build with java 11, for 3.x, build with java 17
+  if (branchName.indexOf("branch-2") >=0) {
+    return "/usr/lib/jvm/java-11";
+  } else {
+    return "/usr/lib/jvm/java-17"
+  }
 }
