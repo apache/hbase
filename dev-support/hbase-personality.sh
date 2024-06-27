@@ -178,7 +178,7 @@ function personality_modules
   # If we have HADOOP_PROFILE specified and we're on branch-2.x, pass along
   # the hadoop.profile system property. Ensures that Hadoop2 and Hadoop3
   # logic is not both activated within Maven.
-  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" = branch-2* ]] ; then
+  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" == *"branch-2"* ]] ; then
     extra="${extra} -Dhadoop.profile=${HADOOP_PROFILE}"
   fi
 
@@ -490,7 +490,7 @@ function shadedjars_rebuild
   # If we have HADOOP_PROFILE specified and we're on branch-2.x, pass along
   # the hadoop.profile system property. Ensures that Hadoop2 and Hadoop3
   # logic is not both activated within Maven.
-  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" = branch-2* ]] ; then
+  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" = *"branch-2"* ]] ; then
     maven_args+=("-Dhadoop.profile=${HADOOP_PROFILE}")
   fi
 
@@ -580,14 +580,7 @@ function hadoopcheck_rebuild
 
   # All supported Hadoop versions that we want to test the compilation with
   # See the Hadoop section on prereqs in the HBase Reference Guide
-  if [[ "${PATCH_BRANCH}" = branch-2.4 ]]; then
-    yetus_info "Setting Hadoop 2 versions to test based on branch-2.4 rules."
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.10.2"
-    else
-      hbase_hadoop2_versions="2.10.0 2.10.1 2.10.2"
-    fi
-  elif [[ "${PATCH_BRANCH}" = branch-2* ]]; then
+  if [[ "${PATCH_BRANCH}" = *"branch-2"* ]]; then
     yetus_info "Setting Hadoop 2 versions to test based on branch-2.5+ rules."
     hbase_hadoop2_versions="2.10.2"
   else
@@ -595,19 +588,19 @@ function hadoopcheck_rebuild
     hbase_hadoop2_versions=""
   fi
 
-  if [[ "${PATCH_BRANCH}" = branch-2.4 ]]; then
-    yetus_info "Setting Hadoop 3 versions to test based on branch-2.4 rules"
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.1.4 3.2.4 3.3.6"
-    else
-      hbase_hadoop3_versions="3.1.1 3.1.2 3.1.3 3.1.4 3.2.0 3.2.1 3.2.2 3.2.3 3.2.4 3.3.0 3.3.1 3.3.2 3.3.3 3.3.4 3.3.5 3.3.6"
-    fi
-  else
-    yetus_info "Setting Hadoop 3 versions to test based on branch-2.5+/master/feature branch rules"
+  if [[ "${PATCH_BRANCH}" = *"branch-2.5"* ]]; then
+    yetus_info "Setting Hadoop 3 versions to test based on branch-2.5 rules"
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
       hbase_hadoop3_versions="3.2.4 3.3.6"
     else
       hbase_hadoop3_versions="3.2.3 3.2.4 3.3.2 3.3.3 3.3.4 3.3.5 3.3.6"
+    fi
+  else
+    yetus_info "Setting Hadoop 3 versions to test based on branch-2.6+/master/feature branch rules"
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop3_versions="3.3.6"
+    else
+      hbase_hadoop3_versions="3.3.5 3.3.6"
     fi
   fi
 
@@ -635,7 +628,7 @@ function hadoopcheck_rebuild
   done
 
   hadoop_profile=""
-  if [[ "${PATCH_BRANCH}" = branch-2* ]]; then
+  if [[ "${PATCH_BRANCH}" == *"branch-2"* ]]; then
     hadoop_profile="-Dhadoop.profile=3.0"
   fi
   for hadoopver in ${hbase_hadoop3_versions}; do
