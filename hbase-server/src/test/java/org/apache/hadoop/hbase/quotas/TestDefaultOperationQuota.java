@@ -164,6 +164,27 @@ public class TestDefaultOperationQuota {
   }
 
   @Test
+  public void testLargeBatchSaturatesReadWriteLimit()
+    throws RpcThrottlingException, InterruptedException {
+    int limit = 10;
+    QuotaProtos.Throttle throttle =
+      QuotaProtos.Throttle.newBuilder().setWriteNum(QuotaProtos.TimedQuota.newBuilder()
+        .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
+    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
+    DefaultOperationQuota quota = new DefaultOperationQuota(new Configuration(), 65536, limiter);
+
+    // use the whole limit
+    quota.checkBatchQuota(limit, 0);
+
+    // the next request should be rejected
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(1, 0));
+
+    envEdge.incValue(1000);
+    // after the TimeUnit, the limit should be refilled
+    quota.checkBatchQuota(limit, 0);
+  }
+
+  @Test
   public void testTooLargeReadBatchIsNotBlocked()
     throws RpcThrottlingException, InterruptedException {
     int limit = 10;
