@@ -45,7 +45,6 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
  * A very simple read only zookeeper implementation without watcher support.
  */
