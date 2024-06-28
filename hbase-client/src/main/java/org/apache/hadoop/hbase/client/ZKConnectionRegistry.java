@@ -28,11 +28,7 @@ import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-import org.apache.hbase.thirdparty.io.netty.util.Timeout;
-import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
@@ -52,7 +48,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Zookeeper based registry implementation.
@@ -74,30 +69,26 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   private final ZNodePaths znodePaths;
   private final Configuration conf;
-
+  private final int zkRegistryAsyncTimeout;
   public static final String ZK_REGISTRY_ASYNC_GET_TIMEOUT = "zookeeper.registry.async.get.timeout";
   public static final int DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT = 60000; // 1 min
-
-
   // User not used, but for rpc based registry we need it
+
   ZKConnectionRegistry(Configuration conf, User ignored) {
     this.znodePaths = new ZNodePaths(conf);
-    this.zk = new ReadOnlyZKClient(conf);
+    this.zk = new ReadOnlyZKClient(conf, AsyncConnectionImpl.RETRY_TIMER);
     this.conf = conf;
+    this.zkRegistryAsyncTimeout =
+      conf.getInt(ZK_REGISTRY_ASYNC_GET_TIMEOUT, DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT);
     if (NEEDS_LOG_WARN) {
       synchronized (WARN_LOCK) {
         if (NEEDS_LOG_WARN) {
           LOG.warn(
             "ZKConnectionRegistry is deprecated. See https://hbase.apache.org/book.html#client.rpcconnectionregistry");
           NEEDS_LOG_WARN = false;
-
         }
       }
     }
-  }
-
-  public ZNodePaths getZNodePaths() {
-    return znodePaths;
   }
 
   private interface Converter<T> {
@@ -106,20 +97,17 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   private <T> CompletableFuture<T> getAndConvert(String path, Converter<T> converter) {
     CompletableFuture<T> future = new CompletableFuture<>();
-    addListener(zk.getWithTimeout(path,
-        conf.getInt(ZK_REGISTRY_ASYNC_GET_TIMEOUT, DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT),
-        AsyncConnectionImpl.RETRY_TIMER),
-      (data, error) -> {
-        if (error != null) {
-          future.completeExceptionally(error);
-          return;
-        }
-        try {
-          future.complete(converter.convert(data));
-        } catch (Exception e) {
-          future.completeExceptionally(e);
-        }
-      });
+    addListener(zk.getWithTimeout(path, this.zkRegistryAsyncTimeout), (data, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      try {
+        future.complete(converter.convert(data));
+      } catch (Exception e) {
+        future.completeExceptionally(e);
+      }
+    });
     return future;
   }
 
@@ -235,11 +223,9 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
     return tracedFuture(() -> {
       CompletableFuture<RegionLocations> future = new CompletableFuture<>();
-      addListener(
-        zk.listWithTimeout(znodePaths.baseZNode,
-          conf.getInt(ZK_REGISTRY_ASYNC_GET_TIMEOUT, DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT),
-          AsyncConnectionImpl.RETRY_TIMER).thenApply(children -> children.stream()
-          .filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
+      addListener(zk.listWithTimeout(znodePaths.baseZNode, this.zkRegistryAsyncTimeout)
+        .thenApply(children -> children.stream().filter(c -> this.znodePaths.isMetaZNodePrefix(c))
+          .collect(Collectors.toList())),
         (metaReplicaZNodes, error) -> {
           if (error != null) {
             future.completeExceptionally(error);

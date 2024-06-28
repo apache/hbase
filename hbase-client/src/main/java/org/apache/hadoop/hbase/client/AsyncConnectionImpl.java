@@ -79,7 +79,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncConnectionImpl.class);
 
-  public static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
+  static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
     new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d").setDaemon(true)
       .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
     10, TimeUnit.MILLISECONDS);
