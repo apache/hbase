@@ -33,6 +33,11 @@ function usage {
   echo "                                          a git checkout, including ignored files."
   exit 1
 }
+
+MVN="mvn"
+if ! command -v mvn &>/dev/null; then
+  MVN=$MAVEN_HOME/bin/mvn
+fi
 # if no args specified, show usage
 if [ $# -lt 1 ]; then
   usage
@@ -124,7 +129,7 @@ fi
 # See http://hbase.apache.org/book.html#maven.release
 
 echo "Maven details, in case our JDK doesn't match expectations:"
-mvn --version --offline | tee "${working_dir}/maven_version"
+${MVN} --version --offline | tee "${working_dir}/maven_version"
 
 echo "Do a clean building of the source artifact using code in ${component_dir}"
 cd "${component_dir}"
@@ -183,16 +188,16 @@ function build_tarball {
   local build_log="srctarball_install.log"
   local tarball_glob="hbase-*-bin.tar.gz"
   if [ $build_hadoop3 -ne 0 ]; then
-    local version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+    local version=$(${MVN} -Dmaven.repo.local="${m2_tarbuild}" help:evaluate -Dexpression=project.version -q -DforceStdout)
     local hadoop3_version=$(get_hadoop3_version $version)
     mvn_extra_args="-Drevision=${hadoop3_version} -Dhadoop.profile=3.0"
     build_log="hadoop3_srctarball_install.log"
     tarball_glob="hbase-*-hadoop3-*-bin.tar.gz"
     echo "Follow the ref guide section on making a RC: Step 8 Build the hadoop3 binary tarball."
   else
-    echo "Follow the ref guide section on making a RC: Step 8 Build the binary tarball."
+    echo "Follow the ref guide section on making a RC: Step 7 Build the binary tarball."
   fi
-  if mvn --threads=2 -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" ${mvn_extra_args} clean install \
+  if ${MVN} --threads=2 -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" ${mvn_extra_args} clean install \
     assembly:single >"${working_dir}/${build_log}" 2>&1; then
     for artifact in "${unpack_dir}"/hbase-assembly/target/${tarball_glob}; do
       if [ -f "${artifact}" ]; then
@@ -212,20 +217,25 @@ function build_tarball {
 
 cd "${unpack_dir}"
 
-build_tarball 0
+${MVN} -Dmaven.repo.local="${m2_tarbuild}" help:active-profiles | grep -q hadoop-3.0
 if [ $? -ne 0 ]; then
-  exit 1
-fi
+  echo "The hadoop-3.0 profile is not activated by default, build a default tarball first."
+  # use java 8 to build with hadoop2
+  JAVA_HOME="/usr/lib/jvm/java-8" build_tarball 0
+  if [ $? -ne 0 ]; then
+    exit 1
+  fi
 
-mvn help:active-profiles | grep -q hadoop-3.0
-if [ $? -ne 0 ]; then
-  echo "The hadoop-3.0 profile is not activated by default, build a hadoop3 tarball."
   # move the previous tarballs out, so it will not be cleaned while building against hadoop3
   mv "${unpack_dir}"/hbase-assembly/target/hbase-*-bin.tar.gz "${unpack_dir}"/
+  echo "build a hadoop3 tarball."
   build_tarball 1
   if [ $? -ne 0 ]; then
     exit 1
   fi
   # move tarballs back
   mv "${unpack_dir}"/hbase-*-bin.tar.gz "${unpack_dir}"/hbase-assembly/target/
+else
+  echo "The hadoop-3.0 profile is activated by default, build a default tarball."
+  build_tarball 0
 fi
