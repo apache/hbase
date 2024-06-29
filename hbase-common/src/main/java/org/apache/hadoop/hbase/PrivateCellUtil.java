@@ -271,7 +271,7 @@ public final class PrivateCellUtil {
     @Override
     public int write(OutputStream out, boolean withTags) throws IOException {
       int len = ((ExtendedCell) this.cell).write(out, false);
-      if (withTags && this.tags != null) {
+      if (withTags && this.tags != null && this.tags.length > 0) {
         // Write the tagsLength 2 bytes
         out.write((byte) (0xff & (this.tags.length >> 8)));
         out.write((byte) (0xff & this.tags.length));
@@ -284,7 +284,7 @@ public final class PrivateCellUtil {
     @Override
     public int getSerializedSize(boolean withTags) {
       int len = ((ExtendedCell) this.cell).getSerializedSize(false);
-      if (withTags && this.tags != null) {
+      if (withTags && this.tags != null && this.tags.length > 0) {
         len += KeyValue.TAGS_LENGTH_SIZE + this.tags.length;
       }
       return len;
@@ -450,7 +450,7 @@ public final class PrivateCellUtil {
     @Override
     public int write(OutputStream out, boolean withTags) throws IOException {
       int len = ((ExtendedCell) this.cell).write(out, false);
-      if (withTags && this.tags != null) {
+      if (withTags && this.tags != null && this.tags.length > 0) {
         // Write the tagsLength 2 bytes
         out.write((byte) (0xff & (this.tags.length >> 8)));
         out.write((byte) (0xff & this.tags.length));
@@ -463,7 +463,7 @@ public final class PrivateCellUtil {
     @Override
     public int getSerializedSize(boolean withTags) {
       int len = ((ExtendedCell) this.cell).getSerializedSize(false);
-      if (withTags && this.tags != null) {
+      if (withTags && this.tags != null && this.tags.length > 0) {
         len += KeyValue.TAGS_LENGTH_SIZE + this.tags.length;
       }
       return len;
@@ -593,7 +593,7 @@ public final class PrivateCellUtil {
         out.write(value);// Value
       }
       len += valLen;
-      if (withTags && tags != null) {
+      if (withTags && tags != null && tags.length > 0) {
         // Write the tagsLength 2 bytes
         out.write((byte) (0xff & (tags.length >> 8)));
         out.write((byte) (0xff & tags.length));
