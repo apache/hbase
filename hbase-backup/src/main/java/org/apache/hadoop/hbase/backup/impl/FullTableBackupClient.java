@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRequest;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.BackupType;
-import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -151,8 +150,7 @@ public class FullTableBackupClient extends TableBackupClient {
 
       Map<String, String> props = new HashMap<>();
       props.put("backupRoot", backupInfo.getBackupRootDir());
-      admin.execProcedure(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE,
-        LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, props);
+      BackupUtils.rollWALWriters(admin, props);
 
       newTimestamps = backupManager.readRegionServerLastLogRollResult();
 
