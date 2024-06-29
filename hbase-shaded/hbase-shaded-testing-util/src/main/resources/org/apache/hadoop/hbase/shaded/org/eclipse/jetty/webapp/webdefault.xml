@@ -163,11 +163,11 @@ limitations under the License.
     </init-param>
     <init-param>
       <param-name>welcomeServlets</param-name>
-      <param-value>false</param-value>
+      <param-value>true</param-value>
     </init-param>
     <init-param>
       <param-name>redirectWelcome</param-name>
-      <param-value>false</param-value>
+      <param-value>true</param-value>
     </init-param>
     <init-param>
       <param-name>maxCacheSize</param-name>
