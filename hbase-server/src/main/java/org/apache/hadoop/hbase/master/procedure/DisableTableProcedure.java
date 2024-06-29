@@ -31,8 +31,11 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -41,6 +44,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DisableTableState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ServerCrashState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 @InterfaceAudience.Private
 public class DisableTableProcedure extends AbstractStateMachineTableProcedure<DisableTableState> {
@@ -48,6 +54,8 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
 
   private TableName tableName;
   private boolean skipTableStateCheck;
+
+  private RetryCounter retryCounter;
 
   public DisableTableProcedure() {
     super();
@@ -81,7 +89,7 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final DisableTableState state)
-    throws InterruptedException {
+    throws InterruptedException, ProcedureSuspendedException {
     LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
@@ -139,9 +147,15 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
       if (isRollbackSupported(state)) {
         setFailure("master-disable-table", e);
       } else {
-        LOG.warn("Retryable error in {}", this, e);
+        if (retryCounter == null) {
+          retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
+        }
+        long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
+        LOG.warn("Retryable error in {}, suspend {}secs", this, backoff / 1000, e);
+        throw suspend(Math.toIntExact(backoff), true);
       }
     }
+    retryCounter = null;
     return Flow.HAS_MORE_STATE;
   }
 
@@ -219,7 +233,16 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
   // SCP.
   @Override
   protected boolean holdLock(MasterProcedureEnv env) {
-    return true;
+    // We will test holdLock when releaseLock, if we are still at the first state, it means we fail
+    // the SCP check and want to retry later, so we should release the lock
+    return getCurrentState() != DisableTableState.DISABLE_TABLE_PREPARE;
+  }
+
+  @Override
+  protected synchronized boolean setTimeoutFailure(MasterProcedureEnv env) {
+    setState(ProcedureProtos.ProcedureState.RUNNABLE);
+    env.getProcedureScheduler().addFront(this);
+    return false;
   }
 
   @Override
@@ -232,12 +255,35 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
     return TableOperationType.DISABLE;
   }
 
+  // check whether this SCP may schedule TRSP which conflits with this DTP, if so we need to sleep a
+  // bit and retry again.
+  private boolean mayHaveSkew(ServerCrashProcedure scp) {
+    if (
+      scp.getCurrentState() == ServerCrashState.SERVER_CRASH_ASSIGN
+        && scp.getState() == ProcedureState.RUNNABLE
+    ) {
+      LOG.info("{} is assigning regions, which may conflict with {}", scp, this);
+      return true;
+    }
+    if (
+      (scp.getCurrentState() == ServerCrashState.SERVER_CRASH_CLAIM_REPLICATION_QUEUES
+        || scp.getCurrentState() == ServerCrashState.SERVER_CRASH_FINISH)
+        && scp.getState() == ProcedureState.WAITING
+    ) {
+      LOG.info("{} is waiting for assigning regions to finish, which may conflict with {}", scp,
+        this);
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Action before any real action of disabling table. Set the exception in the procedure instead of
    * throwing it. This approach is to deal with backward compatible with 1.0.
    * @param env MasterProcedureEnv
    */
-  private boolean prepareDisable(final MasterProcedureEnv env) throws IOException {
+  private boolean prepareDisable(final MasterProcedureEnv env)
+    throws IOException, ProcedureSuspendedException {
     boolean canTableBeDisabled = true;
     if (tableName.equals(TableName.META_TABLE_NAME)) {
       setFailure("master-disable-table",
@@ -264,6 +310,21 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
         canTableBeDisabled = false;
       }
     }
+    if (!isFailed()) {
+      // if we passed all the above check, then we need to check whether there are possible SCPs
+      // which could introduce data race, see HBASE-28522 for more details
+      long count = env.getMasterServices().getMasterProcedureExecutor().getProcedures().stream()
+        .filter(p -> !p.isFailed()).filter(p -> p instanceof ServerCrashProcedure)
+        .map(p -> (ServerCrashProcedure) p).filter(this::mayHaveSkew).count();
+      if (count > 0) {
+        if (retryCounter == null) {
+          retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
+        }
+        long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
+        LOG.info("There are {} SCPs may conflict with {}, sleep {}ms", count, this, backoff);
+        throw suspend(Math.toIntExact(backoff), true);
+      }
+    }
 
     // We are done the check. Future actions in this procedure could be done asynchronously.
     releaseSyncLatch();
@@ -276,9 +337,12 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
    * @param env   MasterProcedureEnv
    * @param state the procedure state
    */
-  protected void preDisable(final MasterProcedureEnv env, final DisableTableState state)
+  private void preDisable(final MasterProcedureEnv env, final DisableTableState state)
     throws IOException, InterruptedException {
-    runCoprocessorAction(env, state);
+    MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
+    if (cpHost != null) {
+      cpHost.preDisableTableAction(tableName, getUser());
+    }
   }
 
   /**
@@ -310,30 +374,11 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
    * @param env   MasterProcedureEnv
    * @param state the procedure state
    */
-  protected void postDisable(final MasterProcedureEnv env, final DisableTableState state)
+  private void postDisable(final MasterProcedureEnv env, final DisableTableState state)
     throws IOException, InterruptedException {
-    runCoprocessorAction(env, state);
-  }
-
-  /**
-   * Coprocessor Action.
-   * @param env   MasterProcedureEnv
-   * @param state the procedure state
-   */
-  private void runCoprocessorAction(final MasterProcedureEnv env, final DisableTableState state)
-    throws IOException, InterruptedException {
-    final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
+    MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      switch (state) {
-        case DISABLE_TABLE_PRE_OPERATION:
-          cpHost.preDisableTableAction(tableName, getUser());
-          break;
-        case DISABLE_TABLE_POST_OPERATION:
-          cpHost.postCompletedDisableTableAction(tableName, getUser());
-          break;
-        default:
-          throw new UnsupportedOperationException(this + " unhandled state=" + state);
-      }
+      cpHost.postCompletedDisableTableAction(tableName, getUser());
     }
   }
 }

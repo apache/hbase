@@ -271,7 +271,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState> extends Proced
     return stateFlow != Flow.NO_MORE_STATE;
   }
 
-  protected TState getCurrentState() {
+  public TState getCurrentState() {
     return stateCount > 0 ? getState(states[stateCount - 1]) : getInitialState();
   }
 
