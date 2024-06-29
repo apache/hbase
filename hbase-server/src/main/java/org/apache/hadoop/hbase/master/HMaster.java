@@ -4503,4 +4503,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         }
       });
   }
+
+  public MobFileCleanerChore getMobFileCleanerChore() {
+    return mobFileCleanerChore;
+  }
 }
