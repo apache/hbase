@@ -745,7 +745,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     // are older than what is currently in memory, the WAL can be GC'd.
     for (Map.Entry<Path, WALProps> e : this.walFile2Props.entrySet()) {
       if (!e.getValue().closed) {
-        LOG.debug("{} is not closed yet or has unflushed entries, will try archiving it next time", e.getKey());
+        LOG.debug("{} is not closed yet, will try archiving it next time", e.getKey());
         continue;
       }
       Path log = e.getKey();
