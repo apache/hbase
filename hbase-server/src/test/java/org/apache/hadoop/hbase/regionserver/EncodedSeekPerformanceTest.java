@@ -59,8 +59,9 @@ public class EncodedSeekPerformanceTest {
     List<ExtendedCell> allKeyValues = new ArrayList<>();
 
     // read all of the key values
-    HStoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(), path, configuration,
-      cacheConf, BloomType.NONE, true);
+    StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(configuration,
+      testingUtility.getTestFileSystem(), path, true);
+    HStoreFile storeFile = new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf);
     storeFile.initReader();
     StoreFileReader reader = storeFile.getReader();
     StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false, 0, 0, false);
@@ -88,8 +89,9 @@ public class EncodedSeekPerformanceTest {
   private void runTest(Path path, DataBlockEncoding blockEncoding, List<ExtendedCell> seeks)
     throws IOException {
     // read all of the key values
-    HStoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(), path, configuration,
-      cacheConf, BloomType.NONE, true);
+    StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(configuration,
+      testingUtility.getTestFileSystem(), path, true);
+    HStoreFile storeFile = new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf);
     storeFile.initReader();
     long totalSize = 0;
 
