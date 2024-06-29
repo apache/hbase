@@ -57,6 +57,7 @@ pipeline {
         // directories, which we retrieve after the build is complete.
         WORKDIR_REL_GENERAL_CHECK = 'yetus-general-check'
         WORKDIR_REL_JDK17_HADOOP3_CHECK = 'yetus-jdk17-hadoop3-check'
+        HIDE_OLD_COMMENTS_REL = "${WORKDIR_REL_GENERAL_CHECK}/${SRC_REL}/dev-support/gh_hide_old_comments"
         ASF_NIGHTLIES = 'https://nightlies.apache.org'
         ASF_NIGHTLIES_BASE_ORI = "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}"
         ASF_NIGHTLIES_BASE = "${ASF_NIGHTLIES_BASE_ORI.replaceAll(' ', '%20')}"
@@ -340,6 +341,13 @@ pipeline {
     }
 
     post {
+        always {
+            script {
+                sh label: 'Hide Stale PR Comments', script: '''#!/bin/bash -e
+                    "${WORKSPACE}/${HIDE_OLD_COMMENTS_REL}" "${CHANGE_ID}"
+                    '''
+            }
+        }
         // Jenkins pipeline jobs fill slaves on PRs without this :(
         cleanup() {
             script {
