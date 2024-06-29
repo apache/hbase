@@ -356,7 +356,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
       log.init();
 
-      //create a region with the wal
+      // create a region with the wal
       TableDescriptor htd =
         TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName()))
           .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
@@ -365,9 +365,9 @@ public class TestFSHLog extends AbstractTestFSWAL {
         MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
       final HRegion region = TEST_UTIL.createLocalHRegion(hri, CONF, htd, log);
       // Repeat the following steps twice
-      //  * Append writes for the FSHLog
-      //  * Create a new Writer replace the old writer
-      for(int i = 0; i < 2; i++) {
+      // * Append writes for the FSHLog
+      // * Create a new Writer replace the old writer
+      for (int i = 0; i < 2; i++) {
         log.setWriter(new FailingWriter());
         region.put(new Put(b).addColumn(b, b, b));
         region.put(new Put(b).addColumn(b, b, b));
@@ -378,7 +378,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       region.put(new Put(b).addColumn(b, b, b));
       region.flush(true);
       log.rollWriter();
-      assertEquals("WAL Files not cleaned ", 0,log.walFile2Props.size());
+      assertEquals("WAL Files not cleaned ", 0, log.walFile2Props.size());
       region.close();
     }
   }

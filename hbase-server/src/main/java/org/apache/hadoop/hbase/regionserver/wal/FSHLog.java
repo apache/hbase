@@ -1220,7 +1220,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     this.writer = writer;
   }
 
-  protected int getClosedErrorCount(){
+  protected int getClosedErrorCount() {
     return closeErrorCount.get();
   }
 }
