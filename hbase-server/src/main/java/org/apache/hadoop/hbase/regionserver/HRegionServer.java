@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
+import org.apache.hadoop.hbase.conf.ConfigurationHolder;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
@@ -2136,6 +2137,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     configurationManager.registerObserver(this.rpcServices);
     configurationManager.registerObserver(this.prefetchExecutorNotifier);
     configurationManager.registerObserver(this);
+    configurationManager.registerObserver(ConfigurationHolder.getInstance());
   }
 
   /*

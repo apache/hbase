@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.DoNotRetryUncheckedIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
@@ -507,6 +508,9 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
       if (e instanceof LinkageError) throw new DoNotRetryIOException(e);
       if (e instanceof IOException) throw (IOException) e;
+      if (e instanceof DoNotRetryUncheckedIOException) {
+        throw ((DoNotRetryUncheckedIOException) e).toDoNotRetryIOException();
+      }
       LOG.error("Unexpected throwable object ", e);
       throw new IOException(e.getMessage(), e);
     }
