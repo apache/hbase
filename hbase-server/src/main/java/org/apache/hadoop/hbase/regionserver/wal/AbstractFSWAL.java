@@ -744,18 +744,20 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     // For each log file, look at its Map of regions to the highest sequence id; if all sequence ids
     // are older than what is currently in memory, the WAL can be GC'd.
     for (Map.Entry<Path, WALProps> e : this.walFile2Props.entrySet()) {
-      Map<byte[], Long> sequenceNums = e.getValue().encodedName2HighestSequenceId;
-      if (!e.getValue().closed && !this.sequenceIdAccounting.areAllLower(sequenceNums)) {
+      if (!e.getValue().closed) {
         LOG.debug("{} is not closed yet or has unflushed entries, will try archiving it next time", e.getKey());
         continue;
       }
       Path log = e.getKey();
-      if (logsToArchive == null) {
-        logsToArchive = new ArrayList<>();
-      }
-      logsToArchive.add(Pair.newPair(log, e.getValue().logSize));
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("WAL file ready for archiving " + log);
+      Map<byte[], Long> sequenceNums = e.getValue().encodedName2HighestSequenceId;
+      if (this.sequenceIdAccounting.areAllLower(sequenceNums)) {
+        if (logsToArchive == null) {
+          logsToArchive = new ArrayList<>();
+        }
+        logsToArchive.add(Pair.newPair(log, e.getValue().logSize));
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("WAL file ready for archiving " + log);
+        }
       }
     }
 
