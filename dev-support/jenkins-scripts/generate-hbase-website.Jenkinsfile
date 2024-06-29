@@ -39,7 +39,7 @@ pipeline {
       tools {
         maven 'maven_latest'
         // this needs to be set to the jdk that ought to be used to build releases on the branch the Jenkinsfile is stored in.
-        jdk "jdk_1.8_latest"
+        jdk "jdk_17_latest"
       }
       steps {
         dir('hbase') {
