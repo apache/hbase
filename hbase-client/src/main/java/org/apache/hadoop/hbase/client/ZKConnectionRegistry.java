@@ -25,7 +25,6 @@ import static org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.lengthOfPBMag
 import static org.apache.hadoop.hbase.trace.TraceUtil.tracedFuture;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -69,11 +68,18 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   private final ReadOnlyZKClient zk;
 
   private final ZNodePaths znodePaths;
-
+  private final Configuration conf;
+  private final int zkRegistryAsyncTimeout;
+  public static final String ZK_REGISTRY_ASYNC_GET_TIMEOUT = "zookeeper.registry.async.get.timeout";
+  public static final int DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT = 60000; // 1 min
   // User not used, but for rpc based registry we need it
+
   ZKConnectionRegistry(Configuration conf, User ignored) {
     this.znodePaths = new ZNodePaths(conf);
-    this.zk = new ReadOnlyZKClient(conf);
+    this.zk = new ReadOnlyZKClient(conf, AsyncConnectionImpl.RETRY_TIMER);
+    this.conf = conf;
+    this.zkRegistryAsyncTimeout =
+      conf.getInt(ZK_REGISTRY_ASYNC_GET_TIMEOUT, DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT);
     if (NEEDS_LOG_WARN) {
       synchronized (WARN_LOCK) {
         if (NEEDS_LOG_WARN) {
@@ -91,7 +97,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   private <T> CompletableFuture<T> getAndConvert(String path, Converter<T> converter) {
     CompletableFuture<T> future = new CompletableFuture<>();
-    addListener(zk.get(path), (data, error) -> {
+    addListener(zk.getWithTimeout(path, this.zkRegistryAsyncTimeout), (data, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
         return;
@@ -217,9 +223,9 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
     return tracedFuture(() -> {
       CompletableFuture<RegionLocations> future = new CompletableFuture<>();
-      addListener(
-        zk.list(znodePaths.baseZNode).thenApply(children -> children.stream()
-          .filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
+      addListener(zk.listWithTimeout(znodePaths.baseZNode, this.zkRegistryAsyncTimeout)
+        .thenApply(children -> children.stream().filter(c -> this.znodePaths.isMetaZNodePrefix(c))
+          .collect(Collectors.toList())),
         (metaReplicaZNodes, error) -> {
           if (error != null) {
             future.completeExceptionally(error);
