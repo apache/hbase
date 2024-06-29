@@ -189,6 +189,7 @@ pipeline {
         stash name: 'jdk8-hadoop2-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}/doesn't-match"
         stash name: 'jdk8-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}/doesn't-match"
         stash name: 'jdk11-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}/doesn't-match"
+        stash name: 'jdk17-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}/doesn't-match"
         stash name: 'srctarball-result', allowEmpty: true, includes: "output-srctarball/doesn't-match"
       }
     }
