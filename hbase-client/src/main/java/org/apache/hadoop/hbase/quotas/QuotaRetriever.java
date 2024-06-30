@@ -178,4 +178,19 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
     scanner.init(conf, scan);
     return scanner;
   }
+
+  /**
+   * Open a QuotaRetriever with the specified filter using an existing Connection
+   * @param conn   Connection object to use.
+   * @param filter the QuotaFilter
+   * @return the QuotaRetriever
+   * @throws IOException if a remote or network exception occurs
+   */
+  public static QuotaRetriever open(final Connection conn, final QuotaFilter filter)
+    throws IOException {
+    Scan scan = QuotaTableUtil.makeScan(filter);
+    QuotaRetriever scanner = new QuotaRetriever();
+    scanner.init(conn, scan);
+    return scanner;
+  }
 }

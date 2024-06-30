@@ -3159,7 +3159,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public List<QuotaSettings> getQuota(QuotaFilter filter) throws IOException {
     List<QuotaSettings> quotas = new ArrayList<>();
-    try (QuotaRetriever retriever = QuotaRetriever.open(conf, filter)) {
+    try (QuotaRetriever retriever = QuotaRetriever.open(connection, filter)) {
       Iterator<QuotaSettings> iterator = retriever.iterator();
       while (iterator.hasNext()) {
         quotas.add(iterator.next());
