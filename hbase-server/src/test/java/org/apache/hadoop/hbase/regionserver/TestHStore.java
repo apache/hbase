@@ -2113,7 +2113,7 @@ public class TestHStore {
       (StoreScanner) store.getScanner(new Scan(new Get(rowKey1)), quals, seqId + 1);
     SegmentScanner segmentScanner = getTypeKeyValueScanner(storeScanner, SegmentScanner.class);
     ExtendedCell resultCell1 = segmentScanner.next();
-    assertTrue(CellUtil.equals(resultCell1, originalCell1));
+    assertTrue(PrivateCellUtil.equals(resultCell1, originalCell1));
     int cell1ChunkId = resultCell1.getChunkId();
     assertTrue(cell1ChunkId != ExtendedCell.CELL_NOT_BASED_ON_CHUNK);
     assertNull(segmentScanner.next());
@@ -2140,12 +2140,12 @@ public class TestHStore {
     // {@link CellChunkMap#getCell} we could not get the data chunk by chunkId.
     storeScanner = (StoreScanner) store.getScanner(new Scan(new Get(rowKey1)), quals, seqId + 1);
     segmentScanner = getTypeKeyValueScanner(storeScanner, SegmentScanner.class);
-    Cell newResultCell1 = segmentScanner.next();
+    ExtendedCell newResultCell1 = segmentScanner.next();
     assertTrue(newResultCell1 != resultCell1);
-    assertTrue(CellUtil.equals(newResultCell1, originalCell1));
+    assertTrue(PrivateCellUtil.equals(newResultCell1, originalCell1));
 
-    Cell resultCell2 = segmentScanner.next();
-    assertTrue(CellUtil.equals(resultCell2, originalCell2));
+    ExtendedCell resultCell2 = segmentScanner.next();
+    assertTrue(PrivateCellUtil.equals(resultCell2, originalCell2));
     assertNull(segmentScanner.next());
     segmentScanner.close();
     storeScanner.close();
@@ -2569,17 +2569,17 @@ public class TestHStore {
         assertTrue(!memStoreLAB.chunks.isEmpty());
         assertTrue(!memStoreLAB.isReclaimed());
 
-        Cell cell1 = segmentScanner.next();
-        CellUtil.equals(smallCell, cell1);
-        Cell cell2 = segmentScanner.next();
-        CellUtil.equals(largeCell, cell2);
+        ExtendedCell cell1 = segmentScanner.next();
+        PrivateCellUtil.equals(smallCell, cell1);
+        ExtendedCell cell2 = segmentScanner.next();
+        PrivateCellUtil.equals(largeCell, cell2);
         assertNull(segmentScanner.next());
       } else {
-        List<Cell> results = new ArrayList<>();
-        storeScanner.next(results);
+        List<ExtendedCell> results = new ArrayList<>();
+        storeScanner.next((List) results);
         assertEquals(2, results.size());
-        CellUtil.equals(smallCell, results.get(0));
-        CellUtil.equals(largeCell, results.get(1));
+        PrivateCellUtil.equals(smallCell, results.get(0));
+        PrivateCellUtil.equals(largeCell, results.get(1));
       }
       assertTrue(exceptionRef.get() == null);
     } finally {
@@ -2712,11 +2712,11 @@ public class TestHStore {
       assertTrue(storeScanner.currentScanners.size() == 1);
       assertTrue(storeScanner.currentScanners.get(0) instanceof StoreFileScanner);
 
-      List<Cell> results = new ArrayList<>();
-      storeScanner.next(results);
+      List<ExtendedCell> results = new ArrayList<>();
+      storeScanner.next((List) results);
       assertEquals(2, results.size());
-      CellUtil.equals(smallCell, results.get(0));
-      CellUtil.equals(largeCell, results.get(1));
+      PrivateCellUtil.equals(smallCell, results.get(0));
+      PrivateCellUtil.equals(largeCell, results.get(1));
     } finally {
       if (storeScanner != null) {
         storeScanner.close();

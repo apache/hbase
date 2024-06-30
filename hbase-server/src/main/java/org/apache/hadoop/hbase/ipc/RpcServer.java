@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
@@ -428,7 +429,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
    * the protobuf response.
    */
   @Override
-  public Pair<Message, CellScanner> call(RpcCall call, MonitoredRPCHandler status)
+  public Pair<Message, ExtendedCellScanner> call(RpcCall call, MonitoredRPCHandler status)
     throws IOException {
     try {
       MethodDescriptor md = call.getMethod();

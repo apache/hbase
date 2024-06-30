@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
@@ -107,7 +107,7 @@ class NettyServerRpcConnection extends ServerRpcConnection {
 
   @Override
   public NettyServerCall createCall(int id, final BlockingService service,
-    final MethodDescriptor md, RequestHeader header, Message param, CellScanner cellScanner,
+    final MethodDescriptor md, RequestHeader header, Message param, ExtendedCellScanner cellScanner,
     long size, final InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
     return new NettyServerCall(id, service, md, header, param, cellScanner, this, size,
       remoteAddress, EnvironmentEdgeManager.currentTime(), timeout, this.rpcServer.bbAllocator,

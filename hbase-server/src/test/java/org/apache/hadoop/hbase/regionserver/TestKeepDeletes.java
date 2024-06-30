@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -349,8 +350,8 @@ public class TestKeepDeletes {
     s.setRaw(true);
     s.readAllVersions();
     InternalScanner scan = region.getScanner(s);
-    List<Cell> kvs = new ArrayList<>();
-    scan.next(kvs);
+    List<ExtendedCell> kvs = new ArrayList<>();
+    scan.next((List) kvs);
     assertEquals(8, kvs.size());
     assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(0)));
     assertArrayEquals(CellUtil.cloneValue(kvs.get(1)), T3);
@@ -369,7 +370,7 @@ public class TestKeepDeletes {
     s.setTimeRange(0, 1);
     scan = region.getScanner(s);
     kvs = new ArrayList<>();
-    scan.next(kvs);
+    scan.next((List) kvs);
     // nothing in this interval, not even delete markers
     assertTrue(kvs.isEmpty());
 
@@ -380,7 +381,7 @@ public class TestKeepDeletes {
     s.setTimeRange(0, ts + 2);
     scan = region.getScanner(s);
     kvs = new ArrayList<>();
-    scan.next(kvs);
+    scan.next((List) kvs);
     assertEquals(4, kvs.size());
     assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(0)));
     assertArrayEquals(CellUtil.cloneValue(kvs.get(1)), T1);
@@ -395,7 +396,7 @@ public class TestKeepDeletes {
     s.setTimeRange(ts + 3, ts + 5);
     scan = region.getScanner(s);
     kvs = new ArrayList<>();
-    scan.next(kvs);
+    scan.next((List) kvs);
     assertEquals(2, kvs.size());
     assertArrayEquals(CellUtil.cloneValue(kvs.get(0)), T3);
     assertTrue(CellUtil.isDelete(kvs.get(1)));

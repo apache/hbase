@@ -21,12 +21,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -114,10 +116,8 @@ public class Increment extends Mutation {
    * @return the Increment object
    */
   public Increment addColumn(byte[] family, byte[] qualifier, long amount) {
-    if (family == null) {
-      throw new IllegalArgumentException("family cannot be null");
-    }
-    List<Cell> list = getCellList(family);
+    Objects.requireNonNull(family, "family cannot be null");
+    List<ExtendedCell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, Bytes.toBytes(amount));
     list.add(kv);
     return this;
@@ -224,7 +224,7 @@ public class Increment extends Mutation {
     }
     sb.append(", families=");
     boolean moreThanOne = false;
-    for (Map.Entry<byte[], List<Cell>> entry : this.familyMap.entrySet()) {
+    for (Map.Entry<byte[], List<ExtendedCell>> entry : this.familyMap.entrySet()) {
       if (moreThanOne) {
         sb.append("), ");
       } else {

@@ -29,7 +29,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcCallback;
@@ -118,7 +118,7 @@ public class TestRpcLogDetails {
       }
 
       @Override
-      public CellScanner getCellScanner() {
+      public ExtendedCellScanner getCellScanner() {
         return null;
       }
 
@@ -182,7 +182,7 @@ public class TestRpcLogDetails {
       }
 
       @Override
-      public void setResponse(Message param, CellScanner cells, Throwable errorThrowable,
+      public void setResponse(Message param, ExtendedCellScanner cells, Throwable errorThrowable,
         String error) {
       }
 

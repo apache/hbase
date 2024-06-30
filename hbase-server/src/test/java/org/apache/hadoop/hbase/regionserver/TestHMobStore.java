@@ -311,15 +311,15 @@ public class TestHMobStore {
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
       scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
-    List<Cell> results = new ArrayList<>();
-    scanner.next(results);
+    List<ExtendedCell> results = new ArrayList<>();
+    scanner.next((List) results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
     // Compare
     Assert.assertEquals(expected.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
-      Cell cell = results.get(i);
+      ExtendedCell cell = results.get(i);
       Assert.assertTrue(MobUtils.isMobReferenceCell(cell));
     }
   }
@@ -399,15 +399,15 @@ public class TestHMobStore {
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
       scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
-    List<Cell> results = new ArrayList<>();
-    scanner.next(results);
+    List<ExtendedCell> results = new ArrayList<>();
+    scanner.next((List) results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
     // Compare
     Assert.assertEquals(expected.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
-      Cell cell = results.get(i);
+      ExtendedCell cell = results.get(i);
       // this is not mob reference cell.
       Assert.assertFalse(MobUtils.isMobReferenceCell(cell));
       Assert.assertEquals(expected.get(i), results.get(i));

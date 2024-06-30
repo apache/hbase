@@ -28,8 +28,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -81,7 +81,7 @@ public class TestKeyValueCodecWithTags {
     DataInputStream dis = new DataInputStream(cis);
     Codec.Decoder decoder = codec.getDecoder(dis);
     assertTrue(decoder.advance());
-    Cell c = decoder.current();
+    ExtendedCell c = decoder.current();
     assertTrue(CellUtil.equals(c, kv1));
     List<Tag> tags = PrivateCellUtil.getTags(c);
     assertEquals(2, tags.size());

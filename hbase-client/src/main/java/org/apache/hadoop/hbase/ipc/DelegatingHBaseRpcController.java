@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.util.Map;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -74,12 +74,12 @@ public class DelegatingHBaseRpcController implements HBaseRpcController {
   }
 
   @Override
-  public CellScanner cellScanner() {
+  public ExtendedCellScanner cellScanner() {
     return delegate.cellScanner();
   }
 
   @Override
-  public void setCellScanner(CellScanner cellScanner) {
+  public void setCellScanner(ExtendedCellScanner cellScanner) {
     delegate.setCellScanner(cellScanner);
   }
 
@@ -134,7 +134,7 @@ public class DelegatingHBaseRpcController implements HBaseRpcController {
   }
 
   @Override
-  public void setDone(CellScanner cellScanner) {
+  public void setDone(ExtendedCellScanner cellScanner) {
     delegate.setDone(cellScanner);
   }
 

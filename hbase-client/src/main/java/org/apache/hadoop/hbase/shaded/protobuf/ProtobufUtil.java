@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -245,7 +246,7 @@ public final class ProtobufUtil {
    * Many results are simple: no cell, exists true or false. To save on object creations, we reuse
    * them across calls.
    */
-  private final static Cell[] EMPTY_CELL_ARRAY = new Cell[] {};
+  private final static ExtendedCell[] EMPTY_CELL_ARRAY = new ExtendedCell[0];
   private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
   final static Result EMPTY_RESULT_EXISTS_TRUE = Result.create(null, true);
   final static Result EMPTY_RESULT_EXISTS_FALSE = Result.create(null, false);
@@ -2024,7 +2025,7 @@ public final class ProtobufUtil {
     return UnsafeByteOperations.unsafeWrap(dup);
   }
 
-  public static Cell toCell(ExtendedCellBuilder cellBuilder, final CellProtos.Cell cell,
+  public static ExtendedCell toCell(ExtendedCellBuilder cellBuilder, final CellProtos.Cell cell,
     boolean decodeTags) {
     ExtendedCellBuilder builder = cellBuilder.clear().setRow(cell.getRow().toByteArray())
       .setFamily(cell.getFamily().toByteArray()).setQualifier(cell.getQualifier().toByteArray())
