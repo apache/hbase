@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -127,7 +128,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   }
 
   @Override
-  public List<Path> close() throws IOException {
+  public Collection<Path> close() throws IOException {
     boolean isSuccessful = true;
     try {
       isSuccessful = finishWriterThreads();

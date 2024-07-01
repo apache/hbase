@@ -20,9 +20,11 @@ package org.apache.hadoop.hbase.wal;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -35,7 +37,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -49,7 +50,7 @@ abstract class OutputSink {
   private final WALSplitter.PipelineController controller;
   protected final EntryBuffers entryBuffers;
 
-  private final List<WriterThread> writerThreads = Lists.newArrayList();
+  private final List<WriterThread> writerThreads = new ArrayList<>();
 
   protected final int numThreads;
 
@@ -58,9 +59,13 @@ abstract class OutputSink {
   protected final AtomicLong totalSkippedEdits = new AtomicLong();
 
   /**
-   * List of all the files produced by this sink
+   * List of all the files produced by this sink.
+   * <p>
+   * In sub classes we may use a thread pool to split and then add the result here, so it should be
+   * thread safe. See HBASE-28703 about a strange ArrayIndexOutOfBoundsexception in ArrayList.add
+   * when running UTs.
    */
-  protected final List<Path> splits = new ArrayList<>();
+  protected final ConcurrentLinkedQueue<Path> splits = new ConcurrentLinkedQueue<>();
 
   protected MonitoredTask status = null;
 
@@ -143,7 +148,7 @@ abstract class OutputSink {
    */
   abstract void append(EntryBuffers.RegionEntryBuffer buffer) throws IOException;
 
-  abstract List<Path> close() throws IOException;
+  abstract Collection<Path> close() throws IOException;
 
   /** Returns a map from encoded region ID to the number of edits written out for that region. */
   abstract Map<String, Long> getOutputCounts();

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -88,7 +89,7 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   }
 
   @Override
-  public List<Path> close() throws IOException {
+  public Collection<Path> close() throws IOException {
     boolean isSuccessful = true;
     try {
       isSuccessful = finishWriterThreads();
