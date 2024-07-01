@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
+import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -239,12 +240,15 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
    */
   private boolean prepareDisable(final MasterProcedureEnv env) throws IOException {
     boolean canTableBeDisabled = true;
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
+    TableName replicationTable = TableName.valueOf(
+      env.getMasterConfiguration().get(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME,
+        ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME_DEFAULT.getNameAsString()));
+    if (!env.getMasterServices().getTableDescriptors().exists(tableName)) {
+      setFailure("master-disable-table", new TableNotFoundException(tableName));
+      canTableBeDisabled = false;
+    } else if (tableName.equals(TableName.META_TABLE_NAME) || tableName.equals(replicationTable)) {
       setFailure("master-disable-table",
         new ConstraintException("Cannot disable " + this.tableName));
-      canTableBeDisabled = false;
-    } else if (!env.getMasterServices().getTableDescriptors().exists(tableName)) {
-      setFailure("master-disable-table", new TableNotFoundException(tableName));
       canTableBeDisabled = false;
     } else if (!skipTableStateCheck) {
       // There could be multiple client requests trying to disable or enable
