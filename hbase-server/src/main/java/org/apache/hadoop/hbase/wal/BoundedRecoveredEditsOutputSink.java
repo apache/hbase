@@ -72,7 +72,9 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
         (k, v) -> v == null ? writer.editsWritten : v + writer.editsWritten);
       List<IOException> thrown = new ArrayList<>();
       Path dst = closeRecoveredEditsWriter(writer, thrown);
-      splits.add(dst);
+      if (dst != null) {
+        splits.add(dst);
+      }
       openingWritersNum.decrementAndGet();
       if (!thrown.isEmpty()) {
         throw MultipleIOException.createIOException(thrown);

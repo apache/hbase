@@ -109,7 +109,9 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
       closeCompletionService.submit(() -> {
         Path dst = closeRecoveredEditsWriter(writer, thrown);
         LOG.trace("Closed {}", dst);
-        splits.add(dst);
+        if (dst != null) {
+          splits.add(dst);
+        }
         return null;
       });
     }
