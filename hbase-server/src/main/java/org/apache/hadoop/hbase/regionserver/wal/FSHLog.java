@@ -390,6 +390,9 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             closeWriter(this.writer, oldPath, true);
           } finally {
             inflightWALClosures.remove(oldPath.getName());
+            if (!isUnflushedEntries()) {
+              markClosedAndClean(oldPath);
+            }
           }
         } else {
           Writer localWriter = this.writer;
@@ -1208,4 +1211,19 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
     return new DatanodeInfo[0];
   }
+<<<<<<< ours
+=======
+
+  Writer getWriter() {
+    return this.writer;
+  }
+
+  void setWriter(Writer writer) {
+    this.writer = writer;
+  }
+
+  protected int getClosedErrorCount() {
+    return closeErrorCount.get();
+  }
+>>>>>>> theirs
 }
