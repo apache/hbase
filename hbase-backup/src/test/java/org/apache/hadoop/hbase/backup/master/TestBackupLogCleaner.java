@@ -65,6 +65,8 @@ public class TestBackupLogCleaner extends TestBackupBase {
 
   @Test
   public void testBackupLogCleaner() throws Exception {
+    Path backupRoot1 = new Path(BACKUP_ROOT_DIR, "root1");
+    Path backupRoot2 = new Path(BACKUP_ROOT_DIR, "root2");
 
     // Create full backup for all tables
     LOG.info("create full backup image for all tables");
@@ -88,8 +90,8 @@ public class TestBackupLogCleaner extends TestBackupBase {
       int size = Iterables.size(deletable);
       assertEquals(walFilesBeforeBackup.size(), size);
 
-      // Create a FULL backup
-      String backupIdFull = fullTableBackup(tableSetFullList);
+      // Create a FULL backup (backupRoot 1)
+      String backupIdFull = backupTables(BackupType.FULL, tableSetFullList, backupRoot1.toString());
       assertTrue(checkSucceeded(backupIdFull));
 
       // New list of WAL files is greater than the previous one,
@@ -123,10 +125,10 @@ public class TestBackupLogCleaner extends TestBackupBase {
       }
       t2.close();
 
-      // Create an INCREMENTAL backup
+      // Create an INCREMENTAL backup (backupRoot 1)
       List<TableName> tableSetIncList = Lists.newArrayList(table1, table2, table3);
       String backupIdIncMultiple =
-        backupTables(BackupType.INCREMENTAL, tableSetIncList, BACKUP_ROOT_DIR);
+        backupTables(BackupType.INCREMENTAL, tableSetIncList, backupRoot1.toString());
       assertTrue(checkSucceeded(backupIdIncMultiple));
 
       // There should be more WALs due to the rolling of Region Servers
@@ -136,6 +138,21 @@ public class TestBackupLogCleaner extends TestBackupBase {
 
       // We can only delete the WALs preceding the INCREMENTAL backup
       deletable = cleaner.getDeletableFiles(walFilesAfterIncBackup);
+      size = Iterables.size(deletable);
+      assertEquals(walFilesAfterFullBackup.size(), size);
+
+      // Create a FULL backup (backupRoot 2)
+      String backupIdFull2 = backupTables(BackupType.FULL, tableSetIncList, backupRoot2.toString());
+      assertTrue(checkSucceeded(backupIdFull2));
+
+      // There should be more WALs due to the rolling of Region Servers
+      Set<FileStatus> walFilesAfterFullBackup2 =
+        mergeAsSet(walFilesAfterFullBackup, getListOfWALFiles(TEST_UTIL.getConfiguration()));
+      assertTrue(walFilesAfterIncBackup.size() < walFilesAfterFullBackup2.size());
+
+      // We created a backup in a different root, so the WAL dependencies of the first root did not
+      // change. I.e. the same files should be deletable as after the incremental backup.
+      deletable = cleaner.getDeletableFiles(walFilesAfterFullBackup2);
       size = Iterables.size(deletable);
       assertEquals(walFilesAfterFullBackup.size(), size);
 

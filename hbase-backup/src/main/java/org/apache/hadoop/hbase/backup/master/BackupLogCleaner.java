@@ -81,39 +81,55 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     }
   }
 
-  private Map<Address, Long> getServerToNewestBackupTs(List<BackupInfo> backups)
+  /**
+   * Calculates the timestamp boundary up to which all backup roots have already included the WAL.
+   * I.e. WALs with a lower (= older) or equal timestamp are no longer needed for future incremental
+   * backups.
+   */
+  private Map<Address, Long> serverToPreservationBoundaryTs(List<BackupInfo> backups)
     throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug(
-        "Cleaning WALs if they are older than the newest backups. "
+        "Cleaning WALs if they are older than the newest backups (for all roots). "
           + "Checking WALs against {} backups: {}",
         backups.size(),
         backups.stream().map(BackupInfo::getBackupId).sorted().collect(Collectors.joining(", ")));
     }
-    Map<Address, Long> serverAddressToNewestBackupMap = new HashMap<>();
 
-    Map<TableName, Long> tableNameBackupInfoMap = new HashMap<>();
-    for (BackupInfo backupInfo : backups) {
+    // This map tracks, for every backup root, the most recent created backup (= highest timestamp)
+    Map<String, BackupInfo> newestBackupPerRootDir = new HashMap<>();
+    for (BackupInfo backup : backups) {
+      BackupInfo existingEntry = newestBackupPerRootDir.get(backup.getBackupRootDir());
+      if (existingEntry == null || existingEntry.getStartTs() < backup.getStartTs()) {
+        newestBackupPerRootDir.put(backup.getBackupRootDir(), backup);
+      }
+    }
+
+    // This map tracks, for every address, the least recent (= oldest / lowest timestamp) inclusion
+    // in any backup. In other words, it is the timestamp boundary up to which all backups roots
+    // have included the WAL in their backup.
+    Map<Address, Long> boundaries = new HashMap<>();
+    for (BackupInfo backupInfo : newestBackupPerRootDir.values()) {
       for (TableName table : backupInfo.getTables()) {
-        tableNameBackupInfoMap.putIfAbsent(table, backupInfo.getStartTs());
-        if (tableNameBackupInfoMap.get(table) <= backupInfo.getStartTs()) {
-          tableNameBackupInfoMap.put(table, backupInfo.getStartTs());
-          for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
-            .entrySet()) {
-            serverAddressToNewestBackupMap.put(Address.fromString(entry.getKey()),
-              entry.getValue());
+        for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
+          .entrySet()) {
+          Address address = Address.fromString(entry.getKey());
+          Long storedTs = boundaries.get(address);
+          if (storedTs == null || entry.getValue() < storedTs) {
+            boundaries.put(address, entry.getValue());
           }
         }
       }
     }
 
     if (LOG.isDebugEnabled()) {
-      for (Map.Entry<Address, Long> entry : serverAddressToNewestBackupMap.entrySet()) {
-        LOG.debug("Server: {}, Newest Backup: {}", entry.getKey().getHostName(), entry.getValue());
+      for (Map.Entry<Address, Long> entry : boundaries.entrySet()) {
+        LOG.debug("Server: {}, WAL cleanup boundary: {}", entry.getKey().getHostName(),
+          entry.getValue());
       }
     }
 
-    return serverAddressToNewestBackupMap;
+    return boundaries;
   }
 
   @Override
@@ -128,10 +144,11 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       return files;
     }
 
-    Map<Address, Long> addressToNewestBackupMap;
+    Map<Address, Long> serverToPreservationBoundaryTs;
     try {
       try (BackupManager backupManager = new BackupManager(conn, getConf())) {
-        addressToNewestBackupMap = getServerToNewestBackupTs(backupManager.getBackupHistory(true));
+        serverToPreservationBoundaryTs =
+          serverToPreservationBoundaryTs(backupManager.getBackupHistory(true));
       }
     } catch (IOException ex) {
       LOG.error("Failed to analyse backup history with exception: {}. Retaining all logs",
@@ -139,7 +156,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       return Collections.emptyList();
     }
     for (FileStatus file : files) {
-      if (canDeleteFile(addressToNewestBackupMap, file.getPath())) {
+      if (canDeleteFile(serverToPreservationBoundaryTs, file.getPath())) {
         filteredFiles.add(file);
       }
     }
@@ -174,7 +191,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     return this.stopped;
   }
 
-  protected static boolean canDeleteFile(Map<Address, Long> addressToNewestBackupMap, Path path) {
+  protected static boolean canDeleteFile(Map<Address, Long> addressToBoundaryTs, Path path) {
     if (isHMasterWAL(path)) {
       return true;
     }
@@ -190,7 +207,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       Address walServerAddress = Address.fromString(hostname);
       long walTimestamp = AbstractFSWALProvider.getTimestamp(path.getName());
 
-      if (!addressToNewestBackupMap.containsKey(walServerAddress)) {
+      if (!addressToBoundaryTs.containsKey(walServerAddress)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("No backup found for server: {}. Deleting file: {}",
             walServerAddress.getHostName(), path);
@@ -198,12 +215,12 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
         return true;
       }
 
-      Long lastBackupTs = addressToNewestBackupMap.get(walServerAddress);
-      if (lastBackupTs >= walTimestamp) {
+      Long backupBoundary = addressToBoundaryTs.get(walServerAddress);
+      if (backupBoundary >= walTimestamp) {
         if (LOG.isDebugEnabled()) {
           LOG.debug(
-            "Backup found for server: {}. Backup from {} is newer than file, so deleting: {}",
-            walServerAddress.getHostName(), lastBackupTs, path);
+            "Backup found for server: {}. All backups from {} are newer than file, so deleting: {}",
+            walServerAddress.getHostName(), backupBoundary, path);
         }
         return true;
       }
@@ -211,7 +228,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       if (LOG.isDebugEnabled()) {
         LOG.debug(
           "Backup found for server: {}. Backup from {} is older than the file, so keeping: {}",
-          walServerAddress.getHostName(), lastBackupTs, path);
+          walServerAddress.getHostName(), backupBoundary, path);
       }
     } catch (Exception ex) {
       LOG.warn("Error occurred while filtering file: {}. Ignoring cleanup of this log", path, ex);
