@@ -80,25 +80,32 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     }
   }
 
-  private Map<Address, Long> getServersToOldestBackupMapping(List<BackupInfo> backups)
+  private Map<Address, Long> serversToLatestUnusedLogTimestamp(List<BackupInfo> backups)
     throws IOException {
-    Map<Address, Long> serverAddressToLastBackupMap = new HashMap<>();
+    Map<Address, Long> serversToLatestUnusedLogTimestamp = new HashMap<>();
 
-    Map<TableName, Long> tableNameBackupInfoMap = new HashMap<>();
-    for (BackupInfo backupInfo : backups) {
+    Map<String, BackupInfo> mostRecentBackupPerRootDir = new HashMap<>();
+    for (BackupInfo backup : backups) {
+      BackupInfo existingEntry = mostRecentBackupPerRootDir.get(backup.getBackupRootDir());
+      if (existingEntry == null || existingEntry.getStartTs() < backup.getStartTs()) {
+        mostRecentBackupPerRootDir.put(backup.getBackupRootDir(), backup);
+      }
+    }
+
+    for (BackupInfo backupInfo : mostRecentBackupPerRootDir.values()) {
       for (TableName table : backupInfo.getTables()) {
-        tableNameBackupInfoMap.putIfAbsent(table, backupInfo.getStartTs());
-        if (tableNameBackupInfoMap.get(table) <= backupInfo.getStartTs()) {
-          tableNameBackupInfoMap.put(table, backupInfo.getStartTs());
-          for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
-            .entrySet()) {
-            serverAddressToLastBackupMap.put(Address.fromString(entry.getKey()), entry.getValue());
+        for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
+          .entrySet()) {
+          Address address = Address.fromString(entry.getKey());
+          Long existingValue = serversToLatestUnusedLogTimestamp.get(address);
+          if (existingValue == null || existingValue > entry.getValue()) {
+            serversToLatestUnusedLogTimestamp.put(address, entry.getValue());
           }
         }
       }
     }
 
-    return serverAddressToLastBackupMap;
+    return serversToLatestUnusedLogTimestamp;
   }
 
   @Override
@@ -113,11 +120,11 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       return files;
     }
 
-    Map<Address, Long> addressToLastBackupMap;
+    Map<Address, Long> serversToLatestUnusedLogTimestamp;
     try {
       try (BackupManager backupManager = new BackupManager(conn, getConf())) {
-        addressToLastBackupMap =
-          getServersToOldestBackupMapping(backupManager.getBackupHistory(true));
+        serversToLatestUnusedLogTimestamp =
+          serversToLatestUnusedLogTimestamp(backupManager.getBackupHistory(true));
       }
     } catch (IOException ex) {
       LOG.error("Failed to analyse backup history with exception: {}. Retaining all logs",
@@ -125,7 +132,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       return Collections.emptyList();
     }
     for (FileStatus file : files) {
-      if (canDeleteFile(addressToLastBackupMap, file.getPath())) {
+      if (canDeleteFile(serversToLatestUnusedLogTimestamp, file.getPath())) {
         filteredFiles.add(file);
       }
     }
@@ -160,7 +167,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     return this.stopped;
   }
 
-  protected static boolean canDeleteFile(Map<Address, Long> addressToLastBackupMap, Path path) {
+  protected static boolean canDeleteFile(Map<Address, Long> addressToLatestUnusedLogTs, Path path) {
     if (isHMasterWAL(path)) {
       return true;
     }
@@ -177,8 +184,8 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       long walTimestamp = AbstractFSWALProvider.getTimestamp(path.getName());
 
       if (
-        !addressToLastBackupMap.containsKey(walServerAddress)
-          || addressToLastBackupMap.get(walServerAddress) >= walTimestamp
+        !addressToLatestUnusedLogTs.containsKey(walServerAddress)
+          || walTimestamp <= addressToLatestUnusedLogTs.get(walServerAddress)
       ) {
         return true;
       }
