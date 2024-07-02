@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.wal;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -71,7 +72,9 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
         (k, v) -> v == null ? writer.editsWritten : v + writer.editsWritten);
       List<IOException> thrown = new ArrayList<>();
       Path dst = closeRecoveredEditsWriter(writer, thrown);
-      splits.add(dst);
+      if (dst != null) {
+        splits.add(dst);
+      }
       openingWritersNum.decrementAndGet();
       if (!thrown.isEmpty()) {
         throw MultipleIOException.createIOException(thrown);
@@ -80,7 +83,7 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   }
 
   @Override
-  public List<Path> close() throws IOException {
+  public Collection<Path> close() throws IOException {
     boolean isSuccessful = true;
     try {
       isSuccessful = finishWriterThreads();
