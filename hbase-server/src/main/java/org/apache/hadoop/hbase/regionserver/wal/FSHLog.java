@@ -1211,8 +1211,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
     return new DatanodeInfo[0];
   }
-<<<<<<< ours
-=======
 
   Writer getWriter() {
     return this.writer;
@@ -1225,5 +1223,4 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   protected int getClosedErrorCount() {
     return closeErrorCount.get();
   }
->>>>>>> theirs
 }
