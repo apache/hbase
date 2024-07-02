@@ -1393,6 +1393,7 @@ public interface AsyncAdmin {
    * @deprecated Since 2.5.0. Will be removed in 4.0.0. Use {@link #balance(BalanceRequest)}
    *             instead.
    */
+  @Deprecated
   default CompletableFuture<Boolean> balance(boolean forcible) {
     return balance(BalanceRequest.newBuilder().setIgnoreRegionsInTransition(forcible).build())
       .thenApply(BalanceResponse::isBalancerRan);
