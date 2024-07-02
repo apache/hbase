@@ -565,10 +565,10 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * If the passed cache key relates to a reference (<hfile>.<parentEncRegion>), this method looks
-   * for the block from the referred file, in the cache. If present in the cache, the block for the
-   * referred file is returned, otherwise, this method returns null. It will also return null if the
-   * passed cache key doesn't relate to a reference.
+   * If the passed cache key relates to a reference (&lt;hfile&gt;.&lt;parentEncRegion&gt;), this
+   * method looks for the block from the referred file, in the cache. If present in the cache, the
+   * block for the referred file is returned, otherwise, this method returns null. It will also
+   * return null if the passed cache key doesn't relate to a reference.
    * @param key the BlockCacheKey instance to look for in the cache.
    * @return the cached block from the referred file, null if there's no such block in the cache or
    *         the passed key doesn't relate to a reference.
