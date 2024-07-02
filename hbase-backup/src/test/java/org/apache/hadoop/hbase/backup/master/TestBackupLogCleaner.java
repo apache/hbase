@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.hbase.backup.master;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -62,7 +66,7 @@ public class TestBackupLogCleaner extends TestBackupBase {
   @Test
   public void testBackupLogCleaner() throws Exception {
 
-    // #1 - create full backup for all tables
+    // Create full backup for all tables
     LOG.info("create full backup image for all tables");
 
     List<TableName> tableSetFullList = Lists.newArrayList(table1, table2, table3, table4);
@@ -71,7 +75,7 @@ public class TestBackupLogCleaner extends TestBackupBase {
       // Verify that we have no backup sessions yet
       assertFalse(systemTable.hasBackupSessions());
 
-      List<FileStatus> walFiles = getListOfWALFiles(TEST_UTIL.getConfiguration());
+      List<FileStatus> walFilesBeforeBackup = getListOfWALFiles(TEST_UTIL.getConfiguration());
       BackupLogCleaner cleaner = new BackupLogCleaner();
       cleaner.setConf(TEST_UTIL.getConfiguration());
       Map<String, Object> params = new HashMap<>();
@@ -79,28 +83,28 @@ public class TestBackupLogCleaner extends TestBackupBase {
       cleaner.init(params);
       cleaner.setConf(TEST_UTIL.getConfiguration());
 
-      Iterable<FileStatus> deletable = cleaner.getDeletableFiles(walFiles);
-      int size = Iterables.size(deletable);
-
       // We can delete all files because we do not have yet recorded backup sessions
-      assertTrue(size == walFiles.size());
+      Iterable<FileStatus> deletable = cleaner.getDeletableFiles(walFilesBeforeBackup);
+      int size = Iterables.size(deletable);
+      assertEquals(walFilesBeforeBackup.size(), size);
 
+      // Create a FULL backup
       String backupIdFull = fullTableBackup(tableSetFullList);
       assertTrue(checkSucceeded(backupIdFull));
-      // Check one more time
-      deletable = cleaner.getDeletableFiles(walFiles);
-      // We can delete wal files because they were saved into backup system table table
+
+      // New list of WAL files is greater than the previous one,
+      // because new WAL per RS have been opened after full backup
+      Set<FileStatus> walFilesAfterFullBackup =
+        mergeAsSet(walFilesBeforeBackup, getListOfWALFiles(TEST_UTIL.getConfiguration()));
+      assertTrue(walFilesBeforeBackup.size() < walFilesAfterFullBackup.size());
+
+      // We can only delete the WALs preceding the FULL backup
+      deletable = cleaner.getDeletableFiles(walFilesAfterFullBackup);
       size = Iterables.size(deletable);
-      assertTrue(size == walFiles.size());
+      assertEquals(walFilesBeforeBackup.size(), size);
 
-      List<FileStatus> newWalFiles = getListOfWALFiles(TEST_UTIL.getConfiguration());
-      LOG.debug("WAL list after full backup");
-
-      // New list of wal files is greater than the previous one,
-      // because new wal per RS have been opened after full backup
-      assertTrue(walFiles.size() < newWalFiles.size());
+      // Insert some data
       Connection conn = ConnectionFactory.createConnection(conf1);
-      // #2 - insert some data to table
       Table t1 = conn.getTable(table1);
       Put p1;
       for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
@@ -108,7 +112,6 @@ public class TestBackupLogCleaner extends TestBackupBase {
         p1.addColumn(famName, qualName, Bytes.toBytes("val" + i));
         t1.put(p1);
       }
-
       t1.close();
 
       Table t2 = conn.getTable(table2);
@@ -118,21 +121,32 @@ public class TestBackupLogCleaner extends TestBackupBase {
         p2.addColumn(famName, qualName, Bytes.toBytes("val" + i));
         t2.put(p2);
       }
-
       t2.close();
 
-      // #3 - incremental backup for multiple tables
-
+      // Create an INCREMENTAL backup
       List<TableName> tableSetIncList = Lists.newArrayList(table1, table2, table3);
       String backupIdIncMultiple =
         backupTables(BackupType.INCREMENTAL, tableSetIncList, BACKUP_ROOT_DIR);
       assertTrue(checkSucceeded(backupIdIncMultiple));
-      deletable = cleaner.getDeletableFiles(newWalFiles);
 
-      assertTrue(Iterables.size(deletable) == newWalFiles.size());
+      // There should be more WALs due to the rolling of Region Servers
+      Set<FileStatus> walFilesAfterIncBackup =
+        mergeAsSet(walFilesAfterFullBackup, getListOfWALFiles(TEST_UTIL.getConfiguration()));
+      assertTrue(walFilesAfterFullBackup.size() < walFilesAfterIncBackup.size());
+
+      // We can only delete the WALs preceding the INCREMENTAL backup
+      deletable = cleaner.getDeletableFiles(walFilesAfterIncBackup);
+      size = Iterables.size(deletable);
+      assertEquals(walFilesAfterFullBackup.size(), size);
 
       conn.close();
     }
+  }
+
+  private Set<FileStatus> mergeAsSet(Collection<FileStatus> toCopy, Collection<FileStatus> toAdd) {
+    Set<FileStatus> result = new HashSet<>(toCopy);
+    result.addAll(toAdd);
+    return result;
   }
 
   @Test
