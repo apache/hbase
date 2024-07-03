@@ -128,7 +128,7 @@ public class StoreHotnessProtector {
       return;
     }
 
-    String tooBusyStore = null;
+    StringBuilder tooBusyStore = new StringBuilder();
     boolean aboveParallelThreadLimit = false;
     boolean aboveParallelPrePutLimit = false;
 
@@ -148,9 +148,10 @@ public class StoreHotnessProtector {
           store.getCurrentParallelPutCount() > this.parallelPutToStoreThreadLimit;
         boolean storeAbovePrePut = preparePutCount > this.parallelPreparePutToStoreThreadLimit;
         if (storeAboveThread || storeAbovePrePut) {
-          tooBusyStore = (tooBusyStore == null
-            ? store.getColumnFamilyName()
-            : tooBusyStore + "," + store.getColumnFamilyName());
+          if (tooBusyStore.length() > 0) {
+            tooBusyStore.append(',');
+          }
+          tooBusyStore.append(store.getColumnFamilyName());
         }
         aboveParallelThreadLimit |= storeAboveThread;
         aboveParallelPrePutLimit |= storeAbovePrePut;
