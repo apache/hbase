@@ -1212,14 +1212,14 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return new DatanodeInfo[0];
   }
 
-  Writer getWriter() {
-    return this.writer;
-  }
-
+  // Visible for testing
+  @InterfaceAudience.Private
   void setWriter(Writer writer) {
     this.writer = writer;
   }
 
+  // Visible for testing
+  @InterfaceAudience.Private
   protected int getClosedErrorCount() {
     return closeErrorCount.get();
   }
