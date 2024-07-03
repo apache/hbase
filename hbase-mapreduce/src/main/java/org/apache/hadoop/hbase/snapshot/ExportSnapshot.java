@@ -79,6 +79,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -138,9 +139,9 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     static final Option NO_CHECKSUM_VERIFY = new Option(null, "no-checksum-verify", false,
       "Do not verify checksum, use name+length only.");
     static final Option NO_TARGET_VERIFY = new Option(null, "no-target-verify", false,
-      "Do not verify the integrity of the exported snapshot.");
-    static final Option NO_SOURCE_VERIFY =
-      new Option(null, "no-source-verify", false, "Do not verify the source of the snapshot.");
+      "Do not verify the exported snapshot's expiration status and integrity.");
+    static final Option NO_SOURCE_VERIFY = new Option(null, "no-source-verify", false,
+      "Do not verify the source snapshot's expiration status and integrity.");
     static final Option OVERWRITE =
       new Option(null, "overwrite", false, "Rewrite the snapshot manifest if already exists.");
     static final Option CHUSER =
@@ -936,13 +937,17 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     }
   }
 
-  private void verifySnapshot(final Configuration baseConf, final FileSystem fs, final Path rootDir,
-    final Path snapshotDir) throws IOException {
+  private void verifySnapshot(final SnapshotDescription snapshotDesc, final Configuration baseConf,
+    final FileSystem fs, final Path rootDir, final Path snapshotDir) throws IOException {
     // Update the conf with the current root dir, since may be a different cluster
     Configuration conf = new Configuration(baseConf);
     CommonFSUtils.setRootDir(conf, rootDir);
     CommonFSUtils.setFsDefault(conf, CommonFSUtils.getRootDir(conf));
-    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    boolean isExpired = SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDesc.getTtl(),
+      snapshotDesc.getCreationTime(), EnvironmentEdgeManager.currentTime());
+    if (isExpired) {
+      throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(snapshotDesc));
+    }
     SnapshotReferenceUtil.verifySnapshot(conf, fs, snapshotDir, snapshotDesc);
   }
 
@@ -1044,14 +1049,14 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     if (snapshotName == null) {
       System.err.println("Snapshot name not provided.");
       LOG.error("Use -h or --help for usage instructions.");
-      return 0;
+      return EXIT_FAILURE;
     }
 
     if (outputRoot == null) {
       System.err
         .println("Destination file-system (--" + Options.COPY_TO.getLongOpt() + ") not provided.");
       LOG.error("Use -h or --help for usage instructions.");
-      return 0;
+      return EXIT_FAILURE;
     }
 
     if (targetName == null) {
@@ -1079,11 +1084,15 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     LOG.debug("outputFs={}, outputRoot={}, skipTmp={}, initialOutputSnapshotDir={}", outputFs,
       outputRoot.toString(), skipTmp, initialOutputSnapshotDir);
 
+    // throw CorruptedSnapshotException if we can't read the snapshot info or the snapshot is
+    // expired
+    SnapshotDescription sourceSnapshotDesc =
+      SnapshotDescriptionUtils.readSnapshotInfo(inputFs, snapshotDir);
+
     // Verify snapshot source before copying files
     if (verifySource) {
-      LOG.info("Verify snapshot source, inputFs={}, inputRoot={}, snapshotDir={}.",
-        inputFs.getUri(), inputRoot, snapshotDir);
-      verifySnapshot(srcConf, inputFs, inputRoot, snapshotDir);
+      LOG.info("Verify the source snapshot's expiration status and integrity.");
+      verifySnapshot(sourceSnapshotDesc, srcConf, inputFs, inputRoot, snapshotDir);
     }
 
     // Find the necessary directory which need to change owner and group
@@ -1104,12 +1113,12 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       if (overwrite) {
         if (!outputFs.delete(outputSnapshotDir, true)) {
           System.err.println("Unable to remove existing snapshot directory: " + outputSnapshotDir);
-          return 1;
+          return EXIT_FAILURE;
         }
       } else {
         System.err.println("The snapshot '" + targetName + "' already exists in the destination: "
           + outputSnapshotDir);
-        return 1;
+        return EXIT_FAILURE;
       }
     }
 
@@ -1120,7 +1129,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
           if (!outputFs.delete(snapshotTmpDir, true)) {
             System.err
               .println("Unable to remove existing snapshot tmp directory: " + snapshotTmpDir);
-            return 1;
+            return EXIT_FAILURE;
           }
         } else {
           System.err
@@ -1129,7 +1138,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
             .println("Please check " + snapshotTmpDir + ". If the snapshot has completed, ");
           System.err
             .println("consider removing " + snapshotTmpDir + " by using the -overwrite option");
-          return 1;
+          return EXIT_FAILURE;
         }
       }
     }
@@ -1208,19 +1217,21 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
       // Step 4 - Verify snapshot integrity
       if (verifyTarget) {
-        LOG.info("Verify snapshot integrity");
-        verifySnapshot(destConf, outputFs, outputRoot, outputSnapshotDir);
+        LOG.info("Verify the exported snapshot's expiration status and integrity.");
+        SnapshotDescription targetSnapshotDesc =
+          SnapshotDescriptionUtils.readSnapshotInfo(outputFs, outputSnapshotDir);
+        verifySnapshot(targetSnapshotDesc, destConf, outputFs, outputRoot, outputSnapshotDir);
       }
 
       LOG.info("Export Completed: " + targetName);
-      return 0;
+      return EXIT_SUCCESS;
     } catch (Exception e) {
       LOG.error("Snapshot export failed", e);
       if (!skipTmp) {
         outputFs.delete(snapshotTmpDir, true);
       }
       outputFs.delete(outputSnapshotDir, true);
-      return 1;
+      return EXIT_FAILURE;
     }
   }
 
