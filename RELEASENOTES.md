@@ -16,6 +16,99 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.5.9 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-28699](https://issues.apache.org/jira/browse/HBASE-28699) | *Major* | **Bump jdk and maven versions in pre commit and nighly dockerfile**
+
+maven 3.8.6 -\> 3.9.8
+temurin openjdk8 8u352-b08 -\> 8u412-b08
+temurin openjdk11 11.0.17\_8 -\> 11.0.23\_9
+temurin openjdk17 17.0.10\_7 -\> 17.0.11\_9
+
+
+---
+
+* [HBASE-28679](https://issues.apache.org/jira/browse/HBASE-28679) | *Major* | **Upgrade yetus to a newer version**
+
+Upgrade yetus to 0.15.0.
+
+Some notable differences:
+Whitespace related checks are renamed to blanks.
+Use xmllint instead of jrunscript for validating xml files.
+For github there is an extra step to write commit status back to github but for HBase it does not work due to insufficient permission.
+
+
+---
+
+* [HBASE-28616](https://issues.apache.org/jira/browse/HBASE-28616) | *Major* | **Remove/Deprecated the rs.\* related configuration in TableOutputFormat**
+
+Mark these two fileds in TableOutputFormat as deprecated as they do not take effect any more.
+
+REGION\_SERVER\_CLASS
+REGION\_SERVER\_IMPL
+
+Mark these two methods in TableMapReduceUtil as deprecated as the serverClass and serverImpl parameters do not take effect any more.
+
+void initTableReducerJob(String table, Class\<? extends TableReducer\> reducer, Job job, Class partitioner, String quorumAddress, String serverClass, String serverImpl) throws IOException
+void initTableReducerJob(String table, Class\<? extends TableReducer\> reducer, Job job, Class partitioner, String quorumAddress, String serverClass, String serverImpl, boolean addDependencyJars) throws IOException
+
+
+---
+
+* [HBASE-25972](https://issues.apache.org/jira/browse/HBASE-25972) | *Major* | **Dual File Compaction**
+
+The default compactor in HBase compacts HFiles into one file. This change introduces a new store file writer which writes the retained cells by compaction into two files, which will be called DualFileWriter. One of these files will include the live cells. This file will be called a live-version file. The other file will include the rest of the cells, that is, historical versions. This file will be called a historical-version file. DualFileWriter will work with the default compactor. The historical files will not be read for the scans scanning latest row versions. This eliminates scanning unnecessary cell versions in compacted files and thus it is expected to improve performance of these scans.
+
+
+---
+
+* [HBASE-28552](https://issues.apache.org/jira/browse/HBASE-28552) | *Major* | **Bump up bouncycastle dependency from 1.76 to 1.78**
+
+Bump bouncycastle dependency from 1.76 to 1.78 for addressing several CVEs
+
+CVE-2024-29857
+CVE-2024-30171
+CVE-2024-30172
+CVE-2024-301XX(Full CVE Code not available yet)
+
+
+---
+
+* [HBASE-28517](https://issues.apache.org/jira/browse/HBASE-28517) | *Major* | **Make properties dynamically configured**
+
+Make the following properties dynamically configured:
+\* hbase.rs.evictblocksonclose
+\* hbase.rs.cacheblocksonwrite
+\* hbase.block.data.cacheonread
+
+
+---
+
+* [HBASE-28457](https://issues.apache.org/jira/browse/HBASE-28457) | *Major* | **Introduce a version field in file based tracker record**
+
+Introduce a 'version' field in file based tracker record, so while downgrading, we will know that we are reading a new version of file tracker file and fail with explicit message instead of failing silently and causing possible data loss.
+
+
+---
+
+* [HBASE-28444](https://issues.apache.org/jira/browse/HBASE-28444) | *Blocker* | **Bump org.apache.zookeeper:zookeeper from 3.8.3 to 3.8.4**
+
+Upgrade zookeeper to 3.8.4 for addressing CVE-2024-23944.
+
+
+---
+
+* [HBASE-28260](https://issues.apache.org/jira/browse/HBASE-28260) | *Major* | **Possible data loss in WAL after RegionServer crash**
+
+Adds a new flag hbase.regionserver.wal.avoid-local-writes. When true (default false), we will avoid writing a block replica to the local datanode for WAL writes. This will improve MTTR and redundancy, but may come with a performance impact for WAL writes. It's recommended to enable, but monitor performance in doing so if that is a concern for you.
+
+
+
 # HBASE  2.5.8 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
