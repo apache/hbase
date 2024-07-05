@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.wal;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionService;
@@ -58,9 +59,12 @@ abstract class OutputSink {
   protected final AtomicLong totalSkippedEdits = new AtomicLong();
 
   /**
-   * List of all the files produced by this sink
+   * List of all the files produced by this sink,
+   * <p>
+   * Must be a synchronized list to avoid concurrency issues. CopyOnWriteArrayList is not a good
+   * choice because all we do is add to the list and then return the result.
    */
-  protected final List<Path> splits = new ArrayList<>();
+  protected final List<Path> splits = Collections.synchronizedList(new ArrayList<>());
 
   protected MonitoredTask status = null;
 
