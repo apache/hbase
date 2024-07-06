@@ -172,7 +172,7 @@ public class Delete extends Mutation {
    * @return this for invocation chaining
    */
   public Delete addFamily(final byte[] family, final long timestamp) {
-    checkTimestamp(ts);
+    checkTimestamp(timestamp);
     List<ExtendedCell> list = getCellList(family);
     if (!list.isEmpty()) {
       list.clear();

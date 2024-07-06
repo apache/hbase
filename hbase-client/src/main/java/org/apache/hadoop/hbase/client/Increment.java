@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.Objects;
 import java.util.TreeMap;
 import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
@@ -36,6 +35,8 @@ import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Used to perform Increment operations on a single row.
@@ -116,7 +117,7 @@ public class Increment extends Mutation {
    * @return the Increment object
    */
   public Increment addColumn(byte[] family, byte[] qualifier, long amount) {
-    Objects.requireNonNull(family, "family cannot be null");
+    Preconditions.checkArgument(family != null, "family cannot be null");
     List<ExtendedCell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, Bytes.toBytes(amount));
     list.add(kv);

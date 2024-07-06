@@ -515,7 +515,7 @@ public abstract class Mutation extends OperationWithAttributes
    * Set the timestamp of the delete.
    */
   public Mutation setTimestamp(long timestamp) {
-    checkTimestamp(ts);
+    checkTimestamp(timestamp);
     this.ts = timestamp;
     return this;
   }
