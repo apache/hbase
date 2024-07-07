@@ -305,7 +305,7 @@ specific to different HBase versions.
 
 Today, Hadoop 3.x is recommended as the last Hadoop 2.x release 2.10.2 was released years ago, and
 there is no release for Hadoop 2.x for a very long time, although the Hadoop community does not
-official EOL Hadoop 2.x yet.
+officially EOL Hadoop 2.x yet.
 
 ====
 
@@ -318,7 +318,7 @@ link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in new
 
 .Hadoop version support matrix for active release lines
 
-[cols="1,2*^.^", options="header"]
+[cols="1,1*^.^", options="header"]
 |===
 | | HBase-2.5.x
 |Hadoop-2.10.[0-1] | icon:times-circle[role="red"]
@@ -333,7 +333,7 @@ link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in new
 
 .Hadoop version support matrix for EOM 2.3+ release lines
 
-[cols="1,1*^.^", options="header"]
+[cols="1,2*^.^", options="header"]
 |===
 | | HBase-2.3.x | HBase-2.4.x
 |Hadoop-2.10.x | icon:check-circle[role="green"] | icon:check-circle[role="green"]
