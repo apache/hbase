@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.backup;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -57,6 +58,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner;
+import org.apache.hadoop.hbase.regionserver.LogRoller;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
@@ -67,6 +69,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,6 +116,38 @@ public class TestBackupBase {
     public IncrementalTableBackupClientForTest(Connection conn, String backupId,
       BackupRequest request) throws IOException {
       super(conn, backupId, request);
+    }
+
+    @Before
+    public void ensurePreviousBackupTestsAreCleanedUp() throws Exception {
+      // Every operation here may not be necessary for any given test,
+      // some often being no-ops. the goal is to help ensure atomicity
+      // of that tests that implement TestBackupBase
+      try (BackupAdmin backupAdmin = getBackupAdmin()) {
+        backupManager.finishBackupSession();
+        backupAdmin.listBackupSets().forEach(backupSet -> {
+          try {
+            backupAdmin.deleteBackupSet(backupSet.getName());
+          } catch (IOException ignored) {
+          }
+        });
+      } catch (Exception ignored) {
+      }
+      Arrays.stream(TEST_UTIL.getAdmin().listTableNames())
+        .filter(tableName -> !tableName.isSystemTable()).forEach(tableName -> {
+          try {
+            TEST_UTIL.truncateTable(tableName);
+          } catch (IOException ignored) {
+          }
+        });
+      TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().forEach(rst -> {
+        try {
+          LogRoller walRoller = rst.getRegionServer().getWalRoller();
+          walRoller.requestRollAll();
+          walRoller.waitUntilWalRollFinished();
+        } catch (Exception ignored) {
+        }
+      });
     }
 
     @Override
@@ -468,7 +503,7 @@ public class TestBackupBase {
     }
   }
 
-  protected BackupAdmin getBackupAdmin() throws IOException {
+  protected static BackupAdmin getBackupAdmin() throws IOException {
     return new BackupAdminImpl(TEST_UTIL.getConnection());
   }
 
