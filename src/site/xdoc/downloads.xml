@@ -118,29 +118,6 @@ under the License.
       </td>
       <td><em>stable release</em></td>
     </tr>
-    <tr>
-      <td style="test-align: left">
-        2.4.18
-      </td>
-      <td style="test-align: left">
-        2024/05/25
-      </td>
-      <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.4.18/api_compare_2.4.17_to_2.4.18RC0.html">2.4.18 vs 2.4.17</a>
-      </td>
-      <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.4.18/CHANGES.md">Changes</a>
-      </td>
-      <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.4.18/RELEASENOTES.md">Release Notes</a>
-      </td>
-      <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.18/hbase-2.4.18-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.4.18/hbase-2.4.18-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.18/hbase-2.4.18-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.18/hbase-2.4.18-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.4.18/hbase-2.4.18-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.18/hbase-2.4.18-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.18/hbase-2.4.18-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.4.18/hbase-2.4.18-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.18/hbase-2.4.18-client-bin.tar.gz.asc">asc</a>)
-      </td>
-      <td />
-    </tr>
   </table>
   </section>
   <section name="Connectors">
