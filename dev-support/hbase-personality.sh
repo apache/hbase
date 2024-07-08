@@ -591,16 +591,16 @@ function hadoopcheck_rebuild
   if [[ "${PATCH_BRANCH}" = *"branch-2.5"* ]]; then
     yetus_info "Setting Hadoop 3 versions to test based on branch-2.5 rules"
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.2.4 3.3.6"
+      hbase_hadoop3_versions="3.2.4 3.3.6 3.4.0"
     else
-      hbase_hadoop3_versions="3.2.3 3.2.4 3.3.2 3.3.3 3.3.4 3.3.5 3.3.6"
+      hbase_hadoop3_versions="3.2.3 3.2.4 3.3.2 3.3.3 3.3.4 3.3.5 3.3.6 3.4.0"
     fi
   else
     yetus_info "Setting Hadoop 3 versions to test based on branch-2.6+/master/feature branch rules"
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.3.6"
+      hbase_hadoop3_versions="3.3.6 3.4.0"
     else
-      hbase_hadoop3_versions="3.3.5 3.3.6"
+      hbase_hadoop3_versions="3.3.5 3.3.6 3.4.0"
     fi
   fi
 
