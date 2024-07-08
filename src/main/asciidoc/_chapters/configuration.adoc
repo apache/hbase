@@ -140,37 +140,32 @@ JVM. When selecting your JDK distribution, please take this into consideration.
 |JDK 17
 
 |HBase 2.6
-|icon:times-circle[role="red"]
-|icon:times-circle[role="red"]
+2+|icon:times-circle[role="red"]
 |icon:check-circle[role="green"]
 |icon:check-circle[role="green"]
 |icon:check-circle[role="green"]
 
 
 |HBase 2.5
-|icon:times-circle[role="red"]
-|icon:times-circle[role="red"]
+2+|icon:times-circle[role="red"]
 |icon:check-circle[role="green"]
 |icon:check-circle[role="green"]
 |icon:exclamation-circle[role="yellow"]*
 
 |HBase 2.4
-|icon:times-circle[role="red"]
-|icon:times-circle[role="red"]
+2+|icon:times-circle[role="red"]
 |icon:check-circle[role="green"]
 |icon:check-circle[role="green"]
 |icon:times-circle[role="red"]
 
 |HBase 2.3
-|icon:times-circle[role="red"]
-|icon:times-circle[role="red"]
+2+|icon:times-circle[role="red"]
 |icon:check-circle[role="green"]
 |icon:exclamation-circle[role="yellow"]*
 |icon:times-circle[role="red"]
 
 |HBase 2.0-2.2
-|icon:times-circle[role="red"]
-|icon:times-circle[role="red"]
+2+|icon:times-circle[role="red"]
 |icon:check-circle[role="green"]
 2+|icon:times-circle[role="red"]
 
