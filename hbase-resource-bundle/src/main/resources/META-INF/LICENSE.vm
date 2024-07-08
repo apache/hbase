@@ -1465,7 +1465,10 @@ project website
 ${dep.url}
 project source
 ${dep.scm.url}
-#elseif( !(${dep.licenses[0].name.contains("Apache License, Version 2.0")} || ${dep.licenses[0].name.contains("The Apache Software License, Version 2.0")}) )
+#elseif( !(${dep.licenses[0].name.contains("Apache License, Version 2.0")} # The official name in the past
+    || ${dep.licenses[0].name.contains("The Apache Software License, Version 2.0")} # The official name in the past too
+    || ${dep.licenses[0].name.contains("Apache Software License - Version 2.0")} # jetty uses this name
+    || ${dep.licenses[0].name.contains("Apache-2.0")}) ) # the new short official name
 #if( ${dep.licenses[0].name.contains("CDDL")} )
 #if( ${dep.licenses[0].name.contains("1.0")} )
 #set($aggregated = $cddl_1_0.add($dep))
