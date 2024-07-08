@@ -130,62 +130,91 @@ JVM. When selecting your JDK distribution, please take this into consideration.
 ====
 
 .Java support by release line
-[cols="5*^.^", options="header"]
+[cols="6*^.^", options="header"]
 |===
 |HBase Version
 |JDK 6
 |JDK 7
 |JDK 8
 |JDK 11
+|JDK 17
 
-|HBase 2.3+
+|HBase 2.6
+|icon:times-circle[role="red"]
+|icon:times-circle[role="red"]
+|icon:check-circle[role="green"]
+|icon:check-circle[role="green"]
+|icon:check-circle[role="green"]
+
+
+|HBase 2.5
+|icon:times-circle[role="red"]
+|icon:times-circle[role="red"]
+|icon:check-circle[role="green"]
+|icon:check-circle[role="green"]
+|icon:exclamation-circle[role="yellow"]*
+
+|HBase 2.4
+|icon:times-circle[role="red"]
+|icon:times-circle[role="red"]
+|icon:check-circle[role="green"]
+|icon:check-circle[role="green"]
+|icon:times-circle[role="red"]
+
+|HBase 2.3
 |icon:times-circle[role="red"]
 |icon:times-circle[role="red"]
 |icon:check-circle[role="green"]
 |icon:exclamation-circle[role="yellow"]*
+|icon:times-circle[role="red"]
 
 |HBase 2.0-2.2
 |icon:times-circle[role="red"]
 |icon:times-circle[role="red"]
 |icon:check-circle[role="green"]
-|icon:times-circle[role="red"]
+2+|icon:times-circle[role="red"]
 
 |HBase 1.2+
 |icon:times-circle[role="red"]
 |icon:check-circle[role="green"]
 |icon:check-circle[role="green"]
-|icon:times-circle[role="red"]
+2+|icon:times-circle[role="red"]
 
 |HBase 1.0-1.1
 |icon:times-circle[role="red"]
 |icon:check-circle[role="green"]
 |icon:exclamation-circle[role="yellow"]
-|icon:times-circle[role="red"]
+2+|icon:times-circle[role="red"]
 
 |HBase 0.98
 |icon:check-circle[role="green"]
 |icon:check-circle[role="green"]
 |icon:exclamation-circle[role="yellow"]
-|icon:times-circle[role="red"]
+2+|icon:times-circle[role="red"]
 
 |HBase 0.94
 |icon:check-circle[role="green"]
 |icon:check-circle[role="green"]
-|icon:times-circle[role="red"]
-|icon:times-circle[role="red"]
+3+|icon:times-circle[role="red"]
 
 |===
 
-.A Note on JDK11 icon:exclamation-circle[role="yellow"]*
+.A Note on JDK11/JDK17 icon:exclamation-circle[role="yellow"]*
 [WARNING]
 ====
-Preliminary support for JDK11 is introduced with HBase 2.3.0. This support is limited to
-compilation and running the full test suite. There are open questions regarding the runtime
-compatibility of JDK11 with Apache ZooKeeper and Apache Hadoop
-(link:https://issues.apache.org/jira/browse/HADOOP-15338[HADOOP-15338]). Significantly, neither
-project has yet released a version with explicit runtime support for JDK11. The remaining known
-issues in HBase are catalogued in
-link:https://issues.apache.org/jira/browse/HBASE-22972[HBASE-22972].
+Preliminary support for JDK11 is introduced with HBase 2.3.0, and for JDK17 is introduced with
+HBase 2.5.x. We will compile and run test suites with JDK11/17 in pre commit checks and nightly
+checks. We will mark the support as icon:check-circle[role="green"] as long as we have run some
+ITs with the JDK version and also there are users in the community use the JDK version in real
+production clusters.
+
+For JDK11/JDK17 support in HBase, please refer to
+link:https://issues.apache.org/jira/browse/HBASE-22972[HBASE-22972] and
+link:https://issues.apache.org/jira/browse/HBASE-26038[HBASE-26038]
+
+For JDK11/JDK17 support in Hadoop, which may also affect HBase, please refer to
+link:https://issues.apache.org/jira/browse/HADOOP-15338[HADOOP-15338] and
+link:https://issues.apache.org/jira/browse/HADOOP-17177[HADOOP-17177]
 ====
 
 NOTE: You must set `JAVA_HOME` on each node of your cluster. _hbase-env.sh_ provides a handy
