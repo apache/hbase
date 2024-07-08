@@ -76,8 +76,7 @@ public class ProtobufHttpEntity implements HttpEntity {
 
   @Override
   public boolean isStreaming() {
-    // TODO Auto-generated method stub
-    return false;
+    return true;
   }
 
   @Override
