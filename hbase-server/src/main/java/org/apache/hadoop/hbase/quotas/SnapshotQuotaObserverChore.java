@@ -168,7 +168,7 @@ public class SnapshotQuotaObserverChore extends ScheduledChore {
     filter.addTypeFilter(QuotaType.SPACE);
     try (Admin admin = conn.getAdmin()) {
       // Pull all of the tables that have quotas (direct, or from namespace)
-      for (QuotaSettings qs : QuotaRetriever.open(conf, filter)) {
+      for (QuotaSettings qs : QuotaRetriever.open(conn, filter)) {
         if (qs.getQuotaType() == QuotaType.SPACE) {
           String ns = qs.getNamespace();
           TableName tn = qs.getTableName();

@@ -327,7 +327,7 @@ public class TestMasterQuotasObserver {
   }
 
   public int getNumSpaceQuotas() throws Exception {
-    QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration());
+    QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConnection());
     int numSpaceQuotas = 0;
     for (QuotaSettings quotaSettings : scanner) {
       if (quotaSettings.getQuotaType() == QuotaType.SPACE) {
@@ -338,7 +338,7 @@ public class TestMasterQuotasObserver {
   }
 
   public int getThrottleQuotas() throws Exception {
-    QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration());
+    QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConnection());
     int throttleQuotas = 0;
     for (QuotaSettings quotaSettings : scanner) {
       if (quotaSettings.getQuotaType() == QuotaType.THROTTLE) {
