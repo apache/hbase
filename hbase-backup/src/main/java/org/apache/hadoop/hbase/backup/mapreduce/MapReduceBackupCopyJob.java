@@ -60,6 +60,10 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class MapReduceBackupCopyJob implements BackupCopyJob {
   public static final String NUMBER_OF_LEVELS_TO_PRESERVE_KEY = "num.levels.preserve";
+
+  // This prefix specifies the DistCp options to be used during backup copy
+  public static final String BACKUP_COPY_OPTION_PREFIX = "hbase.backup.copy.";
+
   private static final Logger LOG = LoggerFactory.getLogger(MapReduceBackupCopyJob.class);
 
   private Configuration conf;
@@ -439,7 +443,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
     List<String> extraArgsFromConf = new ArrayList<>();
 
     for (DistCpOptionSwitch optionSwitch : DistCpOptionSwitch.values()) {
-      String configLabel = optionSwitch.getConfigLabel();
+      String configLabel = BACKUP_COPY_OPTION_PREFIX + optionSwitch.getConfigLabel();
       if (conf.get(configLabel) != null) {
         if (optionSwitch.getOption().hasArg()) {
           extraArgsFromConf.add("-" + optionSwitch.getOption().getOpt());
