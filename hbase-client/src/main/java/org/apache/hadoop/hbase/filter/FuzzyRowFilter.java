@@ -161,6 +161,31 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
     return true;
   }
 
+  /**
+   * Returns the Fuzzy keys in the format expected by the constructor.
+   * @return the Fuzzy keys in the format expected by the constructor
+   */
+  public List<Pair<byte[], byte[]>> getFuzzyKeys() {
+    List<Pair<byte[], byte[]>> returnList = new ArrayList<>(fuzzyKeysData.size());
+    for (Pair<byte[], byte[]> fuzzyKey : fuzzyKeysData) {
+      Pair<byte[], byte[]> returnKey = new Pair<>();
+      // This won't revert the original key's don't care values, but we don't care.
+      returnKey.setFirst(Arrays.copyOf(fuzzyKey.getFirst(), fuzzyKey.getFirst().length));
+      byte[] returnMask = Arrays.copyOf(fuzzyKey.getSecond(), fuzzyKey.getSecond().length);
+      // Revert the preprocessing. Does nothing if there was no preprocessing.
+      for (int i = 0; i < returnMask.length; i++) {
+        if (returnMask[i] == -1) {
+          returnMask[i] = 0; // -1 >> 0
+        } else if (returnMask[i] == 2) {
+          returnMask[i] = 1;// 2 >> 1
+        }
+      }
+      returnKey.setSecond(returnMask);
+      returnList.add(returnKey);
+    }
+    return returnList;
+  }
+
   @Override
   public void reset() throws IOException {
     filterRow = false;
