@@ -3297,7 +3297,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try (RegionScanner scanner = getScanner(new Scan(get))) {
       // NOTE: Please don't use HRegion.get() instead,
       // because it will copy cells to heap. See HBASE-26036
-      List<Cell> result = new ArrayList<>();
+      List<ExtendedCell> result = new ArrayList<>();
       scanner.next(result);
 
       if (result.size() < count) {
@@ -4070,7 +4070,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       for (Map.Entry<byte[], List<ExtendedCell>> entry : ClientInternalHelper
         .getExtendedFamilyCellMap(mutation).entrySet()) {
         final byte[] columnFamilyName = entry.getKey();
-        List<ExtendedCell> deltas = (List) entry.getValue();
+        List<ExtendedCell> deltas = entry.getValue();
         // Reckon for the Store what to apply to WAL and MemStore.
         List<ExtendedCell> toApply =
           reckonDeltasByStore(region.stores.get(columnFamilyName), mutation, now, deltas, results);
@@ -4131,7 +4131,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // NOTE: Please don't use HRegion.get() instead,
         // because it will copy cells to heap. See HBASE-26036
         List<ExtendedCell> currentValues = new ArrayList<>();
-        scanner.next((List) currentValues);
+        scanner.next(currentValues);
         // Iterate the input columns and update existing values if they were found, otherwise
         // add new column initialized to the delta amount
         int currentValuesIndex = 0;
@@ -5063,7 +5063,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         try (RegionScanner scanner = getScanner(new Scan(get))) {
           // NOTE: Please don't use HRegion.get() instead,
           // because it will copy cells to heap. See HBASE-26036
-          List<Cell> result = new ArrayList<>(1);
+          List<ExtendedCell> result = new ArrayList<>(1);
           scanner.next(result);
           if (filter != null) {
             if (!result.isEmpty()) {
@@ -5079,7 +5079,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               matches = (result.get(0).getValueLength() == 0) == (op != CompareOperator.NOT_EQUAL);
               cellTs = result.get(0).getTimestamp();
             } else if (result.size() == 1) {
-              Cell kv = result.get(0);
+              ExtendedCell kv = result.get(0);
               cellTs = kv.getTimestamp();
               int compareResult = PrivateCellUtil.compareValue(kv, comparator);
               matches = matches(op, compareResult);

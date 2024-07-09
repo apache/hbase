@@ -2576,7 +2576,7 @@ public class TestHStore {
         assertNull(segmentScanner.next());
       } else {
         List<ExtendedCell> results = new ArrayList<>();
-        storeScanner.next((List) results);
+        storeScanner.next(results);
         assertEquals(2, results.size());
         PrivateCellUtil.equals(smallCell, results.get(0));
         PrivateCellUtil.equals(largeCell, results.get(1));
@@ -2713,7 +2713,7 @@ public class TestHStore {
       assertTrue(storeScanner.currentScanners.get(0) instanceof StoreFileScanner);
 
       List<ExtendedCell> results = new ArrayList<>();
-      storeScanner.next((List) results);
+      storeScanner.next(results);
       assertEquals(2, results.size());
       PrivateCellUtil.equals(smallCell, results.get(0));
       PrivateCellUtil.equals(largeCell, results.get(1));

@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -233,7 +233,8 @@ public class TestMobCompactionWithException {
         private int count = -1;
 
         @Override
-        public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+        public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
+          throws IOException {
           count++;
           if (count == rowCount - 1 && testException) {
             count = 0;

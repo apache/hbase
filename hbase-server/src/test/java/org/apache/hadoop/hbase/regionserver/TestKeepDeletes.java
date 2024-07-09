@@ -351,7 +351,7 @@ public class TestKeepDeletes {
     s.readAllVersions();
     InternalScanner scan = region.getScanner(s);
     List<ExtendedCell> kvs = new ArrayList<>();
-    scan.next((List) kvs);
+    scan.next(kvs);
     assertEquals(8, kvs.size());
     assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(0)));
     assertArrayEquals(CellUtil.cloneValue(kvs.get(1)), T3);
@@ -370,7 +370,7 @@ public class TestKeepDeletes {
     s.setTimeRange(0, 1);
     scan = region.getScanner(s);
     kvs = new ArrayList<>();
-    scan.next((List) kvs);
+    scan.next(kvs);
     // nothing in this interval, not even delete markers
     assertTrue(kvs.isEmpty());
 
@@ -381,7 +381,7 @@ public class TestKeepDeletes {
     s.setTimeRange(0, ts + 2);
     scan = region.getScanner(s);
     kvs = new ArrayList<>();
-    scan.next((List) kvs);
+    scan.next(kvs);
     assertEquals(4, kvs.size());
     assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(0)));
     assertArrayEquals(CellUtil.cloneValue(kvs.get(1)), T1);
@@ -396,7 +396,7 @@ public class TestKeepDeletes {
     s.setTimeRange(ts + 3, ts + 5);
     scan = region.getScanner(s);
     kvs = new ArrayList<>();
-    scan.next((List) kvs);
+    scan.next(kvs);
     assertEquals(2, kvs.size());
     assertArrayEquals(CellUtil.cloneValue(kvs.get(0)), T3);
     assertTrue(CellUtil.isDelete(kvs.get(1)));

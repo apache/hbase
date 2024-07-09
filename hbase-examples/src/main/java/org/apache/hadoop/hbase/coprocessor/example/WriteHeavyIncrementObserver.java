@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -99,11 +100,14 @@ public class WriteHeavyIncrementObserver implements RegionCoprocessor, RegionObs
       private long sum;
 
       @Override
-      public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+      public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
+        throws IOException {
         boolean moreRows = scanner.next(srcResult, scannerContext);
         if (srcResult.isEmpty()) {
           if (!moreRows && row != null) {
-            result.add(createCell(row, family, qualifier, timestamp, sum));
+            // all cells in HBase are ExtendedCells, so you are fine to cast it to ExtendedCell,
+            // just do not use its methods since it may change without any deprecation cycle
+            result.add((ExtendedCell) createCell(row, family, qualifier, timestamp, sum));
           }
           return moreRows;
         }
@@ -114,7 +118,9 @@ public class WriteHeavyIncrementObserver implements RegionCoprocessor, RegionObs
           row = CellUtil.cloneRow(firstCell);
           qualifier = CellUtil.cloneQualifier(firstCell);
         } else if (!CellUtil.matchingRows(firstCell, row)) {
-          result.add(createCell(row, family, qualifier, timestamp, sum));
+          // all cells in HBase are ExtendedCells, so you are fine to cast it to ExtendedCell,
+          // just do not use its methods since it may change without any deprecation cycle
+          result.add((ExtendedCell) createCell(row, family, qualifier, timestamp, sum));
           row = CellUtil.cloneRow(firstCell);
           qualifier = CellUtil.cloneQualifier(firstCell);
           sum = 0;
@@ -123,14 +129,18 @@ public class WriteHeavyIncrementObserver implements RegionCoprocessor, RegionObs
           if (CellUtil.matchingQualifier(c, qualifier)) {
             sum += Bytes.toLong(c.getValueArray(), c.getValueOffset());
           } else {
-            result.add(createCell(row, family, qualifier, timestamp, sum));
+            // all cells in HBase are ExtendedCells, so you are fine to cast it to ExtendedCell,
+            // just do not use its methods since it may change without any deprecation cycle
+            result.add((ExtendedCell) createCell(row, family, qualifier, timestamp, sum));
             qualifier = CellUtil.cloneQualifier(c);
             sum = Bytes.toLong(c.getValueArray(), c.getValueOffset());
           }
           timestamp = c.getTimestamp();
         });
         if (!moreRows) {
-          result.add(createCell(row, family, qualifier, timestamp, sum));
+          // all cells in HBase are ExtendedCells, so you are fine to cast it to ExtendedCell,
+          // just do not use its methods since it may change without any deprecation cycle
+          result.add((ExtendedCell) createCell(row, family, qualifier, timestamp, sum));
         }
         srcResult.clear();
         return moreRows;

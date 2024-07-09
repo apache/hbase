@@ -134,7 +134,7 @@ abstract class StoreFlusher {
         // InternalScanner is for CPs so we do not want to leak ExtendedCell to the interface, but
         // all the server side implementation should only add ExtendedCell to the List, otherwise it
         // will cause serious assertions in our code
-        hasMore = scanner.next((List) kvs, scannerContext);
+        hasMore = scanner.next(kvs, scannerContext);
         if (!kvs.isEmpty()) {
           for (ExtendedCell c : kvs) {
             sink.append(c);

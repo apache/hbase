@@ -3790,7 +3790,7 @@ public class TestHRegion {
       expected1.add(new KeyValue(row1, fam4, null, ts, KeyValue.Type.Put, null));
 
       res = new ArrayList<>();
-      is.next((List) res);
+      is.next(res);
       for (int i = 0; i < res.size(); i++) {
         assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected1.get(i), res.get(i)));
       }
@@ -3801,7 +3801,7 @@ public class TestHRegion {
       expected2.add(new KeyValue(row2, fam4, null, ts, KeyValue.Type.Put, null));
 
       res = new ArrayList<>();
-      is.next((List) res);
+      is.next(res);
       for (int i = 0; i < res.size(); i++) {
         assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected2.get(i), res.get(i)));
       }
@@ -3908,7 +3908,7 @@ public class TestHRegion {
     scan.readVersions(MAX_VERSIONS);
     List<ExtendedCell> actual = new ArrayList<>();
     try (InternalScanner scanner = region.getScanner(scan)) {
-      boolean hasNext = scanner.next((List) actual);
+      boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
 
       // Verify result
@@ -3985,7 +3985,7 @@ public class TestHRegion {
     scan.readVersions(versions);
     List<ExtendedCell> actual = new ArrayList<>();
     try (InternalScanner scanner = region.getScanner(scan)) {
-      boolean hasNext = scanner.next((List) actual);
+      boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
 
       // Verify result
@@ -4095,7 +4095,7 @@ public class TestHRegion {
     scan.readVersions(MAX_VERSIONS);
     List<ExtendedCell> actual = new ArrayList<>();
     try (InternalScanner scanner = region.getScanner(scan)) {
-      boolean hasNext = scanner.next((List) actual);
+      boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
 
       // Verify result
@@ -4211,7 +4211,7 @@ public class TestHRegion {
     scan.readVersions(versions);
     List<ExtendedCell> actual = new ArrayList<>();
     try (InternalScanner scanner = region.getScanner(scan)) {
-      boolean hasNext = scanner.next((List) actual);
+      boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
 
       // Verify result
