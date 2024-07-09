@@ -1084,8 +1084,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     LOG.debug("outputFs={}, outputRoot={}, skipTmp={}, initialOutputSnapshotDir={}", outputFs,
       outputRoot.toString(), skipTmp, initialOutputSnapshotDir);
 
-    // throw CorruptedSnapshotException if we can't read the snapshot info or the snapshot is
-    // expired
+    // throw CorruptedSnapshotException if we can't read the snapshot info.
     SnapshotDescription sourceSnapshotDesc =
       SnapshotDescriptionUtils.readSnapshotInfo(inputFs, snapshotDir);
 
