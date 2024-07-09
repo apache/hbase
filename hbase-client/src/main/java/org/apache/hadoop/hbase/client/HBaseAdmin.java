@@ -3153,7 +3153,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public QuotaRetriever getQuotaRetriever(final QuotaFilter filter) throws IOException {
-    return QuotaRetriever.open(conf, filter);
+    return QuotaRetriever.open(connection, filter);
   }
 
   @Override
