@@ -193,12 +193,14 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
       // This won't revert the original key's don't care values, but we don't care.
       returnKey.setFirst(Arrays.copyOf(fuzzyKey.getFirst(), fuzzyKey.getFirst().length));
       byte[] returnMask = Arrays.copyOf(fuzzyKey.getSecond(), fuzzyKey.getSecond().length);
-      // Revert the preprocessing. Does nothing if there was no preprocessing.
-      for (int i = 0; i < returnMask.length; i++) {
-        if (returnMask[i] == -1) {
-          returnMask[i] = 0; // -1 >> 0
-        } else if (returnMask[i] == processedWildcardMask) {
-          returnMask[i] = 1;//  0 or 2 >> 1 depending on mask version
+      if (UNSAFE_UNALIGNED && isPreprocessedMask(returnMask)) {
+        // Revert the preprocessing.
+        for (int i = 0; i < returnMask.length; i++) {
+          if (returnMask[i] == -1) {
+            returnMask[i] = 0; // -1 >> 0
+          } else if (returnMask[i] == processedWildcardMask) {
+            returnMask[i] = 1; // 0 or 2 >> 1 depending on mask version
+          }
         }
       }
       returnKey.setSecond(returnMask);

@@ -519,7 +519,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
           this.filters.add(new FilterModel(((WhileMatchFilter) filter).getFilter()));
           break;
         case FuzzyRowFilter:
-          this.fuzzyKeys = new ArrayList<>();
+          https: // cloudera.dps.mow-dev.cloudera.com/cloud/workloads/details/cod-1s24fo7eea35x/events
+          this.fuzzyKeys = new ArrayList<>(((FuzzyRowFilter) filter).getFuzzyKeys().size());
           for (Pair<byte[], byte[]> keyWithMask : ((FuzzyRowFilter) filter).getFuzzyKeys()) {
             this.fuzzyKeys.add(new FuzzyKeyModel(keyWithMask));
           }
