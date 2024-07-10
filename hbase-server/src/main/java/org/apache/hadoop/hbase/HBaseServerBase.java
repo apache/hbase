@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionRegistryEndpoint;
+import org.apache.hadoop.hbase.conf.ConfigurationHolder;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
@@ -247,6 +248,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     final Span span = TraceUtil.createSpan("HBaseServerBase.cxtor");
     try (Scope ignored = span.makeCurrent()) {
       this.conf = conf;
+      ConfigurationHolder.getInstance().setConf(conf);
       this.eventLoopGroupConfig =
         NettyEventLoopGroupConfig.setup(conf, getClass().getSimpleName() + "-EventLoopGroup");
       this.startcode = EnvironmentEdgeManager.currentTime();
