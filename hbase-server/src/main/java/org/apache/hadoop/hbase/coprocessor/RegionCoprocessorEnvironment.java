@@ -34,9 +34,10 @@ import org.apache.hadoop.hbase.quotas.RpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.regionserver.OnlineRegions;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -137,7 +138,7 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment<Reg
   /**
    * Check the quota for the current (rpc-context) user. Returns the OperationQuota used to get the
    * available quota and to report the data/usage of the operation.
-   * @param scan                     the scan to be estimated against the quota
+   * @param scan                            the scan to be estimated against the quota
    * @param maxBlockBytesScanned            the maximum bytes scanned in a single RPC call by the
    *                                        scanner
    * @param prevBlockBytesScannedDifference the difference between BBS of the previous two next
