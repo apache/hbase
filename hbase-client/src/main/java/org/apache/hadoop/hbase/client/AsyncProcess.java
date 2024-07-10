@@ -195,7 +195,7 @@ class AsyncProcess {
   }
 
   /**
-   * The submitted task may be not accomplished at all if there are too many running tasks or other
+   * The submitted task may not be accomplished at all if there are too many running tasks or other
    * limits.
    * @param <CResult> The class to cast the result
    * @param task      The setting and data
@@ -387,6 +387,7 @@ class AsyncProcess {
     Objects.requireNonNull(task.getPool(), "The pool can't be NULL");
     checkOperationTimeout(task.getOperationTimeout());
     checkRpcTimeout(task.getRpcTimeout());
+    Objects.requireNonNull(task.getRequestAttributes(), "The map of task attributes cannot be null");
     return null;
   }
 

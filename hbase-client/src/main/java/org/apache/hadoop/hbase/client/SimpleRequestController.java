@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
-
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -405,7 +404,7 @@ class SimpleRequestController implements RequestController {
     }
 
     /**
-     * 1) check the regions is allowed. 2) check the concurrent tasks for regions. 3) check the
+     * 1) check the region is allowed. 2) check the concurrent tasks for regions. 3) check the
      * total concurrent tasks. 4) check the concurrent tasks for server.
      * @param loc           the destination of data
      * @param heapSizeOfRow the data size

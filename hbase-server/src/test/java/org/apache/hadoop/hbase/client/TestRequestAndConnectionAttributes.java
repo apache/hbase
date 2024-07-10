@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -36,6 +35,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellScannable;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -44,7 +45,10 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.ipc.DelegatingHBaseRpcController;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -57,7 +61,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 @Category({ ClientTests.class, MediumTests.class })
@@ -252,6 +255,53 @@ public class TestRequestAndConnectionAttributes {
   }
 
   @Test
+  public void testRequestAttributesBufferedMutate() throws IOException, InterruptedException {
+    assertFalse(REQUEST_ATTRIBUTES_VALIDATED.get());
+    addRandomRequestAttributes();
+
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (
+      Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
+        CONNECTION_ATTRIBUTES);
+      BufferedMutator bufferedMutator = conn.getBufferedMutator(configureRequestAttributes(new BufferedMutatorParams(REQUEST_ATTRIBUTES_TEST_TABLE)));
+    ) {
+      Put put = new Put(Bytes.toBytes("a"));
+      put.addColumn(REQUEST_ATTRIBUTES_TEST_TABLE_CF, Bytes.toBytes("c"), Bytes.toBytes("v"));
+      bufferedMutator.mutate(put);
+      bufferedMutator.flush();
+    }
+
+    assertTrue(REQUEST_ATTRIBUTES_VALIDATED.get());
+  }
+
+  @Test
+  public void testRequestAttributesFromRpcController() throws IOException, InterruptedException {
+    assertFalse(REQUEST_ATTRIBUTES_VALIDATED.get());
+    addRandomRequestAttributes();
+
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setClass(
+      RpcControllerFactory.CUSTOM_CONTROLLER_CONF_KEY,
+      RequestMetadataControllerFactory.class,
+      RpcControllerFactory.class
+    );
+    try (
+      Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
+        CONNECTION_ATTRIBUTES);
+      BufferedMutator bufferedMutator = conn.getBufferedMutator(REQUEST_ATTRIBUTES_TEST_TABLE);
+    ) {
+      Put put = new Put(Bytes.toBytes("a"));
+      put.addColumn(REQUEST_ATTRIBUTES_TEST_TABLE_CF, Bytes.toBytes("c"), Bytes.toBytes("v"));
+      bufferedMutator.mutate(put);
+      bufferedMutator.flush();
+    }
+    conf.unset(
+      RpcControllerFactory.CUSTOM_CONTROLLER_CONF_KEY
+    );
+    assertTrue(REQUEST_ATTRIBUTES_VALIDATED.get());
+  }
+
+  @Test
   public void testNoRequestAttributes() throws IOException {
     assertFalse(REQUEST_ATTRIBUTES_VALIDATED.get());
     TableName tableName = TableName.valueOf("testNoRequestAttributesScan");
@@ -282,6 +332,47 @@ public class TestRequestAndConnectionAttributes {
     REQUEST_ATTRIBUTES.forEach(tableBuilder::setRequestAttribute);
     return tableBuilder;
   }
+
+  private static BufferedMutatorParams configureRequestAttributes(BufferedMutatorParams params) {
+    REQUEST_ATTRIBUTES.forEach(params::setRequestAttribute);
+    return params;
+  }
+
+  public static class RequestMetadataControllerFactory extends RpcControllerFactory {
+
+    public RequestMetadataControllerFactory(Configuration conf) {
+      super(conf);
+    }
+
+    @Override public HBaseRpcController newController() {
+      return new RequestMetadataController(super.newController(), REQUEST_ATTRIBUTES);
+    }
+
+    @Override public HBaseRpcController newController(CellScanner cellScanner) {
+      return new RequestMetadataController(super.newController(cellScanner),
+        REQUEST_ATTRIBUTES);
+    }
+
+    @Override public HBaseRpcController newController(List<CellScannable> cellIterables) {
+      return new RequestMetadataController(super.newController(cellIterables),
+        REQUEST_ATTRIBUTES);
+    }
+
+    public static class RequestMetadataController extends DelegatingHBaseRpcController {
+      private final Map<String, byte[]> requestAttributes;
+
+      RequestMetadataController(HBaseRpcController delegate,
+        Map<String, byte[]> requestAttributes) {
+        super(delegate);
+        this.requestAttributes = requestAttributes;
+      }
+
+      @Override public Map<String, byte[]> getRequestAttributes() {
+        return requestAttributes;
+      }
+    }
+  }
+
 
   public static class AttributesCoprocessor implements RegionObserver, RegionCoprocessor {
 

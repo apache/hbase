@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -184,6 +185,14 @@ public interface BufferedMutator extends Closeable {
   default void setRpcTimeout(int timeout) {
     throw new UnsupportedOperationException(
       "The BufferedMutator::setRpcTimeout has not been implemented");
+  }
+
+  /**
+   * Get rpc request attribtues
+   */
+  default Map<String, byte[]> getRequestAttributes() {
+    throw new UnsupportedOperationException(
+      "The BufferedMutator::getRequestAttributes has not been implemented");
   }
 
   /**

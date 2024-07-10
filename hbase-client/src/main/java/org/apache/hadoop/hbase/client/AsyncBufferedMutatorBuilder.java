@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
-
 import java.util.concurrent.TimeUnit;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -37,6 +36,11 @@ public interface AsyncBufferedMutatorBuilder {
    * Set timeout for each rpc request when doing background flush.
    */
   AsyncBufferedMutatorBuilder setRpcTimeout(long timeout, TimeUnit unit);
+
+  /**
+   * Override a request attribute
+   */
+  AsyncBufferedMutatorBuilder setRequestAttribute(String key, byte[] value);
 
   /**
    * Set the base pause time for retrying. We use an exponential policy to generate sleep time when
