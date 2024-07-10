@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.filter.FamilyFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.FuzzyRowFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.MultiRowRangeFilter;
@@ -75,6 +76,7 @@ import org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
@@ -277,6 +279,63 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
 
     }
 
+    static class FuzzyKeyModel {
+
+      protected byte[] key;
+
+      protected byte[] mask;
+
+      public FuzzyKeyModel() {
+      }
+
+      public FuzzyKeyModel(Pair<byte[], byte[]> keyWithMask) {
+        this.key = keyWithMask.getFirst();
+        this.mask = keyWithMask.getSecond();
+      }
+
+      public Pair<byte[], byte[]> build() {
+        return new Pair<>(key, mask);
+      }
+
+      public byte[] getKey() {
+        return key;
+      }
+
+      public void setKey(byte[] key) {
+        this.key = key;
+      }
+
+      public byte[] getMask() {
+        return mask;
+      }
+
+      public void setMask(byte[] mask) {
+        this.mask = mask;
+      }
+
+      @Override
+      public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + Arrays.hashCode(key);
+        result = prime * result + Arrays.hashCode(mask);
+        return result;
+      }
+
+      @Override
+      public boolean equals(Object obj) {
+        if (this == obj) {
+          return true;
+        }
+        if (!(obj instanceof FuzzyKeyModel)) {
+          return false;
+        }
+        FuzzyKeyModel other = (FuzzyKeyModel) obj;
+        return Arrays.equals(key, other.key) && Arrays.equals(mask, other.mask);
+      }
+
+    }
+
     // A grab bag of fields, would have been a union if this were C.
     // These are null by default and will only be serialized if set (non null).
     @XmlAttribute
@@ -319,6 +378,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     private List<RowRangeModel> ranges;
     @XmlElement
     public List<Long> timestamps;
+    @XmlElement
+    private List<FuzzyKeyModel> fuzzyKeys;
 
     static enum FilterType {
       ColumnCountGetFilter,
@@ -343,7 +404,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
       SkipFilter,
       TimestampsFilter,
       ValueFilter,
-      WhileMatchFilter
+      WhileMatchFilter,
+      FuzzyRowFilter
     }
 
     public FilterModel() {
@@ -456,6 +518,12 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
           this.filters = new ArrayList<>();
           this.filters.add(new FilterModel(((WhileMatchFilter) filter).getFilter()));
           break;
+        case FuzzyRowFilter:
+          this.fuzzyKeys = new ArrayList<>(((FuzzyRowFilter) filter).getFuzzyKeys().size());
+          for (Pair<byte[], byte[]> keyWithMask : ((FuzzyRowFilter) filter).getFuzzyKeys()) {
+            this.fuzzyKeys.add(new FuzzyKeyModel(keyWithMask));
+          }
+          break;
         default:
           throw new RuntimeException("unhandled filter type " + type);
       }
@@ -566,6 +634,14 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
           break;
         case WhileMatchFilter:
           filter = new WhileMatchFilter(filters.get(0).build());
+          break;
+        case FuzzyRowFilter: {
+          ArrayList<Pair<byte[], byte[]>> fuzzyKeyArgs = new ArrayList<>(fuzzyKeys.size());
+          for (FuzzyKeyModel keyModel : fuzzyKeys) {
+            fuzzyKeyArgs.add(keyModel.build());
+          }
+          filter = new FuzzyRowFilter(fuzzyKeyArgs);
+        }
           break;
         default:
           throw new RuntimeException("unhandled filter type: " + type);
