@@ -982,7 +982,7 @@ public class TestScannersWithFilters {
   }
 
   @Test
-  public void testFuzzyKeyFilter() throws Exception {
+  public void testFuzzyRowFilter() throws Exception {
     long expectedRows = 4;
     long expectedKeys = colsPerRow;
     List<Pair<byte[], byte[]>> fuzzyKeys = new ArrayList<>();
