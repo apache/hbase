@@ -111,8 +111,13 @@ public class DefaultOperationQuota implements OperationQuota {
         continue;
       }
 
-      limiter.checkQuota(numWrites, writeConsumed, numReads, readConsumed,
-        writeCapacityUnitConsumed, readCapacityUnitConsumed);
+      long maxRequestsToEstimate = limiter.getRequestNumLimit();
+      long maxReadsToEstimate = Math.min(maxRequestsToEstimate, limiter.getReadNumLimit());
+      long maxWritesToEstimate = Math.min(maxRequestsToEstimate, limiter.getWriteNumLimit());
+
+      limiter.checkQuota(Math.min(maxWritesToEstimate, numWrites), writeConsumed,
+        Math.min(maxReadsToEstimate, numReads), readConsumed, writeCapacityUnitConsumed,
+        readCapacityUnitConsumed);
       readAvailable = Math.min(readAvailable, limiter.getReadAvailable());
     }
 
