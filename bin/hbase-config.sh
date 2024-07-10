@@ -164,17 +164,17 @@ export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}
 
 # Now having JAVA_HOME defined is required
 if [ -z "$JAVA_HOME" ]; then
-    cat 1>&2 <<EOF
+  cat 1>&2 <<EOF
 +======================================================================+
 |                    Error: JAVA_HOME is not set                       |
 +----------------------------------------------------------------------+
 | Please download the latest Sun JDK from the Sun Java web site        |
 |     > http://www.oracle.com/technetwork/java/javase/downloads        |
 |                                                                      |
-| HBase requires Java 1.8 or later.                                    |
+| HBase requires Java 17 or later.                                    |
 +======================================================================+
 EOF
-    exit 1
+  exit 1
 fi
 
 function read_java_version() {
@@ -203,3 +203,11 @@ function parse_java_major_version() {
     ;;
   esac
 }
+
+# test whether we are on jdk17 or above
+java_version="$(read_java_version)"
+major_version_number="$(parse_java_major_version "$java_version")"
+if [ "${major_version_number}" -lt 17 ] ; then
+  echo "HBase can only be run on JDK17 and later. Detected JDK version is ${java_version}".
+  exit 1
+fi
