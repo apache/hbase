@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeWrite;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.READER_IDLE;
 
-import com.google.protobuf.CodedOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -81,6 +80,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufOutputStream;
 import org.apache.hbase.thirdparty.io.netty.buffer.CompositeByteBuf;
@@ -391,7 +391,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         Class<?> builderClass = DataTransferEncryptorMessageProto.Builder.class;
 
         // Try the unrelocated ByteString
-        Class<?> byteStringClass = com.google.protobuf.ByteString.class;
+        Class<?> byteStringClass;
         try {
           // See if it can load the relocated ByteString, which comes from hadoop-thirdparty.
           byteStringClass = Class.forName("org.apache.hadoop.thirdparty.protobuf.ByteString");
@@ -400,6 +400,12 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         } catch (ClassNotFoundException e) {
           LOG.debug("Did not find relocated ByteString class from hadoop-thirdparty."
             + " Assuming this is below Hadoop 3.3.0", e);
+          try {
+            byteStringClass = Class.forName("com.google.protobuf.ByteString");
+            LOG.debug("com.google.protobuf.ByteString found.");
+          } catch (ClassNotFoundException ex) {
+            throw new RuntimeException(ex);
+          }
         }
 
         // LiteralByteString is a package private class in protobuf. Make it accessible.
@@ -446,7 +452,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       }
       DataTransferEncryptorMessageProto proto = builder.build();
       int size = proto.getSerializedSize();
-      size += CodedOutputStream.computeRawVarint32Size(size);
+      size += CodedOutputStream.computeUInt32SizeNoTag(size);
       ByteBuf buf = ctx.alloc().buffer(size);
       proto.writeDelimitedTo(new ByteBufOutputStream(buf));
       safeWrite(ctx, buf);
