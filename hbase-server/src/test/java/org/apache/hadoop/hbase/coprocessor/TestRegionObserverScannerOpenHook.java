@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -198,7 +199,8 @@ public class TestRegionObserverScannerOpenHook {
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     Path path = new Path(DIR + callingMethod);
     WAL wal = HBaseTestingUtil.createWal(conf, path, info);
-    HRegion r = HRegion.createHRegion(info, path, conf, tableDescriptor, wal);
+    RegionServerServices rsServices = mock(RegionServerServices.class);
+    HRegion r = HRegion.createHRegion(info, path, conf, tableDescriptor, wal, true, rsServices);
     // this following piece is a hack. currently a coprocessorHost
     // is secretly loaded at OpenRegionHandler. we don't really
     // start a region server here, so just manually create cphost

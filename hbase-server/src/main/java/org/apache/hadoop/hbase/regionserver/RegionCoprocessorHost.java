@@ -211,6 +211,18 @@ public class RegionCoprocessorHost
       return rpcQuotaManager.checkScanQuota(region, scanRequest, maxScannerResultSize,
         maxBlockBytesScanned, prevBlockBytesScannedDifference);
     }
+
+    @Override
+    public OperationQuota checkBatchQuota(Region region, OperationQuota.OperationType type)
+      throws IOException, RpcThrottlingException {
+      return rpcQuotaManager.checkBatchQuota(region, type);
+    }
+
+    @Override
+    public OperationQuota checkBatchQuota(Region region, List<ClientProtos.Action> actions,
+      boolean hasCondition) throws IOException, RpcThrottlingException {
+      return rpcQuotaManager.checkBatchQuota(region, actions, hasCondition);
+    }
   }
 
   /**
