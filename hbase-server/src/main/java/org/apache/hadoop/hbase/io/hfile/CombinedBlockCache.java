@@ -103,8 +103,6 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
         }
       } else {
         if (existInL1) {
-          LOG.warn("Cache key {} had block type {}, but was found in L1 cache.", cacheKey,
-            cacheKey.getBlockType());
           updateBlockMetrics(block, cacheKey, l1Cache, caching);
         } else {
           updateBlockMetrics(block, cacheKey, l2Cache, caching);
