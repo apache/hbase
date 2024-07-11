@@ -317,4 +317,69 @@ public class TestFSHLog extends AbstractTestFSWAL {
       region.close();
     }
   }
+
+  @Test
+  /**
+   * Test for jira https://issues.apache.org/jira/browse/HBASE-28665
+   */
+  public void testWALClosureFailureAndCleanup() throws IOException {
+
+    class FailingWriter implements WALProvider.Writer {
+      @Override
+      public void sync(boolean forceSync) throws IOException {
+
+      }
+
+      @Override
+      public void append(WAL.Entry entry) throws IOException {
+      }
+
+      @Override
+      public long getLength() {
+        return 0;
+      }
+
+      @Override
+      public long getSyncedLength() {
+        return 0;
+      }
+
+      @Override
+      public void close() throws IOException {
+        throw new IOException("WAL close injected failure..");
+      }
+    }
+    final byte[] b = Bytes.toBytes("b");
+    String name = this.name.getMethodName();
+    // Have a FSHLog writer implementation that fails during close
+    try (FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
+      HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
+      log.init();
+
+      // create a region with the wal
+      TableDescriptor htd =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName()))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
+      RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
+      ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+        MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+      final HRegion region = TEST_UTIL.createLocalHRegion(hri, CONF, htd, log);
+      // Repeat the following steps twice
+      // * Append writes for the FSHLog
+      // * Create a new Writer replace the old writer
+      for (int i = 0; i < 2; i++) {
+        log.setWriter(new FailingWriter());
+        region.put(new Put(b).addColumn(b, b, b));
+        region.put(new Put(b).addColumn(b, b, b));
+        log.rollWriter();
+      }
+      assertEquals(2, log.getClosedErrorCount());
+      region.put(new Put(b).addColumn(b, b, b));
+      region.put(new Put(b).addColumn(b, b, b));
+      region.flush(true);
+      log.rollWriter();
+      assertEquals("WAL Files not cleaned ", 0, log.walFile2Props.size());
+      region.close();
+    }
+  }
 }
