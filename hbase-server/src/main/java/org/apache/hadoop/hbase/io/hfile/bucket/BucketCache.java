@@ -1393,50 +1393,6 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
-  /**
-   * Create an input stream that deletes the file after reading it. Use in try-with-resources to
-   * avoid this pattern where an exception thrown from a finally block may mask earlier exceptions:
-   *
-   * <pre>
-   *   File f = ...
-   *   try (FileInputStream fis = new FileInputStream(f)) {
-   *     // use the input stream
-   *   } finally {
-   *     if (!f.delete()) throw new IOException("failed to delete");
-   *   }
-   * </pre>
-   *
-   * @param file the file to read and delete
-   * @return a FileInputStream for the given file
-   * @throws IOException if there is a problem creating the stream
-   */
-  private FileInputStream deleteFileOnClose(final File file) throws IOException {
-    return new FileInputStream(file) {
-      private File myFile;
-
-      private FileInputStream init(File file) {
-        myFile = file;
-        return this;
-      }
-
-      @Override
-      public void close() throws IOException {
-        // close() will be called during try-with-resources and it will be
-        // called by finalizer thread during GC. To avoid double-free resource,
-        // set myFile to null after the first call.
-        if (myFile == null) {
-          return;
-        }
-
-        super.close();
-        if (!myFile.delete()) {
-          throw new IOException("Failed deleting persistence file " + myFile.getAbsolutePath());
-        }
-        myFile = null;
-      }
-    }.init(file);
-  }
-
   private void verifyCapacityAndClasses(long capacitySize, String ioclass, String mapclass)
     throws IOException {
     if (capacitySize != cacheCapacity) {
