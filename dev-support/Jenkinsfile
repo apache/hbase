@@ -954,13 +954,25 @@ pipeline {
     always {
       script {
          try {
+           sh "printenv"
+           // wipe out all the output directories before unstashing
+           sh'''
+             echo "Clean up result directories"
+             rm -rf ${OUTPUT_DIR_RELATIVE_GENERAL}
+             rm -rf ${OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}
+             rm -rf ${OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}
+             rm -rf ${OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}
+             rm -rf ${OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}
+             rm -rf output-srctarball
+             rm -rf output-integration
+           '''
            unstash 'general-result'
            unstash 'jdk8-hadoop2-result'
            unstash 'jdk8-hadoop3-result'
            unstash 'jdk11-hadoop3-result'
            unstash 'jdk17-hadoop3-result'
            unstash 'srctarball-result'
-           sh "printenv"
+
            def results = ["${env.OUTPUT_DIR_RELATIVE_GENERAL}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}/commentfile",
