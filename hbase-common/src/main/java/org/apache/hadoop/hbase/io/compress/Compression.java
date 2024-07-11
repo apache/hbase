@@ -558,6 +558,7 @@ public final class Compression {
         throw new RuntimeException("No codec configured for " + algo.confKey);
       }
       Class<?> codecClass = getClassLoaderForCodec().loadClass(codecClassName);
+      // The class is from hadoop so we use hadoop's ReflectionUtils to create it
       CompressionCodec codec =
         (CompressionCodec) ReflectionUtils.newInstance(codecClass, new Configuration(conf));
       LOG.info("Loaded codec {} for compression algorithm {}", codec.getClass().getCanonicalName(),
