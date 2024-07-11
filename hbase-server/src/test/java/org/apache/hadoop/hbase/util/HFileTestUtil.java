@@ -144,7 +144,8 @@ public class HFileTestUtil {
     ResultScanner s = table.getScanner(new Scan());
     for (Result r : s) {
       for (Cell c : r.listCells()) {
-        Optional<Tag> tag = PrivateCellUtil.getTag(c, TagType.MOB_TABLE_NAME_TAG_TYPE);
+        Optional<Tag> tag =
+          PrivateCellUtil.getTag((ExtendedCell) c, TagType.MOB_TABLE_NAME_TAG_TYPE);
         if (!tag.isPresent()) {
           fail(c.toString() + " has null tag");
           continue;

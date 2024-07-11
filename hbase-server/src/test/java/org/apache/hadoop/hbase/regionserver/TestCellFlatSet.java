@@ -31,11 +31,11 @@ import java.util.SortedSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator.ChunkType;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -187,10 +187,10 @@ public class TestCellFlatSet {
       Iterator<ExtendedCell> excludeIter = excludeTail.iterator();
       Iterator<ExtendedCell> includeIter = includeTail.iterator();
       for (int j = 1 + i; j != ascCells.length; ++j) {
-        assertEquals(true, CellUtil.equals(excludeIter.next(), ascCells[j]));
+        assertEquals(true, PrivateCellUtil.equals(excludeIter.next(), ascCells[j]));
       }
       for (int j = i; j != ascCells.length; ++j) {
-        assertEquals(true, CellUtil.equals(includeIter.next(), ascCells[j]));
+        assertEquals(true, PrivateCellUtil.equals(includeIter.next(), ascCells[j]));
       }
     }
     assertEquals(NUM_OF_CELLS, cs.tailSet(lowerOuterCell, false).size());
@@ -203,10 +203,10 @@ public class TestCellFlatSet {
       Iterator<ExtendedCell> excludeIter = excludeHead.iterator();
       Iterator<ExtendedCell> includeIter = includeHead.iterator();
       for (int j = 0; j != i; ++j) {
-        assertEquals(true, CellUtil.equals(excludeIter.next(), ascCells[j]));
+        assertEquals(true, PrivateCellUtil.equals(excludeIter.next(), ascCells[j]));
       }
       for (int j = 0; j != i + 1; ++j) {
-        assertEquals(true, CellUtil.equals(includeIter.next(), ascCells[j]));
+        assertEquals(true, PrivateCellUtil.equals(includeIter.next(), ascCells[j]));
       }
     }
     assertEquals(0, cs.headSet(lowerOuterCell, false).size());
@@ -217,7 +217,7 @@ public class TestCellFlatSet {
     assertEquals(NUM_OF_CELLS, sub.size());
     Iterator<ExtendedCell> iter = sub.values().iterator();
     for (int i = 0; i != ascCells.length; ++i) {
-      assertEquals(true, CellUtil.equals(iter.next(), ascCells[i]));
+      assertEquals(true, PrivateCellUtil.equals(iter.next(), ascCells[i]));
     }
   }
 

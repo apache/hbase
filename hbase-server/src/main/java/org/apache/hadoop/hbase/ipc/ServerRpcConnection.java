@@ -39,8 +39,8 @@ import java.util.Properties;
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
 import org.apache.commons.crypto.random.CryptoRandom;
 import org.apache.commons.crypto.random.CryptoRandomFactory;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.client.ConnectionRegistryEndpoint;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.codec.Codec;
@@ -588,7 +588,7 @@ abstract class ServerRpcConnection implements Closeable {
       }
       MethodDescriptor md = null;
       Message param = null;
-      CellScanner cellScanner = null;
+      ExtendedCellScanner cellScanner = null;
       try {
         if (header.hasRequestParam() && header.getRequestParam()) {
           md = this.service.getDescriptorForType().findMethodByName(header.getMethodName());
@@ -816,7 +816,7 @@ abstract class ServerRpcConnection implements Closeable {
   public abstract boolean isConnectionOpen();
 
   public abstract ServerCall<?> createCall(int id, BlockingService service, MethodDescriptor md,
-    RequestHeader header, Message param, CellScanner cellScanner, long size,
+    RequestHeader header, Message param, ExtendedCellScanner cellScanner, long size,
     InetAddress remoteAddress, int timeout, CallCleanup reqCleanup);
 
   private static class ByteBuffByteInput extends ByteInput {

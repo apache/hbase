@@ -15,41 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.filter.FilterBase;
-import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A filter that returns the cells which have mob reference tags. It's a server-side filter.
+ * We use this class in HBase internally for getting {@link ExtendedCell} directly without casting.
+ * <p>
+ * In general, all {@link Cell}s in HBase should and must be {@link ExtendedCell}.
+ * <p>
+ * See HBASE-28684 and related issues for more details.
+ * @see CellScanner
+ * @see ExtendedCellScannable
+ * @see ExtendedCell
  */
 @InterfaceAudience.Private
-class MobReferenceOnlyFilter extends FilterBase {
+public interface ExtendedCellScanner extends CellScanner {
 
   @Override
-  public ReturnCode filterCell(final Cell cell) {
-    if (null != cell && cell instanceof ExtendedCell) {
-      // If a cell with a mob reference tag, it's included.
-      if (MobUtils.isMobReferenceCell((ExtendedCell) cell)) {
-        return ReturnCode.INCLUDE;
-      }
-    }
-    return ReturnCode.SKIP;
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (!(obj instanceof MobReferenceOnlyFilter)) {
-      return false;
-    }
-    return obj == this;
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
+  ExtendedCell current();
 }

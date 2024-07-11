@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -232,7 +233,7 @@ public class TestFromClientSide extends FromClientSideBase {
       s.setTimeRange(0, ts + 3);
       s.readAllVersions();
       ResultScanner scanner = h.getScanner(s);
-      Cell[] kvs = scanner.next().rawCells();
+      ExtendedCell[] kvs = scanner.next().rawExtendedCells();
       assertArrayEquals(T2, CellUtil.cloneValue(kvs[0]));
       assertArrayEquals(T1, CellUtil.cloneValue(kvs[1]));
       scanner.close();
@@ -241,7 +242,7 @@ public class TestFromClientSide extends FromClientSideBase {
       s.setRaw(true);
       s.readAllVersions();
       scanner = h.getScanner(s);
-      kvs = scanner.next().rawCells();
+      kvs = scanner.next().rawExtendedCells();
       assertTrue(PrivateCellUtil.isDeleteFamily(kvs[0]));
       assertArrayEquals(T3, CellUtil.cloneValue(kvs[1]));
       assertTrue(CellUtil.isDelete(kvs[2]));

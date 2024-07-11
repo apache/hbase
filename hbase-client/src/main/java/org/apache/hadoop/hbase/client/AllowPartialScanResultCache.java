@@ -21,8 +21,8 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.filterCells;
 
 import java.io.IOException;
 import java.util.Arrays;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -36,14 +36,14 @@ class AllowPartialScanResultCache implements ScanResultCache {
 
   // used to filter out the cells that already returned to user as we always start from the
   // beginning of a row when retry.
-  private Cell lastCell;
+  private ExtendedCell lastCell;
 
   private boolean lastResultPartial;
 
   private int numberOfCompleteRows;
 
   private void recordLastResult(Result result) {
-    lastCell = result.rawCells()[result.rawCells().length - 1];
+    lastCell = result.rawExtendedCells()[result.rawExtendedCells().length - 1];
     lastResultPartial = result.mayHaveMoreCellsInRow();
   }
 

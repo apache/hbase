@@ -112,6 +112,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -3512,7 +3513,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // store the family map reference to allow for mutations
           // we know that in mutation, only ExtendedCells are allow so here we do a fake cast, to
           // simplify later logic
-          familyCellMaps[index] = (Map) mutation.getFamilyCellMap();
+          familyCellMaps[index] = PackagePrivateFieldAccessor.getExtendedFamilyCellMap(mutation);
         }
 
         // store durability for the batch (highest durability of all operations in the batch)
@@ -4063,7 +4064,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       assert mutation instanceof Increment || mutation instanceof Append;
       Map<byte[], List<ExtendedCell>> ret = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       // Process a Store/family at a time.
-      for (Map.Entry<byte[], List<Cell>> entry : mutation.getFamilyCellMap().entrySet()) {
+      for (Map.Entry<byte[], List<ExtendedCell>> entry : PackagePrivateFieldAccessor
+        .getExtendedFamilyCellMap(mutation).entrySet()) {
         final byte[] columnFamilyName = entry.getKey();
         List<ExtendedCell> deltas = (List) entry.getValue();
         // Reckon for the Store what to apply to WAL and MemStore.
@@ -4184,9 +4186,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return cellPairs.stream().map(Pair::getSecond).collect(Collectors.toList());
     }
 
-    private static ExtendedCell reckonDelta(final Cell delta, final Cell currentCell,
-      final byte[] columnFamily, final long now, Mutation mutation, Function<Cell, byte[]> supplier)
-      throws IOException {
+    private static ExtendedCell reckonDelta(final ExtendedCell delta,
+      final ExtendedCell currentCell, final byte[] columnFamily, final long now, Mutation mutation,
+      Function<ExtendedCell, byte[]> supplier) throws IOException {
       // Forward any tags found on the delta.
       List<Tag> tags = TagUtil.carryForwardTags(delta);
       if (currentCell != null) {
@@ -4204,7 +4206,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       } else {
         tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
         PrivateCellUtil.updateLatestStamp(delta, now);
-        assert delta instanceof ExtendedCell;
         ExtendedCell deltaCell = (ExtendedCell) delta;
         return CollectionUtils.isEmpty(tags)
           ? deltaCell
@@ -4522,7 +4523,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           // Returned mutations from coprocessor correspond to the Mutation at index i. We can
           // directly add the cells from those mutations to the familyMaps of this mutation.
-          Map<byte[], List<ExtendedCell>> cpFamilyMap = (Map) cpMutation.getFamilyCellMap();
+          Map<byte[], List<ExtendedCell>> cpFamilyMap =
+            PackagePrivateFieldAccessor.getExtendedFamilyCellMap(cpMutation);
           region.rewriteCellTags(cpFamilyMap, mutation);
           // will get added to the memStore later
           mergeFamilyMaps(familyCellMaps[i], cpFamilyMap);
@@ -5094,14 +5096,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           byte[] byteTs = Bytes.toBytes(ts);
           if (mutation != null) {
             if (mutation instanceof Put) {
-              updateCellTimestamps((Iterable) mutation.getFamilyCellMap().values(), byteTs);
+              updateCellTimestamps(
+                PackagePrivateFieldAccessor.getExtendedFamilyCellMap(mutation).values(), byteTs);
             }
             // And else 'delete' is not needed since it already does a second get, and sets the
             // timestamp from get (see prepareDeleteTimestamps).
           } else {
             for (Mutation m : rowMutations.getMutations()) {
               if (m instanceof Put) {
-                updateCellTimestamps((Iterable) m.getFamilyCellMap().values(), byteTs);
+                updateCellTimestamps(
+                  PackagePrivateFieldAccessor.getExtendedFamilyCellMap(m).values(), byteTs);
               }
             }
             // And else 'delete' is not needed since it already does a second get, and sets the

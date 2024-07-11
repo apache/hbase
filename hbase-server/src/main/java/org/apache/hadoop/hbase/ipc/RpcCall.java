@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -48,7 +48,7 @@ public interface RpcCall extends RpcCallContext {
   Message getParam();
 
   /** Returns The CellScanner that can carry input and result payload. */
-  CellScanner getCellScanner();
+  ExtendedCellScanner getCellScanner();
 
   /** Returns The timestamp when the call is constructed. */
   long getReceiveTime();
@@ -117,7 +117,8 @@ public interface RpcCall extends RpcCallContext {
    * @param errorThrowable The error Throwable resulting from the call.
    * @param error          Extra error message.
    */
-  void setResponse(Message param, CellScanner cells, Throwable errorThrowable, String error);
+  void setResponse(Message param, ExtendedCellScanner cells, Throwable errorThrowable,
+    String error);
 
   /**
    * Send the response of this RPC call. Implementation provides the underlying facility

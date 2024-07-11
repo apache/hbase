@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.Superusers;
@@ -452,7 +453,9 @@ public final class AuthManager {
    */
   public boolean authorizeCell(User user, TableName table, Cell cell, Permission.Action action) {
     try {
-      List<Permission> perms = PermissionStorage.getCellPermissionsForUser(user, cell);
+      assert cell instanceof ExtendedCell;
+      List<Permission> perms =
+        PermissionStorage.getCellPermissionsForUser(user, (ExtendedCell) cell);
       if (LOG.isTraceEnabled()) {
         LOG.trace("Perms for user {} in table {} in cell {}: {}", user.getShortName(), table, cell,
           (perms != null ? perms : ""));

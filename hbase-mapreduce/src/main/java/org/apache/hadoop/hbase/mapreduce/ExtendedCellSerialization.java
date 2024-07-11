@@ -94,7 +94,7 @@ public class ExtendedCellSerialization implements Serialization<ExtendedCell> {
     @Override
     public void serialize(ExtendedCell kv) throws IOException {
       dos.writeInt(PrivateCellUtil.estimatedSerializedSizeOf(kv) - Bytes.SIZEOF_INT);
-      PrivateCellUtil.writeCell(kv, dos, true);
+      kv.write(dos, true);
       dos.writeLong(kv.getSequenceId());
     }
   }

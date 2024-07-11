@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -97,7 +96,7 @@ public class EncodedSeekPerformanceTest {
     StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false, 0, 0, false);
 
     long startReadingTime = System.nanoTime();
-    Cell current;
+    ExtendedCell current;
     scanner.seek(KeyValue.LOWESTKEY);
     while (null != (current = scanner.next())) { // just iterate it!
       if (KeyValueUtil.ensureKeyValue(current).getLength() < 0) {
@@ -111,7 +110,7 @@ public class EncodedSeekPerformanceTest {
     long startSeeksTime = System.nanoTime();
     for (ExtendedCell keyValue : seeks) {
       scanner.seek(keyValue);
-      Cell toVerify = scanner.next();
+      ExtendedCell toVerify = scanner.next();
       if (!keyValue.equals(toVerify)) {
         System.out
           .println(String.format("KeyValue doesn't match:\n" + "Orig key: %s\n" + "Ret key:  %s",

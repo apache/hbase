@@ -327,7 +327,7 @@ public class TestDataBlockEncoders {
       int i = 0;
       do {
         KeyValue expectedKeyValue = sampleKv.get(i);
-        Cell cell = seeker.getCell();
+        ExtendedCell cell = seeker.getCell();
         if (
           PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, expectedKeyValue,
             cell) != 0
@@ -360,7 +360,7 @@ public class TestDataBlockEncoders {
       DataBlockEncoder encoder = encoding.getEncoder();
       ByteBuffer encodedBuffer = encodeKeyValues(encoding, sampleKv,
         getEncodingContext(conf, Compression.Algorithm.NONE, encoding), this.useOffheapData);
-      Cell key = encoder.getFirstKeyCellInBlock(new SingleByteBuff(encodedBuffer));
+      ExtendedCell key = encoder.getFirstKeyCellInBlock(new SingleByteBuff(encodedBuffer));
       KeyValue firstKv = sampleKv.get(0);
       if (0 != PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, key, firstKv)) {
         int commonPrefix = PrivateCellUtil.findCommonPrefixInFlatKey(key, firstKv, false, true);
@@ -394,20 +394,20 @@ public class TestDataBlockEncoders {
 
   private void checkSeekingConsistency(List<DataBlockEncoder.EncodedSeeker> encodedSeekers,
     boolean seekBefore, ExtendedCell keyValue) {
-    Cell expectedKeyValue = null;
+    ExtendedCell expectedKeyValue = null;
     ByteBuffer expectedKey = null;
     ByteBuffer expectedValue = null;
     for (DataBlockEncoder.EncodedSeeker seeker : encodedSeekers) {
       seeker.seekToKeyInBlock(keyValue, seekBefore);
       seeker.rewind();
 
-      Cell actualKeyValue = seeker.getCell();
+      ExtendedCell actualKeyValue = seeker.getCell();
       ByteBuffer actualKey = null;
       actualKey = ByteBuffer.wrap(((KeyValue) seeker.getKey()).getKey());
       ByteBuffer actualValue = seeker.getValueShallowCopy();
 
       if (expectedKeyValue != null) {
-        assertTrue(CellUtil.equals(expectedKeyValue, actualKeyValue));
+        assertTrue(PrivateCellUtil.equals(expectedKeyValue, actualKeyValue));
       } else {
         expectedKeyValue = actualKeyValue;
       }

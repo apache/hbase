@@ -26,8 +26,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScannable;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -72,13 +72,14 @@ public class TestRpcControllerFactory {
     }
 
     @Override
-    public HBaseRpcController newController(RegionInfo regionInfo, CellScanner cellScanner) {
+    public HBaseRpcController newController(RegionInfo regionInfo,
+      ExtendedCellScanner cellScanner) {
       return new CountingRpcController(super.newController(regionInfo, cellScanner));
     }
 
     @Override
     public HBaseRpcController newController(RegionInfo regionInfo,
-      List<CellScannable> cellIterables) {
+      List<ExtendedCellScannable> cellIterables) {
       return new CountingRpcController(super.newController(regionInfo, cellIterables));
     }
   }
