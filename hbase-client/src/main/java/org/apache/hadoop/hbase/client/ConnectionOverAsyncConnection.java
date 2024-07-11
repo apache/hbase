@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.util.IOExceptionSupplier;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -106,6 +105,10 @@ class ConnectionOverAsyncConnection implements Connection {
     }
     if (params.getMaxKeyValueSize() != BufferedMutatorParams.UNSET) {
       builder.setMaxKeyValueSize(params.getMaxKeyValueSize());
+    }
+    if (!params.getRequestAttributes().isEmpty()) {
+
+      builder.setRequestAttributes(params.getRequestAttributes());
     }
     return new BufferedMutatorOverAsyncBufferedMutator(builder.build(), params.getListener());
   }

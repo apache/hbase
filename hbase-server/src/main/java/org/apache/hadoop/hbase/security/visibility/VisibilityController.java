@@ -35,10 +35,10 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -300,10 +300,9 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
       boolean sanityFailure = false;
       boolean modifiedTagFound = false;
       Pair<Boolean, Tag> pair = new Pair<>(false, null);
-      for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-        Cell cell = cellScanner.current();
-        assert cell instanceof ExtendedCell;
-        pair = checkForReservedVisibilityTagPresence((ExtendedCell) cell, pair);
+      for (ExtendedCellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
+        ExtendedCell cell = cellScanner.current();
+        pair = checkForReservedVisibilityTagPresence(cell, pair);
         if (!pair.getFirst()) {
           // Don't disallow reserved tags if authorization is disabled
           if (authorizationEnabled) {
@@ -342,10 +341,8 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
           }
           if (visibilityTags != null) {
             List<ExtendedCell> updatedCells = new ArrayList<>();
-            for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-              Cell ce = cellScanner.current();
-              assert ce instanceof ExtendedCell;
-              ExtendedCell cell = (ExtendedCell) ce;
+            for (ExtendedCellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
+              ExtendedCell cell = cellScanner.current();
               List<Tag> tags = PrivateCellUtil.getTags(cell);
               if (modifiedTagFound) {
                 // Rewrite the tags by removing the modified tags.

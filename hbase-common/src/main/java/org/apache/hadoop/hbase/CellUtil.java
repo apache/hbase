@@ -309,10 +309,14 @@ public final class CellUtil {
       public boolean advance() throws IOException {
         while (true) {
           if (this.cellScanner == null) {
-            if (!this.iterator.hasNext()) return false;
+            if (!this.iterator.hasNext()) {
+              return false;
+            }
             this.cellScanner = this.iterator.next().cellScanner();
           }
-          if (this.cellScanner.advance()) return true;
+          if (this.cellScanner.advance()) {
+            return true;
+          }
           this.cellScanner = null;
         }
       }
@@ -357,13 +361,17 @@ public final class CellUtil {
 
       @Override
       public Cell current() {
-        if (cells == null) return null;
+        if (cells == null) {
+          return null;
+        }
         return (index < 0) ? null : this.cells[index];
       }
 
       @Override
       public boolean advance() {
-        if (cells == null) return false;
+        if (cells == null) {
+          return false;
+        }
         return ++index < this.cells.length;
       }
     };
@@ -549,8 +557,13 @@ public final class CellUtil {
       buf.length);
   }
 
+  /**
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Tags are now internal only, you should not
+   *             try to check it through the {@link Cell} interface.
+   */
+  @Deprecated
   public static boolean matchingTags(final Cell left, final Cell right) {
-    return PrivateCellUtil.matchingTags(left, right, left.getTagsLength(), right.getTagsLength());
+    return PrivateCellUtil.matchingTags((ExtendedCell) left, (ExtendedCell) right);
   }
 
   /**
@@ -662,7 +675,7 @@ public final class CellUtil {
 
   public static boolean equals(Cell a, Cell b) {
     return matchingRows(a, b) && matchingFamily(a, b) && matchingQualifier(a, b)
-      && matchingTimestamp(a, b) && PrivateCellUtil.matchingType(a, b);
+      && matchingTimestamp(a, b) && a.getTypeByte() == b.getTypeByte();
   }
 
   public static boolean matchingTimestamp(Cell a, Cell b) {

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -129,10 +128,10 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
 
   @Override
   public AsyncTableBuilder<C> setRequestAttribute(String key, byte[] value) {
-    if (this.requestAttributes.isEmpty()) {
-      this.requestAttributes = new HashMap<>();
+    if (requestAttributes.isEmpty()) {
+      requestAttributes = new HashMap<>();
     }
-    this.requestAttributes.put(key, value);
+    requestAttributes.put(key, value);
     return this;
   }
 }

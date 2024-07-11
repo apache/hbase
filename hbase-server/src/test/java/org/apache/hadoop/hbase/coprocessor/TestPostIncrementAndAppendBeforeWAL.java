@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -247,7 +248,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
     }
   }
 
-  private static boolean checkAclTag(byte[] acl, Cell cell) {
+  private static boolean checkAclTag(byte[] acl, ExtendedCell cell) {
     Iterator<Tag> iter = PrivateCellUtil.tagsIterator(cell);
     while (iter.hasNext()) {
       Tag tag = iter.next();
@@ -342,7 +343,10 @@ public class TestPostIncrementAndAppendBeforeWAL {
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
       List<Pair<Cell, Cell>> result = super.postIncrementBeforeWAL(ctx, mutation, cellPairs);
       for (Pair<Cell, Cell> pair : result) {
-        if (mutation.getACL() != null && !checkAclTag(mutation.getACL(), pair.getSecond())) {
+        if (
+          mutation.getACL() != null
+            && !checkAclTag(mutation.getACL(), (ExtendedCell) pair.getSecond())
+        ) {
           throw new DoNotRetryIOException("Unmatched ACL tag.");
         }
       }
@@ -355,7 +359,10 @@ public class TestPostIncrementAndAppendBeforeWAL {
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
       List<Pair<Cell, Cell>> result = super.postAppendBeforeWAL(ctx, mutation, cellPairs);
       for (Pair<Cell, Cell> pair : result) {
-        if (mutation.getACL() != null && !checkAclTag(mutation.getACL(), pair.getSecond())) {
+        if (
+          mutation.getACL() != null
+            && !checkAclTag(mutation.getACL(), (ExtendedCell) pair.getSecond())
+        ) {
           throw new DoNotRetryIOException("Unmatched ACL tag.");
         }
       }

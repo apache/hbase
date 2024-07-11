@@ -62,14 +62,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseServerBase;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MatcherPredicate;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
@@ -176,7 +176,7 @@ public abstract class AbstractTestIPC {
   public void testCompressCellBlock() throws IOException, ServiceException {
     Configuration clientConf = new Configuration(CONF);
     clientConf.set("hbase.client.rpc.compressor", GzipCodec.class.getCanonicalName());
-    List<Cell> cells = new ArrayList<>();
+    List<ExtendedCell> cells = new ArrayList<>();
     int count = 3;
     for (int i = 0; i < count; i++) {
       cells.add(CELL);
@@ -188,7 +188,8 @@ public abstract class AbstractTestIPC {
     try (AbstractRpcClient<?> client = createRpcClient(clientConf)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
-      HBaseRpcController pcrc = new HBaseRpcControllerImpl(CellUtil.createCellScanner(cells));
+      HBaseRpcController pcrc =
+        new HBaseRpcControllerImpl(PrivateCellUtil.createExtendedCellScanner(cells));
       String message = "hello";
       assertEquals(message,
         stub.echo(pcrc, EchoRequestProto.newBuilder().setMessage(message).build()).getMessage());
@@ -270,9 +271,8 @@ public abstract class AbstractTestIPC {
       }
       // set total RPC size bigger than 100 bytes
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(message.toString()).build();
-      stub.echo(
-        new HBaseRpcControllerImpl(CellUtil.createCellScanner(ImmutableList.<Cell> of(CELL))),
-        param);
+      stub.echo(new HBaseRpcControllerImpl(
+        PrivateCellUtil.createExtendedCellScanner(ImmutableList.<ExtendedCell> of(CELL))), param);
       fail("RPC should have failed because it exceeds max request size");
     } catch (ServiceException e) {
       LOG.info("Caught expected exception: " + e);

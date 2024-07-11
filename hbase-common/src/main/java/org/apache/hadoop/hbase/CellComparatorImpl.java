@@ -761,7 +761,7 @@ public class CellComparatorImpl implements CellComparator {
   }
 
   @Override
-  public Comparator getSimpleComparator() {
+  public Comparator<Cell> getSimpleComparator() {
     return this;
   }
 

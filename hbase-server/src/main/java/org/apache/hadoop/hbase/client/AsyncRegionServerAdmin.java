@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -95,7 +95,8 @@ public class AsyncRegionServerAdmin {
     void call(AdminService.Interface stub, HBaseRpcController controller, RpcCallback<RESP> done);
   }
 
-  private <RESP> CompletableFuture<RESP> call(RpcCall<RESP> rpcCall, CellScanner cellScanner) {
+  private <RESP> CompletableFuture<RESP> call(RpcCall<RESP> rpcCall,
+    ExtendedCellScanner cellScanner) {
     CompletableFuture<RESP> future = new CompletableFuture<>();
     HBaseRpcController controller = conn.rpcControllerFactory.newController(null, cellScanner);
     try {
@@ -158,8 +159,8 @@ public class AsyncRegionServerAdmin {
     return call((stub, controller, done) -> stub.compactRegion(controller, request, done));
   }
 
-  public CompletableFuture<ReplicateWALEntryResponse>
-    replicateWALEntry(ReplicateWALEntryRequest request, CellScanner cellScanner, int timeout) {
+  public CompletableFuture<ReplicateWALEntryResponse> replicateWALEntry(
+    ReplicateWALEntryRequest request, ExtendedCellScanner cellScanner, int timeout) {
     return call((stub, controller, done) -> {
       controller.setCallTimeout(timeout);
       stub.replicateWALEntry(controller, request, done);
@@ -167,7 +168,7 @@ public class AsyncRegionServerAdmin {
   }
 
   public CompletableFuture<ReplicateWALEntryResponse> replay(ReplicateWALEntryRequest request,
-    CellScanner cellScanner) {
+    ExtendedCellScanner cellScanner) {
     return call((stub, controller, done) -> stub.replay(controller, request, done), cellScanner);
   }
 

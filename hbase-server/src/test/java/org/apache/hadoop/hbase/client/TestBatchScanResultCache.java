@@ -22,7 +22,7 @@ import static org.junit.Assert.assertSame;
 
 import java.io.IOException;
 import java.util.Arrays;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -56,12 +56,12 @@ public class TestBatchScanResultCache {
     resultCache = null;
   }
 
-  static Cell createCell(byte[] cf, int key, int cq) {
+  static ExtendedCell createCell(byte[] cf, int key, int cq) {
     return new KeyValue(Bytes.toBytes(key), cf, Bytes.toBytes("cq" + cq), Bytes.toBytes(key));
   }
 
-  static Cell[] createCells(byte[] cf, int key, int numCqs) {
-    Cell[] cells = new Cell[numCqs];
+  static ExtendedCell[] createCells(byte[] cf, int key, int numCqs) {
+    ExtendedCell[] cells = new ExtendedCell[numCqs];
     for (int i = 0; i < numCqs; i++) {
       cells[i] = createCell(cf, key, i);
     }
@@ -83,9 +83,9 @@ public class TestBatchScanResultCache {
     assertSame(ScanResultCache.EMPTY_RESULT_ARRAY,
       resultCache.addAndGet(ScanResultCache.EMPTY_RESULT_ARRAY, true));
 
-    Cell[] cells1 = createCells(CF, 1, 10);
-    Cell[] cells2 = createCells(CF, 2, 10);
-    Cell[] cells3 = createCells(CF, 3, 10);
+    ExtendedCell[] cells1 = createCells(CF, 1, 10);
+    ExtendedCell[] cells2 = createCells(CF, 2, 10);
+    ExtendedCell[] cells3 = createCells(CF, 3, 10);
     assertEquals(0, resultCache.addAndGet(
       new Result[] { Result.create(Arrays.copyOf(cells1, 3), null, false, true) }, false).length);
     Result[] results = resultCache

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -85,7 +86,12 @@ public class CellSerialization implements Serialization<Cell> {
     @Override
     public void serialize(Cell kv) throws IOException {
       dos.writeInt(PrivateCellUtil.estimatedSerializedSizeOf(kv) - Bytes.SIZEOF_INT);
-      PrivateCellUtil.writeCell(kv, dos, true);
+      if (kv instanceof ExtendedCell) {
+        ((ExtendedCell) kv).write(dos, true);
+      } else {
+        throw new UnsupportedOperationException(
+          "Unsupported cell type: " + kv.getClass().getName());
+      }
     }
   }
 }

@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -518,7 +519,7 @@ public class TestHFileOutputFormat2 {
           HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
         HFileScanner scanner = reader.getScanner(conf, false, false, false);
         scanner.seekTo();
-        Cell cell = scanner.getCell();
+        ExtendedCell cell = scanner.getCell();
         List<Tag> tagsFromCell = PrivateCellUtil.getTags(cell);
         assertTrue(tagsFromCell.size() > 0);
         for (Tag tag : tagsFromCell) {
