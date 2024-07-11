@@ -233,9 +233,7 @@ public class WALCellCodec implements Codec {
     }
 
     @Override
-    public void write(Cell c) throws IOException {
-      assert c instanceof ExtendedCell;
-      ExtendedCell cell = (ExtendedCell) c;
+    public void write(ExtendedCell cell) throws IOException {
       // We first write the KeyValue infrastructure as VInts.
       StreamUtils.writeRawVInt32(out, KeyValueUtil.keyLength(cell));
       StreamUtils.writeRawVInt32(out, cell.getValueLength());
@@ -290,7 +288,7 @@ public class WALCellCodec implements Codec {
     }
 
     @Override
-    protected Cell parseCell() throws IOException {
+    protected ExtendedCell parseCell() throws IOException {
       int keylength = StreamUtils.readRawVarint32(in);
       int vlength = StreamUtils.readRawVarint32(in);
       int tagsLength = StreamUtils.readRawVarint32(in);
@@ -396,7 +394,7 @@ public class WALCellCodec implements Codec {
     }
 
     @Override
-    public void write(Cell cell) throws IOException {
+    public void write(ExtendedCell cell) throws IOException {
       checkFlushed();
       // Make sure to write tags into WAL
       ByteBufferUtils.putInt(this.out, KeyValueUtil.getSerializedSize(cell, true));

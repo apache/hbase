@@ -240,13 +240,13 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
 
       @Override
       public void write(ImmutableBytesWritable row, V cell) throws IOException {
-        Cell kv = cell;
         // null input == user explicitly wants to flush
-        if (row == null && kv == null) {
+        if (row == null && cell == null) {
           rollWriters(null);
           return;
         }
 
+        ExtendedCell kv = PrivateCellUtil.ensureExtendedCell(cell);
         byte[] rowKey = CellUtil.cloneRow(kv);
         int length = (PrivateCellUtil.estimatedSerializedSizeOf(kv)) - Bytes.SIZEOF_INT;
         byte[] family = CellUtil.cloneFamily(kv);

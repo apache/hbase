@@ -32,9 +32,11 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -199,14 +201,15 @@ public class TestMalformedCellFromClient {
             ProtobufUtil.toMutationNoData(ClientProtos.MutationProto.MutationType.PUT, put))))
         .build();
 
-    List<Cell> cells = new ArrayList<>();
+    List<ExtendedCell> cells = new ArrayList<>();
     for (Mutation m : rm.getMutations()) {
       cells.addAll(m.getCellList(FAMILY));
     }
     cells.addAll(put.getCellList(FAMILY));
     assertEquals(3, cells.size());
     HBaseRpcController controller = Mockito.mock(HBaseRpcController.class);
-    Mockito.when(controller.cellScanner()).thenReturn(CellUtil.createCellScanner(cells));
+    Mockito.when(controller.cellScanner())
+      .thenReturn(PrivateCellUtil.createExtendedCellScanner(cells));
     HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(TEST_UTIL
       .getMiniHBaseCluster().getServerHoldingRegion(TABLE_NAME, r.getRegionInfo().getRegionName()));
 

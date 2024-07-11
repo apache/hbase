@@ -25,13 +25,13 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -178,8 +178,8 @@ public class TestSeekBeforeWithInlineBlocks {
   }
 
   /** Check a key/value pair after it was read by the reader */
-  private void checkCell(Cell expected, Cell actual) {
+  private void checkCell(ExtendedCell expected, ExtendedCell actual) {
     assertTrue(String.format("Expected key %s, but was %s", CellUtil.getCellKeyAsString(expected),
-      CellUtil.getCellKeyAsString(actual)), CellUtil.equals(expected, actual));
+      CellUtil.getCellKeyAsString(actual)), PrivateCellUtil.equals(expected, actual));
   }
 }

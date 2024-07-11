@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
@@ -32,6 +31,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
+import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -62,9 +62,9 @@ public class PutSortReducer
   }
 
   @Override
-  protected void reduce(ImmutableBytesWritable row, java.lang.Iterable<Put> puts,
+  protected void reduce(ImmutableBytesWritable row, Iterable<Put> puts,
     Reducer<ImmutableBytesWritable, Put, ImmutableBytesWritable, KeyValue>.Context context)
-    throws java.io.IOException, InterruptedException {
+    throws IOException, InterruptedException {
     // although reduce() is called per-row, handle pathological case
     long threshold =
       context.getConfiguration().getLong("putsortreducer.row.threshold", 1L * (1 << 30));
@@ -100,8 +100,9 @@ public class PutSortReducer
           // just ignoring the bad one?
           throw new IOException("Invalid visibility expression found in mutation " + p, e);
         }
-        for (List<Cell> cells : p.getFamilyCellMap().values()) {
-          for (ExtendedCell cell : (List<ExtendedCell>) (List) cells) {
+        for (List<ExtendedCell> cells : PackagePrivateFieldAccessor.getExtendedFamilyCellMap(p)
+          .values()) {
+          for (ExtendedCell cell : cells) {
             // Creating the KV which needs to be directly written to HFiles. Using the Facade
             // KVCreator for creation of kvs.
             KeyValue kv = null;

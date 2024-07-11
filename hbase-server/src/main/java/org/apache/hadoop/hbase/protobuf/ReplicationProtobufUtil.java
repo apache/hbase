@@ -24,10 +24,11 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
-import org.apache.hadoop.hbase.io.SizedCellScanner;
+import org.apache.hadoop.hbase.io.SizedExtendedCellScanner;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -56,8 +57,8 @@ public class ReplicationProtobufUtil {
   public static CompletableFuture<ReplicateWALEntryResponse> replicateWALEntry(
     AsyncRegionServerAdmin admin, Entry[] entries, String replicationClusterId,
     Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir, int timeout) {
-    Pair<ReplicateWALEntryRequest, CellScanner> p = buildReplicateWALEntryRequest(entries, null,
-      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir);
+    Pair<ReplicateWALEntryRequest, ExtendedCellScanner> p = buildReplicateWALEntryRequest(entries,
+      null, replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir);
     return admin.replicateWALEntry(p.getFirst(), p.getSecond(), timeout);
   }
 
@@ -66,7 +67,7 @@ public class ReplicationProtobufUtil {
    * @param entries the WAL entries to be replicated
    * @return a pair of ReplicateWALEntryRequest and a CellScanner over all the WALEdit values found.
    */
-  public static Pair<ReplicateWALEntryRequest, CellScanner>
+  public static Pair<ReplicateWALEntryRequest, ExtendedCellScanner>
     buildReplicateWALEntryRequest(final Entry[] entries) {
     return buildReplicateWALEntryRequest(entries, null, null, null, null);
   }
@@ -81,11 +82,11 @@ public class ReplicationProtobufUtil {
    * @param sourceHFileArchiveDir  Path to the source cluster hfile archive directory
    * @return a pair of ReplicateWALEntryRequest and a CellScanner over all the WALEdit values found.
    */
-  public static Pair<ReplicateWALEntryRequest, CellScanner> buildReplicateWALEntryRequest(
+  public static Pair<ReplicateWALEntryRequest, ExtendedCellScanner> buildReplicateWALEntryRequest(
     final Entry[] entries, byte[] encodedRegionName, String replicationClusterId,
     Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir) {
     // Accumulate all the Cells seen in here.
-    List<List<? extends Cell>> allCells = new ArrayList<>(entries.length);
+    List<List<? extends ExtendedCell>> allCells = new ArrayList<>(entries.length);
     int size = 0;
     WALEntry.Builder entryBuilder = WALEntry.newBuilder();
     ReplicateWALEntryRequest.Builder builder = ReplicateWALEntryRequest.newBuilder();
@@ -104,7 +105,8 @@ public class ReplicationProtobufUtil {
       }
       entryBuilder.setKey(keyBuilder.build());
       WALEdit edit = entry.getEdit();
-      List<Cell> cells = edit.getCells();
+      // TODO: avoid this cast
+      List<ExtendedCell> cells = (List) edit.getCells();
       // Add up the size. It is used later serializing out the kvs.
       for (Cell cell : cells) {
         size += PrivateCellUtil.estimatedSerializedSizeOf(cell);
@@ -130,21 +132,24 @@ public class ReplicationProtobufUtil {
   }
 
   /** Returns <code>cells</code> packaged as a CellScanner */
-  static CellScanner getCellScanner(final List<List<? extends Cell>> cells, final int size) {
-    return new SizedCellScanner() {
-      private final Iterator<List<? extends Cell>> entries = cells.iterator();
-      private Iterator<? extends Cell> currentIterator = null;
-      private Cell currentCell;
+  static ExtendedCellScanner getCellScanner(final List<List<? extends ExtendedCell>> cells,
+    final int size) {
+    return new SizedExtendedCellScanner() {
+      private final Iterator<List<? extends ExtendedCell>> entries = cells.iterator();
+      private Iterator<? extends ExtendedCell> currentIterator = null;
+      private ExtendedCell currentCell;
 
       @Override
-      public Cell current() {
+      public ExtendedCell current() {
         return this.currentCell;
       }
 
       @Override
       public boolean advance() {
         if (this.currentIterator == null) {
-          if (!this.entries.hasNext()) return false;
+          if (!this.entries.hasNext()) {
+            return false;
+          }
           this.currentIterator = this.entries.next().iterator();
         }
         if (this.currentIterator.hasNext()) {

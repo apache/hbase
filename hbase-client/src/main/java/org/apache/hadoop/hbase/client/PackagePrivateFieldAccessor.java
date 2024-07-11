@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.List;
+import java.util.NavigableMap;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -37,5 +40,22 @@ public class PackagePrivateFieldAccessor {
 
   public static long getMvccReadPoint(Scan scan) {
     return scan.getMvccReadPoint();
+  }
+
+  public static ExtendedCell[] getExtendedRawCells(Result result) {
+    return result.rawExtendedCells();
+  }
+
+  public static NavigableMap<byte[], List<ExtendedCell>> getExtendedFamilyCellMap(Mutation m) {
+    return m.familyMap;
+  }
+
+  public static Result createResult(ExtendedCell[] cells) {
+    return Result.create(cells);
+  }
+
+  public static Result createResult(ExtendedCell[] cells, Boolean exists, boolean stale,
+    boolean mayHaveMoreCellsInRow) {
+    return Result.create(cells, exists, stale, mayHaveMoreCellsInRow);
   }
 }

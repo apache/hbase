@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -369,7 +370,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     Set<String> foundMobFiles = new LinkedHashSet<>(FOUND_MOB_FILES_CACHE_CAPACITY);
     Set<String> missingMobFiles = new LinkedHashSet<>(MISSING_MOB_FILES_CACHE_CAPACITY);
     do {
-      Cell cell = scanner.getCell();
+      ExtendedCell cell = scanner.getCell();
       if (row != null && row.length != 0) {
         int result = CellComparator.getInstance().compareRows(cell, row, 0, row.length);
         if (result > 0) {

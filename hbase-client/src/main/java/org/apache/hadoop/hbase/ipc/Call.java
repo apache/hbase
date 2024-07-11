@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Map;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -44,7 +44,7 @@ class Call {
    * Optionally has cells when making call. Optionally has cells set on response. Used passing cells
    * to the rpc and receiving the response.
    */
-  CellScanner cells;
+  ExtendedCellScanner cells;
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
       justification = "Direct access is only allowed after done")
   Message response; // value, null if error
@@ -63,9 +63,10 @@ class Call {
   final Span span;
   Timeout timeoutTask;
 
-  Call(int id, final Descriptors.MethodDescriptor md, Message param, final CellScanner cells,
-    final Message responseDefaultType, int timeout, int priority, Map<String, byte[]> attributes,
-    RpcCallback<Call> callback, MetricsConnection.CallStats callStats) {
+  Call(int id, final Descriptors.MethodDescriptor md, Message param,
+    final ExtendedCellScanner cells, final Message responseDefaultType, int timeout, int priority,
+    Map<String, byte[]> attributes, RpcCallback<Call> callback,
+    MetricsConnection.CallStats callStats) {
     this.param = param;
     this.md = md;
     this.cells = cells;
@@ -136,7 +137,7 @@ class Call {
    * @param response return value of the call.
    * @param cells    Can be null
    */
-  public void setResponse(Message response, final CellScanner cells) {
+  public void setResponse(Message response, final ExtendedCellScanner cells) {
     synchronized (this) {
       if (done) {
         return;

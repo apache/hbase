@@ -88,7 +88,7 @@ public class KeyValueUtil {
 
   /**************** copy the cell to create a new keyvalue *********************/
 
-  public static KeyValue copyToNewKeyValue(final Cell cell) {
+  public static KeyValue copyToNewKeyValue(final ExtendedCell cell) {
     byte[] bytes = copyToNewByteArray(cell);
     KeyValue kvCell = new KeyValue(bytes, 0, bytes.length);
     kvCell.setSequenceId(cell.getSequenceId());
@@ -120,7 +120,7 @@ public class KeyValueUtil {
     return kv;
   }
 
-  public static byte[] copyToNewByteArray(final Cell cell) {
+  public static byte[] copyToNewByteArray(final ExtendedCell cell) {
     // Cell#getSerializedSize returns the serialized size of the Source cell, which may
     // not serialize all fields. We are constructing a KeyValue backing array here,
     // which does include all fields, and must allocate accordingly.
@@ -133,7 +133,7 @@ public class KeyValueUtil {
     return backingBytes;
   }
 
-  public static int appendKeyTo(final Cell cell, final byte[] output, final int offset) {
+  public static int appendKeyTo(final ExtendedCell cell, final byte[] output, final int offset) {
     int nextOffset = offset;
     nextOffset = Bytes.putShort(output, nextOffset, cell.getRowLength());
     nextOffset = CellUtil.copyRowTo(cell, output, nextOffset);
@@ -147,7 +147,8 @@ public class KeyValueUtil {
 
   /**************** copy key and value *********************/
 
-  public static int appendToByteArray(Cell cell, byte[] output, int offset, boolean withTags) {
+  public static int appendToByteArray(ExtendedCell cell, byte[] output, int offset,
+    boolean withTags) {
     int pos = offset;
     pos = Bytes.putInt(output, pos, keyLength(cell));
     pos = Bytes.putInt(output, pos, cell.getValueLength());
@@ -416,7 +417,7 @@ public class KeyValueUtil {
    * @deprecated without any replacement.
    */
   @Deprecated
-  public static KeyValue ensureKeyValue(final Cell cell) {
+  public static KeyValue ensureKeyValue(final ExtendedCell cell) {
     if (cell == null) return null;
     if (cell instanceof KeyValue) {
       if (cell.getClass().getName().equals(KeyValue.class.getName())) {

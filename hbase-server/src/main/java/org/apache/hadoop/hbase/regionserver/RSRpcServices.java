@@ -47,11 +47,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
+import org.apache.hadoop.hbase.ExtendedCellScannable;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseRpcServicesBase;
 import org.apache.hadoop.hbase.HConstants;
@@ -72,6 +73,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
+import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -581,7 +583,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         builder.addCellsPerResult(res.size());
         builder.addPartialFlagPerResult(res.mayHaveMoreCellsInRow());
       }
-      controller.setCellScanner(CellUtil.createCellScanner(results));
+      controller.setCellScanner(PrivateCellUtil.createExtendedCellScanner(results));
     } else {
       for (Result res : results) {
         ClientProtos.Result pbr = ProtobufUtil.toResult(res);
@@ -725,10 +727,10 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
    * @param context       the current RpcCallContext
    * @return Return the <code>cellScanner</code> passed
    */
-  private List<CellScannable> doNonAtomicRegionMutation(final HRegion region,
+  private List<ExtendedCellScannable> doNonAtomicRegionMutation(final HRegion region,
     final OperationQuota quota, final RegionAction actions, final CellScanner cellScanner,
-    final RegionActionResult.Builder builder, List<CellScannable> cellsToReturn, long nonceGroup,
-    final RegionScannersCloseCallBack closeCallBack, RpcCallContext context,
+    final RegionActionResult.Builder builder, List<ExtendedCellScannable> cellsToReturn,
+    long nonceGroup, final RegionScannersCloseCallBack closeCallBack, RpcCallContext context,
     ActivePolicyEnforcement spaceQuotaEnforcement) {
     // Gather up CONTIGUOUS Puts and Deletes in this mutations List. Idea is that rather than do
     // one at a time, we instead pass them in batch. Be aware that the corresponding
@@ -2053,9 +2055,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     return response;
   }
 
-  private CellScanner getAndReset(RpcController controller) {
+  private ExtendedCellScanner getAndReset(RpcController controller) {
     HBaseRpcController hrc = (HBaseRpcController) controller;
-    CellScanner cells = hrc.cellScanner();
+    ExtendedCellScanner cells = hrc.cellScanner();
     hrc.setCellScanner(null);
     return cells;
   }
@@ -2498,8 +2500,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
             && VersionInfoUtil.hasMinimumVersion(context.getClientVersionInfo(), 1, 3)
         ) {
           pbr = ProtobufUtil.toResultNoData(r);
-          ((HBaseRpcController) controller)
-            .setCellScanner(CellUtil.createCellScanner(r.rawCells()));
+          ((HBaseRpcController) controller).setCellScanner(PrivateCellUtil
+            .createExtendedCellScanner(PackagePrivateFieldAccessor.getExtendedRawCells(r)));
           addSize(context, r);
         } else {
           pbr = ProtobufUtil.toResult(r);
@@ -2648,10 +2650,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     // rpc controller is how we bring in data via the back door; it is unprotobuf'ed data.
     // It is also the conduit via which we pass back data.
     HBaseRpcController controller = (HBaseRpcController) rpcc;
-    CellScanner cellScanner = controller != null ? controller.cellScanner() : null;
-    if (controller != null) {
-      controller.setCellScanner(null);
-    }
+    CellScanner cellScanner = controller != null ? getAndReset(controller) : null;
 
     long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
 
@@ -2732,7 +2731,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     }
 
     // this will contain all the cells that we need to return. It's created later, if needed.
-    List<CellScannable> cellsToReturn = null;
+    List<ExtendedCellScannable> cellsToReturn = null;
     RegionScannersCloseCallBack closeCallBack = null;
     RpcCallContext context = RpcServer.getCurrentCall().orElse(null);
     Map<RegionSpecifier, ClientProtos.RegionLoadStats> regionStats =
@@ -2858,7 +2857,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     }
     // Load the controller with the Cells to return.
     if (cellsToReturn != null && !cellsToReturn.isEmpty() && controller != null) {
-      controller.setCellScanner(CellUtil.createCellScanner(cellsToReturn));
+      controller.setCellScanner(PrivateCellUtil.createExtendedCellScanner(cellsToReturn));
     }
 
     MultiRegionLoadStats.Builder builder = MultiRegionLoadStats.newBuilder();
@@ -3427,7 +3426,10 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
             int lastIdx = results.size() - 1;
             Result r = results.get(lastIdx);
             if (r.mayHaveMoreCellsInRow()) {
-              results.set(lastIdx, Result.create(r.rawCells(), r.getExists(), r.isStale(), false));
+              results.set(lastIdx,
+                PackagePrivateFieldAccessor.createResult(
+                  PackagePrivateFieldAccessor.getExtendedRawCells(r), r.getExists(), r.isStale(),
+                  false));
             }
           }
           boolean sizeLimitReached = scannerContext.checkSizeLimit(LimitScope.BETWEEN_ROWS);
