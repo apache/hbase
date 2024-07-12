@@ -895,8 +895,8 @@ public class TestBucketCache {
   public void testNotifyFileCachingCompletedSuccess() throws Exception {
     BucketCache bucketCache = null;
     try {
-      Path filePath = new Path(HBASE_TESTING_UTILITY.getDataTestDir(),
-        "testNotifyFileCachingCompletedSuccess");
+      Path filePath =
+        new Path(HBASE_TESTING_UTILITY.getDataTestDir(), "testNotifyFileCachingCompletedSuccess");
       bucketCache = testNotifyFileCachingCompleted(filePath, 10);
       assertTrue(bucketCache.fullyCachedFiles.containsKey(filePath.getName()));
     } finally {
@@ -913,8 +913,8 @@ public class TestBucketCache {
     try {
       Path filePath = new Path(HBASE_TESTING_UTILITY.getDataTestDir(),
         "testNotifyFileCachingCompletedNotAllCached");
-      //Deliberately passing more blocks than we have created to test that
-      //notifyFileCachingCompleted will not consider the file fully cached
+      // Deliberately passing more blocks than we have created to test that
+      // notifyFileCachingCompleted will not consider the file fully cached
       bucketCache = testNotifyFileCachingCompleted(filePath, 12);
       assertFalse(bucketCache.fullyCachedFiles.containsKey(filePath.getName()));
     } finally {
@@ -924,7 +924,9 @@ public class TestBucketCache {
       HBASE_TESTING_UTILITY.cleanupTestDir();
     }
   }
-  private BucketCache testNotifyFileCachingCompleted(Path filePath, int totalBlocks) throws Exception {
+
+  private BucketCache testNotifyFileCachingCompleted(Path filePath, int totalBlocks)
+    throws Exception {
     final Path dataTestDir = createAndGetTestDir();
     String ioEngineName = "file:" + dataTestDir + "/bucketNoRecycler.cache";
     BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
@@ -935,8 +937,7 @@ public class TestBucketCache {
       CacheTestUtils.generateBlocksForPath(constructedBlockSize, 10, filePath);
     // Add blocks
     for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
-      bucketCache.cacheBlock(hfileBlockPair.getBlockName(), hfileBlockPair.getBlock(), false,
-        true);
+      bucketCache.cacheBlock(hfileBlockPair.getBlockName(), hfileBlockPair.getBlock(), false, true);
     }
     bucketCache.notifyFileCachingCompleted(filePath, totalBlocks, totalBlocks,
       totalBlocks * constructedBlockSize);

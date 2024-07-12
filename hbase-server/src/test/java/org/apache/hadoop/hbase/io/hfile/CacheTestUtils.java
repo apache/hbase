@@ -306,7 +306,7 @@ public class CacheTestUtils {
           ByteBuffAllocator.HEAP);
       String key = null;
       long offset = 0;
-      if (path!=null) {
+      if (path != null) {
         key = path.getName();
         offset = i * blockSize;
       } else {
@@ -317,7 +317,7 @@ public class CacheTestUtils {
         }
       }
       returnedBlocks[i] = new HFileBlockPair();
-      returnedBlocks[i].blockName = new BlockCacheKey(key,offset);
+      returnedBlocks[i].blockName = new BlockCacheKey(key, offset);
       returnedBlocks[i].block = generated;
     }
     return returnedBlocks;
