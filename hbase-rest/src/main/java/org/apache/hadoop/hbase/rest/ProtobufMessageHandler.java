@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
  * Common interface for models capable of supporting protobuf marshalling and unmarshalling. Hooks

@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.rest.model;
 
 import static org.apache.hadoop.hbase.rest.model.CellModel.MAGIC_LENGTH;
 
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -34,8 +32,11 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * Representation of a grouping of cells. May contain cells from more than one row. Encapsulates
@@ -113,19 +114,19 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
     for (RowModel row : getRows()) {
       CellSet.Row.Builder rowBuilder = CellSet.Row.newBuilder();
       if (row.getKeyLength() == MAGIC_LENGTH) {
-        rowBuilder.setKey(ByteStringer.wrap(row.getKey()));
+        rowBuilder.setKey(UnsafeByteOperations.unsafeWrap(row.getKey()));
       } else {
-        rowBuilder
-          .setKey(ByteStringer.wrap(row.getKeyArray(), row.getKeyOffset(), row.getKeyLength()));
+        rowBuilder.setKey(UnsafeByteOperations.unsafeWrap(row.getKeyArray(), row.getKeyOffset(),
+          row.getKeyLength()));
       }
       for (CellModel cell : row.getCells()) {
         Cell.Builder cellBuilder = Cell.newBuilder();
-        cellBuilder.setColumn(ByteStringer.wrap(cell.getColumn()));
+        cellBuilder.setColumn(UnsafeByteOperations.unsafeWrap(cell.getColumn()));
         if (cell.getValueLength() == MAGIC_LENGTH) {
-          cellBuilder.setData(ByteStringer.wrap(cell.getValue()));
+          cellBuilder.setData(UnsafeByteOperations.unsafeWrap(cell.getValue()));
         } else {
-          cellBuilder.setData(
-            ByteStringer.wrap(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+          cellBuilder.setData(UnsafeByteOperations.unsafeWrap(cell.getValueArray(),
+            cell.getValueOffset(), cell.getValueLength()));
         }
         if (cell.hasUserTimestamp()) {
           cellBuilder.setTimestamp(cell.getTimestamp());
