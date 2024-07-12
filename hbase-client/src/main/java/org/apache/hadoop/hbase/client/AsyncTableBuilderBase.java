@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
