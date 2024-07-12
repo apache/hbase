@@ -21,8 +21,6 @@ import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIMITER;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import javax.xml.bind.annotation.XmlAccessType;
@@ -38,8 +36,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * Representation of a cell. A cell is a single value associated a column and optional qualifier,
@@ -204,11 +205,11 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   @Override
   public Message messageFromObject() {
     Cell.Builder builder = Cell.newBuilder();
-    builder.setColumn(ByteStringer.wrap(getColumn()));
+    builder.setColumn(UnsafeByteOperations.unsafeWrap(getColumn()));
     if (valueLength == MAGIC_LENGTH) {
-      builder.setData(ByteStringer.wrap(getValue()));
+      builder.setData(UnsafeByteOperations.unsafeWrap(getValue()));
     } else {
-      builder.setData(ByteStringer.wrap(value, valueOffset, valueLength));
+      builder.setData(UnsafeByteOperations.unsafeWrap(value, valueOffset, valueLength));
     }
     if (hasUserTimestamp()) {
       builder.setTimestamp(getTimestamp());
