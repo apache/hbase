@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -62,7 +61,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 @Category({ ClientTests.class, MediumTests.class })
@@ -346,7 +344,7 @@ public class TestRequestAndConnectionAttributes {
     @Override
     public HBaseRpcController newController(RegionInfo regionInfo,
       final List<ExtendedCellScannable> cellIterables) {
-      return new RequestMetadataController(newController(regionInfo, cellIterables),
+      return new RequestMetadataController(super.newController(regionInfo, cellIterables),
         REQUEST_ATTRIBUTES);
     }
 
