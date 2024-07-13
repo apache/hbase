@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
-import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -100,8 +100,7 @@ public class PutSortReducer
           // just ignoring the bad one?
           throw new IOException("Invalid visibility expression found in mutation " + p, e);
         }
-        for (List<ExtendedCell> cells : PackagePrivateFieldAccessor.getExtendedFamilyCellMap(p)
-          .values()) {
+        for (List<ExtendedCell> cells : ClientInternalHelper.getExtendedFamilyCellMap(p).values()) {
           for (ExtendedCell cell : cells) {
             // Creating the KV which needs to be directly written to HFiles. Using the Facade
             // KVCreator for creation of kvs.

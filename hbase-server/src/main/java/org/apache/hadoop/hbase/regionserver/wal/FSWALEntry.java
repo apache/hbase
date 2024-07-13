@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.ServerCall;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -80,7 +82,8 @@ class FSWALEntry extends Entry {
     if (inMemstore) {
       // construct familyNames here to reduce the work of log sinker.
       Set<byte[]> families = edit.getFamilies();
-      this.familyNames = families != null ? families : collectFamilies(edit.getCells());
+      this.familyNames =
+        families != null ? families : collectFamilies(WALEditInternalHelper.getExtendedCells(edit));
     } else {
       this.familyNames = Collections.emptySet();
     }
@@ -90,7 +93,7 @@ class FSWALEntry extends Entry {
     }
   }
 
-  static Set<byte[]> collectFamilies(List<Cell> cells) {
+  static Set<byte[]> collectFamilies(List<ExtendedCell> cells) {
     if (CollectionUtils.isEmpty(cells)) {
       return Collections.emptySet();
     } else {

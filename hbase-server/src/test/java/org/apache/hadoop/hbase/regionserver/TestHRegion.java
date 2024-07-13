@@ -171,6 +171,7 @@ import org.apache.hadoop.hbase.wal.FaultyFSLog;
 import org.apache.hadoop.hbase.wal.NettyAsyncFSWALConfigHelper;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
@@ -699,7 +700,7 @@ public class TestHRegion {
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
-        edit.add(
+        WALEditInternalHelper.addExtendedCell(edit,
           new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes.toBytes(i)));
         writer.append(new WAL.Entry(
           new WALKeyImpl(regionName, tableName, i, time, HConstants.DEFAULT_CLUSTER_ID), edit));
@@ -753,7 +754,7 @@ public class TestHRegion {
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
-        edit.add(
+        WALEditInternalHelper.addExtendedCell(edit,
           new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes.toBytes(i)));
         writer.append(new WAL.Entry(
           new WALKeyImpl(regionName, tableName, i, time, HConstants.DEFAULT_CLUSTER_ID), edit));
@@ -804,7 +805,7 @@ public class TestHRegion {
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
-        edit.add(
+        WALEditInternalHelper.addExtendedCell(edit,
           new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes.toBytes(i)));
         writer.append(new WAL.Entry(
           new WALKeyImpl(regionName, tableName, i, time, HConstants.DEFAULT_CLUSTER_ID), edit));
@@ -899,7 +900,7 @@ public class TestHRegion {
               .setRegionName(ByteString.copyFrom(region.getRegionInfo().getRegionName())).build());
         } else {
           edit = new WALEdit();
-          edit.add(
+          WALEditInternalHelper.addExtendedCell(edit,
             new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes.toBytes(i)));
         }
         writer.append(new WAL.Entry(

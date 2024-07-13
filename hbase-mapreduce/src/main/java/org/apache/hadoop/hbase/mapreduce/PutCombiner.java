@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -55,9 +55,9 @@ public class PutCombiner<K> extends Reducer<K, Put, K, Put> {
       cnt++;
       if (combinedPut == null) {
         combinedPut = p;
-        combinedFamilyMap = PackagePrivateFieldAccessor.getExtendedFamilyCellMap(combinedPut);
+        combinedFamilyMap = ClientInternalHelper.getExtendedFamilyCellMap(combinedPut);
       } else {
-        for (Entry<byte[], List<ExtendedCell>> entry : PackagePrivateFieldAccessor
+        for (Entry<byte[], List<ExtendedCell>> entry : ClientInternalHelper
           .getExtendedFamilyCellMap(p).entrySet()) {
           List<ExtendedCell> existCells = combinedFamilyMap.get(entry.getKey());
           if (existCells == null) {

@@ -36,9 +36,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.hamcrest.Matchers;
@@ -238,10 +239,12 @@ public class TestReplicationSourceManager {
       WALKeyImpl key = new WALKeyImpl(RI.getEncodedNameAsBytes(), TABLE_NAME,
         EnvironmentEdgeManager.currentTime(), SCOPES);
       WALEdit edit = new WALEdit();
-      edit.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(F1).setFamily(F1)
-        .setQualifier(F1).setType(Cell.Type.Put).setValue(F1).build());
-      edit.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(F2).setFamily(F2)
-        .setQualifier(F2).setType(Cell.Type.Put).setValue(F2).build());
+      WALEditInternalHelper.addExtendedCell(edit,
+        ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(F1).setFamily(F1)
+          .setQualifier(F1).setType(Cell.Type.Put).setValue(F1).build());
+      WALEditInternalHelper.addExtendedCell(edit,
+        ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(F2).setFamily(F2)
+          .setQualifier(F2).setType(Cell.Type.Put).setValue(F2).build());
       writer.append(new WAL.Entry(key, edit));
       writer.sync(false);
     } finally {
