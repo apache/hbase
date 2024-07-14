@@ -26,27 +26,17 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MapReduceTests.class, MediumTests.class })
-public class TestTableInputFormatScanEmptyToOPP extends TestTableInputFormatScanBase {
-
+public class TestTableInputFormatScanQPPToOBB extends TestTableInputFormatScanBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableInputFormatScanEmptyToOPP.class);
-
-  /**
-   * Tests a MR scan using specific start and stop rows.
-   */
-  @Test
-  public void testScanEmptyToOPP()
-    throws IOException, InterruptedException, ClassNotFoundException {
-    testScan(null, "opp", "opo");
-  }
+    HBaseClassTestRule.forClass(TestTableInputFormatScanQPPToOBB.class);
 
   /**
    * Tests a MR reverse scan using specific start and stop rows.
    */
   @Test
-  public void testReverseScanEmptyToOPP()
+  public void testReverseScanQPPToOBB()
     throws IOException, InterruptedException, ClassNotFoundException {
-    testReverseScan(null, "opp", "opq");
+    testReverseScan("qpp", "obb", "obc");
   }
 }

@@ -140,6 +140,14 @@ public abstract class TestTableInputFormatScanBase {
       Configuration c = context.getConfiguration();
       String startRow = c.get(KEY_STARTROW);
       String lastRow = c.get(KEY_LASTROW);
+      String scanString = context.getConfiguration().get(TableInputFormat.SCAN);
+      Scan scan =
+        scanString == null ? new Scan() : TableMapReduceUtil.convertStringToScan(scanString);
+      if (scan.isReversed()) {
+        String tmpFirst = first;
+        first = last;
+        last = tmpFirst;
+      }
       LOG.info("cleanup: first -> \"" + first + "\", start row -> \"" + startRow + "\"");
       LOG.info("cleanup: last -> \"" + last + "\", last row -> \"" + lastRow + "\"");
       if (startRow != null && startRow.length() > 0) {
@@ -206,6 +214,41 @@ public abstract class TestTableInputFormatScanBase {
       scan.withStopRow(Bytes.toBytes(stop));
     }
     c.set(KEY_LASTROW, last != null ? last : "");
+    LOG.info("scan before: " + scan);
+    Job job = Job.getInstance(c, jobName);
+    TableMapReduceUtil.initTableMapperJob(TABLE_NAME, scan, ScanMapper.class,
+      ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
+    job.setReducerClass(ScanReducer.class);
+    job.setNumReduceTasks(1); // one to get final "first" and "last" key
+    FileOutputFormat.setOutputPath(job, new Path(job.getJobName()));
+    LOG.info("Started " + job.getJobName());
+    assertTrue(job.waitForCompletion(true));
+    LOG.info("After map/reduce completion - job " + jobName);
+  }
+
+  /**
+   * Tests a MR reverse scan using specific start and stop rows.
+   */
+  protected void testReverseScan(String start, String stop, String last)
+    throws IOException, InterruptedException, ClassNotFoundException {
+    String jobName = "ReverseScan" + (start != null ? start.toUpperCase(Locale.ROOT) : "Empty")
+      + "To" + (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
+    LOG.info("Before map/reduce startup - job " + jobName);
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+    Scan scan = new Scan();
+    scan.addFamily(INPUT_FAMILYS[0]);
+    scan.addFamily(INPUT_FAMILYS[1]);
+    if (start != null) {
+      scan.withStartRow(Bytes.toBytes(start));
+    }
+    c.set(KEY_STARTROW, start != null ? start : "");
+    if (stop != null) {
+      scan.withStopRow(Bytes.toBytes(stop));
+    }
+    scan.setReversed(true);
+    c.set(KEY_LASTROW, last != null ? last : "");
+    c.setInt("hbase.mapreduce.tableinput.mappers.per.region", 3);
+
     LOG.info("scan before: " + scan);
     Job job = Job.getInstance(c, jobName);
     TableMapReduceUtil.initTableMapperJob(TABLE_NAME, scan, ScanMapper.class,
