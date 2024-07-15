@@ -502,11 +502,9 @@ public class Client {
    * Execute a transaction method. Will call either <tt>executePathOnly</tt> or <tt>executeURI</tt>
    * depending on whether a path only is supplied in 'path', or if a complete URI is passed instead,
    * respectively.
-   * @param cluster the cluster definition
    * @param method  the HTTP method
    * @param headers HTTP header values to send
-   * @param path    the properly urlencoded path or URI
-   * @return the HTTP response code
+   * @return the CloseableHttpResponse object
    */
   public CloseableHttpResponse execute(HttpUriRequest method, Header[] headers) throws IOException {
     String path = method.getURI().toASCIIString();

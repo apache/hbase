@@ -356,7 +356,7 @@ public class RemoteHTable implements Table {
   public boolean exists(Get get) throws IOException {
     LOG.warn("exists() is really get(), just use get()");
     Result result = get(get);
-    return (result != null && !(result.isEmpty()));
+    return result != null && !(result.isEmpty());
   }
 
   @Override
