@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import javax.xml.bind.UnmarshalException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -64,7 +65,8 @@ public class TestXmlParsing {
     Client client = mock(Client.class);
 
     HttpEntity entity = mock(HttpEntity.class);
-    when(entity.getContent()).thenReturn(new ByteArrayInputStream(xml.getBytes()));
+    when(entity.getContent())
+      .thenReturn(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
     when(entity.getContentType())
       .thenReturn(new BasicHeader(HTTP.CONTENT_TYPE, Constants.MIMETYPE_XML));
 
