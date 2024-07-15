@@ -18,10 +18,13 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -32,6 +35,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -45,6 +49,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.junit.After;
@@ -175,6 +180,42 @@ public class TestRestoreSnapshotHelper {
       long maxSeqId2 = WALSplitUtil.getMaxRegionSequenceId(fs, recoveredEdit);
       Assert.assertTrue(maxSeqId2 > maxSeqId);
     }
+  }
+
+  @Test
+  public void testCopyExpiredSnapshotForScanner() throws IOException, InterruptedException {
+    rootDir = TEST_UTIL.getDefaultRootDirPath();
+    CommonFSUtils.setRootDir(conf, rootDir);
+    TableName tableName = TableName.valueOf("testCopyExpiredSnapshotForScanner");
+    String snapshotName = tableName.getNameAsString() + "-snapshot";
+    Path restoreDir = new Path("/hbase/.tmp-expired-snapshot/copySnapshotDest");
+    // create table and put some data into the table
+    byte[] columnFamily = Bytes.toBytes("A");
+    Table table = TEST_UTIL.createTable(tableName, columnFamily);
+    TEST_UTIL.loadTable(table, columnFamily);
+    // create snapshot with ttl = 10 sec
+    Map<String, Object> properties = new HashMap<>();
+    properties.put("TTL", 10);
+    org.apache.hadoop.hbase.client.SnapshotDescription snapshotDesc =
+      new org.apache.hadoop.hbase.client.SnapshotDescription(snapshotName, tableName,
+        SnapshotType.FLUSH, null, EnvironmentEdgeManager.currentTime(), -1, properties);
+    TEST_UTIL.getAdmin().snapshot(snapshotDesc);
+    boolean isExist = TEST_UTIL.getAdmin().listSnapshots().stream()
+      .anyMatch(ele -> snapshotName.equals(ele.getName()));
+    assertTrue(isExist);
+    int retry = 6;
+    while (
+      !SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDesc.getTtl(),
+        snapshotDesc.getCreationTime(), EnvironmentEdgeManager.currentTime()) && retry > 0
+    ) {
+      retry--;
+      Thread.sleep(10 * 1000);
+    }
+    boolean isExpiredSnapshot = SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDesc.getTtl(),
+      snapshotDesc.getCreationTime(), EnvironmentEdgeManager.currentTime());
+    assertTrue(isExpiredSnapshot);
+    assertThrows(SnapshotTTLExpiredException.class, () -> RestoreSnapshotHelper
+      .copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName));
   }
 
   protected void createTableAndSnapshot(TableName tableName, String snapshotName)
