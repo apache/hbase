@@ -350,8 +350,8 @@ public class TestExportSnapshot {
     Path tgtDir = rawTgtDir.makeQualified(tgtFs.getUri(), tgtFs.getWorkingDirectory());
 
     // Export Snapshot
-    int res = runExportSnapshot(conf, Bytes.toString(snapshotName), Bytes.toString(targetName), srcDir, rawTgtDir, overwrite,
-      resetTtl, checksumVerify, true, true);
+    int res = runExportSnapshot(conf, Bytes.toString(snapshotName), Bytes.toString(targetName),
+      srcDir, rawTgtDir, overwrite, resetTtl, checksumVerify, true, true);
     assertEquals("success " + success + ", res=" + res, success ? 0 : 1, res);
     if (!success) {
       final Path targetDir = new Path(HConstants.SNAPSHOT_DIR_NAME, Bytes.toString(targetName));
