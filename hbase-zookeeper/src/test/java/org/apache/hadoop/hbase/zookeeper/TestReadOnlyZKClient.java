@@ -213,4 +213,18 @@ public class TestReadOnlyZKClient {
     waitForIdleConnectionClosed();
     verify(mockedZK, times(1)).close();
   }
+
+  @Test
+  public void testReadWithTimeout() throws Exception {
+    assertArrayEquals(DATA, RO_ZK.getWithTimeout(PATH, 60000).get());
+    assertEquals(CHILDREN, RO_ZK.existsWithTimeout(PATH, 60000).get().getNumChildren());
+    List<String> children = RO_ZK.listWithTimeout(PATH, 60000).get();
+    assertEquals(CHILDREN, children.size());
+    Collections.sort(children);
+    for (int i = 0; i < CHILDREN; i++) {
+      assertEquals("c" + i, children.get(i));
+    }
+    assertNotNull(RO_ZK.zookeeper);
+    waitForIdleConnectionClosed();
+  }
 }
