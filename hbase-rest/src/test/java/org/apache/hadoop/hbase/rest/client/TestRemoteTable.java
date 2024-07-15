@@ -629,7 +629,7 @@ public class TestRemoteTable {
     REST_TEST_UTIL.shutdownServletContainer();
 
     // Set the ConnectionCache timeout to trigger halfway through the trials
-    TEST_UTIL.getConfiguration().setLong(RESTServlet.MAX_IDLETIME, (numTrials / 2l) * trialPause);
+    TEST_UTIL.getConfiguration().setLong(RESTServlet.MAX_IDLETIME, (numTrials / 2L) * trialPause);
     TEST_UTIL.getConfiguration().setLong(RESTServlet.CLEANUP_INTERVAL, cleanUpInterval);
 
     // Start the Rest Servlet container
