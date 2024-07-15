@@ -31,6 +31,7 @@ import javax.xml.bind.JAXBException;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Response;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
@@ -41,6 +42,8 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.http.Header;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.message.BasicHeader;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -162,6 +165,39 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(304, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_3);
     checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_3);
+
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(200, response.getCode());
+  }
+
+  @Test
+  public void testMultipleCellPutPBEntity() throws IOException {
+    Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
+    assertEquals(404, response.getCode());
+
+    CellSetModel model = new CellSetModel();
+    RowModel row1 = new RowModel(ROW_1);
+    row1.addCell(new CellModel(Bytes.toBytes(COLUMN_1), Bytes.toBytes(VALUE_1)));
+    row1.addCell(new CellModel(Bytes.toBytes(COLUMN_2), Bytes.toBytes(VALUE_2)));
+    row1.addCell(new CellModel(Bytes.toBytes(COLUMN_3), Bytes.toBytes(VALUE_3)));
+    model.addRow(row1);
+
+    // This illustrates how to use the lower level API to more efficiently marshall cells
+    // to Protobuf for mutations
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(TABLE);
+    path.append('/');
+    path.append("dummy_row");
+    HttpPut httpPut = new HttpPut(path.toString());
+    httpPut.setEntity(new ProtobufHttpEntity(model));
+    try (CloseableHttpResponse closableResponse =
+      client.execute(httpPut, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+      assertEquals(200, closableResponse.getStatusLine().getStatusCode());
+    }
+    checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_2);
+    checkValuePB(TABLE, ROW_1, COLUMN_3, VALUE_3);
 
     response = deleteRow(TABLE, ROW_1);
     assertEquals(200, response.getCode());
