@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
@@ -275,6 +276,10 @@ public class CacheTestUtils {
   }
 
   public static HFileBlockPair[] generateHFileBlocks(int blockSize, int numBlocks) {
+    return generateBlocksForPath(blockSize, numBlocks, null);
+  }
+
+  public static HFileBlockPair[] generateBlocksForPath(int blockSize, int numBlocks, Path path) {
     HFileBlockPair[] returnedBlocks = new HFileBlockPair[numBlocks];
     Random rand = ThreadLocalRandom.current();
     HashSet<String> usedStrings = new HashSet<>();
@@ -299,16 +304,20 @@ public class CacheTestUtils {
           prevBlockOffset, ByteBuff.wrap(cachedBuffer), HFileBlock.DONT_FILL_HEADER, blockSize,
           onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE, -1, meta,
           ByteBuffAllocator.HEAP);
-
-      String strKey;
-      /* No conflicting keys */
-      strKey = Long.toString(rand.nextLong());
-      while (!usedStrings.add(strKey)) {
-        strKey = Long.toString(rand.nextLong());
+      String key = null;
+      long offset = 0;
+      if (path != null) {
+        key = path.getName();
+        offset = i * blockSize;
+      } else {
+        /* No conflicting keys */
+        key = Long.toString(rand.nextLong());
+        while (!usedStrings.add(key)) {
+          key = Long.toString(rand.nextLong());
+        }
       }
-
       returnedBlocks[i] = new HFileBlockPair();
-      returnedBlocks[i].blockName = new BlockCacheKey(strKey, 0);
+      returnedBlocks[i].blockName = new BlockCacheKey(key, offset);
       returnedBlocks[i].block = generated;
     }
     return returnedBlocks;
