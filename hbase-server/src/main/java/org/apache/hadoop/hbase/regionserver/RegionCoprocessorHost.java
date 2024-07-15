@@ -138,7 +138,12 @@ public class RegionCoprocessorHost
       this.services = services;
       this.metricRegistry =
         MetricsCoprocessor.createRegistryForRegionCoprocessor(impl.getClass().getName());
-      this.rpcQuotaManager = services.getRegionServerRpcQuotaManager();
+      // lets unit tests through
+      if (services != null) {
+        this.rpcQuotaManager = services.getRegionServerRpcQuotaManager();
+      } else {
+        this.rpcQuotaManager = null;
+      }
     }
 
     /** Returns the region */
