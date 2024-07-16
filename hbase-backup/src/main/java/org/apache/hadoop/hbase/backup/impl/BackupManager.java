@@ -193,7 +193,8 @@ public class BackupManager implements Closeable {
    * @throws BackupException exception
    */
   public BackupInfo createBackupInfo(String backupId, BackupType type, List<TableName> tableList,
-    String targetRootDir, int workers, long bandwidth) throws BackupException {
+    String targetRootDir, int workers, long bandwidth, boolean noChecksumVerify)
+    throws BackupException {
     if (targetRootDir == null) {
       throw new BackupException("Wrong backup request parameter: target backup root directory");
     }
@@ -230,6 +231,7 @@ public class BackupManager implements Closeable {
       targetRootDir);
     backupInfo.setBandwidth(bandwidth);
     backupInfo.setWorkers(workers);
+    backupInfo.setNoChecksumVerify(noChecksumVerify);
     return backupInfo;
   }
 

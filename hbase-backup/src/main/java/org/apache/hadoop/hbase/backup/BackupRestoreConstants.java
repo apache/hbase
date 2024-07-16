@@ -62,7 +62,7 @@ public interface BackupRestoreConstants {
 
   String OPTION_TABLE = "t";
   String OPTION_TABLE_DESC =
-    "Table name. If specified, only backup images," + " which contain this table will be listed.";
+    "Table name. If specified, only backup images, which contain this table will be listed.";
 
   String OPTION_LIST = "l";
   String OPTION_TABLE_LIST_DESC = "Table name list, comma-separated.";
@@ -73,6 +73,12 @@ public interface BackupRestoreConstants {
 
   String OPTION_WORKERS = "w";
   String OPTION_WORKERS_DESC = "Number of parallel MapReduce tasks to execute";
+
+  String OPTION_IGNORECHECKSUM = "i";
+  String OPTION_IGNORECHECKSUM_DESC =
+    "Ignore checksum verify between source snapshot and exported snapshot."
+      + " Especially when the source and target file system types are different,"
+      + " we should use -i option to skip checksum-checks.";
 
   String OPTION_RECORD_NUMBER = "n";
   String OPTION_RECORD_NUMBER_DESC = "Number of records of backup history. Default: 10";
