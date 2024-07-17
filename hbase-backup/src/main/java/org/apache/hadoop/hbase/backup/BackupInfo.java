@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 @InterfaceAudience.Private
 public class BackupInfo implements Comparable<BackupInfo> {
   private static final Logger LOG = LoggerFactory.getLogger(BackupInfo.class);
+  private static final int MAX_FAILED_MESSAGE_LENGTH = 1024;
 
   public interface Filter {
     /**
@@ -253,6 +254,9 @@ public class BackupInfo implements Comparable<BackupInfo> {
   }
 
   public void setFailedMsg(String failedMsg) {
+    if (failedMsg.length() > MAX_FAILED_MESSAGE_LENGTH) {
+      failedMsg = failedMsg.substring(0, MAX_FAILED_MESSAGE_LENGTH);
+    }
     this.failedMsg = failedMsg;
   }
 
