@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -61,6 +62,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 @Category({ ClientTests.class, MediumTests.class })
@@ -263,8 +265,8 @@ public class TestRequestAndConnectionAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      BufferedMutator bufferedMutator = conn.getBufferedMutator(configureRequestAttributes(new BufferedMutatorParams(REQUEST_ATTRIBUTES_TEST_TABLE)));
-    ) {
+      BufferedMutator bufferedMutator = conn.getBufferedMutator(
+        configureRequestAttributes(new BufferedMutatorParams(REQUEST_ATTRIBUTES_TEST_TABLE)));) {
       Put put = new Put(Bytes.toBytes("a"));
       put.addColumn(REQUEST_ATTRIBUTES_TEST_TABLE_CF, Bytes.toBytes("c"), Bytes.toBytes("v"));
       bufferedMutator.mutate(put);
@@ -280,24 +282,18 @@ public class TestRequestAndConnectionAttributes {
     addRandomRequestAttributes();
 
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setClass(
-      RpcControllerFactory.CUSTOM_CONTROLLER_CONF_KEY,
-      RequestMetadataControllerFactory.class,
-      RpcControllerFactory.class
-    );
+    conf.setClass(RpcControllerFactory.CUSTOM_CONTROLLER_CONF_KEY,
+      RequestMetadataControllerFactory.class, RpcControllerFactory.class);
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      BufferedMutator bufferedMutator = conn.getBufferedMutator(REQUEST_ATTRIBUTES_TEST_TABLE);
-    ) {
+      BufferedMutator bufferedMutator = conn.getBufferedMutator(REQUEST_ATTRIBUTES_TEST_TABLE);) {
       Put put = new Put(Bytes.toBytes("a"));
       put.addColumn(REQUEST_ATTRIBUTES_TEST_TABLE_CF, Bytes.toBytes("c"), Bytes.toBytes("v"));
       bufferedMutator.mutate(put);
       bufferedMutator.flush();
     }
-    conf.unset(
-      RpcControllerFactory.CUSTOM_CONTROLLER_CONF_KEY
-    );
+    conf.unset(RpcControllerFactory.CUSTOM_CONTROLLER_CONF_KEY);
     assertTrue(REQUEST_ATTRIBUTES_VALIDATED.get());
   }
 
@@ -344,18 +340,19 @@ public class TestRequestAndConnectionAttributes {
       super(conf);
     }
 
-    @Override public HBaseRpcController newController() {
+    @Override
+    public HBaseRpcController newController() {
       return new RequestMetadataController(super.newController(), REQUEST_ATTRIBUTES);
     }
 
-    @Override public HBaseRpcController newController(CellScanner cellScanner) {
-      return new RequestMetadataController(super.newController(cellScanner),
-        REQUEST_ATTRIBUTES);
+    @Override
+    public HBaseRpcController newController(CellScanner cellScanner) {
+      return new RequestMetadataController(super.newController(cellScanner), REQUEST_ATTRIBUTES);
     }
 
-    @Override public HBaseRpcController newController(List<CellScannable> cellIterables) {
-      return new RequestMetadataController(super.newController(cellIterables),
-        REQUEST_ATTRIBUTES);
+    @Override
+    public HBaseRpcController newController(List<CellScannable> cellIterables) {
+      return new RequestMetadataController(super.newController(cellIterables), REQUEST_ATTRIBUTES);
     }
 
     public static class RequestMetadataController extends DelegatingHBaseRpcController {
@@ -367,12 +364,12 @@ public class TestRequestAndConnectionAttributes {
         this.requestAttributes = requestAttributes;
       }
 
-      @Override public Map<String, byte[]> getRequestAttributes() {
+      @Override
+      public Map<String, byte[]> getRequestAttributes() {
         return requestAttributes;
       }
     }
   }
-
 
   public static class AttributesCoprocessor implements RegionObserver, RegionCoprocessor {
 

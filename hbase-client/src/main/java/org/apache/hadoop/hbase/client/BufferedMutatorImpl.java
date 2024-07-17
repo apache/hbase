@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.BufferedMutatorParams.UNSET;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -388,7 +389,6 @@ public class BufferedMutatorImpl implements BufferedMutator {
   public void setRpcTimeout(int rpcTimeout) {
     this.rpcTimeout.set(rpcTimeout);
   }
-
 
   @Override
   public Map<String, byte[]> getRequestAttributes() {

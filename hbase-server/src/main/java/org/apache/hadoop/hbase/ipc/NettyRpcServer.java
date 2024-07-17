@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.util.NettyUnsafeUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
-import org.apache.hbase.thirdparty.io.netty.handler.ssl.util.LazyX509Certificate;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,6 +74,7 @@ import org.apache.hbase.thirdparty.io.netty.handler.codec.FixedLengthFrameDecode
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.OptionalSslHandler;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslHandler;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.util.LazyX509Certificate;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
 
 /**
@@ -456,7 +456,8 @@ public class NettyRpcServer extends RpcServer {
       if (certificates != null && certificates.length > 0) {
         X509Certificate[] x509Certificates = new X509Certificate[certificates.length];
         for (int i = 0; i < certificates.length; i++) {
-          // Hack to work around https://github.com/netty/netty/issues/13796, remove once HBase uses Netty 4.1.107.Final or later
+          // Hack to work around https://github.com/netty/netty/issues/13796, remove once HBase uses
+          // Netty 4.1.107.Final or later
           if (certificates[i] instanceof LazyX509Certificate) {
             Method method = LazyX509Certificate.class.getDeclaredMethod("unwrap");
             method.setAccessible(true);

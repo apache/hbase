@@ -387,7 +387,8 @@ class AsyncProcess {
     Objects.requireNonNull(task.getPool(), "The pool can't be NULL");
     checkOperationTimeout(task.getOperationTimeout());
     checkRpcTimeout(task.getRpcTimeout());
-    Objects.requireNonNull(task.getRequestAttributes(), "The map of task attributes cannot be null");
+    Objects.requireNonNull(task.getRequestAttributes(),
+      "The map of task attributes cannot be null");
     return null;
   }
 

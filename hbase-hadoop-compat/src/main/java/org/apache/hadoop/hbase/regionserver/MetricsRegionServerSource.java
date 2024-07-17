@@ -524,10 +524,12 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String ZEROCOPY_BYTES_READ_DESC = "The number of bytes read through HDFS zero copy";
 
   String LOCAL_RACK_BYTES_READ = "localRackBytesRead";
-  String LOCAL_RACK_BYTES_READ_DESC = "The number of bytes read from the same rack of the RegionServer, but not the local HDFS DataNode";
+  String LOCAL_RACK_BYTES_READ_DESC =
+    "The number of bytes read from the same rack of the RegionServer, but not the local HDFS DataNode";
 
   String REMOTE_RACK_BYTES_READ = "remoteRackBytesRead";
-  String REMOTE_RACK_BYTES_READ_DESC = "The number of bytes read from a different rack from that of the RegionServer";
+  String REMOTE_RACK_BYTES_READ_DESC =
+    "The number of bytes read from a different rack from that of the RegionServer";
 
   String BLOCKED_REQUESTS_COUNT = "blockedRequestCount";
   String BLOCKED_REQUESTS_COUNT_DESC = "The number of blocked requests because of memstore size is "
