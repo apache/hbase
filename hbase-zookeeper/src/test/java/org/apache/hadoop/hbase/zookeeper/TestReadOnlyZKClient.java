@@ -84,7 +84,7 @@ public class TestReadOnlyZKClient {
   private static int CHILDREN = 5;
 
   private static ReadOnlyZKClient RO_ZK;
-  static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
+  private static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
     new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d").setDaemon(true)
       .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
     10, TimeUnit.MILLISECONDS);
@@ -114,6 +114,7 @@ public class TestReadOnlyZKClient {
 
   @AfterClass
   public static void tearDown() throws IOException {
+    RETRY_TIMER.stop();
     RO_ZK.close();
     UTIL.shutdownMiniZKCluster();
     UTIL.cleanupTestDir();
