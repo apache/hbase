@@ -23,7 +23,9 @@ import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Queue;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -50,10 +52,24 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
   private Connection connection;
   private Table table;
 
-  QuotaRetriever() {
+  /**
+   * Should QutoaRetriever manage the state of the connection, or leave it be.
+   */
+  private final boolean isManagedConnection;
+
+  QuotaRetriever(final Connection conn, final Scan scan) throws IOException {
+    isManagedConnection = false;
+    init(conn, scan);
   }
 
-  void init(final Connection conn, final Scan scan) throws IOException {
+  QuotaRetriever(final Configuration conf, final Scan scan) throws IOException {
+    // Set this before creating the connection and passing it down to make sure
+    // it's cleaned up if we fail to construct the Scanner.
+    isManagedConnection = true;
+    init(ConnectionFactory.createConnection(conf), scan);
+  }
+
+  private void init(final Connection conn, final Scan scan) throws IOException {
     this.connection = Objects.requireNonNull(conn);
     this.table = this.connection.getTable(QuotaTableUtil.QUOTA_TABLE_NAME);
     try {
@@ -74,8 +90,13 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
       this.table.close();
       this.table = null;
     }
-    // Null out the connection on close() even though we don't explicitly close it
+    // Null out the connection on close() even if we didn't explicitly close it
     // to maintain typical semantics.
+    if (isManagedConnection) {
+      if (this.connection != null) {
+        this.connection.close();
+      }
+    }
     this.connection = null;
   }
 
@@ -137,6 +158,18 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
 
   /**
    * Open a QuotaRetriever with no filter, all the quota settings will be returned.
+   * @param conf Configuration object to use.
+   * @return the QuotaRetriever
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Use {@link #open(Connection)} instead.
+   */
+  @Deprecated
+  public static QuotaRetriever open(final Configuration conf) throws IOException {
+    return open(conf, null);
+  }
+
+  /**
+   * Open a QuotaRetriever with no filter, all the quota settings will be returned.
    * @param conn Connection object to use.
    * @return the QuotaRetriever
    * @throws IOException if a remote or network exception occurs
@@ -146,7 +179,23 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
   }
 
   /**
-   * Open a QuotaRetriever with the specified filter using an existing Connection
+   * Open a QuotaRetriever with the specified filter.
+   * @param conf   Configuration object to use.
+   * @param filter the QuotaFilter
+   * @return the QuotaRetriever
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Use {@link #open(Connection, QuotaFilter)}
+   *             instead.
+   */
+  @Deprecated
+  public static QuotaRetriever open(final Configuration conf, final QuotaFilter filter)
+    throws IOException {
+    Scan scan = QuotaTableUtil.makeScan(filter);
+    return new QuotaRetriever(conf, scan);
+  }
+
+  /**
+   * Open a QuotaRetriever with the specified filter.
    * @param conn   Connection object to use.
    * @param filter the QuotaFilter
    * @return the QuotaRetriever
@@ -155,8 +204,6 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
   public static QuotaRetriever open(final Connection conn, final QuotaFilter filter)
     throws IOException {
     Scan scan = QuotaTableUtil.makeScan(filter);
-    QuotaRetriever scanner = new QuotaRetriever();
-    scanner.init(conn, scan);
-    return scanner;
+    return new QuotaRetriever(conn, scan);
   }
 }
