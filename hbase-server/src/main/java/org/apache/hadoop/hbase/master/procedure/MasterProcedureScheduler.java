@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -365,16 +366,18 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
           TableProcedureWaitingQueue waitingQueue =
             tableProcsWaitingEnqueue.get(tableProc.getTableName());
           if (waitingQueue != null) {
-            waitingQueue.procedureCompleted(proc).ifPresentOrElse(next -> {
+            Optional<Procedure<?>> nextProc = waitingQueue.procedureCompleted(proc);
+            if (nextProc.isPresent()) {
               // enqueue it
+              Procedure<?> next = nextProc.get();
               LOG.debug("{} completed, enqueue a new procedure {}", proc, next);
               doAdd(tableRunQueue, getTableQueue(tableProc.getTableName()), next, false);
-            }, () -> {
+            } else {
               if (waitingQueue.isEmpty()) {
                 // there is no waiting procedures in it, remove
                 tableProcsWaitingEnqueue.remove(tableProc.getTableName());
               }
-            });
+            }
           } else {
             // this should not happen normally, warn it
             LOG.warn("no waiting queue while completing {}, which should not happen", proc);
