@@ -95,26 +95,26 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        2.5.8
+        2.5.9
       </td>
       <td style="test-align: left">
-        2024/03/12
+        2024/07/15
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.5.8/api_compare_2.5.7_to_2.5.8RC0.html">2.5.8 vs 2.5.7</a>
+        <a href="https://downloads.apache.org/hbase/2.5.9/api_compare_2.5.8_to_2.5.9RC0.html">2.5.9 vs 2.5.8</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.5.8/CHANGES.md">Changes</a>
+        <a href="https://downloads.apache.org/hbase/2.5.9/CHANGES.md">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.5.8/RELEASENOTES.md">Release Notes</a>
+        <a href="https://downloads.apache.org/hbase/2.5.9/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.8/hbase-2.5.8-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.5.8/hbase-2.5.8-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.8/hbase-2.5.8-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.8/hbase-2.5.8-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.5.8/hbase-2.5.8-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.8/hbase-2.5.8-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.8/hbase-2.5.8-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.8/hbase-2.5.8-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.8/hbase-2.5.8-client-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.8/hbase-2.5.8-hadoop3-bin.tar.gz">hadoop3-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.8/hbase-2.5.8-hadoop3-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.8/hbase-2.5.8-hadoop3-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.8/hbase-2.5.8-hadoop3-client-bin.tar.gz">hadoop3-client-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.8/hbase-2.5.8-hadoop3-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.8/hbase-2.5.8-hadoop3-client-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.9/hbase-2.5.9-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.5.9/hbase-2.5.9-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.9/hbase-2.5.9-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.9/hbase-2.5.9-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.5.9/hbase-2.5.9-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.9/hbase-2.5.9-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.9/hbase-2.5.9-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.9/hbase-2.5.9-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.9/hbase-2.5.9-client-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.9/hbase-2.5.9-hadoop3-bin.tar.gz">hadoop3-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.9/hbase-2.5.9-hadoop3-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.9/hbase-2.5.9-hadoop3-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.9/hbase-2.5.9-hadoop3-client-bin.tar.gz">hadoop3-client-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.9/hbase-2.5.9-hadoop3-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.9/hbase-2.5.9-hadoop3-client-bin.tar.gz.asc">asc</a>)
       </td>
       <td><em>stable release</em></td>
     </tr>
