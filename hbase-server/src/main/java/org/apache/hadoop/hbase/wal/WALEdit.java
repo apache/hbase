@@ -46,10 +46,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
  * that came in as a single transaction. All the edits for a given transaction are written out as a
  * single record, in PB format, followed (optionally) by Cells written via the WALCellEncoder.
  * <p>
- * This class is LimitedPrivate for CPs to read-only. The {@link #add} methods are classified as
- * private methods, not for use by CPs.
- * </p>
- * <p>
  * A particular WALEdit 'type' is the 'meta' type used to mark key operational events in the WAL
  * such as compaction, flush, or region open. These meta types do not traverse hbase memstores. They
  * are edits made by the hbase system rather than edit data submitted by clients. They only show in
@@ -73,7 +69,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
  * file. See the hand-off in FSWALEntry Constructor.
  * @see WALKey
  */
-// TODO: Do not expose this class to Coprocessors. It has set methods. A CP might meddle.
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.REPLICATION,
   HBaseInterfaceAudience.COPROC })
 public class WALEdit implements HeapSize {
@@ -224,13 +219,11 @@ public class WALEdit implements HeapSize {
     return this.replay;
   }
 
-  @InterfaceAudience.Private
   public WALEdit add(Cell cell, byte[] family) {
     getOrCreateFamilies().add(family);
     return addCell(cell);
   }
 
-  @InterfaceAudience.Private
   public WALEdit add(Cell cell) {
     // We clone Family each time we add a Cell. Expensive but safe. For CPU savings, use
     // add(Map) or add(Cell, family).
@@ -254,7 +247,6 @@ public class WALEdit implements HeapSize {
    * that nothing else depends on the contents being immutable.
    * @param cells the list of cells that this WALEdit now contains.
    */
-  @InterfaceAudience.Private
   // Used by replay.
   public void setCells(ArrayList<Cell> cells) {
     this.cells = cells;
