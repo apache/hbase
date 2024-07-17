@@ -53,7 +53,7 @@ Posing questions - and helping to answer other people's questions - is encourage
 === Slack
 
 The Apache HBase project uses the #hbase channel on the official
-link: https://the-asf.slack.com/[ASF Slack Workspace] for real-time questions and discussion.
+https://the-asf.slack.com/[ASF Slack Workspace] for real-time questions and discussion.
 All committers of any Apache projects can join the channel directly, for others, please mail
 dev@hbase.apache.org to request an invite.
 
