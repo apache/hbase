@@ -98,7 +98,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   private <T> CompletableFuture<T> getAndConvert(String path, Converter<T> converter) {
     CompletableFuture<T> future = new CompletableFuture<>();
-    addListener(zk.getWithTimeout(path, this.zkRegistryAsyncTimeout), (data, error) -> {
+    addListener(zk.get(path, this.zkRegistryAsyncTimeout), (data, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
         return;
@@ -224,7 +224,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
     return tracedFuture(() -> {
       CompletableFuture<RegionLocations> future = new CompletableFuture<>();
-      addListener(zk.listWithTimeout(znodePaths.baseZNode, this.zkRegistryAsyncTimeout)
+      addListener(zk.list(znodePaths.baseZNode, this.zkRegistryAsyncTimeout)
         .thenApply(children -> children.stream().filter(c -> this.znodePaths.isMetaZNodePrefix(c))
           .collect(Collectors.toList())),
         (metaReplicaZNodes, error) -> {

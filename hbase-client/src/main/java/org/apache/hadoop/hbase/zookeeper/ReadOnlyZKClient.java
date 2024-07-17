@@ -274,7 +274,7 @@ public final class ReadOnlyZKClient implements Closeable {
     };
   }
 
-  public CompletableFuture<byte[]> getWithTimeout(final String path, final long timeoutMs) {
+  public CompletableFuture<byte[]> get(final String path, final long timeoutMs) {
     CompletableFuture<byte[]> future = get(path);
     TimerTask timerTask = getTimerTask(timeoutMs, future, "GET");
     retryTimer.newTimeout(timerTask, timeoutMs + 1, TimeUnit.MILLISECONDS);
@@ -297,7 +297,7 @@ public final class ReadOnlyZKClient implements Closeable {
     return future;
   }
 
-  public CompletableFuture<Stat> existsWithTimeout(String path, long timeoutMs) {
+  public CompletableFuture<Stat> exists(String path, long timeoutMs) {
     CompletableFuture<Stat> future = exists(path);
     TimerTask timerTask = getTimerTask(timeoutMs, future, "EXISTS");
     retryTimer.newTimeout(timerTask, timeoutMs + 1, TimeUnit.MILLISECONDS);
@@ -319,7 +319,7 @@ public final class ReadOnlyZKClient implements Closeable {
     return future;
   }
 
-  public CompletableFuture<List<String>> listWithTimeout(String path, long timeoutMs) {
+  public CompletableFuture<List<String>> list(String path, long timeoutMs) {
     CompletableFuture<List<String>> future = list(path);
     TimerTask timerTask = getTimerTask(timeoutMs, future, "LIST");
     retryTimer.newTimeout(timerTask, timeoutMs + 1, TimeUnit.MILLISECONDS);

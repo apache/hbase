@@ -217,9 +217,9 @@ public class TestReadOnlyZKClient {
 
   @Test
   public void testReadWithTimeout() throws Exception {
-    assertArrayEquals(DATA, RO_ZK.getWithTimeout(PATH, 60000).get());
-    assertEquals(CHILDREN, RO_ZK.existsWithTimeout(PATH, 60000).get().getNumChildren());
-    List<String> children = RO_ZK.listWithTimeout(PATH, 60000).get();
+    assertArrayEquals(DATA, RO_ZK.get(PATH, 60000).get());
+    assertEquals(CHILDREN, RO_ZK.exists(PATH, 60000).get().getNumChildren());
+    List<String> children = RO_ZK.list(PATH, 60000).get();
     assertEquals(CHILDREN, children.size());
     Collections.sort(children);
     for (int i = 0; i < CHILDREN; i++) {
