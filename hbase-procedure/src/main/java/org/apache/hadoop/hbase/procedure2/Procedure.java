@@ -906,7 +906,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     this.wasExecuted = true;
   }
 
-  protected synchronized boolean wasExecuted() {
+  public synchronized boolean wasExecuted() {
     return wasExecuted;
   }
 
