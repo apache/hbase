@@ -235,7 +235,7 @@ A quality question that includes all context and exhibits evidence the author ha
 
 [[trouble.resources.slack]]
 === Slack
-See  http://apache-hbase.slack.com Channel on Slack
+#hbase on https://the-asf.slack.com/
 
 [[trouble.resources.irc]]
 === IRC

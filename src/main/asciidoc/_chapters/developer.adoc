@@ -51,8 +51,11 @@ Posing questions - and helping to answer other people's questions - is encourage
 
 [[slack]]
 === Slack
-The Apache HBase project has its own link: http://apache-hbase.slack.com[Slack Channel] for real-time questions
-and discussion. Mail dev@hbase.apache.org to request an invite.
+
+The Apache HBase project uses the #hbase channel on the official
+link: https://the-asf.slack.com/[ASF Slack Channel] for real-time questions and discussion.
+All committers of any Apache projects can join the channel directly, for others, please mail
+dev@hbase.apache.org to request an invite.
 
 [[irc]]
 === Internet Relay Chat (IRC)
