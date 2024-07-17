@@ -123,6 +123,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
     @Override
     public void releaseLock(Void env) {
       procedureScheduler.wakeTableExclusiveLock(this, getTableName());
+      procedureScheduler.completionCleanup(this);
     }
   }
 
