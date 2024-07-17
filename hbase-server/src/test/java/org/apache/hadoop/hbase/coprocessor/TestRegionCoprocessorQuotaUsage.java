@@ -79,8 +79,6 @@ public class TestRegionCoprocessorQuotaUsage {
   }
 
   public static class MyCoprocessor implements RegionCoprocessor {
-    private RegionCoprocessorEnvironment env;
-
     RegionObserver observer = new MyRegionObserver();
 
     @Override
@@ -110,7 +108,6 @@ public class TestRegionCoprocessorQuotaUsage {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    CONN.close();
     UTIL.shutdownMiniCluster();
   }
 

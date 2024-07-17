@@ -138,7 +138,8 @@ public class RegionCoprocessorHost
       this.services = services;
       this.metricRegistry =
         MetricsCoprocessor.createRegistryForRegionCoprocessor(impl.getClass().getName());
-      // lets unit tests through
+      // Some unit tests reach this line with services == null, and are okay with rpcQuotaManager
+      // being null. Let these unit tests succeed. This should not happen in real usage.
       if (services != null) {
         this.rpcQuotaManager = services.getRegionServerRpcQuotaManager();
       } else {
