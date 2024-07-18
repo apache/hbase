@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
@@ -1084,25 +1085,16 @@ public class AssignmentManager {
       .toArray(TransitRegionStateProcedure[]::new);
   }
 
-  /**
-   * Called by ModifyTableProcedure to unassign all the excess region replicas for a table. Will
-   * skip submit unassign procedure if the region is in transition, so you may need to call this
-   * method multiple times.
-   * @param tableName       the table for closing excess region replicas
-   * @param newReplicaCount the new replica count, should be less than current replica count
-   * @param submit          for submitting procedure
-   * @return the number of regions in transition that we can not schedule unassign procedures
-   */
-  public int submitUnassignProcedureForClosingExcessRegionReplicas(TableName tableName,
-    int newReplicaCount, Consumer<TransitRegionStateProcedure> submit) {
+  private int submitUnassignProcedure(TableName tableName,
+    Function<RegionStateNode, Boolean> shouldSubmit, Consumer<RegionStateNode> logRIT,
+    Consumer<TransitRegionStateProcedure> submit) {
     int inTransitionCount = 0;
     for (RegionStateNode regionNode : regionStates.getTableRegionStateNodes(tableName)) {
       regionNode.lock();
       try {
-        if (regionNode.getRegionInfo().getReplicaId() >= newReplicaCount) {
+        if (shouldSubmit.apply(regionNode)) {
           if (regionNode.isInTransition()) {
-            LOG.debug("skip scheduling unassign procedure for {} when closing excess region "
-              + "replicas since it is in transition", regionNode);
+            logRIT.accept(regionNode);
             inTransitionCount++;
             continue;
           }
@@ -1119,12 +1111,46 @@ public class AssignmentManager {
     return inTransitionCount;
   }
 
-  public int numberOfUnclosedExcessRegionReplicas(TableName tableName, int newReplicaCount) {
+  /**
+   * Called by DsiableTableProcedure to unassign all regions for a table. Will skip submit unassign
+   * procedure if the region is in transition, so you may need to call this method multiple times.
+   * @param tableName the table for closing excess region replicas
+   * @param submit    for submitting procedure
+   * @return the number of regions in transition that we can not schedule unassign procedures
+   */
+  public int submitUnassignProcedureForDisablingTable(TableName tableName,
+    Consumer<TransitRegionStateProcedure> submit) {
+    return submitUnassignProcedure(tableName, rn -> true,
+      rn -> LOG.debug("skip scheduling unassign procedure for {} when closing table regions "
+        + "for disabling since it is in transition", rn),
+      submit);
+  }
+
+  /**
+   * Called by ModifyTableProcedure to unassign all the excess region replicas for a table. Will
+   * skip submit unassign procedure if the region is in transition, so you may need to call this
+   * method multiple times.
+   * @param tableName       the table for closing excess region replicas
+   * @param newReplicaCount the new replica count, should be less than current replica count
+   * @param submit          for submitting procedure
+   * @return the number of regions in transition that we can not schedule unassign procedures
+   */
+  public int submitUnassignProcedureForClosingExcessRegionReplicas(TableName tableName,
+    int newReplicaCount, Consumer<TransitRegionStateProcedure> submit) {
+    return submitUnassignProcedure(tableName,
+      rn -> rn.getRegionInfo().getReplicaId() >= newReplicaCount,
+      rn -> LOG.debug("skip scheduling unassign procedure for {} when closing excess region "
+        + "replicas since it is in transition", rn),
+      submit);
+  }
+
+  private int numberOfUnclosedRegions(TableName tableName,
+    Function<RegionStateNode, Boolean> shouldSubmit) {
     int unclosed = 0;
     for (RegionStateNode regionNode : regionStates.getTableRegionStateNodes(tableName)) {
       regionNode.lock();
       try {
-        if (regionNode.getRegionInfo().getReplicaId() >= newReplicaCount) {
+        if (shouldSubmit.apply(regionNode)) {
           if (!regionNode.isInState(State.OFFLINE, State.CLOSED, State.SPLIT)) {
             unclosed++;
           }
@@ -1134,6 +1160,15 @@ public class AssignmentManager {
       }
     }
     return unclosed;
+  }
+
+  public int numberOfUnclosedRegionsForDisabling(TableName tableName) {
+    return numberOfUnclosedRegions(tableName, rn -> true);
+  }
+
+  public int numberOfUnclosedExcessRegionReplicas(TableName tableName, int newReplicaCount) {
+    return numberOfUnclosedRegions(tableName,
+      rn -> rn.getRegionInfo().getReplicaId() >= newReplicaCount);
   }
 
   public SplitTableRegionProcedure createSplitProcedure(final RegionInfo regionToSplit,
