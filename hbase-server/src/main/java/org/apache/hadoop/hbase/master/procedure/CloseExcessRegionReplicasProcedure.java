@@ -142,6 +142,7 @@ public class CloseExcessRegionReplicasProcedure
 
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    super.serializeStateData(serializer);
     CloseExcessRegionReplicasProcedureStateData data = CloseExcessRegionReplicasProcedureStateData
       .newBuilder().setTableName(ProtobufUtil.toProtoTableName(tableName))
       .setNewReplicaCount(newReplicaCount).build();
@@ -150,6 +151,7 @@ public class CloseExcessRegionReplicasProcedure
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    super.deserializeStateData(serializer);
     CloseExcessRegionReplicasProcedureStateData data =
       serializer.deserialize(CloseExcessRegionReplicasProcedureStateData.class);
     tableName = ProtobufUtil.toTableName(data.getTableName());
