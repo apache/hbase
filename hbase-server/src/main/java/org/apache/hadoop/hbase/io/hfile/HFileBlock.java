@@ -40,7 +40,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
@@ -697,7 +697,7 @@ public class HFileBlock implements Cacheable {
    * when block is returned to the cache.
    * @return the offset of this block in the file it was read from
    */
-  long getOffset() {
+  public long getOffset() {
     if (offset < 0) {
       throw new IllegalStateException("HFile block offset not initialized properly");
     }
@@ -894,7 +894,7 @@ public class HFileBlock implements Cacheable {
     /**
      * Writes the Cell to this block
      */
-    void write(Cell cell) throws IOException {
+    void write(ExtendedCell cell) throws IOException {
       expectState(State.WRITING);
       this.dataBlockEncoder.encode(cell, dataBlockEncodingCtx, this.userDataStream);
     }
@@ -1205,16 +1205,7 @@ public class HFileBlock implements Cacheable {
      * being wholesome (ECC memory or if file-backed, it does checksumming).
      */
     HFileBlock getBlockForCaching(CacheConfig cacheConf) {
-      HFileContext newContext = new HFileContextBuilder().withBlockSize(fileContext.getBlocksize())
-        .withBytesPerCheckSum(0).withChecksumType(ChecksumType.NULL) // no checksums in cached data
-        .withCompression(fileContext.getCompression())
-        .withDataBlockEncoding(fileContext.getDataBlockEncoding())
-        .withHBaseCheckSum(fileContext.isUseHBaseChecksum())
-        .withCompressTags(fileContext.isCompressTags())
-        .withIncludesMvcc(fileContext.isIncludesMvcc())
-        .withIncludesTags(fileContext.isIncludesTags())
-        .withColumnFamily(fileContext.getColumnFamily()).withTableName(fileContext.getTableName())
-        .build();
+      HFileContext newContext = BlockCacheUtil.cloneContext(fileContext);
       // Build the HFileBlock.
       HFileBlockBuilder builder = new HFileBlockBuilder();
       ByteBuff buff;

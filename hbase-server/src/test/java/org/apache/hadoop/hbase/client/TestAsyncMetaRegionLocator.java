@@ -107,8 +107,7 @@ public class TestAsyncMetaRegionLocator {
       testUtil = miniClusterRule.getTestingUtility();
       HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, 3);
       testUtil.waitUntilNoRegionsInTransition();
-      registry =
-        ConnectionRegistryFactory.getRegistry(testUtil.getConfiguration(), User.getCurrent());
+      registry = ConnectionRegistryFactory.create(testUtil.getConfiguration(), User.getCurrent());
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(testUtil, registry);
       admin.balancerSwitch(false).get();
       locator = new AsyncMetaRegionLocator(registry);

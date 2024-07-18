@@ -35,6 +35,7 @@ import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -421,7 +422,7 @@ public abstract class Compactor<T extends CellSink> {
     long bytesWrittenProgressForShippedCall = 0;
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
-    List<Cell> cells = new ArrayList<>();
+    List<ExtendedCell> cells = new ArrayList<>();
     long currentTime = EnvironmentEdgeManager.currentTime();
     long lastMillis = 0;
     if (LOG.isDebugEnabled()) {
@@ -442,7 +443,10 @@ public abstract class Compactor<T extends CellSink> {
       (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
     try {
       do {
-        hasMore = scanner.next(cells, scannerContext);
+        // InternalScanner is for CPs so we do not want to leak ExtendedCell to the interface, but
+        // all the server side implementation should only add ExtendedCell to the List, otherwise it
+        // will cause serious assertions in our code
+        hasMore = scanner.next((List) cells, scannerContext);
         currentTime = EnvironmentEdgeManager.currentTime();
         if (LOG.isDebugEnabled()) {
           now = currentTime;
@@ -454,7 +458,7 @@ public abstract class Compactor<T extends CellSink> {
         // output to writer:
         Cell lastCleanCell = null;
         long lastCleanCellSeqId = 0;
-        for (Cell c : cells) {
+        for (ExtendedCell c : cells) {
           if (cleanSeqId && c.getSequenceId() <= smallestReadPoint) {
             lastCleanCell = c;
             lastCleanCellSeqId = c.getSequenceId();
@@ -463,7 +467,6 @@ public abstract class Compactor<T extends CellSink> {
             lastCleanCell = null;
             lastCleanCellSeqId = 0;
           }
-          writer.append(c);
           int len = c.getSerializedSize();
           ++progress.currentCompactedKVs;
           progress.totalCompactedSize += len;
@@ -477,6 +480,7 @@ public abstract class Compactor<T extends CellSink> {
             return false;
           }
         }
+        writer.appendAll(cells);
         if (shipper != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
           if (lastCleanCell != null) {
             // HBASE-16931, set back sequence id to avoid affecting scan order unexpectedly.

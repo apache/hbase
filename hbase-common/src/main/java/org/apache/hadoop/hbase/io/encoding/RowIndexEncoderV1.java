@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -32,7 +32,7 @@ public class RowIndexEncoderV1 {
   private static final Logger LOG = LoggerFactory.getLogger(RowIndexEncoderV1.class);
 
   /** The Cell previously appended. */
-  private Cell lastCell = null;
+  private ExtendedCell lastCell = null;
 
   private DataOutputStream out;
   private NoneEncoder encoder;
@@ -46,7 +46,7 @@ public class RowIndexEncoderV1 {
     this.context = encodingCtx;
   }
 
-  public void write(Cell cell) throws IOException {
+  public void write(ExtendedCell cell) throws IOException {
     // checkRow uses comparator to check we are writing in order.
     int extraBytesForRowIndex = 0;
 
@@ -63,7 +63,7 @@ public class RowIndexEncoderV1 {
     context.getEncodingState().postCellEncode(size, size + extraBytesForRowIndex);
   }
 
-  protected boolean checkRow(final Cell cell) throws IOException {
+  protected boolean checkRow(final ExtendedCell cell) throws IOException {
     boolean isDuplicateRow = false;
     if (cell == null) {
       throw new IOException("Key cannot be null or empty");

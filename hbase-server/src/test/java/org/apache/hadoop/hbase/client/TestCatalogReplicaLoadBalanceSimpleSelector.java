@@ -77,8 +77,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
       () -> TEST_UTIL.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size()
           >= numOfMetaReplica);
 
-    registry =
-      ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration(), User.getCurrent());
+    registry = ConnectionRegistryFactory.create(TEST_UTIL.getConfiguration(), User.getCurrent());
     CONN =
       new AsyncConnectionImpl(conf, registry, registry.getClusterId().get(), User.getCurrent());
   }

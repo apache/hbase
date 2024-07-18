@@ -2092,8 +2092,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         }
       }
       if (tableName == null) {
-        future.completeExceptionally(new RestoreSnapshotException(
-          "Unable to find the table name for snapshot=" + snapshotName));
+        future.completeExceptionally(
+          new RestoreSnapshotException("The snapshot " + snapshotName + " does not exist."));
         return;
       }
       final TableName finalTableName = tableName;
@@ -2148,10 +2148,21 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                     if (err3 != null) {
                       future.completeExceptionally(err3);
                     } else {
-                      String msg =
-                        "Restore snapshot=" + snapshotName + " failed. Rollback to snapshot="
-                          + failSafeSnapshotSnapshotName + " succeeded.";
-                      future.completeExceptionally(new RestoreSnapshotException(msg, err2));
+                      // If fail to restore snapshot but rollback successfully, delete the
+                      // restore-failsafe snapshot.
+                      LOG.info(
+                        "Deleting restore-failsafe snapshot: " + failSafeSnapshotSnapshotName);
+                      addListener(deleteSnapshot(failSafeSnapshotSnapshotName), (ret4, err4) -> {
+                        if (err4 != null) {
+                          LOG.error("Unable to remove the failsafe snapshot: {}",
+                            failSafeSnapshotSnapshotName, err4);
+                        }
+                        String msg =
+                          "Restore snapshot=" + snapshotName + " failed, Rollback to snapshot="
+                            + failSafeSnapshotSnapshotName + " succeeded.";
+                        LOG.error(msg);
+                        future.completeExceptionally(new RestoreSnapshotException(msg, err2));
+                      });
                     }
                   });
               } else {

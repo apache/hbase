@@ -26,6 +26,7 @@
   import="org.apache.hadoop.fs.Path"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
+  import="org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription"
@@ -68,6 +69,7 @@
         <th>Creation Time</th>
         <th>Owner</th>
         <th>TTL</th>
+        <th>Expired</th>
         <th>Shared Storefile Size</th>
         <th>Mob Storefile Size</th>
         <th>Archived Storefile Size</th>
@@ -93,6 +95,9 @@
         <%=PrettyPrinter
           .format(String.valueOf(snapshotDesc.getTtl()), PrettyPrinter.Unit.TIME_INTERVAL)%>
         <% } %>
+      </td>
+      <td>
+        <%= SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDesc.getTtl(), snapshotDesc.getCreationTime(), System.currentTimeMillis()) ? "Yes" : "No" %>
       </td>
       <td><%= StringUtils.humanReadableInt(stats.getSharedStoreFilesSize()) %></td>
       <td><%= StringUtils.humanReadableInt(stats.getMobStoreFilesSize())  %></td>

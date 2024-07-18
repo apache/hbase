@@ -18,11 +18,9 @@
 package org.apache.hadoop.hbase.backup;
 
 import java.io.IOException;
-import java.util.HashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -44,8 +42,8 @@ public final class HBackupFileSystem {
   }
 
   /**
-   * Given the backup root dir, backup id and the table name, return the backup image location,
-   * which is also where the backup manifest file is. return value look like:
+   * Given the backup root dir, backup id and the table name, return the backup image location.
+   * Return value look like:
    * "hdfs://backup.hbase.org:9000/user/biadmin/backup/backup_1396650096738/default/t1_dn/", where
    * "hdfs://backup.hbase.org:9000/user/biadmin/backup" is a backup root directory
    * @param backupRootDir backup root directory
@@ -79,11 +77,6 @@ public final class HBackupFileSystem {
     return new Path(getBackupTmpDirPath(backupRoot), backupId);
   }
 
-  public static String getTableBackupDataDir(String backupRootDir, String backupId,
-    TableName tableName) {
-    return getTableBackupDir(backupRootDir, backupId, tableName) + Path.SEPARATOR + "data";
-  }
-
   public static Path getBackupPath(String backupRootDir, String backupId) {
     return new Path(backupRootDir + Path.SEPARATOR + backupId);
   }
@@ -102,24 +95,6 @@ public final class HBackupFileSystem {
     return new Path(getTableBackupDir(backupRootPath.toString(), backupId, tableName));
   }
 
-  /**
-   * Given the backup root dir and the backup id, return the log file location for an incremental
-   * backup.
-   * @param backupRootDir backup root directory
-   * @param backupId      backup id
-   * @return logBackupDir: ".../user/biadmin/backup/WALs/backup_1396650096738"
-   */
-  public static String getLogBackupDir(String backupRootDir, String backupId) {
-    return backupRootDir + Path.SEPARATOR + backupId + Path.SEPARATOR
-      + HConstants.HREGION_LOGDIR_NAME;
-  }
-
-  public static Path getLogBackupPath(String backupRootDir, String backupId) {
-    return new Path(getLogBackupDir(backupRootDir, backupId));
-  }
-
-  // TODO we do not keep WAL files anymore
-  // Move manifest file to other place
   private static Path getManifestPath(Configuration conf, Path backupRootPath, String backupId)
     throws IOException {
     FileSystem fs = backupRootPath.getFileSystem(conf);
@@ -139,20 +114,5 @@ public final class HBackupFileSystem {
     BackupManifest manifest =
       new BackupManifest(conf, getManifestPath(conf, backupRootPath, backupId));
     return manifest;
-  }
-
-  /**
-   * Check whether the backup image path and there is manifest file in the path.
-   * @param backupManifestMap If all the manifests are found, then they are put into this map
-   * @param tableArray        the tables involved
-   * @throws IOException exception
-   */
-  public static void checkImageManifestExist(HashMap<TableName, BackupManifest> backupManifestMap,
-    TableName[] tableArray, Configuration conf, Path backupRootPath, String backupId)
-    throws IOException {
-    for (TableName tableName : tableArray) {
-      BackupManifest manifest = getManifest(conf, backupRootPath, backupId);
-      backupManifestMap.put(tableName, manifest);
-    }
   }
 }

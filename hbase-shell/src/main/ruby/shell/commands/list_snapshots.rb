@@ -18,6 +18,8 @@
 
 require 'time'
 
+java_import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils
+
 module Shell
   module Commands
     class ListSnapshots < Command
@@ -34,12 +36,25 @@ EOF
       end
 
       def command(regex = '.*')
-        formatter.header(['SNAPSHOT', 'TABLE + CREATION TIME'])
+        formatter.header(['SNAPSHOT', 'TABLE + CREATION TIME + TTL(Sec)'])
 
         list = admin.list_snapshot(regex)
         list.each do |snapshot|
           creation_time = Time.at(snapshot.getCreationTime / 1000).to_s
-          formatter.row([snapshot.getName, snapshot.getTable + ' (' + creation_time + ')'])
+          ttl = snapshot.getTtl
+          if ttl == 0
+            ttl_info = 'FOREVER'
+          else
+            now_timestamp = (Time.now.to_f * 1000).to_i
+            expired = SnapshotDescriptionUtils.isExpiredSnapshot(ttl, snapshot.getCreationTime(), now_timestamp)
+            if expired
+              ttl_info = ttl.to_s + ' (Expired) '
+            else
+              ttl_info = ttl.to_s
+            end
+          end
+          info = snapshot.getTableNameAsString + ' (' + creation_time + ') ' + ttl_info
+          formatter.row([snapshot.getName, info])
         end
 
         formatter.footer(list.size)

@@ -65,8 +65,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesP
  * I.e. fuzzy info tells the matching mask is "????_99_????_01", where at ? can be any value.
  */
 @InterfaceAudience.Public
-public class FuzzyRowFilter extends FilterBase {
-
+public class FuzzyRowFilter extends FilterBase implements HintingFilter {
   private static final boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
 
   // the wildcard byte is 1 on the user side. but the filter converts it internally
@@ -181,6 +180,33 @@ public class FuzzyRowFilter extends FilterBase {
       }
     }
     return true;
+  }
+
+  /**
+   * Returns the Fuzzy keys in the format expected by the constructor.
+   * @return the Fuzzy keys in the format expected by the constructor
+   */
+  public List<Pair<byte[], byte[]>> getFuzzyKeys() {
+    List<Pair<byte[], byte[]>> returnList = new ArrayList<>(fuzzyKeysData.size());
+    for (Pair<byte[], byte[]> fuzzyKey : fuzzyKeysData) {
+      Pair<byte[], byte[]> returnKey = new Pair<>();
+      // This won't revert the original key's don't care values, but we don't care.
+      returnKey.setFirst(Arrays.copyOf(fuzzyKey.getFirst(), fuzzyKey.getFirst().length));
+      byte[] returnMask = Arrays.copyOf(fuzzyKey.getSecond(), fuzzyKey.getSecond().length);
+      if (UNSAFE_UNALIGNED && isPreprocessedMask(returnMask)) {
+        // Revert the preprocessing.
+        for (int i = 0; i < returnMask.length; i++) {
+          if (returnMask[i] == -1) {
+            returnMask[i] = 0; // -1 >> 0
+          } else if (returnMask[i] == processedWildcardMask) {
+            returnMask[i] = 1; // 0 or 2 >> 1 depending on mask version
+          }
+        }
+      }
+      returnKey.setSecond(returnMask);
+      returnList.add(returnKey);
+    }
+    return returnList;
   }
 
   @Deprecated

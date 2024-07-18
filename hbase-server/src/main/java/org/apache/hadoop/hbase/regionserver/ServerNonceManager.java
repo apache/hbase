@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
@@ -46,7 +47,8 @@ public class ServerNonceManager {
    */
   private int conflictWaitIterationMs = 30000;
 
-  private static final SimpleDateFormat tsFormat = new SimpleDateFormat("HH:mm:ss.SSS");
+  private static final DateTimeFormatter TS_FORMAT =
+    DateTimeFormatter.ofPattern("HH:mm:ss.SSS").withZone(ZoneId.systemDefault());
 
   // This object is used to synchronize on in case of collisions, and for cleanup.
   private static class OperationContext {
@@ -65,7 +67,7 @@ public class ServerNonceManager {
     @Override
     public String toString() {
       return "[state " + getState() + ", hasWait " + hasWait() + ", activity "
-        + tsFormat.format(new Date(getActivityTime())) + "]";
+        + TS_FORMAT.format(Instant.ofEpochMilli(getActivityTime())) + "]";
     }
 
     public OperationContext() {

@@ -21,10 +21,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.Objects;
 import java.util.Queue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -59,7 +61,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   /** The size of individual Bloom filter chunks to create */
   private int chunkByteSize;
   /** The prev Cell that was processed */
-  private Cell prevCell;
+  private ExtendedCell prevCell;
 
   /** A Bloom filter chunk enqueued for writing */
   private static class ReadyChunk {
@@ -145,8 +147,8 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   }
 
   @Override
-  public void append(Cell cell) throws IOException {
-    if (cell == null) throw new NullPointerException();
+  public void append(ExtendedCell cell) throws IOException {
+    Objects.requireNonNull(cell);
 
     enqueueReadyChunk(false);
 

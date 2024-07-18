@@ -29,6 +29,7 @@ import "RPC.proto";
 import "Snapshot.proto";
 import "Replication.proto";
 import "RegionServerStatus.proto";
+import "ErrorHandling.proto";
 
 // ============================================================================
 //  WARNING - Compatibility rules
@@ -254,6 +255,8 @@ message SnapshotVerifyProcedureStateData {
   required SnapshotDescription snapshot = 1;
   required RegionInfo region = 2;
   optional ServerName target_server = 3;
+  optional ServerRemoteProcedureState state = 4;
+  optional ForeignExceptionMessage error = 5;
 }
 
 message SnapshotVerifyParameter {
@@ -503,6 +506,8 @@ message RefreshPeerStateData {
   required string peer_id = 1;
   required PeerModificationType type = 2;
   required ServerName target_server = 3;
+  optional ServerRemoteProcedureState state = 5;
+  optional ForeignExceptionMessage error = 6;
 }
 
 message RefreshPeerParameter {
@@ -586,6 +591,14 @@ enum RegionRemoteProcedureBaseState {
   REGION_REMOTE_PROCEDURE_SERVER_CRASH = 4;
 }
 
+enum ServerRemoteProcedureState {
+  SERVER_REMOTE_PROCEDURE_DISPATCH = 1;
+  SERVER_REMOTE_PROCEDURE_DISPATCH_FAIL = 2;
+  SERVER_REMOTE_PROCEDURE_REPORT_SUCCEED = 3;
+  SERVER_REMOTE_PROCEDURE_REPORT_FAILED = 4;
+  SERVER_REMOTE_PROCEDURE_SERVER_CRASH = 5;
+}
+
 message RegionRemoteProcedureBaseStateData {
   required RegionInfo region = 1;
   required ServerName target_server = 2;
@@ -617,6 +630,8 @@ message SwitchRpcThrottleStateData {
 message SwitchRpcThrottleRemoteStateData {
   required ServerName target_server = 1;
   required bool rpc_throttle_enabled = 2;
+  optional ServerRemoteProcedureState state = 3;
+  optional ForeignExceptionMessage error = 4;
 }
 
 message SplitWALParameter {
@@ -634,6 +649,8 @@ message SplitWALRemoteData {
   required string wal_path = 1;
   required ServerName crashed_server = 2;
   required ServerName worker = 3;
+  optional ServerRemoteProcedureState state = 4;
+  optional ForeignExceptionMessage error = 5;
 }
 
 enum SplitWALState {
@@ -650,6 +667,8 @@ message ClaimReplicationQueueRemoteStateData {
   required ServerName crashed_server = 1;
   required string queue = 2;
   required ServerName target_server = 3;
+  optional ServerRemoteProcedureState state = 5;
+  optional ForeignExceptionMessage error = 6;
 }
 
 message ClaimReplicationQueueRemoteParameter {
@@ -686,4 +705,14 @@ message ModifyStoreFileTrackerStateData {
 
 message ModifyColumnFamilyStoreFileTrackerStateData {
   required bytes family = 1;
+}
+
+enum CloseExcessRegionReplicasProcedureState {
+  CLOSE_EXCESS_REGION_REPLICAS_SCHEDULE = 1;
+  CLOSE_EXCESS_REGION_REPLICAS_CONFIRM = 2;
+}
+
+message CloseExcessRegionReplicasProcedureStateData {
+  required TableName table_name = 1;
+  required uint32 new_replica_count = 2;
 }

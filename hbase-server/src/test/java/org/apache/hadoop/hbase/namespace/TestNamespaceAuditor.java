@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
@@ -403,9 +402,10 @@ public class TestNamespaceAuditor {
     Collections.sort(hris, RegionInfo.COMPARATOR);
     // verify that we cannot split
     try {
-      ADMIN.split(tableTwo, Bytes.toBytes("6"));
+      ADMIN.splitRegionAsync(hris.get(1).getRegionName(), Bytes.toBytes("6")).get(10,
+        TimeUnit.SECONDS);
       fail();
-    } catch (DoNotRetryRegionException e) {
+    } catch (ExecutionException e) {
       // Expected
     }
     Thread.sleep(2000);

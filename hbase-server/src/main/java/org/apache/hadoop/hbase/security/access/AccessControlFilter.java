@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -130,7 +131,7 @@ class AccessControlFilter extends FilterBase {
       case CHECK_CELL_DEFAULT: {
         if (
           authManager.authorizeUserTable(user, table, f, q, Permission.Action.READ)
-            || authManager.authorizeCell(user, table, cell, Permission.Action.READ)
+            || authManager.authorizeCell(user, table, (ExtendedCell) cell, Permission.Action.READ)
         ) {
           return ReturnCode.INCLUDE;
         }

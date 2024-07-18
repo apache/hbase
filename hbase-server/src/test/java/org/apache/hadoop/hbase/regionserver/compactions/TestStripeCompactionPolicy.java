@@ -243,13 +243,13 @@ public class TestStripeCompactionPolicy {
     when(ref.isReference()).thenReturn(true);
     StripeInformationProvider si = mock(StripeInformationProvider.class);
     Collection<HStoreFile> sfs = al(ref, createFile());
-    when(si.getStorefiles()).thenReturn(sfs);
+    when(si.getStoreFiles()).thenReturn(sfs);
 
     assertTrue(policy.needsCompactions(si, al()));
     StripeCompactionPolicy.StripeCompactionRequest scr = policy.selectCompaction(si, al(), false);
     // UnmodifiableCollection does not implement equals so we need to change it here to a
     // collection that implements it.
-    assertEquals(si.getStorefiles(), new ArrayList<>(scr.getRequest().getFiles()));
+    assertEquals(si.getStoreFiles(), new ArrayList<>(scr.getRequest().getFiles()));
     scr.execute(sc, NoLimitThroughputController.INSTANCE, null);
     verify(sc, only()).compact(eq(scr.getRequest()), anyInt(), anyLong(), aryEq(OPEN_KEY),
       aryEq(OPEN_KEY), aryEq(OPEN_KEY), aryEq(OPEN_KEY), any(), any());
@@ -262,11 +262,11 @@ public class TestStripeCompactionPolicy {
     StripeCompactionPolicy policy =
       createPolicy(conf, defaultSplitSize, defaultSplitCount, 2, false);
     StripeCompactionPolicy.StripeInformationProvider si = createStripesL0Only(3, 8);
-    verifyCompaction(policy, si, si.getStorefiles(), true, 2, 12L, OPEN_KEY, OPEN_KEY, true);
+    verifyCompaction(policy, si, si.getStoreFiles(), true, 2, 12L, OPEN_KEY, OPEN_KEY, true);
     si = createStripesL0Only(3, 10); // If result would be too large, split into smaller parts.
-    verifyCompaction(policy, si, si.getStorefiles(), true, 3, 10L, OPEN_KEY, OPEN_KEY, true);
+    verifyCompaction(policy, si, si.getStoreFiles(), true, 3, 10L, OPEN_KEY, OPEN_KEY, true);
     policy = createPolicy(conf, defaultSplitSize, defaultSplitCount, 6, false);
-    verifyCompaction(policy, si, si.getStorefiles(), true, 6, 5L, OPEN_KEY, OPEN_KEY, true);
+    verifyCompaction(policy, si, si.getStoreFiles(), true, 6, 5L, OPEN_KEY, OPEN_KEY, true);
   }
 
   @Test
@@ -855,7 +855,7 @@ public class TestStripeCompactionPolicy {
     ConcatenatedLists<HStoreFile> sfs = new ConcatenatedLists<>();
     sfs.addAllSublists(stripes);
     sfs.addSublist(l0Files);
-    when(si.getStorefiles()).thenReturn(sfs);
+    when(si.getStoreFiles()).thenReturn(sfs);
     when(si.getStripes()).thenReturn(stripes);
     when(si.getStripeBoundaries()).thenReturn(boundariesList);
     when(si.getStripeCount()).thenReturn(stripes.size());

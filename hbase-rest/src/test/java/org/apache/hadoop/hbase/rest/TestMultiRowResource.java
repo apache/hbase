@@ -76,7 +76,7 @@ public class TestMultiRowResource {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
 
-  private static final Encoder base64UrlEncoder = java.util.Base64.getUrlEncoder();
+  private static final Encoder base64UrlEncoder = java.util.Base64.getUrlEncoder().withoutPadding();
 
   private static Client client;
   private static Configuration conf;
@@ -187,7 +187,7 @@ public class TestMultiRowResource {
     client.post(row_6_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_2), extraHdr);
 
     StringBuilder path = new StringBuilder();
-    Base64.Encoder encoder = Base64.getUrlEncoder();
+    Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
     path.append("/");
     path.append(TABLE);
     path.append("/multiget/?row=");
@@ -217,6 +217,17 @@ public class TestMultiRowResource {
 
     client.delete(row_5_url, extraHdr);
     client.delete(row_6_url, extraHdr);
+  }
+
+  @Test
+  public void testMultiCellGetNoKeys() throws IOException {
+    StringBuilder path = new StringBuilder();
+    path.append("/");
+    path.append(TABLE);
+    path.append("/multiget");
+
+    Response response = client.get(path.toString(), Constants.MIMETYPE_XML);
+    assertEquals(404, response.getCode());
   }
 
   @Test

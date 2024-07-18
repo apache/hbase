@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.apache.hadoop.hbase.regionserver.CompactSplit.HBASE_REGION_SERVER_ENABLE_COMPACTION;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.BLOCK_CACHE_KEY_KEY;
 
 import io.opentelemetry.api.common.Attributes;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -42,14 +42,12 @@ import org.apache.hadoop.hbase.SizeCachedByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
-import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
@@ -159,6 +157,10 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
   }
 
+  public CacheConfig getCacheConf() {
+    return cacheConf;
+  }
+
   private Optional<String> toStringFirstKey() {
     return getFirstKey().map(CellUtil::getCellKeyAsString);
   }
@@ -188,7 +190,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    *         the first row key, but rather the byte form of the first KeyValue.
    */
   @Override
-  public Optional<Cell> getFirstKey() {
+  public Optional<ExtendedCell> getFirstKey() {
     if (dataBlockIndexReader == null) {
       throw new BlockIndexNotLoadedException(path);
     }
@@ -307,7 +309,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
   }
 
-  protected static class HFileScannerImpl implements HFileScanner {
+  public static class HFileScannerImpl implements HFileScanner {
     private ByteBuff blockBuffer;
     protected final boolean cacheBlocks;
     protected final boolean pread;
@@ -330,7 +332,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
      * last data block. If the nextIndexedKey is null, it means the nextIndexedKey has not been
      * loaded yet.
      */
-    protected Cell nextIndexedKey;
+    protected ExtendedCell nextIndexedKey;
     // Current block being used. NOTICE: DON't release curBlock separately except in shipped() or
     // close() methods. Because the shipped() or close() will do the release finally, even if any
     // exception occur the curBlock will be released by the close() method (see
@@ -340,6 +342,11 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     // Whether we returned a result for curBlock's size in recordBlockSize().
     // gets reset whenever curBlock is changed.
     private boolean providedCurrentBlockSize = false;
+
+    public HFileBlock getCurBlock() {
+      return curBlock;
+    }
+
     // Previous blocks that were used in the course of the read
     protected final ArrayList<HFileBlock> prevBlocks = new ArrayList<>();
 
@@ -621,17 +628,17 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public Cell getNextIndexedKey() {
+    public ExtendedCell getNextIndexedKey() {
       return nextIndexedKey;
     }
 
     @Override
-    public int seekTo(Cell key) throws IOException {
+    public int seekTo(ExtendedCell key) throws IOException {
       return seekTo(key, true);
     }
 
     @Override
-    public int reseekTo(Cell key) throws IOException {
+    public int reseekTo(ExtendedCell key) throws IOException {
       int compared;
       if (isSeeked()) {
         compared = compareKey(reader.getComparator(), key);
@@ -672,7 +679,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
      *         key, 1 if we are past the given key -2 if the key is earlier than the first key of
      *         the file while using a faked index key
      */
-    public int seekTo(Cell key, boolean rewind) throws IOException {
+    public int seekTo(ExtendedCell key, boolean rewind) throws IOException {
       HFileBlockIndex.BlockIndexReader indexReader = reader.getDataBlockIndexReader();
       BlockWithScanInfo blockWithScanInfo = indexReader.loadDataBlockWithScanInfo(key, curBlock,
         cacheBlocks, pread, isCompaction, getEffectiveDataBlockEncoding(), reader);
@@ -685,13 +692,13 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public boolean seekBefore(Cell key) throws IOException {
+    public boolean seekBefore(ExtendedCell key) throws IOException {
       HFileBlock seekToBlock = reader.getDataBlockIndexReader().seekToDataBlock(key, curBlock,
         cacheBlocks, pread, isCompaction, reader.getEffectiveEncodingInCache(isCompaction), reader);
       if (seekToBlock == null) {
         return false;
       }
-      Cell firstKey = getFirstKeyCellInBlock(seekToBlock);
+      ExtendedCell firstKey = getFirstKeyCellInBlock(seekToBlock);
       if (PrivateCellUtil.compareKeyIgnoresMvcc(reader.getComparator(), firstKey, key) >= 0) {
         long previousBlockOffset = seekToBlock.getPrevBlockOffset();
         // The key we are interested in
@@ -771,12 +778,12 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public Cell getCell() {
+    public ExtendedCell getCell() {
       if (!isSeeked()) {
         return null;
       }
 
-      Cell ret;
+      ExtendedCell ret;
       int cellBufSize = getKVBufSize();
       long seqId = 0L;
       if (this.reader.getHFileInfo().shouldIncludeMemStoreTS()) {
@@ -816,7 +823,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public Cell getKey() {
+    public ExtendedCell getKey() {
       assertSeeked();
       // Create a new object so that this getKey is cached as firstKey, lastKey
       ObjectIntPair<ByteBuffer> keyPair = new ObjectIntPair<>();
@@ -966,8 +973,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       updateCurrentBlock(newBlock);
     }
 
-    protected int loadBlockAndSeekToKey(HFileBlock seekToBlock, Cell nextIndexedKey, boolean rewind,
-      Cell key, boolean seekBefore) throws IOException {
+    protected int loadBlockAndSeekToKey(HFileBlock seekToBlock, ExtendedCell nextIndexedKey,
+      boolean rewind, ExtendedCell key, boolean seekBefore) throws IOException {
       if (this.curBlock == null || this.curBlock.getOffset() != seekToBlock.getOffset()) {
         updateCurrentBlock(seekToBlock);
       } else if (rewind) {
@@ -1025,7 +1032,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       this.nextIndexedKey = null;
     }
 
-    protected Cell getFirstKeyCellInBlock(HFileBlock curBlock) {
+    protected ExtendedCell getFirstKeyCellInBlock(HFileBlock curBlock) {
       ByteBuff buffer = curBlock.getBufferWithoutHeader();
       // It is safe to manipulate this buffer because we own the buffer object.
       buffer.rewind();
@@ -1050,7 +1057,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       return ByteBufferUtils.toStringBinary(getValue());
     }
 
-    public int compareKey(CellComparator comparator, Cell key) {
+    public int compareKey(CellComparator comparator, ExtendedCell key) {
       blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen, pair);
       this.bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), currKeyLen, rowLen);
       return PrivateCellUtil.compareKeyIgnoresMvcc(comparator, key, this.bufBackedKeyOnlyKv);
@@ -1293,8 +1300,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       new BlockCacheKey(path, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
     Attributes attributes = Attributes.of(BLOCK_CACHE_KEY_KEY, cacheKey.toString());
 
-    boolean cacheable = cacheBlock && cacheIfCompactionsOff();
-
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
     final Span span = Span.current();
@@ -1336,7 +1341,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
             return cachedBlock;
           }
 
-          if (!useLock && cacheable && cacheConf.shouldLockOnCacheMiss(expectedBlockType)) {
+          if (!useLock && cacheBlock && cacheConf.shouldLockOnCacheMiss(expectedBlockType)) {
             // check cache again with lock
             useLock = true;
             continue;
@@ -1347,7 +1352,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         span.addEvent("block cache miss", attributes);
         // Load block from filesystem.
         HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread,
-          !isCompaction, shouldUseHeap(expectedBlockType, cacheable));
+          !isCompaction, shouldUseHeap(expectedBlockType, cacheBlock));
         try {
           validateBlockType(hfileBlock, expectedBlockType);
         } catch (IOException e) {
@@ -1360,25 +1365,30 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
         // Don't need the unpacked block back and we're storing the block in the cache compressed
         if (cacheOnly && cacheCompressed && cacheOnRead) {
+          HFileBlock blockNoChecksum = BlockCacheUtil.getBlockForCaching(cacheConf, hfileBlock);
           cacheConf.getBlockCache().ifPresent(cache -> {
             LOG.debug("Skipping decompression of block {} in prefetch", cacheKey);
             // Cache the block if necessary
-            if (cacheable && cacheConf.shouldCacheBlockOnRead(category)) {
-              cache.cacheBlock(cacheKey, hfileBlock, cacheConf.isInMemory(), cacheOnly);
+            if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
+              cache.cacheBlock(cacheKey, blockNoChecksum, cacheConf.isInMemory(), cacheOnly);
             }
           });
 
           if (updateCacheMetrics && hfileBlock.getBlockType().isData()) {
             HFile.DATABLOCK_READ_COUNT.increment();
           }
-          return hfileBlock;
+          return blockNoChecksum;
         }
         HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
+        HFileBlock unpackedNoChecksum = BlockCacheUtil.getBlockForCaching(cacheConf, unpacked);
         // Cache the block if necessary
         cacheConf.getBlockCache().ifPresent(cache -> {
-          if (cacheable && cacheConf.shouldCacheBlockOnRead(category)) {
+          if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
             // Using the wait on cache during compaction and prefetching.
-            cache.cacheBlock(cacheKey, cacheCompressed ? hfileBlock : unpacked,
+            cache.cacheBlock(cacheKey,
+              cacheCompressed
+                ? BlockCacheUtil.getBlockForCaching(cacheConf, hfileBlock)
+                : unpackedNoChecksum,
               cacheConf.isInMemory(), cacheOnly);
           }
         });
@@ -1390,7 +1400,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
           HFile.DATABLOCK_READ_COUNT.increment();
         }
 
-        return unpacked;
+        return unpackedNoChecksum;
       }
     } finally {
       if (lockEntry != null) {
@@ -1432,7 +1442,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    *         the last row key, but it is the Cell representation of the last key
    */
   @Override
-  public Optional<Cell> getLastKey() {
+  public Optional<ExtendedCell> getLastKey() {
     return dataBlockIndexReader.isEmpty()
       ? Optional.empty()
       : Optional.of(fileInfo.getLastKeyCell());
@@ -1443,7 +1453,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    *         approximation only.
    */
   @Override
-  public Optional<Cell> midKey() throws IOException {
+  public Optional<ExtendedCell> midKey() throws IOException {
     return Optional.ofNullable(dataBlockIndexReader.midkey(this));
   }
 
@@ -1552,7 +1562,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public Cell getKey() {
+    public ExtendedCell getKey() {
       assertValidSeek();
       return seeker.getKey();
     }
@@ -1564,7 +1574,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public Cell getCell() {
+    public ExtendedCell getCell() {
       if (this.curBlock == null) {
         return null;
       }
@@ -1589,13 +1599,13 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    protected Cell getFirstKeyCellInBlock(HFileBlock curBlock) {
+    protected ExtendedCell getFirstKeyCellInBlock(HFileBlock curBlock) {
       return dataBlockEncoder.getFirstKeyCellInBlock(getEncodedBuffer(curBlock));
     }
 
     @Override
-    protected int loadBlockAndSeekToKey(HFileBlock seekToBlock, Cell nextIndexedKey, boolean rewind,
-      Cell key, boolean seekBefore) throws IOException {
+    protected int loadBlockAndSeekToKey(HFileBlock seekToBlock, ExtendedCell nextIndexedKey,
+      boolean rewind, ExtendedCell key, boolean seekBefore) throws IOException {
       if (this.curBlock == null || this.curBlock.getOffset() != seekToBlock.getOffset()) {
         updateCurrentBlock(seekToBlock);
       } else if (rewind) {
@@ -1606,7 +1616,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public int compareKey(CellComparator comparator, Cell key) {
+    public int compareKey(CellComparator comparator, ExtendedCell key) {
       return seeker.compareKey(comparator, key);
     }
   }
@@ -1669,9 +1679,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
   /**
    * Create a Scanner on this file. No seeks or reads are done on creation. Call
-   * {@link HFileScanner#seekTo(Cell)} to position an start the read. There is nothing to clean up
-   * in a Scanner. Letting go of your references to the scanner is sufficient. NOTE: Do not use this
-   * overload of getScanner for compactions. See
+   * {@link HFileScanner#seekTo(ExtendedCell)} to position an start the read. There is nothing to
+   * clean up in a Scanner. Letting go of your references to the scanner is sufficient. NOTE: Do not
+   * use this overload of getScanner for compactions. See
    * {@link #getScanner(Configuration, boolean, boolean, boolean)}
    * @param conf        Store configuration.
    * @param cacheBlocks True if we should cache blocks read in by this scanner.
@@ -1686,8 +1696,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
   /**
    * Create a Scanner on this file. No seeks or reads are done on creation. Call
-   * {@link HFileScanner#seekTo(Cell)} to position an start the read. There is nothing to clean up
-   * in a Scanner. Letting go of your references to the scanner is sufficient.
+   * {@link HFileScanner#seekTo(ExtendedCell)} to position an start the read. There is nothing to
+   * clean up in a Scanner. Letting go of your references to the scanner is sufficient.
    * @param conf         Store configuration.
    * @param cacheBlocks  True if we should cache blocks read in by this scanner.
    * @param pread        Use positional read rather than seek+read if true (pread is better for
@@ -1711,10 +1721,5 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   @Override
   public void unbufferStream() {
     fsBlockReader.unbufferStream();
-  }
-
-  protected boolean cacheIfCompactionsOff() {
-    return (!StoreFileInfo.isReference(name) && !HFileLink.isHFileLink(name))
-      || !conf.getBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, true);
   }
 }

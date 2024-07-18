@@ -190,7 +190,7 @@ public class FullTableBackupClient extends TableBackupClient {
       backupManager.writeBackupStartCode(newStartCode);
 
       // backup complete
-      completeBackup(conn, backupInfo, backupManager, BackupType.FULL, conf);
+      completeBackup(conn, backupInfo, BackupType.FULL, conf);
     } catch (Exception e) {
       failBackup(conn, backupInfo, backupManager, e, "Unexpected BackupException : ",
         BackupType.FULL, conf);

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionRegistry;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
@@ -123,7 +124,7 @@ public class TestMultiTableInputFormatBase {
     static final AtomicInteger creations = new AtomicInteger(0);
 
     MRSplitsConnection(Configuration conf, ExecutorService pool, User user,
-      Map<String, byte[]> connectionAttributes) throws IOException {
+      ConnectionRegistry registry, Map<String, byte[]> connectionAttributes) throws IOException {
       this.configuration = conf;
       creations.incrementAndGet();
     }

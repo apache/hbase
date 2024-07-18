@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import static org.apache.hadoop.hbase.rest.model.CellModel.MAGIC_LENGTH;
+
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -26,8 +30,8 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet;
 import org.apache.hadoop.hbase.util.ByteStringer;
@@ -67,7 +71,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </pre>
  */
 @XmlRootElement(name = "CellSet")
-@XmlAccessorType(XmlAccessType.FIELD)
+@XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Private
 public class CellSetModel implements Serializable, ProtobufMessageHandler {
   private static final long serialVersionUID = 1L;
@@ -104,15 +108,25 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     CellSet.Builder builder = CellSet.newBuilder();
     for (RowModel row : getRows()) {
       CellSet.Row.Builder rowBuilder = CellSet.Row.newBuilder();
-      rowBuilder.setKey(ByteStringer.wrap(row.getKey()));
+      if (row.getKeyLength() == MAGIC_LENGTH) {
+        rowBuilder.setKey(ByteStringer.wrap(row.getKey()));
+      } else {
+        rowBuilder
+          .setKey(ByteStringer.wrap(row.getKeyArray(), row.getKeyOffset(), row.getKeyLength()));
+      }
       for (CellModel cell : row.getCells()) {
         Cell.Builder cellBuilder = Cell.newBuilder();
         cellBuilder.setColumn(ByteStringer.wrap(cell.getColumn()));
-        cellBuilder.setData(ByteStringer.wrap(cell.getValue()));
+        if (cell.getValueLength() == MAGIC_LENGTH) {
+          cellBuilder.setData(ByteStringer.wrap(cell.getValue()));
+        } else {
+          cellBuilder.setData(
+            ByteStringer.wrap(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+        }
         if (cell.hasUserTimestamp()) {
           cellBuilder.setTimestamp(cell.getTimestamp());
         }
@@ -120,13 +134,13 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
       }
       builder.addRows(rowBuilder);
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     CellSet.Builder builder = CellSet.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     for (CellSet.Row row : builder.getRowsList()) {
       RowModel rowModel = new RowModel(row.getKey().toByteArray());
       for (Cell cell : row.getValuesList()) {

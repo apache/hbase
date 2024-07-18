@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -30,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * Stores all of the cache objects and configuration for a single HFile.
  */
 @InterfaceAudience.Private
-public class CacheConfig {
+public class CacheConfig implements ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(CacheConfig.class.getName());
 
   /**
@@ -70,6 +71,8 @@ public class CacheConfig {
    * closed.
    */
   public static final String EVICT_BLOCKS_ON_CLOSE_KEY = "hbase.rs.evictblocksonclose";
+
+  public static final String EVICT_BLOCKS_ON_SPLIT_KEY = "hbase.rs.evictblocksonsplit";
 
   /**
    * Configuration key to prefetch all blocks of a given file into the block cache when the file is
@@ -112,6 +115,7 @@ public class CacheConfig {
   public static final boolean DEFAULT_CACHE_INDEXES_ON_WRITE = false;
   public static final boolean DEFAULT_CACHE_BLOOMS_ON_WRITE = false;
   public static final boolean DEFAULT_EVICT_ON_CLOSE = false;
+  public static final boolean DEFAULT_EVICT_ON_SPLIT = true;
   public static final boolean DEFAULT_CACHE_DATA_COMPRESSED = false;
   public static final boolean DEFAULT_PREFETCH_ON_OPEN = false;
   public static final boolean DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE = false;
@@ -124,13 +128,13 @@ public class CacheConfig {
    * turned off on a per-family or per-request basis). If off we will STILL cache meta blocks; i.e.
    * INDEX and BLOOM types. This cannot be disabled.
    */
-  private final boolean cacheDataOnRead;
+  private volatile boolean cacheDataOnRead;
 
   /** Whether blocks should be flagged as in-memory when being cached */
   private final boolean inMemory;
 
   /** Whether data blocks should be cached when new files are written */
-  private boolean cacheDataOnWrite;
+  private volatile boolean cacheDataOnWrite;
 
   /** Whether index blocks should be cached when new files are written */
   private boolean cacheIndexesOnWrite;
@@ -463,5 +467,17 @@ public class CacheConfig {
       + ", cacheBloomsOnWrite=" + shouldCacheBloomsOnWrite() + ", cacheEvictOnClose="
       + shouldEvictOnClose() + ", cacheDataCompressed=" + shouldCacheDataCompressed()
       + ", prefetchOnOpen=" + shouldPrefetchOnOpen();
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ);
+    cacheDataOnWrite = conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE);
+    evictOnClose = conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE);
+    LOG.info(
+      "Config hbase.block.data.cacheonread is changed to {}, "
+        + "hbase.rs.cacheblocksonwrite is changed to {}, "
+        + "hbase.rs.evictblocksonclose is changed to {}",
+      cacheDataOnRead, cacheDataOnWrite, evictOnClose);
   }
 }

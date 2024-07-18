@@ -24,11 +24,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -119,7 +123,10 @@ public class CompressionTest {
       HFile.getWriterFactoryNoCache(conf).withPath(fs, path).withFileContext(context).create();
     // Write any-old Cell...
     final byte[] rowKey = Bytes.toBytes("compressiontestkey");
-    Cell c = CellUtil.createCell(rowKey, Bytes.toBytes("compressiontestval"));
+    ExtendedCell c = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(rowKey)
+      .setFamily(HConstants.EMPTY_BYTE_ARRAY).setQualifier(HConstants.EMPTY_BYTE_ARRAY)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP).setType(KeyValue.Type.Maximum.getCode())
+      .setValue(Bytes.toBytes("compressiontestval")).build();
     writer.append(c);
     writer.appendFileInfo(Bytes.toBytes("compressioninfokey"), Bytes.toBytes("compressioninfoval"));
     writer.close();
@@ -146,17 +153,18 @@ public class CompressionTest {
 
     Configuration conf = new Configuration();
     Path path = new Path(args[0]);
-    FileSystem fs = path.getFileSystem(conf);
-    if (fs.exists(path)) {
-      System.err.println("The specified path exists, aborting!");
-      System.exit(1);
-    }
+    try (FileSystem fs = path.getFileSystem(conf)) {
+      if (fs.exists(path)) {
+        System.err.println("The specified path exists, aborting!");
+        System.exit(1);
+      }
 
-    try {
-      doSmokeTest(fs, path, args[1]);
-    } finally {
-      fs.delete(path, false);
+      try {
+        doSmokeTest(fs, path, args[1]);
+      } finally {
+        fs.delete(path, false);
+      }
+      System.out.println("SUCCESS");
     }
-    System.out.println("SUCCESS");
   }
 }

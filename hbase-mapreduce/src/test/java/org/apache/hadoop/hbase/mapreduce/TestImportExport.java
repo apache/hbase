@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -887,7 +888,7 @@ public class TestImportExport {
           Cell cell = cellScanner.current();
           List<Tag> tags = PrivateCellUtil.getTags(cell);
           tags.add(sourceOpTag);
-          Cell updatedCell = PrivateCellUtil.createCell(cell, tags);
+          Cell updatedCell = PrivateCellUtil.createCell((ExtendedCell) cell, tags);
           updatedCells.add(updatedCell);
         }
         m.getFamilyCellMap().clear();

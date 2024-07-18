@@ -28,7 +28,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
@@ -153,7 +153,7 @@ public class TestMemstoreLABWithoutPool {
   }
 
   private Thread getChunkQueueTestThread(final MemStoreLABImpl mslab, String threadName,
-    Cell cellToCopyInto) {
+    ExtendedCell cellToCopyInto) {
     Thread thread = new Thread() {
       volatile boolean stopped = false;
 

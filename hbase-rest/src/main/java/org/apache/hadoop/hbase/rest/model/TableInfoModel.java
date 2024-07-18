@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -24,8 +26,8 @@ import java.util.List;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -121,7 +123,7 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     TableInfo.Builder builder = TableInfo.newBuilder();
     builder.setName(name);
     for (TableRegionModel aRegion : regions) {
@@ -133,13 +135,13 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
       regionBuilder.setLocation(aRegion.getLocation());
       builder.addRegions(regionBuilder);
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     TableInfo.Builder builder = TableInfo.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     setName(builder.getName());
     for (TableInfo.Region region : builder.getRegionsList()) {
       add(

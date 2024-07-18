@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
@@ -100,7 +101,7 @@ public class PutSortReducer
           throw new IOException("Invalid visibility expression found in mutation " + p, e);
         }
         for (List<Cell> cells : p.getFamilyCellMap().values()) {
-          for (Cell cell : cells) {
+          for (ExtendedCell cell : (List<ExtendedCell>) (List) cells) {
             // Creating the KV which needs to be directly written to HFiles. Using the Facade
             // KVCreator for creation of kvs.
             KeyValue kv = null;

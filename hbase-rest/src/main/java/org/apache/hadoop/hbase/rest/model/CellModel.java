@@ -17,7 +17,12 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIMITER;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import javax.xml.bind.annotation.XmlAccessType;
@@ -30,8 +35,8 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -56,10 +61,11 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </pre>
  */
 @XmlRootElement(name = "Cell")
-@XmlAccessorType(XmlAccessType.FIELD)
+@XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Private
 public class CellModel implements ProtobufMessageHandler, Serializable {
   private static final long serialVersionUID = 1L;
+  public static final int MAGIC_LENGTH = -1;
 
   @JsonProperty("column")
   @XmlAttribute
@@ -69,9 +75,16 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   @XmlAttribute
   private long timestamp = HConstants.LATEST_TIMESTAMP;
 
-  @JsonProperty("$")
-  @XmlValue
+  // If valueLength = -1, this represents the cell's value.
+  // If valueLength <> 1, this represents an array containing the cell's value as determined by
+  // offset and length.
   private byte[] value;
+
+  @JsonIgnore
+  private int valueOffset;
+
+  @JsonIgnore
+  private int valueLength = MAGIC_LENGTH;
 
   /**
    * Default constructor
@@ -94,11 +107,16 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   }
 
   /**
-   * Constructor from KeyValue
+   * Constructor from KeyValue This avoids copying the value from the cell, and tries to optimize
+   * generating the column value.
    */
   public CellModel(org.apache.hadoop.hbase.Cell cell) {
-    this(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell), cell.getTimestamp(),
-      CellUtil.cloneValue(cell));
+    this.column = makeColumn(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+      cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+    this.timestamp = cell.getTimestamp();
+    this.value = cell.getValueArray();
+    this.valueOffset = cell.getValueOffset();
+    this.valueLength = cell.getValueLength();
   }
 
   /**
@@ -107,16 +125,16 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   public CellModel(byte[] column, long timestamp, byte[] value) {
     this.column = column;
     this.timestamp = timestamp;
-    this.value = value;
+    setValue(value);
   }
 
   /**
    * Constructor
    */
-  public CellModel(byte[] column, byte[] qualifier, long timestamp, byte[] value) {
-    this.column = CellUtil.makeColumn(column, qualifier);
+  public CellModel(byte[] family, byte[] qualifier, long timestamp, byte[] value) {
+    this.column = CellUtil.makeColumn(family, qualifier);
     this.timestamp = timestamp;
-    this.value = value;
+    setValue(value);
   }
 
   /** Returns the column */
@@ -149,38 +167,80 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   }
 
   /** Returns the value */
+  @JsonProperty("$")
+  @XmlValue
   public byte[] getValue() {
+    if (valueLength == MAGIC_LENGTH) {
+      return value;
+    } else {
+      byte[] retValue = new byte[valueLength];
+      System.arraycopy(value, valueOffset, retValue, 0, valueLength);
+      return retValue;
+    }
+  }
+
+  /** Returns the backing array for value (may be the same as value) */
+  public byte[] getValueArray() {
     return value;
   }
 
   /**
    * @param value the value to set
    */
+  @JsonProperty("$")
   public void setValue(byte[] value) {
     this.value = value;
+    this.valueLength = MAGIC_LENGTH;
+  }
+
+  public int getValueOffset() {
+    return valueOffset;
+  }
+
+  public int getValueLength() {
+    return valueLength;
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     Cell.Builder builder = Cell.newBuilder();
     builder.setColumn(ByteStringer.wrap(getColumn()));
-    builder.setData(ByteStringer.wrap(getValue()));
+    if (valueLength == MAGIC_LENGTH) {
+      builder.setData(ByteStringer.wrap(getValue()));
+    } else {
+      builder.setData(ByteStringer.wrap(value, valueOffset, valueLength));
+    }
     if (hasUserTimestamp()) {
       builder.setTimestamp(getTimestamp());
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     Cell.Builder builder = Cell.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     setColumn(builder.getColumn().toByteArray());
     setValue(builder.getData().toByteArray());
     if (builder.hasTimestamp()) {
       setTimestamp(builder.getTimestamp());
     }
     return this;
+  }
+
+  /**
+   * Makes a column in family:qualifier form from separate byte arrays with offset and length.
+   * <p>
+   * Not recommended for usage as this is old-style API.
+   * @return family:qualifier
+   */
+  public static byte[] makeColumn(byte[] family, int familyOffset, int familyLength,
+    byte[] qualifier, int qualifierOffset, int qualifierLength) {
+    byte[] column = new byte[familyLength + qualifierLength + 1];
+    System.arraycopy(family, familyOffset, column, 0, familyLength);
+    column[familyLength] = COLUMN_FAMILY_DELIMITER;
+    System.arraycopy(qualifier, qualifierOffset, column, familyLength + 1, qualifierLength);
+    return column;
   }
 
   @Override
@@ -196,17 +256,17 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
     }
     CellModel cellModel = (CellModel) obj;
     return new EqualsBuilder().append(column, cellModel.column)
-      .append(timestamp, cellModel.timestamp).append(value, cellModel.value).isEquals();
+      .append(timestamp, cellModel.timestamp).append(getValue(), cellModel.getValue()).isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder().append(column).append(timestamp).append(value).toHashCode();
+    return new HashCodeBuilder().append(column).append(timestamp).append(getValue()).toHashCode();
   }
 
   @Override
   public String toString() {
     return new ToStringBuilder(this).append("column", column).append("timestamp", timestamp)
-      .append("value", value).toString();
+      .append("value", getValue()).toString();
   }
 }

@@ -79,6 +79,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -137,9 +138,9 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     static final Option NO_CHECKSUM_VERIFY = new Option(null, "no-checksum-verify", false,
       "Do not verify checksum, use name+length only.");
     static final Option NO_TARGET_VERIFY = new Option(null, "no-target-verify", false,
-      "Do not verify the integrity of the exported snapshot.");
-    static final Option NO_SOURCE_VERIFY =
-      new Option(null, "no-source-verify", false, "Do not verify the source of the snapshot.");
+      "Do not verify the exported snapshot's expiration status and integrity.");
+    static final Option NO_SOURCE_VERIFY = new Option(null, "no-source-verify", false,
+      "Do not verify the source snapshot's expiration status and integrity.");
     static final Option OVERWRITE =
       new Option(null, "overwrite", false, "Rewrite the snapshot manifest if already exists.");
     static final Option CHUSER =
@@ -165,6 +166,15 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     BYTES_EXPECTED,
     BYTES_SKIPPED,
     BYTES_COPIED
+  }
+
+  /**
+   * Indicates the checksum comparison result.
+   */
+  public enum ChecksumComparison {
+    TRUE, // checksum comparison is compatible and true.
+    FALSE, // checksum comparison is compatible and false.
+    INCOMPATIBLE, // checksum comparison is not compatible.
   }
 
   private static class ExportMapper
@@ -306,24 +316,38 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         in = new ThrottledInputStream(new BufferedInputStream(in), bandwidthMB * 1024 * 1024L);
       }
 
+      Path inputPath = inputStat.getPath();
       try {
         context.getCounter(Counter.BYTES_EXPECTED).increment(inputStat.getLen());
 
         // Ensure that the output folder is there and copy the file
         createOutputPath(outputPath.getParent());
         FSDataOutputStream out = outputFs.create(outputPath, true);
-        try {
-          copyData(context, inputStat.getPath(), in, outputPath, out, inputStat.getLen());
-        } finally {
-          out.close();
-        }
+
+        long stime = EnvironmentEdgeManager.currentTime();
+        long totalBytesWritten =
+          copyData(context, inputPath, in, outputPath, out, inputStat.getLen());
+
+        // Verify the file length and checksum
+        verifyCopyResult(inputStat, outputFs.getFileStatus(outputPath));
+
+        long etime = EnvironmentEdgeManager.currentTime();
+        LOG.info("copy completed for input=" + inputPath + " output=" + outputPath);
+        LOG
+          .info("size=" + totalBytesWritten + " (" + StringUtils.humanReadableInt(totalBytesWritten)
+            + ")" + " time=" + StringUtils.formatTimeDiff(etime, stime) + String
+              .format(" %.3fM/sec", (totalBytesWritten / ((etime - stime) / 1000.0)) / 1048576.0));
+        context.getCounter(Counter.FILES_COPIED).increment(1);
 
         // Try to Preserve attributes
         if (!preserveAttributes(outputPath, inputStat)) {
           LOG.warn("You may have to run manually chown on: " + outputPath);
         }
+      } catch (IOException e) {
+        LOG.error("Error copying " + inputPath + " to " + outputPath, e);
+        context.getCounter(Counter.COPY_FAILED).increment(1);
+        throw e;
       } finally {
-        in.close();
         injectTestFailure(context, inputInfo);
       }
     }
@@ -400,7 +424,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       return str != null && str.length() > 0;
     }
 
-    private void copyData(final Context context, final Path inputPath, final InputStream in,
+    private long copyData(final Context context, final Path inputPath, final InputStream in,
       final Path outputPath, final FSDataOutputStream out, final long inputFileSize)
       throws IOException {
       final String statusMessage =
@@ -412,7 +436,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         int reportBytes = 0;
         int bytesRead;
 
-        long stime = EnvironmentEdgeManager.currentTime();
         while ((bytesRead = in.read(buffer)) > 0) {
           out.write(buffer, 0, bytesRead);
           totalBytesWritten += bytesRead;
@@ -427,7 +450,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
             reportBytes = 0;
           }
         }
-        long etime = EnvironmentEdgeManager.currentTime();
 
         context.getCounter(Counter.BYTES_COPIED).increment(reportBytes);
         context
@@ -435,23 +457,10 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
             (totalBytesWritten / (float) inputFileSize) * 100.0f) + " from " + inputPath + " to "
             + outputPath);
 
-        // Verify that the written size match
-        if (totalBytesWritten != inputFileSize) {
-          String msg = "number of bytes copied not matching copied=" + totalBytesWritten
-            + " expected=" + inputFileSize + " for file=" + inputPath;
-          throw new IOException(msg);
-        }
-
-        LOG.info("copy completed for input=" + inputPath + " output=" + outputPath);
-        LOG
-          .info("size=" + totalBytesWritten + " (" + StringUtils.humanReadableInt(totalBytesWritten)
-            + ")" + " time=" + StringUtils.formatTimeDiff(etime, stime) + String
-              .format(" %.3fM/sec", (totalBytesWritten / ((etime - stime) / 1000.0)) / 1048576.0));
-        context.getCounter(Counter.FILES_COPIED).increment(1);
-      } catch (IOException e) {
-        LOG.error("Error copying " + inputPath + " to " + outputPath, e);
-        context.getCounter(Counter.COPY_FAILED).increment(1);
-        throw e;
+        return totalBytesWritten;
+      } finally {
+        out.close();
+        in.close();
       }
     }
 
@@ -529,6 +538,81 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         LOG.warn("Unable to get checksum for file=" + path, e);
         return null;
       }
+    }
+
+    /**
+     * Utility to compare the file length and checksums for the paths specified.
+     */
+    private void verifyCopyResult(final FileStatus inputStat, final FileStatus outputStat)
+      throws IOException {
+      long inputLen = inputStat.getLen();
+      long outputLen = outputStat.getLen();
+      Path inputPath = inputStat.getPath();
+      Path outputPath = outputStat.getPath();
+
+      if (inputLen != outputLen) {
+        throw new IOException("Mismatch in length of input:" + inputPath + " (" + inputLen
+          + ") and output:" + outputPath + " (" + outputLen + ")");
+      }
+
+      // If length==0, we will skip checksum
+      if (inputLen != 0 && verifyChecksum) {
+        FileChecksum inChecksum = getFileChecksum(inputFs, inputStat.getPath());
+        FileChecksum outChecksum = getFileChecksum(outputFs, outputStat.getPath());
+
+        ChecksumComparison checksumComparison = verifyChecksum(inChecksum, outChecksum);
+        if (!checksumComparison.equals(ChecksumComparison.TRUE)) {
+          StringBuilder errMessage = new StringBuilder("Checksum mismatch between ")
+            .append(inputPath).append(" and ").append(outputPath).append(".");
+
+          boolean addSkipHint = false;
+          String inputScheme = inputFs.getScheme();
+          String outputScheme = outputFs.getScheme();
+          if (!inputScheme.equals(outputScheme)) {
+            errMessage.append(" Input and output filesystems are of different types.\n")
+              .append("Their checksum algorithms may be incompatible.");
+            addSkipHint = true;
+          } else if (inputStat.getBlockSize() != outputStat.getBlockSize()) {
+            errMessage.append(" Input and output differ in block-size.");
+            addSkipHint = true;
+          } else if (
+            inChecksum != null && outChecksum != null
+              && !inChecksum.getAlgorithmName().equals(outChecksum.getAlgorithmName())
+          ) {
+            errMessage.append(" Input and output checksum algorithms are of different types.");
+            addSkipHint = true;
+          }
+          if (addSkipHint) {
+            errMessage
+              .append(" You can choose file-level checksum validation via "
+                + "-Ddfs.checksum.combine.mode=COMPOSITE_CRC when block-sizes"
+                + " or filesystems are different.")
+              .append(" Or you can skip checksum-checks altogether with --no-checksum-verify.\n")
+              .append(" (NOTE: By skipping checksums, one runs the risk of "
+                + "masking data-corruption during file-transfer.)\n");
+          }
+          throw new IOException(errMessage.toString());
+        }
+      }
+    }
+
+    /**
+     * Utility to compare checksums
+     */
+    private ChecksumComparison verifyChecksum(final FileChecksum inChecksum,
+      final FileChecksum outChecksum) {
+      // If the input or output checksum is null, or the algorithms of input and output are not
+      // equal, that means there is no comparison
+      // and return not compatible. else if matched, return compatible with the matched result.
+      if (
+        inChecksum == null || outChecksum == null
+          || !inChecksum.getAlgorithmName().equals(outChecksum.getAlgorithmName())
+      ) {
+        return ChecksumComparison.INCOMPATIBLE;
+      } else if (inChecksum.equals(outChecksum)) {
+        return ChecksumComparison.TRUE;
+      }
+      return ChecksumComparison.FALSE;
     }
 
     /**
@@ -850,13 +934,17 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     }
   }
 
-  private void verifySnapshot(final Configuration baseConf, final FileSystem fs, final Path rootDir,
-    final Path snapshotDir) throws IOException {
+  private void verifySnapshot(final SnapshotDescription snapshotDesc, final Configuration baseConf,
+    final FileSystem fs, final Path rootDir, final Path snapshotDir) throws IOException {
     // Update the conf with the current root dir, since may be a different cluster
     Configuration conf = new Configuration(baseConf);
     CommonFSUtils.setRootDir(conf, rootDir);
     CommonFSUtils.setFsDefault(conf, CommonFSUtils.getRootDir(conf));
-    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    boolean isExpired = SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDesc.getTtl(),
+      snapshotDesc.getCreationTime(), EnvironmentEdgeManager.currentTime());
+    if (isExpired) {
+      throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(snapshotDesc));
+    }
     SnapshotReferenceUtil.verifySnapshot(conf, fs, snapshotDir, snapshotDesc);
   }
 
@@ -958,14 +1046,14 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     if (snapshotName == null) {
       System.err.println("Snapshot name not provided.");
       LOG.error("Use -h or --help for usage instructions.");
-      return 0;
+      return EXIT_FAILURE;
     }
 
     if (outputRoot == null) {
       System.err
         .println("Destination file-system (--" + Options.COPY_TO.getLongOpt() + ") not provided.");
       LOG.error("Use -h or --help for usage instructions.");
-      return 0;
+      return EXIT_FAILURE;
     }
 
     if (targetName == null) {
@@ -993,11 +1081,14 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     LOG.debug("outputFs={}, outputRoot={}, skipTmp={}, initialOutputSnapshotDir={}", outputFs,
       outputRoot.toString(), skipTmp, initialOutputSnapshotDir);
 
+    // throw CorruptedSnapshotException if we can't read the snapshot info.
+    SnapshotDescription sourceSnapshotDesc =
+      SnapshotDescriptionUtils.readSnapshotInfo(inputFs, snapshotDir);
+
     // Verify snapshot source before copying files
     if (verifySource) {
-      LOG.info("Verify snapshot source, inputFs={}, inputRoot={}, snapshotDir={}.",
-        inputFs.getUri(), inputRoot, snapshotDir);
-      verifySnapshot(srcConf, inputFs, inputRoot, snapshotDir);
+      LOG.info("Verify the source snapshot's expiration status and integrity.");
+      verifySnapshot(sourceSnapshotDesc, srcConf, inputFs, inputRoot, snapshotDir);
     }
 
     // Find the necessary directory which need to change owner and group
@@ -1018,12 +1109,12 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       if (overwrite) {
         if (!outputFs.delete(outputSnapshotDir, true)) {
           System.err.println("Unable to remove existing snapshot directory: " + outputSnapshotDir);
-          return 1;
+          return EXIT_FAILURE;
         }
       } else {
         System.err.println("The snapshot '" + targetName + "' already exists in the destination: "
           + outputSnapshotDir);
-        return 1;
+        return EXIT_FAILURE;
       }
     }
 
@@ -1034,7 +1125,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
           if (!outputFs.delete(snapshotTmpDir, true)) {
             System.err
               .println("Unable to remove existing snapshot tmp directory: " + snapshotTmpDir);
-            return 1;
+            return EXIT_FAILURE;
           }
         } else {
           System.err
@@ -1043,7 +1134,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
             .println("Please check " + snapshotTmpDir + ". If the snapshot has completed, ");
           System.err
             .println("consider removing " + snapshotTmpDir + " by using the -overwrite option");
-          return 1;
+          return EXIT_FAILURE;
         }
       }
     }
@@ -1122,19 +1213,21 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
       // Step 4 - Verify snapshot integrity
       if (verifyTarget) {
-        LOG.info("Verify snapshot integrity");
-        verifySnapshot(destConf, outputFs, outputRoot, outputSnapshotDir);
+        LOG.info("Verify the exported snapshot's expiration status and integrity.");
+        SnapshotDescription targetSnapshotDesc =
+          SnapshotDescriptionUtils.readSnapshotInfo(outputFs, outputSnapshotDir);
+        verifySnapshot(targetSnapshotDesc, destConf, outputFs, outputRoot, outputSnapshotDir);
       }
 
       LOG.info("Export Completed: " + targetName);
-      return 0;
+      return EXIT_SUCCESS;
     } catch (Exception e) {
       LOG.error("Snapshot export failed", e);
       if (!skipTmp) {
         outputFs.delete(snapshotTmpDir, true);
       }
       outputFs.delete(outputSnapshotDir, true);
-      return 1;
+      return EXIT_FAILURE;
     }
   }
 

@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -234,9 +235,11 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         hasConsumerTask = () -> false;
       }
     } else {
-      ThreadPoolExecutor threadPool = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
-        new LinkedBlockingQueue<Runnable>(), new ThreadFactoryBuilder()
-          .setNameFormat("AsyncFSWAL-%d-" + rootDir.toString()).setDaemon(true).build());
+      ThreadPoolExecutor threadPool =
+        new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(),
+          new ThreadFactoryBuilder().setNameFormat("AsyncFSWAL-%d-" + rootDir.toString()
+            + "-prefix:" + (prefix == null ? "default" : prefix).replace("%", "%%")).setDaemon(true)
+            .build());
       hasConsumerTask = () -> threadPool.getQueue().peek() == consumer;
       this.consumeExecutor = threadPool;
     }
@@ -714,13 +717,22 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
   }
 
+  private void recoverLease(FileSystem fs, Path p, Configuration conf) {
+    try {
+      RecoverLeaseFSUtils.recoverFileLease(fs, p, conf, null);
+    } catch (IOException ex) {
+      LOG.error("Unable to recover lease after several attempts. Give up.", ex);
+    }
+  }
+
   private void closeWriter(AsyncWriter writer, Path path) {
     inflightWALClosures.put(path.getName(), writer);
     closeExecutor.execute(() -> {
       try {
         writer.close();
       } catch (IOException e) {
-        LOG.warn("close old writer failed", e);
+        LOG.warn("close old writer failed.", e);
+        recoverLease(this.fs, path, conf);
       } finally {
         // call this even if the above close fails, as there is no other chance we can set closed to
         // true, it will not cause big problems.
@@ -772,8 +784,10 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   @Override
   protected void doShutdown() throws IOException {
     waitForSafePoint();
-    closeWriter(this.writer, getOldPath());
-    this.writer = null;
+    if (this.writer != null) {
+      closeWriter(this.writer, getOldPath());
+      this.writer = null;
+    }
     closeExecutor.shutdown();
     try {
       if (!closeExecutor.awaitTermination(waitOnShutdownInSeconds, TimeUnit.SECONDS)) {

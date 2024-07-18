@@ -17,14 +17,16 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.Serializable;
 import javax.servlet.ServletContext;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RESTServlet;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -161,20 +163,20 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     Version.Builder builder = Version.newBuilder();
     builder.setRestVersion(restVersion);
     builder.setJvmVersion(jvmVersion);
     builder.setOsVersion(osVersion);
     builder.setServerVersion(serverVersion);
     builder.setJerseyVersion(jerseyVersion);
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     Version.Builder builder = Version.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     if (builder.hasRestVersion()) {
       restVersion = builder.getRestVersion();
     }
