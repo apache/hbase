@@ -22,6 +22,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -45,6 +46,7 @@ import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCp;
 import org.apache.hadoop.tools.DistCpConstants;
+import org.apache.hadoop.tools.DistCpOptionSwitch;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -58,6 +60,10 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class MapReduceBackupCopyJob implements BackupCopyJob {
   public static final String NUMBER_OF_LEVELS_TO_PRESERVE_KEY = "num.levels.preserve";
+
+  // This prefix specifies the DistCp options to be used during backup copy
+  public static final String BACKUP_COPY_OPTION_PREFIX = "hbase.backup.copy.";
+
   private static final Logger LOG = LoggerFactory.getLogger(MapReduceBackupCopyJob.class);
 
   private Configuration conf;
@@ -394,7 +400,15 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
         if (!destfs.exists(dest)) {
           destfs.mkdirs(dest);
         }
-        res = distcp.run(newOptions);
+
+        List<String> distCpOptionsFromConf = parseDistCpOptions(conf);
+        String[] finalOptions = new String[newOptions.length + distCpOptionsFromConf.size()];
+        for (int i = 0; i < distCpOptionsFromConf.size(); i++) {
+          finalOptions[i] = distCpOptionsFromConf.get(i);
+        }
+        System.arraycopy(newOptions, 0, finalOptions, distCpOptionsFromConf.size(),
+          newOptions.length);
+        res = distcp.run(finalOptions);
       }
       return res;
 
@@ -423,6 +437,27 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
     } catch (InterruptedException e) {
       throw new IOException(e);
     }
+  }
+
+  protected static List<String> parseDistCpOptions(Configuration conf) {
+    List<String> extraArgsFromConf = new ArrayList<>();
+
+    for (DistCpOptionSwitch optionSwitch : DistCpOptionSwitch.values()) {
+      String configLabel = BACKUP_COPY_OPTION_PREFIX + optionSwitch.getConfigLabel();
+      if (conf.get(configLabel) != null) {
+        if (optionSwitch.getOption().hasArg()) {
+          extraArgsFromConf.add("-" + optionSwitch.getOption().getOpt());
+          extraArgsFromConf.add(conf.get(configLabel));
+        } else {
+          boolean value = conf.getBoolean(configLabel, false);
+          if (value) {
+            extraArgsFromConf.add("-" + optionSwitch.getOption().getOpt());
+          }
+        }
+      }
+    }
+
+    return extraArgsFromConf;
   }
 
 }
