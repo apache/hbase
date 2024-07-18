@@ -57,7 +57,15 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
    */
   private final boolean isManagedConnection;
 
-  QuotaRetriever(final Connection conn, final Scan scan) throws IOException {
+  public QuotaRetriever(final Connection conn) throws IOException {
+    this(conn, (QuotaFilter) null);
+  }
+
+  public QuotaRetriever(final Connection conn, final QuotaFilter filter) throws IOException {
+    this(conn, QuotaTableUtil.makeScan(filter));
+  }
+
+  public QuotaRetriever(final Connection conn, final Scan scan) throws IOException {
     isManagedConnection = false;
     init(conn, scan);
   }
@@ -161,21 +169,12 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
    * @param conf Configuration object to use.
    * @return the QuotaRetriever
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Since 3.0.0, will be removed in 4.0.0. Use {@link #open(Connection)} instead.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Use
+   *             {@link #QuotaRetriever(Configuration, Scan)} instead.
    */
   @Deprecated
   public static QuotaRetriever open(final Configuration conf) throws IOException {
     return open(conf, null);
-  }
-
-  /**
-   * Open a QuotaRetriever with no filter, all the quota settings will be returned.
-   * @param conn Connection object to use.
-   * @return the QuotaRetriever
-   * @throws IOException if a remote or network exception occurs
-   */
-  public static QuotaRetriever open(final Connection conn) throws IOException {
-    return open(conn, null);
   }
 
   /**
@@ -184,8 +183,8 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
    * @param filter the QuotaFilter
    * @return the QuotaRetriever
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Since 3.0.0, will be removed in 4.0.0. Use {@link #open(Connection, QuotaFilter)}
-   *             instead.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Use
+   *             {@link #QuotaRetriever(Configuration, Scan)} instead.
    */
   @Deprecated
   public static QuotaRetriever open(final Configuration conf, final QuotaFilter filter)
@@ -194,16 +193,4 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
     return new QuotaRetriever(conf, scan);
   }
 
-  /**
-   * Open a QuotaRetriever with the specified filter.
-   * @param conn   Connection object to use.
-   * @param filter the QuotaFilter
-   * @return the QuotaRetriever
-   * @throws IOException if a remote or network exception occurs
-   */
-  public static QuotaRetriever open(final Connection conn, final QuotaFilter filter)
-    throws IOException {
-    Scan scan = QuotaTableUtil.makeScan(filter);
-    return new QuotaRetriever(conn, scan);
-  }
 }

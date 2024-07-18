@@ -168,19 +168,21 @@ public class SnapshotQuotaObserverChore extends ScheduledChore {
     filter.addTypeFilter(QuotaType.SPACE);
     try (Admin admin = conn.getAdmin()) {
       // Pull all of the tables that have quotas (direct, or from namespace)
-      for (QuotaSettings qs : QuotaRetriever.open(conn, filter)) {
-        if (qs.getQuotaType() == QuotaType.SPACE) {
-          String ns = qs.getNamespace();
-          TableName tn = qs.getTableName();
-          if ((null == ns && null == tn) || (null != ns && null != tn)) {
-            throw new IllegalStateException(
-              "Expected either one of namespace and tablename to be null but not both");
-          }
-          // Collect either the table name itself, or all of the tables in the namespace
-          if (null != ns) {
-            tablesToFetchSnapshotsFrom.addAll(Arrays.asList(admin.listTableNamesByNamespace(ns)));
-          } else {
-            tablesToFetchSnapshotsFrom.add(tn);
+      try (QuotaRetriever qr = new QuotaRetriever(conn, filter)) {
+        for (QuotaSettings qs : qr) {
+          if (qs.getQuotaType() == QuotaType.SPACE) {
+            String ns = qs.getNamespace();
+            TableName tn = qs.getTableName();
+            if ((null == ns && null == tn) || (null != ns && null != tn)) {
+              throw new IllegalStateException(
+                "Expected either one of namespace and tablename to be null but not both");
+            }
+            // Collect either the table name itself, or all of the tables in the namespace
+            if (null != ns) {
+              tablesToFetchSnapshotsFrom.addAll(Arrays.asList(admin.listTableNamesByNamespace(ns)));
+            } else {
+              tablesToFetchSnapshotsFrom.add(tn);
+            }
           }
         }
       }

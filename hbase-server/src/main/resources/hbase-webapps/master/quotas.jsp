@@ -38,7 +38,7 @@
   boolean exceedThrottleQuotaEnabled = false;
   if (quotaManager != null) {
     exceedThrottleQuotaEnabled = quotaManager.isExceedThrottleQuotaEnabled();
-    try (QuotaRetriever scanner = QuotaRetriever.open(master.getConnection(), null)) {
+    try (QuotaRetriever scanner = new QuotaRetriever(master.getConnection())) {
       for (QuotaSettings quota : scanner) {
         if (quota instanceof ThrottleSettings) {
           ThrottleSettings throttle = (ThrottleSettings) quota;
