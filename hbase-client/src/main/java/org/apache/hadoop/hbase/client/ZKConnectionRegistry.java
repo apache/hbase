@@ -84,7 +84,6 @@ class ZKConnectionRegistry implements ConnectionRegistry {
     this.conf = conf;
     this.zkRegistryAsyncTimeout =
       conf.getInt(ZK_REGISTRY_ASYNC_GET_TIMEOUT, DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT);
-    // this.zk = new ReadOnlyZKClient(conf);
     if (NEEDS_LOG_WARN) {
       synchronized (WARN_LOCK) {
         if (NEEDS_LOG_WARN) {

@@ -107,7 +107,6 @@ public class TestReadOnlyZKClient {
     conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY, 3);
     conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY_INTERVAL_MILLIS, 100);
     conf.setInt(ReadOnlyZKClient.KEEPALIVE_MILLIS, 3000);
-    // RO_ZK = new ReadOnlyZKClient(conf);
     RO_ZK = new ReadOnlyZKClient(conf, RETRY_TIMER);
     // only connect when necessary
     assertNull(RO_ZK.zookeeper);
