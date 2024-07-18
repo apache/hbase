@@ -18,6 +18,46 @@
 -->
 # HBASE Changelog
 
+## Release 2.5.10 - 2024-07-26
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28683](https://issues.apache.org/jira/browse/HBASE-28683) | Only allow one TableProcedureInterface for a single table to run at the same time for some special procedure types |  Critical | master, proc-v2 |
+| [HBASE-28717](https://issues.apache.org/jira/browse/HBASE-28717) | Support FuzzyRowFilter in REST interface |  Major | REST |
+| [HBASE-28718](https://issues.apache.org/jira/browse/HBASE-28718) | Should support different license name for 'Apache License, Version 2.0' |  Major | build, shading |
+| [HBASE-28685](https://issues.apache.org/jira/browse/HBASE-28685) | Support non-root context in REST RemoteHTable and RemodeAdmin |  Major | REST |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28740](https://issues.apache.org/jira/browse/HBASE-28740) | Need to call parent class's serialization methods in CloseExcessRegionReplicasProcedure |  Blocker | proc-v2 |
+| [HBASE-28727](https://issues.apache.org/jira/browse/HBASE-28727) | SteppingSplitPolicy may not work when table enables region replication |  Minor | . |
+| [HBASE-28665](https://issues.apache.org/jira/browse/HBASE-28665) | WALs not marked closed when there are errors in closing WALs |  Minor | wal |
+| [HBASE-28364](https://issues.apache.org/jira/browse/HBASE-28364) | Warn: Cache key had block type null, but was found in L1 cache |  Major | . |
+| [HBASE-28714](https://issues.apache.org/jira/browse/HBASE-28714) | Hadoop check for hadoop 3.4.0 is failing |  Critical | dependencies, hadoop3 |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28737](https://issues.apache.org/jira/browse/HBASE-28737) | Add the slack channel related information in README.md |  Major | documentation |
+| [HBASE-28723](https://issues.apache.org/jira/browse/HBASE-28723) | [JDK17] TestSecureIPC fails under JDK17 |  Major | java, test |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28707](https://issues.apache.org/jira/browse/HBASE-28707) | Backport the code changes in HBASE-28675 to branch-2.x |  Major | . |
+
+
 ## Release 2.5.9 - Unreleased (as of 2024-07-05)
 
 

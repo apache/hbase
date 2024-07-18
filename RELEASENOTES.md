@@ -16,6 +16,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.5.10 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-28718](https://issues.apache.org/jira/browse/HBASE-28718) | *Major* | **Should support different license name for 'Apache License, Version 2.0'**
+
+Also accept "Apache-2.0" and "Apache Software License - Version 2.0" when aggregating license in resource bundle module.
+
+
+
 # HBASE  2.5.9 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
