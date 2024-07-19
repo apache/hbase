@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
@@ -99,6 +98,6 @@ public interface AsyncBufferedMutator extends Closeable {
    * Returns the rpc request attributes.
    */
   default Map<String, byte[]> getRequestAttributes() {
-    throw new UnsupportedOperationException("Not implemented");
+    return Collections.emptyMap();
   }
 }
