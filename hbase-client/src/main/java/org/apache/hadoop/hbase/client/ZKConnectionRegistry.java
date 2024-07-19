@@ -62,10 +62,17 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   private final ReadOnlyZKClient zk;
 
   private final ZNodePaths znodePaths;
+  private final Configuration conf;
+  private final int zkRegistryAsyncTimeout;
+  public static final String ZK_REGISTRY_ASYNC_GET_TIMEOUT = "zookeeper.registry.async.get.timeout";
+  public static final int DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT = 60000; // 1 min
 
   ZKConnectionRegistry(Configuration conf) {
     this.znodePaths = new ZNodePaths(conf);
-    this.zk = new ReadOnlyZKClient(conf);
+    this.zk = new ReadOnlyZKClient(conf, AsyncConnectionImpl.RETRY_TIMER);
+    this.conf = conf;
+    this.zkRegistryAsyncTimeout =
+      conf.getInt(ZK_REGISTRY_ASYNC_GET_TIMEOUT, DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT);
   }
 
   private interface Converter<T> {
@@ -74,7 +81,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   private <T> CompletableFuture<T> getAndConvert(String path, Converter<T> converter) {
     CompletableFuture<T> future = new CompletableFuture<>();
-    addListener(zk.get(path), (data, error) -> {
+    addListener(zk.get(path, this.zkRegistryAsyncTimeout), (data, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
         return;
@@ -208,8 +215,8 @@ class ZKConnectionRegistry implements ConnectionRegistry {
     return tracedFuture(() -> {
       CompletableFuture<RegionLocations> future = new CompletableFuture<>();
       addListener(
-        zk.list(znodePaths.baseZNode).thenApply(children -> children.stream()
-          .filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
+        zk.list(znodePaths.baseZNode, this.zkRegistryAsyncTimeout).thenApply(children -> children
+          .stream().filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
         (metaReplicaZNodes, error) -> {
           if (error != null) {
             future.completeExceptionally(error);
