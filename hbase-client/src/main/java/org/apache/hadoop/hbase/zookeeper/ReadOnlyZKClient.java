@@ -80,7 +80,7 @@ public final class ReadOnlyZKClient implements Closeable {
   private final int keepAliveTimeMs;
 
   private HashedWheelTimer retryTimer;
-  
+
   private final ZKClientConfig zkClientConfig;
 
   private static abstract class Task implements Delayed {
