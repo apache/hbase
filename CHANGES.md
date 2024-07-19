@@ -26,6 +26,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-28428](https://issues.apache.org/jira/browse/HBASE-28428) | Zookeeper ConnectionRegistry APIs should have timeout |  Major | . |
 | [HBASE-28683](https://issues.apache.org/jira/browse/HBASE-28683) | Only allow one TableProcedureInterface for a single table to run at the same time for some special procedure types |  Critical | master, proc-v2 |
 | [HBASE-28717](https://issues.apache.org/jira/browse/HBASE-28717) | Support FuzzyRowFilter in REST interface |  Major | REST |
 | [HBASE-28718](https://issues.apache.org/jira/browse/HBASE-28718) | Should support different license name for 'Apache License, Version 2.0' |  Major | build, shading |
@@ -36,6 +37,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-28704](https://issues.apache.org/jira/browse/HBASE-28704) | The expired snapshot can be read by CopyTable or ExportSnapshot﻿ |  Major | mapreduce, snapshots |
 | [HBASE-28740](https://issues.apache.org/jira/browse/HBASE-28740) | Need to call parent class's serialization methods in CloseExcessRegionReplicasProcedure |  Blocker | proc-v2 |
 | [HBASE-28727](https://issues.apache.org/jira/browse/HBASE-28727) | SteppingSplitPolicy may not work when table enables region replication |  Minor | . |
 | [HBASE-28665](https://issues.apache.org/jira/browse/HBASE-28665) | WALs not marked closed when there are errors in closing WALs |  Minor | wal |
