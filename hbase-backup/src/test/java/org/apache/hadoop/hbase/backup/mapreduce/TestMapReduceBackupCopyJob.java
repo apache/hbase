@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.backup.mapreduce;
 
 import static org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupCopyJob.BACKUP_COPY_OPTION_PREFIX;
-import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_DIRECT_WRITE;
 import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_MAX_MAPS;
 import static org.junit.Assert.assertEquals;
 
@@ -43,11 +42,9 @@ public class TestMapReduceBackupCopyJob {
   public void testDistCpOptionParsing() {
     Configuration conf = new Configuration();
     conf.setInt(BACKUP_COPY_OPTION_PREFIX + CONF_LABEL_MAX_MAPS, 1000);
-    conf.setBoolean(BACKUP_COPY_OPTION_PREFIX + CONF_LABEL_DIRECT_WRITE, true);
     List<String> args = MapReduceBackupCopyJob.parseDistCpOptions(conf);
 
-    List<String> expectedArgs =
-      ImmutableList.<String> builder().add("-m", "1000").add("-direct").build();
+    List<String> expectedArgs = ImmutableList.<String> builder().add("-m", "1000").build();
 
     assertEquals(args, expectedArgs);
   }
