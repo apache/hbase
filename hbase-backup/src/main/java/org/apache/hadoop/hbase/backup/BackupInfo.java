@@ -164,6 +164,11 @@ public class BackupInfo implements Comparable<BackupInfo> {
    */
   private long bandwidth = -1;
 
+  /**
+   * Do not verify checksum between source snapshot and exported snapshot
+   */
+  private boolean noChecksumVerify;
+
   public BackupInfo() {
     backupTableInfoMap = new HashMap<>();
   }
@@ -195,6 +200,14 @@ public class BackupInfo implements Comparable<BackupInfo> {
 
   public void setBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;
+  }
+
+  public void setNoChecksumVerify(boolean noChecksumVerify) {
+    this.noChecksumVerify = noChecksumVerify;
+  }
+
+  public boolean getNoChecksumVerify() {
+    return noChecksumVerify;
   }
 
   public void setBackupTableInfoMap(Map<TableName, BackupTableInfo> backupTableInfoMap) {
