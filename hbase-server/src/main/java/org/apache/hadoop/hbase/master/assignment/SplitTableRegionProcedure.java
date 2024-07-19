@@ -324,7 +324,7 @@ public class SplitTableRegionProcedure
           setNextState(SplitTableRegionState.SPLIT_TABLE_REGION_UPDATE_META);
           break;
         case SPLIT_TABLE_REGION_UPDATE_META:
-          updateMeta(env);
+          updateMeta(env, getProcId());
           setNextState(SplitTableRegionState.SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_META);
           break;
         case SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_META:
@@ -880,9 +880,9 @@ public class SplitTableRegionProcedure
    * Add daughter regions to META
    * @param env MasterProcedureEnv
    */
-  private void updateMeta(final MasterProcedureEnv env) throws IOException {
+  private void updateMeta(final MasterProcedureEnv env, long procId) throws IOException {
     env.getAssignmentManager().markRegionAsSplit(getParentRegion(), getParentRegionServerName(env),
-      daughterOneRI, daughterTwoRI);
+      daughterOneRI, daughterTwoRI, procId);
   }
 
   /**

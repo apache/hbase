@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 public class NamedQueueGetRequest {
 
   private AdminProtos.SlowLogResponseRequest slowLogResponseRequest;
+  private AdminProtos.RegionHistorianResponseRequest regionHistorianResponseRequest;
   private NamedQueuePayload.NamedQueueEvent namedQueueEvent;
   private MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest;
   private MasterProtos.BalancerRejectionsRequest balancerRejectionsRequest;
@@ -46,6 +47,13 @@ public class NamedQueueGetRequest {
     this.slowLogResponseRequest = slowLogResponseRequest;
   }
 
+  public void setRegionHistorianResponseRequest(AdminProtos.RegionHistorianResponseRequest regionHistorianResponseRequest) {
+    this.regionHistorianResponseRequest = regionHistorianResponseRequest;
+  }
+
+  public AdminProtos.RegionHistorianResponseRequest getRegionHistorianResponseRequest() {
+    return regionHistorianResponseRequest;
+  }
   public MasterProtos.BalancerDecisionsRequest getBalancerDecisionsRequest() {
     return balancerDecisionsRequest;
   }
@@ -76,7 +84,9 @@ public class NamedQueueGetRequest {
   public String toString() {
     return new ToStringBuilder(this).append("slowLogResponseRequest", slowLogResponseRequest)
       .append("namedQueueEvent", namedQueueEvent)
+      .append("regionHistorianResponseRequest",regionHistorianResponseRequest)
       .append("balancerDecisionsRequest", balancerDecisionsRequest)
       .append("balancerRejectionsRequest", balancerRejectionsRequest).toString();
   }
+
 }

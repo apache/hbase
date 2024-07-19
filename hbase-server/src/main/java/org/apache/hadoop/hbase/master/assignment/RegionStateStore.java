@@ -23,9 +23,15 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+<<<<<<< HEAD
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
+=======
+import java.util.SortedMap;
+import java.util.TreeMap;
+import org.apache.hadoop.conf.Configuration;
+>>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
@@ -57,6 +63,8 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.namequeues.RegionHistorianPayload;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
@@ -69,7 +77,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -92,10 +99,19 @@ public class RegionStateStore {
   private final MasterServices master;
 
   private final MasterRegion masterRegion;
+  NamedQueueRecorder namedQueueRecorder;
+  private boolean isRegionHistorianEnabled = false;
 
   public RegionStateStore(MasterServices master, MasterRegion masterRegion) {
     this.master = master;
     this.masterRegion = masterRegion;
+    Configuration conf =
+      master.getMasterProcedureExecutor().getEnvironment().getMasterConfiguration();
+    isRegionHistorianEnabled = conf.getBoolean(HConstants.REGION_HISTORIAN_BUFFER_ENABLED_KEY,
+      HConstants.DEFAULT_REGION_HISTORIAN_ENABLED_KEY);
+    if (isRegionHistorianEnabled) {
+      namedQueueRecorder = NamedQueueRecorder.getInstance(conf);
+    }
   }
 
   @FunctionalInterface
@@ -176,7 +192,16 @@ public class RegionStateStore {
     }
   }
 
+<<<<<<< HEAD
   private Put generateUpdateRegionLocationPut(RegionStateNode regionStateNode) throws IOException {
+=======
+  static RegionHistorianPayload getRegionHistorianPayload (String hostName, String regionName, String tableName, String eventType, long eventTimestamp, Long pid, Long ppid
+  ) {
+    return new RegionHistorianPayload(hostName, regionName, tableName, eventType, eventTimestamp, pid, ppid);
+  }
+
+  void updateRegionLocation(RegionStateNode regionStateNode) throws IOException {
+>>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
     long time = EnvironmentEdgeManager.currentTime();
     long openSeqNum = regionStateNode.getState() == State.OPEN
       ? regionStateNode.getOpenSeqNum()
@@ -221,6 +246,7 @@ public class RegionStateStore {
       .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put).setValue(Bytes.toBytes(state.name()))
       .build());
     LOG.info(info.toString());
+<<<<<<< HEAD
     return put;
   }
 
@@ -234,6 +260,18 @@ public class RegionStateStore {
     RegionInfo regionInfo = regionStateNode.getRegionInfo();
     State state = regionStateNode.getState();
     CompletableFuture<Void> future = updateRegionLocation(regionInfo, state, put);
+=======
+    updateRegionLocation(regionInfo, state, put);
+    if (isRegionHistorianEnabled) {
+      RegionHistorianPayload regionHistorianPayload =
+        getRegionHistorianPayload(regionLocation != null ? regionLocation.getServerName() : "null",
+          regionStateNode.getProcedure().getRegion().getEncodedName(),
+          regionStateNode.getTable().getNameAsString(), regionStateNode.getState().toString(),
+          System.currentTimeMillis(), regionStateNode.getProcedure().getProcId(),
+          regionStateNode.getProcedure().getParentProcId());
+      namedQueueRecorder.addRecord(regionHistorianPayload);
+    }
+>>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
     if (regionInfo.isMetaRegion() && regionInfo.isFirst()) {
       // mirror the meta location to zookeeper
       // we store meta location in master local region which means the above method is
@@ -359,6 +397,7 @@ public class RegionStateStore {
   // ============================================================================================
   // Update Region Splitting State helpers
   // ============================================================================================
+<<<<<<< HEAD
   /**
    * Splits the region into two in an atomic operation. Offlines the parent region with the
    * information that it is split into two, and also adds the daughter regions. Does not add the
@@ -366,10 +405,16 @@ public class RegionStateStore {
    */
   public void splitRegion(RegionInfo parent, RegionInfo splitA, RegionInfo splitB,
     ServerName serverName, TableDescriptor htd) throws IOException {
+=======
+  public void splitRegion(RegionInfo parent, RegionInfo hriA, RegionInfo hriB,
+    ServerName serverName, long procId) throws IOException {
+    TableDescriptor htd = getTableDescriptor(parent.getTable());
+>>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
     long parentOpenSeqNum = HConstants.NO_SEQNUM;
     if (htd.hasGlobalReplicationScope()) {
       parentOpenSeqNum = getOpenSeqNumForParentRegion(parent);
     }
+<<<<<<< HEAD
     long time = EnvironmentEdgeManager.currentTime();
     // Put for parent
     Put putParent = MetaTableAccessor.makePutFromRegionInfo(
@@ -407,13 +452,30 @@ public class RegionStateStore {
     }
 
     multiMutate(parent, Arrays.asList(putParent, putA, putB));
+=======
+    MetaTableAccessor.splitRegion(master.getConnection(), parent, parentOpenSeqNum, hriA, hriB,
+      serverName, getRegionReplication(htd));
+    if (isRegionHistorianEnabled) {
+      RegionHistorianPayload regionHistorianPayload =
+        getRegionHistorianPayload(serverName.toString(), parent.getEncodedName(),
+          parent.getTable().getNameAsString(), "MARK_REGION_AS_SPLIT", System.currentTimeMillis(),
+          procId, -1L);
+      namedQueueRecorder.addRecord(regionHistorianPayload);
+    }
+>>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
   }
 
   // ============================================================================================
   // Update Region Merging State helpers
   // ============================================================================================
   public void mergeRegions(RegionInfo child, RegionInfo[] parents, ServerName serverName,
+<<<<<<< HEAD
     TableDescriptor htd) throws IOException {
+=======
+    long procId)
+    throws IOException {
+    TableDescriptor htd = getTableDescriptor(child.getTable());
+>>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
     boolean globalScope = htd.hasGlobalReplicationScope();
     long time = HConstants.LATEST_TIMESTAMP;
     List<Mutation> mutations = new ArrayList<>();
@@ -428,6 +490,7 @@ public class RegionStateStore {
         replicationParents.add(ri);
       }
     }
+<<<<<<< HEAD
     // Put for parent
     Put putOfMerged = MetaTableAccessor.makePutFromRegionInfo(child, time);
     putOfMerged = addMergeRegions(putOfMerged, Arrays.asList(parents));
@@ -529,6 +592,17 @@ public class RegionStateStore {
         .build());
     }
     return put;
+=======
+    MetaTableAccessor.mergeRegions(master.getConnection(), child, parentSeqNums, serverName,
+      getRegionReplication(htd));
+    if (isRegionHistorianEnabled) {
+      RegionHistorianPayload regionHistorianPayload =
+        getRegionHistorianPayload(serverName.toString(), child.getEncodedName(),
+          child.getTable().getNameAsString(), "MARK_REGION_AS_MERGE", System.currentTimeMillis(),
+          procId, -1L);
+      namedQueueRecorder.addRecord(regionHistorianPayload);
+    }
+>>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
   }
 
   // ============================================================================================

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.namequeues;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionHist;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -43,6 +44,23 @@ public class LogHandlerUtils {
       totalFilters++;
     }
     if (StringUtils.isNotEmpty(request.getUserName())) {
+      totalFilters++;
+    }
+    return totalFilters;
+  }
+
+  private static int getTotalFiltersCountRegionHist(AdminProtos.RegionHistorianResponseRequest request) {
+    int totalFilters = 0;
+    if (StringUtils.isNotEmpty(request.getRegionName())) {
+      totalFilters++;
+    }
+    if (StringUtils.isNotEmpty(request.getTableName())) {
+      totalFilters++;
+    }
+    if (request.hasPid()) {
+      totalFilters++;
+    }
+    if (request.hasPpid()) {
       totalFilters++;
     }
     return totalFilters;
@@ -92,11 +110,67 @@ public class LogHandlerUtils {
     return filteredSlowLogPayloads;
   }
 
+  private static List<RegionHist.RegionHistorianPayload> filterLogsRegionHist(
+    AdminProtos.RegionHistorianResponseRequest request, List<RegionHist.RegionHistorianPayload> PayloadList,
+    int totalFilters) {
+    List<RegionHist.RegionHistorianPayload> filteredPayloads = new ArrayList<>();
+    final String regionName =
+      StringUtils.isNotEmpty(request.getRegionName()) ? request.getRegionName() : null;
+    final String tableName =
+      StringUtils.isNotEmpty(request.getTableName()) ? request.getTableName() : null;
+    for (RegionHist.RegionHistorianPayload Payload : PayloadList) {
+      int totalFilterMatches = 0;
+      if (regionName != null && Payload.getRegionName().equals(regionName)) {
+        totalFilterMatches++;
+      }
+      if (tableName != null && Payload.getTableName().equals(tableName)) {
+        totalFilterMatches++;
+      }
+      if (request.hasPid()){
+        long pid = request.getPid();
+        if (Payload.getPid()==pid){
+          totalFilterMatches++;
+        }
+      }
+      if (request.hasPpid()){
+        long ppid = request.getPpid();
+        if (Payload.getPpid()==ppid){
+          totalFilterMatches++;
+        }
+      }
+      if (
+        request.hasFilterByOperator() && request.getFilterByOperator()
+          .equals(AdminProtos.RegionHistorianResponseRequest.FilterByOperator.AND)
+      ) {
+        // Filter by AND operator
+        if (totalFilterMatches == totalFilters) {
+          filteredPayloads.add(Payload);
+        }
+      } else {
+        // Filter by OR operator
+        if (totalFilterMatches > 0) {
+          filteredPayloads.add(Payload);
+        }
+      }
+    }
+    return filteredPayloads;
+  }
+
   public static List<TooSlowLog.SlowLogPayload> getFilteredLogs(
     AdminProtos.SlowLogResponseRequest request, List<TooSlowLog.SlowLogPayload> logPayloadList) {
     int totalFilters = getTotalFiltersCount(request);
     if (totalFilters > 0) {
       logPayloadList = filterLogs(request, logPayloadList, totalFilters);
+    }
+    int limit = Math.min(request.getLimit(), logPayloadList.size());
+    return logPayloadList.subList(0, limit);
+  }
+
+  public static List<RegionHist.RegionHistorianPayload> getFilteredLogsRegionHist(
+    AdminProtos.RegionHistorianResponseRequest request, List<RegionHist.RegionHistorianPayload> logPayloadList) {
+    int totalFilters = getTotalFiltersCountRegionHist(request);
+    if (totalFilters > 0) {
+      logPayloadList = filterLogsRegionHist(request, logPayloadList, totalFilters);
     }
     int limit = Math.min(request.getLimit(), logPayloadList.size());
     return logPayloadList.subList(0, limit);

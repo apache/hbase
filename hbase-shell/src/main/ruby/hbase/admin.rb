@@ -1682,7 +1682,7 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Retrieve SlowLog Responses from RegionServers
-    def get_slowlog_responses(server_names, args, is_large_log = false)
+    def  get_slowlog_responses(server_names, args, is_large_log = false)
       unless server_names.is_a?(Array) || server_names.is_a?(String)
         raise(ArgumentError,
               "#{server_names.class} of #{server_names.inspect} is not of Array/String type")
@@ -1733,6 +1733,14 @@ module Hbase
         user = args['USER']
         filter_params.put('userName', user)
       end
+      if args.key? 'PID'
+        pid = args['PID']
+        filter_params.put('pid', pid)
+      end
+      if args.key? 'PPID'
+        ppid = args['PPID']
+        filter_params.put('ppid',ppid)
+      end
       if args.key? 'FILTER_BY_OP'
         filter_by_op = args['FILTER_BY_OP']
         if filter_by_op != 'OR' && filter_by_op != 'AND'
@@ -1769,6 +1777,60 @@ module Hbase
            "#{clear_log_success_count}/#{clear_log_responses.size} RegionServers"
     end
 
+    #----------------------------------------------------------------------------------------------
+    #Retrieve region historian responses from RegionServers
+    def get_regionHistorian_responses(server_names, args)
+      unless server_names.is_a?(Array) || server_names.is_a?(String)
+        raise(ArgumentError, "#{server_names.class} of #{server_names.inspect} is not of Array/String type")
+      end
+      if server_names == '*'
+        server_names = getServerNames([], true)
+      else
+        server_names_list = to_server_names(server_names)
+        server_names = getServerNames(server_names_list, false)
+      end
+      filter_params = get_filter_params(args)
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+      else
+        limit = 10
+      end
+      log_type = 'REGION_HISTORIAN'
+      log_dest =  org.apache.hadoop.hbase.client.ServerType::MASTER
+      server_names_set = java.util.HashSet.new(server_names)
+      region_Historian_responses = @admin.getLogEntries(server_names_set, log_type, log_dest, limit, filter_params)
+      region_Historian_responses_arr = []
+      region_Historian_responses.each { |region_Historian_responses|
+        region_Historian_responses_arr << region_Historian_responses.toJsonPrettyPrint
+      }
+      region_Historian_responses_arr
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Clears RegionHistorian Responses from RegionServers
+    def clear_regionHistorian_responses(server_names)
+      unless server_names.nil? || server_names.is_a?(Array) || server_names.is_a?(String)
+        raise(ArgumentError,
+              "#{server_names.class} of #{server_names.inspect} is not of correct type")
+      end
+      if server_names.nil?
+        server_names = getServerNames([], true)
+      else
+        server_names_list = to_server_names(server_names)
+        server_names = getServerNames(server_names_list, false)
+      end
+      puts 'before admin call in admin rb'
+      clear_log_responses = @admin.clearRegionHistoriansResponses(java.util.HashSet.new(server_names))
+      puts 'after admin call in admin rb'
+      clear_log_success_count = 0
+      clear_log_responses.each do |response|
+        if response
+          clear_log_success_count += 1
+        end
+      end
+      puts 'Cleared RegionHistorian responses from ' \
+           "#{clear_log_success_count}/#{clear_log_responses.size} RegionServers"
+    end
     #----------------------------------------------------------------------------------------------
     # Decommission a list of region servers, optionally offload corresponding regions
     def decommission_regionservers(host_or_servers, should_offload)

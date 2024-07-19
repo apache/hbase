@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionHistLogEntry;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLoadStats;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -123,6 +124,7 @@ import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionHist;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
@@ -3507,7 +3509,35 @@ public final class ProtobufUtil {
     }
     throw new RuntimeException("Invalid response from server");
   }
+  public static LogEntry getRegionHistorianRecord(final RegionHist.RegionHistorianPayload payload) {
+    RegionHistLogEntry regionHistLogEntry =
+      new RegionHistLogEntry.RegionHistorianLogEntryBuilder().setHostName(payload.getHostName())
+        .setRegionName(payload.getRegionName())
+        .setTableName(payload.getTableName())
+        .setEventType(payload.getEventType())
+        .setEventTimestamp(payload.getEventTimestamp())
+        .setPid(payload.getPid())
+        .setPpid(payload.getPpid()).build();
+    return regionHistLogEntry;
+  }
 
+  public static List<LogEntry> toRegionHistorianPayloads(final HBaseProtos.LogEntry logEntry) {
+    try {
+      final String logClassName = logEntry.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("RegionHistorianResponses")) {
+        AdminProtos.RegionHistorianResponses regionHistorianResponses =
+          (AdminProtos.RegionHistorianResponses) method.invoke(null, logEntry.getLogMessage());
+        return regionHistorianResponses.getRegionHistorianPayloadsList().stream()
+          .map(ProtobufUtil::getRegionHistorianRecord).collect(Collectors.toList());
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+             | InvocationTargetException e) {
+      throw new RuntimeException("Error while retrieving response from server");
+    }
+    throw new RuntimeException("Invalid response from server");
+  }
   /**
    * Convert {@link ClearSlowLogResponses} to boolean
    * @param clearSlowLogResponses Clear slowlog response protobuf instance
@@ -3517,6 +3547,7 @@ public final class ProtobufUtil {
     return clearSlowLogResponses.getIsCleaned();
   }
 
+<<<<<<< HEAD
   public static void populateBalanceRSGroupResponse(
     RSGroupAdminProtos.BalanceRSGroupResponse.Builder responseBuilder, BalanceResponse response) {
     responseBuilder.setBalanceRan(response.isBalancerRan())
@@ -3578,6 +3609,10 @@ public final class ProtobufUtil {
           .collect(Collectors.toList());
     return RSGroupProtos.RSGroupInfo.newBuilder().setName(pojo.getName()).addAllServers(hostports)
       .addAllTables(tables).addAllConfiguration(configuration).build();
+=======
+  public static boolean toClearRegionHistorianPayload(final AdminProtos.ClearRegionHistorianResponses clearRegionHistorianResponses) {
+    return clearRegionHistorianResponses.getIsCleaned();
+>>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
   }
 
   public static CheckAndMutate toCheckAndMutate(ClientProtos.Condition condition,

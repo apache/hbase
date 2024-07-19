@@ -1588,8 +1588,30 @@ public final class HConstants {
   // Default 10 mins.
   public static final int DEFAULT_SLOW_LOG_SYS_TABLE_CHORE_DURATION = 10 * 60 * 1000;
 
+<<<<<<< HEAD
   public static final String SLOW_LOG_SCAN_PAYLOAD_ENABLED = "hbase.slowlog.scan.payload.enabled";
   public static final boolean SLOW_LOG_SCAN_PAYLOAD_ENABLED_DEFAULT = false;
+=======
+  public static final String REGION_HISTORIAN_BUFFER_ENABLED_KEY =
+    "hbase.master.regionHistorian.buffer.enabled";
+  public static final Boolean DEFAULT_REGION_HISTORIAN_ENABLED_KEY = false;
+
+  /** The regionHistorian info family as a string */
+  private static final String REGIONHISTORIAN_INFO_FAMILY_STR = "info";
+
+  /** The regionHistorian info family */
+  public static final byte[] REGIONHISTORIAN_INFO_FAMILY = Bytes.toBytes(REGIONHISTORIAN_INFO_FAMILY_STR);
+
+  public static final String REGION_HISTORIAN_SYS_TABLE_ENABLED_KEY =
+    "hbase.master.regionHistorian.systable.enabled";
+  public static final boolean DEFAULT_REGION_HISTORIAN_SYS_TABLE_ENABLED_KEY = false;
+
+  public static final String REGION_HISTORIAN_SYS_TABLE_CHORE_DURATION_KEY =
+    "hbase.master.regionHistorian.systable.chore.duration";
+  // Default 10 mins.
+  public static final int DEFAULT_REGION_HISTORIAN_SYS_TABLE_CHORE_DURATION = 10 * 60 * 1000;
+
+>>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
 
   public static final String SHELL_TIMESTAMP_FORMAT_EPOCH_KEY =
     "hbase.shell.timestamp.format.epoch";

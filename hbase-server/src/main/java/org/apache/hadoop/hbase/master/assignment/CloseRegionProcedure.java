@@ -58,6 +58,10 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
     this.evictCache = evictCache;
   }
 
+  public RegionInfo getRegion() {
+    return region;
+  }
+
   @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.REGION_UNASSIGN;
