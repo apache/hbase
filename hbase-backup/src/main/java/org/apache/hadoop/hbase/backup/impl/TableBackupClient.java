@@ -91,7 +91,8 @@ public abstract class TableBackupClient {
     this.conf = conn.getConfiguration();
     this.fs = CommonFSUtils.getCurrentFileSystem(conf);
     backupInfo = backupManager.createBackupInfo(backupId, request.getBackupType(), tableList,
-      request.getTargetRootDir(), request.getTotalTasks(), request.getBandwidth());
+      request.getTargetRootDir(), request.getTotalTasks(), request.getBandwidth(),
+      request.getNoChecksumVerify());
     if (tableList == null || tableList.isEmpty()) {
       this.tableList = new ArrayList<>(backupInfo.getTables());
     }
