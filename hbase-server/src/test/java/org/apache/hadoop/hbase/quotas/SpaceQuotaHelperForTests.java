@@ -124,13 +124,8 @@ public class SpaceQuotaHelperForTests {
    * Returns the number of quotas defined in the HBase quota table.
    */
   long listNumDefinedQuotas(Connection conn) throws IOException {
-    QuotaRetriever scanner = QuotaRetriever.open(conn.getConfiguration());
-    try {
+    try (QuotaRetriever scanner = new QuotaRetriever(conn)) {
       return Iterables.size(scanner);
-    } finally {
-      if (scanner != null) {
-        scanner.close();
-      }
     }
   }
 
@@ -436,8 +431,7 @@ public class SpaceQuotaHelperForTests {
       waitForQuotaTable(conn);
     } else {
       // Or, clean up any quotas from previous test runs.
-      QuotaRetriever scanner = QuotaRetriever.open(conn.getConfiguration());
-      try {
+      try (QuotaRetriever scanner = new QuotaRetriever(conn);) {
         for (QuotaSettings quotaSettings : scanner) {
           final String namespace = quotaSettings.getNamespace();
           final TableName tableName = quotaSettings.getTableName();
@@ -453,17 +447,13 @@ public class SpaceQuotaHelperForTests {
             QuotaUtil.deleteUserQuota(conn, userName);
           }
         }
-      } finally {
-        if (scanner != null) {
-          scanner.close();
-        }
       }
     }
   }
 
   QuotaSettings getTableSpaceQuota(Connection conn, TableName tn) throws IOException {
-    try (QuotaRetriever scanner = QuotaRetriever.open(conn.getConfiguration(),
-      new QuotaFilter().setTableFilter(tn.getNameAsString()))) {
+    try (QuotaRetriever scanner =
+      new QuotaRetriever(conn, new QuotaFilter().setTableFilter(tn.getNameAsString()))) {
       for (QuotaSettings setting : scanner) {
         if (setting.getTableName().equals(tn) && setting.getQuotaType() == QuotaType.SPACE) {
           return setting;
