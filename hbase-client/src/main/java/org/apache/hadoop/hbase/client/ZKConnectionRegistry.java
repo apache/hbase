@@ -75,7 +75,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   private final Configuration conf;
   private final int zkRegistryAsyncTimeout;
   public static final String ZK_REGISTRY_ASYNC_GET_TIMEOUT = "zookeeper.registry.async.get.timeout";
-  public static final int DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT = 60000; // 1 min
+  public static final int DEFAULT_ZK_REGISTRY_ASYNC_GET_TIMEOUT = 10000; // 10 sec
 
   // User not used, but for rpc based registry we need it
   ZKConnectionRegistry(Configuration conf, User ignored) {
