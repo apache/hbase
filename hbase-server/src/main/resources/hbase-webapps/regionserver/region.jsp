@@ -22,9 +22,11 @@
   import="java.util.Collection"
   import="java.util.Date"
   import="java.util.List"
+  import="org.apache.hadoop.fs.FileSystem"
   import="org.apache.hadoop.fs.FileStatus"
   import="org.apache.hadoop.fs.Path"
   import="org.apache.hadoop.hbase.HConstants"
+  import="org.apache.hadoop.hbase.client.RegionInfo"
   import="org.apache.hadoop.hbase.client.RegionInfoDisplay"
   import="org.apache.hadoop.hbase.mob.MobUtils"
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
@@ -37,12 +39,17 @@
 <%
   String regionName = request.getParameter("name");
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
+  FileSystem fs = rs.getFileSystem();
 
   Region region = rs.getRegion(regionName);
   String displayName;
+  String note = "";
   if (region != null) {
     displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(region.getRegionInfo(),
             rs.getConfiguration());
+    if (region.getRegionInfo().getReplicaId() > RegionInfo.DEFAULT_REPLICA_ID) {
+      note = "The information about storefile(s) may not up-to-date because it's not the primary region.";
+    }
   } else {
     displayName = "region {" + regionName + "} is not currently online on this region server";
   }
@@ -79,17 +86,20 @@
            <th>Len Of Biggest Cell</th>
            <th>Key Of Biggest Cell</th>
          </tr>
-       <%   for(StoreFile sf : storeFiles) { %>
+       <% int count = 0;
+          for(StoreFile sf : storeFiles) {
+            if (!fs.exists(sf.getPath())) continue;
+            count ++; %>
          <tr>
            <td><a href="storeFile.jsp?name=<%= sf.getEncodedPath() %>"><%= sf.getPath() %></a></td>
-           <td><%= (int) (rs.getFileSystem().getLength(sf.getPath()) / 1024 / 1024) %></td>
+           <td><%= (int) (fs.getLength(sf.getPath()) / 1024 / 1024) %></td>
            <td><%= new Date(sf.getModificationTimestamp()) %></td>
            <td><%= String.format("%,1d", ((HStoreFile)sf).getFileInfo().getHFileInfo().getLenOfBiggestCell()) %></td>
            <td><%= ((HStoreFile)sf).getFileInfo().getHFileInfo().getKeyOfBiggestCell() %></td>
          </tr>
          <% } %>
 
-         <p> <%= storeFiles.size() %> StoreFile(s) in set.</p>
+         <p> <%= count %> StoreFile(s) in set. <%= note %></p>
          </table>
 
        <% if (store instanceof HMobStore) { %>
