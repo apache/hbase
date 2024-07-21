@@ -24,6 +24,7 @@ module Shell
 Take a snapshot of specified table. Examples:
 
   hbase> snapshot 'sourceTable', 'snapshotName'
+  hbase> snapshot 'sourceTable', 'snapshotName', {TTL => 86400}
   hbase> snapshot 'namespace:sourceTable', 'snapshotName', {SKIP_FLUSH => true, MAX_FILESIZE => 21474836480}
 EOF
       end
