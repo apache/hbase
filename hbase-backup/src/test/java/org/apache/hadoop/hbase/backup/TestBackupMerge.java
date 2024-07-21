@@ -138,15 +138,15 @@ public class TestBackupMerge extends TestBackupBase {
       BackupAdminImpl client = new BackupAdminImpl(conn);
       List<TableName> tables = Lists.newArrayList(table1, table2);
 
-      BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
+      BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR, true);
       String backupIdFull = client.backupTables(request);
       assertTrue(checkSucceeded(backupIdFull));
 
-      request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
+      request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, true);
       String backupIdIncMultiple = client.backupTables(request);
       assertTrue(checkSucceeded(backupIdIncMultiple));
 
-      request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
+      request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, true);
       String backupIdIncMultiple2 = client.backupTables(request);
       assertTrue(checkSucceeded(backupIdIncMultiple2));
 

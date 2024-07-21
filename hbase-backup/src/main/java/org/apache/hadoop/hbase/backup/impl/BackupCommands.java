@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDW
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_LIST;
@@ -329,6 +331,8 @@ public final class BackupCommands {
         ? Integer.parseInt(cmdline.getOptionValue(OPTION_WORKERS))
         : -1;
 
+      boolean ignoreChecksum = cmdline.hasOption(OPTION_IGNORECHECKSUM);
+
       if (cmdline.hasOption(OPTION_YARN_QUEUE_NAME)) {
         String queueName = cmdline.getOptionValue(OPTION_YARN_QUEUE_NAME);
         // Set system property value for MR job
@@ -341,7 +345,8 @@ public final class BackupCommands {
           .withTableList(
             tables != null ? Lists.newArrayList(BackupUtils.parseTableNames(tables)) : null)
           .withTargetRootDir(targetBackupDir).withTotalTasks(workers)
-          .withBandwidthPerTasks(bandwidth).withBackupSetName(setName).build();
+          .withBandwidthPerTasks(bandwidth).withNoChecksumVerify(ignoreChecksum)
+          .withBackupSetName(setName).build();
         String backupId = admin.backupTables(request);
         System.out.println("Backup session " + backupId + " finished. Status: SUCCESS");
       } catch (IOException e) {
@@ -394,6 +399,7 @@ public final class BackupCommands {
       options.addOption(OPTION_TABLE, true, OPTION_TABLE_LIST_DESC);
       options.addOption(OPTION_YARN_QUEUE_NAME, true, OPTION_YARN_QUEUE_NAME_DESC);
       options.addOption(OPTION_DEBUG, false, OPTION_DEBUG_DESC);
+      options.addOption(OPTION_IGNORECHECKSUM, false, OPTION_IGNORECHECKSUM_DESC);
 
       HelpFormatter helpFormatter = new HelpFormatter();
       helpFormatter.setLeftPadding(2);

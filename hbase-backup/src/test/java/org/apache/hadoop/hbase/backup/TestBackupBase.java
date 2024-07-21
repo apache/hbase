@@ -395,9 +395,14 @@ public class TestBackupBase {
 
   protected BackupRequest createBackupRequest(BackupType type, List<TableName> tables,
     String path) {
+    return createBackupRequest(type, tables, path, false);
+  }
+
+  protected BackupRequest createBackupRequest(BackupType type, List<TableName> tables, String path,
+    boolean noChecksumVerify) {
     BackupRequest.Builder builder = new BackupRequest.Builder();
-    BackupRequest request =
-      builder.withBackupType(type).withTableList(tables).withTargetRootDir(path).build();
+    BackupRequest request = builder.withBackupType(type).withTableList(tables)
+      .withTargetRootDir(path).withNoChecksumVerify(noChecksumVerify).build();
     return request;
   }
 
