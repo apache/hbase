@@ -586,8 +586,10 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
             errMessage
               .append(" You can choose file-level checksum validation via "
                 + "-Ddfs.checksum.combine.mode=COMPOSITE_CRC when block-sizes"
-                + " or filesystems are different.")
-              .append(" Or you can skip checksum-checks altogether with --no-checksum-verify.\n")
+                + " or filesystems are different.\n")
+              .append(" Or you can skip checksum-checks altogether with -no-checksum-verify,")
+              .append(
+                " for the table backup scenario, you should use -i option to skip checksum-checks.\n")
               .append(" (NOTE: By skipping checksums, one runs the risk of "
                 + "masking data-corruption during file-transfer.)\n");
           }
