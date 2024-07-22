@@ -2092,6 +2092,7 @@ public class BucketCache implements BlockCache, HeapSize {
           for (ReentrantReadWriteLock lock : locks) {
             lock.readLock().unlock();
           }
+          locks.clear();
           LOG.debug("There are still blocks pending caching for file {}. Will sleep 100ms "
             + "and try the verification again.", fileName.getName());
           Thread.sleep(100);
