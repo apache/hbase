@@ -205,6 +205,15 @@ class WALEntryStream implements Closeable {
     this.currentPath = path;
   }
 
+  private void resetReader() throws IOException {
+    if (currentPositionOfEntry > 0) {
+      reader.resetTo(currentPositionOfEntry, state.resetCompression());
+    } else {
+      // we will read from the beginning so we should always clear the compression context
+      reader.resetTo(-1, true);
+    }
+  }
+
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DCN_NULLPOINTER_EXCEPTION",
       justification = "HDFS-4380")
   private HasNext prepareReader() {
@@ -214,12 +223,7 @@ class WALEntryStream implements Closeable {
         LOG.debug("Reset reader {} to pos {}, reset compression={}", currentPath,
           currentPositionOfEntry, state.resetCompression());
         try {
-          if (currentPositionOfEntry > 0) {
-            reader.resetTo(currentPositionOfEntry, state.resetCompression());
-          } else {
-            // we will read from the beginning so we should always clear the compression context
-            reader.resetTo(-1, true);
-          }
+          resetReader();
           return HasNext.YES;
         } catch (FileNotFoundException e) {
           // For now, this could happen only when reading meta wal for meta replicas.
@@ -295,7 +299,7 @@ class WALEntryStream implements Closeable {
     LOG.debug("Reset reader {} for the last time to pos {}, reset compression={}", currentPath,
       currentPositionOfEntry, state.resetCompression());
     try {
-      reader.resetTo(currentPositionOfEntry, state.resetCompression());
+      resetReader();
     } catch (IOException e) {
       LOG.warn("Failed to reset reader {} to pos {}, reset compression={}", currentPath,
         currentPositionOfEntry, state.resetCompression(), e);
