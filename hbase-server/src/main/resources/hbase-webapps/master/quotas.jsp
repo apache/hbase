@@ -30,7 +30,6 @@
 %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
-  Configuration conf = master.getConfiguration();
   pageContext.setAttribute("pageTitle", "HBase Master Quotas: " + master.getServerName());
   List<ThrottleSettings> regionServerThrottles = new ArrayList<>();
   List<ThrottleSettings> namespaceThrottles = new ArrayList<>();
@@ -39,7 +38,7 @@
   boolean exceedThrottleQuotaEnabled = false;
   if (quotaManager != null) {
     exceedThrottleQuotaEnabled = quotaManager.isExceedThrottleQuotaEnabled();
-    try (QuotaRetriever scanner = QuotaRetriever.open(conf, null)) {
+    try (QuotaRetriever scanner = new QuotaRetriever(master.getConnection())) {
       for (QuotaSettings quota : scanner) {
         if (quota instanceof ThrottleSettings) {
           ThrottleSettings throttle = (ThrottleSettings) quota;
