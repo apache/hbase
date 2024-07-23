@@ -137,7 +137,7 @@ public class TestAsyncFSWALRollStuck {
     Configuration conf = UTIL.getConfiguration();
     conf.setClass(AsyncFSWALProvider.WRITER_IMPL, TestAsyncWriter.class, AsyncWriter.class);
     // set a very small size so we will reach the batch size when writing out a single edit
-    conf.setLong(AsyncFSWAL.WAL_BATCH_SIZE, 1);
+    conf.setLong(AbstractFSWAL.WAL_BATCH_SIZE, 1);
 
     TN = TableName.valueOf("test");
     RI = RegionInfoBuilder.newBuilder(TN).build();
