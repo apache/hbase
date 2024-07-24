@@ -20,15 +20,17 @@ package org.apache.hadoop.hbase.io;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntConsumer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -58,11 +60,13 @@ public class HalfStoreFileReader extends StoreFileReader {
   // i.e. empty column and a timestamp of LATEST_TIMESTAMP.
   protected final byte[] splitkey;
 
-  private final Cell splitCell;
+  private final ExtendedCell splitCell;
 
-  private Optional<Cell> firstKey = Optional.empty();
+  private Optional<ExtendedCell> firstKey = Optional.empty();
 
   private boolean firstKeySeeked = false;
+
+  private AtomicBoolean closed = new AtomicBoolean(false);
 
   /**
    * Creates a half file reader for a hfile referred to by an hfilelink.
@@ -100,21 +104,27 @@ public class HalfStoreFileReader extends StoreFileReader {
       public boolean atEnd = false;
 
       @Override
-      public Cell getKey() {
-        if (atEnd) return null;
+      public ExtendedCell getKey() {
+        if (atEnd) {
+          return null;
+        }
         return delegate.getKey();
       }
 
       @Override
       public ByteBuffer getValue() {
-        if (atEnd) return null;
+        if (atEnd) {
+          return null;
+        }
 
         return delegate.getValue();
       }
 
       @Override
-      public Cell getCell() {
-        if (atEnd) return null;
+      public ExtendedCell getCell() {
+        if (atEnd) {
+          return null;
+        }
 
         return delegate.getCell();
       }
@@ -173,7 +183,7 @@ public class HalfStoreFileReader extends StoreFileReader {
       }
 
       @Override
-      public int seekTo(Cell key) throws IOException {
+      public int seekTo(ExtendedCell key) throws IOException {
         if (top) {
           if (PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) < 0) {
             return -1;
@@ -195,10 +205,9 @@ public class HalfStoreFileReader extends StoreFileReader {
       }
 
       @Override
-      public int reseekTo(Cell key) throws IOException {
+      public int reseekTo(ExtendedCell key) throws IOException {
         // This function is identical to the corresponding seekTo function
-        // except
-        // that we call reseekTo (and not seekTo) on the delegate.
+        // except that we call reseekTo (and not seekTo) on the delegate.
         if (top) {
           if (PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) < 0) {
             return -1;
@@ -223,9 +232,9 @@ public class HalfStoreFileReader extends StoreFileReader {
       }
 
       @Override
-      public boolean seekBefore(Cell key) throws IOException {
+      public boolean seekBefore(ExtendedCell key) throws IOException {
         if (top) {
-          Optional<Cell> fk = getFirstKey();
+          Optional<ExtendedCell> fk = getFirstKey();
           if (
             fk.isPresent()
               && PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, fk.get()) <= 0
@@ -251,7 +260,7 @@ public class HalfStoreFileReader extends StoreFileReader {
       }
 
       @Override
-      public Cell getNextIndexedKey() {
+      public ExtendedCell getNextIndexedKey() {
         return null;
       }
 
@@ -278,7 +287,7 @@ public class HalfStoreFileReader extends StoreFileReader {
   }
 
   @Override
-  public Optional<Cell> getLastKey() {
+  public Optional<ExtendedCell> getLastKey() {
     if (top) {
       return super.getLastKey();
     }
@@ -299,13 +308,13 @@ public class HalfStoreFileReader extends StoreFileReader {
   }
 
   @Override
-  public Optional<Cell> midKey() throws IOException {
+  public Optional<ExtendedCell> midKey() throws IOException {
     // Returns null to indicate file is not splitable.
     return Optional.empty();
   }
 
   @Override
-  public Optional<Cell> getFirstKey() {
+  public Optional<ExtendedCell> getFirstKey() {
     if (!firstKeySeeked) {
       HFileScanner scanner = getScanner(true, true, false);
       try {
@@ -334,5 +343,43 @@ public class HalfStoreFileReader extends StoreFileReader {
   public long getFilterEntries() {
     // Estimate the number of entries as half the original file; this may be wildly inaccurate.
     return super.getFilterEntries() / 2;
+  }
+
+  /**
+   * Overrides close method to handle cache evictions for the referred file. If evictionOnClose is
+   * true, we will seek to the block containing the splitCell and evict all blocks from offset 0 up
+   * to that block offset if this is a bottom half reader, or the from the split block offset up to
+   * the end of the file if this is a top half reader.
+   * @param evictOnClose true if it should evict the file blocks from the cache.
+   */
+  @Override
+  public void close(boolean evictOnClose) throws IOException {
+    if (closed.compareAndSet(false, true)) {
+      if (evictOnClose) {
+        final HFileReaderImpl.HFileScannerImpl s =
+          (HFileReaderImpl.HFileScannerImpl) super.getScanner(false, true, false);
+        final String reference = this.reader.getHFileInfo().getHFileContext().getHFileName();
+        final String referred = StoreFileInfo.getReferredToRegionAndFile(reference).getSecond();
+        s.seekTo(splitCell);
+        if (s.getCurBlock() != null) {
+          long offset = s.getCurBlock().getOffset();
+          LOG.trace("Seeking to split cell in reader: {} for file: {} top: {}, split offset: {}",
+            this, reference, top, offset);
+          ((HFileReaderImpl) reader).getCacheConf().getBlockCache().ifPresent(cache -> {
+            int numEvictedReferred = top
+              ? cache.evictBlocksRangeByHfileName(referred, offset, Long.MAX_VALUE)
+              : cache.evictBlocksRangeByHfileName(referred, 0, offset);
+            int numEvictedReference = cache.evictBlocksByHfileName(reference);
+            LOG.trace(
+              "Closing reference: {}; referred file: {}; was top? {}; evicted for referred: {};"
+                + "evicted for reference: {}",
+              reference, referred, top, numEvictedReferred, numEvictedReference);
+          });
+        }
+        reader.close(false);
+      } else {
+        reader.close(evictOnClose);
+      }
+    }
   }
 }

@@ -23,6 +23,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -92,12 +93,13 @@ public class RemoteHTable implements Table {
   final byte[] name;
   final int maxRetries;
   final long sleepTime;
+  private String pathPrefix = "/";
 
   @SuppressWarnings("rawtypes")
   protected String buildRowSpec(final byte[] row, final Map familyMap, final long startTime,
     final long endTime, final int maxVersions) {
-    StringBuffer sb = new StringBuffer();
-    sb.append('/');
+    StringBuilder sb = new StringBuilder();
+    sb.append(pathPrefix);
     sb.append(Bytes.toString(name));
     sb.append('/');
     sb.append(toURLEncodedBytes(row));
@@ -158,7 +160,7 @@ public class RemoteHTable implements Table {
 
   protected String buildMultiRowSpec(final byte[][] rows, int maxVersions) {
     StringBuilder sb = new StringBuilder();
-    sb.append('/');
+    sb.append(pathPrefix);
     sb.append(Bytes.toString(name));
     sb.append("/multiget/");
     if (rows == null || rows.length == 0) {
@@ -239,6 +241,11 @@ public class RemoteHTable implements Table {
     this.name = name;
     this.maxRetries = conf.getInt("hbase.rest.client.max.retries", 10);
     this.sleepTime = conf.getLong("hbase.rest.client.sleep", 1000);
+  }
+
+  public RemoteHTable(Client client, Configuration conf, byte[] name, String pathPrefix) {
+    this(client, conf, name);
+    this.pathPrefix = pathPrefix + "/";
   }
 
   public byte[] getTableName() {
@@ -358,7 +365,7 @@ public class RemoteHTable implements Table {
   public void put(Put put) throws IOException {
     CellSetModel model = buildModelFromPut(put);
     StringBuilder sb = new StringBuilder();
-    sb.append('/');
+    sb.append(pathPrefix);
     sb.append(Bytes.toString(name));
     sb.append('/');
     sb.append(toURLEncodedBytes(put.getRow()));
@@ -414,7 +421,7 @@ public class RemoteHTable implements Table {
 
     // build path for multiput
     StringBuilder sb = new StringBuilder();
-    sb.append('/');
+    sb.append(pathPrefix);
     sb.append(Bytes.toString(name));
     sb.append("/$multiput"); // can be any nonexistent row
     for (int i = 0; i < maxRetries; i++) {
@@ -476,7 +483,7 @@ public class RemoteHTable implements Table {
   @Override
   public TableDescriptor getDescriptor() throws IOException {
     StringBuilder sb = new StringBuilder();
-    sb.append('/');
+    sb.append(pathPrefix);
     sb.append(Bytes.toString(name));
     sb.append('/');
     sb.append("schema");
@@ -505,6 +512,8 @@ public class RemoteHTable implements Table {
   class Scanner implements ResultScanner {
 
     String uri;
+    private Result[] cachedResults;
+    private int nextCachedResultsRow = 0;
 
     public Scanner(Scan scan) throws IOException {
       ScannerModel model;
@@ -513,8 +522,8 @@ public class RemoteHTable implements Table {
       } catch (Exception e) {
         throw new IOException(e);
       }
-      StringBuffer sb = new StringBuffer();
-      sb.append('/');
+      StringBuilder sb = new StringBuilder();
+      sb.append(pathPrefix);
       sb.append(Bytes.toString(name));
       sb.append('/');
       sb.append("scanner");
@@ -540,11 +549,8 @@ public class RemoteHTable implements Table {
       throw new IOException("scan request timed out");
     }
 
-    @Override
-    public Result[] next(int nbRows) throws IOException {
+    public Result[] nextBatch() throws IOException {
       StringBuilder sb = new StringBuilder(uri);
-      sb.append("?n=");
-      sb.append(nbRows);
       for (int i = 0; i < maxRetries; i++) {
         Response response = client.get(sb.toString(), Constants.MIMETYPE_PROTOBUF);
         int code = response.getCode();
@@ -570,13 +576,31 @@ public class RemoteHTable implements Table {
       throw new IOException("scanner.next request timed out");
     }
 
+    private boolean updateCachedResults() throws IOException {
+      if (cachedResults == null || nextCachedResultsRow >= cachedResults.length) {
+        nextCachedResultsRow = 0;
+        cachedResults = nextBatch();
+      }
+      return !(cachedResults == null || cachedResults.length < 1);
+    }
+
     @Override
-    public Result next() throws IOException {
-      Result[] results = next(1);
-      if (results == null || results.length < 1) {
+    public Result[] next(int nbRows) throws IOException {
+      if (!updateCachedResults()) {
         return null;
       }
-      return results[0];
+      int endIndex = Math.min(cachedResults.length, nextCachedResultsRow + nbRows);
+      Result[] chunk = Arrays.copyOfRange(cachedResults, nextCachedResultsRow, endIndex);
+      nextCachedResultsRow = endIndex;
+      return chunk;
+    }
+
+    @Override
+    public Result next() throws IOException {
+      if (!updateCachedResults()) {
+        return null;
+      }
+      return cachedResults[nextCachedResultsRow++];
     }
 
     class Iter implements Iterator<Result> {
@@ -670,7 +694,7 @@ public class RemoteHTable implements Table {
 
     CellSetModel model = buildModelFromPut(put);
     StringBuilder sb = new StringBuilder();
-    sb.append('/');
+    sb.append(pathPrefix);
     sb.append(Bytes.toString(name));
     sb.append('/');
     sb.append(toURLEncodedBytes(put.getRow()));
@@ -706,7 +730,7 @@ public class RemoteHTable implements Table {
     put.add(new KeyValue(row, family, qualifier, value));
     CellSetModel model = buildModelFromPut(put);
     StringBuilder sb = new StringBuilder();
-    sb.append('/');
+    sb.append(pathPrefix);
     sb.append(Bytes.toString(name));
     sb.append('/');
     sb.append(toURLEncodedBytes(row));

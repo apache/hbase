@@ -23,6 +23,7 @@ import java.util.NavigableSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
@@ -116,7 +117,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   protected final CellComparator rowComparator;
 
   /** Key to seek to in memstore and StoreFiles */
-  protected final Cell startKey;
+  protected final ExtendedCell startKey;
 
   /** Keeps track of columns and versions */
   protected final ColumnTracker columns;
@@ -127,9 +128,9 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   protected final long now;
 
   /** Row the query is on */
-  protected Cell currentRow;
+  protected ExtendedCell currentRow;
 
-  protected ScanQueryMatcher(Cell startKey, ScanInfo scanInfo, ColumnTracker columns,
+  protected ScanQueryMatcher(ExtendedCell startKey, ScanInfo scanInfo, ColumnTracker columns,
     long oldestUnexpiredTS, long now) {
     this.rowComparator = scanInfo.getComparator();
     this.startKey = startKey;
@@ -139,7 +140,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   }
 
   /** Returns true if the cell is expired */
-  private static boolean isCellTTLExpired(final Cell cell, final long oldestTimestamp,
+  private static boolean isCellTTLExpired(final ExtendedCell cell, final long oldestTimestamp,
     final long now) {
     // Look for a TTL tag first. Use it instead of the family setting if
     // found. If a cell has multiple TTLs, resolve the conflict by using the
@@ -168,7 +169,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    * Check before the delete logic.
    * @return null means continue.
    */
-  protected final MatchCode preCheck(Cell cell) {
+  protected final MatchCode preCheck(ExtendedCell cell) {
     if (currentRow == null) {
       // Since the curCell is null it means we are already sure that we have moved over to the next
       // row
@@ -197,7 +198,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     return null;
   }
 
-  protected final MatchCode checkDeleted(DeleteTracker deletes, Cell cell) {
+  protected final MatchCode checkDeleted(DeleteTracker deletes, ExtendedCell cell) {
     if (deletes.isEmpty() && !(deletes instanceof NewVersionBehaviorTracker)) {
       return null;
     }
@@ -235,10 +236,10 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    * @throws IOException in case there is an internal consistency problem caused by a data
    *                     corruption.
    */
-  public abstract MatchCode match(Cell cell) throws IOException;
+  public abstract MatchCode match(ExtendedCell cell) throws IOException;
 
   /** Returns the start key */
-  public Cell getStartKey() {
+  public ExtendedCell getStartKey() {
     return startKey;
   }
 
@@ -246,7 +247,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   public abstract boolean hasNullColumnInQuery();
 
   /** Returns a cell represent the current row */
-  public Cell currentRow() {
+  public ExtendedCell currentRow() {
     return currentRow;
   }
 
@@ -262,7 +263,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   /**
    * Set the row when there is change in row
    */
-  public void setToNewRow(Cell currentRow) {
+  public void setToNewRow(ExtendedCell currentRow) {
     this.currentRow = currentRow;
     columns.reset();
     reset();
@@ -275,16 +276,16 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    *         <code>stopRow</code> or we are scanning on row only because this Scan is for a Get,
    *         etc.
    */
-  public abstract boolean moreRowsMayExistAfter(Cell cell);
+  public abstract boolean moreRowsMayExistAfter(ExtendedCell cell);
 
-  public Cell getKeyForNextColumn(Cell cell) {
+  public ExtendedCell getKeyForNextColumn(ExtendedCell cell) {
     // We aren't sure whether any DeleteFamily cells exist, so we can't skip to next column.
     // TODO: Current way disable us to seek to next column quickly. Is there any better solution?
     // see HBASE-18471 for more details
     // see TestFromClientSide3#testScanAfterDeletingSpecifiedRow
     // see TestFromClientSide3#testScanAfterDeletingSpecifiedRowV2
     if (cell.getQualifierLength() == 0) {
-      Cell nextKey = PrivateCellUtil.createNextOnRowCol(cell);
+      ExtendedCell nextKey = PrivateCellUtil.createNextOnRowCol(cell);
       if (nextKey != cell) {
         return nextKey;
       }
@@ -306,7 +307,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    * @param currentCell The Cell we're using to calculate the seek key
    * @return result of the compare between the indexed key and the key portion of the passed cell
    */
-  public int compareKeyForNextRow(Cell nextIndexed, Cell currentCell) {
+  public int compareKeyForNextRow(ExtendedCell nextIndexed, ExtendedCell currentCell) {
     return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0,
       null, 0, 0, PrivateConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
   }
@@ -316,7 +317,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    * @param currentCell The Cell we're using to calculate the seek key
    * @return result of the compare between the indexed key and the key portion of the passed cell
    */
-  public int compareKeyForNextColumn(Cell nextIndexed, Cell currentCell) {
+  public int compareKeyForNextColumn(ExtendedCell nextIndexed, ExtendedCell currentCell) {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
       return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0,
@@ -335,7 +336,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   /**
    * Delegate to {@link Filter#getNextCellHint(Cell)}. If no filter, return {@code null}.
    */
-  public abstract Cell getNextKeyHint(Cell cell) throws IOException;
+  public abstract ExtendedCell getNextKeyHint(ExtendedCell cell) throws IOException;
 
   @Override
   public void beforeShipped() throws IOException {
@@ -347,7 +348,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     }
   }
 
-  protected static Cell createStartKeyFromRow(byte[] startRow, ScanInfo scanInfo) {
+  protected static ExtendedCell createStartKeyFromRow(byte[] startRow, ScanInfo scanInfo) {
     return PrivateCellUtil.createFirstDeleteFamilyCellOnRow(startRow, scanInfo.getFamily());
   }
 

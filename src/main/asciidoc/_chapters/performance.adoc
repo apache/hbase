@@ -261,7 +261,7 @@ Note that you always have at least one write queue, no matter what setting you u
   Given a value of `10` for `hbase.ipc.server.num.callqueue`, 3 queues would be used for reads and 7 for writes.
 * A value of `.5` uses the same number of read queues and write queues.
   Given a value of `10` for `hbase.ipc.server.num.callqueue`, 5 queues would be used for reads and 5 for writes.
-* A value of `.6` uses 60% of the queues for reading and 40% for reading.
+* A value of `.6` uses 60% of the queues for reading and 40% for writing.
   Given a value of `10` for `hbase.ipc.server.num.callqueue`, 6 queues would be used for reads and 4 for writes.
 * A value of `1.0` uses one queue to process write requests, and all other queues process read requests.
   A value higher than `1.0` has the same effect as a value of `1.0`.

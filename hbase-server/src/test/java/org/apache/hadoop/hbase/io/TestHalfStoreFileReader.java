@@ -25,11 +25,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
@@ -42,6 +44,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -82,15 +85,19 @@ public class TestHalfStoreFileReader {
    */
   @Test
   public void testHalfScanAndReseek() throws IOException {
-    String root_dir = TEST_UTIL.getDataTestDir().toString();
-    Path p = new Path(root_dir, "test");
-
     Configuration conf = TEST_UTIL.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
+    String root_dir = TEST_UTIL.getDataTestDir().toString();
+    Path parentPath = new Path(new Path(root_dir, "parent"), "CF");
+    fs.mkdirs(parentPath);
+    Path splitAPath = new Path(new Path(root_dir, "splita"), "CF");
+    Path splitBPath = new Path(new Path(root_dir, "splitb"), "CF");
+    Path filePath = StoreFileWriter.getUniqueFile(fs, parentPath);
+
     CacheConfig cacheConf = new CacheConfig(conf);
     HFileContext meta = new HFileContextBuilder().withBlockSize(1024).build();
     HFile.Writer w =
-      HFile.getWriterFactory(conf, cacheConf).withPath(fs, p).withFileContext(meta).create();
+      HFile.getWriterFactory(conf, cacheConf).withPath(fs, filePath).withFileContext(meta).create();
 
     // write some things.
     List<KeyValue> items = genSomeKeys();
@@ -99,26 +106,35 @@ public class TestHalfStoreFileReader {
     }
     w.close();
 
-    HFile.Reader r = HFile.createReader(fs, p, cacheConf, true, conf);
+    HFile.Reader r = HFile.createReader(fs, filePath, cacheConf, true, conf);
     Cell midKV = r.midKey().get();
     byte[] midkey = CellUtil.cloneRow(midKV);
 
-    // System.out.println("midkey: " + midKV + " or: " + Bytes.toStringBinary(midkey));
+    Path splitFileA = new Path(splitAPath, filePath.getName() + ".parent");
+    Path splitFileB = new Path(splitBPath, filePath.getName() + ".parent");
 
     Reference bottom = new Reference(midkey, Reference.Range.bottom);
-    doTestOfScanAndReseek(p, fs, bottom, cacheConf);
+    bottom.write(fs, splitFileA);
+    doTestOfScanAndReseek(splitFileA, fs, bottom, cacheConf);
 
     Reference top = new Reference(midkey, Reference.Range.top);
-    doTestOfScanAndReseek(p, fs, top, cacheConf);
+    top.write(fs, splitFileB);
+    doTestOfScanAndReseek(splitFileB, fs, top, cacheConf);
 
     r.close();
   }
 
   private void doTestOfScanAndReseek(Path p, FileSystem fs, Reference bottom, CacheConfig cacheConf)
     throws IOException {
-    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, p).build();
-    StoreFileInfo storeFileInfo =
-      new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, fs.getFileStatus(p), bottom);
+    Path referencePath = StoreFileInfo.getReferredToFile(p);
+    FSDataInputStreamWrapper in = new FSDataInputStreamWrapper(fs, referencePath, false, 0);
+    FileStatus status = fs.getFileStatus(referencePath);
+    long length = status.getLen();
+    ReaderContextBuilder contextBuilder =
+      new ReaderContextBuilder().withInputStreamWrapper(in).withFileSize(length)
+        .withReaderType(ReaderContext.ReaderType.PREAD).withFileSystem(fs).withFilePath(p);
+    ReaderContext context = contextBuilder.build();
+    StoreFileInfo storeFileInfo = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, p, true);
     storeFileInfo.initHFileInfo(context);
     final HalfStoreFileReader halfreader =
       (HalfStoreFileReader) storeFileInfo.createReader(context, cacheConf);
@@ -164,7 +180,7 @@ public class TestHalfStoreFileReader {
     w.close();
 
     HFile.Reader r = HFile.createReader(fs, p, cacheConf, true, conf);
-    Cell midKV = r.midKey().get();
+    ExtendedCell midKV = r.midKey().get();
     byte[] midkey = CellUtil.cloneRow(midKV);
 
     Reference bottom = new Reference(midkey, Reference.Range.bottom);
@@ -213,7 +229,7 @@ public class TestHalfStoreFileReader {
     assertNull(foundKeyValue);
   }
 
-  private Cell doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, Cell seekBefore,
+  private Cell doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, ExtendedCell seekBefore,
     CacheConfig cacheConfig) throws IOException {
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, p).build();
     StoreFileInfo storeFileInfo =

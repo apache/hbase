@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -505,7 +506,7 @@ public class TestProtobufUtil {
     CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, true);
     assertNotNull(protoCell);
 
-    Cell decodedCell = getCellFromProtoResult(protoCell, true);
+    ExtendedCell decodedCell = getCellFromProtoResult(protoCell, true);
     List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
     assertEquals(1, decodedTags.size());
     Tag decodedTag = decodedTags.get(0);
@@ -525,7 +526,7 @@ public class TestProtobufUtil {
     return cellBuilder.build();
   }
 
-  private Cell getCellFromProtoResult(CellProtos.Cell protoCell, boolean decodeTags) {
+  private ExtendedCell getCellFromProtoResult(CellProtos.Cell protoCell, boolean decodeTags) {
     ExtendedCellBuilder decodedBuilder =
       ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
     return ProtobufUtil.toCell(decodedBuilder, protoCell, decodeTags);
@@ -542,7 +543,7 @@ public class TestProtobufUtil {
     CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, false);
     assertNotNull(protoCell);
 
-    Cell decodedCell = getCellFromProtoResult(protoCell, false);
+    ExtendedCell decodedCell = getCellFromProtoResult(protoCell, false);
     List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
     assertEquals(0, decodedTags.size());
   }
@@ -558,7 +559,7 @@ public class TestProtobufUtil {
     CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, false);
     assertNotNull(protoCell);
 
-    Cell decodedCell = getCellFromProtoResult(protoCell, true);
+    ExtendedCell decodedCell = getCellFromProtoResult(protoCell, true);
     List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
     assertEquals(0, decodedTags.size());
   }
@@ -574,7 +575,7 @@ public class TestProtobufUtil {
     CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, true);
     assertNotNull(protoCell);
 
-    Cell decodedCell = getCellFromProtoResult(protoCell, false);
+    ExtendedCell decodedCell = getCellFromProtoResult(protoCell, false);
     List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
     assertEquals(0, decodedTags.size());
   }

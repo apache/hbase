@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -39,7 +40,8 @@ public class RowPrefixFixedLengthBloomContext extends RowBloomContext {
     this.prefixLength = prefixLength;
   }
 
-  public void writeBloom(Cell cell) throws IOException {
+  @Override
+  public void writeBloom(ExtendedCell cell) throws IOException {
     super.writeBloom(getRowPrefixCell(cell));
   }
 
@@ -47,7 +49,7 @@ public class RowPrefixFixedLengthBloomContext extends RowBloomContext {
    * @param cell the cell
    * @return the new cell created by row prefix
    */
-  private Cell getRowPrefixCell(Cell cell) {
+  private ExtendedCell getRowPrefixCell(ExtendedCell cell) {
     byte[] row = CellUtil.copyRow(cell);
     return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
       .setRow(row, 0, Math.min(prefixLength, row.length)).setType(Cell.Type.Put).build();

@@ -281,12 +281,12 @@ public class TestCustomPriorityRpcControllerFactory {
     }
 
     @Override
-    public HBaseRpcController newController(CellScanner cellScanner) {
+    public HBaseRpcController newController(ExtendedCellScanner cellScanner) {
       return new PriorityController(EXPECTED_PRIORITY.get(), super.newController(cellScanner));
     }
 
     @Override
-    public HBaseRpcController newController(List<CellScannable> cellIterables) {
+    public HBaseRpcController newController(List<ExtendedCellScannable> cellIterables) {
       return new PriorityController(EXPECTED_PRIORITY.get(), super.newController(cellIterables));
     }
   }

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.CellUtil.createCellScanner;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcPriority;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
@@ -44,11 +43,12 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellScannable;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.RetryImmediatelyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -274,7 +274,7 @@ class AsyncBatchRpcRetryingCaller<T> {
   }
 
   private ClientProtos.MultiRequest buildReq(Map<byte[], RegionRequest> actionsByRegion,
-    List<CellScannable> cells, Map<Integer, Integer> indexMap) throws IOException {
+    List<ExtendedCellScannable> cells, Map<Integer, Integer> indexMap) throws IOException {
     ClientProtos.MultiRequest.Builder multiRequestBuilder = ClientProtos.MultiRequest.newBuilder();
     ClientProtos.RegionAction.Builder regionActionBuilder = ClientProtos.RegionAction.newBuilder();
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
@@ -382,7 +382,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       return;
     }
     ClientProtos.MultiRequest req;
-    List<CellScannable> cells = new ArrayList<>();
+    List<ExtendedCellScannable> cells = new ArrayList<>();
     // Map from a created RegionAction to the original index for a RowMutations within
     // the original list of actions. This will be used to process the results when there
     // is RowMutations/CheckAndMutate in the action list.
@@ -398,7 +398,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       calcPriority(serverReq.getPriority(), tableName), tableName);
     controller.setRequestAttributes(requestAttributes);
     if (!cells.isEmpty()) {
-      controller.setCellScanner(createCellScanner(cells));
+      controller.setCellScanner(PrivateCellUtil.createExtendedCellScanner(cells));
     }
     stub.multi(controller, req, resp -> {
       if (controller.failed()) {

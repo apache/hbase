@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.util.Map;
-import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScannable;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -42,13 +42,13 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX,
   HBaseInterfaceAudience.REPLICATION })
 @InterfaceStability.Evolving
-public interface HBaseRpcController extends RpcController, CellScannable {
+public interface HBaseRpcController extends RpcController, ExtendedCellScannable {
 
   /**
    * Only used to send cells to rpc server, the returned cells should be set by
-   * {@link #setDone(CellScanner)}.
+   * {@link #setDone(ExtendedCellScanner)}.
    */
-  void setCellScanner(CellScanner cellScanner);
+  void setCellScanner(ExtendedCellScanner cellScanner);
 
   /**
    * Set the priority for this operation.
@@ -97,7 +97,7 @@ public interface HBaseRpcController extends RpcController, CellScannable {
    * <b>IMPORTANT:</b> always call this method if the call finished without any exception to tell
    * the {@code HBaseRpcController} that we are done.
    */
-  void setDone(CellScanner cellScanner);
+  void setDone(ExtendedCellScanner cellScanner);
 
   /**
    * A little different from the basic RpcController:

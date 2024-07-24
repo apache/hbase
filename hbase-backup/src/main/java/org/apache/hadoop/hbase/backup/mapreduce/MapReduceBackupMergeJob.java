@@ -96,7 +96,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
     boolean finishedTables = false;
     Connection conn = ConnectionFactory.createConnection(getConf());
     BackupSystemTable table = new BackupSystemTable(conn);
-    FileSystem fs = FileSystem.get(getConf());
+    FileSystem fs = null;
 
     try {
 
@@ -112,6 +112,8 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
 
       BackupInfo bInfo = table.readBackupInfo(backupIds[0]);
       String backupRoot = bInfo.getBackupRootDir();
+      Path backupRootPath = new Path(backupRoot);
+      fs = backupRootPath.getFileSystem(conf);
 
       for (int i = 0; i < tableNames.length; i++) {
         LOG.info("Merge backup images for " + tableNames[i]);
@@ -120,7 +122,9 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
         Path[] dirPaths = findInputDirectories(fs, backupRoot, tableNames[i], backupIds);
         String dirs = StringUtils.join(dirPaths, ",");
 
-        Path bulkOutputPath = BackupUtils.getBulkOutputDir(
+        // bulkOutputPath should be on the same filesystem as backupRoot
+        Path tmpRestoreOutputDir = HBackupFileSystem.getBackupTmpDirPath(backupRoot);
+        Path bulkOutputPath = BackupUtils.getBulkOutputDir(tmpRestoreOutputDir,
           BackupUtils.getFileNameCompatibleString(tableNames[i]), getConf(), false);
         // Delete content if exists
         if (fs.exists(bulkOutputPath)) {
@@ -186,7 +190,9 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       if (!finishedTables) {
         // cleanup bulk directories and finish merge
         // merge MUST be repeated (no need for repair)
-        cleanupBulkLoadDirs(fs, toPathList(processedTableList));
+        if (fs != null) {
+          cleanupBulkLoadDirs(fs, toPathList(processedTableList));
+        }
         table.finishMergeOperation();
         table.finishBackupExclusiveOperation();
         throw new IOException("Backup merge operation failed, you should try it again", e);

@@ -157,7 +157,7 @@ public class TestRegionReplicasWithModifyTable {
   }
 
   @Test
-  public void testRegionReplicasByEnableTableWhenReplicaCountIsIncreasedWithmultipleRegions()
+  public void testRegionReplicasByEnableTableWhenReplicaCountIsIncreasedWithMultipleRegions()
     throws Exception {
     enableReplicationByModification(true, 2, 3, 15);
   }

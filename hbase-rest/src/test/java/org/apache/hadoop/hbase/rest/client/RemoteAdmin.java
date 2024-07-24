@@ -45,6 +45,7 @@ public class RemoteAdmin {
   final String accessToken;
   final int maxRetries;
   final long sleepTime;
+  private String pathPrefix = "/";
 
   // This unmarshaller is necessary for getting the /version/cluster resource.
   // This resource does not support protobufs. Therefore this is necessary to
@@ -80,6 +81,14 @@ public class RemoteAdmin {
   }
 
   /**
+   * Constructor
+   */
+  public RemoteAdmin(Client client, Configuration conf, String accessToken, String pathPrefix) {
+    this(client, conf, accessToken);
+    this.pathPrefix = pathPrefix + "/";
+  }
+
+  /**
    * @param tableName name of table to check
    * @return true if all regions of the table are available
    * @throws IOException if a remote or network exception occurs
@@ -95,7 +104,7 @@ public class RemoteAdmin {
   public VersionModel getRestVersion() throws IOException {
 
     StringBuilder path = new StringBuilder();
-    path.append('/');
+    path.append(pathPrefix);
     if (accessToken != null) {
       path.append(accessToken);
       path.append('/');
@@ -136,7 +145,7 @@ public class RemoteAdmin {
   public StorageClusterStatusModel getClusterStatus() throws IOException {
 
     StringBuilder path = new StringBuilder();
-    path.append('/');
+    path.append(pathPrefix);
     if (accessToken != null) {
       path.append(accessToken);
       path.append('/');
@@ -175,7 +184,7 @@ public class RemoteAdmin {
   public StorageClusterVersionModel getClusterVersion() throws IOException {
 
     StringBuilder path = new StringBuilder();
-    path.append('/');
+    path.append(pathPrefix);
     if (accessToken != null) {
       path.append(accessToken);
       path.append('/');
@@ -221,7 +230,7 @@ public class RemoteAdmin {
    */
   public boolean isTableAvailable(byte[] tableName) throws IOException {
     StringBuilder path = new StringBuilder();
-    path.append('/');
+    path.append(pathPrefix);
     if (accessToken != null) {
       path.append(accessToken);
       path.append('/');
@@ -260,7 +269,7 @@ public class RemoteAdmin {
   public void createTable(TableDescriptor desc) throws IOException {
     TableSchemaModel model = new TableSchemaModel(desc);
     StringBuilder path = new StringBuilder();
-    path.append('/');
+    path.append(pathPrefix);
     if (accessToken != null) {
       path.append(accessToken);
       path.append('/');
@@ -306,7 +315,7 @@ public class RemoteAdmin {
    */
   public void deleteTable(final byte[] tableName) throws IOException {
     StringBuilder path = new StringBuilder();
-    path.append('/');
+    path.append(pathPrefix);
     if (accessToken != null) {
       path.append(accessToken);
       path.append('/');
@@ -342,7 +351,7 @@ public class RemoteAdmin {
   public TableListModel getTableList() throws IOException {
 
     StringBuilder path = new StringBuilder();
-    path.append('/');
+    path.append(pathPrefix);
     if (accessToken != null) {
       path.append(accessToken);
       path.append('/');

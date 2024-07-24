@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.Closeable;
 import java.io.File;
+import java.net.URI;
 import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -197,8 +198,8 @@ public class TestTableMapReduceUtil {
       kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
       loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
 
-      try (Closeable util1Closeable = startSecureMiniCluster(util1, kdc, userPrincipal);
-        Closeable util2Closeable = startSecureMiniCluster(util2, kdc, userPrincipal)) {
+      try (Closeable ignored1 = startSecureMiniCluster(util1, kdc, userPrincipal);
+        Closeable ignored2 = startSecureMiniCluster(util2, kdc, userPrincipal)) {
         Configuration conf1 = util1.getConfiguration();
         Job job = Job.getInstance(conf1);
 
@@ -231,7 +232,7 @@ public class TestTableMapReduceUtil {
       kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
       loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
 
-      try (Closeable util1Closeable = startSecureMiniCluster(util1, kdc, userPrincipal)) {
+      try (Closeable ignored1 = startSecureMiniCluster(util1, kdc, userPrincipal)) {
         HBaseTestingUtil util2 = new HBaseTestingUtil();
         // Assume util2 is insecure cluster
         // Do not start util2 because cannot boot secured mini cluster and insecure mini cluster at
@@ -267,11 +268,50 @@ public class TestTableMapReduceUtil {
       kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
       loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
 
-      try (Closeable util2Closeable = startSecureMiniCluster(util2, kdc, userPrincipal)) {
+      try (Closeable ignored2 = startSecureMiniCluster(util2, kdc, userPrincipal)) {
         Configuration conf1 = util1.getConfiguration();
         Job job = Job.getInstance(conf1);
 
         TableMapReduceUtil.initCredentialsForCluster(job, util2.getConfiguration());
+
+        Credentials credentials = job.getCredentials();
+        Collection<Token<? extends TokenIdentifier>> tokens = credentials.getAllTokens();
+        assertEquals(1, tokens.size());
+
+        String clusterId = ZKClusterId.readClusterIdZNode(util2.getZooKeeperWatcher());
+        Token<AuthenticationTokenIdentifier> tokenForCluster =
+          (Token<AuthenticationTokenIdentifier>) credentials.getToken(new Text(clusterId));
+        assertEquals(userPrincipal + '@' + kdc.getRealm(),
+          tokenForCluster.decodeIdentifier().getUsername());
+      }
+    } finally {
+      kdc.stop();
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testInitCredentialsForClusterUri() throws Exception {
+    HBaseTestingUtil util1 = new HBaseTestingUtil();
+    HBaseTestingUtil util2 = new HBaseTestingUtil();
+
+    File keytab = new File(util1.getDataTestDir("keytab").toUri().getPath());
+    MiniKdc kdc = util1.setupMiniKdc(keytab);
+    try {
+      String username = UserGroupInformation.getLoginUser().getShortUserName();
+      String userPrincipal = username + "/localhost";
+      kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
+      loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
+
+      try (Closeable ignored1 = startSecureMiniCluster(util1, kdc, userPrincipal);
+        Closeable ignored2 = startSecureMiniCluster(util2, kdc, userPrincipal)) {
+        Configuration conf1 = util1.getConfiguration();
+        Job job = Job.getInstance(conf1);
+
+        // use Configuration from util1 and URI from util2, to make sure that we use the URI instead
+        // of rely on the Configuration
+        TableMapReduceUtil.initCredentialsForCluster(job, util1.getConfiguration(),
+          new URI(util2.getRpcConnnectionURI()));
 
         Credentials credentials = job.getCredentials();
         Collection<Token<? extends TokenIdentifier>> tokens = credentials.getAllTokens();

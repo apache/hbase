@@ -161,7 +161,7 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
     Map<TableName, List<String>> excludeTableCFs = Maps.newHashMap();
     excludeTableCFs.put(REPLICATE_TABLE, Lists.newArrayList(Bytes.toString(CF_B)));
     ReplicationPeerConfig peerConfig =
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getRpcConnnectionURI())
         .setReplicateAllUserTables(true).setExcludeTableCFsMap(excludeTableCFs).build();
     admin1.addReplicationPeer(PEER_ID2, peerConfig);
     Assert.assertTrue(peerConfig.needToReplicate(REPLICATE_TABLE));
@@ -192,7 +192,7 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
     Map<TableName, List<String>> excludeTableCFs = Maps.newHashMap();
     excludeTableCFs.put(NO_REPLICATE_TABLE, null);
     ReplicationPeerConfig peerConfig =
-      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getRpcConnnectionURI())
         .setReplicateAllUserTables(true).setExcludeTableCFsMap(excludeTableCFs).build();
     admin1.addReplicationPeer(PEER_ID2, peerConfig);
     assertTrue(peerConfig.needToReplicate(REPLICATE_TABLE));
@@ -223,7 +223,7 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
 
     // Add peer, setReplicateAllUserTables true, but exclude one namespace.
     ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-      .setClusterKey(UTIL2.getClusterKey()).setReplicateAllUserTables(true)
+      .setClusterKey(UTIL2.getRpcConnnectionURI()).setReplicateAllUserTables(true)
       .setExcludeNamespaces(Sets.newHashSet(NO_REPLICATE_NAMESPACE)).build();
     admin1.addReplicationPeer(PEER_ID2, peerConfig);
     assertTrue(peerConfig.needToReplicate(REPLICATE_TABLE));

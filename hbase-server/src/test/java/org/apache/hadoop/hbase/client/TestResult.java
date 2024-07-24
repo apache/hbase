@@ -23,7 +23,9 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -45,6 +47,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -83,15 +86,16 @@ public class TestResult {
     Cell[] cells = genKVs(row, family, value, 1, 10);
     Arrays.sort(cells, CellComparator.getInstance());
     Result r = Result.create(cells);
-    assertSame(r, cells);
+    assertCellsSame(r, cells);
     // Assert I run over same result multiple times.
-    assertSame(r.cellScanner(), cells);
-    assertSame(r.cellScanner(), cells);
+    assertCellsSame(r.cellScanner(), cells);
+    assertCellsSame(r.cellScanner(), cells);
     // Assert we are not creating new object when doing cellscanner
     assertTrue(r == r.cellScanner());
   }
 
-  private void assertSame(final CellScanner cellScanner, final Cell[] cells) throws IOException {
+  private void assertCellsSame(final CellScanner cellScanner, final Cell[] cells)
+    throws IOException {
     int count = 0;
     while (cellScanner.advance()) {
       assertTrue(cells[count].equals(cellScanner.current()));
@@ -458,7 +462,6 @@ public class TestResult {
    * Microbenchmark that compares {@link Result#getValue} and {@link Result#loadValue} performance.
    */
   public void doReadBenchmark() throws Exception {
-
     final int n = 5;
     final int m = 100000000;
 
@@ -514,6 +517,20 @@ public class TestResult {
     }
     stop = System.nanoTime();
     System.out.println("getValue():  " + (stop - start));
+  }
+
+  @Test
+  public void testCreateResultWithCellArray() {
+    Cell[] cells = genKVs(row, family, value, EnvironmentEdgeManager.currentTime(), 5);
+    Result r = Result.create(cells);
+    // the cells is actually a KeyValue[], which can be cast to ExtendedCell[] directly, so we
+    // should get the same one without copying
+    assertSame(cells, r.rawCells());
+
+    Cell[] emptyCells = new Cell[0];
+    Result emptyResult = Result.create(emptyCells);
+    // emptyCells is a Cell[] instead of ExtendedCell[], so we need to copy it to a new array
+    assertNotSame(emptyCells, emptyResult.rawCells());
   }
 
   /**

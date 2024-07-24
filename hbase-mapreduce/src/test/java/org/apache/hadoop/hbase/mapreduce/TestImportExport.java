@@ -42,8 +42,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -59,6 +60,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
@@ -364,7 +366,7 @@ public class TestImportExport {
       s.setRaw(true);
       ResultScanner scanner = t.getScanner(s);
       Result r = scanner.next();
-      Cell[] res = r.rawCells();
+      ExtendedCell[] res = PackagePrivateFieldAccessor.getExtendedRawCells(r);
       assertTrue(PrivateCellUtil.isDeleteFamily(res[0]));
       assertEquals(now + 4, res[1].getTimestamp());
       assertEquals(now + 3, res[2].getTimestamp());
@@ -645,13 +647,12 @@ public class TestImportExport {
     }).when(ctx).write(any(), any());
 
     importer.setup(ctx);
-    Result value = mock(Result.class);
     KeyValue[] keys = {
       new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
         Bytes.toBytes("value")),
       new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
         Bytes.toBytes("value1")) };
-    when(value.rawCells()).thenReturn(keys);
+    Result value = Result.create(keys);
     importer.map(new ImmutableBytesWritable(Bytes.toBytes("Key")), value, ctx);
 
   }
@@ -819,7 +820,7 @@ public class TestImportExport {
   }
 
   private void checkWhetherTagExists(TableName table, boolean tagExists) throws IOException {
-    List<Cell> values = new ArrayList<>();
+    List<ExtendedCell> values = new ArrayList<>();
     for (HRegion region : UTIL.getHBaseCluster().getRegions(table)) {
       Scan scan = new Scan();
       // Make sure to set rawScan to true so that we will get Delete Markers.
@@ -829,13 +830,13 @@ public class TestImportExport {
       // Need to use RegionScanner instead of table#getScanner since the latter will
       // not return tags since it will go through rpc layer and remove tags intentionally.
       RegionScanner scanner = region.getScanner(scan);
-      scanner.next(values);
+      scanner.next((List) values);
       if (!values.isEmpty()) {
         break;
       }
     }
     boolean deleteFound = false;
-    for (Cell cell : values) {
+    for (ExtendedCell cell : values) {
       if (PrivateCellUtil.isDelete(cell.getType().getCode())) {
         deleteFound = true;
         List<Tag> tags = PrivateCellUtil.getTags(cell);
@@ -880,8 +881,8 @@ public class TestImportExport {
         }
         Tag sourceOpTag = new ArrayBackedTag(TEST_TAG_TYPE, sourceOpAttr);
         List<Cell> updatedCells = new ArrayList<>();
-        for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-          Cell cell = cellScanner.current();
+        for (ExtendedCellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
+          ExtendedCell cell = cellScanner.current();
           List<Tag> tags = PrivateCellUtil.getTags(cell);
           tags.add(sourceOpTag);
           Cell updatedCell = PrivateCellUtil.createCell(cell, tags);
@@ -933,9 +934,10 @@ public class TestImportExport {
       int count = 0;
       Result result;
       while ((result = scanner.next()) != null) {
-        List<Cell> cells = result.listCells();
+        List<ExtendedCell> cells =
+          Arrays.asList(PackagePrivateFieldAccessor.getExtendedRawCells(result));
         assertEquals(2, cells.size());
-        Cell cell = cells.get(0);
+        ExtendedCell cell = cells.get(0);
         assertTrue(CellUtil.isDelete(cell));
         List<Tag> tags = PrivateCellUtil.getTags(cell);
         assertEquals(0, tags.size());

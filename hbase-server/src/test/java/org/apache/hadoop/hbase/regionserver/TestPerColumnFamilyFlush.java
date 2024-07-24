@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractTestFSWAL;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -162,8 +163,8 @@ public class TestPerColumnFamilyFlush {
     MemStoreSize cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
 
     // Get the overall smallest LSN in the region's memstores.
-    long smallestSeqInRegionCurrentMemstore =
-      getWAL(region).getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    long smallestSeqInRegionCurrentMemstore = AbstractTestFSWAL
+      .getEarliestMemStoreSeqNum(getWAL(region), region.getRegionInfo().getEncodedNameAsBytes());
 
     // The overall smallest LSN in the region's memstores should be the same as
     // the LSN of the smallest edit in CF1
@@ -193,8 +194,8 @@ public class TestPerColumnFamilyFlush {
     cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
     cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
     totalMemstoreSize = region.getMemStoreDataSize();
-    smallestSeqInRegionCurrentMemstore =
-      getWAL(region).getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    smallestSeqInRegionCurrentMemstore = AbstractTestFSWAL.getEarliestMemStoreSeqNum(getWAL(region),
+      region.getRegionInfo().getEncodedNameAsBytes());
 
     // We should have cleared out only CF1, since we chose the flush thresholds
     // and number of puts accordingly.
@@ -231,8 +232,8 @@ public class TestPerColumnFamilyFlush {
     cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
     cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
     totalMemstoreSize = region.getMemStoreDataSize();
-    smallestSeqInRegionCurrentMemstore =
-      getWAL(region).getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    smallestSeqInRegionCurrentMemstore = AbstractTestFSWAL.getEarliestMemStoreSeqNum(getWAL(region),
+      region.getRegionInfo().getEncodedNameAsBytes());
 
     // CF1 and CF2, both should be absent.
     assertEquals(0, cf1MemstoreSize.getDataSize());
@@ -242,6 +243,7 @@ public class TestPerColumnFamilyFlush {
     // CF3 shouldn't have been touched.
     assertEquals(cf3MemstoreSize, oldCF3MemstoreSize);
     assertEquals(totalMemstoreSize, cf3MemstoreSize.getDataSize());
+    assertEquals(smallestSeqInRegionCurrentMemstore, smallestSeqCF3);
 
     // What happens when we hit the memstore limit, but we are not able to find
     // any Column Family above the threshold?
@@ -313,8 +315,8 @@ public class TestPerColumnFamilyFlush {
     cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
     cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
     totalMemstoreSize = region.getMemStoreDataSize();
-    long smallestSeqInRegionCurrentMemstore =
-      region.getWAL().getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    long smallestSeqInRegionCurrentMemstore = AbstractTestFSWAL
+      .getEarliestMemStoreSeqNum(region.getWAL(), region.getRegionInfo().getEncodedNameAsBytes());
 
     // Everything should have been cleared
     assertEquals(0, cf1MemstoreSize.getDataSize());

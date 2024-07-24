@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.mapreduce.replication;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -35,12 +36,14 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.ConnectionRegistryFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableSnapshotScanner;
+import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -55,11 +58,11 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
-import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -210,13 +213,18 @@ public class VerifyReplication extends Configured implements Tool {
 
         final InputSplit tableSplit = context.getInputSplit();
 
-        String zkClusterKey = conf.get(NAME + ".peerQuorumAddress");
-        Configuration peerConf =
-          HBaseConfiguration.createClusterConf(conf, zkClusterKey, PEER_CONFIG_PREFIX);
-
+        String peerQuorumAddress = conf.get(NAME + ".peerQuorumAddress");
+        URI connectionUri = ConnectionRegistryFactory.tryParseAsConnectionURI(peerQuorumAddress);
+        Configuration peerConf;
+        if (connectionUri != null) {
+          peerConf = HBaseConfiguration.create(conf);
+        } else {
+          peerConf =
+            HBaseConfiguration.createClusterConf(conf, peerQuorumAddress, PEER_CONFIG_PREFIX);
+        }
         String peerName = peerConf.get(NAME + ".peerTableName", tableName.getNameAsString());
         TableName peerTableName = TableName.valueOf(peerName);
-        replicatedConnection = ConnectionFactory.createConnection(peerConf);
+        replicatedConnection = ConnectionFactory.createConnection(connectionUri, peerConf);
         replicatedTable = replicatedConnection.getTable(peerTableName);
         scan.withStartRow(value.getRow());
 
@@ -397,7 +405,7 @@ public class VerifyReplication extends Configured implements Tool {
         ReplicationStorageFactory.getReplicationPeerStorage(FileSystem.get(conf), localZKW, conf);
       ReplicationPeerConfig peerConfig = storage.getPeerConfig(peerId);
       return Pair.newPair(peerConfig,
-        ReplicationUtils.getPeerClusterConfiguration(peerConfig, conf));
+        ReplicationPeerConfigUtil.getPeerClusterConfiguration(conf, peerConfig));
     } catch (ReplicationException e) {
       throw new IOException("An error occurred while trying to connect to the remote peer cluster",
         e);
@@ -408,10 +416,22 @@ public class VerifyReplication extends Configured implements Tool {
     }
   }
 
+  private Configuration applyURIConf(Configuration conf, URI uri) {
+    Configuration peerConf = HBaseConfiguration.subset(conf, PEER_CONFIG_PREFIX);
+    HBaseConfiguration.merge(peerConf, conf);
+    Strings.applyURIQueriesToConf(uri, peerConf);
+    return peerConf;
+  }
+
   private void restoreSnapshotForPeerCluster(Configuration conf, String peerQuorumAddress)
     throws IOException {
-    Configuration peerConf =
-      HBaseConfiguration.createClusterConf(conf, peerQuorumAddress, PEER_CONFIG_PREFIX);
+    URI uri = ConnectionRegistryFactory.tryParseAsConnectionURI(peerQuorumAddress);
+    Configuration peerConf;
+    if (uri != null) {
+      peerConf = applyURIConf(conf, uri);
+    } else {
+      peerConf = HBaseConfiguration.createClusterConf(conf, peerQuorumAddress, PEER_CONFIG_PREFIX);
+    }
     FileSystem.setDefaultUri(peerConf, peerFSAddress);
     CommonFSUtils.setRootDir(peerConf, new Path(peerFSAddress, peerHBaseRootAddress));
     FileSystem fs = FileSystem.get(peerConf);
@@ -526,16 +546,24 @@ public class VerifyReplication extends Configured implements Tool {
       TableMapReduceUtil.initTableMapperJob(tableName, scan, Verifier.class, null, null, job);
     }
 
-    Configuration peerClusterConf;
+    Configuration peerClusterBaseConf;
     if (peerId != null) {
       assert peerConfigPair != null;
-      peerClusterConf = peerConfigPair.getSecond();
+      peerClusterBaseConf = peerConfigPair.getSecond();
     } else {
-      peerClusterConf =
-        HBaseConfiguration.createClusterConf(conf, peerQuorumAddress, PEER_CONFIG_PREFIX);
+      peerClusterBaseConf = conf;
+    }
+    Configuration peerClusterConf;
+    URI uri = ConnectionRegistryFactory.tryParseAsConnectionURI(peerQuorumAddress);
+    if (uri != null) {
+      peerClusterConf = new Configuration(peerClusterBaseConf);
+      applyURIConf(peerClusterConf, uri);
+    } else {
+      peerClusterConf = HBaseConfiguration.createClusterConf(peerClusterBaseConf, peerQuorumAddress,
+        PEER_CONFIG_PREFIX);
     }
     // Obtain the auth token from peer cluster
-    TableMapReduceUtil.initCredentialsForCluster(job, peerClusterConf);
+    TableMapReduceUtil.initCredentialsForCluster(job, peerClusterConf, uri);
 
     job.setOutputFormatClass(NullOutputFormat.class);
     job.setNumReduceTasks(0);
@@ -775,6 +803,9 @@ public class VerifyReplication extends Configured implements Tool {
   }
 
   private boolean isPeerQuorumAddress(String cmd) {
+    if (ConnectionRegistryFactory.tryParseAsConnectionURI(cmd) != null) {
+      return true;
+    }
     try {
       ZKConfig.validateClusterKey(cmd);
     } catch (IOException e) {

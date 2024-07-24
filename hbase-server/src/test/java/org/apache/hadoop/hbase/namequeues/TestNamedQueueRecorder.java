@@ -31,7 +31,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -717,7 +717,7 @@ public class TestNamedQueueRecorder {
       }
 
       @Override
-      public CellScanner getCellScanner() {
+      public ExtendedCellScanner getCellScanner() {
         return null;
       }
 
@@ -783,7 +783,7 @@ public class TestNamedQueueRecorder {
       }
 
       @Override
-      public void setResponse(Message param, CellScanner cells, Throwable errorThrowable,
+      public void setResponse(Message param, ExtendedCellScanner cells, Throwable errorThrowable,
         String error) {
       }
 

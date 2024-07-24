@@ -97,6 +97,9 @@ public class FullTableBackupClient extends TableBackupClient {
         argsList.add("-mappers");
         argsList.add(String.valueOf(backupInfo.getWorkers()));
       }
+      if (backupInfo.getNoChecksumVerify()) {
+        argsList.add("-no-checksum-verify");
+      }
 
       String[] args = argsList.toArray(new String[0]);
 
@@ -190,7 +193,7 @@ public class FullTableBackupClient extends TableBackupClient {
       backupManager.writeBackupStartCode(newStartCode);
 
       // backup complete
-      completeBackup(conn, backupInfo, backupManager, BackupType.FULL, conf);
+      completeBackup(conn, backupInfo, BackupType.FULL, conf);
     } catch (Exception e) {
       failBackup(conn, backupInfo, backupManager, e, "Unexpected BackupException : ",
         BackupType.FULL, conf);

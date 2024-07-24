@@ -18,6 +18,9 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -54,32 +57,80 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
 
   /**
+   * Optional job parameter to specify a peer cluster. Used specifying remote cluster when copying
+   * between hbase clusters (the source is picked up from <code>hbase-site.xml</code>).
+   * @see TableMapReduceUtil#initTableReducerJob(String, Class, org.apache.hadoop.mapreduce.Job,
+   *      Class, java.net.URI)
+   */
+  public static final String OUTPUT_CLUSTER = "hbase.mapred.outputcluster";
+
+  /**
    * Prefix for configuration property overrides to apply in {@link #setConf(Configuration)}. For
    * keys matching this prefix, the prefix is stripped, and the value is set in the configuration
    * with the resulting key, ie. the entry "hbase.mapred.output.key1 = value1" would be set in the
    * configuration as "key1 = value1". Use this to set properties which should only be applied to
    * the {@code TableOutputFormat} configuration and not the input configuration.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. You do not need to use this way for
+   *             specifying configurations any more, you can specify any configuration with the
+   *             connection uri's queries specified by the {@link #OUTPUT_CLUSTER} parameter.
    */
+  @Deprecated
   public static final String OUTPUT_CONF_PREFIX = "hbase.mapred.output.";
 
   /**
    * Optional job parameter to specify a peer cluster. Used specifying remote cluster when copying
    * between hbase clusters (the source is picked up from <code>hbase-site.xml</code>).
    * @see TableMapReduceUtil#initTableReducerJob(String, Class, org.apache.hadoop.mapreduce.Job,
-   *      Class, String, String, String)
+   *      Class, String)
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Use {@link #OUTPUT_CLUSTER} to specify the
+   *             peer cluster instead.
    */
+  @Deprecated
   public static final String QUORUM_ADDRESS = OUTPUT_CONF_PREFIX + "quorum";
 
-  /** Optional job parameter to specify peer cluster's ZK client port */
+  /**
+   * Optional job parameter to specify peer cluster's ZK client port.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. You do not need to use this way for
+   *             specifying configurations any more, you can specify any configuration with the
+   *             connection uri's queries specified by the {@link #OUTPUT_CLUSTER} parameter.
+   */
+  @Deprecated
   public static final String QUORUM_PORT = OUTPUT_CONF_PREFIX + "quorum.port";
 
-  /** Optional specification of the rs class name of the peer cluster */
+  /**
+   * Optional specification of the rs class name of the peer cluster.
+   * @deprecated Since 2.5.9, 2.6.1 and 2.7.0, will be removed in 4.0.0. Does not take effect from
+   *             long ago, see HBASE-6044.
+   */
+  @Deprecated
   public static final String REGION_SERVER_CLASS = OUTPUT_CONF_PREFIX + "rs.class";
-  /** Optional specification of the rs impl name of the peer cluster */
+  /**
+   * Optional specification of the rs impl name of the peer cluster
+   * @deprecated Since 2.5.9, 2.6.1 and 2.7.0, will be removed in 4.0.0. Does not take effect from
+   *             long ago, see HBASE-6044.
+   */
+  @Deprecated
   public static final String REGION_SERVER_IMPL = OUTPUT_CONF_PREFIX + "rs.impl";
 
   /** The configuration. */
   private Configuration conf = null;
+
+  private static Connection createConnection(Configuration conf) throws IOException {
+    String outputCluster = conf.get(OUTPUT_CLUSTER);
+    if (!StringUtils.isBlank(outputCluster)) {
+      URI uri;
+      try {
+        uri = new URI(outputCluster);
+      } catch (URISyntaxException e) {
+        throw new IOException(
+          "malformed connection uri: " + outputCluster + ", please check config " + OUTPUT_CLUSTER,
+          e);
+      }
+      return ConnectionFactory.createConnection(uri, conf);
+    } else {
+      return ConnectionFactory.createConnection(conf);
+    }
+  }
 
   /**
    * Writes the reducer output to an HBase table.
@@ -89,13 +140,9 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
     private Connection connection;
     private BufferedMutator mutator;
 
-    /**
-     *
-    *
-     */
     public TableRecordWriter() throws IOException {
+      this.connection = createConnection(conf);
       String tableName = conf.get(OUTPUT_TABLE);
-      this.connection = ConnectionFactory.createConnection(conf);
       this.mutator = connection.getBufferedMutator(TableName.valueOf(tableName));
       LOG.info("Created table instance for " + tableName);
     }
@@ -165,8 +212,7 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
       hConf = context.getConfiguration();
     }
 
-    try (Connection connection = ConnectionFactory.createConnection(hConf);
-      Admin admin = connection.getAdmin()) {
+    try (Connection connection = createConnection(hConf); Admin admin = connection.getAdmin()) {
       TableName tableName = TableName.valueOf(hConf.get(OUTPUT_TABLE));
       if (!admin.tableExists(tableName)) {
         throw new TableNotFoundException(
@@ -208,15 +254,9 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
 
     String address = otherConf.get(QUORUM_ADDRESS);
     int zkClientPort = otherConf.getInt(QUORUM_PORT, 0);
-    String serverClass = otherConf.get(REGION_SERVER_CLASS);
-    String serverImpl = otherConf.get(REGION_SERVER_IMPL);
 
     try {
       this.conf = HBaseConfiguration.createClusterConf(otherConf, address, OUTPUT_CONF_PREFIX);
-
-      if (serverClass != null) {
-        this.conf.set(HConstants.REGION_SERVER_IMPL, serverImpl);
-      }
       if (zkClientPort != 0) {
         this.conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);
       }

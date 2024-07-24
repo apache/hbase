@@ -337,8 +337,8 @@ public class TestReplicationSource {
       final Admin admin = TEST_UTIL.getAdmin();
 
       final String peerId = "TestPeer";
-      admin.addReplicationPeer(peerId,
-        ReplicationPeerConfig.newBuilder().setClusterKey(TEST_UTIL_PEER.getClusterKey()).build());
+      admin.addReplicationPeer(peerId, ReplicationPeerConfig.newBuilder()
+        .setClusterKey(TEST_UTIL_PEER.getRpcConnnectionURI()).build());
       // Wait for replication sources to come up
       Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
         @Override

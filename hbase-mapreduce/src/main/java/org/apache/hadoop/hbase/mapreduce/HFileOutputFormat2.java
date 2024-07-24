@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
@@ -239,13 +240,13 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
 
       @Override
       public void write(ImmutableBytesWritable row, V cell) throws IOException {
-        Cell kv = cell;
         // null input == user explicitly wants to flush
-        if (row == null && kv == null) {
+        if (row == null && cell == null) {
           rollWriters(null);
           return;
         }
 
+        ExtendedCell kv = PrivateCellUtil.ensureExtendedCell(cell);
         byte[] rowKey = CellUtil.cloneRow(kv);
         int length = (PrivateCellUtil.estimatedSerializedSizeOf(kv)) - Bytes.SIZEOF_INT;
         byte[] family = CellUtil.cloneFamily(kv);
@@ -320,8 +321,8 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
         }
 
         // we now have the proper WAL writer. full steam ahead
-        PrivateCellUtil.updateLatestStamp(cell, this.now);
-        wl.writer.append(kv);
+        PrivateCellUtil.updateLatestStamp(kv, this.now);
+        wl.writer.append((ExtendedCell) kv);
         wl.written += length;
 
         // Copy the row so we know when a row transition.

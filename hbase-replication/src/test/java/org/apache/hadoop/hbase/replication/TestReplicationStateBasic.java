@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.junit.Test;
@@ -86,8 +87,8 @@ public abstract class TestReplicationStateBasic {
       SyncReplicationState.NONE);
     assertNumberOfPeers(2);
 
-    assertEquals(KEY_ONE, ZKConfig.getZooKeeperClusterKey(ReplicationUtils
-      .getPeerClusterConfiguration(rp.getPeerStorage().getPeerConfig(ID_ONE), rp.getConf())));
+    assertEquals(KEY_ONE, ZKConfig.getZooKeeperClusterKey(ReplicationPeerConfigUtil
+      .getPeerClusterConfiguration(rp.getConf(), rp.getPeerStorage().getPeerConfig(ID_ONE))));
     rp.getPeerStorage().removePeer(ID_ONE);
     rp.removePeer(ID_ONE);
     assertNumberOfPeers(1);

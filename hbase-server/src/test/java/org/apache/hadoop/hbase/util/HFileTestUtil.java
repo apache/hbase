@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
@@ -112,7 +113,7 @@ public class HFileTestUtil {
     try {
       // subtract 2 since iterateOnSplits doesn't include boundary keys
       for (byte[] key : Bytes.iterateOnSplits(startKey, endKey, numRows - 2)) {
-        Cell kv = new KeyValue(key, family, qualifier, now, key);
+        ExtendedCell kv = new KeyValue(key, family, qualifier, now, key);
         if (withTag) {
           // add a tag. Arbitrarily chose mob tag since we have a helper already.
           Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE, key);
@@ -143,7 +144,8 @@ public class HFileTestUtil {
     ResultScanner s = table.getScanner(new Scan());
     for (Result r : s) {
       for (Cell c : r.listCells()) {
-        Optional<Tag> tag = PrivateCellUtil.getTag(c, TagType.MOB_TABLE_NAME_TAG_TYPE);
+        Optional<Tag> tag =
+          PrivateCellUtil.getTag((ExtendedCell) c, TagType.MOB_TABLE_NAME_TAG_TYPE);
         if (!tag.isPresent()) {
           fail(c.toString() + " has null tag");
           continue;

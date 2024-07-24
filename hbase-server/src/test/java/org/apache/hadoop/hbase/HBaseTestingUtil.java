@@ -3216,6 +3216,24 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     }
   }
 
+  public String getRpcConnnectionURI() throws UnknownHostException {
+    return "hbase+rpc://" + MasterRegistry.getMasterAddr(conf);
+  }
+
+  public String getZkConnectionURI() {
+    return "hbase+zk://" + conf.get(HConstants.ZOOKEEPER_QUORUM) + ":"
+      + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT)
+      + conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+  }
+
+  /**
+   * Get the zk based cluster key for this cluster.
+   * @deprecated since 2.7.0, will be removed in 4.0.0. Now we use connection uri to specify the
+   *             connection info of a cluster. Keep here only for compatibility.
+   * @see #getRpcConnnectionURI()
+   * @see #getZkConnectionURI()
+   */
+  @Deprecated
   public String getClusterKey() {
     return conf.get(HConstants.ZOOKEEPER_QUORUM) + ":" + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT)
       + ":"

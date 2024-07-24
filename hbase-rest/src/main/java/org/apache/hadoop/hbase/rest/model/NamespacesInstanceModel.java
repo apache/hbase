@@ -29,7 +29,11 @@ import javax.xml.bind.annotation.XmlTransient;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.NamespacePropertiesMessage.NamespaceProperties;
 
@@ -140,7 +144,7 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     NamespaceProperties.Builder builder = NamespaceProperties.newBuilder();
     if (properties != null) {
       for (Map.Entry<String, String> entry : properties.entrySet()) {
@@ -151,13 +155,13 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
         builder.addProps(property);
       }
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     NamespaceProperties.Builder builder = NamespaceProperties.newBuilder();
-    builder.mergeFrom(message);
+    RestUtil.mergeFrom(builder, cis);
     List<NamespaceProperties.Property> properties = builder.getPropsList();
     for (NamespaceProperties.Property property : properties) {
       addProperty(property.getKey(), property.getValue());

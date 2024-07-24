@@ -26,7 +26,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -124,13 +126,13 @@ public class TestMutation {
   private void assertEquals(Mutation origin, Mutation clone) {
     Assert.assertEquals(origin.getFamilyCellMap().size(), clone.getFamilyCellMap().size());
     for (byte[] family : origin.getFamilyCellMap().keySet()) {
-      List<Cell> originCells = origin.getCellList(family);
-      List<Cell> cloneCells = clone.getCellList(family);
+      List<ExtendedCell> originCells = origin.getCellList(family);
+      List<ExtendedCell> cloneCells = clone.getCellList(family);
       Assert.assertEquals(originCells.size(), cloneCells.size());
       for (int i = 0; i != cloneCells.size(); ++i) {
-        Cell originCell = originCells.get(i);
-        Cell cloneCell = cloneCells.get(i);
-        assertTrue(CellUtil.equals(originCell, cloneCell));
+        ExtendedCell originCell = originCells.get(i);
+        ExtendedCell cloneCell = cloneCells.get(i);
+        assertTrue(PrivateCellUtil.equals(originCell, cloneCell));
         assertTrue(CellUtil.matchingValue(originCell, cloneCell));
       }
     }

@@ -117,7 +117,8 @@ public class WALPlayer extends Configured implements Tool {
             byte[] outKey = multiTableSupport
               ? Bytes.add(table.getName(), Bytes.toBytes(tableSeparator), CellUtil.cloneRow(cell))
               : CellUtil.cloneRow(cell);
-            context.write(new ImmutableBytesWritable(outKey), new MapReduceExtendedCell(cell));
+            context.write(new ImmutableBytesWritable(outKey),
+              new MapReduceExtendedCell(PrivateCellUtil.ensureExtendedCell(cell)));
           }
         }
       } catch (InterruptedException e) {

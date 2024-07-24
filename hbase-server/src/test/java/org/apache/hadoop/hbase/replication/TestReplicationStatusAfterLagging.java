@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
@@ -41,6 +42,13 @@ public class TestReplicationStatusAfterLagging extends TestReplicationBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestReplicationStatusAfterLagging.class);
+
+  @Override
+  protected String getClusterKey(HBaseTestingUtil util) throws Exception {
+    // in this test we will restart the peer cluster, and the master address will be changed, so we
+    // need to use zk based connection uri
+    return util.getZkConnectionURI();
+  }
 
   @Test
   public void testReplicationStatusAfterLagging() throws Exception {

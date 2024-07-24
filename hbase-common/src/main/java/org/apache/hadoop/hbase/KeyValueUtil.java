@@ -88,7 +88,7 @@ public class KeyValueUtil {
 
   /**************** copy the cell to create a new keyvalue *********************/
 
-  public static KeyValue copyToNewKeyValue(final Cell cell) {
+  public static KeyValue copyToNewKeyValue(final ExtendedCell cell) {
     byte[] bytes = copyToNewByteArray(cell);
     KeyValue kvCell = new KeyValue(bytes, 0, bytes.length);
     kvCell.setSequenceId(cell.getSequenceId());
@@ -99,7 +99,7 @@ public class KeyValueUtil {
    * The position will be set to the beginning of the new ByteBuffer
    * @return the Bytebuffer containing the key part of the cell
    */
-  public static ByteBuffer copyKeyToNewByteBuffer(final Cell cell) {
+  public static ByteBuffer copyKeyToNewByteBuffer(final ExtendedCell cell) {
     byte[] bytes = new byte[keyLength(cell)];
     appendKeyTo(cell, bytes, 0);
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
@@ -110,7 +110,7 @@ public class KeyValueUtil {
    * Copies the key to a new KeyValue
    * @return the KeyValue that consists only the key part of the incoming cell
    */
-  public static KeyValue toNewKeyCell(final Cell cell) {
+  public static KeyValue toNewKeyCell(final ExtendedCell cell) {
     byte[] bytes = new byte[keyLength(cell)];
     appendKeyTo(cell, bytes, 0);
     KeyValue kv = new KeyValue.KeyOnlyKeyValue(bytes, 0, bytes.length);
@@ -120,7 +120,7 @@ public class KeyValueUtil {
     return kv;
   }
 
-  public static byte[] copyToNewByteArray(final Cell cell) {
+  public static byte[] copyToNewByteArray(final ExtendedCell cell) {
     // Cell#getSerializedSize returns the serialized size of the Source cell, which may
     // not serialize all fields. We are constructing a KeyValue backing array here,
     // which does include all fields, and must allocate accordingly.
@@ -133,7 +133,7 @@ public class KeyValueUtil {
     return backingBytes;
   }
 
-  public static int appendKeyTo(final Cell cell, final byte[] output, final int offset) {
+  public static int appendKeyTo(final ExtendedCell cell, final byte[] output, final int offset) {
     int nextOffset = offset;
     nextOffset = Bytes.putShort(output, nextOffset, cell.getRowLength());
     nextOffset = CellUtil.copyRowTo(cell, output, nextOffset);
@@ -147,7 +147,8 @@ public class KeyValueUtil {
 
   /**************** copy key and value *********************/
 
-  public static int appendToByteArray(Cell cell, byte[] output, int offset, boolean withTags) {
+  public static int appendToByteArray(ExtendedCell cell, byte[] output, int offset,
+    boolean withTags) {
     int pos = offset;
     pos = Bytes.putInt(output, pos, keyLength(cell));
     pos = Bytes.putInt(output, pos, cell.getValueLength());
@@ -163,7 +164,7 @@ public class KeyValueUtil {
   /**
    * Copy the Cell content into the passed buf in KeyValue serialization format.
    */
-  public static int appendTo(Cell cell, ByteBuffer buf, int offset, boolean withTags) {
+  public static int appendTo(ExtendedCell cell, ByteBuffer buf, int offset, boolean withTags) {
     offset = ByteBufferUtils.putInt(buf, offset, keyLength(cell));// Key length
     offset = ByteBufferUtils.putInt(buf, offset, cell.getValueLength());// Value length
     offset = appendKeyTo(cell, buf, offset);
@@ -176,7 +177,7 @@ public class KeyValueUtil {
     return offset;
   }
 
-  public static int appendKeyTo(Cell cell, ByteBuffer buf, int offset) {
+  public static int appendKeyTo(ExtendedCell cell, ByteBuffer buf, int offset) {
     offset = ByteBufferUtils.putShort(buf, offset, cell.getRowLength());// RK length
     offset = CellUtil.copyRowTo(cell, buf, offset);// Row bytes
     offset = ByteBufferUtils.putByte(buf, offset, cell.getFamilyLength());// CF length
@@ -416,7 +417,7 @@ public class KeyValueUtil {
    * @deprecated without any replacement.
    */
   @Deprecated
-  public static KeyValue ensureKeyValue(final Cell cell) {
+  public static KeyValue ensureKeyValue(final ExtendedCell cell) {
     if (cell == null) return null;
     if (cell instanceof KeyValue) {
       if (cell.getClass().getName().equals(KeyValue.class.getName())) {
@@ -433,10 +434,10 @@ public class KeyValueUtil {
   }
 
   @Deprecated
-  public static List<KeyValue> ensureKeyValues(List<Cell> cells) {
-    List<KeyValue> lazyList = Lists.transform(cells, new Function<Cell, KeyValue>() {
+  public static List<KeyValue> ensureKeyValues(List<ExtendedCell> cells) {
+    List<KeyValue> lazyList = Lists.transform(cells, new Function<ExtendedCell, KeyValue>() {
       @Override
-      public KeyValue apply(Cell arg0) {
+      public KeyValue apply(ExtendedCell arg0) {
         return KeyValueUtil.ensureKeyValue(arg0);
       }
     });

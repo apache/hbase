@@ -60,6 +60,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.InnerStoreCellComparator;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
@@ -554,7 +555,7 @@ public class HStore
   /**
    * Adds a value to the memstore
    */
-  public void add(final Cell cell, MemStoreSizing memstoreSizing) {
+  public void add(final ExtendedCell cell, MemStoreSizing memstoreSizing) {
     storeEngine.readLock();
     try {
       if (this.currentParallelPutCount.getAndIncrement() > this.parallelPutCountPrintThreshold) {
@@ -571,7 +572,7 @@ public class HStore
   /**
    * Adds the specified value to the memstore
    */
-  public void add(final Iterable<Cell> cells, MemStoreSizing memstoreSizing) {
+  public void add(final Iterable<ExtendedCell> cells, MemStoreSizing memstoreSizing) {
     storeEngine.readLock();
     try {
       if (this.currentParallelPutCount.getAndIncrement() > this.parallelPutCountPrintThreshold) {
@@ -615,7 +616,7 @@ public class HStore
 
       Optional<byte[]> firstKey = reader.getFirstRowKey();
       Preconditions.checkState(firstKey.isPresent(), "First key can not be null");
-      Optional<Cell> lk = reader.getLastKey();
+      Optional<ExtendedCell> lk = reader.getLastKey();
       Preconditions.checkState(lk.isPresent(), "Last key can not be null");
       byte[] lastKey = CellUtil.cloneRow(lk.get());
 
@@ -868,7 +869,7 @@ public class HStore
       HFile.createReader(srcFs, path, getCacheConfig(), isPrimaryReplicaStore(), conf)) {
       Optional<byte[]> firstKey = reader.getFirstRowKey();
       Preconditions.checkState(firstKey.isPresent(), "First key can not be null");
-      Optional<Cell> lk = reader.getLastKey();
+      Optional<ExtendedCell> lk = reader.getLastKey();
       Preconditions.checkState(lk.isPresent(), "Last key can not be null");
       byte[] lastKey = CellUtil.cloneRow(lk.get());
       if (!this.getRegionInfo().containsRange(firstKey.get(), lastKey)) {
@@ -1913,7 +1914,7 @@ public class HStore
    * across all of them.
    * @param readpoint readpoint below which we can safely remove duplicate KVs
    */
-  public void upsert(Iterable<Cell> cells, long readpoint, MemStoreSizing memstoreSizing) {
+  public void upsert(Iterable<ExtendedCell> cells, long readpoint, MemStoreSizing memstoreSizing) {
     this.storeEngine.readLock();
     try {
       this.memstore.upsert(cells, readpoint, memstoreSizing);

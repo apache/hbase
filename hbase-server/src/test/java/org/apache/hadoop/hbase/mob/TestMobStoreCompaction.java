@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -373,11 +374,11 @@ public class TestMobStoreCompaction {
     InternalScanner scanner = region.getScanner(scan);
 
     int scannedCount = 0;
-    List<Cell> results = new ArrayList<>();
+    List<ExtendedCell> results = new ArrayList<>();
     boolean hasMore = true;
     while (hasMore) {
-      hasMore = scanner.next(results);
-      for (Cell c : results) {
+      hasMore = scanner.next((List) results);
+      for (ExtendedCell c : results) {
         if (MobUtils.isMobReferenceCell(c)) {
           scannedCount++;
         }
@@ -401,15 +402,15 @@ public class TestMobStoreCompaction {
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     InternalScanner scanner = region.getScanner(scan);
 
-    List<Cell> kvs = new ArrayList<>();
+    List<ExtendedCell> kvs = new ArrayList<>();
     boolean hasMore = true;
     String fileName;
     Set<String> files = new HashSet<>();
     do {
       kvs.clear();
-      hasMore = scanner.next(kvs);
+      hasMore = scanner.next((List) kvs);
       for (Cell kv : kvs) {
-        if (!MobUtils.isMobReferenceCell(kv)) {
+        if (!MobUtils.isMobReferenceCell((ExtendedCell) kv)) {
           continue;
         }
         if (!MobUtils.hasValidMobRefCellValue(kv)) {

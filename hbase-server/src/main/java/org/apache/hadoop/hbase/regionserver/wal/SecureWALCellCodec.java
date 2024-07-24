@@ -24,7 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -78,7 +78,7 @@ public class SecureWALCellCodec extends WALCellCodec {
     }
 
     @Override
-    protected Cell parseCell() throws IOException {
+    protected ExtendedCell parseCell() throws IOException {
       if (this.decryptor == null) {
         return super.parseCell();
       }
@@ -173,7 +173,7 @@ public class SecureWALCellCodec extends WALCellCodec {
     }
 
     @Override
-    public void write(Cell cell) throws IOException {
+    public void write(ExtendedCell cell) throws IOException {
       if (encryptor == null) {
         super.write(cell);
         return;

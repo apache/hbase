@@ -1120,8 +1120,8 @@ If you don't have time to build it both ways and compare, my advice would be to 
 - A value between `0` and `1` allocates the number of queues proportionally to the number of handlers. For instance, a value of `.5` shares one queue between each two handlers.
 * Use `hbase.ipc.server.callqueue.read.ratio` (`hbase.ipc.server.callqueue.read.share` in 0.98) to split the call queues into read and write queues:
 - `0.5` means there will be the same number of read and write queues
-- `< 0.5` for more read than write
-- `> 0.5` for more write than read
+- `< 0.5` for more write than read
+- `> 0.5` for more read than write
 * Set `hbase.ipc.server.callqueue.scan.ratio` (HBase 1.0+)  to split read call queues into small-read and long-read queues:
 - 0.5 means that there will be the same number of short-read and long-read queues
 - `< 0.5` for more short-read

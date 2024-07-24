@@ -35,12 +35,13 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -469,12 +470,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           }
         }
       } else if (entry.getValue() instanceof List) {
-        List<Cell> list = (List<Cell>) entry.getValue();
+        List<ExtendedCell> list = (List<ExtendedCell>) entry.getValue();
         if (list == null || list.isEmpty()) {
           get.addFamily(col);
         } else {
           // In case of family delete, a Cell will be added into the list with Qualifier as null.
-          for (Cell cell : list) {
+          for (ExtendedCell cell : list) {
             if (
               cell.getQualifierLength() == 0 && (cell.getTypeByte() == Type.DeleteFamily.getCode()
                 || cell.getTypeByte() == Type.DeleteFamilyVersion.getCode())
@@ -609,7 +610,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // with new cells including the ACL data
     for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
       List<Cell> newCells = Lists.newArrayList();
-      for (Cell cell : e.getValue()) {
+      for (Cell c : e.getValue()) {
+        assert c instanceof ExtendedCell;
+        ExtendedCell cell = (ExtendedCell) c;
         // Prepend the supplied perms in a new ACL tag to an update list of tags for the cell
         List<Tag> tags = new ArrayList<>();
         tags.add(new ArrayBackedTag(PermissionStorage.ACL_TAG_TYPE, perms));
@@ -641,7 +644,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     if (m.getAttribute(TAG_CHECK_PASSED) != null) {
       return;
     }
-    for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
+    for (ExtendedCellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
       Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cellScanner.current());
       while (tagsItr.hasNext()) {
         if (tagsItr.next().getType() == PermissionStorage.ACL_TAG_TYPE) {
@@ -1729,8 +1732,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // there is no need to rewrite them again. Just extract non-acl tags of newCell if we need to
     // add a new acl tag for the cell. Actually, oldCell is useless here.
     List<Tag> tags = Lists.newArrayList();
-    if (newCell != null) {
-      Iterator<Tag> tagIterator = PrivateCellUtil.tagsIterator(newCell);
+    ExtendedCell newExtendedCell = (ExtendedCell) newCell;
+    if (newExtendedCell != null) {
+      Iterator<Tag> tagIterator = PrivateCellUtil.tagsIterator(newExtendedCell);
       while (tagIterator.hasNext()) {
         Tag tag = tagIterator.next();
         if (tag.getType() != PermissionStorage.ACL_TAG_TYPE) {
@@ -1747,7 +1751,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // We have checked the ACL tag of mutation is not null.
     // So that the tags could not be empty.
     tags.add(new ArrayBackedTag(PermissionStorage.ACL_TAG_TYPE, mutation.getACL()));
-    return PrivateCellUtil.createCell(newCell, tags);
+    return PrivateCellUtil.createCell(newExtendedCell, tags);
   }
 
   @Override

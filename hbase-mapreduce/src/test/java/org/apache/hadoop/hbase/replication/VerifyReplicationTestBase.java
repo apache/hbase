@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -52,8 +51,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -62,22 +59,16 @@ import org.apache.hadoop.mapreduce.Job;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ReplicationTests.class, LargeTests.class })
-public class TestVerifyReplication extends TestReplicationBase {
+public abstract class VerifyReplicationTestBase extends TestReplicationBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVerifyReplication.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestVerifyReplication.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestVerifyReplicationZkClusterKey.class);
 
   private static final String PEER_ID = "2";
   private static final TableName peerTableName = TableName.valueOf("peerTest");
@@ -260,7 +251,7 @@ public class TestVerifyReplication extends TestReplicationBase {
     runSmallBatchTest();
 
     // with a quorum address (a cluster key)
-    String[] args = new String[] { UTIL2.getClusterKey(), tableName.getNameAsString() };
+    String[] args = new String[] { getClusterKey(UTIL2), tableName.getNameAsString() };
     runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
 
     Scan scan = new Scan();
@@ -305,7 +296,7 @@ public class TestVerifyReplication extends TestReplicationBase {
     String[] args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
       "--sourceSnapshotTmpDir=" + tmpPath1, "--peerSnapshotName=" + peerSnapshotName,
       "--peerSnapshotTmpDir=" + tmpPath2, "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
+      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), getClusterKey(UTIL2),
       tableName.getNameAsString() };
     runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
     checkRestoreTmpDir(CONF1, tmpPath1, 1);
@@ -335,7 +326,7 @@ public class TestVerifyReplication extends TestReplicationBase {
     args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
       "--sourceSnapshotTmpDir=" + tmpPath1, "--peerSnapshotName=" + peerSnapshotName,
       "--peerSnapshotTmpDir=" + tmpPath2, "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
+      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), getClusterKey(UTIL2),
       tableName.getNameAsString() };
     runVerifyReplication(args, 0, NB_ROWS_IN_BATCH);
     checkRestoreTmpDir(CONF1, tmpPath1, 2);
@@ -377,7 +368,7 @@ public class TestVerifyReplication extends TestReplicationBase {
 
     // with a peerTableName along with quorum address (a cluster key)
     String[] args = new String[] { "--peerTableName=" + peerTableName.getNameAsString(),
-      UTIL2.getClusterKey(), tableName.getNameAsString() };
+      getClusterKey(UTIL2), tableName.getNameAsString() };
     runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
 
     UTIL2.deleteTableData(peerTableName);
@@ -411,7 +402,7 @@ public class TestVerifyReplication extends TestReplicationBase {
       "--sourceSnapshotName=" + sourceSnapshotName, "--sourceSnapshotTmpDir=" + tmpPath1,
       "--peerSnapshotName=" + peerSnapshotName, "--peerSnapshotTmpDir=" + tmpPath2,
       "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
+      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), getClusterKey(UTIL2),
       tableName.getNameAsString() };
     runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
     checkRestoreTmpDir(CONF1, tmpPath1, 1);
@@ -442,7 +433,7 @@ public class TestVerifyReplication extends TestReplicationBase {
       "--sourceSnapshotName=" + sourceSnapshotName, "--sourceSnapshotTmpDir=" + tmpPath1,
       "--peerSnapshotName=" + peerSnapshotName, "--peerSnapshotTmpDir=" + tmpPath2,
       "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
+      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), getClusterKey(UTIL2),
       tableName.getNameAsString() };
     runVerifyReplication(args, 0, NB_ROWS_IN_BATCH);
     checkRestoreTmpDir(CONF1, tmpPath1, 2);
@@ -471,7 +462,7 @@ public class TestVerifyReplication extends TestReplicationBase {
 
     String[] args = new String[] { "--recompareThreads=10", "--recompareTries=3",
       "--recompareSleep=1", "--peerTableName=" + peerTableName.getNameAsString(),
-      UTIL2.getClusterKey(), tableName.getNameAsString() };
+      getClusterKey(UTIL2), tableName.getNameAsString() };
     Counters counters = runVerifyReplication(args, NB_ROWS_IN_BATCH - 1, 3);
     assertEquals(
       counters.findCounter(VerifyReplication.Verifier.Counters.FAILED_RECOMPARE).getValue(), 9);
@@ -515,7 +506,7 @@ public class TestVerifyReplication extends TestReplicationBase {
      */
     String[] args = new String[] { "--recompareThreads=1", "--recompareTries=1",
       "--recompareSleep=121000", "--peerTableName=" + peerTableName.getNameAsString(),
-      UTIL2.getClusterKey(), tableName.getNameAsString() };
+      getClusterKey(UTIL2), tableName.getNameAsString() };
 
     Counters counters = runVerifyReplication(args, NB_ROWS_IN_BATCH - 1, 3);
     assertEquals(
@@ -553,7 +544,7 @@ public class TestVerifyReplication extends TestReplicationBase {
     htable1.put(put);
 
     String[] args = new String[] { "--recompareTries=3", "--recompareSleep=1",
-      "--peerTableName=" + peerTableName.getNameAsString(), UTIL2.getClusterKey(),
+      "--peerTableName=" + peerTableName.getNameAsString(), getClusterKey(UTIL2),
       tableName.getNameAsString() };
     Counters counters = runVerifyReplication(args, NB_ROWS_IN_BATCH - 1, 3);
     assertEquals(

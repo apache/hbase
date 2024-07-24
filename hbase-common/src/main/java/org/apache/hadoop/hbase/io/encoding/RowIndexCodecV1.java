@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
@@ -72,7 +72,7 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
   }
 
   @Override
-  public void encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  public void encode(ExtendedCell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
     throws IOException {
     RowIndexEncodingState state = (RowIndexEncodingState) encodingCtx.getEncodingState();
     RowIndexEncoderV1 encoder = state.encoder;
@@ -104,7 +104,7 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
     } else {
       RowIndexSeekerV1 seeker = new RowIndexSeekerV1(decodingCtx);
       seeker.setCurrentBuffer(new SingleByteBuff(sourceAsBuffer));
-      List<Cell> kvs = new ArrayList<>();
+      List<ExtendedCell> kvs = new ArrayList<>();
       kvs.add(seeker.getCell());
       while (seeker.next()) {
         kvs.add(seeker.getCell());
@@ -112,7 +112,7 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
       boolean includesMvcc = decodingCtx.getHFileContext().isIncludesMvcc();
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       try (DataOutputStream out = new DataOutputStream(baos)) {
-        for (Cell cell : kvs) {
+        for (ExtendedCell cell : kvs) {
           KeyValue currentCell = KeyValueUtil.copyToNewKeyValue(cell);
           out.write(currentCell.getBuffer(), currentCell.getOffset(), currentCell.getLength());
           if (includesMvcc) {
@@ -126,7 +126,7 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
   }
 
   @Override
-  public Cell getFirstKeyCellInBlock(ByteBuff block) {
+  public ExtendedCell getFirstKeyCellInBlock(ByteBuff block) {
     block.mark();
     int keyLength = block.getInt();
     block.getInt();

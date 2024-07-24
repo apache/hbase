@@ -21,18 +21,17 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
-import org.apache.hadoop.hbase.io.SizedCellScanner;
+import org.apache.hadoop.hbase.io.SizedExtendedCellScanner;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -78,10 +77,9 @@ public class TestCellBlockBuilder {
   static void doBuildCellBlockUndoCellBlock(final CellBlockBuilder builder, final Codec codec,
     final CompressionCodec compressor, final int count, final int size, final boolean sized)
     throws IOException {
-    Cell[] cells = getCells(count, size);
-    CellScanner cellScanner = sized
-      ? getSizedCellScanner(cells)
-      : CellUtil.createCellScanner(Arrays.asList(cells).iterator());
+    ExtendedCell[] cells = getCells(count, size);
+    ExtendedCellScanner cellScanner =
+      sized ? getSizedCellScanner(cells) : PrivateCellUtil.createExtendedCellScanner(cells);
     ByteBuffer bb = builder.buildCellBlock(codec, compressor, cellScanner);
     cellScanner =
       builder.createCellScannerReusingBuffers(codec, compressor, new SingleByteBuff(bb));
@@ -92,21 +90,21 @@ public class TestCellBlockBuilder {
     assertEquals(count, i);
   }
 
-  static CellScanner getSizedCellScanner(final Cell[] cells) {
+  static ExtendedCellScanner getSizedCellScanner(final ExtendedCell[] cells) {
     int size = -1;
     for (Cell cell : cells) {
       size += PrivateCellUtil.estimatedSerializedSizeOf(cell);
     }
     final int totalSize = ClassSize.align(size);
-    final CellScanner cellScanner = CellUtil.createCellScanner(cells);
-    return new SizedCellScanner() {
+    final ExtendedCellScanner cellScanner = PrivateCellUtil.createExtendedCellScanner(cells);
+    return new SizedExtendedCellScanner() {
       @Override
       public long heapSize() {
         return totalSize;
       }
 
       @Override
-      public Cell current() {
+      public ExtendedCell current() {
         return cellScanner.current();
       }
 
@@ -117,12 +115,12 @@ public class TestCellBlockBuilder {
     };
   }
 
-  static Cell[] getCells(final int howMany) {
+  static ExtendedCell[] getCells(final int howMany) {
     return getCells(howMany, 1024);
   }
 
-  static Cell[] getCells(final int howMany, final int valueSize) {
-    Cell[] cells = new Cell[howMany];
+  static ExtendedCell[] getCells(final int howMany, final int valueSize) {
+    ExtendedCell[] cells = new ExtendedCell[howMany];
     byte[] value = new byte[valueSize];
     for (int i = 0; i < howMany; i++) {
       byte[] index = Bytes.toBytes(i);

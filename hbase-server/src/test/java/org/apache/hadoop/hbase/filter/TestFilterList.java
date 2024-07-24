@@ -31,6 +31,7 @@ import java.util.Objects;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -554,12 +555,14 @@ public class TestFilterList {
 
     // Value for fam:qual1 should be stripped:
     assertEquals(Filter.ReturnCode.INCLUDE, flist.filterCell(kvQual1));
-    final KeyValue transformedQual1 = KeyValueUtil.ensureKeyValue(flist.transformCell(kvQual1));
+    final KeyValue transformedQual1 =
+      KeyValueUtil.ensureKeyValue((ExtendedCell) flist.transformCell(kvQual1));
     assertEquals(0, transformedQual1.getValueLength());
 
     // Value for fam:qual2 should not be stripped:
     assertEquals(Filter.ReturnCode.INCLUDE, flist.filterCell(kvQual2));
-    final KeyValue transformedQual2 = KeyValueUtil.ensureKeyValue(flist.transformCell(kvQual2));
+    final KeyValue transformedQual2 =
+      KeyValueUtil.ensureKeyValue((ExtendedCell) flist.transformCell(kvQual2));
     assertEquals("value", Bytes.toString(transformedQual2.getValueArray(),
       transformedQual2.getValueOffset(), transformedQual2.getValueLength()));
 
@@ -641,6 +644,12 @@ public class TestFilterList {
     @Override
     public int hashCode() {
       return Objects.hash(this.targetRetCode);
+    }
+  }
+
+  private static class HintingMockFilter extends MockFilter implements HintingFilter {
+    public HintingMockFilter(ReturnCode targetRetCode) {
+      super(targetRetCode);
     }
   }
 
@@ -729,7 +738,7 @@ public class TestFilterList {
     MockFilter filter3 = new MockFilter(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW);
     MockFilter filter4 = new MockFilter(ReturnCode.NEXT_COL);
     MockFilter filter5 = new MockFilter(ReturnCode.SKIP);
-    MockFilter filter6 = new MockFilter(ReturnCode.SEEK_NEXT_USING_HINT);
+    MockFilter filter6 = new HintingMockFilter(ReturnCode.SEEK_NEXT_USING_HINT);
     MockFilter filter7 = new MockFilter(ReturnCode.NEXT_ROW);
 
     FilterList filterList = new FilterList(Operator.MUST_PASS_ALL, filter1, filter2);
@@ -739,10 +748,10 @@ public class TestFilterList {
     assertEquals(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, filterList.filterCell(kv1));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL, filter4, filter5, filter6);
-    assertEquals(ReturnCode.NEXT_COL, filterList.filterCell(kv1));
+    assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL, filter4, filter6);
-    assertEquals(ReturnCode.NEXT_COL, filterList.filterCell(kv1));
+    assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL, filter3, filter1);
     assertEquals(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, filterList.filterCell(kv1));
@@ -767,7 +776,7 @@ public class TestFilterList {
     MockFilter filter3 = new MockFilter(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW);
     MockFilter filter4 = new MockFilter(ReturnCode.NEXT_COL);
     MockFilter filter5 = new MockFilter(ReturnCode.SKIP);
-    MockFilter filter6 = new MockFilter(ReturnCode.SEEK_NEXT_USING_HINT);
+    MockFilter filter6 = new HintingMockFilter(ReturnCode.SEEK_NEXT_USING_HINT);
     FilterList filterList = new FilterList(Operator.MUST_PASS_ONE, filter1, filter2);
     assertEquals(ReturnCode.INCLUDE, filterList.filterCell(kv1));
 

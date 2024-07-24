@@ -27,6 +27,7 @@ import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DE
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.Sequence;
 import com.lmax.disruptor.Sequencer;
@@ -95,6 +96,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -687,12 +689,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   @Override
-  public long getEarliestMemStoreSeqNum(byte[] encodedRegionName) {
-    // Used by tests. Deprecated as too subtle for general usage.
-    return this.sequenceIdAccounting.getLowestSequenceId(encodedRegionName);
-  }
-
-  @Override
   public long getEarliestMemStoreSeqNum(byte[] encodedRegionName, byte[] familyName) {
     // This method is used by tests and for figuring if we should flush or not because our
     // sequenceids are too old. It is also used reporting the master our oldest sequenceid for use
@@ -728,6 +724,12 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   @Override
   public final void sync(long txid, boolean forceSync) throws IOException {
     TraceUtil.trace(() -> doSync(txid, forceSync), () -> createSpan("WAL.sync"));
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public SequenceIdAccounting getSequenceIdAccounting() {
+    return sequenceIdAccounting;
   }
 
   /**
@@ -2021,13 +2023,22 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
   }
 
+  private void recoverLease(FileSystem fs, Path p, Configuration conf) {
+    try {
+      RecoverLeaseFSUtils.recoverFileLease(fs, p, conf, null);
+    } catch (IOException ex) {
+      LOG.error("Unable to recover lease after several attempts. Give up.", ex);
+    }
+  }
+
   protected final void closeWriter(W writer, Path path) {
     inflightWALClosures.put(path.getName(), writer);
     closeExecutor.execute(() -> {
       try {
         writer.close();
       } catch (IOException e) {
-        LOG.warn("close old writer failed", e);
+        LOG.warn("close old writer failed.", e);
+        recoverLease(this.fs, path, conf);
       } finally {
         // call this even if the above close fails, as there is no other chance we can set closed to
         // true, it will not cause big problems.

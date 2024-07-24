@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
@@ -123,5 +125,47 @@ public class TestBackupMerge extends TestBackupBase {
 
     admin.close();
     conn.close();
+  }
+
+  @Test
+  public void testIncBackupMergeRestoreSeparateFs() throws Exception {
+    String originalBackupRoot = BACKUP_ROOT_DIR;
+    // prepare BACKUP_ROOT_DIR on a different filesystem from HBase.
+    String backupTargetDir = TEST_UTIL.getDataTestDir("backupTarget").toString();
+    BACKUP_ROOT_DIR = new File(backupTargetDir).toURI().toString();
+
+    try (Connection conn = ConnectionFactory.createConnection(conf1)) {
+      BackupAdminImpl client = new BackupAdminImpl(conn);
+      List<TableName> tables = Lists.newArrayList(table1, table2);
+
+      BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR, true);
+      String backupIdFull = client.backupTables(request);
+      assertTrue(checkSucceeded(backupIdFull));
+
+      request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, true);
+      String backupIdIncMultiple = client.backupTables(request);
+      assertTrue(checkSucceeded(backupIdIncMultiple));
+
+      request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, true);
+      String backupIdIncMultiple2 = client.backupTables(request);
+      assertTrue(checkSucceeded(backupIdIncMultiple2));
+
+      try (BackupAdmin bAdmin = new BackupAdminImpl(conn)) {
+        String[] backups = new String[] { backupIdIncMultiple, backupIdIncMultiple2 };
+        // this throws java.lang.IllegalArgumentException: Wrong FS prior to HBASE-28539
+        bAdmin.mergeBackups(backups);
+      }
+
+      assertTrue(
+        new File(HBackupFileSystem.getBackupPath(BACKUP_ROOT_DIR, backupIdFull).toUri()).exists());
+      assertFalse(
+        new File(HBackupFileSystem.getBackupPath(BACKUP_ROOT_DIR, backupIdIncMultiple).toUri())
+          .exists());
+      assertTrue(
+        new File(HBackupFileSystem.getBackupPath(BACKUP_ROOT_DIR, backupIdIncMultiple2).toUri())
+          .exists());
+    } finally {
+      BACKUP_ROOT_DIR = originalBackupRoot;
+    }
   }
 }

@@ -29,10 +29,9 @@ li {
   line-height: 120%;
 }
 
-div#topbar,
+header#topbar,
 div#banner,
-div#breadcrumbs,
-div#bodyColumn,
+main#bodyColumn,
 footer {
   width: initial;
   padding-left: 20px;
@@ -52,9 +51,7 @@ div#search-form.navbar-search.pull-right {
   margin-left: 0;
   position: initial;
 }
-li#publishDate.pull-right {
-  list-style: none;
-}
+
 .container,
 .navbar-static-top .container,
 .navbar-fixed-top .container,
@@ -105,14 +102,13 @@ li#publishDate.pull-right {
 }
 
 /* Override weird body padding thing that causes scrolling */
-@media (max-width: 767px)
-body {
+@media (max-width: 767px) {
+  body {
     padding-right: 0;
     padding-left: 0;
-}
-
-@media (max-width: 767px)
-.navbar-fixed-top, .navbar-fixed-bottom, .navbar-static-top {
-  margin-left: 0;
-  margin-right: 0;
+  }
+  .navbar-fixed-top, .navbar-fixed-bottom, .navbar-static-top {
+    margin-left: 0;
+    margin-right: 0;
+  }
 }

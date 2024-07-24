@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -54,8 +54,8 @@ public class EncodedSeekPerformanceTest {
     numberOfSeeks = DEFAULT_NUMBER_OF_SEEKS;
   }
 
-  private List<Cell> prepareListOfTestSeeks(Path path) throws IOException {
-    List<Cell> allKeyValues = new ArrayList<>();
+  private List<ExtendedCell> prepareListOfTestSeeks(Path path) throws IOException {
+    List<ExtendedCell> allKeyValues = new ArrayList<>();
 
     // read all of the key values
     HStoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(), path, configuration,
@@ -63,7 +63,7 @@ public class EncodedSeekPerformanceTest {
     storeFile.initReader();
     StoreFileReader reader = storeFile.getReader();
     StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false, 0, 0, false);
-    Cell current;
+    ExtendedCell current;
 
     scanner.seek(KeyValue.LOWESTKEY);
     while (null != (current = scanner.next())) {
@@ -73,9 +73,9 @@ public class EncodedSeekPerformanceTest {
     storeFile.closeStoreFile(cacheConf.shouldEvictOnClose());
 
     // pick seeks by random
-    List<Cell> seeks = new ArrayList<>();
+    List<ExtendedCell> seeks = new ArrayList<>();
     for (int i = 0; i < numberOfSeeks; ++i) {
-      Cell keyValue = allKeyValues.get(randomizer.nextInt(allKeyValues.size()));
+      ExtendedCell keyValue = allKeyValues.get(randomizer.nextInt(allKeyValues.size()));
       seeks.add(keyValue);
     }
 
@@ -84,7 +84,7 @@ public class EncodedSeekPerformanceTest {
     return seeks;
   }
 
-  private void runTest(Path path, DataBlockEncoding blockEncoding, List<Cell> seeks)
+  private void runTest(Path path, DataBlockEncoding blockEncoding, List<ExtendedCell> seeks)
     throws IOException {
     // read all of the key values
     HStoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(), path, configuration,
@@ -96,7 +96,7 @@ public class EncodedSeekPerformanceTest {
     StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false, 0, 0, false);
 
     long startReadingTime = System.nanoTime();
-    Cell current;
+    ExtendedCell current;
     scanner.seek(KeyValue.LOWESTKEY);
     while (null != (current = scanner.next())) { // just iterate it!
       if (KeyValueUtil.ensureKeyValue(current).getLength() < 0) {
@@ -108,9 +108,9 @@ public class EncodedSeekPerformanceTest {
 
     // do seeks
     long startSeeksTime = System.nanoTime();
-    for (Cell keyValue : seeks) {
+    for (ExtendedCell keyValue : seeks) {
       scanner.seek(keyValue);
-      Cell toVerify = scanner.next();
+      ExtendedCell toVerify = scanner.next();
       if (!keyValue.equals(toVerify)) {
         System.out
           .println(String.format("KeyValue doesn't match:\n" + "Orig key: %s\n" + "Ret key:  %s",
@@ -145,7 +145,7 @@ public class EncodedSeekPerformanceTest {
    * @throws IOException if there is a bug while reading from disk
    */
   public void runTests(Path path, DataBlockEncoding[] encodings) throws IOException {
-    List<Cell> seeks = prepareListOfTestSeeks(path);
+    List<ExtendedCell> seeks = prepareListOfTestSeeks(path);
 
     for (DataBlockEncoding blockEncoding : encodings) {
       runTest(path, blockEncoding, seeks);

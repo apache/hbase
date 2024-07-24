@@ -41,7 +41,7 @@
   <version>${revision}</version>
   <packaging>pom</packaging>
   <name>Apache HBase</name>
-  <description>Apache HBase is the Hadoop database. Use it when you need
+  <description>Apache HBase® is the Hadoop database. Use it when you need
     random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
     of commodity hardware.</description>
@@ -75,6 +75,12 @@
       <name>Allan Yang</name>
       <email>allan163@apache.org</email>
       <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>andor</id>
+      <name>Andor Molnar</name>
+      <email>andor@apache.org</email>
+      <timezone>-5</timezone>
     </developer>
     <developer>
       <id>appy</id>
@@ -803,8 +809,8 @@
     <tar.name>${project.build.finalName}.tar.gz</tar.name>
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm</maven.build.timestamp.format>
     <buildDate>${maven.build.timestamp}</buildDate>
-    <compileSource>1.8</compileSource>
-    <releaseTarget>8</releaseTarget>
+    <compileSource>17</compileSource>
+    <releaseTarget>17</releaseTarget>
     <!-- Build dependencies -->
     <!-- The $revision feature is introduced in 3.5.0 -->
     <maven.min.version>3.5.0</maven.min.version>
@@ -828,12 +834,8 @@
     <netty3.version>3.10.6.Final</netty3.version>
     <netty4.version>4.1.108.Final</netty4.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
-    <audience-annotations.version>0.13.0</audience-annotations.version>
-    <!--
-      The version used when generating javadoc, 0.13.0 is the latest version which supports jdk8.
-      When building with jdk11, we will use 0.14.1, please see the build-with-jdk11 profile.
-    -->
-    <javadoc.audience-annotations.version>0.13.0</javadoc.audience-annotations.version>
+    <audience-annotations.version>0.15.0</audience-annotations.version>
+    <javadoc.audience-annotations.version>0.15.0</javadoc.audience-annotations.version>
     <avro.version>1.11.3</avro.version>
     <caffeine.version>2.8.1</caffeine.version>
     <commons-codec.version>1.15</commons-codec.version>
@@ -913,7 +915,7 @@
     <spotless.version>2.27.2</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
-    <aircompressor.version>0.24</aircompressor.version>
+    <aircompressor.version>0.27</aircompressor.version>
     <brotli4j.version>1.11.0</brotli4j.version>
     <lz4.version>1.8.0</lz4.version>
     <snappy.version>1.1.10.4</snappy.version>
@@ -987,9 +989,15 @@
       "-Djava.library.path=${hadoop.library.path};${java.library.path}"
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced
       -Dio.opentelemetry.context.enableStrictContext=true</hbase-surefire.cygwin-argLine>
-    <!-- Keep these options in sync with add_jdk11_jvm_flags() in bin/hbase.
-    Currently, all of these options are known to be required by HBase, and not the test cases -->
-    <hbase-surefire.jdk11.flags>-Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true
+    <!--
+      Keep these options in sync with add_jdk17_jvm_flags() in bin/hbase, except the below ones
+      which are only used in test code
+      'java.base/jdk.internal.util.random' is required by the test code
+      'java.base/sun.security.x509' and 'java.base/sun.security.util' are required by
+      TestLdapHttpServer, see HBASE-28341
+      'java.base/java.net' is required by TestSecureIPC, see HBASE-28723
+    -->
+    <hbase-surefire.jdk17.flags>-Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true
       --add-modules jdk.unsupported
       --add-opens java.base/java.io=ALL-UNNAMED
       --add-opens java.base/java.nio=ALL-UNNAMED
@@ -1002,12 +1010,11 @@
       --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
       --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED
       --add-exports java.base/sun.net.dns=ALL-UNNAMED
-      --add-exports java.base/sun.net.util=ALL-UNNAMED</hbase-surefire.jdk11.flags>
-    <!-- java.base/jdk.internal.util.random=ALL-UNNAMED is required by the test code, so we do not
-    need this in bin/hbase -->
-    <hbase-surefire.jdk17.flags>--add-opens java.base/jdk.internal.util.random=ALL-UNNAMED
+      --add-exports java.base/sun.net.util=ALL-UNNAMED
+      --add-opens java.base/jdk.internal.util.random=ALL-UNNAMED
       --add-opens java.base/sun.security.x509=ALL-UNNAMED
-      --add-opens java.base/sun.security.util=ALL-UNNAMED</hbase-surefire.jdk17.flags>
+      --add-opens java.base/sun.security.util=ALL-UNNAMED
+      --add-opens java.base/java.net=ALL-UNNAMED</hbase-surefire.jdk17.flags>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine} @{jacocoArgLine}</argLine>
     <extra.enforcer.version>1.5.1</extra.enforcer.version>
@@ -2253,6 +2260,30 @@
               <failIfNoMatch>false</failIfNoMatch>
             </configuration>
           </execution>
+          <execution>
+            <id>set-current-year</id>
+            <goals>
+              <goal>timestamp-property</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <name>current.year</name>
+              <pattern>yyyy</pattern>
+              <unit>year</unit>
+            </configuration>
+          </execution>
+          <execution>
+            <id>set-current-date</id>
+            <goals>
+              <goal>timestamp-property</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <name>current.date</name>
+              <pattern>yyyy-MM-dd</pattern>
+              <unit>day</unit>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -2515,6 +2546,7 @@
                     <bannedImport>org.apache.commons.cli.**</bannedImport>
                     <bannedImport>org.apache.commons.collections.**</bannedImport>
                     <bannedImport>org.apache.commons.collections4.**</bannedImport>
+                    <bannedImport>org.apache.hadoop.thirdparty.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
@@ -3021,7 +3053,7 @@
               <destDir>devapidocs</destDir>
               <name>Developer API</name>
               <description>The full HBase API, including private and unstable APIs</description>
-              <doctitle>Apache HBase™ ${project.version} API</doctitle>
+              <doctitle>Apache HBase® ${project.version} API</doctitle>
               <sourceFileExcludes>
                 <exclude>**/generated/*</exclude>
                 <exclude>**/protobuf/*</exclude>
@@ -3072,7 +3104,7 @@
               <destDir>testdevapidocs</destDir>
               <name>Test Developer API</name>
               <description>The full HBase API test code, including private and unstable APIs</description>
-              <testDoctitle>Apache HBase™ ${project.version} Test API</testDoctitle>
+              <testDoctitle>Apache HBase® ${project.version} Test API</testDoctitle>
               <sourceFileExcludes>
                 <exclude>**/generated/*</exclude>
                 <exclude>**/protobuf/*</exclude>
@@ -3132,7 +3164,7 @@
               <destDir>apidocs</destDir>
               <name>User API</name>
               <description>The HBase Application Programmer's API</description>
-              <doctitle>Apache HBase™ ${project.version} API</doctitle>
+              <doctitle>Apache HBase® ${project.version} API</doctitle>
               <excludePackageNames>org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:*.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.metrics2*:org.apache.hadoop.hbase.io.compress*</excludePackageNames>
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
@@ -3190,7 +3222,7 @@
               <destDir>testapidocs</destDir>
               <name>Test User API</name>
               <description>The HBase Application Programmer's API test code</description>
-              <testDoctitle>Apache HBase™ ${project.version} Test API</testDoctitle>
+              <testDoctitle>Apache HBase® ${project.version} Test API</testDoctitle>
               <excludePackageNames>org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:*.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.metrics2*:org.apache.hadoop.hbase.io.compress*</excludePackageNames>
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
@@ -3273,24 +3305,13 @@
   -->
   <profiles>
     <profile>
-      <id>build-with-jdk8</id>
+      <id>build-with-jdk17</id>
       <activation>
-        <jdk>1.8</jdk>
-      </activation>
-      <properties>
-        <maven.compiler.source>${compileSource}</maven.compiler.source>
-        <maven.compiler.target>${compileSource}</maven.compiler.target>
-      </properties>
-    </profile>
-    <profile>
-      <id>build-with-jdk11</id>
-      <activation>
-        <jdk>[11,)</jdk>
+        <jdk>[17,)</jdk>
       </activation>
       <properties>
         <maven.compiler.release>${releaseTarget}</maven.compiler.release>
-        <!-- TODO: replicate logic for windows support -->
-        <argLine>${hbase-surefire.jdk11.flags}
+        <argLine>${hbase-surefire.jdk17.flags}
           ${hbase-surefire.argLine}
           @{jacocoArgLine}</argLine>
         <!--
@@ -3298,12 +3319,6 @@
           TODO: replicate logic for windows
         -->
         <surefire.Xmx>2200m</surefire.Xmx>
-        <!--
-          com.sun.javadoc and com.sun.tools.doclets are both deprecated in java 11 and will
-          fail the javadoc generating, so we need to use yetus 0.14.1 where it uses jdk.javadoc
-          and jdk.javadoc.doclet instead
-        -->
-        <javadoc.audience-annotations.version>0.14.1</javadoc.audience-annotations.version>
       </properties>
       <build>
         <pluginManagement>
@@ -3329,18 +3344,6 @@
           </plugins>
         </pluginManagement>
       </build>
-    </profile>
-    <profile>
-      <id>build-with-jdk17</id>
-      <activation>
-        <jdk>[17,)</jdk>
-      </activation>
-      <properties>
-        <argLine>${hbase-surefire.jdk11.flags}
-          ${hbase-surefire.jdk17.flags}
-          ${hbase-surefire.argLine}
-          @{jacocoArgLine}</argLine>
-      </properties>
     </profile>
     <!-- profile activated by the Jenkins patch testing job -->
     <profile>
@@ -3937,6 +3940,10 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk15on</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3993,6 +4000,10 @@
               <exclusion>
                 <groupId>javax.ws.rs</groupId>
                 <artifactId>jsr311-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk15on</artifactId>
               </exclusion>
             </exclusions>
           </dependency>

@@ -26,8 +26,8 @@ import java.util.Map;
 import java.util.Random;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.io.WritableUtils;
@@ -270,8 +270,8 @@ public class RedundantKVGenerator {
    * @param howMany How many Key values should be generated.
    * @return sorted list of key values
    */
-  public List<Cell> generateTestExtendedOffheapKeyValues(int howMany, boolean useTags) {
-    List<Cell> result = new ArrayList<>();
+  public List<ExtendedCell> generateTestExtendedOffheapKeyValues(int howMany, boolean useTags) {
+    List<ExtendedCell> result = new ArrayList<>();
     List<byte[]> rows = generateRows();
     Map<Integer, List<byte[]>> rowsToQualifier = new HashMap<>();
 

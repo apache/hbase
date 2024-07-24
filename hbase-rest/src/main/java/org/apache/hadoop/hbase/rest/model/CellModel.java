@@ -34,11 +34,13 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.CellMessage.Cell;
 
 /**
@@ -202,7 +204,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     Cell.Builder builder = Cell.newBuilder();
     builder.setColumn(UnsafeByteOperations.unsafeWrap(getColumn()));
     if (valueLength == MAGIC_LENGTH) {
@@ -213,13 +215,13 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
     if (hasUserTimestamp()) {
       builder.setTimestamp(getTimestamp());
     }
-    return builder.build().toByteArray();
+    return builder.build();
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream cis) throws IOException {
     Cell.Builder builder = Cell.newBuilder();
-    ProtobufUtil.mergeFrom(builder, message);
+    RestUtil.mergeFrom(builder, cis);
     setColumn(builder.getColumn().toByteArray());
     setValue(builder.getData().toByteArray());
     if (builder.hasTimestamp()) {

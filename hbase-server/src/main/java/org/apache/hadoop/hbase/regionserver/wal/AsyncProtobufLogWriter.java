@@ -31,7 +31,9 @@ import java.util.function.Consumer;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutputHelper;
@@ -138,7 +140,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
     }
     try {
       for (Cell cell : entry.getEdit().getCells()) {
-        cellEncoder.write(cell);
+        cellEncoder.write((ExtendedCell) cell);
       }
     } catch (IOException e) {
       throw new AssertionError("should not happen", e);
@@ -205,9 +207,11 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
       InterruptedIOException ioe = new InterruptedIOException();
       ioe.initCause(e);
       throw ioe;
-    } catch (ExecutionException | TimeoutException e) {
+    } catch (ExecutionException e) {
       Throwables.propagateIfPossible(e.getCause(), IOException.class);
       throw new RuntimeException(e.getCause());
+    } catch (TimeoutException e) {
+      throw new TimeoutIOException(e);
     }
   }
 

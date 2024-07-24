@@ -36,6 +36,9 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
 /**
  * Representation of a row. A row is a related set of cells, grouped by common row key. RowModels do
  * not appear in results by themselves. They are always encapsulated within CellSetModels.
@@ -179,13 +182,13 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
   }
 
   @Override
-  public byte[] createProtobufOutput() {
+  public Message messageFromObject() {
     // there is no standalone row protobuf message
     throw new UnsupportedOperationException("no protobuf equivalent to RowModel");
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(CodedInputStream is) throws IOException {
     // there is no standalone row protobuf message
     throw new UnsupportedOperationException("no protobuf equivalent to RowModel");
   }

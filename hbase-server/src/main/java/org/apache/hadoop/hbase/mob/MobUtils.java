@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -119,7 +120,7 @@ public final class MobUtils {
    * @param cell The current cell.
    * @return True if the cell has a mob reference tag, false if it doesn't.
    */
-  public static boolean isMobReferenceCell(Cell cell) {
+  public static boolean isMobReferenceCell(ExtendedCell cell) {
     if (cell.getTagsLength() > 0) {
       Optional<Tag> tag = PrivateCellUtil.getTag(cell, TagType.MOB_REFERENCE_TAG_TYPE);
       if (tag.isPresent()) {
@@ -134,7 +135,7 @@ public final class MobUtils {
    * @param cell The current cell.
    * @return The table name tag.
    */
-  private static Optional<Tag> getTableNameTag(Cell cell) {
+  private static Optional<Tag> getTableNameTag(ExtendedCell cell) {
     Optional<Tag> tag = Optional.empty();
     if (cell.getTagsLength() > 0) {
       tag = PrivateCellUtil.getTag(cell, TagType.MOB_TABLE_NAME_TAG_TYPE);
@@ -147,7 +148,7 @@ public final class MobUtils {
    * @param cell to extract tag from
    * @return table name as a string. empty if the tag is not found.
    */
-  public static Optional<String> getTableNameString(Cell cell) {
+  public static Optional<String> getTableNameString(ExtendedCell cell) {
     Optional<Tag> tag = getTableNameTag(cell);
     Optional<String> name = Optional.empty();
     if (tag.isPresent()) {
@@ -161,7 +162,7 @@ public final class MobUtils {
    * @param cell to extract tag from
    * @return name of table as a TableName. empty if the tag is not found.
    */
-  public static Optional<TableName> getTableName(Cell cell) {
+  public static Optional<TableName> getTableName(ExtendedCell cell) {
     Optional<Tag> maybe = getTableNameTag(cell);
     Optional<TableName> name = Optional.empty();
     if (maybe.isPresent()) {
@@ -497,7 +498,8 @@ public final class MobUtils {
    *                     snapshot.
    * @return The mob reference KeyValue.
    */
-  public static Cell createMobRefCell(Cell cell, byte[] fileName, Tag tableNameTag) {
+  public static ExtendedCell createMobRefCell(ExtendedCell cell, byte[] fileName,
+    Tag tableNameTag) {
     // Append the tags to the KeyValue.
     // The key is same, the value is the filename of the mob file
     List<Tag> tags = new ArrayList<>();
@@ -512,7 +514,8 @@ public final class MobUtils {
     return createMobRefCell(cell, fileName, TagUtil.fromList(tags));
   }
 
-  public static Cell createMobRefCell(Cell cell, byte[] fileName, byte[] refCellTags) {
+  public static ExtendedCell createMobRefCell(ExtendedCell cell, byte[] fileName,
+    byte[] refCellTags) {
     byte[] refValue = Bytes.add(Bytes.toBytes(cell.getValueLength()), fileName);
     return PrivateCellUtil.createCell(cell, refValue, TagUtil.concatTags(refCellTags, cell));
   }

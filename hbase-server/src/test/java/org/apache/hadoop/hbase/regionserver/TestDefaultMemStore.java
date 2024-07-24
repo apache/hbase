@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -824,7 +825,7 @@ public class TestDefaultMemStore {
     memstore = new DefaultMemStore(conf, CellComparatorImpl.COMPARATOR);
     MemStoreSize oldSize = memstore.size();
 
-    List<Cell> l = new ArrayList<>();
+    List<ExtendedCell> l = new ArrayList<>();
     KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
     KeyValue kv2 = KeyValueTestUtil.create("r", "f", "q", 101, "v");
     KeyValue kv3 = KeyValueTestUtil.create("r", "f", "q", 102, "v");
@@ -886,7 +887,7 @@ public class TestDefaultMemStore {
       t = runSnapshot(memstore);
 
       // test the case that the timeOfOldestEdit is updated after a KV upsert
-      List<Cell> l = new ArrayList<>();
+      List<ExtendedCell> l = new ArrayList<>();
       KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
       kv1.setSequenceId(100);
       l.add(kv1);

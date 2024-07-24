@@ -15,17 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.io;
+package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.CellScanner;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.junit.ClassRule;
+import org.junit.experimental.categories.Category;
 
-/**
- * A CellScanner that knows its size in memory in bytes. Used playing the CellScanner into an
- * in-memory buffer; knowing the size ahead of time saves on background buffer resizings.
- */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-public interface SizedCellScanner extends CellScanner, HeapSize {
+@Category({ ReplicationTests.class, LargeTests.class })
+public class TestVerifyReplicationZkConnectionUri extends VerifyReplicationTestBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestVerifyReplicationZkConnectionUri.class);
+
+  @Override
+  protected String getClusterKey(HBaseTestingUtil util) throws Exception {
+    return util.getZkConnectionURI();
+  }
 }

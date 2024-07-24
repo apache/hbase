@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.io.IOUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -46,6 +45,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestFlushFromClient {
@@ -76,7 +77,7 @@ public class TestFlushFromClient {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    IOUtils.cleanup(null, asyncConn);
+    Closeables.close(asyncConn, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 

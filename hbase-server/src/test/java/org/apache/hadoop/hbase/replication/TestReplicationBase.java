@@ -282,10 +282,15 @@ public class TestReplicationBase {
     return hbaseAdmin.listReplicationPeers().stream().anyMatch(p -> peerId.equals(p.getPeerId()));
   }
 
+  // can be override in tests, in case you need to use zk based uri, or the old style uri
+  protected String getClusterKey(HBaseTestingUtil util) throws Exception {
+    return util.getRpcConnnectionURI();
+  }
+
   protected final void addPeer(String peerId, TableName tableName) throws Exception {
     if (!peerExist(peerId)) {
       ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer())
+        .setClusterKey(getClusterKey(UTIL2)).setSerial(isSerialPeer())
         .setReplicationEndpointImpl(ReplicationEndpointTest.class.getName());
       if (isSyncPeer()) {
         FileSystem fs2 = UTIL2.getTestFileSystem();

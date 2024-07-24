@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -866,7 +867,7 @@ public final class PermissionStorage {
     return Arrays.copyOfRange(namespace, 1, namespace.length);
   }
 
-  public static List<Permission> getCellPermissionsForUser(User user, Cell cell)
+  public static List<Permission> getCellPermissionsForUser(User user, ExtendedCell cell)
     throws IOException {
     // Save an object allocation where we can
     if (cell.getTagsLength() == 0) {
