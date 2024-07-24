@@ -46,6 +46,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -865,7 +866,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     bos.write(AbstractProtobufWALReader.PB_WAL_MAGIC);
     try (FSDataInputStream in = fs.open(archivedEmptyLogFile)) {
-      in.skipNBytes(AbstractProtobufWALReader.PB_WAL_MAGIC.length);
+      IOUtils.skipFully(in, AbstractProtobufWALReader.PB_WAL_MAGIC.length);
       WALHeader header = WALHeader.parseDelimitedFrom(in);
       header.writeDelimitedTo(bos);
     }
