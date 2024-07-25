@@ -80,8 +80,8 @@
            <th>Len Of Biggest Cell</th>
            <th>Key Of Biggest Cell</th>
          </tr>
-       <% int count = 0;  
-          for(StoreFile sf : storeFiles) { 
+       <% int count = 0;
+          for(StoreFile sf : storeFiles) {
             if (!fs.exists(sf.getPath())) continue;
             count++; %>
          <tr>
