@@ -67,6 +67,11 @@ public final class RestoreRequest {
       return this;
     }
 
+    public Builder withKeepOriginalSplits(boolean keepOriginalSplits) {
+      request.setKeepOriginalSplits(keepOriginalSplits);
+      return this;
+    }
+
     public RestoreRequest build() {
       return request;
     }
@@ -79,6 +84,8 @@ public final class RestoreRequest {
   private TableName[] fromTables;
   private TableName[] toTables;
   private boolean overwrite = false;
+
+  private boolean keepOriginalSplits = false;
 
   private RestoreRequest() {
   }
@@ -143,6 +150,15 @@ public final class RestoreRequest {
 
   private RestoreRequest setOverwrite(boolean overwrite) {
     this.overwrite = overwrite;
+    return this;
+  }
+
+  public boolean isKeepOriginalSplits() {
+    return keepOriginalSplits;
+  }
+
+  private RestoreRequest setKeepOriginalSplits(boolean keepOriginalSplits) {
+    this.keepOriginalSplits = keepOriginalSplits;
     return this;
   }
 }
