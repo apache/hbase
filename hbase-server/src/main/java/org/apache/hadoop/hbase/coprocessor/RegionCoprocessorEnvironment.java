@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -36,8 +35,6 @@ import org.apache.hadoop.hbase.regionserver.OnlineRegions;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -167,12 +164,12 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment<Reg
    * available quota and to report the data/usage of the operation. This method does not support
    * scans because estimating a scan's workload is more complicated than estimating the workload of
    * a get/put.
-   * @param region       the region where the operation will be performed
-   * @param actions      the "multi" actions to perform
-   * @param hasCondition whether the RegionAction has a condition
+   * @param region    the region where the operation will be performed
+   * @param numWrites number of writes to count against quota
+   * @param numReads  number of reads to count against quota
    * @return the OperationQuota
    * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
-  OperationQuota checkBatchQuota(final Region region, final List<ClientProtos.Action> actions,
-    boolean hasCondition) throws IOException, RpcThrottlingException;
+  OperationQuota checkBatchQuota(final Region region, int numWrites, int numReads)
+    throws IOException, RpcThrottlingException;
 }

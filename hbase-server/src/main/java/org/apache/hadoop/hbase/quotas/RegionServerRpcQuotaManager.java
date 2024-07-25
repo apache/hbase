@@ -225,7 +225,8 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager {
    * @return the OperationQuota
    * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
-  private OperationQuota checkBatchQuota(final Region region, final int numWrites,
+  @Override
+  public OperationQuota checkBatchQuota(final Region region, final int numWrites,
     final int numReads) throws IOException, RpcThrottlingException {
     Optional<User> user = RpcServer.getRequestUser();
     UserGroupInformation ugi;

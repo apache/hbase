@@ -225,9 +225,9 @@ public class RegionCoprocessorHost
     }
 
     @Override
-    public OperationQuota checkBatchQuota(Region region, List<ClientProtos.Action> actions,
-      boolean hasCondition) throws IOException, RpcThrottlingException {
-      return rpcQuotaManager.checkBatchQuota(region, actions, hasCondition);
+    public OperationQuota checkBatchQuota(final Region region, int numWrites, int numReads)
+      throws IOException, RpcThrottlingException {
+      return rpcQuotaManager.checkBatchQuota(region, numWrites, numReads);
     }
   }
 
