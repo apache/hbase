@@ -56,6 +56,8 @@ import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -280,8 +282,9 @@ public class HMobStore extends HStore {
   private void validateMobFile(Path path) throws IOException {
     HStoreFile storeFile = null;
     try {
+      StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, getStoreContext());
       storeFile = new HStoreFile(getFileSystem(), path, conf, getCacheConfig(), BloomType.NONE,
-        isPrimaryReplicaStore());
+        isPrimaryReplicaStore(), sft);
       storeFile.initReader();
     } catch (IOException e) {
       LOG.error("Fail to open mob file[" + path + "], keep it in temp directory.", e);
@@ -405,7 +408,7 @@ public class HMobStore extends HStore {
       MobFile file = null;
       Path path = new Path(location, fileName);
       try {
-        file = mobFileCache.openFile(fs, path, getCacheConfig());
+        file = mobFileCache.openFile(fs, path, getCacheConfig(), this.getStoreContext());
         return readPt != -1
           ? file.readCell(search, cacheMobBlocks, readPt)
           : file.readCell(search, cacheMobBlocks);

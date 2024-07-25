@@ -838,7 +838,6 @@
       in the dependencyManagement section as it could still lead to different versions of netty
       modules and cause trouble if we only rely on transitive dependencies.
     -->
-    <netty3.version>3.10.6.Final</netty3.version>
     <netty4.version>4.1.112.Final</netty4.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.15.0</audience-annotations.version>
@@ -942,17 +941,6 @@
     <jacoco.version>0.8.8</jacoco.version>
     <jacocoArgLine/>
     <sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
-    <!-- Intraproject jar naming properties -->
-    <!-- TODO this is pretty ugly, but works for the moment.
-      Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
-    <server.test.jar>hbase-server-${project.version}-tests.jar</server.test.jar>
-    <common.test.jar>hbase-common-${project.version}-tests.jar</common.test.jar>
-    <procedure.test.jar>hbase-procedure-${project.version}-tests.jar</procedure.test.jar>
-    <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
-    <annotations.test.jar>hbase-annotations-${project.version}-tests.jar</annotations.test.jar>
-    <mapreduce.test.jar>hbase-mapreduce-${project.version}-tests.jar</mapreduce.test.jar>
-    <zookeeper.test.jar>hbase-zookeeper-${project.version}-tests.jar</zookeeper.test.jar>
-    <asyncfs.test.jar>hbase-asyncfs-${project.version}-tests.jar</asyncfs.test.jar>
     <shell-executable>bash</shell-executable>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
@@ -1853,11 +1841,6 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty</artifactId>
-        <version>${netty3.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.netty</groupId>
         <artifactId>netty-bom</artifactId>
         <version>${netty4.version}</version>
         <type>pom</type>
@@ -2731,6 +2714,11 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <!-- Make a jar and put the sources in the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
       </plugin>
       <!-- parent-module only plugins -->
       <plugin>

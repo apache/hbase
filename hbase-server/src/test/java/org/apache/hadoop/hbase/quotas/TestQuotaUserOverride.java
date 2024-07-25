@@ -78,39 +78,32 @@ public class TestQuotaUserOverride {
   @Test
   public void testUserGlobalThrottleWithCustomOverride() throws Exception {
     final Admin admin = TEST_UTIL.getAdmin();
-    final String userOverrideWithQuota = User.getCurrent().getShortName() + "123";
+    final String userOverrideWithQuota = User.getCurrent().getShortName();
 
     // Add 6req/min limit
     admin.setQuota(QuotaSettingsFactory.throttleUser(userOverrideWithQuota,
       ThrottleType.REQUEST_NUMBER, 6, TimeUnit.MINUTES));
+    ThrottleQuotaTestUtil.triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
 
     Table tableWithThrottle = TEST_UTIL.getConnection().getTableBuilder(TABLE_NAME, null)
       .setRequestAttribute(CUSTOM_OVERRIDE_KEY, Bytes.toBytes(userOverrideWithQuota)).build();
     Table tableWithoutThrottle = TEST_UTIL.getConnection().getTableBuilder(TABLE_NAME, null)
-      .setRequestAttribute(QuotaCache.QUOTA_USER_REQUEST_ATTRIBUTE_OVERRIDE_KEY,
-        Bytes.toBytes(userOverrideWithQuota))
-      .build();
-    Table tableWithoutThrottle2 =
-      TEST_UTIL.getConnection().getTableBuilder(TABLE_NAME, null).build();
+      .setRequestAttribute(CUSTOM_OVERRIDE_KEY, Bytes.toBytes("anotherUser")).build();
 
     // warm things up
     doPuts(10, FAMILY, QUALIFIER, tableWithThrottle);
     doPuts(10, FAMILY, QUALIFIER, tableWithoutThrottle);
-    doPuts(10, FAMILY, QUALIFIER, tableWithoutThrottle2);
 
     // should reject some requests
     assertTrue(10 > doPuts(10, FAMILY, QUALIFIER, tableWithThrottle));
     // should accept all puts
     assertEquals(10, doPuts(10, FAMILY, QUALIFIER, tableWithoutThrottle));
-    // should accept all puts
-    assertEquals(10, doPuts(10, FAMILY, QUALIFIER, tableWithoutThrottle2));
 
     // Remove all the limits
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(userOverrideWithQuota));
-    Thread.sleep(60_000);
+    ThrottleQuotaTestUtil.triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAME);
     assertEquals(10, doPuts(10, FAMILY, QUALIFIER, tableWithThrottle));
     assertEquals(10, doPuts(10, FAMILY, QUALIFIER, tableWithoutThrottle));
-    assertEquals(10, doPuts(10, FAMILY, QUALIFIER, tableWithoutThrottle2));
   }
 
 }

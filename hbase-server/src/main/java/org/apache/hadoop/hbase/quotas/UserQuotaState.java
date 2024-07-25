@@ -117,6 +117,10 @@ public class UserQuotaState extends QuotaState {
     namespaceLimiters = setLimiter(namespaceLimiters, namespace, quotas);
   }
 
+  public boolean hasTableLimiters() {
+    return tableLimiters != null && !tableLimiters.isEmpty();
+  }
+
   private <K> Map<K, QuotaLimiter> setLimiter(Map<K, QuotaLimiter> limiters, final K key,
     final Quotas quotas) {
     if (limiters == null) {

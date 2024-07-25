@@ -514,8 +514,9 @@ add_opentelemetry_agent() {
 
 #Add the development env class path stuff
 if $in_dev_env; then
+  # The below line makes available all the jars required in dev_env, even if we may not add them
+  # to assembly. See HBASE-28433 for more info.
   add_maven_deps_to_classpath "cached_classpath.txt"
-
   if [[ $jline_needed ]]; then
     add_maven_deps_to_classpath "cached_classpath_jline.txt"
   elif [[ $jruby_needed ]]; then
@@ -766,13 +767,6 @@ elif [ "$COMMAND" = "copyreppeers" ] ; then
   CLASS='org.apache.hadoop.hbase.replication.CopyReplicationPeers'
 else
   CLASS=$COMMAND
-if [[ "$CLASS" =~ .*IntegrationTest.* ]] ; then
-    for f in ${HBASE_HOME}/lib/test/*.jar; do
-      if [ -f "${f}" ]; then
-        CLASSPATH="${CLASSPATH}:${f}"
-      fi
-    done
-  fi
 fi
 
 add_jdk17_jvm_flags

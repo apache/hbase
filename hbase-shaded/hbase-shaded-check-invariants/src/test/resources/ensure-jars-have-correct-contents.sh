@@ -75,6 +75,8 @@ allowed_expr="(^org/$|^org/apache/$|^org/apache/hadoop/$"
 allowed_expr+="|^org/apache/hadoop/hbase"
 #   * classes in packages that start with org.apache.hbase
 allowed_expr+="|^org/apache/hbase/"
+# We have a dummy DFSOutputStream implementation in hbase
+allowed_expr+="|^org/apache/hadoop/hdfs/$|^org/apache/hadoop/hdfs/DummyDFSOutputStream.class"
 #   * whatever in the "META-INF" directory
 allowed_expr+="|^META-INF/"
 #   * the folding tables from jcodings

@@ -34,10 +34,12 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Creates multiple threads that write key/values into the */
+@InterfaceAudience.Private
 public class MultiThreadedWriter extends MultiThreadedWriterBase {
   private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedWriter.class);
 
