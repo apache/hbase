@@ -30,6 +30,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public interface RestoreJob extends Configurable {
+
+  String KEEP_ORIGINAL_SPLITS_OPT = "keep_original_splits";
+
   /**
    * Run restore operation
    * @param dirPaths          path array of WAL log directories
