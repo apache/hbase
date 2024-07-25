@@ -59,6 +59,8 @@ public class RestoreTablesClient {
   private Path restoreRootDir;
   private boolean isOverwrite;
 
+  private boolean isKeepOriginalSplits;
+
   public RestoreTablesClient(Connection conn, RestoreRequest request) throws IOException {
     this.backupRootDir = request.getBackupRootDir();
     this.backupId = request.getBackupId();
@@ -68,6 +70,7 @@ public class RestoreTablesClient {
       this.tTableArray = sTableArray;
     }
     this.isOverwrite = request.isOverwrite();
+    this.isKeepOriginalSplits = request.isKeepOriginalSplits();
     this.conn = conn;
     this.conf = conn.getConfiguration();
     if (request.getRestoreRootDir() != null) {
@@ -132,7 +135,7 @@ public class RestoreTablesClient {
    */
 
   private void restoreImages(BackupImage[] images, TableName sTable, TableName tTable,
-    boolean truncateIfExists) throws IOException {
+    boolean truncateIfExists, boolean isKeepOriginalSplits) throws IOException {
     // First image MUST be image of a FULL backup
     BackupImage image = images[0];
     String rootDir = image.getRootDir();
@@ -148,7 +151,7 @@ public class RestoreTablesClient {
         + tableBackupPath.toString());
       conf.set(JOB_NAME_CONF_KEY, "Full_Restore-" + backupId + "-" + tTable);
       restoreTool.fullRestoreTable(conn, tableBackupPath, sTable, tTable, truncateIfExists,
-        lastIncrBackupId);
+        isKeepOriginalSplits, lastIncrBackupId);
       conf.unset(JOB_NAME_CONF_KEY);
     } else { // incremental Backup
       throw new IOException("Unexpected backup type " + image.getType());
@@ -183,7 +186,7 @@ public class RestoreTablesClient {
     dirList.toArray(paths);
     conf.set(JOB_NAME_CONF_KEY, "Incremental_Restore-" + backupId + "-" + tTable);
     restoreTool.incrementalRestoreTable(conn, tableBackupPath, paths, new TableName[] { sTable },
-      new TableName[] { tTable }, lastIncrBackupId);
+      new TableName[] { tTable }, lastIncrBackupId, isKeepOriginalSplits);
     LOG.info(sTable + " has been successfully restored to " + tTable);
   }
 
@@ -208,7 +211,7 @@ public class RestoreTablesClient {
    * @throws IOException exception
    */
   private void restore(BackupManifest manifest, TableName[] sTableArray, TableName[] tTableArray,
-    boolean isOverwrite) throws IOException {
+    boolean isOverwrite, boolean isKeepOriginalSplits) throws IOException {
     TreeSet<BackupImage> restoreImageSet = new TreeSet<>();
 
     for (int i = 0; i < sTableArray.length; i++) {
@@ -223,7 +226,7 @@ public class RestoreTablesClient {
       set.addAll(depList);
       BackupImage[] arr = new BackupImage[set.size()];
       set.toArray(arr);
-      restoreImages(arr, table, tTableArray[i], isOverwrite);
+      restoreImages(arr, table, tTableArray[i], isOverwrite, isKeepOriginalSplits);
       restoreImageSet.addAll(list);
       if (restoreImageSet != null && !restoreImageSet.isEmpty()) {
         LOG.info("Restore includes the following image(s):");
@@ -257,6 +260,6 @@ public class RestoreTablesClient {
     Path rootPath = new Path(backupRootDir);
     BackupManifest manifest = HBackupFileSystem.getManifest(conf, rootPath, backupId);
 
-    restore(manifest, sTableArray, tTableArray, isOverwrite);
+    restore(manifest, sTableArray, tTableArray, isOverwrite, isKeepOriginalSplits);
   }
 }
