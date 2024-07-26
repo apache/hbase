@@ -32,24 +32,21 @@
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
   import="org.apache.hadoop.hbase.regionserver.HMobStore"
   import="org.apache.hadoop.hbase.regionserver.HStoreFile"
-  import="org.apache.hadoop.hbase.regionserver.Region"
-  import="org.apache.hadoop.hbase.regionserver.Store"
-  import="org.apache.hadoop.hbase.regionserver.StoreFile"
+  import="org.apache.hadoop.hbase.regionserver.HRegion"
+  import="org.apache.hadoop.hbase.regionserver.HStore"
 %>
 <%
   String regionName = request.getParameter("name");
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
   FileSystem fs = rs.getFileSystem();
 
-  Region region = rs.getRegion(regionName);
+  HRegion region = rs.getRegion(regionName);
   String displayName;
-  String note = "";
+  boolean isReplicaRegion = false;
   if (region != null) {
     displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(region.getRegionInfo(),
             rs.getConfiguration());
-    if (region.getRegionInfo().getReplicaId() > RegionInfo.DEFAULT_REPLICA_ID) {
-      note = "The information about storefile(s) may not up-to-date because it's not the primary region.";
-    }
+    isReplicaRegion = region.getRegionInfo().getReplicaId() > RegionInfo.DEFAULT_REPLICA_ID;
   } else {
     displayName = "region {" + regionName + "} is not currently online on this region server";
   }
@@ -66,11 +63,11 @@
         </div>
     </div>
 
-<% if(region != null) { //
-     List<? extends Store> stores = region.getStores();
-     for (Store store : stores) {
+<% if(region != null) {
+     List<HStore> stores = region.getStores();
+     for (HStore store : stores) {
        String cf = store.getColumnFamilyName();
-       Collection<? extends StoreFile> storeFiles = store.getStorefiles(); %>
+       Collection<HStoreFile> storeFiles = store.getStorefiles(); %>
 
        <h3>Column Family: <%= cf %></h3>
 
@@ -87,19 +84,19 @@
            <th>Key Of Biggest Cell</th>
          </tr>
        <% int count = 0;
-          for(StoreFile sf : storeFiles) {
-            if (!fs.exists(sf.getPath())) continue;
+          for(HStoreFile sf : storeFiles) {
+            if (isReplicaRegion && !fs.exists(sf.getPath())) continue;
             count ++; %>
          <tr>
            <td><a href="storeFile.jsp?name=<%= sf.getEncodedPath() %>"><%= sf.getPath() %></a></td>
            <td><%= (int) (fs.getLength(sf.getPath()) / 1024 / 1024) %></td>
            <td><%= new Date(sf.getModificationTimestamp()) %></td>
-           <td><%= String.format("%,1d", ((HStoreFile)sf).getFileInfo().getHFileInfo().getLenOfBiggestCell()) %></td>
-           <td><%= ((HStoreFile)sf).getFileInfo().getHFileInfo().getKeyOfBiggestCell() %></td>
+           <td><%= String.format("%,1d", sf.getFileInfo().getHFileInfo().getLenOfBiggestCell()) %></td>
+           <td><%= sf.getFileInfo().getHFileInfo().getKeyOfBiggestCell() %></td>
          </tr>
          <% } %>
 
-         <p> <%= count %> StoreFile(s) in set. <%= note %></p>
+         <p> <%= count %> StoreFile(s) in set. <%= isReplicaRegion ? "The information about storefile(s) may not up-to-date because it's not the primary region." : "" %></p>
          </table>
 
        <% if (store instanceof HMobStore) { %>
@@ -113,17 +110,18 @@
 
          <%
          int mobCnt = 0;
-         for (StoreFile sf : storeFiles) {
+         for (HStoreFile sf : storeFiles) {
            try {
-             byte[] value = ((HStoreFile)sf).getMetadataValue(HStoreFile.MOB_FILE_REFS);
+             byte[] value = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
              if (value == null) {
                continue;
              }
 
              Collection<String> fileNames = MobUtils.deserializeMobFileRefs(value).build().values();
-             mobCnt += fileNames.size();
              for (String fileName : fileNames) {
                Path mobPath = new Path(((HMobStore) store).getPath(), fileName);
+               if (isReplicaRegion && !fs.exists(mobPath)) continue;
+               mobCnt ++;
                FileStatus status = rs.getFileSystem().getFileStatus(mobPath);
                String mobPathStr = mobPath.toString();
                String encodedStr = URLEncoder.encode(mobPathStr, HConstants.UTF8_ENCODING); %>
@@ -142,7 +140,7 @@
            <% }
          } %>
 
-         <p> <%= mobCnt %> MobFile(s) in set.</p>
+         <p> <%= mobCnt %> MobFile(s) in set. <%= isReplicaRegion ? "The information about MobFile(s) may not up-to-date because it's not the primary region." : "" %></p>
        </table>
        <% }
      }
