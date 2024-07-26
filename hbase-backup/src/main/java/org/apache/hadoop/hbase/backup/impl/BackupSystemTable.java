@@ -293,19 +293,7 @@ public final class BackupSystemTable implements Closeable {
     }
     try (Table table = connection.getTable(tableName)) {
       Put put = createPutForBackupInfo(info);
-      try {
-        table.put(put);
-      } catch (Exception e) {
-        // If the BackupInfo update can't be processed, then we should fall back to
-        // the previous BackupInfo, but also update it to reflect the failure.
-        LOG.error("Failed to update BackupInfo for {}. Marking as failed", info.getBackupId(), e);
-        BackupInfo legacyInfo = readBackupInfo(info.getBackupId());
-        if (legacyInfo != null) {
-          legacyInfo.setFailedMsg("Failed to update BackupInfo. Error: " + e.getMessage());
-          table.put(createPutForBackupInfo(legacyInfo));
-        }
-        throw e;
-      }
+      table.put(put);
     }
   }
 
