@@ -311,9 +311,9 @@ public class TestTags {
       try {
         Result[] next = scanner.next(3);
         for (Result result : next) {
-          CellScanner cellScanner = result.cellScanner();
+          ExtendedCellScanner cellScanner = result.cellScanner();
           cellScanner.advance();
-          Cell current = cellScanner.current();
+          ExtendedCell current = cellScanner.current();
           assertEquals(0, current.getTagsLength());
         }
       } finally {
@@ -328,9 +328,9 @@ public class TestTags {
       try {
         Result[] next = scanner.next(3);
         for (Result result : next) {
-          CellScanner cellScanner = result.cellScanner();
+          ExtendedCellScanner cellScanner = result.cellScanner();
           cellScanner.advance();
-          Cell current = cellScanner.current();
+          ExtendedCell current = cellScanner.current();
           assertEquals(0, current.getTagsLength());
         }
       } finally {

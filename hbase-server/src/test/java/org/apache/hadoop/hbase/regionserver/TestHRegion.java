@@ -106,6 +106,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -4839,9 +4840,9 @@ public class TestHRegion {
           }
           assertTrue(timestamp >= prevTimestamp);
           prevTimestamp = timestamp;
-          Cell previousKV = null;
+          ExtendedCell previousKV = null;
 
-          for (Cell kv : result.rawCells()) {
+          for (ExtendedCell kv : ClientInternalHelper.getExtendedRawCells(result)) {
             byte[] thisValue = CellUtil.cloneValue(kv);
             if (previousKV != null) {
               if (Bytes.compareTo(CellUtil.cloneValue(previousKV), thisValue) != 0) {

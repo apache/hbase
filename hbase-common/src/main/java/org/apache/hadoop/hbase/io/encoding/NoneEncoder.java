@@ -21,7 +21,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -41,7 +40,7 @@ public class NoneEncoder {
     // We write tags seperately because though there is no tag in KV
     // if the hfilecontext says include tags we need the tags length to be
     // written
-    int size = KeyValueUtil.oswrite(cell, out, false);
+    int size = cell.write(out, false);
     // Write the additional tag into the stream
     if (encodingCtx.getHFileContext().isIncludesTags()) {
       int tagsLength = cell.getTagsLength();

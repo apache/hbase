@@ -24,8 +24,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
-
 /**
  * A {@link CellComparatorImpl} for <code>hbase:meta</code> catalog table {@link KeyValue}s.
  */
@@ -92,8 +90,11 @@ public class MetaCellComparator extends CellComparatorImpl {
       return diff;
     }
 
+    if (ignoreSequenceid) {
+      return diff;
+    }
     // Negate following comparisons so later edits show up first mvccVersion: later sorts first
-    return ignoreSequenceid ? diff : Longs.compare(b.getSequenceId(), a.getSequenceId());
+    return Long.compare(PrivateCellUtil.getSequenceId(b), PrivateCellUtil.getSequenceId(a));
   }
 
   @FunctionalInterface
