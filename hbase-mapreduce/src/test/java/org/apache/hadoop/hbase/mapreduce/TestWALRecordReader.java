@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -143,10 +144,12 @@ public class TestWALRecordReader {
     // being millisecond based.
     long ts = EnvironmentEdgeManager.currentTime();
     WALEdit edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), ts, value));
+    WALEditInternalHelper.addExtendedCell(edit,
+      new KeyValue(rowName, family, Bytes.toBytes("1"), ts, value));
     log.appendData(info, getWalKeyImpl(ts, scopes), edit);
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), ts + 1, value));
+    WALEditInternalHelper.addExtendedCell(edit,
+      new KeyValue(rowName, family, Bytes.toBytes("2"), ts + 1, value));
     log.appendData(info, getWalKeyImpl(ts + 1, scopes), edit);
     log.sync();
     Threads.sleep(10);
@@ -158,10 +161,12 @@ public class TestWALRecordReader {
     long ts1 = EnvironmentEdgeManager.currentTime();
 
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("3"), ts1 + 1, value));
+    WALEditInternalHelper.addExtendedCell(edit,
+      new KeyValue(rowName, family, Bytes.toBytes("3"), ts1 + 1, value));
     log.appendData(info, getWalKeyImpl(ts1 + 1, scopes), edit);
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("4"), ts1 + 2, value));
+    WALEditInternalHelper.addExtendedCell(edit,
+      new KeyValue(rowName, family, Bytes.toBytes("4"), ts1 + 2, value));
     log.appendData(info, getWalKeyImpl(ts1 + 2, scopes), edit);
     log.sync();
     log.shutdown();
@@ -203,8 +208,8 @@ public class TestWALRecordReader {
     WAL log = walfactory.getWAL(info);
     byte[] value = Bytes.toBytes("value");
     WALEdit edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), EnvironmentEdgeManager.currentTime(),
-      value));
+    WALEditInternalHelper.addExtendedCell(edit, new KeyValue(rowName, family, Bytes.toBytes("1"),
+      EnvironmentEdgeManager.currentTime(), value));
     long txid =
       log.appendData(info, getWalKeyImpl(EnvironmentEdgeManager.currentTime(), scopes), edit);
     log.sync(txid);
@@ -214,8 +219,8 @@ public class TestWALRecordReader {
     log.rollWriter();
 
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), EnvironmentEdgeManager.currentTime(),
-      value));
+    WALEditInternalHelper.addExtendedCell(edit, new KeyValue(rowName, family, Bytes.toBytes("2"),
+      EnvironmentEdgeManager.currentTime(), value));
     txid = log.appendData(info, getWalKeyImpl(EnvironmentEdgeManager.currentTime(), scopes), edit);
     log.sync(txid);
     log.shutdown();
@@ -261,8 +266,8 @@ public class TestWALRecordReader {
     WAL log = walfactory.getWAL(info);
     byte[] value = Bytes.toBytes("value");
     WALEdit edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), EnvironmentEdgeManager.currentTime(),
-      value));
+    WALEditInternalHelper.addExtendedCell(edit, new KeyValue(rowName, family, Bytes.toBytes("1"),
+      EnvironmentEdgeManager.currentTime(), value));
     long txid =
       log.appendData(info, getWalKeyImpl(EnvironmentEdgeManager.currentTime(), scopes), edit);
     log.sync(txid);
@@ -270,8 +275,8 @@ public class TestWALRecordReader {
     Thread.sleep(10); // make sure 2nd edit gets a later timestamp
 
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), EnvironmentEdgeManager.currentTime(),
-      value));
+    WALEditInternalHelper.addExtendedCell(edit, new KeyValue(rowName, family, Bytes.toBytes("2"),
+      EnvironmentEdgeManager.currentTime(), value));
     txid = log.appendData(info, getWalKeyImpl(EnvironmentEdgeManager.currentTime(), scopes), edit);
     log.sync(txid);
     log.shutdown();

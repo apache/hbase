@@ -37,9 +37,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
@@ -186,9 +187,10 @@ public class TestReplicationSource {
       TEST_UTIL.waitFor(30000, () -> rs.getWalEntryFilter() != null);
       WALEntryFilter wef = rs.getWalEntryFilter();
       // Test non-system WAL edit.
-      WALEdit we = new WALEdit()
-        .add(CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(HConstants.EMPTY_START_ROW)
-          .setFamily(HConstants.CATALOG_FAMILY).setType(Cell.Type.Put).build());
+      WALEdit we = WALEditInternalHelper.addExtendedCell(new WALEdit(),
+        ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+          .setRow(HConstants.EMPTY_START_ROW).setFamily(HConstants.CATALOG_FAMILY)
+          .setType(Cell.Type.Put).build());
       WAL.Entry e = new WAL.Entry(
         new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, TableName.valueOf("test"), -1, -1, uuid), we);
       assertTrue(wef.filter(e) == e);
@@ -222,7 +224,7 @@ public class TestReplicationSource {
       byte[] b = Bytes.toBytes(Integer.toString(i));
       KeyValue kv = new KeyValue(b, b, b);
       WALEdit edit = new WALEdit();
-      edit.add(kv);
+      WALEditInternalHelper.addExtendedCell(edit, kv);
       WALKeyImpl key = new WALKeyImpl(b, TableName.valueOf(b), 0, 0, HConstants.DEFAULT_CLUSTER_ID);
       writer.append(new WAL.Entry(key, edit));
       writer.sync(false);

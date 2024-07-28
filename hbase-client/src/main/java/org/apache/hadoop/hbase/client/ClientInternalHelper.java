@@ -32,7 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * TODO: A better solution is to separate the data structures used in client and server.
  */
 @InterfaceAudience.Private
-public class PackagePrivateFieldAccessor {
+public class ClientInternalHelper {
 
   public static void setMvccReadPoint(Scan scan, long mvccReadPoint) {
     scan.setMvccReadPoint(mvccReadPoint);

@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -56,7 +57,6 @@ import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
-import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
@@ -222,7 +222,7 @@ public final class ThriftUtilities {
    * @return converted result, returns an empty result if the input is <code>null</code>
    */
   public static TResult resultFromHBase(Result in) {
-    ExtendedCell[] raw = PackagePrivateFieldAccessor.getExtendedRawCells(in);
+    ExtendedCell[] raw = ClientInternalHelper.getExtendedRawCells(in);
     TResult out = new TResult();
     byte[] row = in.getRow();
     if (row != null) {
@@ -1311,7 +1311,7 @@ public final class ThriftUtilities {
     if (in.getDurability() != Durability.USE_DEFAULT) {
       out.setDurability(durabilityFromHBase(in.getDurability()));
     }
-    for (Map.Entry<byte[], List<ExtendedCell>> entry : PackagePrivateFieldAccessor
+    for (Map.Entry<byte[], List<ExtendedCell>> entry : ClientInternalHelper
       .getExtendedFamilyCellMap(in).entrySet()) {
       byte[] family = entry.getKey();
       for (ExtendedCell cell : entry.getValue()) {
@@ -1375,7 +1375,7 @@ public final class ThriftUtilities {
     if (in.getDurability() != Durability.USE_DEFAULT) {
       out.setDurability(durabilityFromHBase(in.getDurability()));
     }
-    for (Map.Entry<byte[], List<ExtendedCell>> entry : PackagePrivateFieldAccessor
+    for (Map.Entry<byte[], List<ExtendedCell>> entry : ClientInternalHelper
       .getExtendedFamilyCellMap(in).entrySet()) {
       byte[] family = entry.getKey();
       for (ExtendedCell cell : entry.getValue()) {

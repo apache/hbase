@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -98,16 +100,16 @@ public class TestHBaseInterClusterReplicationEndpointFilterEdits {
   public void testFilterNotExistColumnFamilyEdits() {
     List<List<Entry>> entryList = new ArrayList<>();
     // should be filtered
-    Cell c1 = new KeyValue(ROW, NON_EXISTING_FAMILY, QUALIFIER,
+    ExtendedCell c1 = new KeyValue(ROW, NON_EXISTING_FAMILY, QUALIFIER,
       EnvironmentEdgeManager.currentTime(), Type.Put, VALUE);
     Entry e1 = new Entry(new WALKeyImpl(new byte[32], TABLE1, EnvironmentEdgeManager.currentTime()),
-      new WALEdit().add(c1));
+      WALEditInternalHelper.addExtendedCell(new WALEdit(), c1));
     entryList.add(Lists.newArrayList(e1));
     // should be kept
-    Cell c2 =
+    ExtendedCell c2 =
       new KeyValue(ROW, FAMILY, QUALIFIER, EnvironmentEdgeManager.currentTime(), Type.Put, VALUE);
     Entry e2 = new Entry(new WALKeyImpl(new byte[32], TABLE1, EnvironmentEdgeManager.currentTime()),
-      new WALEdit().add(c2));
+      WALEditInternalHelper.addExtendedCell(new WALEdit(), c2));
     entryList.add(Lists.newArrayList(e2, e1));
     List<List<Entry>> filtered = endpoint.filterNotExistColumnFamilyEdits(entryList);
     assertEquals(1, filtered.size());
@@ -120,16 +122,16 @@ public class TestHBaseInterClusterReplicationEndpointFilterEdits {
   public void testFilterNotExistTableEdits() {
     List<List<Entry>> entryList = new ArrayList<>();
     // should be filtered
-    Cell c1 =
+    ExtendedCell c1 =
       new KeyValue(ROW, FAMILY, QUALIFIER, EnvironmentEdgeManager.currentTime(), Type.Put, VALUE);
     Entry e1 = new Entry(new WALKeyImpl(new byte[32], TABLE2, EnvironmentEdgeManager.currentTime()),
-      new WALEdit().add(c1));
+      WALEditInternalHelper.addExtendedCell(new WALEdit(), c1));
     entryList.add(Lists.newArrayList(e1));
     // should be kept
-    Cell c2 =
+    ExtendedCell c2 =
       new KeyValue(ROW, FAMILY, QUALIFIER, EnvironmentEdgeManager.currentTime(), Type.Put, VALUE);
     Entry e2 = new Entry(new WALKeyImpl(new byte[32], TABLE1, EnvironmentEdgeManager.currentTime()),
-      new WALEdit().add(c2));
+      WALEditInternalHelper.addExtendedCell(new WALEdit(), c2));
     entryList.add(Lists.newArrayList(e2));
     List<List<Entry>> filtered = endpoint.filterNotExistTableEdits(entryList);
     assertEquals(1, filtered.size());

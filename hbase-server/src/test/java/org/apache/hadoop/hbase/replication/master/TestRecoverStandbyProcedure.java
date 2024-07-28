@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -183,7 +184,8 @@ public class TestRecoverStandbyProcedure {
   private Entry createWALEntry(byte[] row, byte[] value) {
     WALKeyImpl key = new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName, 1);
     WALEdit edit = new WALEdit();
-    edit.add(new KeyValue(row, family, qualifier, timestamp, value));
+    WALEditInternalHelper.addExtendedCell(edit,
+      new KeyValue(row, family, qualifier, timestamp, value));
     return new Entry(key, edit);
   }
 }
