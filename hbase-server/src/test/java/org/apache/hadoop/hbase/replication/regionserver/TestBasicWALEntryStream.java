@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
@@ -557,7 +558,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
 
   private WALEdit getWALEdit(String row) {
     WALEdit edit = new WALEdit();
-    edit.add(new KeyValue(Bytes.toBytes(row), family, qualifier,
+    WALEditInternalHelper.addExtendedCell(edit, new KeyValue(Bytes.toBytes(row), family, qualifier,
       EnvironmentEdgeManager.currentTime(), qualifier));
     return edit;
   }
@@ -700,7 +701,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
       byte[] b = Bytes.toBytes(Integer.toString(i));
       KeyValue kv = new KeyValue(b, b, b);
       WALEdit edit = new WALEdit();
-      edit.add(kv);
+      WALEditInternalHelper.addExtendedCell(edit, kv);
       WALKeyImpl key = new WALKeyImpl(b, TableName.valueOf(b), 0, 0, HConstants.DEFAULT_CLUSTER_ID);
       NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
       scopes.put(b, HConstants.REPLICATION_SCOPE_GLOBAL);

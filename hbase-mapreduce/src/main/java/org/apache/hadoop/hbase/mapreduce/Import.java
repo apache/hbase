@@ -47,12 +47,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
@@ -205,7 +205,7 @@ public class Import extends Configured implements Tool {
           filter == null || !filter.filterRowKey(
             PrivateCellUtil.createFirstOnRow(row.get(), row.getOffset(), (short) row.getLength()))
         ) {
-          for (ExtendedCell kv : PackagePrivateFieldAccessor.getExtendedRawCells(value)) {
+          for (ExtendedCell kv : ClientInternalHelper.getExtendedRawCells(value)) {
             kv = filterKv(filter, kv);
             // skip if we filtered it out
             if (kv == null) {
@@ -271,7 +271,7 @@ public class Import extends Configured implements Tool {
           filter == null || !filter.filterRowKey(
             PrivateCellUtil.createFirstOnRow(row.get(), row.getOffset(), (short) row.getLength()))
         ) {
-          for (ExtendedCell kv : PackagePrivateFieldAccessor.getExtendedRawCells(value)) {
+          for (ExtendedCell kv : ClientInternalHelper.getExtendedRawCells(value)) {
             kv = filterKv(filter, kv);
             // skip if we filtered it out
             if (kv == null) {
@@ -336,7 +336,7 @@ public class Import extends Configured implements Tool {
 
     protected void processKV(ImmutableBytesWritable key, Result result, Context context, Put put,
       Delete delete) throws IOException, InterruptedException {
-      for (ExtendedCell kv : PackagePrivateFieldAccessor.getExtendedRawCells(result)) {
+      for (ExtendedCell kv : ClientInternalHelper.getExtendedRawCells(result)) {
         kv = filterKv(filter, kv);
         // skip if we filter it out
         if (kv == null) {

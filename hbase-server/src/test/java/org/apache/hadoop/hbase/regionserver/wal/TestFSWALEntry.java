@@ -21,8 +21,8 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -48,7 +48,7 @@ public class TestFSWALEntry {
     byte[] family1 = Bytes.toBytes("family1");
     byte[] family2 = Bytes.toBytes("family2");
 
-    List<Cell> cells = new ArrayList<>();
+    List<ExtendedCell> cells = new ArrayList<>();
     assertEquals(0, FSWALEntry.collectFamilies(cells).size());
 
     cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(family0)

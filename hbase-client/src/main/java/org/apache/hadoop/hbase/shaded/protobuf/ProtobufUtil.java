@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -89,7 +90,6 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
-import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLoadStats;
@@ -1082,7 +1082,7 @@ public final class ProtobufUtil {
     if (scan.getCaching() > 0) {
       scanBuilder.setCaching(scan.getCaching());
     }
-    long mvccReadPoint = PackagePrivateFieldAccessor.getMvccReadPoint(scan);
+    long mvccReadPoint = ClientInternalHelper.getMvccReadPoint(scan);
     if (mvccReadPoint > 0) {
       scanBuilder.setMvccReadPoint(mvccReadPoint);
     }
@@ -1192,7 +1192,7 @@ public final class ProtobufUtil {
       scan.setCaching(proto.getCaching());
     }
     if (proto.hasMvccReadPoint()) {
-      PackagePrivateFieldAccessor.setMvccReadPoint(scan, proto.getMvccReadPoint());
+      ClientInternalHelper.setMvccReadPoint(scan, proto.getMvccReadPoint());
     }
     if (proto.hasReadType()) {
       scan.setReadType(toReadType(proto.getReadType()));

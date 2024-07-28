@@ -31,9 +31,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Cell.Type;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -157,10 +157,10 @@ public class TestParsePartialWALFile {
           EnvironmentEdgeManager.currentTime(), HConstants.DEFAULT_CLUSTER_ID);
         WALEdit edit = new WALEdit();
         if (i % 2 == 0) {
-          edit.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Type.Put)
+          edit.add(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Type.Put)
             .setRow(ROW).setFamily(FAMILY).setQualifier(QUAL).setValue(VALUE).build());
         } else {
-          edit.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+          edit.add(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
             .setType(Type.DeleteFamily).setRow(ROW).setFamily(FAMILY).build());
         }
         writer.append(new WAL.Entry(key, edit));
