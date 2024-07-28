@@ -29,6 +29,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,7 +46,9 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -56,6 +59,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufWALReader;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream.HasNext;
@@ -63,7 +67,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -76,6 +79,7 @@ import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 
 public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
 
@@ -93,7 +97,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     initWAL();
   }
 
-  private Entry next(WALEntryStream entryStream) {
+  private WAL.Entry next(WALEntryStream entryStream) {
     assertEquals(HasNext.YES, entryStream.hasNext());
     return entryStream.next();
   }
@@ -562,7 +566,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     return new WALEntryFilter() {
 
       @Override
-      public Entry filter(Entry entry) {
+      public WAL.Entry filter(WAL.Entry entry) {
         return entry;
       }
     };
@@ -581,7 +585,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     }
 
     @Override
-    public Entry filter(Entry entry) {
+    public WAL.Entry filter(WAL.Entry entry) {
       if (countFailures == numFailures) {
         return entry;
       }
@@ -839,6 +843,44 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     assertNull(reader.poll(10));
   }
 
+  // testcase for HBASE-28748
+  @Test
+  public void testWALEntryStreamEOFRightAfterHeader() throws Exception {
+    assertEquals(1, logQueue.getQueueSize(fakeWalGroupId));
+    AbstractFSWAL<?> abstractWAL = (AbstractFSWAL<?>) log;
+    Path emptyLogFile = abstractWAL.getCurrentFileName();
+    log.rollWriter(true);
+
+    // AsyncFSWAl and FSHLog both moves the log from WALs to oldWALs directory asynchronously.
+    // Wait for in flight wal close count to become 0. This makes sure that empty wal is moved to
+    // oldWALs directory.
+    Waiter.waitFor(CONF, 5000,
+      (Waiter.Predicate<Exception>) () -> abstractWAL.getInflightWALCloseCount() == 0);
+    // There will 2 logs in the queue.
+    assertEquals(2, logQueue.getQueueSize(fakeWalGroupId));
+    appendToLogAndSync();
+
+    Path archivedEmptyLogFile = AbstractFSWALProvider.findArchivedLog(emptyLogFile, CONF);
+
+    // read the wal header
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    bos.write(AbstractProtobufWALReader.PB_WAL_MAGIC);
+    try (FSDataInputStream in = fs.open(archivedEmptyLogFile)) {
+      IOUtils.skipFully(in, AbstractProtobufWALReader.PB_WAL_MAGIC.length);
+      WALHeader header = WALHeader.parseDelimitedFrom(in);
+      header.writeDelimitedTo(bos);
+    }
+    // truncate the first empty log so we have an incomplete header
+    try (FSDataOutputStream out = fs.create(archivedEmptyLogFile, true)) {
+      bos.writeTo(out);
+    }
+    try (WALEntryStream entryStream =
+      new WALEntryStream(logQueue, fs, CONF, 0, log, new MetricsSource("1"), fakeWalGroupId)) {
+      assertEquals(HasNext.RETRY_IMMEDIATELY, entryStream.hasNext());
+      assertNotNull(next(entryStream));
+    }
+  }
+
   private static class PartialWALEntryFailingWALEntryFilter implements WALEntryFilter {
     private int filteredWALEntryCount = -1;
     private int walEntryCount = 0;
@@ -851,7 +893,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     }
 
     @Override
-    public Entry filter(Entry entry) {
+    public WAL.Entry filter(WAL.Entry entry) {
       filteredWALEntryCount++;
       if (filteredWALEntryCount < walEntryCount - 1) {
         return entry;
