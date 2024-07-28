@@ -2262,6 +2262,18 @@ public final class PrivateCellUtil {
   }
 
   /**
+   * Deep clones the given cell if the cell supports deep cloning
+   * @param cell the cell to be cloned
+   * @return the cloned cell
+   */
+  public static Cell deepClone(Cell cell) throws CloneNotSupportedException {
+    if (cell instanceof ExtendedCell) {
+      return ((ExtendedCell) cell).deepClone();
+    }
+    throw new CloneNotSupportedException();
+  }
+
+  /**
    * Sets the given seqId to the cell. Marked as audience Private as of 1.2.0. Setting a Cell
    * sequenceid is an internal implementation detail not for general public use.
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
