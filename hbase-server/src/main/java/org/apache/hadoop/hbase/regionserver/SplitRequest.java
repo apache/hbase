@@ -81,7 +81,7 @@ class SplitRequest implements Runnable {
     // are created just to pass the information to the reportRegionStateTransition().
     if (
       !server.reportRegionStateTransition(new RegionStateTransitionContext(
-        TransitionCode.READY_TO_SPLIT, HConstants.NO_SEQNUM, -1, parent, hri_a, hri_b))
+        TransitionCode.READY_TO_SPLIT, HConstants.NO_SEQNUM, -1, -1, parent, hri_a, hri_b))
     ) {
       LOG.error("Unable to ask master to split " + parent.getRegionNameAsString());
     }

@@ -35,12 +35,16 @@ public class RSProcedureHandler extends EventHandler {
 
   private final long procId;
 
+  private final long masterStartCode;
+
   private final RSProcedureCallable callable;
 
-  public RSProcedureHandler(HRegionServer rs, long procId, RSProcedureCallable callable) {
+  public RSProcedureHandler(HRegionServer rs, long procId, long masterStartCode,
+    RSProcedureCallable callable) {
     super(rs, callable.getEventType());
     this.procId = procId;
     this.callable = callable;
+    this.masterStartCode = masterStartCode;
   }
 
   @Override
@@ -53,7 +57,7 @@ public class RSProcedureHandler extends EventHandler {
       LOG.error("pid=" + this.procId, t);
       error = t;
     } finally {
-      ((HRegionServer) server).remoteProcedureComplete(procId, error);
+      ((HRegionServer) server).remoteProcedureComplete(procId, masterStartCode, error);
     }
   }
 }

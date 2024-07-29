@@ -34,11 +34,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseRpcServicesBase;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerMetrics;
@@ -64,7 +66,6 @@ import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
-import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
@@ -396,6 +397,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.Rena
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -458,7 +460,9 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   private static final Logger AUDITLOG =
     LoggerFactory.getLogger("SecurityLogger." + MasterRpcServices.class.getName());
 
-  /** RPC scheduler to use for the master. */
+  /**
+   * RPC scheduler to use for the master.
+   */
   public static final String MASTER_RPC_SCHEDULER_FACTORY_CLASS =
     "hbase.master.rpc.scheduler.factory.class";
 
@@ -578,7 +582,9 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     return switchBalancer(b, BalanceSwitchMode.SYNC);
   }
 
-  /** Returns list of blocking services and their security info classes that this server supports */
+  /**
+   * Returns list of blocking services and their security info classes that this server supports
+   */
   @Override
   protected List<BlockingServiceAndInterface> getServices() {
     List<BlockingServiceAndInterface> bssi = new ArrayList<>(5);
@@ -1854,6 +1860,8 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     ReportRegionStateTransitionRequest req) throws ServiceException {
     try {
       server.checkServiceStarted();
+      throwOnOldMasterStartCode(req.getTransitionList().stream()
+        .map(RegionServerStatusProtos.RegionStateTransition::getMasterStartCode));
       return server.getAssignmentManager().reportRegionStateTransition(req);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -2553,7 +2561,9 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     // Check Masters is up and ready for duty before progressing. Remote side will keep trying.
     try {
       this.server.checkServiceStarted();
-    } catch (ServerNotRunningYetException snrye) {
+      throwOnOldMasterStartCode(
+        request.getResultList().stream().map(RemoteProcedureResult::getMasterStartCode));
+    } catch (IOException snrye) {
       throw new ServiceException(snrye);
     }
     request.getResultList().forEach(result -> {
@@ -2565,6 +2575,15 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       }
     });
     return ReportProcedureDoneResponse.getDefaultInstance();
+  }
+
+  private void throwOnOldMasterStartCode(Stream<Long> masterStartCodeStream)
+    throws MasterNotRunningException {
+    long masterStartCodeFromProc = masterStartCodeStream.max(Long::compare).orElse(-1L);
+    if (masterStartCodeFromProc > server.getStartcode()) {
+      // do we need to abort the master here ?
+      throw new MasterNotRunningException("Another master is active");
+    }
   }
 
   @Override

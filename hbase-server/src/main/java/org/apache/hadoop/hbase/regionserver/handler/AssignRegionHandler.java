@@ -59,15 +59,19 @@ public class AssignRegionHandler extends EventHandler {
 
   private final long masterSystemTime;
 
+  private final long masterStartCode;
+
   private final RetryCounter retryCounter;
 
   public AssignRegionHandler(HRegionServer server, RegionInfo regionInfo, long openProcId,
-    @Nullable TableDescriptor tableDesc, long masterSystemTime, EventType eventType) {
+    @Nullable TableDescriptor tableDesc, long masterSystemTime, long masterStartCode,
+    EventType eventType) {
     super(server, eventType);
     this.regionInfo = regionInfo;
     this.openProcId = openProcId;
     this.tableDesc = tableDesc;
     this.masterSystemTime = masterSystemTime;
+    this.masterStartCode = masterStartCode;
     this.retryCounter = HandlerUtil.getRetryCounter();
   }
 
@@ -82,7 +86,7 @@ public class AssignRegionHandler extends EventHandler {
     rs.getRegionsInTransitionInRS().remove(regionInfo.getEncodedNameAsBytes(), Boolean.TRUE);
     if (
       !rs.reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.FAILED_OPEN,
-        HConstants.NO_SEQNUM, openProcId, masterSystemTime, regionInfo))
+        HConstants.NO_SEQNUM, openProcId, masterSystemTime, regionInfo, masterStartCode))
     ) {
       throw new IOException(
         "Failed to report failed open to master: " + regionInfo.getRegionNameAsString());
@@ -142,7 +146,8 @@ public class AssignRegionHandler extends EventHandler {
     }
     // From here on out, this is PONR. We can not revert back. The only way to address an
     // exception from here on out is to abort the region server.
-    rs.postOpenDeployTasks(new PostOpenDeployContext(region, openProcId, masterSystemTime));
+    rs.postOpenDeployTasks(
+      new PostOpenDeployContext(region, openProcId, masterSystemTime, masterStartCode));
     rs.addRegion(region);
     LOG.info("Opened {}", regionName);
     // Cache the open region procedure id after report region transition succeed.
@@ -169,7 +174,7 @@ public class AssignRegionHandler extends EventHandler {
   }
 
   public static AssignRegionHandler create(HRegionServer server, RegionInfo regionInfo,
-    long openProcId, TableDescriptor tableDesc, long masterSystemTime) {
+    long openProcId, TableDescriptor tableDesc, long masterSystemTime, long masterStartCode) {
     EventType eventType;
     if (regionInfo.isMetaRegion()) {
       eventType = EventType.M_RS_OPEN_META;
@@ -182,6 +187,6 @@ public class AssignRegionHandler extends EventHandler {
       eventType = EventType.M_RS_OPEN_REGION;
     }
     return new AssignRegionHandler(server, regionInfo, openProcId, tableDesc, masterSystemTime,
-      eventType);
+      masterStartCode, eventType);
   }
 }

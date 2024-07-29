@@ -416,7 +416,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     public void dispatchCloseRequests(final MasterProcedureEnv env,
       final List<RegionCloseOperation> operations) {
       for (RegionCloseOperation op : operations) {
-        request.addCloseRegion(op.buildCloseRegionRequest(getServerName()));
+        request.addCloseRegion(op.buildCloseRegionRequest(getServerName(),
+          env.getMasterServices().getServerName().getStartCode()));
       }
     }
 
@@ -442,6 +443,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     final ServerName serverName, final List<RegionOpenOperation> operations) {
     final OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
     builder.setServerStartCode(serverName.getStartcode());
+    builder.setMasterStartCode(env.getMasterServices().getServerName().getStartCode());
     builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
     for (RegionOpenOperation op : operations) {
       builder.addOpenInfo(op.buildRegionOpenInfoRequest(env));
@@ -517,9 +519,10 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       return destinationServer;
     }
 
-    public CloseRegionRequest buildCloseRegionRequest(final ServerName serverName) {
+    public CloseRegionRequest buildCloseRegionRequest(final ServerName serverName,
+      long masterStartCode) {
       return ProtobufUtil.buildCloseRegionRequest(serverName, regionInfo.getRegionName(),
-        getDestinationServer(), procId, evictCache);
+        getDestinationServer(), procId, evictCache, masterStartCode);
 
     }
   }
