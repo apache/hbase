@@ -460,9 +460,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   private static final Logger AUDITLOG =
     LoggerFactory.getLogger("SecurityLogger." + MasterRpcServices.class.getName());
 
-  /**
-   * RPC scheduler to use for the master.
-   */
+  /** RPC scheduler to use for the master. */
   public static final String MASTER_RPC_SCHEDULER_FACTORY_CLASS =
     "hbase.master.rpc.scheduler.factory.class";
 
@@ -582,9 +580,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     return switchBalancer(b, BalanceSwitchMode.SYNC);
   }
 
-  /**
-   * Returns list of blocking services and their security info classes that this server supports
-   */
+  /** Returns list of blocking services and their security info classes that this server supports */
   @Override
   protected List<BlockingServiceAndInterface> getServices() {
     List<BlockingServiceAndInterface> bssi = new ArrayList<>(5);
@@ -2563,8 +2559,8 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       this.server.checkServiceStarted();
       throwOnOldMasterStartCode(
         request.getResultList().stream().map(RemoteProcedureResult::getMasterStartCode));
-    } catch (IOException snrye) {
-      throw new ServiceException(snrye);
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
     }
     request.getResultList().forEach(result -> {
       if (result.getStatus() == RemoteProcedureResult.Status.SUCCESS) {

@@ -423,7 +423,10 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
     @Override
     public void dispatchServerOperations(MasterProcedureEnv env, List<ServerOperation> operations) {
-      operations.stream().map(o -> o.buildRequest()).forEachOrdered(request::addProc);
+      operations.stream()
+        .map(o -> o
+          .buildRequestWithMasterStartCode(env.getMasterServices().getServerName().getStartCode()))
+        .forEachOrdered(request::addProc);
     }
 
     // will be overridden in test.
@@ -442,7 +445,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
   private static OpenRegionRequest buildOpenRegionRequest(final MasterProcedureEnv env,
     final ServerName serverName, final List<RegionOpenOperation> operations) {
     final OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-    builder.setServerStartCode(serverName.getStartcode());
+    builder.setServerStartCode(serverName.getStartCode());
     builder.setMasterStartCode(env.getMasterServices().getServerName().getStartCode());
     builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
     for (RegionOpenOperation op : operations) {
@@ -473,9 +476,10 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       this.rsProcData = rsProcData;
     }
 
-    public RemoteProcedureRequest buildRequest() {
+    public RemoteProcedureRequest buildRequestWithMasterStartCode(long masterStartCode) {
       return RemoteProcedureRequest.newBuilder().setProcId(procId)
-        .setProcClass(rsProcClass.getName()).setProcData(ByteString.copyFrom(rsProcData)).build();
+        .setProcClass(rsProcClass.getName()).setProcData(ByteString.copyFrom(rsProcData))
+        .setMasterStartCode(masterStartCode).build();
     }
   }
 
