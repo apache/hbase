@@ -202,6 +202,9 @@ pipeline {
               label 'hbase'
             }
           }
+          when {
+            branch '*branch-2*'
+          }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
             TESTS = "${env.SHALLOW_CHECKS}"
@@ -644,6 +647,9 @@ pipeline {
               label 'hbase'
             }
           }
+          when {
+            branch '*branch-2*'
+          }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
             TESTS = "${env.DEEP_CHECKS}"
@@ -817,18 +823,19 @@ pipeline {
                 echo '(x) {color:red}-1 testing binary artifact{color}\n-- source tarball did not produce the expected binaries.' >>output-srctarball/commentfile
                 exit 1
               fi
+              set -x
               install_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | grep -v client-bin | grep -v hadoop3)
-              tar --strip-component=1 -xzf "${install_artifact}" -C "hbase-install"
+              tar --strip-component=1 -xzvf "${install_artifact}" -C "hbase-install"
               client_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-client-bin.tar.gz | grep -v hadoop3)
-              tar --strip-component=1 -xzf "${client_artifact}" -C "hbase-client"
+              tar --strip-component=1 -xzvf "${client_artifact}" -C "hbase-client"
               if [ 2 -eq $(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-hadoop3-*-bin.tar.gz | wc -l) ]; then
                 echo "hadoop3 artifacts available, unpacking the hbase hadoop3 bin tarball into 'hbase-hadoop3-install' and the client hadoop3 tarball into 'hbase-hadoop3-client'"
                 mkdir hbase-hadoop3-install
                 mkdir hbase-hadoop3-client
                 hadoop3_install_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-hadoop3-*-bin.tar.gz | grep -v client-bin)
-                tar --strip-component=1 -xzf "${hadoop3_install_artifact}" -C "hbase-hadoop3-install"
+                tar --strip-component=1 -xzvf "${hadoop3_install_artifact}" -C "hbase-hadoop3-install"
                 hadoop3_client_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-hadoop3-*-client-bin.tar.gz)
-                tar --strip-component=1 -xzf "${hadoop3_client_artifact}" -C "hbase-hadoop3-client"
+                tar --strip-component=1 -xzvf "${hadoop3_client_artifact}" -C "hbase-hadoop3-client"
               fi
             '''
             unstash 'hadoop-2'
