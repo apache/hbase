@@ -2580,8 +2580,10 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   private void throwOnOldMasterStartCode(Stream<Long> masterStartCodeStream)
     throws MasterNotRunningException {
     long masterStartCodeFromProc = masterStartCodeStream.max(Long::compare).orElse(-1L);
+    // -1 is less than any possible MasterStartCode
+
     if (masterStartCodeFromProc > server.getStartcode()) {
-      // do we need to abort the master here ?
+      // procedure is initiated by new active master but report received on different
       throw new MasterNotRunningException("Another master is active");
     }
   }
