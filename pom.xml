@@ -4572,17 +4572,5 @@
         </pluginManagement>
       </build>
     </profile>
-    <profile>
-      <id>aarch64</id>
-      <activation>
-        <os>
-          <family>linux</family>
-          <arch>aarch64</arch>
-        </os>
-      </activation>
-      <properties>
-        <external.protobuf.groupid>org.openlabtesting.protobuf</external.protobuf.groupid>
-      </properties>
-    </profile>
   </profiles>
 </project>
