@@ -144,7 +144,8 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
    * @return true if more rows exist after this one, false if scanner is done
    */
   @Override
-  public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+  public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
+    throws IOException {
     if (this.current == null) {
       return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     }

@@ -547,7 +547,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @return true if there are more rows, false if scanner is done
    */
   @Override
-  public boolean next(List<Cell> outResult, ScannerContext scannerContext) throws IOException {
+  public boolean next(List<? super ExtendedCell> outResult, ScannerContext scannerContext)
+    throws IOException {
     if (scannerContext == null) {
       throw new IllegalArgumentException("Scanner context cannot be null");
     }
@@ -830,7 +831,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @param outResult the cells which are visible for user scan
    * @return null is the top cell doesn't change. Otherwise, the NextState to return
    */
-  private NextState needToReturn(List<Cell> outResult) {
+  private NextState needToReturn(List<? super ExtendedCell> outResult) {
     if (!outResult.isEmpty() && topChanged) {
       return heap.peek() == null ? NextState.NO_MORE_VALUES : NextState.MORE_VALUES;
     }

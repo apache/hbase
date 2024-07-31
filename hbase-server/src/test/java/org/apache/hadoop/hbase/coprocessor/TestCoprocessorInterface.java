@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -92,22 +93,24 @@ public class TestCoprocessorInterface {
     }
 
     @Override
-    public boolean next(List<Cell> results) throws IOException {
+    public boolean next(List<? super ExtendedCell> results) throws IOException {
       return delegate.next(results);
     }
 
     @Override
-    public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+    public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
+      throws IOException {
       return delegate.next(result, scannerContext);
     }
 
     @Override
-    public boolean nextRaw(List<Cell> result) throws IOException {
+    public boolean nextRaw(List<? super ExtendedCell> result) throws IOException {
       return delegate.nextRaw(result);
     }
 
     @Override
-    public boolean nextRaw(List<Cell> result, ScannerContext context) throws IOException {
+    public boolean nextRaw(List<? super ExtendedCell> result, ScannerContext context)
+      throws IOException {
       return delegate.nextRaw(result, context);
     }
 
