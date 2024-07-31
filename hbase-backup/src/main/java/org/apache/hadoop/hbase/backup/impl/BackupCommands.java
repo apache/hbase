@@ -142,6 +142,12 @@ public final class BackupCommands {
         throw new IOException(INCORRECT_USAGE);
       }
 
+      if (cmdline.hasOption(OPTION_YARN_QUEUE_NAME)) {
+        String queueName = cmdline.getOptionValue(OPTION_YARN_QUEUE_NAME);
+        // Set MR job queuename to configuration
+        getConf().set("mapreduce.job.queuename", queueName);
+      }
+
       // Create connection
       conn = ConnectionFactory.createConnection(getConf());
       if (requiresNoActiveSession()) {
@@ -332,12 +338,6 @@ public final class BackupCommands {
         : -1;
 
       boolean ignoreChecksum = cmdline.hasOption(OPTION_IGNORECHECKSUM);
-
-      if (cmdline.hasOption(OPTION_YARN_QUEUE_NAME)) {
-        String queueName = cmdline.getOptionValue(OPTION_YARN_QUEUE_NAME);
-        // Set system property value for MR job
-        System.setProperty("mapreduce.job.queuename", queueName);
-      }
 
       try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         BackupRequest.Builder builder = new BackupRequest.Builder();
