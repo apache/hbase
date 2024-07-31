@@ -29,6 +29,7 @@ import java.util.function.Predicate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -286,7 +287,8 @@ public class TestCoprocessorScanPolicy {
         }
 
         @Override
-        public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+        public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
+          throws IOException {
           boolean moreRows = scanner.next(result, scannerContext);
           if (result.isEmpty()) {
             return moreRows;
@@ -297,7 +299,7 @@ public class TestCoprocessorScanPolicy {
             predicate = checkTtl(now, ttl);
           }
           if (version != null) {
-            Predicate<Cell> vp = checkVersion(result.get(0), version);
+            Predicate<Cell> vp = checkVersion((Cell) result.get(0), version);
             if (predicate != null) {
               predicate = predicate.and(vp);
             } else {
@@ -305,7 +307,7 @@ public class TestCoprocessorScanPolicy {
             }
           }
           if (predicate != null) {
-            result.removeIf(predicate);
+            ((List<Cell>) result).removeIf(predicate);
           }
           return moreRows;
         }

@@ -218,7 +218,7 @@ public abstract class TestMultiColumnScanner {
         String queryInfo = "columns queried: " + qualSet + " (columnBitMask=" + columnBitMask
           + "), maxVersions=" + maxVersions;
 
-        while (scanner.next((List) results) || results.size() > 0) {
+        while (scanner.next(results) || results.size() > 0) {
           for (ExtendedCell kv : results) {
             while (
               kvPos < kvs.size()

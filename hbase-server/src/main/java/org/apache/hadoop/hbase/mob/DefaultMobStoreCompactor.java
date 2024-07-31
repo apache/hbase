@@ -362,7 +362,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
 
       do {
-        hasMore = scanner.next((List) cells, scannerContext);
+        hasMore = scanner.next(cells, scannerContext);
         currentTime = EnvironmentEdgeManager.currentTime();
         if (LOG.isDebugEnabled()) {
           now = currentTime;

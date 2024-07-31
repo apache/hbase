@@ -830,7 +830,7 @@ public class TestImportExport {
       // Need to use RegionScanner instead of table#getScanner since the latter will
       // not return tags since it will go through rpc layer and remove tags intentionally.
       RegionScanner scanner = region.getScanner(scan);
-      scanner.next((List) values);
+      scanner.next(values);
       if (!values.isEmpty()) {
         break;
       }

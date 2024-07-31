@@ -211,7 +211,7 @@ public class TestScannerFromBucketCache {
       actual = new ArrayList<>();
       InternalScanner scanner = region.getScanner(scan);
 
-      boolean hasNext = scanner.next((List) actual);
+      boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
@@ -289,7 +289,7 @@ public class TestScannerFromBucketCache {
     List<ExtendedCell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
-    boolean hasNext = scanner.next((List) actual);
+    boolean hasNext = scanner.next(actual);
     assertEquals(false, hasNext);
     return actual;
   }

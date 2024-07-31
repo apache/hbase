@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mob.MobCell;
@@ -64,7 +63,7 @@ public class MobStoreScanner extends StoreScanner {
    * the mob file as the result.
    */
   @Override
-  public boolean next(List<Cell> outResult, ScannerContext ctx) throws IOException {
+  public boolean next(List<? super ExtendedCell> outResult, ScannerContext ctx) throws IOException {
     boolean result = super.next(outResult, ctx);
     if (!rawMobScan) {
       // retrieve the mob data

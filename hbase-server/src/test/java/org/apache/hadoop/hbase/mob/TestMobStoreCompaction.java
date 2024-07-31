@@ -377,7 +377,7 @@ public class TestMobStoreCompaction {
     List<ExtendedCell> results = new ArrayList<>();
     boolean hasMore = true;
     while (hasMore) {
-      hasMore = scanner.next((List) results);
+      hasMore = scanner.next(results);
       for (ExtendedCell c : results) {
         if (MobUtils.isMobReferenceCell(c)) {
           scannedCount++;
@@ -408,7 +408,7 @@ public class TestMobStoreCompaction {
     Set<String> files = new HashSet<>();
     do {
       kvs.clear();
-      hasMore = scanner.next((List) kvs);
+      hasMore = scanner.next(kvs);
       for (Cell kv : kvs) {
         if (!MobUtils.isMobReferenceCell((ExtendedCell) kv)) {
           continue;
