@@ -58,8 +58,8 @@ public class KeyValueCodec implements Codec {
     public void write(ExtendedCell cell) throws IOException {
       checkFlushed();
       // Do not write tags over RPC
-      ByteBufferUtils.putInt(this.out, KeyValueUtil.getSerializedSize(cell, false));
-      KeyValueUtil.oswrite(cell, out, false);
+      ByteBufferUtils.putInt(this.out, cell.getSerializedSize(false));
+      cell.write(out, false);
     }
   }
 

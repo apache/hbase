@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
@@ -490,7 +489,7 @@ public final class WALSplitUtil {
       : entry.getKey().getLogSequenceNumber();
     int count = entry.getAssociatedCellCount();
     List<MutationReplay> mutations = new ArrayList<>();
-    Cell previousCell = null;
+    ExtendedCell previousCell = null;
     Mutation m = null;
     WALKeyImpl key = null;
     WALEdit val = null;

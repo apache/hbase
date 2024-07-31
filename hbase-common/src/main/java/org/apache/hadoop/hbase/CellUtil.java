@@ -570,15 +570,13 @@ public final class CellUtil {
    * Return true if a delete type, a {@link KeyValue.Type#Delete} or a {KeyValue.Type#DeleteFamily}
    * or a {@link KeyValue.Type#DeleteColumn} KeyValue type.
    */
-  @SuppressWarnings("deprecation")
   public static boolean isDelete(final Cell cell) {
-    return PrivateCellUtil.isDelete(cell.getTypeByte());
+    return PrivateCellUtil.isDelete(PrivateCellUtil.getTypeByte(cell));
   }
 
   /** Returns True if this cell is a Put. */
-  @SuppressWarnings("deprecation")
   public static boolean isPut(Cell cell) {
-    return cell.getTypeByte() == KeyValue.Type.Put.getCode();
+    return PrivateCellUtil.getTypeByte(cell) == KeyValue.Type.Put.getCode();
   }
 
   /**
@@ -629,13 +627,21 @@ public final class CellUtil {
     sb.append('/');
     sb.append(KeyValue.humanReadableTimestamp(cell.getTimestamp()));
     sb.append('/');
-    sb.append(KeyValue.Type.codeToType(cell.getTypeByte()));
+    if (cell instanceof ExtendedCell) {
+      sb.append(KeyValue.Type.codeToType(((ExtendedCell) cell).getTypeByte()));
+    } else {
+      sb.append(cell.getType());
+    }
+
     if (!(cell instanceof KeyValue.KeyOnlyKeyValue)) {
       sb.append("/vlen=");
       sb.append(cell.getValueLength());
     }
-    sb.append("/seqid=");
-    sb.append(cell.getSequenceId());
+    if (cell instanceof ExtendedCell) {
+      sb.append("/seqid=");
+      sb.append(((ExtendedCell) cell).getSequenceId());
+    }
+
     return sb.toString();
   }
 
@@ -651,8 +657,12 @@ public final class CellUtil {
     String value = null;
     if (verbose) {
       // TODO: pretty print tags as well
-      if (cell.getTagsLength() > 0) {
-        tag = Bytes.toStringBinary(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+      if (cell instanceof RawCell) {
+        RawCell rawCell = (RawCell) cell;
+        if (rawCell.getTagsLength() > 0) {
+          tag = Bytes.toStringBinary(rawCell.getTagsArray(), rawCell.getTagsOffset(),
+            rawCell.getTagsLength());
+        }
       }
       if (!(cell instanceof KeyValue.KeyOnlyKeyValue)) {
         value =
@@ -675,7 +685,8 @@ public final class CellUtil {
 
   public static boolean equals(Cell a, Cell b) {
     return matchingRows(a, b) && matchingFamily(a, b) && matchingQualifier(a, b)
-      && matchingTimestamp(a, b) && a.getTypeByte() == b.getTypeByte();
+      && matchingTimestamp(a, b)
+      && PrivateCellUtil.getTypeByte(a) == PrivateCellUtil.getTypeByte(b);
   }
 
   public static boolean matchingTimestamp(Cell a, Cell b) {

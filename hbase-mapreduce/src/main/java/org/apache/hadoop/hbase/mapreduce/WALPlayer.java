@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -167,8 +169,8 @@ public class WALPlayer extends Configured implements Tool {
           ImmutableBytesWritable tableOut = new ImmutableBytesWritable(targetTable.getName());
           Put put = null;
           Delete del = null;
-          Cell lastCell = null;
-          for (Cell cell : value.getCells()) {
+          ExtendedCell lastCell = null;
+          for (ExtendedCell cell : WALEditInternalHelper.getExtendedCells(value)) {
             context.getCounter(Counter.CELLS_READ).increment(1);
             // Filtering WAL meta marker entries.
             if (WALEdit.isMetaEditFamily(cell)) {

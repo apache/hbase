@@ -237,7 +237,8 @@ public class StoreFileReader {
         if (columns != null && columns.size() == 1) {
           byte[] column = columns.first();
           // create the required fake key
-          Cell kvKey = PrivateCellUtil.createFirstOnRow(row, HConstants.EMPTY_BYTE_ARRAY, column);
+          ExtendedCell kvKey =
+            PrivateCellUtil.createFirstOnRow(row, HConstants.EMPTY_BYTE_ARRAY, column);
           return passesGeneralRowColBloomFilter(kvKey);
         }
 
@@ -307,14 +308,14 @@ public class StoreFileReader {
    * multi-column query. the cell to check if present in BloomFilter
    * @return True if passes
    */
-  public boolean passesGeneralRowColBloomFilter(Cell cell) {
+  public boolean passesGeneralRowColBloomFilter(ExtendedCell cell) {
     BloomFilter bloomFilter = this.generalBloomFilter;
     if (bloomFilter == null) {
       bloomFilterMetrics.incrementEligible();
       return true;
     }
     // Used in ROW_COL bloom
-    Cell kvKey = null;
+    ExtendedCell kvKey = null;
     // Already if the incoming key is a fake rowcol key then use it as it is
     if (cell.getTypeByte() == KeyValue.Type.Maximum.getCode() && cell.getFamilyLength() == 0) {
       kvKey = cell;

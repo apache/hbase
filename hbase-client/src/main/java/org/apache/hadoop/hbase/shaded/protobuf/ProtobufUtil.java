@@ -1315,10 +1315,11 @@ public final class ProtobufUtil {
     }
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-    for (Map.Entry<byte[], List<Cell>> family : mutation.getFamilyCellMap().entrySet()) {
+    for (Map.Entry<byte[], List<ExtendedCell>> family : ClientInternalHelper
+      .getExtendedFamilyCellMap(mutation).entrySet()) {
       columnBuilder.clear();
       columnBuilder.setFamily(UnsafeByteOperations.unsafeWrap(family.getKey()));
-      for (Cell cell : family.getValue()) {
+      for (ExtendedCell cell : family.getValue()) {
         valueBuilder.clear();
         valueBuilder.setQualifier(UnsafeByteOperations.unsafeWrap(cell.getQualifierArray(),
           cell.getQualifierOffset(), cell.getQualifierLength()));
@@ -1420,13 +1421,13 @@ public final class ProtobufUtil {
       return toResult(result.getExists(), result.isStale());
     }
 
-    Cell[] cells = result.rawCells();
+    ExtendedCell[] cells = ClientInternalHelper.getExtendedRawCells(result);
     if (cells == null || cells.length == 0) {
       return result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB;
     }
 
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
-    for (Cell c : cells) {
+    for (ExtendedCell c : cells) {
       builder.addCell(toCell(c, encodeTags));
     }
 
@@ -1980,7 +1981,7 @@ public final class ProtobufUtil {
     throw new IOException(se);
   }
 
-  public static CellProtos.Cell toCell(final Cell kv, boolean encodeTags) {
+  public static CellProtos.Cell toCell(final ExtendedCell kv, boolean encodeTags) {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
     CellProtos.Cell.Builder kvbuilder = CellProtos.Cell.newBuilder();
@@ -1991,7 +1992,7 @@ public final class ProtobufUtil {
         ((ByteBufferExtendedCell) kv).getFamilyPosition(), kv.getFamilyLength()));
       kvbuilder.setQualifier(wrap(((ByteBufferExtendedCell) kv).getQualifierByteBuffer(),
         ((ByteBufferExtendedCell) kv).getQualifierPosition(), kv.getQualifierLength()));
-      kvbuilder.setCellType(CellProtos.CellType.valueOf(kv.getTypeByte()));
+      kvbuilder.setCellType(CellProtos.CellType.forNumber(kv.getTypeByte()));
       kvbuilder.setTimestamp(kv.getTimestamp());
       kvbuilder.setValue(wrap(((ByteBufferExtendedCell) kv).getValueByteBuffer(),
         ((ByteBufferExtendedCell) kv).getValuePosition(), kv.getValueLength()));
@@ -2006,7 +2007,7 @@ public final class ProtobufUtil {
         kv.getFamilyLength()));
       kvbuilder.setQualifier(UnsafeByteOperations.unsafeWrap(kv.getQualifierArray(),
         kv.getQualifierOffset(), kv.getQualifierLength()));
-      kvbuilder.setCellType(CellProtos.CellType.valueOf(kv.getTypeByte()));
+      kvbuilder.setCellType(CellProtos.CellType.forNumber(kv.getTypeByte()));
       kvbuilder.setTimestamp(kv.getTimestamp());
       kvbuilder.setValue(UnsafeByteOperations.unsafeWrap(kv.getValueArray(), kv.getValueOffset(),
         kv.getValueLength()));

@@ -24,7 +24,8 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.Tag;
@@ -74,8 +75,8 @@ public class LoadTestDataGeneratorWithTags extends DefaultDataGenerator {
         numTags = minNumTags + rand.nextInt(maxNumTags - minNumTags);
       }
       List<Tag> tags;
-      for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-        Cell cell = cellScanner.current();
+      for (ExtendedCellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
+        ExtendedCell cell = cellScanner.current();
         byte[] tag = LoadTestDataGenerator.generateData(rand,
           minTagLength + rand.nextInt(maxTagLength - minTagLength));
         tags = new ArrayList<>();
