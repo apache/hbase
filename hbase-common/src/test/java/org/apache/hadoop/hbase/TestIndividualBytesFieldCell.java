@@ -152,10 +152,10 @@ public class TestIndividualBytesFieldCell {
     byte[] value = null;
     byte[] tags = null;
 
-    Cell ic1 =
+    ExtendedCell ic1 =
       new IndividualBytesFieldCell(row, family, qualifier, timestamp, type, seqId, value, tags);
 
-    Cell kv1 = new KeyValue(row, family, qualifier, timestamp, type, value, tags);
+    ExtendedCell kv1 = new KeyValue(row, family, qualifier, timestamp, type, value, tags);
     byte[] familyArrayInKV =
       Bytes.copy(kv1.getFamilyArray(), kv1.getFamilyOffset(), kv1.getFamilyLength());
     byte[] qualifierArrayInKV =

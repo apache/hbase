@@ -892,7 +892,7 @@ public class TestHFile {
     long ts = 5;
     KeyValue kv1 = new KeyValue(Bytes.toBytes("the quick brown fox"), family, qualA, ts, Type.Put);
     KeyValue kv2 = new KeyValue(Bytes.toBytes("the who test text"), family, qualA, ts, Type.Put);
-    Cell newKey = HFileWriterImpl.getMidpoint(keyComparator, kv1, kv2);
+    ExtendedCell newKey = HFileWriterImpl.getMidpoint(keyComparator, kv1, kv2);
     assertTrue(keyComparator.compare(kv1, newKey) < 0);
     assertTrue((keyComparator.compare(kv2, newKey)) > 0);
     byte[] expectedArray = Bytes.toBytes("the r");

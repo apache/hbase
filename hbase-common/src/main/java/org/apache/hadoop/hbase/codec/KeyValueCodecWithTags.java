@@ -61,8 +61,8 @@ public class KeyValueCodecWithTags implements Codec {
     public void write(ExtendedCell cell) throws IOException {
       checkFlushed();
       // Write tags
-      ByteBufferUtils.putInt(this.out, KeyValueUtil.getSerializedSize(cell, true));
-      KeyValueUtil.oswrite(cell, out, true);
+      ByteBufferUtils.putInt(this.out, cell.getSerializedSize(true));
+      cell.write(out, true);
     }
   }
 

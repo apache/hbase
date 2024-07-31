@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -49,11 +51,13 @@ public class NamespaceTableCfWALEntryFilter implements WALEntryFilter, WALCellFi
 
   @Override
   public Cell filterCell(final Entry entry, Cell cell) {
+    ExtendedCell extendedCell = PrivateCellUtil.ensureExtendedCell(cell);
     ReplicationPeerConfig peerConfig = this.peer.getPeerConfig();
     TableName tableName = entry.getKey().getTableName();
     if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
       // If the cell is about BULKLOAD event, unpack and filter it by BulkLoadCellFilter.
-      return bulkLoadFilter.filterCell(cell, fam -> !peerConfig.needToReplicate(tableName, fam));
+      return bulkLoadFilter.filterCell(extendedCell,
+        fam -> !peerConfig.needToReplicate(tableName, fam));
     } else {
       return peerConfig.needToReplicate(tableName, CellUtil.cloneFamily(cell)) ? cell : null;
     }
