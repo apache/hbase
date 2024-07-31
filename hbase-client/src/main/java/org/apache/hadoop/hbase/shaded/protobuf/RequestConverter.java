@@ -61,11 +61,7 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-<<<<<<< HEAD
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
-=======
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
->>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -1706,6 +1702,7 @@ public final class RequestConverter {
       .setLogClassName(slowLogResponseRequest.getClass().getName())
       .setLogMessage(slowLogResponseRequest.toByteString()).build();
   }
+
   /**
    * Create a protocol buffer {@link ClearSlowLogResponseRequest}
    * @return a protocol buffer ClearSlowLogResponseRequest
@@ -1714,7 +1711,6 @@ public final class RequestConverter {
     return ClearSlowLogResponseRequest.newBuilder().build();
   }
 
-<<<<<<< HEAD
   public static MoveServersRequest buildMoveServersRequest(Set<Address> servers,
     String targetGroup) {
     Set<HBaseProtos.ServerName> hostPorts = Sets.newHashSet();
@@ -1745,56 +1741,5 @@ public final class RequestConverter {
       }
     }
     return builder.setNonceGroup(nonceGroup).setNonce(nonce).build();
-=======
-  public static AdminProtos.ClearRegionHistorianResponseRequest buildClearRegionHistorianResponseRequest() {
-    System.out.println("requestConverter");
-    return AdminProtos.ClearRegionHistorianResponseRequest.newBuilder().build();
-  }
-
-  public static HBaseProtos.LogRequest buildRegionHistorianResponseRequest(
-    final Map<String, Object> filterParams, final int limit) {
-    AdminProtos.RegionHistorianResponseRequest.Builder builder = AdminProtos.RegionHistorianResponseRequest.newBuilder();
-    builder.setLimit(limit);
-    boolean filterByAnd = false;
-    if (MapUtils.isNotEmpty(filterParams)) {
-      if (filterParams.containsKey("regionName")) {
-        final String regionName = (String) filterParams.get("regionName");
-        if (StringUtils.isNotEmpty(regionName)) {
-          builder.setRegionName(regionName);
-        }
-      }
-      if (filterParams.containsKey("tableName")) {
-        final String tableName = (String) filterParams.get("tableName");
-        if (StringUtils.isNotEmpty(tableName)) {
-          builder.setTableName(tableName);
-        }
-      }
-      if(filterParams.containsKey("pid")){
-        final long pid = (long) filterParams.get("pid");
-          builder.setPid(pid);
-      }
-      if(filterParams.containsKey("ppid")){
-        final long pid = (long) filterParams.get("ppid");
-        builder.setPid(pid);
-      }
-      if (filterParams.containsKey("filterByOperator")) {
-        final String filterByOperator = (String) filterParams.get("filterByOperator");
-        if (StringUtils.isNotEmpty(filterByOperator)) {
-          if (filterByOperator.toUpperCase().equals("AND")) {
-            filterByAnd = true;
-          }
-        }
-      }
-    }
-    if (filterByAnd) {
-      builder.setFilterByOperator(AdminProtos.RegionHistorianResponseRequest.FilterByOperator.AND);
-    } else {
-      builder.setFilterByOperator(AdminProtos.RegionHistorianResponseRequest.FilterByOperator.OR);
-    }
-    AdminProtos.RegionHistorianResponseRequest regionHistorianResponseRequest = builder.build();
-    return HBaseProtos.LogRequest.newBuilder()
-      .setLogClassName(regionHistorianResponseRequest.getClass().getName())
-      .setLogMessage(regionHistorianResponseRequest.toByteString()).build();
->>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
   }
 }

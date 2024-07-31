@@ -2006,39 +2006,11 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
-<<<<<<< HEAD
     <name>hbase.master.metafixer.max.merge.count</name>
     <value>64</value>
     <description>
       Maximum regions to merge at a time when we fix overlaps noted in
       CJ consistency report, but avoid merging 100 regions in one go!
-=======
-    <name>hbase.master.regionHistorian.ringbuffer.size</name>
-    <value>256</value>
-    <description>
-      Default size of ringbuffer to be maintained by each RegionServer in order to store
-      RegionHistorian responses.
-    </description>
-  </property>
-  <property>
-    <name>hbase.master.regionHistorian.buffer.enabled</name>
-    <value>true</value>
-    <description>
-      Indicates whether Master have ring buffer running for storing
-      Region Historian records in FIFO manner with limited entries. The size of
-      the ring buffer is indicated by config: hbase.master.regionHistorian.ringbuffer.size
-      The default value is false, turn this on and get latest region historian
-      responses with complete data.
-    </description>
-  </property>
-  <property>
-    <name>hbase.master.regionHistorian.systable.enabled</name>
-    <value>true</value>
-    <description>
-      Should be enabled only if hbase.master.regionHistorian.buffer.enabled is enabled. If enabled
-      (true), all Region Historian records would be persisted to system table hbase:regionHistorian (in addition
-      to in-memory ring buffer at each Master).
->>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
     </description>
   </property>
   <property>
@@ -2055,7 +2027,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.namedqueue.provider.classes</name>
-    <value>org.apache.hadoop.hbase.namequeues.impl.SlowLogQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerDecisionQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerRejectionQueueService,org.apache.hadoop.hbase.namequeues.WALEventTrackerQueueService,org.apache.hadoop.hbase.namequeues.impl.RegionHistorianQueueService</value>
+    <value>org.apache.hadoop.hbase.namequeues.impl.SlowLogQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerDecisionQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerRejectionQueueService,org.apache.hadoop.hbase.namequeues.WALEventTrackerQueueService</value>
     <description>
       Default values for NamedQueueService implementors. This comma separated full class names
       represent all implementors of NamedQueueService that we would like to be invoked by

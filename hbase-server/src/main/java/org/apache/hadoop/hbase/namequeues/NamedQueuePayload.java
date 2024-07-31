@@ -30,8 +30,7 @@ public class NamedQueuePayload {
     SLOW_LOG(0),
     BALANCE_DECISION(1),
     BALANCE_REJECTION(2),
-    WAL_EVENT_TRACKER(3),
-    REGION_HISTORIAN(4);
+    WAL_EVENT_TRACKER(3);
 
     private final int value;
 
@@ -52,9 +51,6 @@ public class NamedQueuePayload {
         }
         case 3: {
           return WAL_EVENT_TRACKER;
-        }
-        case 4: {
-          return REGION_HISTORIAN;
         }
         default: {
           throw new IllegalArgumentException(

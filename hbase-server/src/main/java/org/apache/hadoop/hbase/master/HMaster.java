@@ -17,15 +17,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.apache.hadoop.hbase.ChoreService.CHORE_SERVICE_INITIAL_POOL_SIZE;
-import static org.apache.hadoop.hbase.ChoreService.DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_REGION_HISTORIAN_SYS_TABLE_CHORE_DURATION;
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.master.cleaner.HFileCleaner.CUSTOM_POOL_SIZE;
-import static org.apache.hadoop.hbase.namequeues.NamedQueueServiceChore.NAMED_QUEUE_CHORE_DURATION_DEFAULT;
-import static org.apache.hadoop.hbase.namequeues.NamedQueueServiceChore.NAMED_QUEUE_CHORE_DURATION_KEY;
 import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
 
 import com.google.errorprone.annotations.RestrictedApi;
@@ -179,11 +174,7 @@ import org.apache.hadoop.hbase.master.procedure.TruncateRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
-<<<<<<< HEAD
 import org.apache.hadoop.hbase.master.replication.AbstractPeerProcedure;
-=======
-import org.apache.hadoop.hbase.master.regionHistorian.RegionHistorianMasterService;
->>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
 import org.apache.hadoop.hbase.master.replication.AddPeerProcedure;
 import org.apache.hadoop.hbase.master.replication.DisablePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.EnablePeerProcedure;
@@ -207,10 +198,6 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskGroup;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
-<<<<<<< HEAD
-=======
-import org.apache.hadoop.hbase.namequeues.NamedQueueServiceChore;
->>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
@@ -463,9 +450,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   SnapshotManager snapshotManager;
   // monitor for distributed procedures
   private MasterProcedureManagerHost mpmHost;
+
   private RegionsRecoveryChore regionsRecoveryChore = null;
-  private NamedQueueServiceChore namedQueueServiceChore;
-  private NamedQueueRecorder namedQueueRecorder = null;
+
   private RegionsRecoveryConfigManager regionsRecoveryConfigManager = null;
   // it is assigned after 'initialized' guard set to true, so should be volatile
   private volatile MasterQuotaManager quotaManager;
@@ -558,7 +545,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       this.maxBalancingTime = getMaxBalancingTime();
       this.maxRitPercent = conf.getDouble(HConstants.HBASE_MASTER_BALANCER_MAX_RIT_PERCENT,
         HConstants.DEFAULT_HBASE_MASTER_BALANCER_MAX_RIT_PERCENT);
-      this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
+
       // Do we publish the status?
       boolean shouldPublish =
         conf.getBoolean(HConstants.STATUS_PUBLISHED, HConstants.STATUS_PUBLISHED_DEFAULT);
@@ -1317,9 +1304,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     final SlowLogMasterService slowLogMasterService = new SlowLogMasterService(conf, this);
     slowLogMasterService.init();
 
-    final RegionHistorianMasterService regionHistorianMasterService = new RegionHistorianMasterService(this);
-    regionHistorianMasterService.init();
-
     WALEventTrackerTableCreator.createIfNeededAndNotExists(conf, this);
     // Create REPLICATION.SINK_TRACKER table if needed.
     ReplicationSinkTrackerTableCreator.createIfNeededAndNotExists(conf, this);
@@ -1775,12 +1759,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         LOG.trace("Snapshot Cleaner Chore is disabled. Not starting up the chore..");
       }
     }
-
-    final int regionHistorianChoreDuration = conf.getInt(HConstants.REGION_HISTORIAN_SYS_TABLE_CHORE_DURATION_KEY, DEFAULT_REGION_HISTORIAN_SYS_TABLE_CHORE_DURATION);
-    final int namedQueueChoreDuration = conf.getInt(NAMED_QUEUE_CHORE_DURATION_KEY, NAMED_QUEUE_CHORE_DURATION_DEFAULT);
-    int choreDuration = Math.min(regionHistorianChoreDuration, namedQueueChoreDuration);
-    namedQueueServiceChore = new NamedQueueServiceChore(this, choreDuration, this.namedQueueRecorder, this.getConnection());
-    getChoreService().scheduleChore(namedQueueServiceChore);
     serviceStarted = true;
     if (LOG.isTraceEnabled()) {
       LOG.trace("Started service threads");
@@ -1928,40 +1906,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
   }
 
-<<<<<<< HEAD
   protected void stopChores() {
     shutdownChore(mobFileCleanerChore);
     shutdownChore(mobFileCompactionChore);
     shutdownChore(balancerChore);
     if (regionNormalizerManager != null) {
       shutdownChore(regionNormalizerManager.getRegionNormalizerChore());
-=======
-  private void stopChores() {
-    if (getChoreService() != null) {
-      shutdownChore(mobFileCleanerChore);
-      shutdownChore(mobFileCompactionChore);
-      shutdownChore(balancerChore);
-      if (regionNormalizerManager != null) {
-        shutdownChore(regionNormalizerManager.getRegionNormalizerChore());
-      }
-      shutdownChore(clusterStatusChore);
-      shutdownChore(catalogJanitorChore);
-      shutdownChore(clusterStatusPublisherChore);
-      shutdownChore(snapshotQuotaChore);
-      shutdownChore(namedQueueServiceChore);
-      shutdownChore(logCleaner);
-      if (hfileCleaners != null) {
-        for (ScheduledChore chore : hfileCleaners) {
-          chore.shutdown();
-        }
-        hfileCleaners = null;
-      }
-      shutdownChore(replicationBarrierCleaner);
-      shutdownChore(snapshotCleanerChore);
-      shutdownChore(hbckChore);
-      shutdownChore(regionsRecoveryChore);
-      shutdownChore(rollingUpgradeChore);
->>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
     }
     shutdownChore(clusterStatusChore);
     shutdownChore(catalogJanitorChore);

@@ -82,7 +82,6 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
 import org.apache.hadoop.hbase.namequeues.BalancerRejectionDetails;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
-import org.apache.hadoop.hbase.namequeues.RegionHistorianPayload;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.net.Address;
@@ -114,8 +113,6 @@ import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionHist;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1904,96 +1901,6 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     return response.build();
   }
 
-<<<<<<< HEAD
-=======
-  /**
-   * Compact a region on the master.
-   * @param controller the RPC controller
-   * @param request    the request
-   */
-  @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
-  public CompactRegionResponse compactRegion(final RpcController controller,
-    final CompactRegionRequest request) throws ServiceException {
-    try {
-      master.checkInitialized();
-      byte[] regionName = request.getRegion().getValue().toByteArray();
-      TableName tableName = RegionInfo.getTable(regionName);
-      // TODO: support CompactType.MOB
-      // if the region is a mob region, do the mob file compaction.
-      if (MobUtils.isMobRegionName(tableName, regionName)) {
-        checkHFileFormatVersionForMob();
-        // TODO: support CompactType.MOB
-        // HBASE-23571
-        LOG.warn("CompactType.MOB is not supported yet, will run regular compaction."
-          + " Refer to HBASE-23571.");
-        return super.compactRegion(controller, request);
-      } else {
-        return super.compactRegion(controller, request);
-      }
-    } catch (IOException ie) {
-      throw new ServiceException(ie);
-    }
-  }
-
-  @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
-  public AdminProtos.RegionHistorianResponses getRegionHistorianResponses(final RpcController controller,
-    final AdminProtos.RegionHistorianResponseRequest request) {
-    final NamedQueueRecorder namedQueueRecorder = this.master.getNamedQueueRecorder();
-    final List<RegionHist.RegionHistorianPayload> regionHistorianPayloads = getRegionHistorianPayloads(request, namedQueueRecorder);
-    AdminProtos.RegionHistorianResponses regionHistorianResponses = AdminProtos.RegionHistorianResponses.newBuilder().addAllRegionHistorianPayloads(regionHistorianPayloads).build();
-    return regionHistorianResponses;
-  }
-
-  /**
-   * check configured hfile format version before to do compaction
-   * @throws IOException throw IOException
-   */
-  private void checkHFileFormatVersionForMob() throws IOException {
-    if (HFile.getFormatVersion(master.getConfiguration()) < HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
-      LOG.error("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS
-        + " is required for MOB compaction. Compaction will not run.");
-      throw new IOException("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS
-        + " is required for MOB feature. Consider setting " + HFile.FORMAT_VERSION_KEY
-        + " accordingly.");
-    }
-  }
-
-  /**
-   * This method implements Admin getRegionInfo. On RegionServer, it is able to return RegionInfo
-   * and detail. On Master, it just returns RegionInfo. On Master it has been hijacked to return Mob
-   * detail. Master implementation is good for querying full region name if you only have the
-   * encoded name (useful around region replicas for example which do not have a row in hbase:meta).
-   */
-  @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
-  public GetRegionInfoResponse getRegionInfo(final RpcController controller,
-    final GetRegionInfoRequest request) throws ServiceException {
-    final GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
-    final RegionInfo info = getRegionInfo(request.getRegion());
-    if (info != null) {
-      builder.setRegionInfo(ProtobufUtil.toRegionInfo(info));
-    } else {
-      // Is it a MOB name? These work differently.
-      byte[] regionName = request.getRegion().getValue().toByteArray();
-      TableName tableName = RegionInfo.getTable(regionName);
-      if (MobUtils.isMobRegionName(tableName, regionName)) {
-        // a dummy region info contains the compaction state.
-        RegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(tableName);
-        builder.setRegionInfo(ProtobufUtil.toRegionInfo(mobRegionInfo));
-        if (request.hasCompactionState() && request.getCompactionState()) {
-          builder.setCompactionState(master.getMobCompactionState(tableName));
-        }
-      } else {
-        // If unknown RegionInfo and not a MOB region, it is unknown.
-        throw new ServiceException(new UnknownRegionException(Bytes.toString(regionName)));
-      }
-    }
-    return builder.build();
-  }
-
->>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
   @Override
   public IsBalancerEnabledResponse isBalancerEnabled(RpcController controller,
     IsBalancerEnabledRequest request) throws ServiceException {
@@ -3486,18 +3393,6 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         return HBaseProtos.LogEntry.newBuilder()
           .setLogClassName(balancerRejectionsResponse.getClass().getName())
           .setLogMessage(balancerRejectionsResponse.toByteString()).build();
-      }else if (logClassName.contains("RegionHistorianResponseRequest")) {
-        AdminProtos.RegionHistorianResponseRequest regionHistorianResponseRequest =
-          (AdminProtos.RegionHistorianResponseRequest) method.invoke(null, request.getLogMessage());
-        final NamedQueueRecorder namedQueueRecorder = this.master.getNamedQueueRecorder();
-        final List<RegionHist.RegionHistorianPayload> regionHistorianPayloads =
-          getRegionHistorianPayloads(regionHistorianResponseRequest, namedQueueRecorder);
-        AdminProtos.RegionHistorianResponses regionHistorianResponses =
-          AdminProtos.RegionHistorianResponses.newBuilder()
-            .addAllRegionHistorianPayloads(regionHistorianPayloads).build();
-        return HBaseProtos.LogEntry.newBuilder()
-          .setLogClassName(regionHistorianResponses.getClass().getName())
-          .setLogMessage(regionHistorianResponses.toByteString()).build();
       }
     } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
       | InvocationTargetException e) {
@@ -3545,7 +3440,6 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       .addAllBalancerRejection(balancerRejections).build();
   }
 
-<<<<<<< HEAD
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public GetRegionInfoResponse getRegionInfo(final RpcController controller,
@@ -3739,23 +3633,4 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       throw new ServiceException(ioe);
     }
   }
-=======
-  private List<RegionHist.RegionHistorianPayload> getRegionHistorianPayloads(
-    AdminProtos.RegionHistorianResponseRequest request, NamedQueueRecorder namedQueueRecorder) {
-    if (namedQueueRecorder == null) {
-      return Collections.emptyList();
-    }
-    List<RegionHist.RegionHistorianPayload> regionHistorianPayloads;
-    NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
-    namedQueueGetRequest.setNamedQueueEvent(RegionHistorianPayload.REGION_HISTORIAN_EVENT);
-    namedQueueGetRequest.setRegionHistorianResponseRequest(request);
-    NamedQueueGetResponse namedQueueGetResponse =
-      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
-    regionHistorianPayloads = namedQueueGetResponse != null
-      ? namedQueueGetResponse.getRegionHistorianPayloads()
-      : Collections.emptyList();
-    return regionHistorianPayloads;
-  }
-
->>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
 }

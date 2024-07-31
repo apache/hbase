@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.ipc.RpcCallback;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionHist;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Assert;
@@ -102,17 +101,6 @@ public class TestNamedQueueRecorder {
     return conf;
   }
 
-  private static Configuration applyRegionHistorianConf(int eventSize) {
-    Configuration conf = HBASE_TESTING_UTILITY.getConfiguration();
-    conf.setBoolean("hbase.master.regionHistorian.buffer.enabled", true);
-    conf.setInt("hbase.master.regionHistorian.ringbuffer.size", eventSize);
-    return conf;
-  }
-
-  public TestNamedQueueRecorder() {
-    super();
-  }
-
   /**
    * confirm that for a ringbuffer of slow logs, payload on given index of buffer has expected
    * elements
@@ -128,16 +116,8 @@ public class TestNamedQueueRecorder {
     return isClassExpected && isClientExpected && isUserExpected;
   }
 
-  private boolean confirmRegionHistPayloadParam(int i, int j, List<RegionHist.RegionHistorianPayload> regionHistorianPayloads) {
-    boolean isHostExpected = regionHistorianPayloads.get(i).getHostName().equals("host_"+j);
-    boolean isRegionNameExpected = regionHistorianPayloads.get(i).getRegionName().equals("region_"+j);
-    boolean isTableNameExpected = regionHistorianPayloads.get(i).getTableName().equals("table_"+j);
-    boolean isEventTypeExpected = regionHistorianPayloads.get(i).getEventType().equals("event_"+j);
-    return isHostExpected && isRegionNameExpected && isTableNameExpected && isEventTypeExpected;
-  }
-
   @Test
-  public void testOnlineSlowLogConsumption() throws Exception {
+  public void testOnlieSlowLogConsumption() throws Exception {
 
     Configuration conf = applySlowLogRecorderConf(8);
     Constructor<NamedQueueRecorder> constructor =
@@ -152,7 +132,6 @@ public class TestNamedQueueRecorder {
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
 
     int i = 0;
-
 
     // add 5 records initially
     for (; i < 5; i++) {
@@ -264,7 +243,6 @@ public class TestNamedQueueRecorder {
 
   @Test
   public void testOnlineSlowLogWithHighRecords() throws Exception {
-
 
     Configuration conf = applySlowLogRecorderConf(14);
     Constructor<NamedQueueRecorder> constructor =
@@ -710,330 +688,6 @@ public class TestNamedQueueRecorder {
     RpcCall rpcCall = getRpcCall(userName);
     return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, 0, 0, className,
       isSlowLog, isLargeLog);
-  }
-
-  @Test
-  public void testRegionHistorian() throws Exception {
-    Configuration conf = applyRegionHistorianConf(8);
-    Constructor<NamedQueueRecorder> constructor =
-      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
-    constructor.setAccessible(true);
-    namedQueueRecorder = constructor.newInstance(conf);
-    AdminProtos.RegionHistorianResponseRequest request =
-      AdminProtos.RegionHistorianResponseRequest.newBuilder().setLimit(15).build();
-
-    namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.REGION_HISTORIAN);
-    Assert.assertEquals(getRegionHistorianPayloads(request).size(), 0);
-    LOG.debug("Initially ringbuffer of region historian is empty");
-
-    int i = 0;
-
-    //add 5 records
-    for (; i < 5; i++) {
-      RegionHistorianPayload regionHistorianPayload =
-        getRegionHistorianPayload("host_" + (i + 1), "region_" + (i + 1), "table_" + (i + 1),
-          "event_" + (i + 1), System.currentTimeMillis(), i + 1, i + 1);
-      namedQueueRecorder.addRecord(regionHistorianPayload);
-    }
-
-    Assert.assertNotEquals(-1,
-      HBASE_TESTING_UTILITY.waitFor(3000, () -> getRegionHistorianPayloads(request).size() == 5));
-    List<RegionHist.RegionHistorianPayload> regionHistorianPayloads =
-      getRegionHistorianPayloads(request);
-    Assert.assertTrue(confirmRegionHistPayloadParam(0, 5, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(1, 4, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(2, 3, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(3, 2, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(4, 1, regionHistorianPayloads));
-
-    // add 2 more records
-    for (; i < 7; i++) {
-      RegionHistorianPayload regionHistorianPayload =
-        getRegionHistorianPayload("host_" + (i + 1), "region_" + (i + 1), "table_" + (i + 1),
-          "event_" + (i + 1), System.currentTimeMillis(), i + 1, i + 1);
-      namedQueueRecorder.addRecord(regionHistorianPayload);
-    }
-
-    Assert.assertNotEquals(-1,
-      HBASE_TESTING_UTILITY.waitFor(3000, () -> getRegionHistorianPayloads(request).size() == 7));
-
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
-      List<RegionHist.RegionHistorianPayload> regionHistorianPayloadsList =
-        getRegionHistorianPayloads(request);
-      return regionHistorianPayloadsList.size() == 7 && confirmRegionHistPayloadParam(0, 7,
-        regionHistorianPayloadsList) && confirmRegionHistPayloadParam(5, 2,
-        regionHistorianPayloadsList) && confirmRegionHistPayloadParam(6, 1,
-        regionHistorianPayloadsList);
-    }));
-
-    // add 10 more records
-    for (; i < 17; i++) {
-      RegionHistorianPayload regionHistorianPayload =
-        getRegionHistorianPayload("host_" + (i + 1), "region_" + (i + 1), "table_" + (i + 1),
-          "event_" + (i + 1), System.currentTimeMillis(), i + 1, i + 1);
-      namedQueueRecorder.addRecord(regionHistorianPayload);
-    }
-
-    Assert.assertNotEquals(-1,
-      HBASE_TESTING_UTILITY.waitFor(3000, () -> getRegionHistorianPayloads(request).size() == 8));
-
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
-      List<RegionHist.RegionHistorianPayload> regionHistorianPayloadsList =
-        getRegionHistorianPayloads(request);
-      return regionHistorianPayloadsList.size() == 8 && confirmRegionHistPayloadParam(0, 17,
-        regionHistorianPayloadsList) && confirmRegionHistPayloadParam(1, 16,
-        regionHistorianPayloadsList) && confirmRegionHistPayloadParam(2, 15,
-        regionHistorianPayloadsList);
-    }));
-
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
-      boolean isRingBufferCleaned =
-        namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.REGION_HISTORIAN);
-
-      LOG.debug("cleared the ring buffer of Region Historian records");
-
-      List<RegionHist.RegionHistorianPayload> regionHistorianPayloadList =
-        getRegionHistorianPayloads(request);
-      return regionHistorianPayloadList.size() == 0 && isRingBufferCleaned;
-    }));
-
-  }
-
-  private List<RegionHist.RegionHistorianPayload> getRegionHistorianPayloads(
-    AdminProtos.RegionHistorianResponseRequest request) {
-    NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
-    namedQueueGetRequest.setNamedQueueEvent(RegionHistorianPayload.REGION_HISTORIAN_EVENT);
-    namedQueueGetRequest.setRegionHistorianResponseRequest(request);
-    NamedQueueGetResponse namedQueueGetResponse =
-      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
-    return namedQueueGetResponse == null ?
-      Collections.emptyList() :
-      namedQueueGetResponse.getRegionHistorianPayloads();
-  }
-
-  @Test
-  public void testRegionHistorianWithHighRecords() throws Exception {
-    Configuration conf = applyRegionHistorianConf(14);
-    Constructor<NamedQueueRecorder> constructor =
-      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
-    constructor.setAccessible(true);
-    namedQueueRecorder = constructor.newInstance(conf);
-    AdminProtos.RegionHistorianResponseRequest request =
-      AdminProtos.RegionHistorianResponseRequest.newBuilder().setLimit(14*11).build();
-
-    namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.REGION_HISTORIAN);
-    Assert.assertEquals(getRegionHistorianPayloads(request).size(), 0);
-    LOG.debug("Initially ringbuffer of region historian is empty");
-
-    int i = 0;
-
-    //add records
-    for (; i < 14*11; i++) {
-      RegionHistorianPayload regionHistorianPayload =
-        getRegionHistorianPayload("host_" + (i + 1), "region_" + (i + 1), "table_" + (i + 1),
-          "event_" + (i + 1), System.currentTimeMillis(), i + 1, i + 1);
-      namedQueueRecorder.addRecord(regionHistorianPayload);
-    }
-
-    //confirm strict order of region historian payloads
-    Assert.assertNotEquals(-1,
-      HBASE_TESTING_UTILITY.waitFor(3000, () -> getRegionHistorianPayloads(request).size() == 14));
-    List<RegionHist.RegionHistorianPayload> regionHistorianPayloads =
-      getRegionHistorianPayloads(request);
-    Assert.assertTrue(confirmRegionHistPayloadParam(0, 154, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(1, 153, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(2, 152, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(3, 151, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(4, 150, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(5, 149, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(6, 148, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(7, 147, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(8, 146, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(9, 145, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(10, 144, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(11, 143, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(12, 142, regionHistorianPayloads));
-    Assert.assertTrue(confirmRegionHistPayloadParam(13, 141, regionHistorianPayloads));
-
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
-      boolean isRingBufferCleaned =
-        namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.REGION_HISTORIAN);
-
-      LOG.debug("cleared the ring buffer of Region Historian records");
-
-      List<RegionHist.RegionHistorianPayload> regionHistorianPayloadList =
-        getRegionHistorianPayloads(request);
-      return regionHistorianPayloadList.size() == 0 && isRingBufferCleaned;
-    }));
-
-  }
-
-  @Test
-  public void tesRegionHistorianWithDefaultDisableConfig() throws Exception {
-    Configuration conf = HBASE_TESTING_UTILITY.getConfiguration();
-    conf.unset(HConstants.REGION_HISTORIAN_BUFFER_ENABLED_KEY);
-
-    Constructor<NamedQueueRecorder> constructor =
-      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
-    constructor.setAccessible(true);
-    namedQueueRecorder = constructor.newInstance(conf);
-    AdminProtos.RegionHistorianResponseRequest request =
-      AdminProtos.RegionHistorianResponseRequest.newBuilder().build();
-
-    namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.REGION_HISTORIAN);
-    Assert.assertEquals(getRegionHistorianPayloads(request).size(), 0);
-    LOG.debug("Initially ringbuffer of region historian is empty");
-
-    for (int i = 0; i < 200; i++) {
-      RegionHistorianPayload regionHistorianPayload =
-        getRegionHistorianPayload("host_" + (i + 1), "region_" + (i + 1), "table_" + (i + 1),
-          "event_" + (i + 1), System.currentTimeMillis(), i + 1, i + 1);
-      namedQueueRecorder.addRecord(regionHistorianPayload);
-    }
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
-      List<RegionHist.RegionHistorianPayload> regionHistorianPayloads =
-        getRegionHistorianPayloads(request);
-      return regionHistorianPayloads.size() == 0;
-    }));
-  }
-
-  @Test
-  public void tesRegionHistorianWithDisableConfig() throws Exception {
-    Configuration conf = HBASE_TESTING_UTILITY.getConfiguration();
-    conf.setBoolean(HConstants.REGION_HISTORIAN_BUFFER_ENABLED_KEY, false);
-
-    Constructor<NamedQueueRecorder> constructor =
-      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
-    constructor.setAccessible(true);
-    namedQueueRecorder = constructor.newInstance(conf);
-    AdminProtos.RegionHistorianResponseRequest request =
-      AdminProtos.RegionHistorianResponseRequest.newBuilder().build();
-
-    namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.REGION_HISTORIAN);
-    Assert.assertEquals(getRegionHistorianPayloads(request).size(), 0);
-    LOG.debug("Initially ringbuffer of region historian is empty");
-
-    for (int i = 0; i < 200; i++) {
-      RegionHistorianPayload regionHistorianPayload =
-        getRegionHistorianPayload("host_" + (i + 1), "region_" + (i + 1), "table_" + (i + 1),
-          "event_" + (i + 1), System.currentTimeMillis(), i + 1, i + 1);
-      namedQueueRecorder.addRecord(regionHistorianPayload);
-    }
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
-      List<RegionHist.RegionHistorianPayload> regionHistorianPayloads =
-        getRegionHistorianPayloads(request);
-      return regionHistorianPayloads.size() == 0;
-    }));
-  }
-
-  @Test
-  public void testRegionHistorianFilters() throws Exception {
-    Configuration conf = applyRegionHistorianConf(45);
-    Constructor<NamedQueueRecorder> constructor = NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
-    constructor.setAccessible(true);
-    namedQueueRecorder = constructor.newInstance(conf);
-    AdminProtos.RegionHistorianResponseRequest request = AdminProtos.RegionHistorianResponseRequest.newBuilder()
-      .setLimit(15).build();
-
-    namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.REGION_HISTORIAN);
-    Assert.assertEquals(getRegionHistorianPayloads(request).size(), 0);
-    LOG.debug("Initially ringbuffer of region historian is empty");
-
-    for (int i = 0; i < 100; i++) {
-      RegionHistorianPayload regionHistorianPayload =
-        getRegionHistorianPayload("host_" + (i + 1), "region_" + (i + 1), "table_" + (i + 1),
-          "event_" + (i + 1), System.currentTimeMillis(), i + 1, i + 1);
-      namedQueueRecorder.addRecord(regionHistorianPayload);
-    }
-    LOG.debug("Added 100 records, ringbuffer should return only 1 record with matching filter");
-
-    AdminProtos.RegionHistorianResponseRequest requestRegionName = AdminProtos.RegionHistorianResponseRequest.newBuilder()
-      .setLimit(15).setRegionName("region_67").build();
-    Assert.assertNotEquals(-1,
-      HBASE_TESTING_UTILITY.waitFor(3000, () -> getRegionHistorianPayloads(requestRegionName).size() ==1));
-
-    AdminProtos.RegionHistorianResponseRequest requestTableName = AdminProtos.RegionHistorianResponseRequest
-      .newBuilder().setLimit(15).setTableName("table_88").build();
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getRegionHistorianPayloads(requestTableName).size() == 1));
-
-    AdminProtos.RegionHistorianResponseRequest requestPid =
-      AdminProtos.RegionHistorianResponseRequest.newBuilder().setLimit(15).setPid(83).build();
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getRegionHistorianPayloads(requestPid).size() == 1));
-
-    AdminProtos.RegionHistorianResponseRequest requestPpid =
-      AdminProtos.RegionHistorianResponseRequest.newBuilder().setLimit(15).setPid(83).build();
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
-      () -> getRegionHistorianPayloads(requestPpid).size() == 1));
-
-    Assert.assertNotEquals(-1,
-      HBASE_TESTING_UTILITY.waitFor(3000, () -> getRegionHistorianPayloads(request).size() ==15));
-  }
-
-  @Test
-  public void testRegionHistorianMixedFilters() throws Exception {
-    Configuration conf = applyRegionHistorianConf(45);
-    Constructor<NamedQueueRecorder> constructor =
-      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
-    constructor.setAccessible(true);
-    namedQueueRecorder = constructor.newInstance(conf);
-    AdminProtos.RegionHistorianResponseRequest request =
-      AdminProtos.RegionHistorianResponseRequest.newBuilder().setLimit(15)
-        .setRegionName("region_91").setPid(86).build();
-
-    namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.REGION_HISTORIAN);
-    Assert.assertEquals(getRegionHistorianPayloads(request).size(), 0);
-    LOG.debug("Initially ringbuffer of region historian is empty");
-
-    for (int i = 0; i < 100; i++) {
-      RegionHistorianPayload regionHistorianPayload =
-        getRegionHistorianPayload("host_" + (i + 1), "region_" + (i + 1), "table_" + (i + 1),
-          "event_" + (i + 1), System.currentTimeMillis(), i + 1, i + 1);
-      namedQueueRecorder.addRecord(regionHistorianPayload);
-    }
-
-    Assert.assertNotEquals(-1,
-      HBASE_TESTING_UTILITY.waitFor(3000, () -> getRegionHistorianPayloads(request).size() == 2));
-
-    AdminProtos.RegionHistorianResponseRequest request2 = AdminProtos.RegionHistorianResponseRequest.newBuilder()
-      .setLimit(15).setLimit(15).setRegionName("region_1").setPid(2).build();
-    Assert.assertEquals(0, getRegionHistorianPayloads(request2).size());
-
-    AdminProtos.RegionHistorianResponseRequest request3 = AdminProtos.RegionHistorianResponseRequest.newBuilder()
-      .setLimit(15).setLimit(15).setRegionName("region_87").setPpid(83)
-      .setFilterByOperator(AdminProtos.RegionHistorianResponseRequest.FilterByOperator.AND).build();
-    Assert.assertEquals(0, getRegionHistorianPayloads(request3).size());
-
-    AdminProtos.RegionHistorianResponseRequest request4 = AdminProtos.RegionHistorianResponseRequest.newBuilder()
-      .setLimit(15).setLimit(15).setRegionName("region_88").setTableName("table_88")
-      .setFilterByOperator(AdminProtos.RegionHistorianResponseRequest.FilterByOperator.AND).build();
-    Assert.assertEquals(1, getRegionHistorianPayloads(request4).size());
-
-    AdminProtos.RegionHistorianResponseRequest request5 = AdminProtos.RegionHistorianResponseRequest.newBuilder()
-      .setLimit(15).setLimit(15).setRegionName("region_91").setPid(86)
-      .setFilterByOperator(AdminProtos.RegionHistorianResponseRequest.FilterByOperator.OR).build();
-    Assert.assertEquals(2, getRegionHistorianPayloads(request5).size());
-
-    AdminProtos.RegionHistorianResponseRequest request6 = AdminProtos.RegionHistorianResponseRequest.newBuilder()
-      .setLimit(15).setTableName("table_89").setPid(89)
-      .setFilterByOperator(AdminProtos.RegionHistorianResponseRequest.FilterByOperator.AND).build();
-    Assert.assertEquals(1, getRegionHistorianPayloads(request6).size());
-
-    AdminProtos.RegionHistorianResponseRequest request7 = AdminProtos.RegionHistorianResponseRequest.newBuilder()
-      .setLimit(15).setLimit(15).setTableName("table_85").setPpid(87)
-      .setFilterByOperator(AdminProtos.RegionHistorianResponseRequest.FilterByOperator.OR).build();
-    Assert.assertEquals(2, getRegionHistorianPayloads(request7).size());
-
-    AdminProtos.RegionHistorianResponseRequest request8 = AdminProtos.RegionHistorianResponseRequest.newBuilder()
-      .setLimit(15).build();
-    Assert.assertNotEquals(-1,
-      HBASE_TESTING_UTILITY.waitFor(3000, () -> getRegionHistorianPayloads(request8).size() == 15));
-  }
-
-  static RegionHistorianPayload getRegionHistorianPayload (String hostName, String regionName, String tableName, String eventType, long eventTimestamp, long pid, long ppid
-  ) {
-    return new RegionHistorianPayload(hostName, regionName, tableName, eventType, eventTimestamp, pid, ppid);
   }
 
   private static RpcCall getRpcCall(String userName) {

@@ -86,8 +86,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompac
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionHistorianResponseRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionHistorianResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
@@ -679,17 +677,6 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   @Override
   public ClearSlowLogResponses clearSlowLogsResponses(RpcController controller,
     ClearSlowLogResponseRequest request) throws ServiceException {
-    return null;
-  }
-
-  @Override
-  public AdminProtos.RegionHistorianResponses getRegionHistorianResponses(RpcController controller,
-    AdminProtos.RegionHistorianResponseRequest request) throws ServiceException {
-    return null;
-  }
-
-  @Override public ClearRegionHistorianResponses clearRegionHistoriansResponses(
-    RpcController controller, ClearRegionHistorianResponseRequest request) throws ServiceException{
     return null;
   }
 

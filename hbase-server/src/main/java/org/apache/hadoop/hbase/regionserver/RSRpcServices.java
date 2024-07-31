@@ -125,11 +125,6 @@ import org.apache.hadoop.hbase.replication.regionserver.RejectReplicationRequest
 import org.apache.hadoop.hbase.replication.regionserver.RejectRequestsFromClientStateChecker;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.access.Permission;
-<<<<<<< HEAD
-=======
-import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
->>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.DNS.ServerType;
@@ -3959,139 +3954,11 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   }
 
   @Override
-<<<<<<< HEAD
   public GetAllBootstrapNodesResponse getAllBootstrapNodes(RpcController controller,
     GetAllBootstrapNodesRequest request) throws ServiceException {
     GetAllBootstrapNodesResponse.Builder builder = GetAllBootstrapNodesResponse.newBuilder();
     server.getBootstrapNodes()
       .forEachRemaining(server -> builder.addNode(ProtobufUtil.toServerName(server)));
-=======
-  @QosPriority(priority = HConstants.ADMIN_QOS)
-  public SlowLogResponses getSlowLogResponses(final RpcController controller,
-    final SlowLogResponseRequest request) {
-    final NamedQueueRecorder namedQueueRecorder = this.regionServer.getNamedQueueRecorder();
-    final List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request, namedQueueRecorder);
-    SlowLogResponses slowLogResponses =
-      SlowLogResponses.newBuilder().addAllSlowLogPayloads(slowLogPayloads).build();
-    return slowLogResponses;
-  }
-
-  private List<SlowLogPayload> getSlowLogPayloads(SlowLogResponseRequest request,
-    NamedQueueRecorder namedQueueRecorder) {
-    if (namedQueueRecorder == null) {
-      return Collections.emptyList();
-    }
-    List<SlowLogPayload> slowLogPayloads;
-    NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
-    namedQueueGetRequest.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
-    namedQueueGetRequest.setSlowLogResponseRequest(request);
-    NamedQueueGetResponse namedQueueGetResponse =
-      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
-    slowLogPayloads = namedQueueGetResponse != null
-      ? namedQueueGetResponse.getSlowLogPayloads()
-      : Collections.emptyList();
-    return slowLogPayloads;
-  }
-
-  @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
-  public SlowLogResponses getLargeLogResponses(final RpcController controller,
-    final SlowLogResponseRequest request) {
-    final NamedQueueRecorder namedQueueRecorder = this.regionServer.getNamedQueueRecorder();
-    final List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request, namedQueueRecorder);
-    SlowLogResponses slowLogResponses =
-      SlowLogResponses.newBuilder().addAllSlowLogPayloads(slowLogPayloads).build();
-    return slowLogResponses;
-  }
-
-  @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
-  public ClearSlowLogResponses clearSlowLogsResponses(final RpcController controller,
-    final ClearSlowLogResponseRequest request) throws ServiceException {
-    rpcPreCheck("clearSlowLogsResponses");
-    final NamedQueueRecorder namedQueueRecorder = this.regionServer.getNamedQueueRecorder();
-    boolean slowLogsCleaned = Optional.ofNullable(namedQueueRecorder)
-      .map(
-        queueRecorder -> queueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG))
-      .orElse(false);
-    ClearSlowLogResponses clearSlowLogResponses =
-      ClearSlowLogResponses.newBuilder().setIsCleaned(slowLogsCleaned).build();
-    return clearSlowLogResponses;
-  }
-
-  @Override
-  public AdminProtos.RegionHistorianResponses getRegionHistorianResponses(RpcController controller,
-    AdminProtos.RegionHistorianResponseRequest request) throws ServiceException {
-    return null;
-  }
-
-  @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
-  public AdminProtos.ClearRegionHistorianResponses clearRegionHistoriansResponses(
-    final RpcController controller, final AdminProtos.ClearRegionHistorianResponseRequest request)
-    throws ServiceException {
-    final NamedQueueRecorder namedQueueRecorder = this.regionServer.getNamedQueueRecorder();
-    boolean regionHistorianCleaned = Optional.ofNullable(namedQueueRecorder)
-      .map(
-        queueRecorder -> queueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.REGION_HISTORIAN))
-      .orElse(false);
-    AdminProtos.ClearRegionHistorianResponses clearRegionHistorianResponses =
-      AdminProtos.ClearRegionHistorianResponses.newBuilder().setIsCleaned(regionHistorianCleaned).build();
-    return clearRegionHistorianResponses;
-  }
-
-  @Override
-  public HBaseProtos.LogEntry getLogEntries(RpcController controller,
-    HBaseProtos.LogRequest request) throws ServiceException {
-    try {
-      final String logClassName = request.getLogClassName();
-      Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
-      Method method = logClass.getMethod("parseFrom", ByteString.class);
-      if (logClassName.contains("SlowLogResponseRequest")) {
-        SlowLogResponseRequest slowLogResponseRequest =
-          (SlowLogResponseRequest) method.invoke(null, request.getLogMessage());
-        final NamedQueueRecorder namedQueueRecorder = this.regionServer.getNamedQueueRecorder();
-        final List<SlowLogPayload> slowLogPayloads =
-          getSlowLogPayloads(slowLogResponseRequest, namedQueueRecorder);
-        SlowLogResponses slowLogResponses =
-          SlowLogResponses.newBuilder().addAllSlowLogPayloads(slowLogPayloads).build();
-        return HBaseProtos.LogEntry.newBuilder()
-          .setLogClassName(slowLogResponses.getClass().getName())
-          .setLogMessage(slowLogResponses.toByteString()).build();
-      }
-    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
-      | InvocationTargetException e) {
-      LOG.error("Error while retrieving log entries.", e);
-      throw new ServiceException(e);
-    }
-    throw new ServiceException("Invalid request params");
-  }
-
-  public RpcScheduler getRpcScheduler() {
-    return rpcServer.getScheduler();
-  }
-
-  protected AccessChecker getAccessChecker() {
-    return accessChecker;
-  }
-
-  protected ZKPermissionWatcher getZkPermissionWatcher() {
-    return zkPermissionWatcher;
-  }
-
-  @Override
-  public GetClusterIdResponse getClusterId(RpcController controller, GetClusterIdRequest request)
-    throws ServiceException {
-    return GetClusterIdResponse.newBuilder().setClusterId(regionServer.getClusterId()).build();
-  }
-
-  @Override
-  public GetActiveMasterResponse getActiveMaster(RpcController controller,
-    GetActiveMasterRequest request) throws ServiceException {
-    GetActiveMasterResponse.Builder builder = GetActiveMasterResponse.newBuilder();
-    regionServer.getActiveMaster()
-      .ifPresent(name -> builder.setServerName(ProtobufUtil.toServerName(name)));
->>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
     return builder.build();
   }
 

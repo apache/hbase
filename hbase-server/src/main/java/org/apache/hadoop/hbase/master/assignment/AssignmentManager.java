@@ -2226,7 +2226,7 @@ public class AssignmentManager {
   // ============================================================================================
 
   public void markRegionAsSplit(final RegionInfo parent, final ServerName serverName,
-    final RegionInfo daughterA, final RegionInfo daughterB, long procId) throws IOException {
+    final RegionInfo daughterA, final RegionInfo daughterB) throws IOException {
     // Update hbase:meta. Parent will be marked offline and split up in hbase:meta.
     // The parent stays in regionStates until cleared when removed by CatalogJanitor.
     // Update its state in regionStates to it shows as offline and split when read
@@ -2248,11 +2248,7 @@ public class AssignmentManager {
     // the RegionState on whether it is split, and also the region info. If one of them matches then
     // it is a split parent. And usually only one of them can match, as after restart, the region
     // state will be changed from SPLIT to CLOSED.
-<<<<<<< HEAD
     regionStateStore.splitRegion(parent, daughterA, daughterB, serverName, td);
-=======
-    regionStateStore.splitRegion(parent, daughterA, daughterB, serverName, procId);
->>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
     if (shouldAssignFavoredNodes(parent)) {
       List<ServerName> onlineServers = this.master.getServerManager().getOnlineServersList();
       getFavoredNodePromoter().generateFavoredNodesForDaughter(onlineServers, parent, daughterA,
@@ -2270,18 +2266,14 @@ public class AssignmentManager {
    * the archiver chore runs, are the References removed).
    */
   public void markRegionAsMerged(final RegionInfo child, final ServerName serverName,
-    RegionInfo[] mergeParents, long procId) throws IOException {
+    RegionInfo[] mergeParents) throws IOException {
     final RegionStateNode node = regionStates.getOrCreateRegionStateNode(child);
     node.setState(State.MERGED);
     for (RegionInfo ri : mergeParents) {
       regionStates.deleteRegion(ri);
     }
-<<<<<<< HEAD
     TableDescriptor td = master.getTableDescriptors().get(child.getTable());
     regionStateStore.mergeRegions(child, mergeParents, serverName, td);
-=======
-    regionStateStore.mergeRegions(child, mergeParents, serverName, procId);
->>>>>>> 6fbe282af4 (All region historian changes of 2.5.5-13 branch combined)
     if (shouldAssignFavoredNodes(child)) {
       getFavoredNodePromoter().generateFavoredNodesForMergedRegion(child, mergeParents);
     }

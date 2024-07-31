@@ -222,7 +222,7 @@ public class MergeTableRegionsProcedure
           setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_UPDATE_META);
           break;
         case MERGE_TABLE_REGIONS_UPDATE_META:
-          updateMetaForMergedRegions(env, getProcId());
+          updateMetaForMergedRegions(env);
           setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION);
           break;
         case MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION:
@@ -710,9 +710,9 @@ public class MergeTableRegionsProcedure
   /**
    * Add merged region to META and delete original regions.
    */
-  private void updateMetaForMergedRegions(final MasterProcedureEnv env, long procId) throws IOException {
+  private void updateMetaForMergedRegions(final MasterProcedureEnv env) throws IOException {
     env.getAssignmentManager().markRegionAsMerged(mergedRegion, getServerName(env),
-      this.regionsToMerge, procId);
+      this.regionsToMerge);
   }
 
   /**

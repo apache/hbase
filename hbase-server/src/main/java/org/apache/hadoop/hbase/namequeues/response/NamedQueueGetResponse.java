@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.namequeues.response;
 import java.util.List;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
-import org.apache.hadoop.hbase.namequeues.RegionHistorianPayload;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionHist;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
@@ -36,7 +34,6 @@ public class NamedQueueGetResponse {
   private List<TooSlowLog.SlowLogPayload> slowLogPayloads;
   private List<RecentLogs.BalancerDecision> balancerDecisions;
   private List<RecentLogs.BalancerRejection> balancerRejections;
-  private List<RegionHist.RegionHistorianPayload> regionHistorianPayloads;
   private NamedQueuePayload.NamedQueueEvent namedQueueEvent;
 
   public List<TooSlowLog.SlowLogPayload> getSlowLogPayloads() {
@@ -61,14 +58,6 @@ public class NamedQueueGetResponse {
 
   public void setBalancerRejections(List<RecentLogs.BalancerRejection> balancerRejections) {
     this.balancerRejections = balancerRejections;
-  }
-
-  public List<RegionHist.RegionHistorianPayload> getRegionHistorianPayloads() {
-    return regionHistorianPayloads;
-  }
-
-  public void setRegionHistorianPayloads(List<RegionHist.RegionHistorianPayload> regionHistorianPayloads) {
-    this.regionHistorianPayloads = regionHistorianPayloads;
   }
 
   public NamedQueuePayload.NamedQueueEvent getNamedQueueEvent() {

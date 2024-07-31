@@ -170,7 +170,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
    * <p/>
    * In this method we will test both region info and state, and will return true if either of the
    * test returns true. Please see the comments in
-   * {@link AssignmentManager#markRegionAsSplit(RegionInfo, ServerName, RegionInfo, RegionInfo, long)} for
+   * {@link AssignmentManager#markRegionAsSplit(RegionInfo, ServerName, RegionInfo, RegionInfo)} for
    * more details on why we need to test two conditions.
    */
   public boolean isSplit() {

@@ -451,7 +451,6 @@ Shell.load_command_group(
     normalizer_enabled
     is_in_maintenance_mode
     clear_slowlog_responses
-    clear_regionHistorian_responses
     close_region
     compact
     compaction_switch
@@ -460,7 +459,6 @@ Shell.load_command_group(
     get_balancer_decisions
     get_balancer_rejections
     get_slowlog_responses
-    get_regionHistorian_responses
     get_largelog_responses
     major_compact
     move
