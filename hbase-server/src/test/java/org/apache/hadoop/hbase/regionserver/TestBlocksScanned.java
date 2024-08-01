@@ -115,7 +115,7 @@ public class TestBlocksScanned {
 
     InternalScanner s = r.getScanner(scan);
     List<ExtendedCell> results = new ArrayList<>();
-    while (s.next((List) results))
+    while (s.next(results))
       ;
     s.close();
 

@@ -15,35 +15,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.coprocessor.example;
+package org.apache.hadoop.hbase.wal;
 
-import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A simple delegation for doing filtering on {@link InternalScanner}.
+ * A helper class so we can call some package private methods of {@link WALEdit} from other
+ * packages. Since {@link WALEdit} has been exposed to coprocessor and replication implementations,
+ * we do not want to make all the methods in it public.
  */
 @InterfaceAudience.Private
-public class DelegatingInternalScanner implements InternalScanner {
+public final class WALEditInternalHelper {
 
-  protected final InternalScanner scanner;
-
-  public DelegatingInternalScanner(InternalScanner scanner) {
-    this.scanner = scanner;
+  private WALEditInternalHelper() {
   }
 
-  @Override
-  public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
-    throws IOException {
-    return scanner.next(result, scannerContext);
+  public static WALEdit addExtendedCell(WALEdit edit, ExtendedCell cell) {
+    return edit.add(cell);
   }
 
-  @Override
-  public void close() throws IOException {
-    scanner.close();
+  public static void addExtendedCell(WALEdit edit, List<ExtendedCell> cells) {
+    edit.add(cells);
+  }
+
+  public static void addMap(WALEdit edit, Map<byte[], List<ExtendedCell>> familyMap) {
+    edit.addMap(familyMap);
+  }
+
+  public static void setExtendedCells(WALEdit edit, ArrayList<ExtendedCell> cells) {
+    edit.setExtendedCells(cells);
+  }
+
+  public static List<ExtendedCell> getExtendedCells(WALEdit edit) {
+    return edit.getExtendedCells();
   }
 }

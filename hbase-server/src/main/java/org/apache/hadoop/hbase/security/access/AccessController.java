@@ -563,7 +563,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
                 (col.getQualifierLength() == 0 && request == OpType.DELETE)
                   || CellUtil.matchingQualifier(cell, col)
               ) {
-                byte type = col.getTypeByte();
+                byte type = PrivateCellUtil.getTypeByte(col);
                 if (considerCellTs) {
                   curColCheckTs = col.getTimestamp();
                 }

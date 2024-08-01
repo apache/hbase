@@ -97,6 +97,9 @@ public class FullTableBackupClient extends TableBackupClient {
         argsList.add("-mappers");
         argsList.add(String.valueOf(backupInfo.getWorkers()));
       }
+      if (backupInfo.getNoChecksumVerify()) {
+        argsList.add("-no-checksum-verify");
+      }
 
       String[] args = argsList.toArray(new String[0]);
 

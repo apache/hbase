@@ -673,7 +673,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     this.offset = 0;
   }
 
-  public KeyValue(Cell c) {
+  public KeyValue(ExtendedCell c) {
     this(c.getRowArray(), c.getRowOffset(), c.getRowLength(), c.getFamilyArray(),
       c.getFamilyOffset(), c.getFamilyLength(), c.getQualifierArray(), c.getQualifierOffset(),
       c.getQualifierLength(), c.getTimestamp(), Type.codeToType(c.getTypeByte()), c.getValueArray(),
@@ -992,7 +992,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return calculateHashForKey(this);
   }
 
-  private int calculateHashForKey(Cell cell) {
+  private int calculateHashForKey(ExtendedCell cell) {
     // pre-calculate the 3 hashes made of byte ranges
     int rowHash = Bytes.hashCode(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
     int familyHash =

@@ -811,3 +811,12 @@ message CloseExcessRegionReplicasProcedureStateData {
   required TableName table_name = 1;
   required uint32 new_replica_count = 2;
 }
+
+enum CloseTableRegionsProcedureState {
+  CLOSE_TABLE_REGIONS_SCHEDULE = 1;
+  CLOSE_TABLE_REGIONS_CONFIRM = 2;
+}
+
+message CloseTableRegionsProcedureStateData {
+  required TableName table_name = 1;
+}

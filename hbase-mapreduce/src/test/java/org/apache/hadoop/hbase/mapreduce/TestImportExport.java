@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -60,7 +61,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
@@ -366,7 +366,7 @@ public class TestImportExport {
       s.setRaw(true);
       ResultScanner scanner = t.getScanner(s);
       Result r = scanner.next();
-      ExtendedCell[] res = PackagePrivateFieldAccessor.getExtendedRawCells(r);
+      ExtendedCell[] res = ClientInternalHelper.getExtendedRawCells(r);
       assertTrue(PrivateCellUtil.isDeleteFamily(res[0]));
       assertEquals(now + 4, res[1].getTimestamp());
       assertEquals(now + 3, res[2].getTimestamp());
@@ -830,7 +830,7 @@ public class TestImportExport {
       // Need to use RegionScanner instead of table#getScanner since the latter will
       // not return tags since it will go through rpc layer and remove tags intentionally.
       RegionScanner scanner = region.getScanner(scan);
-      scanner.next((List) values);
+      scanner.next(values);
       if (!values.isEmpty()) {
         break;
       }
@@ -934,8 +934,7 @@ public class TestImportExport {
       int count = 0;
       Result result;
       while ((result = scanner.next()) != null) {
-        List<ExtendedCell> cells =
-          Arrays.asList(PackagePrivateFieldAccessor.getExtendedRawCells(result));
+        List<ExtendedCell> cells = Arrays.asList(ClientInternalHelper.getExtendedRawCells(result));
         assertEquals(2, cells.size());
         ExtendedCell cell = cells.get(0);
         assertTrue(CellUtil.isDelete(cell));
