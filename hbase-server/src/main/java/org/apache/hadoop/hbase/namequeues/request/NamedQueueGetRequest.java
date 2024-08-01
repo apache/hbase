@@ -37,6 +37,8 @@ public class NamedQueueGetRequest {
   private NamedQueuePayload.NamedQueueEvent namedQueueEvent;
   private MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest;
   private MasterProtos.BalancerRejectionsRequest balancerRejectionsRequest;
+  private AdminProtos.RegionHistorianResponseRequest regionHistorianResponseRequest;
+
 
   public AdminProtos.SlowLogResponseRequest getSlowLogResponseRequest() {
     return slowLogResponseRequest;
@@ -44,6 +46,14 @@ public class NamedQueueGetRequest {
 
   public void setSlowLogResponseRequest(AdminProtos.SlowLogResponseRequest slowLogResponseRequest) {
     this.slowLogResponseRequest = slowLogResponseRequest;
+  }
+
+  public void setRegionHistorianResponseRequest(AdminProtos.RegionHistorianResponseRequest regionHistorianResponseRequest) {
+    this.regionHistorianResponseRequest = regionHistorianResponseRequest;
+  }
+
+  public AdminProtos.RegionHistorianResponseRequest getRegionHistorianResponseRequest() {
+    return regionHistorianResponseRequest;
   }
 
   public MasterProtos.BalancerDecisionsRequest getBalancerDecisionsRequest() {
