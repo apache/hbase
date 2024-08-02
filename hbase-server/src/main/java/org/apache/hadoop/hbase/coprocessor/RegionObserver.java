@@ -1567,8 +1567,8 @@ public interface RegionObserver {
    * @param ctx        the environment provided by the region server
    * @param delTracker the deleteTracker that is created by the QueryMatcher
    * @return the Delete Tracker
-   * @deprecated Since 2.0, will be removed in 4.0. Visibility label feature still use this method,
-   *             so it can not be removed in 3.0
+   * @deprecated Since 2.0.0, will be removed in 4.0.0. Visibility label feature still use this
+   *             method, so it can not be removed in 3.0.0
    */
   @Deprecated
   default DeleteTracker postInstantiateDeleteTracker(
