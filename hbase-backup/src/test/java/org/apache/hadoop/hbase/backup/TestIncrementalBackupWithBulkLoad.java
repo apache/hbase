@@ -127,7 +127,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
 
     backupIdFull = client.backupTables(request);
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
-      Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>,
+      Pair<Map<TableName, Map<String, Map<String, List<String>>>>,
         List<byte[]>> pair = table.readBulkloadRows(tables);
       assertTrue("map still has " + pair.getSecond().size() + " entries",
         pair.getSecond().isEmpty());

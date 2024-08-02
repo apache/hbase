@@ -105,17 +105,14 @@ public class IncrementalTableBackupClient extends TableBackupClient {
    * Reads bulk load records from backup table, iterates through the records and forms the paths for
    * bulk loaded hfiles. Copies the bulk loaded hfiles to backup destination
    * @param sTableList list of tables to be backed up
-   * @return map of table to List of files
    */
-  @SuppressWarnings("unchecked")
-  protected Map<byte[], List<Path>>[] handleBulkLoad(List<TableName> sTableList)
+  protected void handleBulkLoad(List<TableName> tablesToBackup)
     throws IOException {
-    Map<byte[], List<Path>>[] mapForSrc = new Map[sTableList.size()];
     List<String> activeFiles = new ArrayList<>();
     List<String> archiveFiles = new ArrayList<>();
-    Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>> pair =
-      backupManager.readBulkloadRows(sTableList);
-    Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>> map = pair.getFirst();
+    Pair<Map<TableName, Map<String, Map<String, List<String>>>>, List<byte[]>> pair =
+      backupManager.readBulkloadRows(tablesToBackup);
+    Map<TableName, Map<String, Map<String, List<String>>>> map = pair.getFirst();
     FileSystem tgtFs;
     try {
       tgtFs = FileSystem.get(new URI(backupInfo.getBackupRootDir()), conf);
@@ -125,45 +122,32 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     Path rootdir = CommonFSUtils.getRootDir(conf);
     Path tgtRoot = new Path(new Path(backupInfo.getBackupRootDir()), backupId);
 
-    for (Map.Entry<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>> tblEntry : map
-      .entrySet()) {
+    for (Map.Entry<TableName, Map<String, Map<String, List<String>>>> tblEntry : map.entrySet()) {
       TableName srcTable = tblEntry.getKey();
 
-      int srcIdx = getIndex(srcTable, sTableList);
-      if (srcIdx < 0) {
-        LOG.warn("Couldn't find " + srcTable + " in source table List");
+      if (!tablesToBackup.contains(srcTable)) {
+        LOG.debug("Skipping {} since it is not in tablesToBackup", srcTable);
         continue;
-      }
-      if (mapForSrc[srcIdx] == null) {
-        mapForSrc[srcIdx] = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       }
       Path tblDir = CommonFSUtils.getTableDir(rootdir, srcTable);
       Path tgtTable = new Path(new Path(tgtRoot, srcTable.getNamespaceAsString()),
         srcTable.getQualifierAsString());
-      for (Map.Entry<String, Map<String, List<Pair<String, Boolean>>>> regionEntry : tblEntry
+      for (Map.Entry<String, Map<String, List<String>>> regionEntry : tblEntry
         .getValue().entrySet()) {
         String regionName = regionEntry.getKey();
         Path regionDir = new Path(tblDir, regionName);
         // map from family to List of hfiles
-        for (Map.Entry<String, List<Pair<String, Boolean>>> famEntry : regionEntry.getValue()
+        for (Map.Entry<String, List<String>> famEntry : regionEntry.getValue()
           .entrySet()) {
           String fam = famEntry.getKey();
           Path famDir = new Path(regionDir, fam);
-          List<Path> files;
-          if (!mapForSrc[srcIdx].containsKey(Bytes.toBytes(fam))) {
-            files = new ArrayList<>();
-            mapForSrc[srcIdx].put(Bytes.toBytes(fam), files);
-          } else {
-            files = mapForSrc[srcIdx].get(Bytes.toBytes(fam));
-          }
           Path archiveDir = HFileArchiveUtil.getStoreArchivePath(conf, srcTable, regionName, fam);
           String tblName = srcTable.getQualifierAsString();
           Path tgtFam = new Path(new Path(tgtTable, regionName), fam);
           if (!tgtFs.mkdirs(tgtFam)) {
             throw new IOException("couldn't create " + tgtFam);
           }
-          for (Pair<String, Boolean> fileWithState : famEntry.getValue()) {
-            String file = fileWithState.getFirst();
+          for (String file : famEntry.getValue()) {
             int idx = file.lastIndexOf("/");
             String filename = file;
             if (idx > 0) {
@@ -175,8 +159,6 @@ public class IncrementalTableBackupClient extends TableBackupClient {
             if (fs.exists(p)) {
               if (LOG.isTraceEnabled()) {
                 LOG.trace("found bulk hfile " + file + " in " + famDir + " for " + tblName);
-              }
-              if (LOG.isTraceEnabled()) {
                 LOG.trace("copying " + p + " to " + tgt);
               }
               activeFiles.add(p.toString());
@@ -184,7 +166,6 @@ public class IncrementalTableBackupClient extends TableBackupClient {
               LOG.debug("copying archive " + archive + " to " + tgt);
               archiveFiles.add(archive.toString());
             }
-            files.add(tgt);
           }
         }
       }
@@ -192,7 +173,6 @@ public class IncrementalTableBackupClient extends TableBackupClient {
 
     copyBulkLoadedFiles(activeFiles, archiveFiles);
     backupManager.deleteBulkLoadedRows(pair.getSecond());
-    return mapForSrc;
   }
 
   private void copyBulkLoadedFiles(List<String> activeFiles, List<String> archiveFiles)
