@@ -154,7 +154,7 @@ module Hbase
     define_test "compaction_switch should work" do
       output = capture_stdout { command(:compaction_switch, false) }
       assert(output.include?('PREV_STATE'))
-      output = capture_stdout { command(:compaction_switch, true) }
+      output = capture_stdout { command(:compaction_switch, 'true') }
       assert(output.include?('PREV_STATE'))
     end
 
