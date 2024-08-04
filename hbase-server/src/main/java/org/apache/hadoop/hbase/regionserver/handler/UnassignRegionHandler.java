@@ -63,6 +63,7 @@ public class UnassignRegionHandler extends EventHandler {
 
   private boolean evictCache;
 
+  //active time of the master that sent this unassign request
   private final long initiatingMasterActiveTime;
 
   public UnassignRegionHandler(HRegionServer server, String encodedName, long closeProcId,
