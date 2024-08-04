@@ -2231,7 +2231,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     HRegion r = context.getRegion();
     long openProcId = context.getOpenProcId();
     long masterSystemTime = context.getMasterSystemTime();
-    long masterStartCode = context.getMasterStartCode();
+    long initiatingMasterActiveTime = context.getInitiatingMasterActiveTime();
     rpcServices.checkOpen();
     LOG.info("Post open deploy tasks for {}, pid={}, masterSystemTime={}",
       r.getRegionInfo().getRegionNameAsString(), openProcId, masterSystemTime);
@@ -2255,7 +2255,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     // Notify master
     if (
       !reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.OPENED,
-        openSeqNum, openProcId, masterSystemTime, r.getRegionInfo(), masterStartCode))
+        openSeqNum, openProcId, masterSystemTime, r.getRegionInfo(), initiatingMasterActiveTime))
     ) {
       throw new IOException(
         "Failed to report opened region to master: " + r.getRegionInfo().getRegionNameAsString());
@@ -2316,6 +2316,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     for (long procId : procIds) {
       transition.addProcId(procId);
     }
+    transition.setInitiatingMasterActiveTime(context.getInitiatingMasterActiveTime());
 
     return builder.build();
   }
@@ -3534,12 +3535,15 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return true;
   }
 
-  void executeProcedure(long procId, long masterStartCode, RSProcedureCallable callable) {
-    executorService.submit(new RSProcedureHandler(this, procId, masterStartCode, callable));
+  void executeProcedure(long procId, long initiatingMasterActiveTime,
+    RSProcedureCallable callable) {
+    executorService
+      .submit(new RSProcedureHandler(this, procId, initiatingMasterActiveTime, callable));
   }
 
-  public void remoteProcedureComplete(long procId, long masterStartCode, Throwable error) {
-    procedureResultReporter.complete(procId, masterStartCode, error);
+  public void remoteProcedureComplete(long procId, long initiatingMasterActiveTime,
+    Throwable error) {
+    procedureResultReporter.complete(procId, initiatingMasterActiveTime, error);
   }
 
   void reportProcedureDone(ReportProcedureDoneRequest request) throws IOException {

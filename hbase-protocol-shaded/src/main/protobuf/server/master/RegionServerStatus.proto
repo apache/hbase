@@ -98,8 +98,8 @@ message RegionStateTransition {
 
   repeated int64 proc_id = 4;
 
-  // Master start code as fencing token
-  optional uint64 master_start_code = 5;
+  // Master active code as fencing token
+  optional int64 initiating_master_active_time = 5;
   enum TransitionCode {
     OPENED = 0;
     FAILED_OPEN = 1;
@@ -158,8 +158,8 @@ message RemoteProcedureResult {
   }
   required Status status = 2;
   optional ForeignExceptionMessage error = 3;
-  // Master start code as fencing token
-  optional uint64 master_start_code = 4;
+  // Master active code as fencing token
+  optional int64 initiating_master_active_time = 4;
 }
 message ReportProcedureDoneRequest {
   repeated RemoteProcedureResult result = 1;

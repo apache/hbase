@@ -34,7 +34,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -1856,8 +1855,15 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     ReportRegionStateTransitionRequest req) throws ServiceException {
     try {
       server.checkServiceStarted();
-      throwOnOldMasterStartCode(req.getTransitionList().stream()
-        .map(RegionServerStatusProtos.RegionStateTransition::getMasterStartCode));
+      for (RegionServerStatusProtos.RegionStateTransition transition : req.getTransitionList()) {
+        long procId =
+          transition.getProcIdCount() > 0 ? transition.getProcId(0) : Procedure.NO_PROC_ID;
+        // -1 is less than any possible MasterActiveCode
+        long initiatingMasterActiveTime = transition.hasInitiatingMasterActiveTime()
+          ? transition.getInitiatingMasterActiveTime()
+          : -1;
+        throwOnOldMasterStartCode(procId, initiatingMasterActiveTime);
+      }
       return server.getAssignmentManager().reportRegionStateTransition(req);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -2557,8 +2563,12 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     // Check Masters is up and ready for duty before progressing. Remote side will keep trying.
     try {
       this.server.checkServiceStarted();
-      throwOnOldMasterStartCode(
-        request.getResultList().stream().map(RemoteProcedureResult::getMasterStartCode));
+      for (RemoteProcedureResult result : request.getResultList()) {
+        // -1 is less than any possible MasterActiveCode
+        long initiatingMasterActiveTime =
+          result.hasInitiatingMasterActiveTime() ? result.getInitiatingMasterActiveTime() : -1;
+        throwOnOldMasterStartCode(result.getProcId(), initiatingMasterActiveTime);
+      }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -2573,13 +2583,13 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     return ReportProcedureDoneResponse.getDefaultInstance();
   }
 
-  private void throwOnOldMasterStartCode(Stream<Long> masterStartCodeStream)
+  private void throwOnOldMasterStartCode(long procId, long initiatingMasterActiveTime)
     throws MasterNotRunningException {
-    long masterStartCodeFromProc = masterStartCodeStream.max(Long::compare).orElse(-1L);
-    // -1 is less than any possible MasterStartCode
-
-    if (masterStartCodeFromProc > server.getStartcode()) {
-      // procedure is initiated by new active master but report received on different
+    if (initiatingMasterActiveTime > server.getMasterActiveTime()) {
+      // procedure is initiated by new active master but report received on master with older active time
+      LOG.warn(
+        "Report for procedure with procId: {} and initiatingMasterActiveTime {} received on non-active master with activeTime {}",
+        procId, initiatingMasterActiveTime, server.getMasterActiveTime());
       throw new MasterNotRunningException("Another master is active");
     }
   }

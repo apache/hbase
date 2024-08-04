@@ -93,14 +93,14 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
     private final HRegion region;
     private final long openProcId;
     private final long masterSystemTime;
-    private final long masterStartCode;
+    private final long initiatingMasterActiveTime;
 
     public PostOpenDeployContext(HRegion region, long openProcId, long masterSystemTime,
-      long masterStartCode) {
+      long initiatingMasterActiveTime) {
       this.region = region;
       this.openProcId = openProcId;
       this.masterSystemTime = masterSystemTime;
-      this.masterStartCode = masterStartCode;
+      this.initiatingMasterActiveTime = initiatingMasterActiveTime;
     }
 
     public HRegion getRegion() {
@@ -115,8 +115,8 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
       return masterSystemTime;
     }
 
-    public long getMasterStartCode() {
-      return masterStartCode;
+    public long getInitiatingMasterActiveTime() {
+      return initiatingMasterActiveTime;
     }
   }
 
@@ -130,26 +130,26 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
     private final TransitionCode code;
     private final long openSeqNum;
     private final long masterSystemTime;
-    private final long masterStartCode;
+    private final long initiatingMasterActiveTime;
     private final long[] procIds;
     private final RegionInfo[] hris;
 
     public RegionStateTransitionContext(TransitionCode code, long openSeqNum, long masterSystemTime,
-      long masterStartCode, RegionInfo... hris) {
+      long initiatingMasterActiveTime, RegionInfo... hris) {
       this.code = code;
       this.openSeqNum = openSeqNum;
       this.masterSystemTime = masterSystemTime;
-      this.masterStartCode = masterStartCode;
+      this.initiatingMasterActiveTime = initiatingMasterActiveTime;
       this.hris = hris;
       this.procIds = new long[hris.length];
     }
 
     public RegionStateTransitionContext(TransitionCode code, long openSeqNum, long procId,
-      long masterSystemTime, RegionInfo hri, long masterStartCode) {
+      long masterSystemTime, RegionInfo hri, long initiatingMasterActiveTime) {
       this.code = code;
       this.openSeqNum = openSeqNum;
       this.masterSystemTime = masterSystemTime;
-      this.masterStartCode = masterStartCode;
+      this.initiatingMasterActiveTime = initiatingMasterActiveTime;
       this.hris = new RegionInfo[] { hri };
       this.procIds = new long[] { procId };
     }
@@ -174,8 +174,8 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
       return procIds;
     }
 
-    public long getMasterStartCode() {
-      return masterStartCode;
+    public long getInitiatingMasterActiveTime() {
+      return initiatingMasterActiveTime;
     }
   }
 

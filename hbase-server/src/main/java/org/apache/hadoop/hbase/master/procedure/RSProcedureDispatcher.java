@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.RpcConnectionConstants;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -417,15 +418,14 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       final List<RegionCloseOperation> operations) {
       for (RegionCloseOperation op : operations) {
         request.addCloseRegion(op.buildCloseRegionRequest(getServerName(),
-          env.getMasterServices().getServerName().getStartCode()));
+          ((HMaster) env.getMasterServices()).getMasterActiveTime()));
       }
     }
 
     @Override
     public void dispatchServerOperations(MasterProcedureEnv env, List<ServerOperation> operations) {
       operations.stream()
-        .map(o -> o
-          .buildRequestWithMasterStartCode(env.getMasterServices().getServerName().getStartCode()))
+        .map(o -> o.buildRequest(((HMaster) env.getMasterServices()).getMasterActiveTime()))
         .forEachOrdered(request::addProc);
     }
 
@@ -446,7 +446,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     final ServerName serverName, final List<RegionOpenOperation> operations) {
     final OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
     builder.setServerStartCode(serverName.getStartCode());
-    builder.setMasterStartCode(env.getMasterServices().getServerName().getStartCode());
+    builder
+      .setInitiatingMasterActiveTime(((HMaster) env.getMasterServices()).getMasterActiveTime());
     builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
     for (RegionOpenOperation op : operations) {
       builder.addOpenInfo(op.buildRegionOpenInfoRequest(env));
@@ -476,10 +477,10 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       this.rsProcData = rsProcData;
     }
 
-    public RemoteProcedureRequest buildRequestWithMasterStartCode(long masterStartCode) {
+    public RemoteProcedureRequest buildRequest(long initiatingMasterActiveTime) {
       return RemoteProcedureRequest.newBuilder().setProcId(procId)
         .setProcClass(rsProcClass.getName()).setProcData(ByteString.copyFrom(rsProcData))
-        .setMasterStartCode(masterStartCode).build();
+        .setInitiatingMasterActiveTime(initiatingMasterActiveTime).build();
     }
   }
 
@@ -524,9 +525,9 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     }
 
     public CloseRegionRequest buildCloseRegionRequest(final ServerName serverName,
-      long masterStartCode) {
+      long initiatingMasterActiveTime) {
       return ProtobufUtil.buildCloseRegionRequest(serverName, regionInfo.getRegionName(),
-        getDestinationServer(), procId, evictCache, masterStartCode);
+        getDestinationServer(), procId, evictCache, initiatingMasterActiveTime);
 
     }
   }
