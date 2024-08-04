@@ -2586,7 +2586,8 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   private void throwOnOldMasterStartCode(long procId, long initiatingMasterActiveTime)
     throws MasterNotRunningException {
     if (initiatingMasterActiveTime > server.getMasterActiveTime()) {
-      // procedure is initiated by new active master but report received on master with older active time
+      // procedure is initiated by new active master but report received on master with older active
+      // time
       LOG.warn(
         "Report for procedure with procId: {} and initiatingMasterActiveTime {} received on non-active master with activeTime {}",
         procId, initiatingMasterActiveTime, server.getMasterActiveTime());
