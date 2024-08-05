@@ -4082,12 +4082,15 @@ public class HRegionServer extends Thread
       this.rpcServices, this.rpcServices, new RegionServerRegistry(this));
   }
 
-  void executeProcedure(long procId, long initiatingMasterActiveTime, RSProcedureCallable callable) {
-    executorService.submit(new RSProcedureHandler(this, procId,initiatingMasterActiveTime, callable));
+  void executeProcedure(long procId, long initiatingMasterActiveTime,
+    RSProcedureCallable callable) {
+    executorService
+      .submit(new RSProcedureHandler(this, procId, initiatingMasterActiveTime, callable));
   }
 
-  public void remoteProcedureComplete(long procId, long initiatingMasterActiveTime, Throwable error) {
-    procedureResultReporter.complete(procId,initiatingMasterActiveTime, error);
+  public void remoteProcedureComplete(long procId, long initiatingMasterActiveTime,
+    Throwable error) {
+    procedureResultReporter.complete(procId, initiatingMasterActiveTime, error);
   }
 
   void reportProcedureDone(ReportProcedureDoneRequest request) throws IOException {

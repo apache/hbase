@@ -3947,8 +3947,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
       }
       long procId = regionOpenInfo.getOpenProcId();
       if (regionServer.submitRegionProcedure(procId)) {
-        regionServer.getExecutorService().submit(AssignRegionHandler.create(regionServer, regionInfo, procId,
-          tableDesc, masterSystemTime, initiatingMasterActiveTime));
+        regionServer.getExecutorService().submit(AssignRegionHandler.create(regionServer,
+          regionInfo, procId, tableDesc, masterSystemTime, initiatingMasterActiveTime));
       }
     }
   }
@@ -3968,8 +3968,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
     long procId = request.getCloseProcId();
     boolean evictCache = request.getEvictCache();
     if (regionServer.submitRegionProcedure(procId)) {
-      regionServer.getExecutorService().submit(UnassignRegionHandler.create(regionServer, encodedName, procId,
-        false, destination, evictCache, initiatingMasterActiveTime));
+      regionServer.getExecutorService().submit(UnassignRegionHandler.create(regionServer,
+        encodedName, procId, false, destination, evictCache, initiatingMasterActiveTime));
     }
   }
 
@@ -3981,13 +3981,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
     } catch (Exception e) {
       LOG.warn("Failed to instantiating remote procedure {}, pid={}", request.getProcClass(),
         request.getProcId(), e);
-      regionServer.remoteProcedureComplete(request.getProcId(), request.getInitiatingMasterActiveTime(),
-        e);
+      regionServer.remoteProcedureComplete(request.getProcId(),
+        request.getInitiatingMasterActiveTime(), e);
       return;
     }
     callable.init(request.getProcData().toByteArray(), regionServer);
     LOG.debug("Executing remote procedure {}, pid={}", callable.getClass(), request.getProcId());
-    regionServer.executeProcedure(request.getProcId(), request.getInitiatingMasterActiveTime(), callable);
+    regionServer.executeProcedure(request.getProcId(), request.getInitiatingMasterActiveTime(),
+      callable);
   }
 
   @Override
