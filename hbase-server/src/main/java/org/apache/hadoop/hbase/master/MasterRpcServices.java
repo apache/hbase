@@ -2589,7 +2589,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       // procedure is initiated by new active master but report received on master with older active
       // time
       LOG.warn(
-        "Report for procedure with procId: {} and initiatingMasterActiveTime {} received on non-active master with activeTime {}",
+        "Report for procId: {} and initiatingMasterAT {} received on master with activeTime {}",
         procId, initiatingMasterActiveTime, server.getMasterActiveTime());
       throw new MasterNotRunningException("Another master is active");
     }
