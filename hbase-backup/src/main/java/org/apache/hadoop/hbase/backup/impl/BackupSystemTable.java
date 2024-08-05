@@ -70,7 +70,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -399,8 +398,8 @@ public final class BackupSystemTable implements Closeable {
 
   /**
    * Registers a bulk load.
-   * @param tableName table name
-   * @param region the region receiving hfile
+   * @param tableName     table name
+   * @param region        the region receiving hfile
    * @param cfToHfilePath column family and associated hfiles
    */
   public void registerBulkLoad(TableName tableName, byte[] region,
@@ -434,31 +433,25 @@ public final class BackupSystemTable implements Closeable {
     }
   }
 
-  /*
+  /**
    * Reads the rows from backup table recording bulk loaded hfiles
    * @param tableList list of table names
-   * @return The keys of the Map are table, region and column family. Value of the map reflects
-   * whether the hfile was recorded by preCommitStoreFile hook (true)
    */
-  public Pair<Map<TableName, Map<String, Map<String, List<String>>>>, List<byte[]>>
-    readBulkloadRows(List<TableName> tableList) throws IOException {
-    Map<TableName, Map<String, Map<String, List<String>>>> map = new HashMap<>();
-    List<byte[]> rows = new ArrayList<>();
-    for (TableName tTable : tableList) {
-      Scan scan = BackupSystemTable.createScanForOrigBulkLoadedFiles(tTable);
-      Map<String, Map<String, List<String>>> tblMap = map.get(tTable);
-      try (Table table = connection.getTable(bulkLoadTableName);
-        ResultScanner scanner = table.getScanner(scan)) {
-        Result res = null;
+  public List<BulkLoad> readBulkloadRows(List<TableName> tableList) throws IOException {
+    List<BulkLoad> result = new ArrayList<>();
+    for (TableName table : tableList) {
+      Scan scan = BackupSystemTable.createScanForOrigBulkLoadedFiles(table);
+      try (Table bulkLoadTable = connection.getTable(bulkLoadTableName);
+        ResultScanner scanner = bulkLoadTable.getScanner(scan)) {
+        Result res;
         while ((res = scanner.next()) != null) {
           res.advance();
           String fam = null;
           String path = null;
-          byte[] row;
           String region = null;
+          byte[] row = null;
           for (Cell cell : res.listCells()) {
             row = CellUtil.cloneRow(cell);
-            rows.add(row);
             String rowStr = Bytes.toString(row);
             region = BackupSystemTable.getRegionNameFromOrigBulkLoadRow(rowStr);
             if (
@@ -473,23 +466,12 @@ public final class BackupSystemTable implements Closeable {
               path = Bytes.toString(CellUtil.cloneValue(cell));
             }
           }
-          if (map.get(tTable) == null) {
-            map.put(tTable, new HashMap<>());
-            tblMap = map.get(tTable);
-          }
-          if (tblMap.get(region) == null) {
-            tblMap.put(region, new HashMap<>());
-          }
-          Map<String, List<String>> famMap = tblMap.get(region);
-          if (famMap.get(fam) == null) {
-            famMap.put(fam, new ArrayList<>());
-          }
-          famMap.get(fam).add(path);
+          result.add(new BulkLoad(table, region, fam, path, row));
           LOG.debug("found orig " + path + " for " + fam + " of table " + region);
         }
       }
     }
-    return new Pair<>(map, rows);
+    return result;
   }
 
   /*
