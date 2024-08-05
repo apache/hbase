@@ -65,6 +65,8 @@
         <dependencySets>
           <dependencySet>
             <excludes>
+              <!-- Exclude pom file -->
+              <exclude>com.sun.xml.ws:jaxws-ri:pom</exclude>
               <!-- Exclude libraries that we put in their own dirs under lib/ -->
               <exclude>org.jruby:jruby-complete</exclude>
               <exclude>com.sun.jersey:*</exclude>
