@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
@@ -51,7 +51,7 @@ public class TestRegionCoprocessorQuotaUsage {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionCoprocessorQuotaUsage.class);
 
-  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
+  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static TableName TABLE_NAME = TableName.valueOf("TestRegionCoprocessorQuotaUsage");
   private static byte[] CF = Bytes.toBytes("CF");
   private static byte[] CQ = Bytes.toBytes("CQ");
