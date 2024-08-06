@@ -676,6 +676,13 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
     void onError(Throwable error);
   }
 
+  @InterfaceAudience.Public
+  interface PartialResultCoprocessorCallback<S, R> extends CoprocessorCallback<R> {
+    ServiceCaller<S, R> getNextCallable(R response, RegionInfo region);
+
+    long getWaitIntervalMs(R response, RegionInfo region);
+  }
+
   /**
    * Helper class for sending coprocessorService request that executes a coprocessor call on regions
    * which are covered by a range.
@@ -744,4 +751,10 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    */
   <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(Function<RpcChannel, S> stubMaker,
     ServiceCaller<S, R> callable, CoprocessorCallback<R> callback);
+
+  /**
+   * Similar to above. Use when your coprocessor client+endpoint supports partial results.
+   */
+  <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(Function<RpcChannel, S> stubMaker,
+    ServiceCaller<S, R> callable, PartialResultCoprocessorCallback<S, R> callback);
 }

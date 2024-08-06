@@ -57,13 +57,16 @@ import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -91,6 +94,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResp
 class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RawAsyncTableImpl.class);
+
+  private static final HashedWheelTimer HWT = new HashedWheelTimer(
+    new ThreadFactoryBuilder().setNameFormat("Raw-Async-Table-Timer-pool-%d").setDaemon(true)
+      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+    10, TimeUnit.MILLISECONDS);
 
   private final AsyncConnectionImpl conn;
 
@@ -792,9 +800,9 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   }
 
   private <S, R> void onLocateComplete(Function<RpcChannel, S> stubMaker,
-    ServiceCaller<S, R> callable, CoprocessorCallback<R> callback, List<HRegionLocation> locs,
-    byte[] endKey, boolean endKeyInclusive, AtomicBoolean locateFinished,
-    AtomicInteger unfinishedRequest, HRegionLocation loc, Throwable error) {
+    ServiceCaller<S, R> callable, PartialResultCoprocessorCallback<S, R> callback, byte[] endKey,
+    boolean endKeyInclusive, AtomicBoolean locateFinished, AtomicInteger unfinishedRequest,
+    HRegionLocation loc, Throwable error) {
     final Span span = Span.current();
     if (error != null) {
       callback.onError(error);
@@ -810,8 +818,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       addListener(conn.getLocator().getRegionLocation(tableName, region.getEndKey(),
         RegionLocateType.CURRENT, operationTimeoutNs), (l, e) -> {
           try (Scope ignored = span.makeCurrent()) {
-            onLocateComplete(stubMaker, callable, callback, locs, endKey, endKeyInclusive,
-              locateFinished, unfinishedRequest, l, e);
+            onLocateComplete(stubMaker, callable, callback, endKey, endKeyInclusive, locateFinished,
+              unfinishedRequest, l, e);
           }
         });
     }
@@ -822,7 +830,30 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         } else {
           callback.onRegionComplete(region, r);
         }
-        if (unfinishedRequest.decrementAndGet() == 0 && locateFinished.get()) {
+
+        boolean complete = unfinishedRequest.decrementAndGet() == 0 && locateFinished.get();
+
+        if (e == null && r != null) {
+          ServiceCaller<S, R> updatedCallable = callback.getNextCallable(r, region);
+          if (updatedCallable != null) {
+            // We are launching a new request now, so un-set complete
+            complete = false;
+            long waitIntervalMs = callback.getWaitIntervalMs(r, region);
+            LOG.trace("Coprocessor returned incomplete result. "
+              + "Sleeping for {} millis before making follow-up request.", waitIntervalMs);
+            if (waitIntervalMs > 0) {
+              HWT.newTimeout(
+                (timeout) -> onLocateComplete(stubMaker, updatedCallable, callback, endKey,
+                  endKeyInclusive, locateFinished, unfinishedRequest, loc, null),
+                waitIntervalMs, TimeUnit.MILLISECONDS);
+            } else {
+              onLocateComplete(stubMaker, updatedCallable, callback, endKey, endKeyInclusive,
+                locateFinished, unfinishedRequest, loc, null);
+            }
+          }
+        }
+
+        if (complete) {
           callback.onComplete();
         }
       }
@@ -836,7 +867,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
     private final ServiceCaller<S, R> callable;
 
-    private final CoprocessorCallback<R> callback;
+    private final PartialResultCoprocessorCallback<S, R> callback;
 
     private byte[] startKey = HConstants.EMPTY_START_ROW;
 
@@ -847,7 +878,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     private boolean endKeyInclusive;
 
     public CoprocessorServiceBuilderImpl(Function<RpcChannel, S> stubMaker,
-      ServiceCaller<S, R> callable, CoprocessorCallback<R> callback) {
+      ServiceCaller<S, R> callable, PartialResultCoprocessorCallback<S, R> callback) {
       this.stubMaker = Preconditions.checkNotNull(stubMaker, "stubMaker is null");
       this.callable = Preconditions.checkNotNull(callable, "callable is null");
       this.callback = Preconditions.checkNotNull(callback, "callback is null");
@@ -884,11 +915,51 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
           .getRegionLocation(tableName, startKey, regionLocateType, operationTimeoutNs);
         addListener(future, (loc, error) -> {
           try (Scope ignored1 = span.makeCurrent()) {
-            onLocateComplete(stubMaker, callable, callback, new ArrayList<>(), endKey,
-              endKeyInclusive, new AtomicBoolean(false), new AtomicInteger(0), loc, error);
+            onLocateComplete(stubMaker, callable, callback, endKey, endKeyInclusive,
+              new AtomicBoolean(false), new AtomicInteger(0), loc, error);
           }
         });
       }
+    }
+  }
+
+  private static class NoopPartialResultCoprocessorCallback<S, R>
+    implements PartialResultCoprocessorCallback<S, R> {
+
+    private final CoprocessorCallback<R> delegate;
+
+    public NoopPartialResultCoprocessorCallback(CoprocessorCallback<R> delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public void onRegionComplete(RegionInfo region, R resp) {
+      delegate.onRegionComplete(region, resp);
+    }
+
+    @Override
+    public void onRegionError(RegionInfo region, Throwable error) {
+      delegate.onRegionError(region, error);
+    }
+
+    @Override
+    public void onComplete() {
+      delegate.onComplete();
+    }
+
+    @Override
+    public void onError(Throwable error) {
+      delegate.onError(error);
+    }
+
+    @Override
+    public ServiceCaller<S, R> getNextCallable(R response, RegionInfo region) {
+      return null;
+    }
+
+    @Override
+    public long getWaitIntervalMs(R response, RegionInfo region) {
+      return 0;
     }
   }
 
@@ -896,6 +967,14 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
     Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
     CoprocessorCallback<R> callback) {
+    return new CoprocessorServiceBuilderImpl<>(stubMaker, callable,
+      new NoopPartialResultCoprocessorCallback<>(callback));
+  }
+
+  @Override
+  public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
+    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
+    PartialResultCoprocessorCallback<S, R> callback) {
     return new CoprocessorServiceBuilderImpl<>(stubMaker, callable, callback);
   }
 }
