@@ -351,4 +351,8 @@ public class CacheTestUtils {
       }
     }
   }
+
+  public static boolean waitForCacheInitialization(BlockCache cache, long timeout) {
+    return cache.waitForCacheInitialization(timeout);
+  }
 }

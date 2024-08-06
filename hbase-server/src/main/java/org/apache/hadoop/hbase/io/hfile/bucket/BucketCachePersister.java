@@ -62,6 +62,8 @@ public class BucketCachePersister extends Thread {
       LOG.info("Finishing cache persister thread.");
     } catch (InterruptedException e) {
       LOG.warn("Interrupting BucketCachePersister thread.", e);
+    } catch (Throwable e) {
+      LOG.error("Failed during persisting bucket cache to file: ", e);
     }
   }
 

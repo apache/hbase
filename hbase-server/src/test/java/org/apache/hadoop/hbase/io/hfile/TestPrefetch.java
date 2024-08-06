@@ -108,11 +108,13 @@ public class TestPrefetch {
   public OpenTelemetryRule otelRule = OpenTelemetryRule.create();
 
   @Before
-  public void setUp() throws IOException {
+  public void setUp() throws IOException, InterruptedException {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     fs = HFileSystem.get(conf);
     blockCache = BlockCacheFactory.createBlockCache(conf);
+    // Add some sleep to enable the cache to be instantiated.
+    Thread.sleep(2000);
     cacheConf = new CacheConfig(conf, blockCache);
   }
 
@@ -364,16 +366,20 @@ public class TestPrefetch {
     // Wait for 20 seconds, no thread should start prefetch
     Thread.sleep(20000);
     assertFalse("Prefetch threads should not be running at this point", reader.prefetchStarted());
-    while (!reader.prefetchStarted()) {
-      assertTrue("Prefetch delay has not been expired yet",
-        getElapsedTime(startTime) < PrefetchExecutor.getPrefetchDelay());
-    }
-    if (reader.prefetchStarted()) {
-      // Added some delay as we have started the timer a bit late.
+    long timeout = 10000;
+    while (!reader.prefetchStarted() && !reader.prefetchComplete()) {
+      // Wait until the prefetch is triggered.
       Thread.sleep(500);
-      assertTrue("Prefetch should start post configured delay",
-        getElapsedTime(startTime) > PrefetchExecutor.getPrefetchDelay());
+      if (timeout <= 0) break;
+      timeout -= 500;
     }
+    assertTrue(reader.prefetchStarted() || reader.prefetchComplete());
+
+    // Added some delay as we have started the timer a bit late.
+    Thread.sleep(500);
+    assertTrue("Prefetch should start post configured delay",
+      getElapsedTime(startTime) > PrefetchExecutor.getPrefetchDelay());
+
     conf.setInt(PREFETCH_DELAY, 1000);
     conf.setFloat(PREFETCH_DELAY_VARIATION, PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
     prefetchExecutorNotifier.onConfigurationChange(conf);

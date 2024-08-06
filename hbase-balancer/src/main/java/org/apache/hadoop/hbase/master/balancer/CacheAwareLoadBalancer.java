@@ -28,6 +28,7 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY;
 
+import java.text.DecimalFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -221,6 +222,9 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         return false;
       }
 
+      DecimalFormat df = new DecimalFormat("#");
+      df.setMaximumFractionDigits(4);
+
       float cacheRatioDiffThreshold = 0.6f;
 
       // Conditions for moving the region
@@ -240,7 +244,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
           LOG.debug(
             "Region {} moved from {} to {} as the region is cached {} equally on both servers",
             cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex],
-            cluster.servers[oldServerIndex], cacheRatioOnCurrentServer);
+            cluster.servers[oldServerIndex], df.format(cacheRatioOnCurrentServer));
         }
         return true;
       }
@@ -257,7 +261,8 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
             "Region {} moved from {} to {} as region cache ratio {} is better than the current "
               + "cache ratio {}",
             cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex],
-            cluster.servers[oldServerIndex], cacheRatioOnCurrentServer, cacheRatioOnOldServer);
+            cluster.servers[oldServerIndex], cacheRatioOnCurrentServer,
+            df.format(cacheRatioOnCurrentServer));
         }
         return true;
       }
@@ -266,7 +271,8 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         LOG.debug(
           "Region {} not moved from {} to {} with current cache ratio {} and old cache ratio {}",
           cluster.regions[regionIndex], cluster.servers[currentServerIndex],
-          cluster.servers[oldServerIndex], cacheRatioOnCurrentServer, cacheRatioOnOldServer);
+          cluster.servers[oldServerIndex], cacheRatioOnCurrentServer,
+          df.format(cacheRatioOnCurrentServer));
       }
       return false;
     }

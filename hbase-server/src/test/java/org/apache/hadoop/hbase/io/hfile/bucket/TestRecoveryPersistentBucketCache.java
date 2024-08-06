@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_I
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -60,6 +61,7 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    assertTrue(CacheTestUtils.waitForCacheInitialization(bucketCache, 1000));
 
     CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 4);
 
@@ -95,7 +97,8 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
-    Thread.sleep(100);
+    assertTrue(CacheTestUtils.waitForCacheInitialization(newBucketCache, 10000));
+
     assertEquals(3, newBucketCache.backingMap.size());
     assertNull(newBucketCache.getBlock(blocks[3].getBlockName(), false, false, false));
     assertNull(newBucketCache.getBlock(smallerBlocks[0].getBlockName(), false, false, false));
@@ -120,6 +123,7 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    assertTrue(CacheTestUtils.waitForCacheInitialization(bucketCache, 10000));
 
     CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 4);
 
@@ -134,7 +138,7 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
-    Thread.sleep(100);
+    assertTrue(CacheTestUtils.waitForCacheInitialization(newBucketCache, 10000));
     assertEquals(4, newBucketCache.backingMap.size());
     newBucketCache.evictBlocksByHfileName(blocks[0].getBlockName().getHfileName());
     assertEquals(3, newBucketCache.backingMap.size());
@@ -143,7 +147,16 @@ public class TestRecoveryPersistentBucketCache {
 
   private void waitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey)
     throws InterruptedException {
-    while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
+    try {
+      long timeout = 120000;
+      while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
+        Thread.sleep(100);
+        if (timeout <= 0) {
+          break;
+        }
+        timeout -= 100;
+      }
+    } finally {
       Thread.sleep(100);
     }
   }

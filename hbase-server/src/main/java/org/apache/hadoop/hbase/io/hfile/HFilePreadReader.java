@@ -34,12 +34,14 @@ import org.slf4j.LoggerFactory;
 public class HFilePreadReader extends HFileReaderImpl {
   private static final Logger LOG = LoggerFactory.getLogger(HFileReaderImpl.class);
 
+  private static final int WAIT_TIME_FOR_CACHE_INITIALIZATION = 10 * 60 * 1000;
   public HFilePreadReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
     final MutableBoolean shouldCache = new MutableBoolean(true);
 
     cacheConf.getBlockCache().ifPresent(cache -> {
+      cache.waitForCacheInitialization(WAIT_TIME_FOR_CACHE_INITIALIZATION);
       Optional<Boolean> result = cache.shouldCacheFile(path.getName());
       shouldCache.setValue(result.isPresent() ? result.get().booleanValue() : true);
     });
@@ -110,8 +112,8 @@ public class HFilePreadReader extends HFileReaderImpl {
                   if (!cache.blockFitsIntoTheCache(block).orElse(true)) {
                     LOG.warn(
                       "Interrupting prefetch for file {} because block {} of size {} "
-                        + "doesn't fit in the available cache space.",
-                      path, cacheKey, block.getOnDiskSizeWithHeader());
+                        + "doesn't fit in the available cache space. isCacheEnabled: {}",
+                      path, cacheKey, block.getOnDiskSizeWithHeader(), cache.isCacheEnabled());
                     interrupted = true;
                     break;
                   }
