@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.List;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -80,5 +81,10 @@ class NoopOperationQuota implements OperationQuota {
   @Override
   public long getReadConsumed() {
     return 0L;
+  }
+
+  @Override
+  public void addScanResultCells(List<Cell> cells) {
+    // no-op
   }
 }
