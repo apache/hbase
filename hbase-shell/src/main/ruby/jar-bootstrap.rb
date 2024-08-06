@@ -68,6 +68,8 @@ Usage: shell [OPTIONS] [SCRIPTFILE [ARGUMENTS]]
  -h | --help             This help.
  -n | --noninteractive   Do not run within an IRB session and exit with non-zero
                          status on first error.
+ -c | --colorize         Enable colorized output.
+ -a | --autocomplete     Enable auto-completion.
  --top-level-defs        Compatibility flag to export HBase shell commands onto
                          Ruby's main object
  -Dkey=value             Pass hbase-*.xml Configuration overrides. For example, to
@@ -105,6 +107,8 @@ opts = GetoptLong.new(
   ['--help', '-h', GetoptLong::NO_ARGUMENT],
   ['--debug', '-d', GetoptLong::NO_ARGUMENT],
   ['--noninteractive', '-n', GetoptLong::NO_ARGUMENT],
+  ['--colorize', '-c', GetoptLong::NO_ARGUMENT],
+  ['--autocomplete', '-a', GetoptLong::NO_ARGUMENT],
   ['--top-level-defs', GetoptLong::NO_ARGUMENT],
   ['-D', GetoptLong::REQUIRED_ARGUMENT],
   ['--return-values', '-r', GetoptLong::NO_ARGUMENT]
@@ -115,6 +119,8 @@ script2run = nil
 log_level = 'ERROR'
 @shell_debug = false
 interactive = true
+colorize = false
+autocomplete = false
 full_backtrace = false
 top_level_definitions = false
 
@@ -132,6 +138,10 @@ opts.each do |opt, arg|
     puts 'Setting DEBUG log level...'
   when '--noninteractive'
     interactive = false
+  when '--colorize'
+    colorize = true
+  when '--autocomplete'
+    autocomplete = true
   when '--return-values'
     warn '[INFO] the -r | --return-values option is ignored. we always behave '\
            'as though it was given.'
@@ -213,6 +223,8 @@ IRB.conf[:IRB_NAME] = 'hbase'
 IRB.conf[:AP_NAME] = 'hbase'
 IRB.conf[:PROMPT_MODE] = :CUSTOM
 IRB.conf[:BACK_TRACE_LIMIT] = 0 unless full_backtrace
+IRB.conf[:USE_AUTOCOMPLETE] = autocomplete
+IRB.conf[:USE_COLORIZE] = colorize
 
 # Create a workspace we'll use across sessions.
 workspace = @shell.get_workspace
