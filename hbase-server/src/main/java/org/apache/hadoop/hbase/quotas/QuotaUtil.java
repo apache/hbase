@@ -590,6 +590,14 @@ public class QuotaUtil extends QuotaTableUtil {
     return size;
   }
 
+  public static long calculateCellsSize(final List<Cell> cells) {
+    long size = 0;
+    for (Cell cell : cells) {
+      size += cell.getSerializedSize();
+    }
+    return size;
+  }
+
   /**
    * Method to enable a table, if not already enabled. This method suppresses
    * {@link TableNotDisabledException} and {@link TableNotFoundException}, if thrown while enabling
