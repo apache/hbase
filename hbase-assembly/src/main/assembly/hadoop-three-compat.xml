@@ -223,7 +223,7 @@
       <outputDirectory>lib/jdk11</outputDirectory>
       <useTransitiveDependencies>true</useTransitiveDependencies>
       <includes>
-          <include>com.sun.activation:javax.activation</include>
+        <include>com.sun.activation:javax.activation</include>
         <!-- The following artifacts are transitive dependencies of com.sun.xml.ws:jaxws-ri:pom
              They are needed to be included in lib/jdk11 to be added to classpath during
              Java 11 runtime
@@ -254,6 +254,10 @@
         <include>jakarta.xml.soap:jakarta.xml.soap-api</include>
         <include>jakarta.jws:jakarta.jws-api</include>
       </includes>
+      <excludes>
+        <!-- Exclude pom file -->
+        <exclude>com.sun.xml.ws:jaxws-ri:pom</exclude>
+      </excludes>
     </dependencySet>
     <dependencySet>
       <outputDirectory>lib/trace</outputDirectory>
