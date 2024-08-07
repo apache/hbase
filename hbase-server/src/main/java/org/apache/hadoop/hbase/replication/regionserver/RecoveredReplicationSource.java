@@ -149,6 +149,7 @@ public class RecoveredReplicationSource extends ReplicationSource {
       boolean allTasksDone = workerThreads.values().stream().allMatch(w -> w.isFinished());
       if (allTasksDone) {
         this.getSourceMetrics().clear();
+        this.terminate("Finished recovering queue");
         manager.removeRecoveredSource(this);
         LOG.info("Finished recovering queue {} with the following stats: {}", queueId, getStats());
       }
