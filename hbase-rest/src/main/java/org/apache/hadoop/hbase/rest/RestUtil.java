@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.Message;
 import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 @InterfaceAudience.Private
 public final class RestUtil {
