@@ -258,8 +258,12 @@
         <include>org.glassfish.pfl:*</include>
         <include>org.jvnet.mimepull:mimepull</include>
         <include>org.jvnet.staxex:stax-ex</include>
-    </includes>
-  </dependencySet>
-</dependencySets>
+      </includes>
+      <excludes>
+        <!-- Exclude pom file -->
+        <exclude>com.sun.xml.ws:jaxws-ri:pom</exclude>
+      </excludes>
+    </dependencySet>
+  </dependencySets>
 
 </assembly>
