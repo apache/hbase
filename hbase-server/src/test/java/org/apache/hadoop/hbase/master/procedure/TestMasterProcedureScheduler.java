@@ -1218,4 +1218,28 @@ public class TestMasterProcedureScheduler {
     queue.wakeRegion(proc, regionInfo);
     queue.wakeTableExclusiveLock(parentProc, tableName);
   }
+
+  @Test
+  public void testDirectlyScheduleProcedureThatDoesNotNeedLock() {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TestTableProcedure xLockNeededProc =
+      new TestTableProcedure(1, tableName, TableOperationType.DELETE);
+    TestTableProcedure noLockNeededProc =
+      new TestTableProcedure(2, tableName, TableOperationType.READ) {
+        @Override
+        public boolean needLock() {
+          return false;
+        }
+      };
+    queue.addBack(xLockNeededProc);
+    queue.addBack(noLockNeededProc);
+
+    assertSame(xLockNeededProc, queue.poll());
+    assertEquals(1, queue.size());
+
+    // now the table exclusive lock has been acquired
+    assertFalse(queue.waitTableExclusiveLock(xLockNeededProc, tableName));
+
+    assertSame(noLockNeededProc, queue.poll());
+  }
 }
