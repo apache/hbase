@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -75,6 +76,20 @@ class AsyncBufferedMutatorBuilderImpl implements AsyncBufferedMutatorBuilder {
   @Override
   public AsyncBufferedMutatorBuilder setStartLogErrorsCnt(int startLogErrorsCnt) {
     tableBuilder.setStartLogErrorsCnt(startLogErrorsCnt);
+    return this;
+  }
+
+  @Override
+  public AsyncBufferedMutatorBuilder setRequestAttribute(String key, byte[] value) {
+    tableBuilder.setRequestAttribute(key, value);
+    return this;
+  }
+
+  @Override
+  public AsyncBufferedMutatorBuilder setRequestAttributes(Map<String, byte[]> requestAttributes) {
+    for (Map.Entry<String, byte[]> requestAttribute : requestAttributes.entrySet()) {
+      tableBuilder.setRequestAttribute(requestAttribute.getKey(), requestAttribute.getValue());
+    }
     return this;
   }
 

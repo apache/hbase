@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -130,7 +131,7 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
         periodicFlushTask = periodicalFlushTimer.newTimeout(timeout -> {
           synchronized (AsyncBufferedMutatorImpl.this) {
             // confirm that we are still valid, if there is already an internalFlush call before us,
-            // then we should not execute any more. And in internalFlush we will set periodicFlush
+            // then we should not execute anymore. And in internalFlush we will set periodicFlush
             // to null, and since we may schedule a new one, so here we check whether the references
             // are equal.
             if (timeout == periodicFlushTask) {
@@ -169,5 +170,10 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   @Override
   public long getPeriodicalFlushTimeout(TimeUnit unit) {
     return unit.convert(periodicFlushTimeoutNs, TimeUnit.NANOSECONDS);
+  }
+
+  @Override
+  public Map<String, byte[]> getRequestAttributes() {
+    return table.getRequestAttributes();
   }
 }

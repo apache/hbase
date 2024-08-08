@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -185,5 +186,10 @@ class BufferedMutatorOverAsyncBufferedMutator implements BufferedMutator {
   @Override
   public void setOperationTimeout(int timeout) {
     // no effect
+  }
+
+  @Override
+  public Map<String, byte[]> getRequestAttributes() {
+    return mutator.getRequestAttributes();
   }
 }
