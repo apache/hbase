@@ -19,12 +19,15 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -63,6 +66,24 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
     MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
+  }
+
+  @Test
+  public void testDisableReplicationTable() throws IOException {
+    final TableName replicationTable = TableName
+      .valueOf(UTIL.getConfiguration().get(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME,
+        ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME_DEFAULT.getNameAsString()));
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    UTIL.getAdmin().createTable(
+      ReplicationStorageFactory.createReplicationQueueTableDescriptor(replicationTable));
+    assertTrue(UTIL.getAdmin().tableExists(replicationTable));
+
+    long procId = procExec.submitProcedure(
+      new DisableTableProcedure(procExec.getEnvironment(), replicationTable, false));
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
+    Procedure<?> result = procExec.getResult(procId);
+    ProcedureTestingUtility.assertProcFailed(procExec, procId);
+    assertTrue(result.getException().getCause() instanceof ConstraintException);
   }
 
   @Test
