@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -169,9 +170,11 @@ public class TestCompactionPolicy {
   List<HStoreFile> sfCreate(boolean isReference, ArrayList<Long> sizes, ArrayList<Long> ageInDisk)
     throws IOException {
     List<HStoreFile> ret = Lists.newArrayList();
+    StoreFileTrackerForTest storeFileTrackerForTest =
+      new StoreFileTrackerForTest(conf, true, store.getStoreContext());
     for (int i = 0; i < sizes.size(); i++) {
-      ret.add(
-        new MockHStoreFile(TEST_UTIL, TEST_FILE, sizes.get(i), ageInDisk.get(i), isReference, i));
+      ret.add(new MockHStoreFile(TEST_UTIL, TEST_FILE, sizes.get(i), ageInDisk.get(i), isReference,
+        i, storeFileTrackerForTest));
     }
     return ret;
   }

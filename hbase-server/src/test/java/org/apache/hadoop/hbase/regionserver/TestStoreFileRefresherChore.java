@@ -100,14 +100,6 @@ public class TestStoreFileRefresherChore {
       RegionInfo regionInfo) {
       super(conf, fs, tableDir, regionInfo);
     }
-
-    @Override
-    public List<StoreFileInfo> getStoreFiles(String familyName) throws IOException {
-      if (fail) {
-        throw new IOException("simulating FS failure");
-      }
-      return super.getStoreFiles(familyName);
-    }
   }
 
   private HRegion initHRegion(TableDescriptor htd, byte[] startKey, byte[] stopKey, int replicaId)

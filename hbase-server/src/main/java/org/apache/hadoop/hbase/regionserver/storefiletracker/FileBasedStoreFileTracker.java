@@ -67,7 +67,8 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
   }
 
   @Override
-  protected List<StoreFileInfo> doLoadStoreFiles(boolean readOnly) throws IOException {
+  protected List<StoreFileInfo> doLoadStoreFiles(boolean readOnly, boolean validate)
+    throws IOException {
     StoreFileList list = backedFile.load(readOnly);
     if (list == null) {
       return Collections.emptyList();
@@ -77,7 +78,7 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
     for (StoreFileEntry entry : list.getStoreFileList()) {
       infos.add(ServerRegionReplicaUtil.getStoreFileInfo(conf, fs, ctx.getRegionInfo(),
         ctx.getRegionFileSystem().getRegionInfoForFS(), ctx.getFamily().getNameAsString(),
-        new Path(ctx.getFamilyStoreDirectoryPath(), entry.getName())));
+        new Path(ctx.getFamilyStoreDirectoryPath(), entry.getName()), this));
     }
     // In general, for primary replica, the load method should only be called once when
     // initialization, so we do not need synchronized here. And for secondary replicas, though the
