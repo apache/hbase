@@ -731,7 +731,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     if (canRetry != Retry.YES) {
       // Batch.Callback<Res> was not called on failure in 0.94. We keep this.
       setError(originalIndex, row, throwable, server);
-    } else if (isActionComplete(originalIndex, row)) {
+    } else if (AsyncProcess.isReplicaGet(row) && isActionComplete(originalIndex)) {
       canRetry = Retry.NO_OTHER_SUCCEEDED;
     }
     return canRetry;
@@ -1164,10 +1164,16 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * synchronize, assuming element index/field accesses are atomic. This is an opportunistic
    * optimization check, doesn't have to be strict.
    * @param index Original action index.
-   * @param row   Original request.
+   * @return If results are non-null, returns whether a result is currently set for action index.
+   * @throws IllegalStateException If results are null. We cannot readily tell here whether an
+   *                               action that is part of an AsyncRequestFuture that doesn't track
+   *                               results is complete
    */
-  private boolean isActionComplete(int index, Row row) {
-    if (!AsyncProcess.isReplicaGet(row)) return false;
+  private boolean isActionComplete(int index) {
+    if (results == null) {
+      throw new IllegalStateException(
+        String.format("Cannot check action %d completion when results are null", index));
+    }
     Object resObj = results[index];
     return (resObj != null)
       && (!(resObj instanceof ReplicaResultState) || ((ReplicaResultState) resObj).callCount == 0);
