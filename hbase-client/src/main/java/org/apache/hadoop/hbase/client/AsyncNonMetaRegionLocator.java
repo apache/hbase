@@ -87,6 +87,8 @@ class AsyncNonMetaRegionLocator {
   // The mode tells if HedgedRead, LoadBalance mode is supported.
   // The default mode is CatalogReplicaMode.None.
   private CatalogReplicaMode metaReplicaMode;
+
+  private boolean useMetaReplicas;
   private CatalogReplicaLoadBalanceSelector metaReplicaSelector;
 
   private final ConcurrentMap<TableName, TableCache> cache = new ConcurrentHashMap<>();
@@ -219,39 +221,39 @@ class AsyncNonMetaRegionLocator {
     this.locatePrefetchLimit =
       conn.getConfiguration().getInt(LOCATE_PREFETCH_LIMIT, DEFAULT_LOCATE_PREFETCH_LIMIT);
 
+    this.useMetaReplicas =
+      conn.getConfiguration().getBoolean(USE_META_REPLICAS, DEFAULT_USE_META_REPLICAS);
     // Get the region locator's meta replica mode.
     this.metaReplicaMode = CatalogReplicaMode.fromString(
       conn.getConfiguration().get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
 
-    switch (this.metaReplicaMode) {
-      case LOAD_BALANCE:
-        String replicaSelectorClass =
-          conn.getConfiguration().get(RegionLocator.LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR,
+    if (useMetaReplicas) {
+      switch (this.metaReplicaMode) {
+        case LOAD_BALANCE:
+          String replicaSelectorClass = conn.getConfiguration().get(
+            RegionLocator.LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR,
             CatalogReplicaLoadBalanceSimpleSelector.class.getName());
 
-        this.metaReplicaSelector = CatalogReplicaLoadBalanceSelectorFactory
-          .createSelector(replicaSelectorClass, META_TABLE_NAME, conn, () -> {
-            int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
-            try {
-              RegionLocations metaLocations = conn.registry.getMetaRegionLocations()
-                .get(conn.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
-              numOfReplicas = metaLocations.size();
-            } catch (Exception e) {
-              LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
-            }
-            return numOfReplicas;
-          });
-        break;
-      case NONE:
-        // If user does not configure LOCATOR_META_REPLICAS_MODE, let's check the legacy config.
-        boolean useMetaReplicas =
-          conn.getConfiguration().getBoolean(USE_META_REPLICAS, DEFAULT_USE_META_REPLICAS);
-        if (useMetaReplicas) {
+          this.metaReplicaSelector = CatalogReplicaLoadBalanceSelectorFactory
+            .createSelector(replicaSelectorClass, META_TABLE_NAME, conn, () -> {
+              int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
+              try {
+                RegionLocations metaLocations = conn.registry.getMetaRegionLocations()
+                  .get(conn.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
+                numOfReplicas = metaLocations.size();
+              } catch (Exception e) {
+                LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
+              }
+              return numOfReplicas;
+            });
+          break;
+        case NONE:
+          // If user does not configure LOCATOR_META_REPLICAS_MODE, let's check the legacy config.
           this.metaReplicaMode = CatalogReplicaMode.HEDGED_READ;
-        }
-        break;
-      default:
-        // Doing nothing
+          break;
+        default:
+          // Doing nothing
+      }
     }
   }
 
@@ -388,21 +390,23 @@ class AsyncNonMetaRegionLocator {
       .addFamily(HConstants.CATALOG_FAMILY).setReversed(true).setCaching(locatePrefetchLimit)
       .setReadType(ReadType.PREAD);
 
-    switch (this.metaReplicaMode) {
-      case LOAD_BALANCE:
-        int metaReplicaId = this.metaReplicaSelector.select(tableName, req.row, req.locateType);
-        if (metaReplicaId != RegionInfo.DEFAULT_REPLICA_ID) {
-          // If the selector gives a non-primary meta replica region, then go with it.
-          // Otherwise, just go to primary in non-hedgedRead mode.
+    if (useMetaReplicas) {
+      switch (this.metaReplicaMode) {
+        case LOAD_BALANCE:
+          int metaReplicaId = this.metaReplicaSelector.select(tableName, req.row, req.locateType);
+          if (metaReplicaId != RegionInfo.DEFAULT_REPLICA_ID) {
+            // If the selector gives a non-primary meta replica region, then go with it.
+            // Otherwise, just go to primary in non-hedgedRead mode.
+            scan.setConsistency(Consistency.TIMELINE);
+            scan.setReplicaId(metaReplicaId);
+          }
+          break;
+        case HEDGED_READ:
           scan.setConsistency(Consistency.TIMELINE);
-          scan.setReplicaId(metaReplicaId);
-        }
-        break;
-      case HEDGED_READ:
-        scan.setConsistency(Consistency.TIMELINE);
-        break;
-      default:
-        // do nothing
+          break;
+        default:
+          // do nothing
+      }
     }
 
     conn.getTable(META_TABLE_NAME).scan(scan, new AdvancedScanResultConsumer() {
