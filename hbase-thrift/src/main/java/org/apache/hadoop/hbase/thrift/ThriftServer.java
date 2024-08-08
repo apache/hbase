@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import static org.apache.hadoop.hbase.http.HttpServerUtil.PATH_SPEC_ANY;
 import static org.apache.hadoop.hbase.thrift.Constants.BACKLOG_CONF_DEAFULT;
 import static org.apache.hadoop.hbase.thrift.Constants.BACKLOG_CONF_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.BIND_CONF_KEY;
@@ -387,9 +388,12 @@ public class ThriftServer extends Configured implements Tool {
     httpServer = new Server(threadPool);
 
     // Context handler
+    boolean isSecure = conf.getBoolean(THRIFT_SSL_ENABLED_KEY, false);
     ServletContextHandler ctxHandler =
       new ServletContextHandler(httpServer, "/", ServletContextHandler.SESSIONS);
-    ctxHandler.addServlet(new ServletHolder(thriftHttpServlet), "/*");
+    HttpServerUtil.addClickjackingPreventionFilter(ctxHandler, conf, PATH_SPEC_ANY);
+    HttpServerUtil.addSecurityHeadersFilter(ctxHandler, conf, isSecure, PATH_SPEC_ANY);
+    ctxHandler.addServlet(new ServletHolder(thriftHttpServlet), PATH_SPEC_ANY);
     HttpServerUtil.constrainHttpMethods(ctxHandler,
       conf.getBoolean(THRIFT_HTTP_ALLOW_OPTIONS_METHOD, THRIFT_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
@@ -404,7 +408,7 @@ public class ThriftServer extends Configured implements Tool {
     httpConfig.setSendDateHeader(false);
 
     ServerConnector serverConnector;
-    if (conf.getBoolean(THRIFT_SSL_ENABLED_KEY, false)) {
+    if (isSecure) {
       HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
       httpsConfig.addCustomizer(new SecureRequestCustomizer());
 
