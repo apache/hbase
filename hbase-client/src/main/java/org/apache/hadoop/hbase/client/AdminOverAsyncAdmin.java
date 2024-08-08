@@ -1136,4 +1136,9 @@ class AdminOverAsyncAdmin implements Admin {
   public List<String> getCachedFilesList(ServerName serverName) throws IOException {
     return get(admin.getCachedFilesList(serverName));
   }
+
+  @Override
+  public Map<String, Integer> uncacheStaleBlocks(ServerName serverName) throws IOException {
+    return get(admin.uncacheStaleBlocks(serverName));
+  }
 }
