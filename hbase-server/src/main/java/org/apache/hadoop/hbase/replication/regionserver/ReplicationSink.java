@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
@@ -282,10 +283,15 @@ public class ReplicationSink {
               }
               addToHashMultiMap(rowMap, table, clusterIds, mutation);
             }
+            // Clone the cell. It may be used to construct a mutation for applying the edit on
+            // the local cluster. Some operations may still be in flight even as we fail to apply
+            // some other in-flight mutations and trigger failure handling including a release
+            // of the buffer underlying the cellScanner that is sourcing the cells.
+            Cell clonedCell = PrivateCellUtil.deepClone(cell);
             if (CellUtil.isDelete(cell)) {
-              ((Delete) mutation).add(cell);
+              ((Delete) mutation).add(clonedCell);
             } else {
-              ((Put) mutation).add(cell);
+              ((Put) mutation).add(clonedCell);
             }
             previousCell = cell;
           }
@@ -335,6 +341,8 @@ public class ReplicationSink {
       LOG.error("Unable to accept edit because:", ex);
       this.metrics.incrementFailedBatches();
       throw ex;
+    } catch (CloneNotSupportedException e) {
+      throw new IOException(e);
     }
   }
 
