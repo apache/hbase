@@ -31,8 +31,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -119,7 +122,7 @@ public final class SnapshotManifestV1 {
 
   static List<SnapshotRegionManifest> loadRegionManifests(final Configuration conf,
     final Executor executor, final FileSystem fs, final Path snapshotDir,
-    final SnapshotDescription desc) throws IOException {
+    final SnapshotDescription desc, final TableDescriptor htd) throws IOException {
     FileStatus[] regions =
       CommonFSUtils.listStatus(fs, snapshotDir, new FSUtils.RegionDirFilter(fs));
     if (regions == null) {
@@ -134,7 +137,7 @@ public final class SnapshotManifestV1 {
         @Override
         public SnapshotRegionManifest call() throws IOException {
           RegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, region.getPath());
-          return buildManifestFromDisk(conf, fs, snapshotDir, hri);
+          return buildManifestFromDisk(conf, fs, snapshotDir, hri, htd);
         }
       });
     }
@@ -159,7 +162,8 @@ public final class SnapshotManifestV1 {
   }
 
   static SnapshotRegionManifest buildManifestFromDisk(final Configuration conf, final FileSystem fs,
-    final Path tableDir, final RegionInfo regionInfo) throws IOException {
+    final Path tableDir, final RegionInfo regionInfo, final TableDescriptor htd)
+    throws IOException {
     HRegionFileSystem regionFs =
       HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, regionInfo, true);
     SnapshotRegionManifest.Builder manifest = SnapshotRegionManifest.newBuilder();
@@ -179,7 +183,9 @@ public final class SnapshotManifestV1 {
     Collection<String> familyNames = regionFs.getFamilies();
     if (familyNames != null) {
       for (String familyName : familyNames) {
-        Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(familyName, false);
+        StoreFileTracker sft = StoreFileTrackerFactory.create(conf, htd,
+          htd.getColumnFamily(familyName.getBytes()), regionFs, false);
+        List<StoreFileInfo> storeFiles = sft.load();
         if (storeFiles == null) {
           LOG.debug("No files under family: " + familyName);
           continue;

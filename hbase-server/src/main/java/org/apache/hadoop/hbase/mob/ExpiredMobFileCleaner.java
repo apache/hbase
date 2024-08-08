@@ -56,17 +56,17 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
    * @param tableName The current table name.
    * @param family    The current family.
    */
-  public void cleanExpiredMobFiles(String tableName, ColumnFamilyDescriptor family)
+  public void cleanExpiredMobFiles(TableDescriptor htd, ColumnFamilyDescriptor family)
     throws IOException {
     Configuration conf = getConf();
-    TableName tn = TableName.valueOf(tableName);
+    String tableName = htd.getTableName().getNameAsString();
     FileSystem fs = FileSystem.get(conf);
     LOG.info("Cleaning the expired MOB files of " + family.getNameAsString() + " in " + tableName);
     // disable the block cache.
     Configuration copyOfConf = new Configuration(conf);
     copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     CacheConfig cacheConfig = new CacheConfig(copyOfConf);
-    MobUtils.cleanExpiredMobFiles(fs, conf, tn, family, cacheConfig,
+    MobUtils.cleanExpiredMobFiles(fs, conf, htd, family, cacheConfig,
       EnvironmentEdgeManager.currentTime());
   }
 
@@ -105,7 +105,7 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
         throw new IOException(
           "The minVersions of the column family is not 0, could not be handled by this cleaner");
       }
-      cleanExpiredMobFiles(tableName, family);
+      cleanExpiredMobFiles(htd, family);
       return 0;
     } finally {
       admin.close();
