@@ -5838,6 +5838,35 @@ public class TestHRegion {
     }
   }
 
+  @Test
+  public void testFlushWithSpecifiedFamily() throws IOException {
+    byte[] family = Bytes.toBytes("family");
+    this.region = initHRegion(tableName, method, family);
+
+    Put put = new Put(tableName.toBytes()).addColumn(family, family, tableName.toBytes());
+    this.region.put(put);
+
+    HRegion.FlushResult fr =
+      this.region.flushcache(Arrays.asList(family), false, FlushLifeCycleTracker.DUMMY);
+    assertTrue(fr.isFlushSucceeded());
+  }
+
+  @Test
+  public void testFlushWithSpecifiedNoSuchFamily() throws IOException {
+    byte[] family = Bytes.toBytes("family");
+    byte[] noSuchFamily = Bytes.toBytes("noSuchFamily");
+    this.region = initHRegion(tableName, method, family);
+
+    Put put = new Put(tableName.toBytes()).addColumn(family, family, tableName.toBytes());
+    this.region.put(put);
+
+    HRegion.FlushResult fr = this.region.flushcache(Arrays.asList(family, noSuchFamily), false,
+      FlushLifeCycleTracker.DUMMY);
+    assertEquals(HRegion.FlushResult.Result.CANNOT_FLUSH, fr.getResult());
+    assertFalse("Cannot flush the Region because of non-existing column families.",
+      fr.isFlushSucceeded());
+  }
+
   protected Configuration initSplit() {
     // Always compact if there is more than one store file.
     CONF.setInt("hbase.hstore.compactionThreshold", 2);
