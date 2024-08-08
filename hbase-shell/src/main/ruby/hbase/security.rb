@@ -100,10 +100,21 @@ module Hbase
             namespace_name = table_name[1...table_name.length]
             raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless namespace_exists?(namespace_name)
 
-            tablebytes = table_name.to_java_bytes
-            org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
-              @connection, namespace_name, user
-            )
+            if (!family.nil?)
+              permission = family[1...family.length-1]
+              perm = org.apache.hadoop.hbase.security.access.Permission.new(
+                permission.to_java_bytes
+              )
+              puts "revoke #{permission} permission"
+              org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
+                @connection, namespace_name, user, perm.getActions
+              )
+            else
+              tablebytes = table_name.to_java_bytes
+              org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
+                @connection, namespace_name, user
+              )
+            end
           else
             # Table should exist
             raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
