@@ -462,10 +462,17 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
 
         // Clear any actions we already resolved, because none will have been executed yet
         // We are going to fail all passed actions because there's no way we can execute any
-        // if operation timeout is exceeded.
+        // if operation timeout is exceeded. We don't fail actions which were already completed
+        // (e.g. failed on location resolution) and had action counter decremented for already
         actionsByServer.clear();
         for (Action actionToFail : currentActions) {
-          manageLocationError(actionToFail, exception);
+          // NumberOfActionsInProgress check is for requests that have null results that we cannot
+          // readily check action completion for and stops us from over decrementing action counter
+          boolean actionAlreadyCompleted = getNumberOfActionsInProgress() == 0
+            || (results != null && isActionComplete(actionToFail.getOriginalIndex()));
+          if (!actionAlreadyCompleted) {
+            manageLocationError(actionToFail, exception);
+          }
         }
         return;
       }
