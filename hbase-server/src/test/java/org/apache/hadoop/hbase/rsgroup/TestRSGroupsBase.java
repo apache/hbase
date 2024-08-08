@@ -315,6 +315,8 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     boolean postBalanceRSGroupCalled = false;
     boolean preMoveServersCalled = false;
     boolean postMoveServersCalled = false;
+    boolean preMoveAllServersCalled = false;
+    boolean postMoveAllServersCalled = false;
     boolean preMoveTablesCalled = false;
     boolean postMoveTablesCalled = false;
     boolean preAddRSGroupCalled = false;
@@ -349,6 +351,8 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
       postBalanceRSGroupCalled = false;
       preMoveServersCalled = false;
       postMoveServersCalled = false;
+      preMoveAllServersCalled = false;
+      postMoveAllServersCalled = false;
       preMoveTablesCalled = false;
       postMoveTablesCalled = false;
       preAddRSGroupCalled = false;
@@ -454,6 +458,18 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     public void postMoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       Set<Address> servers, String targetGroup) throws IOException {
       postMoveServersCalled = true;
+    }
+
+    @Override
+    public void preMoveAllServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String sourceGroup, String targetGroup) throws IOException {
+      preMoveAllServersCalled = true;
+    }
+
+    @Override
+    public void postMoveAllServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String sourceGroup, String targetGroup) throws IOException {
+      postMoveAllServersCalled = true;
     }
 
     @Override
