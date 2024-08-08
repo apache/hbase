@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.AGE_AT_EVICTION;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -26,11 +27,13 @@ import static org.mockito.Mockito.when;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
+import org.apache.hadoop.metrics2.MetricHistogram;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -139,6 +142,29 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("l2CacheHitRatio", 90, serverSource);
     HELPER.assertGauge("l2CacheMissRatio", 10, serverSource);
     HELPER.assertCounter("updatesBlockedTime", 419, serverSource);
+    // start asserting ageAtEviction Histogram stats
+    FastLongHistogram ageAtEviction = wrapper.getAgeAtEviction();
+    HELPER.assertGauge(AGE_AT_EVICTION + MetricHistogram.MIN_METRIC_NAME, 100, serverSource);
+    HELPER.assertGauge(AGE_AT_EVICTION + MetricHistogram.MAX_METRIC_NAME, 500, serverSource);
+    HELPER.assertGauge(AGE_AT_EVICTION + MetricHistogram.MEAN_METRIC_NAME, (500 + 400 + 100) / 3,
+      serverSource);
+    HELPER.assertGauge(AGE_AT_EVICTION + MetricHistogram.TWENTY_FIFTH_PERCENTILE_METRIC_NAME,
+      ageAtEviction.getQuantiles()[0], serverSource);
+    HELPER.assertGauge(AGE_AT_EVICTION + MetricHistogram.MEDIAN_METRIC_NAME,
+      ageAtEviction.getQuantiles()[1], serverSource);
+    HELPER.assertGauge(AGE_AT_EVICTION + MetricHistogram.SEVENTY_FIFTH_PERCENTILE_METRIC_NAME,
+      ageAtEviction.getQuantiles()[2], serverSource);
+    HELPER.assertGauge(AGE_AT_EVICTION + MetricHistogram.NINETIETH_PERCENTILE_METRIC_NAME,
+      ageAtEviction.getQuantiles()[3], serverSource);
+    HELPER.assertGauge(AGE_AT_EVICTION + MetricHistogram.NINETY_FIFTH_PERCENTILE_METRIC_NAME,
+      ageAtEviction.getQuantiles()[4], serverSource);
+    HELPER.assertGauge(AGE_AT_EVICTION + MetricHistogram.NINETY_EIGHTH_PERCENTILE_METRIC_NAME,
+      ageAtEviction.getQuantiles()[5], serverSource);
+    HELPER.assertGauge(AGE_AT_EVICTION + MetricHistogram.NINETY_NINETH_PERCENTILE_METRIC_NAME,
+      ageAtEviction.getQuantiles()[6], serverSource);
+    HELPER.assertGauge(
+      AGE_AT_EVICTION + MetricHistogram.NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC_NAME,
+      ageAtEviction.getQuantiles()[7], serverSource);
   }
 
   @Test
