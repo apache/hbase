@@ -213,6 +213,13 @@ public interface TableDescriptor {
   boolean isCompactionEnabled();
 
   /**
+   * Check if the compaction only remove expired file flag of the table is true. If flag is false then do
+   * normal compactions.
+   * @return true if table compaction only remove expired file
+   */
+  boolean isCompactionOnlyExpiredFile();
+
+  /**
    * Check if the split enable flag of the table is true. If flag is false then no region split will
    * be done.
    * @return true if table region split enabled
