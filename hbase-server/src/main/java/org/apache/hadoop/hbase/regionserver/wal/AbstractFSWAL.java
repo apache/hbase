@@ -70,6 +70,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -1103,7 +1104,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         tellListenersAboutPostLogRoll(oldPath, newPath);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Create new " + implClassName + " writer with pipeline: "
-            + Arrays.toString(getPipeline()));
+            + Arrays.stream(getPipeline()).map(DatanodeInfo::getHostName).collect(Collectors.toSet()));
         }
         // We got a new writer, so reset the slow sync count
         lastTimeCheckSlowSync = EnvironmentEdgeManager.currentTime();

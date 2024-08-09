@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.Encryptor;
@@ -474,7 +475,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       new HashSet<>(excludeDatanodeManager.getExcludeDNs().keySet());
     for (int retry = 0;; retry++) {
       LOG.debug("When create output stream for {}, exclude list is {}, retry={}", src,
-        toExcludeNodes, retry);
+        toExcludeNodes.stream().map(DatanodeInfo::getHostName).collect(Collectors.toSet()), retry);
       HdfsFileStatus stat;
       try {
         stat = FILE_CREATOR.create(namenode, src,
