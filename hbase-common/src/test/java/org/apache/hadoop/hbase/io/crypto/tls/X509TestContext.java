@@ -461,7 +461,8 @@ public final class X509TestContext {
   }
 
   public void regenerateStores(X509KeyType keyStoreKeyType, X509KeyType trustStoreKeyType,
-    KeyStoreFileType keyStoreFileType, KeyStoreFileType trustStoreFileType, String... subjectAltNames)
+    KeyStoreFileType keyStoreFileType, KeyStoreFileType trustStoreFileType,
+    String... subjectAltNames)
     throws GeneralSecurityException, IOException, OperatorCreationException {
 
     trustStoreKeyPair = X509TestHelpers.generateKeyPair(trustStoreKeyType);

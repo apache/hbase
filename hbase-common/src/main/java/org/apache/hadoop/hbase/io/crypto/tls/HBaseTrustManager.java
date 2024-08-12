@@ -95,7 +95,8 @@ public class HBaseTrustManager extends X509ExtendedTrustManager {
     if (hostnameVerificationEnabled && engine != null) {
       try {
         if (engine.getPeerHost() == null) {
-          LOG.warn("Cannot perform client hostname verification, because peer information is not available");
+          LOG.warn(
+            "Cannot perform client hostname verification, because peer information is not available");
           return;
         }
         performHostVerification(InetAddress.getByName(engine.getPeerHost()), chain[0]);

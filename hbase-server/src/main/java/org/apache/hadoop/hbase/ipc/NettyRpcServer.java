@@ -386,8 +386,8 @@ public class NettyRpcServer extends RpcServer {
     SslContext nettySslContext = getSslContext();
 
     /*
-     * our HostnameVerifier gets the host name from SSLEngine, so we have to construct the
-     * engine properly by passing the remote address
+     * our HostnameVerifier gets the host name from SSLEngine, so we have to construct the engine
+     * properly by passing the remote address
      */
 
     if (supportPlaintext) {

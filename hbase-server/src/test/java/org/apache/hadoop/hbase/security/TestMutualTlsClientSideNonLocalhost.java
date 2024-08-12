@@ -17,6 +17,15 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.security.GeneralSecurityException;
+import java.security.Security;
+import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -34,12 +43,8 @@ import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl;
-import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
-import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.After;
@@ -51,18 +56,26 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import java.io.File;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.security.GeneralSecurityException;
-import java.security.Security;
-import java.util.List;
-import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos;
+
+/**
+ * Tests for client-side mTLS focusing on client hostname verification in the case when client and
+ * server are on different hosts. We try to simulate this behaviour by querying the hostname with
+ * <p>
+ * InetAddress.getLocalHost()
+ * </p>
+ * Certificates are generated with the hostname in Subject Alternative Names, server binds
+ * non-localhost interface and client connects via remote IP address. Parameter is set to verify
+ * both TLS/plaintext and TLS-only cases.
+ */
 @RunWith(Parameterized.class)
 @Category({ RPCTests.class, MediumTests.class })
-public class TestMutualTlsClientSideNonLocalhost  {
+public class TestMutualTlsClientSideNonLocalhost {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -126,8 +139,8 @@ public class TestMutualTlsClientSideNonLocalhost  {
     InetSocketAddress isa = new InetSocketAddress(InetAddress.getLocalHost(), 0);
 
     rpcServer = new NettyRpcServer(null, "testRpcServer",
-      Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
-      isa, serverConf, new FifoRpcScheduler(serverConf, 1), true);
+      Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)), isa, serverConf,
+      new FifoRpcScheduler(serverConf, 1), true);
     rpcServer.start();
 
     rpcClient = new NettyRpcClient(clientConf);
@@ -138,8 +151,8 @@ public class TestMutualTlsClientSideNonLocalhost  {
     throws GeneralSecurityException, IOException, OperatorCreationException {
     serverConf.setBoolean(X509Util.HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, supportPlaintext);
     clientConf.setBoolean(X509Util.HBASE_CLIENT_NETTY_TLS_VERIFY_SERVER_HOSTNAME, true);
-    x509TestContext.regenerateStores(X509KeyType.RSA, X509KeyType.RSA, KeyStoreFileType.JKS, KeyStoreFileType.JKS,
-      InetAddress.getLocalHost().getHostName());
+    x509TestContext.regenerateStores(X509KeyType.RSA, X509KeyType.RSA, KeyStoreFileType.JKS,
+      KeyStoreFileType.JKS, InetAddress.getLocalHost().getHostName());
   }
 
   @After
