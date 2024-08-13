@@ -79,7 +79,7 @@ public class TestMutualTlsClientSideNonLocalhost {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMutualTlsClientSide.class);
+    HBaseClassTestRule.forClass(TestMutualTlsClientSideNonLocalhost.class);
 
   protected static HBaseCommonTestingUtil UTIL;
 
