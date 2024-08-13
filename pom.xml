@@ -541,6 +541,8 @@
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
     <hadoop-two.version>2.10.0</hadoop-two.version>
+    <!--From hadoop 3.3.3 For LZ4 and Snappy compression codec, Hadoop  moves to use lz4-java and snappy-java
+    instead of requring the native libraries of these to be installed on the systems running Hadoop.-->
     <hadoop-three.version>3.3.3</hadoop-three.version>
     <!-- These must be defined here for downstream build tools that don't look at profiles.
          They ought to match the values found in our default hadoop profile, which is
