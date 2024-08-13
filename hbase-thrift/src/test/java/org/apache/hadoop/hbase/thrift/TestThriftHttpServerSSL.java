@@ -33,7 +33,7 @@ import java.security.cert.X509Certificate;
 import javax.net.ssl.SSLContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -70,7 +70,7 @@ public class TestThriftHttpServerSSL {
     HBaseClassTestRule.forClass(TestThriftHttpServerSSL.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestThriftHttpServerSSL.class);
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final String KEY_STORE_PASSWORD = "myKSPassword";
   private static final String TRUST_STORE_PASSWORD = "myTSPassword";
 
