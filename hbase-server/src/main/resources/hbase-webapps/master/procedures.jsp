@@ -47,8 +47,28 @@
 <%@ page import="org.apache.hadoop.hbase.metrics.Histogram" %>
 <%@ page import="java.util.TreeMap" %>
 <%@ page import="org.apache.hadoop.hbase.metrics.impl.HistogramImpl" %>
+
+<jsp:include page="header.jsp">
+    <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
+
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
+  if (!master.isInitialized()) {
+%>
+    <div class="container-fluid content">
+      <div class="row inner_header">
+        <div class="page-header">
+          <h1>Master is initializing</h1>
+        </div>
+      </div>
+      <p><hr><p>
+      <jsp:include page="redirect.jsp" />
+    </div>
+<%  return;
+  } %>
+
+<%
   ProcedureExecutor<MasterProcedureEnv> procExecutor = master.getMasterProcedureExecutor();
   List<Procedure<MasterProcedureEnv>> procedures = procExecutor.getProcedures();
   Collections.sort(procedures, new Comparator<Procedure>() {
@@ -63,9 +83,6 @@
   List<LockedResource> lockedResources = master.getLocks();
   pageContext.setAttribute("pageTitle", "HBase Master Procedures: " + master.getServerName());
 %>
-<jsp:include page="header.jsp">
-    <jsp:param name="pageTitle" value="${pageTitle}"/>
-</jsp:include>
 
 <div class="container-fluid content">
   <div class="row top_header">
