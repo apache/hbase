@@ -1862,7 +1862,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         long initiatingMasterActiveTime = transition.hasInitiatingMasterActiveTime()
           ? transition.getInitiatingMasterActiveTime()
           : -1;
-        throwOnOldMasterStartCode(procId, initiatingMasterActiveTime);
+        throwOnOldMaster(procId, initiatingMasterActiveTime);
       }
       return server.getAssignmentManager().reportRegionStateTransition(req);
     } catch (IOException ioe) {
@@ -2567,7 +2567,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         // -1 is less than any possible MasterActiveCode
         long initiatingMasterActiveTime =
           result.hasInitiatingMasterActiveTime() ? result.getInitiatingMasterActiveTime() : -1;
-        throwOnOldMasterStartCode(result.getProcId(), initiatingMasterActiveTime);
+        throwOnOldMaster(result.getProcId(), initiatingMasterActiveTime);
       }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -2583,7 +2583,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     return ReportProcedureDoneResponse.getDefaultInstance();
   }
 
-  private void throwOnOldMasterStartCode(long procId, long initiatingMasterActiveTime)
+  private void throwOnOldMaster(long procId, long initiatingMasterActiveTime)
     throws MasterNotRunningException {
     if (initiatingMasterActiveTime > server.getMasterActiveTime()) {
       // procedure is initiated by new active master but report received on master with older active
