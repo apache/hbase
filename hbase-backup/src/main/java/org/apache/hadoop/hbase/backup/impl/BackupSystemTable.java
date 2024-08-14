@@ -54,15 +54,16 @@ import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
@@ -77,7 +78,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -103,7 +103,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 public final class BackupSystemTable implements Closeable {
 
   private static final Logger LOG = LoggerFactory.getLogger(BackupSystemTable.class);
-  private static final int BATCH_SIZE = 1000;
 
   static class WALItem {
     String backupId;
@@ -417,7 +416,7 @@ public final class BackupSystemTable implements Closeable {
     }
     try (Table table = connection.getTable(bulkLoadTableName)) {
       List<Put> puts = BackupSystemTable.createPutForCommittedBulkload(tabName, region, finalPaths);
-      executePartitionedBatches(table, puts);
+      executeBufferedMutations(table, puts);
       LOG.debug("written " + puts.size() + " rows for bulk load of " + tabName);
     }
   }
@@ -456,7 +455,7 @@ public final class BackupSystemTable implements Closeable {
         lstDels.add(del);
         LOG.debug("orig deleting the row: " + Bytes.toString(row));
       }
-      executePartitionedBatches(table, lstDels);
+      executeBufferedMutations(table, lstDels);
       LOG.debug("deleted " + rows.size() + " original bulkload rows");
     }
   }
@@ -561,7 +560,7 @@ public final class BackupSystemTable implements Closeable {
         }
       }
       if (!puts.isEmpty()) {
-        executePartitionedBatches(table, puts);
+        executeBufferedMutations(table, puts);
       }
     }
   }
@@ -921,7 +920,7 @@ public final class BackupSystemTable implements Closeable {
       puts.add(put);
     }
     try (Table table = connection.getTable(tableName)) {
-      executePartitionedBatches(table, puts);
+      executeBufferedMutations(table, puts);
     }
   }
 
@@ -1888,6 +1887,13 @@ public final class BackupSystemTable implements Closeable {
     return Bytes.toString(data).substring(SET_KEY_PREFIX.length());
   }
 
+  private void executeBufferedMutations(Table table, List<? extends Mutation> mutations)
+    throws IOException {
+    try (BufferedMutator bufferedMutator = connection.getBufferedMutator(table.getName())) {
+      bufferedMutator.mutate(mutations);
+    }
+  }
+
   private static byte[] rowkey(String s, String... other) {
     StringBuilder sb = new StringBuilder(s);
     for (String ss : other) {
@@ -1902,21 +1908,6 @@ public final class BackupSystemTable implements Closeable {
         admin.enableTable(tableName);
       } catch (TableNotDisabledException ignored) {
         LOG.info("Table {} is not disabled, ignoring enable request", tableName);
-      }
-    }
-  }
-
-  /**
-   * Executes the given operations in partitioned batches of size {@link #BATCH_SIZE}
-   */
-  private static void executePartitionedBatches(Table table, List<? extends Row> operations)
-    throws IOException {
-    List<? extends List<? extends Row>> operationBatches = Lists.partition(operations, BATCH_SIZE);
-    for (List<? extends Row> batch : operationBatches) {
-      try {
-        table.batch(batch, new Object[batch.size()]);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
       }
     }
   }
