@@ -65,13 +65,8 @@ public class UnassignRegionHandler extends EventHandler {
 
   private boolean evictCache;
 
-  // active time of the master that sent this unassign request
+  // active time of the master that sent this unassign request, used for fencing
   private final long initiatingMasterActiveTime;
-
-  public UnassignRegionHandler(HRegionServer server, String encodedName, long closeProcId,
-    boolean abort, @Nullable ServerName destination, EventType eventType) {
-    this(server, encodedName, closeProcId, abort, destination, eventType, -1, false);
-  }
 
   public UnassignRegionHandler(HRegionServer server, String encodedName, long closeProcId,
     boolean abort, @Nullable ServerName destination, EventType eventType,

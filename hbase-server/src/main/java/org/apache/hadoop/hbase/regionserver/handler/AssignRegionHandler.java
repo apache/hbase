@@ -62,7 +62,7 @@ public class AssignRegionHandler extends EventHandler {
 
   private final long masterSystemTime;
 
-  // active time of the master that sent this assign request
+  // active time of the master that sent this assign request, used for fencing
   private final long initiatingMasterActiveTime;
 
   private final RetryCounter retryCounter;
