@@ -1639,4 +1639,11 @@ public final class HConstants {
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
+
+  /**
+   * Number of threads used to execute table normalizer operations.
+   */
+  public static final String HBASE_NORMALIZER_WORKER_POOL_THREADS =
+    "hbase.normalizer.worker.pool.threads";
+  public static final int HBASE_NORMALIZER_WORKER_POOL_THREADS_DEFAULT = 1;
 }
