@@ -857,7 +857,7 @@
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
-    <tomcat.jasper.version>9.0.84</tomcat.jasper.version>
+    <tomcat.jasper.version>9.0.93</tomcat.jasper.version>
     <jruby.version>9.4.8.0</jruby.version>
     <junit.version>4.13.2</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
@@ -1573,6 +1573,14 @@
             <groupId>org.eclipse.jdt</groupId>
             <artifactId>ecj</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>org.apache.tomcat</groupId>
+            <artifactId>tomcat-servlet-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.tomcat</groupId>
+            <artifactId>tomcat-jsp-api</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1580,11 +1588,6 @@
         <groupId>javax.servlet.jsp</groupId>
         <artifactId>javax.servlet.jsp-api</artifactId>
         <version>2.3.1</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish</groupId>
-        <artifactId>javax.el</artifactId>
-        <version>${glassfish.el.version}</version>
       </dependency>
       <dependency>
         <groupId>javax.xml.bind</groupId>
