@@ -49,7 +49,9 @@ public class RecoveredReplicationSource extends ReplicationSource {
       () -> {
         if (workerThreads.isEmpty()) {
           this.getSourceMetrics().clear();
-          this.terminate("Finished recovering queue");
+          if (this.getReplicationEndpoint() != null) {
+            this.getReplicationEndpoint().stop();
+          }
           manager.finishRecoveredSource(this);
         }
       });
