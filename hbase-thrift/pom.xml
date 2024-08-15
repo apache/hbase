@@ -149,6 +149,11 @@
       <artifactId>reload4j</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk18on</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
