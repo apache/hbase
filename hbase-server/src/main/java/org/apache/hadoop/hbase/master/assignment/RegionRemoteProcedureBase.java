@@ -96,10 +96,11 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
     if (state == RegionRemoteProcedureBaseState.REGION_REMOTE_PROCEDURE_REPORT_SUCCEED) {
       return Optional.empty();
     }
-    return Optional.of(newRemoteOperation());
+    return Optional.of(newRemoteOperation(env));
   }
 
-  protected abstract RemoteProcedureDispatcher.RemoteOperation newRemoteOperation();
+  protected abstract RemoteProcedureDispatcher.RemoteOperation
+    newRemoteOperation(MasterProcedureEnv env);
 
   @Override
   public void remoteOperationCompleted(MasterProcedureEnv env) {

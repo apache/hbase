@@ -224,8 +224,9 @@ public class SnapshotVerifyProcedure extends ServerRemoteProcedure
   public Optional<RemoteOperation> remoteCallBuild(MasterProcedureEnv env, ServerName serverName) {
     SnapshotVerifyParameter.Builder builder = SnapshotVerifyParameter.newBuilder();
     builder.setSnapshot(snapshot).setRegion(ProtobufUtil.toRegionInfo(region));
-    return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
-      SnapshotVerifyCallable.class, builder.build().toByteArray()));
+    return Optional
+      .of(new RSProcedureDispatcher.ServerOperation(this, getProcId(), SnapshotVerifyCallable.class,
+        builder.build().toByteArray(), env.getMasterServices().getMasterActiveTime()));
   }
 
   @Override
