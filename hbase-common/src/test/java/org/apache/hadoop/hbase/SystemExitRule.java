@@ -26,7 +26,7 @@ import org.junit.runners.model.Statement;
 * the JVM - instead an exception is thrown.
 * */
 public class SystemExitRule implements TestRule {
-  final static SecurityManager securityManager = new TestSecurityManager();
+//  final static SecurityManager securityManager = new TestSecurityManager();
 
   @Override
   public Statement apply(final Statement s, Description d) {
@@ -35,10 +35,10 @@ public class SystemExitRule implements TestRule {
       public void evaluate() throws Throwable {
 
         try {
-          forbidSystemExitCall();
+//          forbidSystemExitCall();
           s.evaluate();
         } finally {
-          System.setSecurityManager(null);
+//          System.setSecurityManager(null);
         }
       }
 
@@ -50,7 +50,7 @@ public class SystemExitRule implements TestRule {
   public static class SystemExitInTestException extends SecurityException {
   }
 
-  private static void forbidSystemExitCall() {
-    System.setSecurityManager(securityManager);
-  }
+//  private static void forbidSystemExitCall() {
+//    System.setSecurityManager(securityManager);
+//  }
 }

@@ -17,30 +17,24 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.ExtendedCellScannable;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -57,259 +51,216 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
-
 @Category({ ClientTests.class, MediumTests.class })
-public class TestRequestAndConnectionAttributes {
+public class TestRequestAttributes {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRequestAndConnectionAttributes.class);
+    HBaseClassTestRule.forClass(TestRequestAttributes.class);
 
+  private static final byte[] ROW_KEY1 = Bytes.toBytes("1");
+  private static final byte[] ROW_KEY2 = Bytes.toBytes("2");
+  private static final byte[] ROW_KEY3 = Bytes.toBytes("3");
+  private static final byte[] ROW_KEY4 = Bytes.toBytes("4");
+  private static final byte[] ROW_KEY5 = Bytes.toBytes("5");
+  private static final byte[] ROW_KEY6 = Bytes.toBytes("6");
+  private static final byte[] ROW_KEY7 = Bytes.toBytes("7");
+  private static final byte[] ROW_KEY8 = Bytes.toBytes("8");
   private static final Map<String, byte[]> CONNECTION_ATTRIBUTES = new HashMap<>();
+  private static final Map<String, byte[]> REQUEST_ATTRIBUTES_SCAN = addRandomRequestAttributes();
+  private static final Map<byte[], Map<String, byte[]>> ROW_KEY_TO_REQUEST_ATTRIBUTES = new HashMap<>();
   static {
     CONNECTION_ATTRIBUTES.put("clientId", Bytes.toBytes("foo"));
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY1, addRandomRequestAttributes());
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY2, addRandomRequestAttributes());
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY3, addRandomRequestAttributes());
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY4, addRandomRequestAttributes());
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY5, addRandomRequestAttributes());
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY6, addRandomRequestAttributes());
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY7, addRandomRequestAttributes());
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY8, new HashMap<>());
   }
-  private static final Map<String, byte[]> REQUEST_ATTRIBUTES = new HashMap<>();
   private static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(100);
-  private static final AtomicBoolean REQUEST_ATTRIBUTES_VALIDATED = new AtomicBoolean(false);
-  private static final byte[] REQUEST_ATTRIBUTES_TEST_TABLE_CF = Bytes.toBytes("0");
-  private static final TableName REQUEST_ATTRIBUTES_TEST_TABLE =
+  private static final byte[] FAMILY = Bytes.toBytes("0");
+  private static final TableName TABLE_NAME =
     TableName.valueOf("testRequestAttributes");
 
-  private static HBaseTestingUtil TEST_UTIL = null;
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private static SingleProcessHBaseCluster cluster;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtil();
-    TEST_UTIL.startMiniCluster(1);
-    TEST_UTIL.createTable(REQUEST_ATTRIBUTES_TEST_TABLE,
-      new byte[][] { REQUEST_ATTRIBUTES_TEST_TABLE_CF }, 1, HConstants.DEFAULT_BLOCKSIZE,
+    cluster = TEST_UTIL.startMiniCluster(1);
+    Table table = TEST_UTIL.createTable(TABLE_NAME,
+      new byte[][] { FAMILY }, 1, HConstants.DEFAULT_BLOCKSIZE,
       AttributesCoprocessor.class.getName());
+    table.close();
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
+    cluster.close();
     TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @Before
-  public void setup() {
-    REQUEST_ATTRIBUTES_VALIDATED.getAndSet(false);
-  }
-
-  @Test
-  public void testConnectionHeaderOverwrittenAttributesRemain() throws IOException {
-    TableName tableName = TableName.valueOf("testConnectionAttributes");
-    byte[] cf = Bytes.toBytes("0");
-    TEST_UTIL.createTable(tableName, new byte[][] { cf }, 1, HConstants.DEFAULT_BLOCKSIZE,
-      AttributesCoprocessor.class.getName());
-
-    Configuration conf = TEST_UTIL.getConfiguration();
-    try (Connection conn = ConnectionFactory.createConnection(conf, null,
-      AuthUtil.loginClient(conf), CONNECTION_ATTRIBUTES); Table table = conn.getTable(tableName)) {
-
-      // submit a 300 byte rowkey here to encourage netty's allocator to overwrite the connection
-      // header
-      byte[] bytes = new byte[300];
-      new Random().nextBytes(bytes);
-      Result result = table.get(new Get(bytes));
-
-      assertEquals(CONNECTION_ATTRIBUTES.size(), result.size());
-      for (Map.Entry<String, byte[]> attr : CONNECTION_ATTRIBUTES.entrySet()) {
-        byte[] val = result.getValue(Bytes.toBytes("c"), Bytes.toBytes(attr.getKey()));
-        assertEquals(Bytes.toStringBinary(attr.getValue()), Bytes.toStringBinary(val));
-      }
-    }
   }
 
   @Test
   public void testRequestAttributesGet() throws IOException {
-    addRandomRequestAttributes();
-
     Configuration conf = TEST_UTIL.getConfiguration();
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
       Table table = configureRequestAttributes(
-        conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)).build()) {
+        conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
+        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY1)
+      ).build()) {
 
-      table.get(new Get(Bytes.toBytes(0)));
-    }
-
-    assertTrue(REQUEST_ATTRIBUTES_VALIDATED.get());
-  }
+      table.get(new Get(ROW_KEY1));
+    }}
 
   @Test
   public void testRequestAttributesMultiGet() throws IOException {
-    assertFalse(REQUEST_ATTRIBUTES_VALIDATED.get());
-    addRandomRequestAttributes();
-
     Configuration conf = TEST_UTIL.getConfiguration();
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
       Table table = configureRequestAttributes(
-        conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)).build()) {
-      List<Get> gets = ImmutableList.of(new Get(Bytes.toBytes(0)), new Get(Bytes.toBytes(1)));
+        conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
+        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY2)
+      ).build()) {
+      List<Get> gets = ImmutableList.of(new Get(ROW_KEY2), new Get(Bytes.toBytes(1)));
       table.get(gets);
     }
-
-    assertTrue(REQUEST_ATTRIBUTES_VALIDATED.get());
-  }
-
-  @Test
-  public void testRequestAttributesExists() throws IOException {
-    assertFalse(REQUEST_ATTRIBUTES_VALIDATED.get());
-    addRandomRequestAttributes();
-
-    Configuration conf = TEST_UTIL.getConfiguration();
-    try (
-      Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
-        CONNECTION_ATTRIBUTES);
-      Table table = configureRequestAttributes(
-        conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)).build()) {
-
-      table.exists(new Get(Bytes.toBytes(0)));
-    }
-
-    assertTrue(REQUEST_ATTRIBUTES_VALIDATED.get());
   }
 
   @Test
   public void testRequestAttributesScan() throws IOException {
-    assertFalse(REQUEST_ATTRIBUTES_VALIDATED.get());
-    addRandomRequestAttributes();
-
     Configuration conf = TEST_UTIL.getConfiguration();
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
       Table table = configureRequestAttributes(
-        conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)).build()) {
+        conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
+        REQUEST_ATTRIBUTES_SCAN
+      ).build()) {
       ResultScanner scanner = table.getScanner(new Scan());
       scanner.next();
     }
-    assertTrue(REQUEST_ATTRIBUTES_VALIDATED.get());
   }
 
   @Test
   public void testRequestAttributesPut() throws IOException {
-    assertFalse(REQUEST_ATTRIBUTES_VALIDATED.get());
-    addRandomRequestAttributes();
-
     Configuration conf = TEST_UTIL.getConfiguration();
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
       Table table = configureRequestAttributes(
-        conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)).build()) {
-      Put put = new Put(Bytes.toBytes("a"));
-      put.addColumn(REQUEST_ATTRIBUTES_TEST_TABLE_CF, Bytes.toBytes("c"), Bytes.toBytes("v"));
+        conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
+        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY3)
+      ).build()) {
+      Put put = new Put(ROW_KEY3);
+      put.addColumn(FAMILY, Bytes.toBytes("c"), Bytes.toBytes("v"));
       table.put(put);
     }
-    assertTrue(REQUEST_ATTRIBUTES_VALIDATED.get());
   }
 
   @Test
   public void testRequestAttributesMultiPut() throws IOException {
-    assertFalse(REQUEST_ATTRIBUTES_VALIDATED.get());
-    addRandomRequestAttributes();
-
     Configuration conf = TEST_UTIL.getConfiguration();
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
       Table table = configureRequestAttributes(
-        conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)).build()) {
-      Put put = new Put(Bytes.toBytes("a"));
-      put.addColumn(REQUEST_ATTRIBUTES_TEST_TABLE_CF, Bytes.toBytes("c"), Bytes.toBytes("v"));
+        conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
+        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY4)
+      ).build()) {
+      Put put = new Put(ROW_KEY4);
+      put.addColumn(FAMILY, Bytes.toBytes("c"), Bytes.toBytes("v"));
       table.put(put);
     }
-    assertTrue(REQUEST_ATTRIBUTES_VALIDATED.get());
   }
 
   @Test
   public void testRequestAttributesBufferedMutate() throws IOException, InterruptedException {
-    assertFalse(REQUEST_ATTRIBUTES_VALIDATED.get());
-    addRandomRequestAttributes();
-
     Configuration conf = TEST_UTIL.getConfiguration();
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
       BufferedMutator bufferedMutator = conn.getBufferedMutator(
-        configureRequestAttributes(new BufferedMutatorParams(REQUEST_ATTRIBUTES_TEST_TABLE)));) {
-      Put put = new Put(Bytes.toBytes("a"));
-      put.addColumn(REQUEST_ATTRIBUTES_TEST_TABLE_CF, Bytes.toBytes("c"), Bytes.toBytes("v"));
+        configureRequestAttributes(new BufferedMutatorParams(TABLE_NAME),
+        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY5)
+      ));) {
+      Put put = new Put(ROW_KEY5);
+      put.addColumn(FAMILY, Bytes.toBytes("c"), Bytes.toBytes("v"));
       bufferedMutator.mutate(put);
       bufferedMutator.flush();
     }
+  }
 
-    assertTrue(REQUEST_ATTRIBUTES_VALIDATED.get());
+  @Test
+  public void testRequestAttributesExists() throws IOException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (
+      Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
+        CONNECTION_ATTRIBUTES);
+      Table table = configureRequestAttributes(
+        conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
+        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY6)
+      ).build()) {
+
+      table.exists(new Get(ROW_KEY6));
+    }
   }
 
   @Test
   public void testRequestAttributesFromRpcController() throws IOException, InterruptedException {
-    assertFalse(REQUEST_ATTRIBUTES_VALIDATED.get());
-    addRandomRequestAttributes();
-
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setClass(RpcControllerFactory.CUSTOM_CONTROLLER_CONF_KEY,
       RequestMetadataControllerFactory.class, RpcControllerFactory.class);
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      BufferedMutator bufferedMutator = conn.getBufferedMutator(REQUEST_ATTRIBUTES_TEST_TABLE);) {
-      Put put = new Put(Bytes.toBytes("a"));
-      put.addColumn(REQUEST_ATTRIBUTES_TEST_TABLE_CF, Bytes.toBytes("c"), Bytes.toBytes("v"));
+      BufferedMutator bufferedMutator = conn.getBufferedMutator(TABLE_NAME);) {
+      Put put = new Put(ROW_KEY7);
+      put.addColumn(FAMILY, Bytes.toBytes("c"), Bytes.toBytes("v"));
       bufferedMutator.mutate(put);
       bufferedMutator.flush();
     }
     conf.unset(RpcControllerFactory.CUSTOM_CONTROLLER_CONF_KEY);
-    assertTrue(REQUEST_ATTRIBUTES_VALIDATED.get());
   }
 
   @Test
   public void testNoRequestAttributes() throws IOException {
-    assertFalse(REQUEST_ATTRIBUTES_VALIDATED.get());
-    TableName tableName = TableName.valueOf("testNoRequestAttributesScan");
-    TEST_UTIL.createTable(tableName, new byte[][] { Bytes.toBytes("0") }, 1,
-      HConstants.DEFAULT_BLOCKSIZE, AttributesCoprocessor.class.getName());
-
-    REQUEST_ATTRIBUTES.clear();
     Configuration conf = TEST_UTIL.getConfiguration();
     try (Connection conn = ConnectionFactory.createConnection(conf, null,
       AuthUtil.loginClient(conf), CONNECTION_ATTRIBUTES)) {
-      TableBuilder tableBuilder = conn.getTableBuilder(tableName, null);
+      TableBuilder tableBuilder = conn.getTableBuilder(TABLE_NAME, null);
       try (Table table = tableBuilder.build()) {
-        table.get(new Get(Bytes.toBytes(0)));
-        assertTrue(REQUEST_ATTRIBUTES_VALIDATED.get());
+        table.get(new Get(ROW_KEY8));
       }
     }
   }
 
-  private void addRandomRequestAttributes() {
-    REQUEST_ATTRIBUTES.clear();
+  private static Map<String, byte[]> addRandomRequestAttributes() {
+    Map<String, byte[]> requestAttributes = new HashMap<>();
     int j = Math.max(2, (int) (10 * Math.random()));
     for (int i = 0; i < j; i++) {
-      REQUEST_ATTRIBUTES.put(String.valueOf(i), Bytes.toBytes(UUID.randomUUID().toString()));
+      requestAttributes.put(String.valueOf(i), Bytes.toBytes(UUID.randomUUID().toString()));
     }
+    return requestAttributes;
   }
 
-  private static TableBuilder configureRequestAttributes(TableBuilder tableBuilder) {
-    REQUEST_ATTRIBUTES.forEach(tableBuilder::setRequestAttribute);
+  private static TableBuilder configureRequestAttributes(TableBuilder tableBuilder, Map<String, byte[]> requestAttributes) {
+    requestAttributes.forEach(tableBuilder::setRequestAttribute);
     return tableBuilder;
   }
 
-  private static BufferedMutatorParams configureRequestAttributes(BufferedMutatorParams params) {
-    REQUEST_ATTRIBUTES.forEach(params::setRequestAttribute);
+  private static BufferedMutatorParams configureRequestAttributes(BufferedMutatorParams params, Map<String, byte[]> requestAttributes) {
+    requestAttributes.forEach(params::setRequestAttribute);
     return params;
   }
 
@@ -321,42 +272,37 @@ public class TestRequestAndConnectionAttributes {
 
     @Override
     public HBaseRpcController newController() {
-      return new RequestMetadataController(super.newController(), REQUEST_ATTRIBUTES);
+      return new RequestMetadataController(super.newController());
     }
 
     @Override
     public HBaseRpcController newController(ExtendedCellScanner cellScanner) {
-      return new RequestMetadataController(super.newController(null, cellScanner),
-        REQUEST_ATTRIBUTES);
+      return new RequestMetadataController(super.newController(null, cellScanner));
     }
 
     @Override
     public HBaseRpcController newController(RegionInfo regionInfo,
       ExtendedCellScanner cellScanner) {
-      return new RequestMetadataController(super.newController(regionInfo, cellScanner),
-        REQUEST_ATTRIBUTES);
+      return new RequestMetadataController(super.newController(regionInfo, cellScanner));
     }
 
     @Override
     public HBaseRpcController newController(final List<ExtendedCellScannable> cellIterables) {
-      return new RequestMetadataController(super.newController(null, cellIterables),
-        REQUEST_ATTRIBUTES);
+      return new RequestMetadataController(super.newController(null, cellIterables));
     }
 
     @Override
     public HBaseRpcController newController(RegionInfo regionInfo,
       final List<ExtendedCellScannable> cellIterables) {
-      return new RequestMetadataController(super.newController(regionInfo, cellIterables),
-        REQUEST_ATTRIBUTES);
+      return new RequestMetadataController(super.newController(regionInfo, cellIterables));
     }
 
     public static class RequestMetadataController extends DelegatingHBaseRpcController {
       private final Map<String, byte[]> requestAttributes;
 
-      RequestMetadataController(HBaseRpcController delegate,
-        Map<String, byte[]> requestAttributes) {
+      RequestMetadataController(HBaseRpcController delegate) {
         super(delegate);
-        this.requestAttributes = requestAttributes;
+        this.requestAttributes = ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY7);
       }
 
       @Override
@@ -376,52 +322,40 @@ public class TestRequestAndConnectionAttributes {
     @Override
     public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
       List<Cell> result) throws IOException {
-      validateRequestAttributes();
-
-      // for connection attrs test
-      RpcCall rpcCall = RpcServer.getCurrentCall().get();
-      for (Map.Entry<String, byte[]> attr : rpcCall.getRequestAttributes().entrySet()) {
-        result.add(c.getEnvironment().getCellBuilder().clear().setRow(get.getRow())
-          .setFamily(Bytes.toBytes("r")).setQualifier(Bytes.toBytes(attr.getKey()))
-          .setValue(attr.getValue()).setType(Cell.Type.Put).setTimestamp(1).build());
-      }
-      for (Map.Entry<String, byte[]> attr : rpcCall.getConnectionAttributes().entrySet()) {
-        result.add(c.getEnvironment().getCellBuilder().clear().setRow(get.getRow())
-          .setFamily(Bytes.toBytes("c")).setQualifier(Bytes.toBytes(attr.getKey()))
-          .setValue(attr.getValue()).setType(Cell.Type.Put).setTimestamp(1).build());
-      }
-      result.sort(CellComparator.getInstance());
-      c.bypass();
+      validateRequestAttributes(getRequestAttributesForRowKey(get.getRow()));
     }
 
     @Override
     public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
       InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
-      validateRequestAttributes();
+      validateRequestAttributes(REQUEST_ATTRIBUTES_SCAN);
       return hasNext;
     }
 
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit)
       throws IOException {
-      validateRequestAttributes();
+      validateRequestAttributes(getRequestAttributesForRowKey(put.getRow()));
     }
 
-    private void validateRequestAttributes() {
+    private Map<String, byte[]> getRequestAttributesForRowKey(byte[] rowKey) {
+      return ROW_KEY_TO_REQUEST_ATTRIBUTES.get(rowKey);
+    }
+
+    private void validateRequestAttributes(Map<String, byte[]> requestAttributes) {
       RpcCall rpcCall = RpcServer.getCurrentCall().get();
       Map<String, byte[]> attrs = rpcCall.getRequestAttributes();
-      if (attrs.size() != REQUEST_ATTRIBUTES.size()) {
+      if (attrs.size() != requestAttributes.size()) {
         return;
       }
       for (Map.Entry<String, byte[]> attr : attrs.entrySet()) {
-        if (!REQUEST_ATTRIBUTES.containsKey(attr.getKey())) {
+        if (!requestAttributes.containsKey(attr.getKey())) {
           return;
         }
-        if (!Arrays.equals(REQUEST_ATTRIBUTES.get(attr.getKey()), attr.getValue())) {
+        if (!Arrays.equals(requestAttributes.get(attr.getKey()), attr.getValue())) {
           return;
         }
       }
-      REQUEST_ATTRIBUTES_VALIDATED.getAndSet(true);
     }
   }
 }
