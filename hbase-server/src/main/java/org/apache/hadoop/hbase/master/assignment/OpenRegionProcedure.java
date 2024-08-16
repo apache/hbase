@@ -57,8 +57,9 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
   }
 
   @Override
-  public RemoteOperation newRemoteOperation() {
-    return new RegionOpenOperation(this, region, getProcId());
+  public RemoteOperation newRemoteOperation(MasterProcedureEnv env) {
+    return new RegionOpenOperation(this, region, getProcId(),
+      env.getMasterServices().getMasterActiveTime());
   }
 
   @Override
