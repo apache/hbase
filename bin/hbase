@@ -763,7 +763,7 @@ elif [ "$COMMAND" = "hbtop" ] ; then
 elif [ "$COMMAND" = "credential" ] ; then
   CLASS='org.apache.hadoop.security.alias.CredentialShell'
 elif [ "$COMMAND" = "copyreppeers" ] ; then
-  CLASS='org.apache.hadoop.hbase.replication.ReplicationPeerMigrationTool'
+  CLASS='org.apache.hadoop.hbase.replication.CopyReplicationPeers'
 else
   CLASS=$COMMAND
 if [[ "$CLASS" =~ .*IntegrationTest.* ]] ; then
