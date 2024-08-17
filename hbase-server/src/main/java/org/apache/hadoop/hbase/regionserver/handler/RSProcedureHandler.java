@@ -35,7 +35,7 @@ public class RSProcedureHandler extends EventHandler {
 
   private final long procId;
 
-  // active time of the master that sent this procedure request, used for fencing
+  // active time of the master that sent procedure request, used for fencing
   private final long initiatingMasterActiveTime;
 
   private final RSProcedureCallable callable;
