@@ -420,7 +420,7 @@ public class MajorCompactor extends Configured implements Tool {
       return -1;
     }
     String tableName = commandLine.getOptionValue("table");
-    String cf = commandLine.getOptionValue("cf", null);
+    String cf = commandLine.getOptionValue("cf");
     Set<String> families = Sets.newHashSet();
     if (cf != null) {
       Iterables.addAll(families, Splitter.on(",").split(cf));
