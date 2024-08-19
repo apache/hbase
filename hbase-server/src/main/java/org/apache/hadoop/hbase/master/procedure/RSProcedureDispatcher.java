@@ -442,7 +442,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     final ServerName serverName, final List<RegionOpenOperation> operations) {
     final OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
     builder.setServerStartCode(serverName.getStartCode());
-    operations.stream().map(RemoteOperation::getInitiatingMasterActiveTime).findAny().ifPresent(builder::setInitiatingMasterActiveTime);
+    operations.stream().map(RemoteOperation::getInitiatingMasterActiveTime).findAny()
+      .ifPresent(builder::setInitiatingMasterActiveTime);
     builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
     for (RegionOpenOperation op : operations) {
       builder.addOpenInfo(op.buildRegionOpenInfoRequest(env));
