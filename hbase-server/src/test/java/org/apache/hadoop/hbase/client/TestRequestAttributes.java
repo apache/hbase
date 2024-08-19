@@ -64,7 +64,8 @@ public class TestRequestAttributes {
     HBaseClassTestRule.forClass(TestRequestAttributes.class);
 
   private static final byte[] ROW_KEY1 = Bytes.toBytes("1");
-  private static final byte[] ROW_KEY2 = Bytes.toBytes("2");
+  private static final byte[] ROW_KEY2A = Bytes.toBytes("2A");
+  private static final byte[] ROW_KEY2B = Bytes.toBytes("2B");
   private static final byte[] ROW_KEY3 = Bytes.toBytes("3");
   private static final byte[] ROW_KEY4 = Bytes.toBytes("4");
   private static final byte[] ROW_KEY5 = Bytes.toBytes("5");
@@ -77,7 +78,9 @@ public class TestRequestAttributes {
   static {
     CONNECTION_ATTRIBUTES.put("clientId", Bytes.toBytes("foo"));
     ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY1, addRandomRequestAttributes());
-    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY2, addRandomRequestAttributes());
+    Map<String, byte[]> requestAttributes2 = addRandomRequestAttributes();
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY2A, requestAttributes2);
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY2B, requestAttributes2);
     ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY3, addRandomRequestAttributes());
     ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY4, addRandomRequestAttributes());
     ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY5, addRandomRequestAttributes());
@@ -130,9 +133,9 @@ public class TestRequestAttributes {
         CONNECTION_ATTRIBUTES);
       Table table = configureRequestAttributes(
         conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
-        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY2)
+        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY2A)
       ).build()) {
-      List<Get> gets = ImmutableList.of(new Get(ROW_KEY2), new Get(Bytes.toBytes(1)));
+      List<Get> gets = List.of(new Get(ROW_KEY2A), new Get(ROW_KEY2B));
       table.get(gets);
     }
   }
@@ -178,9 +181,11 @@ public class TestRequestAttributes {
         conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
         ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY4)
       ).build()) {
-      Put put = new Put(ROW_KEY4);
-      put.addColumn(FAMILY, Bytes.toBytes("c"), Bytes.toBytes("v"));
-      table.put(put);
+      Put put1 = new Put(ROW_KEY4);
+      put1.addColumn(FAMILY, Bytes.toBytes("c1"), Bytes.toBytes("v1"));
+      Put put2 = new Put(ROW_KEY4);
+      put2.addColumn(FAMILY, Bytes.toBytes("c2"), Bytes.toBytes("v2"));
+      table.put(List.of(put1, put2));
     }
   }
 
@@ -339,7 +344,12 @@ public class TestRequestAttributes {
     }
 
     private Map<String, byte[]> getRequestAttributesForRowKey(byte[] rowKey) {
-      return ROW_KEY_TO_REQUEST_ATTRIBUTES.get(rowKey);
+      for (byte[] byteArray : ROW_KEY_TO_REQUEST_ATTRIBUTES.keySet()) {
+        if (Arrays.equals(byteArray, rowKey)) {
+          return ROW_KEY_TO_REQUEST_ATTRIBUTES.get(byteArray);
+        }
+      }
+      return null;
     }
 
     private void validateRequestAttributes(Map<String, byte[]> requestAttributes) {
