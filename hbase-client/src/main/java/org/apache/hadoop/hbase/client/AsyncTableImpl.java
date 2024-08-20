@@ -296,32 +296,9 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
     Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
     CoprocessorCallback<R> callback) {
-    final Context context = Context.current();
-    CoprocessorCallback<R> wrappedCallback = new CoprocessorCallback<R>() {
-
-      @Override
-      public void onRegionComplete(RegionInfo region, R resp) {
-        pool.execute(context.wrap(() -> callback.onRegionComplete(region, resp)));
-      }
-
-      @Override
-      public void onRegionError(RegionInfo region, Throwable error) {
-        pool.execute(context.wrap(() -> callback.onRegionError(region, error)));
-      }
-
-      @Override
-      public void onComplete() {
-        pool.execute(context.wrap(callback::onComplete));
-      }
-
-      @Override
-      public void onError(Throwable error) {
-        pool.execute(context.wrap(() -> callback.onError(error)));
-      }
-    };
     CoprocessorServiceBuilder<S, R> builder =
-      rawTable.coprocessorService(stubMaker, callable, wrappedCallback);
-    return new CoprocessorServiceBuilder<S, R>() {
+      rawTable.coprocessorService(stubMaker, callable, callback);
+    return new CoprocessorServiceBuilder<>() {
 
       @Override
       public CoprocessorServiceBuilder<S, R> fromRow(byte[] startKey, boolean inclusive) {
