@@ -35,9 +35,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
@@ -477,7 +477,8 @@ public final class WALSplitUtil {
    */
   @Deprecated
   public static List<MutationReplay> getMutationsFromWALEntry(AdminProtos.WALEntry entry,
-    CellScanner cells, Pair<WALKey, WALEdit> logEntry, Durability durability) throws IOException {
+    ExtendedCellScanner cells, Pair<WALKey, WALEdit> logEntry, Durability durability)
+    throws IOException {
     if (entry == null) {
       // return an empty array
       return Collections.emptyList();
@@ -488,7 +489,7 @@ public final class WALSplitUtil {
       : entry.getKey().getLogSequenceNumber();
     int count = entry.getAssociatedCellCount();
     List<MutationReplay> mutations = new ArrayList<>();
-    Cell previousCell = null;
+    ExtendedCell previousCell = null;
     Mutation m = null;
     WALKeyImpl key = null;
     WALEdit val = null;
@@ -501,9 +502,9 @@ public final class WALSplitUtil {
       if (!cells.advance()) {
         throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
       }
-      Cell cell = cells.current();
+      ExtendedCell cell = cells.current();
       if (val != null) {
-        val.add(cell);
+        WALEditInternalHelper.addExtendedCell(val, cell);
       }
 
       boolean isNewRowOrType =

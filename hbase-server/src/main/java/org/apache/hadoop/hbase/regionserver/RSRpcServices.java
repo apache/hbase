@@ -67,13 +67,13 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
-import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -2078,7 +2078,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   public ReplicateWALEntryResponse replay(final RpcController controller,
     final ReplicateWALEntryRequest request) throws ServiceException {
     long before = EnvironmentEdgeManager.currentTime();
-    CellScanner cells = getAndReset(controller);
+    ExtendedCellScanner cells = getAndReset(controller);
     try {
       checkOpen();
       List<WALEntry> entries = request.getEntryList();
@@ -2216,7 +2216,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         requestCount.increment();
         List<WALEntry> entries = request.getEntryList();
         checkShouldRejectReplicationRequest(entries);
-        CellScanner cellScanner = getAndReset(controller);
+        ExtendedCellScanner cellScanner = getAndReset(controller);
         server.getRegionServerCoprocessorHost().preReplicateLogEntries();
         server.getReplicationSinkService().replicateLogEntries(entries, cellScanner,
           request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
@@ -2500,8 +2500,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
             && VersionInfoUtil.hasMinimumVersion(context.getClientVersionInfo(), 1, 3)
         ) {
           pbr = ProtobufUtil.toResultNoData(r);
-          ((HBaseRpcController) controller).setCellScanner(PrivateCellUtil
-            .createExtendedCellScanner(PackagePrivateFieldAccessor.getExtendedRawCells(r)));
+          ((HBaseRpcController) controller).setCellScanner(
+            PrivateCellUtil.createExtendedCellScanner(ClientInternalHelper.getExtendedRawCells(r)));
           addSize(context, r);
         } else {
           pbr = ProtobufUtil.toResult(r);
@@ -3426,10 +3426,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
             int lastIdx = results.size() - 1;
             Result r = results.get(lastIdx);
             if (r.mayHaveMoreCellsInRow()) {
-              results.set(lastIdx,
-                PackagePrivateFieldAccessor.createResult(
-                  PackagePrivateFieldAccessor.getExtendedRawCells(r), r.getExists(), r.isStale(),
-                  false));
+              results.set(lastIdx, ClientInternalHelper.createResult(
+                ClientInternalHelper.getExtendedRawCells(r), r.getExists(), r.isStale(), false));
             }
           }
           boolean sizeLimitReached = scannerContext.checkSizeLimit(LimitScope.BETWEEN_ROWS);

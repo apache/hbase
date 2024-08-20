@@ -148,7 +148,7 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
         // InternalScanner is for CPs so we do not want to leak ExtendedCell to the interface, but
         // all the server side implementation should only add ExtendedCell to the List, otherwise it
         // will cause serious assertions in our code
-        hasMore = compactingScanner.next((List) kvs, scannerContext);
+        hasMore = compactingScanner.next(kvs, scannerContext);
       } catch (IOException e) {
         // should not happen as all data are in memory
         throw new IllegalStateException(e);

@@ -501,8 +501,7 @@ public class TestProtobufUtil {
    */
   @Test
   public void testCellConversionWithTags() {
-
-    Cell cell = getCellWithTags();
+    ExtendedCell cell = getCellWithTags();
     CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, true);
     assertNotNull(protoCell);
 
@@ -514,7 +513,7 @@ public class TestProtobufUtil {
     assertEquals(TAG_STR, Tag.getValueAsString(decodedTag));
   }
 
-  private Cell getCellWithTags() {
+  private ExtendedCell getCellWithTags() {
     Tag tag = new ArrayBackedTag(TAG_TYPE, TAG_STR);
     ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
     cellBuilder.setRow(Bytes.toBytes("row1"));
@@ -539,7 +538,7 @@ public class TestProtobufUtil {
    */
   @Test
   public void testCellConversionWithoutTags() {
-    Cell cell = getCellWithTags();
+    ExtendedCell cell = getCellWithTags();
     CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, false);
     assertNotNull(protoCell);
 
@@ -555,7 +554,7 @@ public class TestProtobufUtil {
    */
   @Test
   public void testTagEncodeFalseDecodeTrue() {
-    Cell cell = getCellWithTags();
+    ExtendedCell cell = getCellWithTags();
     CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, false);
     assertNotNull(protoCell);
 
@@ -571,7 +570,7 @@ public class TestProtobufUtil {
    */
   @Test
   public void testTagEncodeTrueDecodeFalse() {
-    Cell cell = getCellWithTags();
+    ExtendedCell cell = getCellWithTags();
     CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, true);
     assertNotNull(protoCell);
 

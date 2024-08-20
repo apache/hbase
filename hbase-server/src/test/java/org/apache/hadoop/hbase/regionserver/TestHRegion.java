@@ -106,6 +106,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -171,6 +172,7 @@ import org.apache.hadoop.hbase.wal.FaultyFSLog;
 import org.apache.hadoop.hbase.wal.NettyAsyncFSWALConfigHelper;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
@@ -699,7 +701,7 @@ public class TestHRegion {
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
-        edit.add(
+        WALEditInternalHelper.addExtendedCell(edit,
           new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes.toBytes(i)));
         writer.append(new WAL.Entry(
           new WALKeyImpl(regionName, tableName, i, time, HConstants.DEFAULT_CLUSTER_ID), edit));
@@ -753,7 +755,7 @@ public class TestHRegion {
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
-        edit.add(
+        WALEditInternalHelper.addExtendedCell(edit,
           new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes.toBytes(i)));
         writer.append(new WAL.Entry(
           new WALKeyImpl(regionName, tableName, i, time, HConstants.DEFAULT_CLUSTER_ID), edit));
@@ -804,7 +806,7 @@ public class TestHRegion {
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
-        edit.add(
+        WALEditInternalHelper.addExtendedCell(edit,
           new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes.toBytes(i)));
         writer.append(new WAL.Entry(
           new WALKeyImpl(regionName, tableName, i, time, HConstants.DEFAULT_CLUSTER_ID), edit));
@@ -899,7 +901,7 @@ public class TestHRegion {
               .setRegionName(ByteString.copyFrom(region.getRegionInfo().getRegionName())).build());
         } else {
           edit = new WALEdit();
-          edit.add(
+          WALEditInternalHelper.addExtendedCell(edit,
             new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes.toBytes(i)));
         }
         writer.append(new WAL.Entry(
@@ -3789,7 +3791,7 @@ public class TestHRegion {
       expected1.add(new KeyValue(row1, fam4, null, ts, KeyValue.Type.Put, null));
 
       res = new ArrayList<>();
-      is.next((List) res);
+      is.next(res);
       for (int i = 0; i < res.size(); i++) {
         assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected1.get(i), res.get(i)));
       }
@@ -3800,7 +3802,7 @@ public class TestHRegion {
       expected2.add(new KeyValue(row2, fam4, null, ts, KeyValue.Type.Put, null));
 
       res = new ArrayList<>();
-      is.next((List) res);
+      is.next(res);
       for (int i = 0; i < res.size(); i++) {
         assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected2.get(i), res.get(i)));
       }
@@ -3907,7 +3909,7 @@ public class TestHRegion {
     scan.readVersions(MAX_VERSIONS);
     List<ExtendedCell> actual = new ArrayList<>();
     try (InternalScanner scanner = region.getScanner(scan)) {
-      boolean hasNext = scanner.next((List) actual);
+      boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
 
       // Verify result
@@ -3984,7 +3986,7 @@ public class TestHRegion {
     scan.readVersions(versions);
     List<ExtendedCell> actual = new ArrayList<>();
     try (InternalScanner scanner = region.getScanner(scan)) {
-      boolean hasNext = scanner.next((List) actual);
+      boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
 
       // Verify result
@@ -4094,7 +4096,7 @@ public class TestHRegion {
     scan.readVersions(MAX_VERSIONS);
     List<ExtendedCell> actual = new ArrayList<>();
     try (InternalScanner scanner = region.getScanner(scan)) {
-      boolean hasNext = scanner.next((List) actual);
+      boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
 
       // Verify result
@@ -4210,7 +4212,7 @@ public class TestHRegion {
     scan.readVersions(versions);
     List<ExtendedCell> actual = new ArrayList<>();
     try (InternalScanner scanner = region.getScanner(scan)) {
-      boolean hasNext = scanner.next((List) actual);
+      boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
 
       // Verify result
@@ -4838,9 +4840,9 @@ public class TestHRegion {
           }
           assertTrue(timestamp >= prevTimestamp);
           prevTimestamp = timestamp;
-          Cell previousKV = null;
+          ExtendedCell previousKV = null;
 
-          for (Cell kv : result.rawCells()) {
+          for (ExtendedCell kv : ClientInternalHelper.getExtendedRawCells(result)) {
             byte[] thisValue = CellUtil.cloneValue(kv);
             if (previousKV != null) {
               if (Bytes.compareTo(CellUtil.cloneValue(previousKV), thisValue) != 0) {

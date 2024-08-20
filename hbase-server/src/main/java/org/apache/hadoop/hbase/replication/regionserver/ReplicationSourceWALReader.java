@@ -28,12 +28,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -413,10 +415,10 @@ class ReplicationSourceWALReader extends Thread {
     // Create a new KeyValue
     KeyValue kv = new KeyValue(CellUtil.cloneRow(cell), CellUtil.cloneFamily(cell),
       CellUtil.cloneQualifier(cell), cell.getTimestamp(), descriptor.toByteArray());
-    ArrayList<Cell> newCells = new ArrayList<>();
+    ArrayList<ExtendedCell> newCells = new ArrayList<>();
     newCells.add(kv);
     // Update edit with new cell.
-    edit.setCells(newCells);
+    WALEditInternalHelper.setExtendedCells(edit, newCells);
   }
 
   /** Returns whether the reader thread is running */

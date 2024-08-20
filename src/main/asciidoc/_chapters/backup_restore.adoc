@@ -254,6 +254,10 @@ _-b <bandwidth_per_worker>_::
 _-d_::
   (Optional) Enables "DEBUG" mode which prints additional logging about the backup creation.
 
+_-i_::
+  (Optional) Ignore checksum verify between source snapshot and exported snapshot. Especially when the source and target file system types
+   are different, we should use -i option to skip checksum-checks.
+
 _-q <name>_::
   (Optional) Allows specification of the name of a YARN queue which the MapReduce job to create the backup should be executed in. This option
   is useful to prevent backup tasks from stealing resources away from other MapReduce jobs of high importance.

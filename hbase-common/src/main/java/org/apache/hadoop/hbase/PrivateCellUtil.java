@@ -1648,7 +1648,7 @@ public final class PrivateCellUtil {
     }
 
     @Override
-    public Type getType() {
+    public Cell.Type getType() {
       throw new UnsupportedOperationException();
     }
   }
@@ -3062,5 +3062,37 @@ public final class PrivateCellUtil {
         return hasNext;
       }
     };
+  }
+
+  private static final Cell.Type[] CELL_TYPE_CODE_ARRAY = new Cell.Type[256];
+
+  static {
+    for (Cell.Type t : Cell.Type.values()) {
+      CELL_TYPE_CODE_ARRAY[t.getCode() & 0xff] = t;
+    }
+  }
+
+  public static Cell.Type code2Type(byte code) {
+    Cell.Type t = CELL_TYPE_CODE_ARRAY[code & 0xff];
+    if (t != null) {
+      return t;
+    }
+    throw new UnsupportedOperationException("Invalid type of cell " + code);
+  }
+
+  public static byte getTypeByte(Cell c) {
+    if (c instanceof ExtendedCell) {
+      return ((ExtendedCell) c).getTypeByte();
+    } else {
+      return c.getType().getCode();
+    }
+  }
+
+  public static long getSequenceId(Cell c) {
+    if (c instanceof ExtendedCell) {
+      return ((ExtendedCell) c).getSequenceId();
+    } else {
+      return HConstants.NO_SEQNUM;
+    }
   }
 }

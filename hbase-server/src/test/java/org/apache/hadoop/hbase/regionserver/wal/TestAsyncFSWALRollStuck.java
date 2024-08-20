@@ -31,8 +31,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell.Type;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider.AsyncWriter;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -137,7 +138,7 @@ public class TestAsyncFSWALRollStuck {
     Configuration conf = UTIL.getConfiguration();
     conf.setClass(AsyncFSWALProvider.WRITER_IMPL, TestAsyncWriter.class, AsyncWriter.class);
     // set a very small size so we will reach the batch size when writing out a single edit
-    conf.setLong(AsyncFSWAL.WAL_BATCH_SIZE, 1);
+    conf.setLong(AbstractFSWAL.WAL_BATCH_SIZE, 1);
 
     TN = TableName.valueOf("test");
     RI = RegionInfoBuilder.newBuilder(TN).build();
@@ -181,9 +182,10 @@ public class TestAsyncFSWALRollStuck {
   public void testRoll() throws Exception {
     byte[] row = Bytes.toBytes("family");
     WALEdit edit = new WALEdit();
-    edit.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setFamily(row)
-      .setQualifier(row).setRow(row).setValue(row)
-      .setTimestamp(EnvironmentEdgeManager.currentTime()).setType(Type.Put).build());
+    WALEditInternalHelper.addExtendedCell(edit,
+      ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setFamily(row)
+        .setQualifier(row).setRow(row).setValue(row)
+        .setTimestamp(EnvironmentEdgeManager.currentTime()).setType(Type.Put).build());
     WALKeyImpl key1 =
       new WALKeyImpl(RI.getEncodedNameAsBytes(), TN, EnvironmentEdgeManager.currentTime(), MVCC);
     WAL.appendData(RI, key1, edit);

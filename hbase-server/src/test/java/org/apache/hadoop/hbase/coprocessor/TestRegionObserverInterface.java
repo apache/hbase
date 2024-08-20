@@ -31,10 +31,10 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
@@ -589,8 +589,9 @@ public class TestRegionObserverInterface {
       return new InternalScanner() {
 
         @Override
-        public boolean next(List<Cell> results, ScannerContext scannerContext) throws IOException {
-          List<Cell> internalResults = new ArrayList<>();
+        public boolean next(List<? super ExtendedCell> results, ScannerContext scannerContext)
+          throws IOException {
+          List<ExtendedCell> internalResults = new ArrayList<>();
           boolean hasMore;
           do {
             hasMore = scanner.next(internalResults, scannerContext);

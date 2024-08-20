@@ -28,8 +28,8 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -111,9 +111,9 @@ public abstract class CompressedWALTestBase {
 
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
-      kvs.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
+      kvs.add(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
         .setRow(row).setFamily(family).setQualifier(Bytes.toBytes(i)).setValue(value).build());
-      kvs.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+      kvs.add(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
         .setType(Cell.Type.DeleteFamily).setRow(row).setFamily(family).build());
       wal.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
         System.currentTimeMillis(), mvcc, scopes), kvs);

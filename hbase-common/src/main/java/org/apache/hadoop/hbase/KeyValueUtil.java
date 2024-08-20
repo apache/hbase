@@ -22,11 +22,9 @@ import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
@@ -708,7 +706,6 @@ public class KeyValueUtil {
    *         useful marking a stream as done.
    */
   public static KeyValue create(int length, final DataInput in) throws IOException {
-
     if (length <= 0) {
       if (length == 0) return null;
       throw new IOException("Failed read " + length + " bytes, stream corrupt?");
@@ -719,61 +716,5 @@ public class KeyValueUtil {
     byte[] bytes = new byte[length];
     in.readFully(bytes);
     return new KeyValue(bytes, 0, length);
-  }
-
-  public static int getSerializedSize(Cell cell, boolean withTags) {
-    if (withTags) {
-      return cell.getSerializedSize();
-    }
-    if (cell instanceof ExtendedCell) {
-      return ((ExtendedCell) cell).getSerializedSize(withTags);
-    }
-    return length(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength(),
-      cell.getValueLength(), cell.getTagsLength(), withTags);
-  }
-
-  public static int oswrite(final Cell cell, final OutputStream out, final boolean withTags)
-    throws IOException {
-    if (cell instanceof ExtendedCell) {
-      return ((ExtendedCell) cell).write(out, withTags);
-    } else {
-      short rlen = cell.getRowLength();
-      byte flen = cell.getFamilyLength();
-      int qlen = cell.getQualifierLength();
-      int vlen = cell.getValueLength();
-      int tlen = cell.getTagsLength();
-      // write key length
-      int klen = keyLength(rlen, flen, qlen);
-      ByteBufferUtils.putInt(out, klen);
-      // write value length
-      ByteBufferUtils.putInt(out, vlen);
-      // Write rowkey - 2 bytes rk length followed by rowkey bytes
-      StreamUtils.writeShort(out, rlen);
-      out.write(cell.getRowArray(), cell.getRowOffset(), rlen);
-      // Write cf - 1 byte of cf length followed by the family bytes
-      out.write(flen);
-      out.write(cell.getFamilyArray(), cell.getFamilyOffset(), flen);
-      // write qualifier
-      out.write(cell.getQualifierArray(), cell.getQualifierOffset(), qlen);
-      // write timestamp
-      StreamUtils.writeLong(out, cell.getTimestamp());
-      // write the type
-      out.write(cell.getTypeByte());
-      // write value
-      out.write(cell.getValueArray(), cell.getValueOffset(), vlen);
-      int size = klen + vlen + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
-      // write tags if we have to
-      if (withTags && tlen > 0) {
-        // 2 bytes tags length followed by tags bytes
-        // tags length is serialized with 2 bytes only(short way) even if the
-        // type is int. As this
-        // is non -ve numbers, we save the sign bit. See HBASE-11437
-        out.write((byte) (0xff & (tlen >> 8)));
-        out.write((byte) (0xff & tlen));
-        out.write(cell.getTagsArray(), cell.getTagsOffset(), tlen);
-        size += tlen + KeyValue.TAGS_LENGTH_SIZE;
-      }
-      return size;
-    }
   }
 }

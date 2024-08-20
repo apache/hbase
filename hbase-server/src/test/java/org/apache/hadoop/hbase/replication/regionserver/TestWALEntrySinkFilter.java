@@ -28,10 +28,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilder;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -101,7 +102,7 @@ public class TestWALEntrySinkFilter {
       ByteString.copyFromUtf8(TableName.valueOf(this.name.getMethodName()).toString());
     // Add WALEdit Cells to Cells List. The way edits arrive at the sink is with protos
     // describing the edit with all Cells from all edits aggregated in a single CellScanner.
-    final List<Cell> cells = new ArrayList<>();
+    final List<ExtendedCell> cells = new ArrayList<>();
     int count = BOUNDARY * 2;
     for (int i = 0; i < count; i++) {
       byte[] bytes = Bytes.toBytes(i);
@@ -114,20 +115,21 @@ public class TestWALEntrySinkFilter {
       entryBuilder.setAssociatedCellCount(1);
       entries.add(entryBuilder.build());
       // We need to add a Cell per WALEdit to the cells array.
-      CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.DEEP_COPY);
+      ExtendedCellBuilder cellBuilder =
+        ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
       // Make cells whose row, family, cell, value, and ts are == 'i'.
-      Cell cell = cellBuilder.setRow(bytes).setFamily(bytes).setQualifier(bytes)
+      ExtendedCell cell = cellBuilder.setRow(bytes).setFamily(bytes).setQualifier(bytes)
         .setType(Cell.Type.Put).setTimestamp(i).setValue(bytes).build();
       cells.add(cell);
     }
     // Now wrap our cells array in a CellScanner that we can pass in to replicateEntries. It has
     // all Cells from all the WALEntries made above.
-    CellScanner cellScanner = new CellScanner() {
+    ExtendedCellScanner cellScanner = new ExtendedCellScanner() {
       // Set to -1 because advance gets called before current.
       int index = -1;
 
       @Override
-      public Cell current() {
+      public ExtendedCell current() {
         return cells.get(index);
       }
 

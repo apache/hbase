@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MockRegionServerServices;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -152,7 +153,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
             long now = System.nanoTime();
             Put put = setupPut(ThreadLocalRandom.current(), key, value, numFamilies);
             WALEdit walEdit = new WALEdit();
-            walEdit.add(put.getFamilyCellMap());
+            walEdit.addMap(ClientInternalHelper.getExtendedFamilyCellMap(put));
             RegionInfo hri = region.getRegionInfo();
             final WALKeyImpl logkey =
               new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc, scopes);

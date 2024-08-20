@@ -312,7 +312,7 @@ public class TestHMobStore {
       scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<ExtendedCell> results = new ArrayList<>();
-    scanner.next((List) results);
+    scanner.next(results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
@@ -400,7 +400,7 @@ public class TestHMobStore {
       scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<ExtendedCell> results = new ArrayList<>();
-    scanner.next((List) results);
+    scanner.next(results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
