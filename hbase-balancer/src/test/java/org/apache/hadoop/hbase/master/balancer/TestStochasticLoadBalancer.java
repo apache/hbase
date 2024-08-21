@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.apache.hadoop.hbase.master.balancer.MutuallyExclusiveTablesCostFunction.DEFAULT_MUTUALLY_EXCLUSIVE_TABLES_COST;
+import static org.apache.hadoop.hbase.master.balancer.MutuallyExclusiveTablesCostFunction.MUTUALLY_EXCLUSIVE_TABLES_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -399,6 +402,43 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       double expected = 1 - expectedLocalities[test];
       assertEquals(expected, cost, 0.001);
     }
+  }
+
+  @Test
+  public void testMutuallyExclusiveTablesOnDifferentServers() throws Exception
+  {
+    conf.setStrings(MUTUALLY_EXCLUSIVE_TABLES_KEY, "table1", "table2");
+    loadBalancer.onConfigurationChange(conf);
+    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
+    ServerName host1 = ServerName.valueOf("host1", 1000, 1000);
+    ServerName host2 = ServerName.valueOf("host2", 1000, 1000);
+    RegionInfo region1 = RegionInfoBuilder.newBuilder(TableName.valueOf("table1")).build();
+    RegionInfo region2 = RegionInfoBuilder.newBuilder(TableName.valueOf("table2")).build();
+    clusterState.put(host1 , Arrays.asList(region1));
+    clusterState.put(host2 , Arrays.asList(region2));
+    CostFunction costFunction = new MutuallyExclusiveTablesCostFunction(conf);
+    costFunction.prepare(new BalancerClusterState(clusterState, null, null, null));
+    double cost = costFunction.cost();
+    assertEquals(0.0, cost, 0.001);
+  }
+
+  @Test
+  public void testMutuallyExclusiveTablesOnSameServer() throws Exception
+  {
+    conf.setStrings(MUTUALLY_EXCLUSIVE_TABLES_KEY, "table1", "table2");
+    loadBalancer.onConfigurationChange(conf);
+    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
+    ServerName host1 = ServerName.valueOf("host1", 1000, 1000);
+    RegionInfo region1 = RegionInfoBuilder.newBuilder(TableName.valueOf("table1")).build();
+    RegionInfo region2 = RegionInfoBuilder.newBuilder(TableName.valueOf("table2")).build();
+    List<RegionInfo> regions = new ArrayList<>();
+    regions.add(region1);
+    regions.add(region2);
+    clusterState.put(host1 , regions);
+    CostFunction costFunction = new MutuallyExclusiveTablesCostFunction(conf);
+    costFunction.prepare(new BalancerClusterState(clusterState, null, null, null));
+    double cost = costFunction.cost();
+    assertEquals(DEFAULT_MUTUALLY_EXCLUSIVE_TABLES_COST, cost, 0.001);
   }
 
   @Test
