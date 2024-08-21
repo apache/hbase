@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
+import org.apache.hadoop.hbase.io.RangeReference;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
@@ -90,6 +91,8 @@ public class StoreFileInfo implements Configurable {
   // If this storefile references another, this is the reference instance.
   private final Reference reference;
 
+  private RangeReference rangeReference = null;
+
   // If this storefile is a link to another, this is the link instance.
   private final HFileLink link;
 
@@ -125,6 +128,7 @@ public class StoreFileInfo implements Configurable {
 
   private StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
     final Path initialPath, final boolean primaryReplica) throws IOException {
+    Reference reference1;
     assert fs != null;
     assert initialPath != null;
     assert conf != null;
@@ -138,11 +142,18 @@ public class StoreFileInfo implements Configurable {
     Path p = initialPath;
     if (HFileLink.isHFileLink(p)) {
       // HFileLink
-      this.reference = null;
+      reference1 = null;
       this.link = HFileLink.buildFromHFileLinkPattern(conf, p);
       LOG.trace("{} is a link", p);
     } else if (isReference(p)) {
-      this.reference = Reference.read(fs, p);
+      // TODO: This is temporary change to quickly validate the Range reference.
+      // Need to define the proper link type for range and read from it.
+      try {
+        reference1 = Reference.read(fs, p);
+      } catch (Exception e) {
+        reference1 = null;
+        this.rangeReference = RangeReference.read(fs, p);
+      }
       Path referencePath = getReferredToFile(p);
       if (HFileLink.isHFileLink(referencePath)) {
         // HFileLink Reference
@@ -151,7 +162,8 @@ public class StoreFileInfo implements Configurable {
         // Reference
         this.link = null;
       }
-      LOG.trace("{} is a {} reference to {}", p, reference.getFileRegion(), referencePath);
+      LOG.trace("{} is a {} reference to {}", p,
+        reference1 != null ? reference1.getFileRegion() : " range ", referencePath);
     } else if (isHFile(p) || isMobFile(p) || isMobRefFile(p)) {
       // HFile
       if (fileStatus != null) {
@@ -162,11 +174,12 @@ public class StoreFileInfo implements Configurable {
         this.createdTimestamp = fStatus.getModificationTime();
         this.size = fStatus.getLen();
       }
-      this.reference = null;
+      reference1 = null;
       this.link = null;
     } else {
       throw new IOException("path=" + p + " doesn't look like a valid StoreFile");
     }
+    this.reference = reference1;
   }
 
   /**
@@ -188,7 +201,7 @@ public class StoreFileInfo implements Configurable {
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
     final HFileLink link) {
-    this(conf, fs, fileStatus, null, link);
+    this(conf, fs, fileStatus, null, link, null);
   }
 
   /**
@@ -200,7 +213,19 @@ public class StoreFileInfo implements Configurable {
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
     final Reference reference) {
-    this(conf, fs, fileStatus, reference, null);
+    this(conf, fs, fileStatus, reference, null, null);
+  }
+
+  /**
+   * Create a Store File Info from an HFileLink
+   * @param conf           The {@link Configuration} to use
+   * @param fs             The current file system to use
+   * @param fileStatus     The {@link FileStatus} of the file
+   * @param rangeReference The range reference instance
+   */
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
+    final RangeReference rangeReference) {
+    this(conf, fs, fileStatus, null, null, rangeReference);
   }
 
   /**
@@ -212,7 +237,7 @@ public class StoreFileInfo implements Configurable {
    * @param link       The link instance
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-    final Reference reference, final HFileLink link) {
+    final Reference reference, final HFileLink link, RangeReference rangeReference) {
     this.fs = fs;
     this.conf = conf;
     this.primaryReplica = false;
@@ -222,6 +247,7 @@ public class StoreFileInfo implements Configurable {
     this.link = link;
     this.noReadahead =
       this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
+    this.rangeReference = rangeReference;
   }
 
   @Override

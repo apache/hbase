@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.io;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Optional;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
@@ -33,10 +37,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Optional;
-import java.util.function.IntConsumer;
 
 @InterfaceAudience.Private
 public class RangeStoreFileReader extends StoreFileReader {
@@ -52,15 +52,16 @@ public class RangeStoreFileReader extends StoreFileReader {
   private boolean firstKeySeeked = false;
 
   public RangeStoreFileReader(final ReaderContext context, final HFileInfo fileInfo,
-    final CacheConfig cacheConf, final byte[] startKey, final byte[] endKey, StoreFileInfo storeFileInfo,
+    final CacheConfig cacheConf, RangeReference rangeReference, StoreFileInfo storeFileInfo,
     final Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, storeFileInfo, conf);
-    this.startKey = startKey;
-    this.endKey = endKey;
+    this.startKey = rangeReference.getStartKey();
+    assert this.startKey != null;
+    this.endKey = rangeReference.getEndKey();
+    assert this.endKey != null;
     this.startCell = new KeyValue.KeyOnlyKeyValue(this.startKey, 0, this.startKey.length);
     this.endCell = new KeyValue.KeyOnlyKeyValue(this.endKey, 0, this.endKey.length);
   }
-
 
   public HFileScanner getScanner(final boolean cacheBlocks, final boolean pread,
     final boolean isCompaction) {
@@ -74,7 +75,6 @@ public class RangeStoreFileReader extends StoreFileReader {
         if (atEnd) return null;
         return delegate.getKey();
       }
-
 
       @Override
       public ByteBuffer getValue() {
@@ -99,7 +99,7 @@ public class RangeStoreFileReader extends StoreFileReader {
           return false;
         }
 
-        if(getComparator().compare(endCell, getKey()) <= 0)  {
+        if (getComparator().compare(endCell, getKey()) <= 0) {
           atEnd = true;
           return false;
         }
@@ -108,28 +108,28 @@ public class RangeStoreFileReader extends StoreFileReader {
 
       @Override
       public boolean seekTo() throws IOException {
-          int r = this.delegate.seekTo(startCell);
-          if (r == HConstants.INDEX_KEY_MAGIC) {
-            return true;
-          }
-          if (r < 0) {
-            // start range is < first key in file
-            boolean seekTo = this.delegate.seekTo();
-            if(seekTo) {
-              // first key in file is less than end range return true otherwise return false.
-              return this.delegate.getReader().getComparator().compare(getKey(), endCell) < 0;
-            }
-            return false;
-          } else if (r > 0) {
-            // TODO: Need to check anything move forward by skipping a cell.
-            boolean next = this.delegate.next();
-            if(!next) {
-              return false;
-            }
-            // next available key in file is less than end range return true otherwise return false.
+        int r = this.delegate.seekTo(startCell);
+        if (r == HConstants.INDEX_KEY_MAGIC) {
+          return true;
+        }
+        if (r < 0) {
+          // start range is < first key in file
+          boolean seekTo = this.delegate.seekTo();
+          if (seekTo) {
+            // first key in file is less than end range return true otherwise return false.
             return this.delegate.getReader().getComparator().compare(getKey(), endCell) < 0;
           }
-          return true;
+          return false;
+        } else if (r > 0) {
+          // TODO: Need to check anything move forward by skipping a cell.
+          boolean next = this.delegate.next();
+          if (!next) {
+            return false;
+          }
+          // next available key in file is less than end range return true otherwise return false.
+          return this.delegate.getReader().getComparator().compare(getKey(), endCell) < 0;
+        }
+        return true;
       }
 
       @Override
@@ -197,7 +197,6 @@ public class RangeStoreFileReader extends StoreFileReader {
         } else {
           ret = this.delegate.seekBefore(key);
         }
-
 
         if (ret) {
           atEnd = false;
