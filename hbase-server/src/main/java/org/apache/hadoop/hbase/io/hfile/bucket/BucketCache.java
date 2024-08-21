@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -77,6 +78,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
@@ -122,6 +124,7 @@ public class BucketCache implements BlockCache, HeapSize {
   static final String EXTRA_FREE_FACTOR_CONFIG_NAME = "hbase.bucketcache.extrafreefactor";
   static final String ACCEPT_FACTOR_CONFIG_NAME = "hbase.bucketcache.acceptfactor";
   static final String MIN_FACTOR_CONFIG_NAME = "hbase.bucketcache.minfactor";
+  static final String BACKING_MAP_PERSISTENCE_CHUNK_SIZE = "hbase.bucketcache.persistence.chunksize";
 
   /** Use strong reference for offsetLock or not */
   private static final String STRONG_REF_KEY = "hbase.bucketcache.offsetlock.usestrongref";
@@ -144,6 +147,10 @@ public class BucketCache implements BlockCache, HeapSize {
 
   final static int DEFAULT_WRITER_THREADS = 3;
   final static int DEFAULT_WRITER_QUEUE_ITEMS = 64;
+
+  final static long DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE = 10000000;
+
+  final static  byte[] PB_MAGIC_V2 = new byte[] { 'V', '2', 'U', 'F' };
 
   // Store/read block data
   transient final IOEngine ioEngine;
@@ -273,6 +280,8 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   private String algorithm;
 
+  private long persistenceChunkSize;
+
   /* Tracing failed Bucket Cache allocations. */
   private long allocFailLogPrevTs; // time of previous log event for allocation failure.
   private static final int ALLOCATION_FAIL_LOG_TIME_PERIOD = 60000; // Default 1 minute.
@@ -313,6 +322,11 @@ public class BucketCache implements BlockCache, HeapSize {
     this.queueAdditionWaitTime =
       conf.getLong(QUEUE_ADDITION_WAIT_TIME, DEFAULT_QUEUE_ADDITION_WAIT_TIME);
     this.bucketcachePersistInterval = conf.getLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, 1000);
+    this.persistenceChunkSize = conf.getLong(BACKING_MAP_PERSISTENCE_CHUNK_SIZE,
+      DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE);
+    if (this.persistenceChunkSize <= 0) {
+      persistenceChunkSize = DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE;
+    }
 
     sanityCheckConfigs();
 
@@ -1358,8 +1372,8 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     File tempPersistencePath = new File(persistencePath + EnvironmentEdgeManager.currentTime());
     try (FileOutputStream fos = new FileOutputStream(tempPersistencePath, false)) {
-      fos.write(ProtobufMagic.PB_MAGIC);
-      BucketProtoUtils.toPB(this).writeDelimitedTo(fos);
+      LOG.debug("Persist in new chunked persistence format.");
+      persistChunkedBackingMap(fos);
     } catch (IOException e) {
       LOG.error("Failed to persist bucket cache to file", e);
       throw e;
@@ -1405,16 +1419,23 @@ public class BucketCache implements BlockCache, HeapSize {
         throw new IOException("Incorrect number of bytes read while checking for protobuf magic "
           + "number. Requested=" + pblen + ", Received= " + read + ", File=" + persistencePath);
       }
-      if (!ProtobufMagic.isPBMagicPrefix(pbuf)) {
+      if (ProtobufMagic.isPBMagicPrefix(pbuf)) {
+        LOG.info("Reading old format of persistence.");
+        // The old non-chunked version of backing map persistence.
+        parsePB(BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in));
+      } else if (Arrays.equals(pbuf, PB_MAGIC_V2)) {
+        // The new persistence format of chunked persistence.
+        LOG.info("Reading new chunked format of persistence.");
+        retrieveChunkedBackingMap(in, bucketSizes);
+      } else {
         // In 3.0 we have enough flexibility to dump the old cache data.
         // TODO: In 2.x line, this might need to be filled in to support reading the old format
         throw new IOException(
           "Persistence file does not start with protobuf magic number. " + persistencePath);
       }
-      parsePB(BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in));
       bucketAllocator = new BucketAllocator(cacheCapacity, bucketSizes, backingMap, realCacheSize);
       blockNumber.add(backingMap.size());
-      LOG.info("Bucket cache retrieved from file successfully");
+      LOG.info("Bucket cache retrieved from file successfully with size: {}", backingMap.size());
     }
   }
 
@@ -1457,6 +1478,75 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
+  private void verifyFileIntegrity(BucketCacheProtos.BucketCacheEntry proto) {
+    try {
+      if (proto.hasChecksum()) {
+        ((PersistentIOEngine) ioEngine).verifyFileIntegrity(proto.getChecksum().toByteArray(),
+          algorithm);
+      }
+      backingMapValidated.set(true);
+    } catch (IOException e) {
+      LOG.warn("Checksum for cache file failed. "
+        + "We need to validate each cache key in the backing map. "
+        + "This may take some time, so we'll do it in a background thread,");
+
+      Runnable cacheValidator = () -> {
+        while (bucketAllocator == null) {
+          try {
+            Thread.sleep(50);
+          } catch (InterruptedException ex) {
+            throw new RuntimeException(ex);
+          }
+        }
+        long startTime = EnvironmentEdgeManager.currentTime();
+        int totalKeysOriginally = backingMap.size();
+        for (Map.Entry<BlockCacheKey, BucketEntry> keyEntry : backingMap.entrySet()) {
+          try {
+            ((FileIOEngine) ioEngine).checkCacheTime(keyEntry.getValue());
+          } catch (IOException e1) {
+            LOG.debug("Check for key {} failed. Evicting.", keyEntry.getKey());
+            evictBlock(keyEntry.getKey());
+            fileNotFullyCached(keyEntry.getKey().getHfileName());
+          }
+        }
+        backingMapValidated.set(true);
+        LOG.info("Finished validating {} keys in the backing map. Recovered: {}. This took {}ms.",
+          totalKeysOriginally, backingMap.size(),
+          (EnvironmentEdgeManager.currentTime() - startTime));
+      };
+      Thread t = new Thread(cacheValidator);
+      t.setDaemon(true);
+      t.start();
+    }
+  }
+
+  private void parsePB(BucketCacheProtos.BucketCacheEntry firstChunk,
+    List<BucketCacheProtos.BackingMap> chunks) throws IOException {
+    fullyCachedFiles.clear();
+    Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> pair =
+      BucketProtoUtils.fromPB(firstChunk.getDeserializersMap(), firstChunk.getBackingMap(),
+        this::createRecycler);
+    backingMap.putAll(pair.getFirst());
+    blocksByHFile.addAll(pair.getSecond());
+    fullyCachedFiles.putAll(BucketProtoUtils.fromPB(firstChunk.getCachedFilesMap()));
+
+    LOG.debug("Number of blocks after first chunk: {}, blocksByHFile: {}",
+      backingMap.size(), fullyCachedFiles.size());
+    int i = 1;
+    for (BucketCacheProtos.BackingMap chunk : chunks) {
+      Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> pair2 =
+        BucketProtoUtils.fromPB(firstChunk.getDeserializersMap(), chunk,
+          this::createRecycler);
+      backingMap.putAll(pair2.getFirst());
+      blocksByHFile.addAll(pair2.getSecond());
+      LOG.debug("Number of blocks after {} reading chunk: {}, blocksByHFile: {}",
+        ++i, backingMap.size(), fullyCachedFiles.size());
+    }
+    verifyFileIntegrity(firstChunk);
+    verifyCapacityAndClasses(firstChunk.getCacheCapacity(), firstChunk.getIoClass(), firstChunk.getMapClass());
+    updateRegionSizeMapWhileRetrievingFromFile();
+  }
+
   private void parsePB(BucketCacheProtos.BucketCacheEntry proto) throws IOException {
     Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> pair =
       BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap(),
@@ -1465,50 +1555,52 @@ public class BucketCache implements BlockCache, HeapSize {
     blocksByHFile = pair.getSecond();
     fullyCachedFiles.clear();
     fullyCachedFiles.putAll(BucketProtoUtils.fromPB(proto.getCachedFilesMap()));
-    if (proto.hasChecksum()) {
-      try {
-        ((PersistentIOEngine) ioEngine).verifyFileIntegrity(proto.getChecksum().toByteArray(),
-          algorithm);
-        backingMapValidated.set(true);
-      } catch (IOException e) {
-        LOG.warn("Checksum for cache file failed. "
-          + "We need to validate each cache key in the backing map. "
-          + "This may take some time, so we'll do it in a background thread,");
-        Runnable cacheValidator = () -> {
-          while (bucketAllocator == null) {
-            try {
-              Thread.sleep(50);
-            } catch (InterruptedException ex) {
-              throw new RuntimeException(ex);
-            }
-          }
-          long startTime = EnvironmentEdgeManager.currentTime();
-          int totalKeysOriginally = backingMap.size();
-          for (Map.Entry<BlockCacheKey, BucketEntry> keyEntry : backingMap.entrySet()) {
-            try {
-              ((FileIOEngine) ioEngine).checkCacheTime(keyEntry.getValue());
-            } catch (IOException e1) {
-              LOG.debug("Check for key {} failed. Evicting.", keyEntry.getKey());
-              evictBlock(keyEntry.getKey());
-              fullyCachedFiles.remove(keyEntry.getKey().getHfileName());
-            }
-          }
-          backingMapValidated.set(true);
-          LOG.info("Finished validating {} keys in the backing map. Recovered: {}. This took {}ms.",
-            totalKeysOriginally, backingMap.size(),
-            (EnvironmentEdgeManager.currentTime() - startTime));
-        };
-        Thread t = new Thread(cacheValidator);
-        t.setDaemon(true);
-        t.start();
-      }
-    } else {
-      // if has not checksum, it means the persistence file is old format
-      LOG.info("Persistent file is old format, it does not support verifying file integrity!");
-      backingMapValidated.set(true);
-    }
+    verifyFileIntegrity(proto);
     updateRegionSizeMapWhileRetrievingFromFile();
     verifyCapacityAndClasses(proto.getCacheCapacity(), proto.getIoClass(), proto.getMapClass());
+  }
+
+  private void persistChunkedBackingMap(FileOutputStream fos) throws IOException {
+    fos.write(PB_MAGIC_V2);
+    long numChunks = backingMap.size() / persistenceChunkSize;
+    if (backingMap.size() % persistenceChunkSize != 0) {
+      numChunks += 1;
+    }
+
+    LOG.debug("persistToFile: before persisting backing map size: {}, "
+        + "fullycachedFiles size: {}, chunkSize: {}, numberofChunks: {}",
+      backingMap.size(), fullyCachedFiles.size(), persistenceChunkSize, numChunks);
+
+    fos.write(Bytes.toBytes(persistenceChunkSize));
+    fos.write(Bytes.toBytes(numChunks));
+    BucketProtoUtils.toPB(this, fos, persistenceChunkSize);
+
+    LOG.debug("persistToFile: after persisting backing map size: {}, "
+        + "fullycachedFiles size: {}, numChunksPersisteed: {}",
+      backingMap.size(), fullyCachedFiles.size(), numChunks);
+  }
+
+  private void retrieveChunkedBackingMap(FileInputStream in, int[] bucketSizes) throws IOException {
+    byte[] bytes = new byte[Long.BYTES];
+    in.read(bytes);
+    long batchSize = Bytes.toLong(bytes, 0);
+    in.read(bytes);
+    long numChunks = Bytes.toLong(bytes, 0);
+
+    LOG.info("Number of chunks: {}, chunk size: {}", numChunks, batchSize);
+
+    ArrayList<BucketCacheProtos.BackingMap> bucketCacheMaps = new ArrayList<>();
+    // Read the first chunk that has all the details.
+    BucketCacheProtos.BucketCacheEntry firstChunk =
+      BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in);
+
+    // Subsequent chunks have the backingMap entries.
+    for (int i = 1; i < numChunks; i++) {
+      LOG.info("Reading chunk no: {}", i+1);
+      bucketCacheMaps.add(BucketCacheProtos.BackingMap.parseDelimitedFrom(in));
+      LOG.info("Retrieved chunk: {}", i+1);
+    }
+    parsePB(firstChunk, bucketCacheMaps);
   }
 
   /**

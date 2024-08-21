@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -45,28 +46,45 @@ final class BucketProtoUtils {
 
   }
 
-  static BucketCacheProtos.BucketCacheEntry toPB(BucketCache cache) {
+  static BucketCacheProtos.BucketCacheEntry toPB(BucketCache cache, BucketCacheProtos.BackingMap backingMap) {
     return BucketCacheProtos.BucketCacheEntry.newBuilder().setCacheCapacity(cache.getMaxSize())
       .setIoClass(cache.ioEngine.getClass().getName())
       .setMapClass(cache.backingMap.getClass().getName())
       .putAllDeserializers(CacheableDeserializerIdManager.save())
       .putAllCachedFiles(toCachedPB(cache.fullyCachedFiles))
-      .setBackingMap(BucketProtoUtils.toPB(cache.backingMap))
+      .setBackingMap(backingMap)
       .setChecksum(ByteString
         .copyFrom(((PersistentIOEngine) cache.ioEngine).calculateChecksum(cache.getAlgorithm())))
       .build();
   }
 
-  private static BucketCacheProtos.BackingMap toPB(Map<BlockCacheKey, BucketEntry> backingMap) {
+  static void toPB(BucketCache cache, FileOutputStream fos, long chunkSize) throws IOException{
+    int blockCount = 0;
+    int chunkCount = 0;
+    int backingMapSize = cache.backingMap.size();
     BucketCacheProtos.BackingMap.Builder builder = BucketCacheProtos.BackingMap.newBuilder();
-    for (Map.Entry<BlockCacheKey, BucketEntry> entry : backingMap.entrySet()) {
-      builder.addEntry(BucketCacheProtos.BackingMapEntry.newBuilder().setKey(toPB(entry.getKey()))
-        .setValue(toPB(entry.getValue())).build());
+    for (Map.Entry<BlockCacheKey, BucketEntry> entry : cache.backingMap.entrySet()) {
+      blockCount++;
+      builder.addEntry(BucketCacheProtos.BackingMapEntry.newBuilder()
+        .setKey(BucketProtoUtils.toPB(entry.getKey()))
+        .setValue(BucketProtoUtils.toPB(entry.getValue())).build());
+      if (blockCount % chunkSize == 0 || (blockCount == backingMapSize)) {
+        chunkCount++;
+        if (chunkCount == 1) {
+          // Persist all details along with the first chunk into BucketCacheEntry
+          BucketProtoUtils.toPB(cache, builder.build()).writeDelimitedTo(fos);
+        } else {
+          // Directly persist subsequent backing-map chunks.
+          builder.build().writeDelimitedTo(fos);
+        }
+        if (blockCount < backingMapSize) {
+          builder = BucketCacheProtos.BackingMap.newBuilder();
+        }
+      }
     }
-    return builder.build();
   }
 
-  private static BucketCacheProtos.BlockCacheKey toPB(BlockCacheKey key) {
+  static BucketCacheProtos.BlockCacheKey toPB(BlockCacheKey key) {
     return BucketCacheProtos.BlockCacheKey.newBuilder().setHfilename(key.getHfileName())
       .setOffset(key.getOffset()).setPrimaryReplicaBlock(key.isPrimary())
       .setBlockType(toPB(key.getBlockType())).build();
@@ -103,7 +121,7 @@ final class BucketProtoUtils {
     }
   }
 
-  private static BucketCacheProtos.BucketEntry toPB(BucketEntry entry) {
+  static BucketCacheProtos.BucketEntry toPB(BucketEntry entry) {
     return BucketCacheProtos.BucketEntry.newBuilder().setOffset(entry.offset())
       .setCachedTime(entry.getCachedTime()).setLength(entry.getLength())
       .setDiskSizeWithHeader(entry.getOnDiskSizeWithHeader())
