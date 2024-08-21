@@ -72,9 +72,7 @@ public class BufferedMutatorExample extends Configured implements Tool {
       }
     };
 
-
-    BufferedMutatorParams params = new BufferedMutatorParams(TABLE)
-      .listener(listener)
+    BufferedMutatorParams params = new BufferedMutatorParams(TABLE).listener(listener)
       .setRequestAttribute("requestInfo", Bytes.toBytes("bar"));
 
     //
@@ -83,7 +81,9 @@ public class BufferedMutatorExample extends Configured implements Tool {
     Map<String, byte[]> connectionAttributes = new HashMap<>();
     connectionAttributes.put("clientId", Bytes.toBytes("foo"));
     Configuration conf = getConf();
-    try (final Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf), connectionAttributes);
+    try (
+      final Connection conn = ConnectionFactory.createConnection(conf, null,
+        AuthUtil.loginClient(conf), connectionAttributes);
       final BufferedMutator mutator = conn.getBufferedMutator(params)) {
 
       /** worker pool that operates on BufferedTable instances */

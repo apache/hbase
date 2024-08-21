@@ -1,6 +1,24 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -51,9 +69,8 @@ public class TestConnectionAttributes {
   @BeforeClass
   public static void setUp() throws Exception {
     cluster = TEST_UTIL.startMiniCluster(1);
-    Table table = TEST_UTIL.createTable(TABLE_NAME,
-      new byte[][] { FAMILY }, 1, HConstants.DEFAULT_BLOCKSIZE,
-      TestConnectionAttributes.AttributesCoprocessor.class.getName());
+    Table table = TEST_UTIL.createTable(TABLE_NAME, new byte[][] { FAMILY }, 1,
+      HConstants.DEFAULT_BLOCKSIZE, TestConnectionAttributes.AttributesCoprocessor.class.getName());
     table.close();
   }
 
@@ -96,8 +113,8 @@ public class TestConnectionAttributes {
       RpcCall rpcCall = RpcServer.getCurrentCall().get();
       for (Map.Entry<String, byte[]> attr : rpcCall.getConnectionAttributes().entrySet()) {
         result.add(c.getEnvironment().getCellBuilder().clear().setRow(get.getRow())
-          .setFamily(FAMILY).setQualifier(Bytes.toBytes(attr.getKey()))
-          .setValue(attr.getValue()).setType(Cell.Type.Put).setTimestamp(1).build());
+          .setFamily(FAMILY).setQualifier(Bytes.toBytes(attr.getKey())).setValue(attr.getValue())
+          .setType(Cell.Type.Put).setTimestamp(1).build());
       }
       result.sort(CellComparator.getInstance());
       c.bypass();

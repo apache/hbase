@@ -74,7 +74,8 @@ public class TestRequestAttributes {
   private static final byte[] ROW_KEY8 = Bytes.toBytes("8");
   private static final Map<String, byte[]> CONNECTION_ATTRIBUTES = new HashMap<>();
   private static final Map<String, byte[]> REQUEST_ATTRIBUTES_SCAN = addRandomRequestAttributes();
-  private static final Map<byte[], Map<String, byte[]>> ROW_KEY_TO_REQUEST_ATTRIBUTES = new HashMap<>();
+  private static final Map<byte[], Map<String, byte[]>> ROW_KEY_TO_REQUEST_ATTRIBUTES =
+    new HashMap<>();
   static {
     CONNECTION_ATTRIBUTES.put("clientId", Bytes.toBytes("foo"));
     ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY1, addRandomRequestAttributes());
@@ -90,8 +91,7 @@ public class TestRequestAttributes {
   }
   private static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(100);
   private static final byte[] FAMILY = Bytes.toBytes("0");
-  private static final TableName TABLE_NAME =
-    TableName.valueOf("testRequestAttributes");
+  private static final TableName TABLE_NAME = TableName.valueOf("testRequestAttributes");
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static SingleProcessHBaseCluster cluster;
@@ -99,9 +99,8 @@ public class TestRequestAttributes {
   @BeforeClass
   public static void setUp() throws Exception {
     cluster = TEST_UTIL.startMiniCluster(1);
-    Table table = TEST_UTIL.createTable(TABLE_NAME,
-      new byte[][] { FAMILY }, 1, HConstants.DEFAULT_BLOCKSIZE,
-      AttributesCoprocessor.class.getName());
+    Table table = TEST_UTIL.createTable(TABLE_NAME, new byte[][] { FAMILY }, 1,
+      HConstants.DEFAULT_BLOCKSIZE, AttributesCoprocessor.class.getName());
     table.close();
   }
 
@@ -117,13 +116,12 @@ public class TestRequestAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      Table table = configureRequestAttributes(
-        conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
-        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY1)
-      ).build()) {
+      Table table = configureRequestAttributes(conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
+        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY1)).build()) {
 
       table.get(new Get(ROW_KEY1));
-    }}
+    }
+  }
 
   @Test
   public void testRequestAttributesMultiGet() throws IOException {
@@ -131,10 +129,8 @@ public class TestRequestAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      Table table = configureRequestAttributes(
-        conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
-        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY2A)
-      ).build()) {
+      Table table = configureRequestAttributes(conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
+        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY2A)).build()) {
       List<Get> gets = List.of(new Get(ROW_KEY2A), new Get(ROW_KEY2B));
       table.get(gets);
     }
@@ -146,10 +142,8 @@ public class TestRequestAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      Table table = configureRequestAttributes(
-        conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
-        REQUEST_ATTRIBUTES_SCAN
-      ).build()) {
+      Table table = configureRequestAttributes(conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
+        REQUEST_ATTRIBUTES_SCAN).build()) {
       ResultScanner scanner = table.getScanner(new Scan());
       scanner.next();
     }
@@ -161,10 +155,8 @@ public class TestRequestAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      Table table = configureRequestAttributes(
-        conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
-        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY3)
-      ).build()) {
+      Table table = configureRequestAttributes(conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
+        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY3)).build()) {
       Put put = new Put(ROW_KEY3);
       put.addColumn(FAMILY, Bytes.toBytes("c"), Bytes.toBytes("v"));
       table.put(put);
@@ -177,10 +169,8 @@ public class TestRequestAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      Table table = configureRequestAttributes(
-        conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
-        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY4)
-      ).build()) {
+      Table table = configureRequestAttributes(conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
+        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY4)).build()) {
       Put put1 = new Put(ROW_KEY4);
       put1.addColumn(FAMILY, Bytes.toBytes("c1"), Bytes.toBytes("v1"));
       Put put2 = new Put(ROW_KEY4);
@@ -195,10 +185,9 @@ public class TestRequestAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      BufferedMutator bufferedMutator = conn.getBufferedMutator(
-        configureRequestAttributes(new BufferedMutatorParams(TABLE_NAME),
-        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY5)
-      ));) {
+      BufferedMutator bufferedMutator =
+        conn.getBufferedMutator(configureRequestAttributes(new BufferedMutatorParams(TABLE_NAME),
+          ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY5)));) {
       Put put = new Put(ROW_KEY5);
       put.addColumn(FAMILY, Bytes.toBytes("c"), Bytes.toBytes("v"));
       bufferedMutator.mutate(put);
@@ -212,10 +201,8 @@ public class TestRequestAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      Table table = configureRequestAttributes(
-        conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
-        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY6)
-      ).build()) {
+      Table table = configureRequestAttributes(conn.getTableBuilder(TABLE_NAME, EXECUTOR_SERVICE),
+        ROW_KEY_TO_REQUEST_ATTRIBUTES.get(ROW_KEY6)).build()) {
 
       table.exists(new Get(ROW_KEY6));
     }
@@ -259,12 +246,14 @@ public class TestRequestAttributes {
     return requestAttributes;
   }
 
-  private static TableBuilder configureRequestAttributes(TableBuilder tableBuilder, Map<String, byte[]> requestAttributes) {
+  private static TableBuilder configureRequestAttributes(TableBuilder tableBuilder,
+    Map<String, byte[]> requestAttributes) {
     requestAttributes.forEach(tableBuilder::setRequestAttribute);
     return tableBuilder;
   }
 
-  private static BufferedMutatorParams configureRequestAttributes(BufferedMutatorParams params, Map<String, byte[]> requestAttributes) {
+  private static BufferedMutatorParams configureRequestAttributes(BufferedMutatorParams params,
+    Map<String, byte[]> requestAttributes) {
     requestAttributes.forEach(params::setRequestAttribute);
     return params;
   }
