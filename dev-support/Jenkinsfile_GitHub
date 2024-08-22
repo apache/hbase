@@ -311,7 +311,7 @@ pipeline {
                               // Has to be relative to WORKSPACE
                               reportDir: "${WORKDIR_REL}/${PATCH_REL}",
                               reportFiles: 'report.html',
-                              reportName: 'PR JDK8 Hadoop3 Check Report'
+                              reportName: 'PR JDK8 Hadoop2 Check Report'
                             ]
                         }
                         // Jenkins pipeline jobs fill slaves on PRs without this :(
