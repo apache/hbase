@@ -80,6 +80,8 @@ message OpenRegionRequest {
   repeated RegionOpenInfo open_info = 1;
   // the intended server for this RPC.
   optional uint64 serverStartCode = 2;
+  // Master active time as fencing token
+  optional int64 initiating_master_active_time = 3;
   // wall clock time from master
   optional uint64 master_system_time = 5;
 
@@ -123,6 +125,8 @@ message CloseRegionRequest {
   optional uint64 serverStartCode = 5;
   optional int64 close_proc_id = 6 [default = -1];
   optional bool evict_cache = 7 [default = false];
+  // Master active time as fencing token
+  optional int64 initiating_master_active_time = 8;
 }
 
 message CloseRegionResponse {
@@ -272,6 +276,8 @@ message RemoteProcedureRequest {
   required uint64 proc_id = 1;
   required string proc_class = 2;
   optional bytes proc_data = 3;
+  // Master active time as fencing token
+  optional int64 initiating_master_active_time = 4;
 }
 
 message ExecuteProceduresRequest {

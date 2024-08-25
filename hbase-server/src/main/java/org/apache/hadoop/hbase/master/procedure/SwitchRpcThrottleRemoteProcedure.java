@@ -93,7 +93,8 @@ public class SwitchRpcThrottleRemoteProcedure extends ServerRemoteProcedure
       SwitchRpcThrottleRemoteCallable.class,
       SwitchRpcThrottleRemoteStateData.newBuilder()
         .setTargetServer(ProtobufUtil.toServerName(remote))
-        .setRpcThrottleEnabled(rpcThrottleEnabled).build().toByteArray()));
+        .setRpcThrottleEnabled(rpcThrottleEnabled).build().toByteArray(),
+      masterProcedureEnv.getMasterServices().getMasterActiveTime()));
   }
 
   @Override

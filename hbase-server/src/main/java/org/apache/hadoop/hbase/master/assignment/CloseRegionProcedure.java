@@ -64,8 +64,9 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
   }
 
   @Override
-  public RemoteOperation newRemoteOperation() {
-    return new RegionCloseOperation(this, region, getProcId(), assignCandidate, evictCache);
+  public RemoteOperation newRemoteOperation(MasterProcedureEnv env) {
+    return new RegionCloseOperation(this, region, getProcId(), assignCandidate, evictCache,
+      env.getMasterServices().getMasterActiveTime());
   }
 
   @Override
