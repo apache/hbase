@@ -3153,6 +3153,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   /** Returns timestamp in millis when HMaster became the active master. */
+  @Override
   public long getMasterActiveTime() {
     return masterActiveTime;
   }

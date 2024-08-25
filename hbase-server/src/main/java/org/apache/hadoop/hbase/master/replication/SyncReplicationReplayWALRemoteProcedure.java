@@ -69,8 +69,9 @@ public class SyncReplicationReplayWALRemoteProcedure extends ServerRemoteProcedu
       ReplaySyncReplicationWALParameter.newBuilder();
     builder.setPeerId(peerId);
     wals.stream().forEach(builder::addWal);
-    return Optional.of(new ServerOperation(this, getProcId(),
-      ReplaySyncReplicationWALCallable.class, builder.build().toByteArray()));
+    return Optional
+      .of(new ServerOperation(this, getProcId(), ReplaySyncReplicationWALCallable.class,
+        builder.build().toByteArray(), env.getMasterServices().getMasterActiveTime()));
   }
 
   protected boolean complete(MasterProcedureEnv env, Throwable error) {

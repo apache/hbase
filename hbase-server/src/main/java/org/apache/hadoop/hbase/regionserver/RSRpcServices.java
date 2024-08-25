@@ -3859,6 +3859,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   private void executeOpenRegionProcedures(OpenRegionRequest request,
     Map<TableName, TableDescriptor> tdCache) {
     long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
+    long initiatingMasterActiveTime =
+      request.hasInitiatingMasterActiveTime() ? request.getInitiatingMasterActiveTime() : -1;
     for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
       RegionInfo regionInfo = ProtobufUtil.toRegionInfo(regionOpenInfo.getRegion());
       TableName tableName = regionInfo.getTable();
@@ -3884,14 +3886,16 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       }
       long procId = regionOpenInfo.getOpenProcId();
       if (server.submitRegionProcedure(procId)) {
-        server.getExecutorService().submit(
-          AssignRegionHandler.create(server, regionInfo, procId, tableDesc, masterSystemTime));
+        server.getExecutorService().submit(AssignRegionHandler.create(server, regionInfo, procId,
+          tableDesc, masterSystemTime, initiatingMasterActiveTime));
       }
     }
   }
 
   private void executeCloseRegionProcedures(CloseRegionRequest request) {
     String encodedName;
+    long initiatingMasterActiveTime =
+      request.hasInitiatingMasterActiveTime() ? request.getInitiatingMasterActiveTime() : -1;
     try {
       encodedName = ProtobufUtil.getRegionEncodedName(request.getRegion());
     } catch (DoNotRetryIOException e) {
@@ -3903,8 +3907,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     long procId = request.getCloseProcId();
     boolean evictCache = request.getEvictCache();
     if (server.submitRegionProcedure(procId)) {
-      server.getExecutorService().submit(
-        UnassignRegionHandler.create(server, encodedName, procId, false, destination, evictCache));
+      server.getExecutorService().submit(UnassignRegionHandler.create(server, encodedName, procId,
+        false, destination, evictCache, initiatingMasterActiveTime));
     }
   }
 
@@ -3916,12 +3920,13 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     } catch (Exception e) {
       LOG.warn("Failed to instantiating remote procedure {}, pid={}", request.getProcClass(),
         request.getProcId(), e);
-      server.remoteProcedureComplete(request.getProcId(), e);
+      server.remoteProcedureComplete(request.getProcId(), request.getInitiatingMasterActiveTime(),
+        e);
       return;
     }
     callable.init(request.getProcData().toByteArray(), server);
     LOG.debug("Executing remote procedure {}, pid={}", callable.getClass(), request.getProcId());
-    server.executeProcedure(request.getProcId(), callable);
+    server.executeProcedure(request.getProcId(), request.getInitiatingMasterActiveTime(), callable);
   }
 
   @Override
