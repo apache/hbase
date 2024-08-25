@@ -222,8 +222,9 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
         }
       }
     }
-    return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
-      FlushRegionCallable.class, builder.build().toByteArray()));
+    return Optional
+      .of(new RSProcedureDispatcher.ServerOperation(this, getProcId(), FlushRegionCallable.class,
+        builder.build().toByteArray(), env.getMasterServices().getMasterActiveTime()));
   }
 
   @Override

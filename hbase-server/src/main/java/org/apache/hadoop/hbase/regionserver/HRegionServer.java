@@ -2596,6 +2596,7 @@ public class HRegionServer extends Thread
     HRegion r = context.getRegion();
     long openProcId = context.getOpenProcId();
     long masterSystemTime = context.getMasterSystemTime();
+    long initiatingMasterActiveTime = context.getInitiatingMasterActiveTime();
     rpcServices.checkOpen();
     LOG.info("Post open deploy tasks for {}, pid={}, masterSystemTime={}",
       r.getRegionInfo().getRegionNameAsString(), openProcId, masterSystemTime);
@@ -2616,7 +2617,7 @@ public class HRegionServer extends Thread
     // Notify master
     if (
       !reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.OPENED,
-        openSeqNum, openProcId, masterSystemTime, r.getRegionInfo()))
+        openSeqNum, openProcId, masterSystemTime, r.getRegionInfo(), initiatingMasterActiveTime))
     ) {
       throw new IOException(
         "Failed to report opened region to master: " + r.getRegionInfo().getRegionNameAsString());
@@ -2677,6 +2678,7 @@ public class HRegionServer extends Thread
     for (long procId : procIds) {
       transition.addProcId(procId);
     }
+    transition.setInitiatingMasterActiveTime(context.getInitiatingMasterActiveTime());
 
     return builder.build();
   }
@@ -4080,12 +4082,15 @@ public class HRegionServer extends Thread
       this.rpcServices, this.rpcServices, new RegionServerRegistry(this));
   }
 
-  void executeProcedure(long procId, RSProcedureCallable callable) {
-    executorService.submit(new RSProcedureHandler(this, procId, callable));
+  void executeProcedure(long procId, long initiatingMasterActiveTime,
+    RSProcedureCallable callable) {
+    executorService
+      .submit(new RSProcedureHandler(this, procId, initiatingMasterActiveTime, callable));
   }
 
-  public void remoteProcedureComplete(long procId, Throwable error) {
-    procedureResultReporter.complete(procId, error);
+  public void remoteProcedureComplete(long procId, long initiatingMasterActiveTime,
+    Throwable error) {
+    procedureResultReporter.complete(procId, initiatingMasterActiveTime, error);
   }
 
   void reportProcedureDone(ReportProcedureDoneRequest request) throws IOException {
