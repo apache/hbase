@@ -222,13 +222,21 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
    */
   public static abstract class RemoteOperation {
     private final RemoteProcedure remoteProcedure;
+    // active time of the master that sent this request, used for fencing
+    private final long initiatingMasterActiveTime;
 
-    protected RemoteOperation(final RemoteProcedure remoteProcedure) {
+    protected RemoteOperation(final RemoteProcedure remoteProcedure,
+      long initiatingMasterActiveTime) {
       this.remoteProcedure = remoteProcedure;
+      this.initiatingMasterActiveTime = initiatingMasterActiveTime;
     }
 
     public RemoteProcedure getRemoteProcedure() {
       return remoteProcedure;
+    }
+
+    public long getInitiatingMasterActiveTime() {
+      return initiatingMasterActiveTime;
     }
   }
 

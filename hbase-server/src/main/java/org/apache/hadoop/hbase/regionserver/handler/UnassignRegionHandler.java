@@ -63,14 +63,19 @@ public class UnassignRegionHandler extends EventHandler {
 
   private final RetryCounter retryCounter;
 
+  // active time of the master that sent this unassign request, used for fencing
+  private final long initiatingMasterActiveTime;
+
   public UnassignRegionHandler(HRegionServer server, String encodedName, long closeProcId,
-    boolean abort, @Nullable ServerName destination, EventType eventType) {
+    boolean abort, @Nullable ServerName destination, EventType eventType,
+    long initiatingMasterActiveTime) {
     super(server, eventType);
     this.encodedName = encodedName;
     this.closeProcId = closeProcId;
     this.abort = abort;
     this.destination = destination;
     this.retryCounter = HandlerUtil.getRetryCounter();
+    this.initiatingMasterActiveTime = initiatingMasterActiveTime;
   }
 
   private HRegionServer getServer() {
@@ -139,7 +144,7 @@ public class UnassignRegionHandler extends EventHandler {
     }
     if (
       !rs.reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.CLOSED,
-        HConstants.NO_SEQNUM, closeProcId, -1, region.getRegionInfo()))
+        HConstants.NO_SEQNUM, closeProcId, -1, region.getRegionInfo(), initiatingMasterActiveTime))
     ) {
       throw new IOException("Failed to report close to master: " + regionName);
     }
@@ -159,7 +164,8 @@ public class UnassignRegionHandler extends EventHandler {
   }
 
   public static UnassignRegionHandler create(HRegionServer server, String encodedName,
-    long closeProcId, boolean abort, @Nullable ServerName destination) {
+    long closeProcId, boolean abort, @Nullable ServerName destination,
+    long initiatingMasterActiveTime) {
     // Just try our best to determine whether it is for closing meta. It is not the end of the world
     // if we put the handler into a wrong executor.
     Region region = server.getRegion(encodedName);
@@ -167,6 +173,6 @@ public class UnassignRegionHandler extends EventHandler {
       ? EventType.M_RS_CLOSE_META
       : EventType.M_RS_CLOSE_REGION;
     return new UnassignRegionHandler(server, encodedName, closeProcId, abort, destination,
-      eventType);
+      eventType, initiatingMasterActiveTime);
   }
 }
