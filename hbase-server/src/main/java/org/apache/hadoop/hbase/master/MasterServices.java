@@ -267,6 +267,9 @@ public interface MasterServices extends Server {
   /** Returns true if master is the active one */
   boolean isActiveMaster();
 
+  /** Returns timestamp in millis when this master became the active one. */
+  long getMasterActiveTime();
+
   /** Returns true if master is initialized */
   boolean isInitialized();
 

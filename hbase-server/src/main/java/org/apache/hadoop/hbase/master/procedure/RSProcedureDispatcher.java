@@ -422,7 +422,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
     @Override
     public void dispatchServerOperations(MasterProcedureEnv env, List<ServerOperation> operations) {
-      operations.stream().map(o -> o.buildRequest()).forEachOrdered(request::addProc);
+      operations.stream().map(ServerOperation::buildRequest).forEachOrdered(request::addProc);
     }
 
     // will be overridden in test.
@@ -441,7 +441,9 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
   private static OpenRegionRequest buildOpenRegionRequest(final MasterProcedureEnv env,
     final ServerName serverName, final List<RegionOpenOperation> operations) {
     final OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-    builder.setServerStartCode(serverName.getStartcode());
+    builder.setServerStartCode(serverName.getStartCode());
+    operations.stream().map(RemoteOperation::getInitiatingMasterActiveTime).findAny()
+      .ifPresent(builder::setInitiatingMasterActiveTime);
     builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
     for (RegionOpenOperation op : operations) {
       builder.addOpenInfo(op.buildRegionOpenInfoRequest(env));
@@ -464,8 +466,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     private final byte[] rsProcData;
 
     public ServerOperation(RemoteProcedure remoteProcedure, long procId, Class<?> rsProcClass,
-      byte[] rsProcData) {
-      super(remoteProcedure);
+      byte[] rsProcData, long initiatingMasterActiveTime) {
+      super(remoteProcedure, initiatingMasterActiveTime);
       this.procId = procId;
       this.rsProcClass = rsProcClass;
       this.rsProcData = rsProcData;
@@ -473,7 +475,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
     public RemoteProcedureRequest buildRequest() {
       return RemoteProcedureRequest.newBuilder().setProcId(procId)
-        .setProcClass(rsProcClass.getName()).setProcData(ByteString.copyFrom(rsProcData)).build();
+        .setProcClass(rsProcClass.getName()).setProcData(ByteString.copyFrom(rsProcData))
+        .setInitiatingMasterActiveTime(getInitiatingMasterActiveTime()).build();
     }
   }
 
@@ -481,8 +484,9 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     protected final RegionInfo regionInfo;
     protected final long procId;
 
-    protected RegionOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo, long procId) {
-      super(remoteProcedure);
+    protected RegionOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo, long procId,
+      long initiatingMasterActiveTime) {
+      super(remoteProcedure, initiatingMasterActiveTime);
       this.regionInfo = regionInfo;
       this.procId = procId;
     }
@@ -490,9 +494,9 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
   public static class RegionOpenOperation extends RegionOperation {
 
-    public RegionOpenOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo,
-      long procId) {
-      super(remoteProcedure, regionInfo, procId);
+    public RegionOpenOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo, long procId,
+      long initiatingMasterActiveTime) {
+      super(remoteProcedure, regionInfo, procId, initiatingMasterActiveTime);
     }
 
     public OpenRegionRequest.RegionOpenInfo
@@ -507,8 +511,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     private boolean evictCache;
 
     public RegionCloseOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo, long procId,
-      ServerName destinationServer, boolean evictCache) {
-      super(remoteProcedure, regionInfo, procId);
+      ServerName destinationServer, boolean evictCache, long initiatingMasterActiveTime) {
+      super(remoteProcedure, regionInfo, procId, initiatingMasterActiveTime);
       this.destinationServer = destinationServer;
       this.evictCache = evictCache;
     }
@@ -519,8 +523,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
     public CloseRegionRequest buildCloseRegionRequest(final ServerName serverName) {
       return ProtobufUtil.buildCloseRegionRequest(serverName, regionInfo.getRegionName(),
-        getDestinationServer(), procId, evictCache);
-
+        getDestinationServer(), procId, evictCache, getInitiatingMasterActiveTime());
     }
   }
 }
