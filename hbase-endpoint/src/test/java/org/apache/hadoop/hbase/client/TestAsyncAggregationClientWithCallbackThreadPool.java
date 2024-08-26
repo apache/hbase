@@ -115,6 +115,13 @@ public class TestAsyncAggregationClientWithCallbackThreadPool {
       AsyncAggregationClient
         .rowCount(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get()
         .longValue());
+
+    // Run the count twice in case some state doesn't get cleaned up inside AsyncTableImpl
+    // on the first time.
+    assertEquals(COUNT,
+      AsyncAggregationClient
+        .rowCount(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get()
+        .longValue());
   }
 
   @Test
