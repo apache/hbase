@@ -390,10 +390,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           try {
             closeWriter(this.writer, oldPath, true);
           } finally {
+            //closing this with unflushed entries as there is no other chance we can set close to true
+            // during clean up we check for unflushed entries
+            markClosedAndClean(oldPath);
             inflightWALClosures.remove(oldPath.getName());
-            if (!isUnflushedEntries()) {
-              markClosedAndClean(oldPath);
-            }
           }
         } else {
           Writer localWriter = this.writer;
