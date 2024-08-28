@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.DEFAULT_HBASE_SERVE
 import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_ENABLED;
 import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT;
 import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_WRAP_SIZE;
-import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -386,8 +385,24 @@ public class NettyRpcServer extends RpcServer {
     throws X509Exception, IOException {
     SslContext nettySslContext = getSslContext();
 
+    /*
+     * our HostnameVerifier gets the host name from SSLEngine, so we have to construct the engine
+     * properly by passing the remote address
+     */
+
     if (supportPlaintext) {
-      p.addLast("ssl", new OptionalSslHandler(nettySslContext));
+      SocketAddress remoteAddress = p.channel().remoteAddress();
+      OptionalSslHandler optionalSslHandler;
+
+      if (remoteAddress instanceof InetSocketAddress) {
+        InetSocketAddress remoteInetAddress = (InetSocketAddress) remoteAddress;
+        optionalSslHandler = new OptionalSslHandlerWithHostPort(nettySslContext,
+          remoteInetAddress.getHostString(), remoteInetAddress.getPort());
+      } else {
+        optionalSslHandler = new OptionalSslHandler(nettySslContext);
+      }
+
+      p.addLast("ssl", optionalSslHandler);
       LOG.debug("Dual mode SSL handler added for channel: {}", p.channel());
     } else {
       SocketAddress remoteAddress = p.channel().remoteAddress();
@@ -395,21 +410,8 @@ public class NettyRpcServer extends RpcServer {
 
       if (remoteAddress instanceof InetSocketAddress) {
         InetSocketAddress remoteInetAddress = (InetSocketAddress) remoteAddress;
-        String host;
-
-        if (conf.getBoolean(TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED, true)) {
-          host = remoteInetAddress.getHostName();
-        } else {
-          host = remoteInetAddress.getHostString();
-        }
-
-        int port = remoteInetAddress.getPort();
-
-        /*
-         * our HostnameVerifier gets the host name from SSLEngine, so we have to construct the
-         * engine properly by passing the remote address
-         */
-        sslHandler = nettySslContext.newHandler(p.channel().alloc(), host, port);
+        sslHandler = nettySslContext.newHandler(p.channel().alloc(),
+          remoteInetAddress.getHostString(), remoteInetAddress.getPort());
       } else {
         sslHandler = nettySslContext.newHandler(p.channel().alloc());
       }
