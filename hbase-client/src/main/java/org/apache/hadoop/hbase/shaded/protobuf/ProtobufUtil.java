@@ -2986,6 +2986,8 @@ public final class ProtobufUtil {
 
   public static CloseRegionRequest buildCloseRegionRequest(ServerName server, byte[] regionName,
     ServerName destinationServer) {
+    // this method is used when we are bypassing active HMaster, so we don't have procId or master
+    // active time.
     return buildCloseRegionRequest(server, regionName, destinationServer, -1, -1);
   }
 
