@@ -150,8 +150,6 @@ public class BucketCache implements BlockCache, HeapSize {
 
   final static long DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE = 10000000;
 
-  final static  byte[] PB_MAGIC_V2 = new byte[] { 'V', '2', 'U', 'F' };
-
   // Store/read block data
   transient final IOEngine ioEngine;
 
@@ -1423,7 +1421,7 @@ public class BucketCache implements BlockCache, HeapSize {
         LOG.info("Reading old format of persistence.");
         // The old non-chunked version of backing map persistence.
         parsePB(BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in));
-      } else if (Arrays.equals(pbuf, PB_MAGIC_V2)) {
+      } else if (Arrays.equals(pbuf, BucketProtoUtils.PB_MAGIC_V2)) {
         // The new persistence format of chunked persistence.
         LOG.info("Reading new chunked format of persistence.");
         retrieveChunkedBackingMap(in, bucketSizes);
@@ -1561,7 +1559,6 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private void persistChunkedBackingMap(FileOutputStream fos) throws IOException {
-    fos.write(PB_MAGIC_V2);
     long numChunks = backingMap.size() / persistenceChunkSize;
     if (backingMap.size() % persistenceChunkSize != 0) {
       numChunks += 1;
@@ -1571,9 +1568,7 @@ public class BucketCache implements BlockCache, HeapSize {
         + "fullycachedFiles size: {}, chunkSize: {}, numberofChunks: {}",
       backingMap.size(), fullyCachedFiles.size(), persistenceChunkSize, numChunks);
 
-    fos.write(Bytes.toBytes(persistenceChunkSize));
-    fos.write(Bytes.toBytes(numChunks));
-    BucketProtoUtils.toPB(this, fos, persistenceChunkSize);
+    BucketProtoUtils.serializeAsPB(this, fos, persistenceChunkSize, numChunks);
 
     LOG.debug("persistToFile: after persisting backing map size: {}, "
         + "fullycachedFiles size: {}, numChunksPersisteed: {}",

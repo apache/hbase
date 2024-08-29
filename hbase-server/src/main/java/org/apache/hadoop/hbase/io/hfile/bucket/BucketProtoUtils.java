@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -42,6 +43,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.BucketCacheProtos;
 
 @InterfaceAudience.Private
 final class BucketProtoUtils {
+
+  final static  byte[] PB_MAGIC_V2 = new byte[] { 'V', '2', 'U', 'F' };
   private BucketProtoUtils() {
 
   }
@@ -58,11 +61,17 @@ final class BucketProtoUtils {
       .build();
   }
 
-  static void toPB(BucketCache cache, FileOutputStream fos, long chunkSize) throws IOException{
+  public static void serializeAsPB(BucketCache cache, FileOutputStream fos,
+    long chunkSize, long numChunks) throws IOException{
     int blockCount = 0;
     int chunkCount = 0;
     int backingMapSize = cache.backingMap.size();
     BucketCacheProtos.BackingMap.Builder builder = BucketCacheProtos.BackingMap.newBuilder();
+
+    fos.write(PB_MAGIC_V2);
+    fos.write(Bytes.toBytes(chunkSize));
+    fos.write(Bytes.toBytes(numChunks));
+
     for (Map.Entry<BlockCacheKey, BucketEntry> entry : cache.backingMap.entrySet()) {
       blockCount++;
       builder.addEntry(BucketCacheProtos.BackingMapEntry.newBuilder()
@@ -84,7 +93,7 @@ final class BucketProtoUtils {
     }
   }
 
-  static BucketCacheProtos.BlockCacheKey toPB(BlockCacheKey key) {
+  private static BucketCacheProtos.BlockCacheKey toPB(BlockCacheKey key) {
     return BucketCacheProtos.BlockCacheKey.newBuilder().setHfilename(key.getHfileName())
       .setOffset(key.getOffset()).setPrimaryReplicaBlock(key.isPrimary())
       .setBlockType(toPB(key.getBlockType())).build();
@@ -121,7 +130,7 @@ final class BucketProtoUtils {
     }
   }
 
-  static BucketCacheProtos.BucketEntry toPB(BucketEntry entry) {
+  private static BucketCacheProtos.BucketEntry toPB(BucketEntry entry) {
     return BucketCacheProtos.BucketEntry.newBuilder().setOffset(entry.offset())
       .setCachedTime(entry.getCachedTime()).setLength(entry.getLength())
       .setDiskSizeWithHeader(entry.getOnDiskSizeWithHeader())
