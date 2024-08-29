@@ -62,6 +62,8 @@ public class TestRecoveryPersistentBucketCache {
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
     assertTrue(CacheTestUtils.waitForCacheInitialization(bucketCache, 1000));
+    assertTrue(bucketCache.isCacheInitialized("testBucketCacheRecovery")
+      && bucketCache.isCacheEnabled());
 
     CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 4);
 
@@ -147,16 +149,7 @@ public class TestRecoveryPersistentBucketCache {
 
   private void waitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey)
     throws InterruptedException {
-    try {
-      long timeout = 120000;
-      while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
-        Thread.sleep(100);
-        if (timeout <= 0) {
-          break;
-        }
-        timeout -= 100;
-      }
-    } finally {
+    while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
       Thread.sleep(100);
     }
   }

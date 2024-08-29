@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -367,16 +368,10 @@ public class TestPrefetch {
     Thread.sleep(20000);
     assertFalse("Prefetch threads should not be running at this point", reader.prefetchStarted());
     long timeout = 10000;
-    while (!reader.prefetchStarted() && !reader.prefetchComplete()) {
-      // Wait until the prefetch is triggered.
-      Thread.sleep(500);
-      if (timeout <= 0) break;
-      timeout -= 500;
-    }
+    Waiter.waitFor(conf, 10000, () -> (reader.prefetchStarted() || reader.prefetchComplete()));
+
     assertTrue(reader.prefetchStarted() || reader.prefetchComplete());
 
-    // Added some delay as we have started the timer a bit late.
-    Thread.sleep(500);
     assertTrue("Prefetch should start post configured delay",
       getElapsedTime(startTime) > PrefetchExecutor.getPrefetchDelay());
 
