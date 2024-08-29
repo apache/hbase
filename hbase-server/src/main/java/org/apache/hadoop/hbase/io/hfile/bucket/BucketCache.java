@@ -178,7 +178,7 @@ public class BucketCache implements BlockCache, HeapSize {
   /**
    * Enum to represent the state of cache
    */
-  private enum CacheState {
+  protected enum CacheState {
     // Initializing: State when the cache is being initialised from persistence.
     INITIALIZING,
     // Enabled: State when cache is initialised and is ready.
@@ -902,6 +902,10 @@ public class BucketCache implements BlockCache, HeapSize {
 
   public void setCacheInconsistent(boolean setCacheInconsistent) {
     isCacheInconsistent.set(setCacheInconsistent);
+  }
+
+  protected void setCacheState(CacheState state) {
+    cacheState = state;
   }
 
   /*

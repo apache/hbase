@@ -147,6 +147,57 @@ public class TestRecoveryPersistentBucketCache {
     TEST_UTIL.cleanupTestDir();
   }
 
+  @Test
+  public void testValidateCacheInitialization() throws Exception {
+    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+    Path testDir = TEST_UTIL.getDataTestDir();
+    TEST_UTIL.getTestFileSystem().mkdirs(testDir);
+    Configuration conf = HBaseConfiguration.create();
+    // Disables the persister thread by setting its interval to MAX_VALUE
+    conf.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, Long.MAX_VALUE);
+    int[] bucketSizes = new int[] { 8 * 1024 + 1024 };
+    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
+      DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    assertTrue(CacheTestUtils.waitForCacheInitialization(bucketCache, 10000));
+
+    CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 4);
+
+    // Add four blocks
+    cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[0].getBlockName(), blocks[0].getBlock());
+    cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[1].getBlockName(), blocks[1].getBlock());
+    cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[2].getBlockName(), blocks[2].getBlock());
+    cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[3].getBlockName(), blocks[3].getBlock());
+    // saves the current state of the cache
+    bucketCache.persistToFile();
+
+    BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
+      DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    assertTrue(CacheTestUtils.waitForCacheInitialization(newBucketCache, 10000));
+
+    // Set the state of bucket cache to INITIALIZING
+    newBucketCache.setCacheState(BucketCache.CacheState.INITIALIZING);
+
+    // Validate that zero values are returned for the cache being initialized.
+    assertEquals(0, newBucketCache.acceptableSize());
+    assertEquals(0, newBucketCache.getPartitionSize(1));
+    assertEquals(0, newBucketCache.getFreeSize());
+    assertEquals(0, newBucketCache.getCurrentSize());
+    assertEquals(false, newBucketCache.blockFitsIntoTheCache(blocks[0].getBlock()).get());
+
+    newBucketCache.setCacheState(BucketCache.CacheState.ENABLED);
+
+    // Validate that non-zero values are returned for enabled cache
+    assertTrue(newBucketCache.acceptableSize() > 0);
+    assertTrue(newBucketCache.getPartitionSize(1) > 0);
+    assertTrue(newBucketCache.getFreeSize() > 0);
+    assertTrue(newBucketCache.getCurrentSize() > 0);
+    assertTrue(newBucketCache.blockFitsIntoTheCache(blocks[0].getBlock()).get());
+
+    TEST_UTIL.cleanupTestDir();
+  }
+
   private void waitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey)
     throws InterruptedException {
     while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
