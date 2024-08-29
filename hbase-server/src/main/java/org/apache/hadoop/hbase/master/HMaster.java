@@ -3036,6 +3036,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /** Returns timestamp in millis when HMaster became the active master. */
+  @Override
   public long getMasterActiveTime() {
     return masterActiveTime;
   }

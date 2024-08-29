@@ -65,7 +65,8 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
     return Optional.of(new ServerOperation(this, getProcId(), ClaimReplicationQueueCallable.class,
       ClaimReplicationQueueRemoteParameter.newBuilder()
         .setCrashedServer(ProtobufUtil.toServerName(crashedServer)).setQueue(queue).build()
-        .toByteArray()));
+        .toByteArray(),
+      env.getMasterServices().getMasterActiveTime()));
   }
 
   @Override

@@ -97,9 +97,10 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
   @Override
   public Optional<RemoteProcedureDispatcher.RemoteOperation> remoteCallBuild(MasterProcedureEnv env,
     ServerName serverName) {
-    return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
-      SplitWALCallable.class, MasterProcedureProtos.SplitWALParameter.newBuilder()
-        .setWalPath(walPath).build().toByteArray()));
+    return Optional.of(new RSProcedureDispatcher.ServerOperation(
+      this, getProcId(), SplitWALCallable.class, MasterProcedureProtos.SplitWALParameter
+        .newBuilder().setWalPath(walPath).build().toByteArray(),
+      env.getMasterServices().getMasterActiveTime()));
   }
 
   @Override
