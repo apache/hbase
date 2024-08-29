@@ -78,7 +78,6 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
@@ -124,7 +123,8 @@ public class BucketCache implements BlockCache, HeapSize {
   static final String EXTRA_FREE_FACTOR_CONFIG_NAME = "hbase.bucketcache.extrafreefactor";
   static final String ACCEPT_FACTOR_CONFIG_NAME = "hbase.bucketcache.acceptfactor";
   static final String MIN_FACTOR_CONFIG_NAME = "hbase.bucketcache.minfactor";
-  static final String BACKING_MAP_PERSISTENCE_CHUNK_SIZE = "hbase.bucketcache.persistence.chunksize";
+  static final String BACKING_MAP_PERSISTENCE_CHUNK_SIZE =
+    "hbase.bucketcache.persistence.chunksize";
 
   /** Use strong reference for offsetLock or not */
   private static final String STRONG_REF_KEY = "hbase.bucketcache.offsetlock.usestrongref";
@@ -320,8 +320,8 @@ public class BucketCache implements BlockCache, HeapSize {
     this.queueAdditionWaitTime =
       conf.getLong(QUEUE_ADDITION_WAIT_TIME, DEFAULT_QUEUE_ADDITION_WAIT_TIME);
     this.bucketcachePersistInterval = conf.getLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, 1000);
-    this.persistenceChunkSize = conf.getLong(BACKING_MAP_PERSISTENCE_CHUNK_SIZE,
-      DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE);
+    this.persistenceChunkSize =
+      conf.getLong(BACKING_MAP_PERSISTENCE_CHUNK_SIZE, DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE);
     if (this.persistenceChunkSize <= 0) {
       persistenceChunkSize = DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE;
     }
@@ -1528,20 +1528,20 @@ public class BucketCache implements BlockCache, HeapSize {
     blocksByHFile.addAll(pair.getSecond());
     fullyCachedFiles.putAll(BucketProtoUtils.fromPB(firstChunk.getCachedFilesMap()));
 
-    LOG.debug("Number of blocks after first chunk: {}, blocksByHFile: {}",
-      backingMap.size(), fullyCachedFiles.size());
+    LOG.debug("Number of blocks after first chunk: {}, blocksByHFile: {}", backingMap.size(),
+      fullyCachedFiles.size());
     int i = 1;
     for (BucketCacheProtos.BackingMap chunk : chunks) {
       Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> pair2 =
-        BucketProtoUtils.fromPB(firstChunk.getDeserializersMap(), chunk,
-          this::createRecycler);
+        BucketProtoUtils.fromPB(firstChunk.getDeserializersMap(), chunk, this::createRecycler);
       backingMap.putAll(pair2.getFirst());
       blocksByHFile.addAll(pair2.getSecond());
-      LOG.debug("Number of blocks after {} reading chunk: {}, blocksByHFile: {}",
-        ++i, backingMap.size(), fullyCachedFiles.size());
+      LOG.debug("Number of blocks after {} reading chunk: {}, blocksByHFile: {}", ++i,
+        backingMap.size(), fullyCachedFiles.size());
     }
     verifyFileIntegrity(firstChunk);
-    verifyCapacityAndClasses(firstChunk.getCacheCapacity(), firstChunk.getIoClass(), firstChunk.getMapClass());
+    verifyCapacityAndClasses(firstChunk.getCacheCapacity(), firstChunk.getIoClass(),
+      firstChunk.getMapClass());
     updateRegionSizeMapWhileRetrievingFromFile();
   }
 
@@ -1564,22 +1564,31 @@ public class BucketCache implements BlockCache, HeapSize {
       numChunks += 1;
     }
 
-    LOG.debug("persistToFile: before persisting backing map size: {}, "
+    LOG.debug(
+      "persistToFile: before persisting backing map size: {}, "
         + "fullycachedFiles size: {}, chunkSize: {}, numberofChunks: {}",
       backingMap.size(), fullyCachedFiles.size(), persistenceChunkSize, numChunks);
 
     BucketProtoUtils.serializeAsPB(this, fos, persistenceChunkSize, numChunks);
 
-    LOG.debug("persistToFile: after persisting backing map size: {}, "
+    LOG.debug(
+      "persistToFile: after persisting backing map size: {}, "
         + "fullycachedFiles size: {}, numChunksPersisteed: {}",
       backingMap.size(), fullyCachedFiles.size(), numChunks);
   }
 
   private void retrieveChunkedBackingMap(FileInputStream in, int[] bucketSizes) throws IOException {
     byte[] bytes = new byte[Long.BYTES];
-    in.read(bytes);
+    int readSize = in.read(bytes);
+    if (readSize != Long.BYTES) {
+      throw new IOException("Invalid size of chunk-size read from persistence: " + readSize);
+    }
     long batchSize = Bytes.toLong(bytes, 0);
-    in.read(bytes);
+
+    readSize = in.read(bytes);
+    if (readSize != Long.BYTES) {
+      throw new IOException("Invalid size for number of chunks read from persistence: " + readSize);
+    }
     long numChunks = Bytes.toLong(bytes, 0);
 
     LOG.info("Number of chunks: {}, chunk size: {}", numChunks, batchSize);
@@ -1591,9 +1600,9 @@ public class BucketCache implements BlockCache, HeapSize {
 
     // Subsequent chunks have the backingMap entries.
     for (int i = 1; i < numChunks; i++) {
-      LOG.info("Reading chunk no: {}", i+1);
+      LOG.info("Reading chunk no: {}", i + 1);
       bucketCacheMaps.add(BucketCacheProtos.BackingMap.parseDelimitedFrom(in));
-      LOG.info("Retrieved chunk: {}", i+1);
+      LOG.info("Retrieved chunk: {}", i + 1);
     }
     parsePB(firstChunk, bucketCacheMaps);
   }

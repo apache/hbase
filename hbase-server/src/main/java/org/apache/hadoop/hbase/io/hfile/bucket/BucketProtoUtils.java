@@ -44,25 +44,26 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.BucketCacheProtos;
 @InterfaceAudience.Private
 final class BucketProtoUtils {
 
-  final static  byte[] PB_MAGIC_V2 = new byte[] { 'V', '2', 'U', 'F' };
+  final static byte[] PB_MAGIC_V2 = new byte[] { 'V', '2', 'U', 'F' };
+
   private BucketProtoUtils() {
 
   }
 
-  static BucketCacheProtos.BucketCacheEntry toPB(BucketCache cache, BucketCacheProtos.BackingMap backingMap) {
+  static BucketCacheProtos.BucketCacheEntry toPB(BucketCache cache,
+    BucketCacheProtos.BackingMap backingMap) {
     return BucketCacheProtos.BucketCacheEntry.newBuilder().setCacheCapacity(cache.getMaxSize())
       .setIoClass(cache.ioEngine.getClass().getName())
       .setMapClass(cache.backingMap.getClass().getName())
       .putAllDeserializers(CacheableDeserializerIdManager.save())
-      .putAllCachedFiles(toCachedPB(cache.fullyCachedFiles))
-      .setBackingMap(backingMap)
+      .putAllCachedFiles(toCachedPB(cache.fullyCachedFiles)).setBackingMap(backingMap)
       .setChecksum(ByteString
         .copyFrom(((PersistentIOEngine) cache.ioEngine).calculateChecksum(cache.getAlgorithm())))
       .build();
   }
 
-  public static void serializeAsPB(BucketCache cache, FileOutputStream fos,
-    long chunkSize, long numChunks) throws IOException{
+  public static void serializeAsPB(BucketCache cache, FileOutputStream fos, long chunkSize,
+    long numChunks) throws IOException {
     int blockCount = 0;
     int chunkCount = 0;
     int backingMapSize = cache.backingMap.size();
@@ -74,9 +75,9 @@ final class BucketProtoUtils {
 
     for (Map.Entry<BlockCacheKey, BucketEntry> entry : cache.backingMap.entrySet()) {
       blockCount++;
-      builder.addEntry(BucketCacheProtos.BackingMapEntry.newBuilder()
-        .setKey(BucketProtoUtils.toPB(entry.getKey()))
-        .setValue(BucketProtoUtils.toPB(entry.getValue())).build());
+      builder.addEntry(
+        BucketCacheProtos.BackingMapEntry.newBuilder().setKey(BucketProtoUtils.toPB(entry.getKey()))
+          .setValue(BucketProtoUtils.toPB(entry.getValue())).build());
       if (blockCount % chunkSize == 0 || (blockCount == backingMapSize)) {
         chunkCount++;
         if (chunkCount == 1) {
