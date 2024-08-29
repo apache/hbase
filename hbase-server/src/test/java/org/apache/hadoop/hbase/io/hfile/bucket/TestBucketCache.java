@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.Waiter;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -226,9 +227,8 @@ public class TestBucketCache {
 
   public static void waitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey)
     throws InterruptedException {
-    while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
-      Thread.sleep(100);
-    }
+    Waiter.waitFor(HBaseConfiguration.create(), 10000,
+      () -> (cache.backingMap.containsKey(cacheKey) && !cache.ramCache.containsKey(cacheKey)));
   }
 
   public static void waitUntilAllFlushedToBucket(BucketCache cache) throws InterruptedException {

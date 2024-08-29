@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.Waiter;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -200,9 +201,8 @@ public class TestRecoveryPersistentBucketCache {
 
   private void waitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey)
     throws InterruptedException {
-    while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
-      Thread.sleep(100);
-    }
+    Waiter.waitFor(HBaseConfiguration.create(), 12000,
+      () -> (cache.backingMap.containsKey(cacheKey) && !cache.ramCache.containsKey(cacheKey)));
   }
 
   // BucketCache.cacheBlock is async, it first adds block to ramCache and writeQueue, then writer
