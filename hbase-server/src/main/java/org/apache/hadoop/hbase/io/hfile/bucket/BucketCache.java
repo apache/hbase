@@ -186,6 +186,7 @@ public class BucketCache implements BlockCache, HeapSize {
     // Disabled: State when the cache is disabled.
     DISABLED
   }
+
   /**
    * Flag if the cache is enabled or not... We shut it off if there are IO errors for some time, so
    * that Bucket IO exceptions/errors don't bring down the HBase server.
@@ -366,32 +367,11 @@ public class BucketCache implements BlockCache, HeapSize {
       if (ioEngine instanceof FileIOEngine) {
         startBucketCachePersisterThread();
       }
-
-      Runnable persistentCacheRetriever = () -> {
-        try {
-          retrieveFromFile(bucketSizes);
-          LOG.info("Persistent bucket cache recovery from {} is complete.", persistencePath);
-        } catch (IOException ioex) {
-          LOG.error("Can't restore from file[{}] because of ", persistencePath, ioex);
-          backingMap.clear();
-          fullyCachedFiles.clear();
-          backingMapValidated.set(true);
-          try {
-            bucketAllocator = new BucketAllocator(capacity, bucketSizes);
-          } catch (BucketAllocatorException ex) {
-            LOG.error("Exception during Bucket Allocation", ex);
-          }
-          regionCachedSize.clear();
-        } finally {
-          this.cacheState = CacheState.ENABLED;
-          startWriterThreads();
-        }
-      };
-      Thread t = new Thread(persistentCacheRetriever);
-      t.start();
+      startPersistenceRetriever(bucketSizes, capacity);
     } else {
       bucketAllocator = new BucketAllocator(capacity, bucketSizes);
-      this.cacheState = CacheState.ENABLED;;
+      this.cacheState = CacheState.ENABLED;
+      ;
       startWriterThreads();
     }
 
@@ -404,6 +384,31 @@ public class BucketCache implements BlockCache, HeapSize {
       + StringUtils.byteDesc(capacity) + ", blockSize=" + StringUtils.byteDesc(blockSize)
       + ", writerThreadNum=" + writerThreadNum + ", writerQLen=" + writerQLen + ", persistencePath="
       + persistencePath + ", bucketAllocator=" + BucketAllocator.class.getName());
+  }
+
+  private void startPersistenceRetriever(int[] bucketSizes, long capacity) {
+    Runnable persistentCacheRetriever = () -> {
+      try {
+        retrieveFromFile(bucketSizes);
+        LOG.info("Persistent bucket cache recovery from {} is complete.", persistencePath);
+      } catch (IOException ioex) {
+        LOG.error("Can't restore from file[{}] because of ", persistencePath, ioex);
+        backingMap.clear();
+        fullyCachedFiles.clear();
+        backingMapValidated.set(true);
+        try {
+          bucketAllocator = new BucketAllocator(capacity, bucketSizes);
+        } catch (BucketAllocatorException ex) {
+          LOG.error("Exception during Bucket Allocation", ex);
+        }
+        regionCachedSize.clear();
+      } finally {
+        this.cacheState = CacheState.ENABLED;
+        startWriterThreads();
+      }
+    };
+    Thread t = new Thread(persistentCacheRetriever);
+    t.start();
   }
 
   private void sanityCheckConfigs() {
@@ -429,14 +434,14 @@ public class BucketCache implements BlockCache, HeapSize {
   /**
    * Called by the constructor to instantiate the writer threads.
    */
-   private void instantiateWriterThreads() {
-     final String threadName = Thread.currentThread().getName();
-     for (int i = 0; i < this.writerThreads.length; ++i) {
-       this.writerThreads[i] = new WriterThread(this.writerQueues.get(i));
-       this.writerThreads[i].setName(threadName + "-BucketCacheWriter-" + i);
-       this.writerThreads[i].setDaemon(true);
-     }
-   }
+  private void instantiateWriterThreads() {
+    final String threadName = Thread.currentThread().getName();
+    for (int i = 0; i < this.writerThreads.length; ++i) {
+      this.writerThreads[i] = new WriterThread(this.writerQueues.get(i));
+      this.writerThreads[i].setName(threadName + "-BucketCacheWriter-" + i);
+      this.writerThreads[i].setDaemon(true);
+    }
+  }
 
   /**
    * Called by the constructor to start the writer threads. Used by tests that need to override

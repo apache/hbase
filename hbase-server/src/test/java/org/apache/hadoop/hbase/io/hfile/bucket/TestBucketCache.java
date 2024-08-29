@@ -238,7 +238,7 @@ public class TestBucketCache {
     } finally {
       Thread.sleep(1000);
     }
-    assertTrue (cache.backingMap.containsKey(cacheKey) && !cache.ramCache.containsKey(cacheKey));
+    assertTrue(cache.backingMap.containsKey(cacheKey) && !cache.ramCache.containsKey(cacheKey));
   }
 
   public static void waitUntilAllFlushedToBucket(BucketCache cache) throws InterruptedException {

@@ -516,7 +516,6 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public boolean isCacheEnabled() {
-      return l1Cache.isCacheEnabled()
-        && l2Cache.isCacheEnabled();
+    return l1Cache.isCacheEnabled() && l2Cache.isCacheEnabled();
   }
 }
