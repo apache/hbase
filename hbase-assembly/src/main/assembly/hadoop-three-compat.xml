@@ -33,7 +33,6 @@
       <useAllReactorProjects>true</useAllReactorProjects>
       <includes>
         <!-- Keep this list sorted by name -->
-        <include>org.apache.hbase:hbase-annotations</include>
         <include>org.apache.hbase:hbase-asyncfs</include>
         <include>org.apache.hbase:hbase-backup</include>
         <include>org.apache.hbase:hbase-balancer</include>
@@ -43,7 +42,6 @@
         <include>org.apache.hbase:hbase-external-blockcache</include>
         <include>org.apache.hbase:hbase-hadoop-compat</include>
         <include>org.apache.hbase:hbase-http</include>
-        <include>org.apache.hbase:hbase-it</include>
         <include>org.apache.hbase:hbase-logging</include>
         <include>org.apache.hbase:hbase-mapreduce</include>
         <include>org.apache.hbase:hbase-diagnostics</include>
@@ -55,7 +53,6 @@
         <include>org.apache.hbase:hbase-rest</include>
         <include>org.apache.hbase:hbase-server</include>
         <include>org.apache.hbase:hbase-shell</include>
-        <include>org.apache.hbase:hbase-testing-util</include>
         <include>org.apache.hbase:hbase-thrift</include>
         <include>org.apache.hbase:hbase-zookeeper</include>
       </includes>
@@ -65,7 +62,10 @@
         <unpack>false</unpack>
         <dependencySets>
           <dependencySet>
+            <useTransitiveFiltering>false</useTransitiveFiltering>
             <excludes>
+              <exclude>org.apache.hadoop:*:test-jar</exclude>
+              <exclude>org.apache.hbase:*:test-jar</exclude>
               <!-- Exclude pom file -->
               <exclude>com.sun.xml.ws:jaxws-ri:pom</exclude>
               <!-- Exclude libraries that we put in their own dirs under lib/ -->
@@ -204,16 +204,6 @@
       <outputDirectory>lib/trace</outputDirectory>
       <includes>
         <include>io.opentelemetry.javaagent:*</include>
-      </includes>
-    </dependencySet>
-
-    <!-- Adds junit libs to lib/test -->
-    <dependencySet>
-      <outputDirectory>lib/test</outputDirectory>
-      <includes>
-        <include>junit:junit</include>
-        <include>org.hamcrest:hamcrest-core</include>
-        <include>org.mockito:mockito-core</include>
       </includes>
     </dependencySet>
   </dependencySets>

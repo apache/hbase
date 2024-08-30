@@ -44,7 +44,10 @@
         <outputDirectory>lib</outputDirectory>
         <dependencySets>
           <dependencySet>
+            <useTransitiveFiltering>false</useTransitiveFiltering>
             <excludes>
+              <exclude>org.apache.hadoop:*:test-jar</exclude>
+              <exclude>org.apache.hbase:*:test-jar</exclude>
             <!-- Exclude J2EE libraries that get pulled in when building on JDK11 -->
               <exclude>com.sun.xml.ws:jaxws-ri</exclude>
             <!-- Exclude libraries that we put in their own dirs under lib/ -->
@@ -165,15 +168,6 @@
       <outputDirectory>lib/trace</outputDirectory>
       <includes>
         <include>io.opentelemetry.javaagent:*</include>
-      </includes>
-    </dependencySet>
-    <!-- Adds junit libs to lib/test -->
-    <dependencySet>
-      <outputDirectory>lib/test</outputDirectory>
-      <includes>
-        <include>junit:junit</include>
-        <include>org.hamcrest:hamcrest-core</include>
-        <include>org.mockito:mockito-core</include>
       </includes>
     </dependencySet>
   </dependencySets>
