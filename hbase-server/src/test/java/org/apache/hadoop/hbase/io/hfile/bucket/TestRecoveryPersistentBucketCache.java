@@ -28,11 +28,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.Waiter;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -63,8 +63,8 @@ public class TestRecoveryPersistentBucketCache {
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
     assertTrue(CacheTestUtils.waitForCacheInitialization(bucketCache, 1000));
-    assertTrue(bucketCache.isCacheInitialized("testBucketCacheRecovery")
-      && bucketCache.isCacheEnabled());
+    assertTrue(
+      bucketCache.isCacheInitialized("testBucketCacheRecovery") && bucketCache.isCacheEnabled());
 
     CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 4);
 
