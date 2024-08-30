@@ -444,35 +444,36 @@ public class MergeTableRegionsProcedure
   private boolean prepareMergeRegion(final MasterProcedureEnv env) throws IOException {
     // Fail if we are taking snapshot for the given table
     TableName tn = regionsToMerge[0].getTable();
+    final String regionNamesToLog = RegionInfo.getShortNameToLog(regionsToMerge);
     if (env.getMasterServices().getSnapshotManager().isTableTakingAnySnapshot(tn)) {
-      throw new MergeRegionException("Skip merging regions "
-        + RegionInfo.getShortNameToLog(regionsToMerge) + ", because we are snapshotting " + tn);
+      throw new MergeRegionException(
+        "Skip merging regions " + regionNamesToLog + ", because we are snapshotting " + tn);
     }
 
-    // Mostly this check is not used because we already check the switch before submit a merge
-    // procedure. Just for safe, check the switch again. This procedure can be rollbacked if
-    // the switch was set to false after submit.
+    // Mostly the below two checks are not used because we already check the switches before
+    // submitting the merge procedure. Just for safety, we are checking the switch again here.
+    // Also, in case the switch was set to false after submission, this procedure can be rollbacked,
+    // thanks to this double check!
+    // case 1: check for cluster level switch
     if (!env.getMasterServices().isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
-      String regionsStr = Arrays.deepToString(this.regionsToMerge);
-      LOG.warn("Merge switch is off! skip merge of " + regionsStr);
+      LOG.warn("Merge switch is off! skip merge of " + regionNamesToLog);
       setFailure(getClass().getSimpleName(),
-        new IOException("Merge of " + regionsStr + " failed because merge switch is off"));
+        new IOException("Merge of " + regionNamesToLog + " failed because merge switch is off"));
       return false;
     }
-
+    // case 2: check for table level switch
     if (!env.getMasterServices().getTableDescriptors().get(getTableName()).isMergeEnabled()) {
-      String regionsStr = Arrays.deepToString(regionsToMerge);
-      LOG.warn("Merge is disabled for the table! Skipping merge of {}", regionsStr);
+      LOG.warn("Merge is disabled for the table! Skipping merge of {}", regionNamesToLog);
       setFailure(getClass().getSimpleName(), new IOException(
-        "Merge of " + regionsStr + " failed as region merge is disabled for the table"));
+        "Merge of " + regionNamesToLog + " failed as region merge is disabled for the table"));
       return false;
     }
 
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
     for (RegionInfo ri : this.regionsToMerge) {
       if (MetaTableAccessor.hasMergeRegions(env.getMasterServices().getConnection(), ri)) {
-        String msg = "Skip merging " + RegionInfo.getShortNameToLog(regionsToMerge)
-          + ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", has a merge qualifier "
+        String msg = "Skip merging " + regionNamesToLog + ", because a parent, "
+          + RegionInfo.getShortNameToLog(ri) + ", has a merge qualifier "
           + "(if a 'merge column' in parent, it was recently merged but still has outstanding "
           + "references to its parents that must be cleared before it can participate in merge -- "
           + "major compact it to hurry clearing of its references)";
@@ -492,8 +493,8 @@ public class MergeTableRegionsProcedure
       try {
         if (!isMergeable(env, state)) {
           setFailure(getClass().getSimpleName(),
-            new MergeRegionException("Skip merging " + RegionInfo.getShortNameToLog(regionsToMerge)
-              + ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", is not mergeable"));
+            new MergeRegionException("Skip merging " + regionNamesToLog + ", because a parent, "
+              + RegionInfo.getShortNameToLog(ri) + ", is not mergeable"));
           return false;
         }
       } catch (IOException e) {
