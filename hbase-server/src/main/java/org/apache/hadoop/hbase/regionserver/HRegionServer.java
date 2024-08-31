@@ -1705,7 +1705,7 @@ public class HRegionServer extends Thread
           if (!isHostnameConsist) {
             String msg = "Master passed us a different hostname to use; was="
               + (StringUtils.isBlank(useThisHostnameInstead)
-                ? rpcServices.getSocketAddress().getHostName()
+                ? expectedHostName
                 : this.useThisHostnameInstead)
               + ", but now=" + hostnameFromMasterPOV;
             LOG.error(msg);
