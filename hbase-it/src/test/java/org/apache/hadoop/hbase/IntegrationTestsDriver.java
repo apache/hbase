@@ -77,7 +77,7 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
 
   @Override
   protected void processOptions(CommandLine cmd) {
-    String testFilterString = cmd.getOptionValue(SHORT_REGEX_ARG, null);
+    String testFilterString = cmd.getOptionValue(SHORT_REGEX_ARG);
     if (testFilterString != null) {
       intTestFilter.setPattern(testFilterString);
     }
