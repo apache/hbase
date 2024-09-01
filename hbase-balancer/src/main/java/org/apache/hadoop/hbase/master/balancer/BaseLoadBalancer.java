@@ -591,6 +591,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   /**
+   * Called after executing balanceCluster. The sub classes could override this method to
+   * do some cleanup work.
+   */
+  protected void completeBalancerCosts(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+  }
+
+  /**
    * Perform the major balance operation for cluster, will invoke
    * {@link #balanceTable(TableName, Map)} to do actual balance.
    * <p/>
@@ -605,20 +612,24 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   public final List<RegionPlan>
     balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
     preBalanceCluster(loadOfAllTable);
+    List<RegionPlan> result;
     if (isByTable) {
-      List<RegionPlan> result = new ArrayList<>();
-      loadOfAllTable.forEach((tableName, loadOfOneTable) -> {
+        result = new ArrayList<>();
+        loadOfAllTable.forEach((tableName, loadOfOneTable) -> {
         LOG.info("Start Generate Balance plan for table: " + tableName);
         List<RegionPlan> partialPlans = balanceTable(tableName, loadOfOneTable);
         if (partialPlans != null) {
           result.addAll(partialPlans);
         }
       });
-      return result;
     } else {
       LOG.debug("Start Generate Balance plan for cluster.");
-      return balanceTable(HConstants.ENSEMBLE_TABLE_NAME, toEnsumbleTableLoad(loadOfAllTable));
+      result = balanceTable(HConstants.ENSEMBLE_TABLE_NAME, toEnsumbleTableLoad(loadOfAllTable));
     }
+    //run at cluster
+    //addall to partialplans
+    completeBalancerCosts(loadOfAllTable);
+    return result;
   }
 
   @Override

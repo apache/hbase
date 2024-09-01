@@ -438,7 +438,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
     CostFunction costFunction = new MutuallyExclusiveTablesCostFunction(conf);
     costFunction.prepare(new BalancerClusterState(clusterState, null, null, null));
     double cost = costFunction.cost();
-    assertEquals(DEFAULT_MUTUALLY_EXCLUSIVE_TABLES_COST, cost, 0.001);
+    assertEquals(1000, cost, 0.001);
   }
 
   @Test

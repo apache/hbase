@@ -180,6 +180,25 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     super(metricsStochasticBalancer);
   }
 
+  @Override protected void completeBalancerCosts(
+    Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+    if (isByTable) {
+      loadOfAllTable.forEach((tableName, loadOfOneTable) -> {
+        LOG.info("Complete Balancer plan for table: " + tableName);
+        BalancerClusterState cluster =
+          new BalancerClusterState(loadOfOneTable, loads, null, rackManager,
+            regionCacheRatioOnOldServerMap);
+        completeCosts(cluster);
+      });
+    } else {
+      LOG.debug("Complete Balancer plan for cluster.");
+      BalancerClusterState cluster =
+        new BalancerClusterState(toEnsumbleTableLoad(loadOfAllTable), loads, null, rackManager,
+          regionCacheRatioOnOldServerMap);
+      completeCosts(cluster);
+    }
+  }
+
   private static CostFunction createCostFunction(Class<? extends CostFunction> clazz,
     Configuration conf) {
     try {
@@ -751,6 +770,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     for (CostFunction c : costFunctions) {
       c.prepare(cluster);
       c.updateWeight(weightsOfGenerators);
+    }
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
+  void completeCosts(BalancerClusterState cluster) {
+    for (CostFunction c : costFunctions) {
+      c.complete(cluster);
     }
   }
 

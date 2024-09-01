@@ -22,14 +22,21 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Ensure Tables are mutually exclusive on an RS
  * for example: META and SYSTEM.CATALOG can be mutually exclusive Tables
  * on same RS
  */
-@InterfaceAudience.Private public class MutuallyExclusiveTablesCostFunction extends CostFunction {
+@InterfaceAudience.Private
+public class MutuallyExclusiveTablesCostFunction extends CostFunction {
   public static final String MUTUALLY_EXCLUSIVE_TABLES_KEY =
     "hbase.master.balancer.stochastic.mutuallyExclusiveTables";
   public static final String MUTUALLY_EXCLUSIVE_TABLES_COST_KEY =
@@ -37,6 +44,8 @@ import java.util.*;
   public static final float DEFAULT_MUTUALLY_EXCLUSIVE_TABLES_COST = 10000;
   private static final int VIOLATION_COST = 1000;
   private Set<String> mutuallyExclusiveTables = Collections.emptySet();
+  private static final Map<ServerName, Set<String>> sharedState = new HashMap<>();
+
 
   public MutuallyExclusiveTablesCostFunction(Configuration conf) {
     this.setMultiplier(
@@ -53,6 +62,25 @@ import java.util.*;
 
   @Override void prepare(BalancerClusterState cluster) {
     super.prepare(cluster);
+    // Register the current table's regions in the shared state
+    Map<ServerName, List<RegionInfo>> clusterState = this.cluster.clusterState;
+
+    for (Map.Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
+      Set<String> tablesOnServer = sharedState.computeIfAbsent(entry.getKey(), k -> new HashSet<>());
+
+      for (RegionInfo regionInfo : entry.getValue()) {
+        String tableName = regionInfo.getTable().getNameAsString();
+        if (mutuallyExclusiveTables.contains(tableName)) {
+          tablesOnServer.add(tableName);
+        }
+      }
+    }
+  }
+
+  @Override void complete(BalancerClusterState cluster) {
+    super.complete(cluster);
+    // Clear the shared state
+    sharedState.clear();
   }
 
   @Override protected double cost() {
