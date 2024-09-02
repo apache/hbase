@@ -104,13 +104,14 @@ public class IncrementalTableBackupClient extends TableBackupClient {
 
   /*
    * Reads bulk load records from backup table, iterates through the records and forms the paths for
-   * bulk loaded hfiles. Copies the bulk loaded hfiles to backup destination
+   * bulk loaded hfiles. Copies the bulk loaded hfiles to backup destination. This method does NOT
+   * clean up the entries in the bulk load system table. Those entries should not be cleaned until
+   * the backup is marked as complete.
    * @param sTableList list of tables to be backed up
-   * @return map of table to List of files
+   * @return the rowkeys of bulk loaded files
    */
   @SuppressWarnings("unchecked")
-  protected Map<byte[], List<Path>>[] handleBulkLoad(List<TableName> sTableList)
-    throws IOException {
+  protected List<byte[]> handleBulkLoad(List<TableName> sTableList) throws IOException {
     Map<byte[], List<Path>>[] mapForSrc = new Map[sTableList.size()];
     List<String> activeFiles = new ArrayList<>();
     List<String> archiveFiles = new ArrayList<>();
@@ -192,8 +193,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
 
     copyBulkLoadedFiles(activeFiles, archiveFiles);
-    backupManager.deleteBulkLoadedRows(pair.getSecond());
-    return mapForSrc;
+
+    return pair.getSecond();
   }
 
   private void copyBulkLoadedFiles(List<String> activeFiles, List<String> archiveFiles)
@@ -309,10 +310,12 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
       backupManager.writeBackupStartCode(newStartCode);
 
-      handleBulkLoad(backupInfo.getTableNames());
+      List<byte[]> bulkLoadedRows = handleBulkLoad(backupInfo.getTableNames());
+
       // backup complete
       completeBackup(conn, backupInfo, BackupType.INCREMENTAL, conf);
 
+      backupManager.deleteBulkLoadedRows(bulkLoadedRows);
     } catch (IOException e) {
       failBackup(conn, backupInfo, backupManager, e, "Unexpected Exception : ",
         BackupType.INCREMENTAL, conf);
