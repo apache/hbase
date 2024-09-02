@@ -316,7 +316,14 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
 
       @Override
       public void onRegionError(RegionInfo region, Throwable error) {
-        pool.execute(context.wrap(() -> callback.onRegionError(region, error)));
+        regionCompletesInProgress.register();
+        pool.execute(context.wrap(() -> {
+          try {
+            callback.onRegionError(region, error);
+          } finally {
+            regionCompletesInProgress.arriveAndDeregister();
+          }
+        }));
       }
 
       @Override
