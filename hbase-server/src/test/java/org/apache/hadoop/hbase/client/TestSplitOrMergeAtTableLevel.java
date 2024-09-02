@@ -21,8 +21,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -157,16 +157,17 @@ public class TestSplitOrMergeAtTableLevel {
     List<RegionInfo> regions = admin.getRegions(tableName);
     int originalCount = regions.size();
 
-    // split the table and make sure region count does not increase
-    Future<?> f = admin.splitRegionAsync(regions.get(0).getEncodedNameAsBytes(), Bytes.toBytes(2));
     try {
+      // split the table and make sure region count does not increase
+      Future<?> f =
+        admin.splitRegionAsync(regions.get(0).getEncodedNameAsBytes(), Bytes.toBytes(2));
       f.get(10, TimeUnit.SECONDS);
       fail("Should not get here.");
-    } catch (ExecutionException ee) {
+    } catch (IOException ee) {
       // expected to reach here
       // check and ensure that table does not get splitted
       assertTrue(admin.getRegions(tableName).size() == originalCount);
-      assertTrue("Expected DoNotRetryIOException!", ee.getCause() instanceof DoNotRetryIOException);
+      assertTrue("Expected DoNotRetryIOException!", ee instanceof DoNotRetryIOException);
     }
   }
 
@@ -217,16 +218,16 @@ public class TestSplitOrMergeAtTableLevel {
     byte[] nameOfRegionA = regions.get(0).getEncodedNameAsBytes();
     byte[] nameOfRegionB = regions.get(1).getEncodedNameAsBytes();
 
-    // check and ensure that region do not get merged
-    Future<?> f = admin.mergeRegionsAsync(new byte[][] { nameOfRegionA, nameOfRegionB }, true);
     try {
+      // check and ensure that region do not get merged
+      Future<?> f = admin.mergeRegionsAsync(new byte[][] { nameOfRegionA, nameOfRegionB }, true);
       f.get(10, TimeUnit.SECONDS);
       fail("Should not get here.");
-    } catch (ExecutionException ee) {
+    } catch (IOException ee) {
       // expected to reach here
       // check and ensure that region do not get merged
       assertTrue(admin.getRegions(tableName).size() == originalCount);
-      assertTrue("Expected DoNotRetryIOException!", ee.getCause() instanceof DoNotRetryIOException);
+      assertTrue("Expected DoNotRetryIOException!", ee instanceof DoNotRetryIOException);
     }
   }
 
