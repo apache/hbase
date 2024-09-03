@@ -164,7 +164,7 @@ public class TestSpaceQuotasWithSnapshots {
     // Make sure we see the "final" new size for the table, not some intermediate
     waitForStableRegionSizeReport(conn, tn);
     final long finalSize = getRegionSizeReportForTable(conn, tn);
-    assertNotNull("Did not expect to see a null size", finalSize);
+    assertTrue("Table data size must be greater than zero", finalSize > 0);
     LOG.info("Last seen size: " + finalSize);
 
     // Make sure the QuotaObserverChore has time to reflect the new region size reports
@@ -263,7 +263,7 @@ public class TestSpaceQuotasWithSnapshots {
     // Make sure we see the "final" new size for the table, not some intermediate
     waitForStableRegionSizeReport(conn, tn);
     final long finalSize = getRegionSizeReportForTable(conn, tn);
-    assertNotNull("Did not expect to see a null size", finalSize);
+    assertTrue("Table data size must be greater than zero", finalSize > 0);
     LOG.info("Final observed size of table: " + finalSize);
 
     // Make sure the QuotaObserverChore has time to reflect the new region size reports
