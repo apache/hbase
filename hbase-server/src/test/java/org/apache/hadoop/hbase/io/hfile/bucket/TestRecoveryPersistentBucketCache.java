@@ -62,7 +62,7 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
-    assertTrue(CacheTestUtils.waitForCacheInitialization(bucketCache, 1000));
+    assertTrue(bucketCache.waitForCacheInitialization(1000));
     assertTrue(
       bucketCache.isCacheInitialized("testBucketCacheRecovery") && bucketCache.isCacheEnabled());
 
@@ -100,7 +100,7 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
-    assertTrue(CacheTestUtils.waitForCacheInitialization(newBucketCache, 10000));
+    assertTrue(newBucketCache.waitForCacheInitialization(1000));
 
     assertEquals(3, newBucketCache.backingMap.size());
     assertNull(newBucketCache.getBlock(blocks[3].getBlockName(), false, false, false));
@@ -126,7 +126,7 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
-    assertTrue(CacheTestUtils.waitForCacheInitialization(bucketCache, 10000));
+    assertTrue(bucketCache.waitForCacheInitialization(10000));
 
     CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 4);
 
@@ -141,7 +141,7 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
-    assertTrue(CacheTestUtils.waitForCacheInitialization(newBucketCache, 10000));
+    assertTrue(newBucketCache.waitForCacheInitialization(10000));
     assertEquals(4, newBucketCache.backingMap.size());
     newBucketCache.evictBlocksByHfileName(blocks[0].getBlockName().getHfileName());
     assertEquals(3, newBucketCache.backingMap.size());
@@ -160,7 +160,7 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
-    assertTrue(CacheTestUtils.waitForCacheInitialization(bucketCache, 10000));
+    assertTrue(bucketCache.waitForCacheInitialization(10000));
 
     CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 4);
 
@@ -175,7 +175,7 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
-    assertTrue(CacheTestUtils.waitForCacheInitialization(newBucketCache, 10000));
+    assertTrue(newBucketCache.waitForCacheInitialization(10000));
 
     // Set the state of bucket cache to INITIALIZING
     newBucketCache.setCacheState(BucketCache.CacheState.INITIALIZING);

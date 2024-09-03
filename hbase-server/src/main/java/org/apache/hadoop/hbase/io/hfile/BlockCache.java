@@ -272,9 +272,8 @@ public interface BlockCache extends Iterable<CachedBlock> {
 
   /**
    * Wait for the bucket cache to be enabled while server restart
-   * @param cache   cache object
    * @param timeout time to wait for the bucket cache to be enable
-   * @return boolean trye if the bucket cache is enabled, false otherwise
+   * @return boolean true if the bucket cache is enabled, false otherwise
    */
   default boolean waitForCacheInitialization(long timeout) {
     return true;

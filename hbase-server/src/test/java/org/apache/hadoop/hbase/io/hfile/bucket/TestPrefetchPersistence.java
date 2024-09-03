@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -110,7 +109,7 @@ public class TestPrefetchPersistence {
     bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
       testDir + "/bucket.persistence", 60 * 1000, conf);
-    CacheTestUtils.waitForCacheInitialization(bucketCache, 10000);
+    bucketCache.waitForCacheInitialization(10000);
     cacheConf = new CacheConfig(conf, bucketCache);
 
     long usedSize = bucketCache.getAllocator().getUsedSize();
@@ -129,7 +128,7 @@ public class TestPrefetchPersistence {
     bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
       testDir + "/bucket.persistence", 60 * 1000, conf);
-    CacheTestUtils.waitForCacheInitialization(bucketCache, 10000);
+    bucketCache.waitForCacheInitialization(10000);
     cacheConf = new CacheConfig(conf, bucketCache);
     assertTrue(usedSize != 0);
     assertTrue(bucketCache.fullyCachedFiles.containsKey(storeFile.getName()));

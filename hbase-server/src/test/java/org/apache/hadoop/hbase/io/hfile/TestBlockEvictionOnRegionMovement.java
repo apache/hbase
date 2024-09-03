@@ -133,7 +133,7 @@ public class TestBlockEvictionOnRegionMovement {
     cluster.startRegionServer();
     Thread.sleep(500);
 
-    CacheTestUtils.waitForCacheInitialization(regionServingRS.getBlockCache().get(), 10000);
+    regionServingRS.getBlockCache().get().waitForCacheInitialization(10000);
     long newUsedCacheSize =
       regionServingRS.getBlockCache().get().getBlockCaches()[1].getCurrentSize();
     assertEquals(oldUsedCacheSize, newUsedCacheSize);

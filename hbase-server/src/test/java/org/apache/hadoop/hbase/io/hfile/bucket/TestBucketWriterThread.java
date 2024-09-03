@@ -30,7 +30,6 @@ import java.util.concurrent.BlockingQueue;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
-import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
@@ -85,7 +84,7 @@ public class TestBucketWriterThread {
     final int writerThreadsCount = 1;
     this.bc = new MockBucketCache("offheap", capacity, 1, new int[] { 1 }, writerThreadsCount,
       capacity, null, 100/* Tolerate ioerrors for 100ms */);
-    CacheTestUtils.waitForCacheInitialization(this.bc, 10000);
+    this.bc.waitForCacheInitialization(10000);
     assertEquals(writerThreadsCount, bc.writerThreads.length);
     assertEquals(writerThreadsCount, bc.writerQueues.size());
     // Get reference to our single WriterThread instance.

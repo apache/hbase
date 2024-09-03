@@ -114,8 +114,6 @@ public class TestPrefetch {
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     fs = HFileSystem.get(conf);
     blockCache = BlockCacheFactory.createBlockCache(conf);
-    // Add some sleep to enable the cache to be instantiated.
-    Thread.sleep(2000);
     cacheConf = new CacheConfig(conf, blockCache);
   }
 
