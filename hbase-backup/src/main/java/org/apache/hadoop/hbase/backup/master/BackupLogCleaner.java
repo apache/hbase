@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -80,8 +81,13 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     }
   }
 
-  private Map<Address, Long> getServersToOldestBackupMapping(List<BackupInfo> backups)
-    throws IOException {
+  private Map<Address, Long> getServerToLastBackupTs(List<BackupInfo> backups) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+        "Cleaning WALs if they are older than the latest backups. Checking WALs against {} backups: {}",
+        backups.size(),
+        backups.stream().map(BackupInfo::getBackupId).sorted().collect(Collectors.joining(", ")));
+    }
     Map<Address, Long> serverAddressToLastBackupMap = new HashMap<>();
 
     Map<TableName, Long> tableNameBackupInfoMap = new HashMap<>();
@@ -95,6 +101,12 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
             serverAddressToLastBackupMap.put(Address.fromString(entry.getKey()), entry.getValue());
           }
         }
+      }
+    }
+
+    if (LOG.isDebugEnabled()) {
+      for (Map.Entry<Address, Long> entry : serverAddressToLastBackupMap.entrySet()) {
+        LOG.debug("Server: {}, Last Backup: {}", entry.getKey().getHostName(), entry.getValue());
       }
     }
 
@@ -116,8 +128,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     Map<Address, Long> addressToLastBackupMap;
     try {
       try (BackupManager backupManager = new BackupManager(conn, getConf())) {
-        addressToLastBackupMap =
-          getServersToOldestBackupMapping(backupManager.getBackupHistory(true));
+        addressToLastBackupMap = getServerToLastBackupTs(backupManager.getBackupHistory(true));
       }
     } catch (IOException ex) {
       LOG.error("Failed to analyse backup history with exception: {}. Retaining all logs",
@@ -176,11 +187,28 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       Address walServerAddress = Address.fromString(hostname);
       long walTimestamp = AbstractFSWALProvider.getTimestamp(path.getName());
 
-      if (
-        !addressToLastBackupMap.containsKey(walServerAddress)
-          || addressToLastBackupMap.get(walServerAddress) >= walTimestamp
-      ) {
+      if (!addressToLastBackupMap.containsKey(walServerAddress)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("No backup found for server: {}. Deleting file: {}",
+            walServerAddress.getHostName(), path);
+        }
         return true;
+      }
+
+      Long lastBackupTs = addressToLastBackupMap.get(walServerAddress);
+      if (lastBackupTs > walTimestamp) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+            "Backup found for server: {}. Backup from {} is newer than file, so deleting: {}",
+            walServerAddress.getHostName(), lastBackupTs, path);
+        }
+        return true;
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+          "Backup found for server: {}. Backup from {} is older than the file, so keeping: {}",
+          walServerAddress.getHostName(), lastBackupTs, path);
       }
     } catch (Exception ex) {
       LOG.warn("Error occurred while filtering file: {}. Ignoring cleanup of this log", path, ex);
