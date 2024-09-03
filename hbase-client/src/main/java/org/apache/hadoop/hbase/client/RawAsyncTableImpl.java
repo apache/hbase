@@ -63,10 +63,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
-import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -94,11 +92,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResp
 class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RawAsyncTableImpl.class);
-
-  private static final HashedWheelTimer HWT = new HashedWheelTimer(
-    new ThreadFactoryBuilder().setNameFormat("Raw-Async-Table-Timer-pool-%d").setDaemon(true)
-      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
-    10, TimeUnit.MILLISECONDS);
 
   private final AsyncConnectionImpl conn;
 
@@ -842,7 +835,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
             LOG.trace("Coprocessor returned incomplete result. "
               + "Sleeping for {} millis before making follow-up request.", waitIntervalMs);
             if (waitIntervalMs > 0) {
-              HWT.newTimeout(
+              AsyncConnectionImpl.RETRY_TIMER.newTimeout(
                 (timeout) -> onLocateComplete(stubMaker, updatedCallable, callback, endKey,
                   endKeyInclusive, locateFinished, unfinishedRequest, loc, null),
                 waitIntervalMs, TimeUnit.MILLISECONDS);

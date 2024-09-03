@@ -138,7 +138,7 @@ public final class AsyncAggregationClient {
         updatedRequest.setScan(originalRequest.getScan().toBuilder()
           .setStartRow(response.getNextChunkStartRow()).build());
         if (log.isTraceEnabled()) {
-          log.trace("Got incomplete result {} for original scan {}. Sending new request {}.",
+          log.trace("Got incomplete result {} for original scan {}. Sending next request {}.",
             TextFormat.shortDebugString(response),
             TextFormat.shortDebugString(originalRequest.getScan()),
             TextFormat.shortDebugString(updatedRequest));
