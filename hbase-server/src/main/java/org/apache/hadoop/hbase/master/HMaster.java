@@ -2256,21 +2256,26 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     final long nonce) throws IOException {
     checkInitialized();
 
+    final String regionNamesToLog = RegionInfo.getShortNameToLog(regionsToMerge);
+
     if (!isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
-      String regionsStr = Arrays.deepToString(regionsToMerge);
-      LOG.warn("Merge switch is off! skip merge of " + regionsStr);
+      LOG.warn("Merge switch is off! skip merge of " + regionNamesToLog);
       throw new DoNotRetryIOException(
-        "Merge of " + regionsStr + " failed because merge switch is off");
+        "Merge of " + regionNamesToLog + " failed because merge switch is off");
     }
 
-    final String mergeRegionsStr = Arrays.stream(regionsToMerge).map(RegionInfo::getEncodedName)
-      .collect(Collectors.joining(", "));
+    if (!getTableDescriptors().get(regionsToMerge[0].getTable()).isMergeEnabled()) {
+      LOG.warn("Merge is disabled for the table! Skipping merge of {}", regionNamesToLog);
+      throw new DoNotRetryIOException(
+        "Merge of " + regionNamesToLog + " failed as region merge is disabled for the table");
+    }
+
     return MasterProcedureUtil.submitProcedure(new NonceProcedureRunnable(this, ng, nonce) {
       @Override
       protected void run() throws IOException {
         getMaster().getMasterCoprocessorHost().preMergeRegions(regionsToMerge);
         String aid = getClientIdAuditPrefix();
-        LOG.info("{} merge regions {}", aid, mergeRegionsStr);
+        LOG.info("{} merge regions {}", aid, regionNamesToLog);
         submitProcedure(new MergeTableRegionsProcedure(procedureExecutor.getEnvironment(),
           regionsToMerge, forcible));
         getMaster().getMasterCoprocessorHost().postMergeRegions(regionsToMerge);
@@ -2292,6 +2297,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       LOG.warn("Split switch is off! skip split of " + regionInfo);
       throw new DoNotRetryIOException(
         "Split region " + regionInfo.getRegionNameAsString() + " failed due to split switch off");
+    }
+
+    if (!getTableDescriptors().get(regionInfo.getTable()).isSplitEnabled()) {
+      LOG.warn("Split is disabled for the table! Skipping split of {}", regionInfo);
+      throw new DoNotRetryIOException("Split region " + regionInfo.getRegionNameAsString()
+        + " failed as region split is disabled for the table");
     }
 
     return MasterProcedureUtil
