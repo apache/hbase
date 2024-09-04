@@ -381,6 +381,7 @@ public class TestVerifyBucketCacheFile {
     BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    assertTrue(bucketCache.waitForCacheInitialization(10000));
 
     CacheTestUtils.HFileBlockPair[] blocks =
       CacheTestUtils.generateHFileBlocks(constructedBlockSize, numBlocks);
@@ -396,7 +397,7 @@ public class TestVerifyBucketCacheFile {
     BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
-
+    assertTrue(newBucketCache.waitForCacheInitialization(10000));
     assertEquals(numBlocks, newBucketCache.backingMap.size());
 
     for (int i = 0; i < numBlocks; i++) {

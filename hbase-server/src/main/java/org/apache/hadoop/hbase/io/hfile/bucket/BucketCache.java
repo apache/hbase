@@ -1436,7 +1436,8 @@ public class BucketCache implements BlockCache, HeapSize {
 
       persistChunkedBackingMap(fos);
 
-      LOG.debug("PersistToFile: after persisting backing map size: {}, fullycachedFiles size: {}, file name: {}",
+      LOG.debug(
+        "PersistToFile: after persisting backing map size: {}, fullycachedFiles size: {}, file name: {}",
         backingMap.size(), fullyCachedFiles.size(), tempPersistencePath.getName());
     } catch (IOException e) {
       LOG.error("Failed to persist bucket cache to file", e);
@@ -1623,8 +1624,8 @@ public class BucketCache implements BlockCache, HeapSize {
     fullyCachedFiles.clear();
     fullyCachedFiles.putAll(BucketProtoUtils.fromPB(proto.getCachedFilesMap()));
 
-    LOG.info("After retrieval Backing map size: {}, fullyCachedFiles size: {}",
-      backingMap.size(), fullyCachedFiles.size());
+    LOG.info("After retrieval Backing map size: {}, fullyCachedFiles size: {}", backingMap.size(),
+      fullyCachedFiles.size());
 
     verifyFileIntegrity(proto);
     updateRegionSizeMapWhileRetrievingFromFile();
