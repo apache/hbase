@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.AsyncAggregationClient;
 import org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter;
@@ -52,7 +52,7 @@ public class TestAsyncAggregationClientWithCallbackThreadPool {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestAsyncAggregationClientWithCallbackThreadPool.class);
 
-  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
+  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static TableName TABLE_NAME = TableName.valueOf("TestAsyncAggregationClient");
 
