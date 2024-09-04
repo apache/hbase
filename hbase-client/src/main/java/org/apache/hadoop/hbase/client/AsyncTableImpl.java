@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
@@ -299,19 +300,39 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
     final Context context = Context.current();
     CoprocessorCallback<R> wrappedCallback = new CoprocessorCallback<R>() {
 
+      private final Phaser regionCompletesInProgress = new Phaser(1);
+
       @Override
       public void onRegionComplete(RegionInfo region, R resp) {
-        pool.execute(context.wrap(() -> callback.onRegionComplete(region, resp)));
+        regionCompletesInProgress.register();
+        pool.execute(context.wrap(() -> {
+          try {
+            callback.onRegionComplete(region, resp);
+          } finally {
+            regionCompletesInProgress.arriveAndDeregister();
+          }
+        }));
       }
 
       @Override
       public void onRegionError(RegionInfo region, Throwable error) {
-        pool.execute(context.wrap(() -> callback.onRegionError(region, error)));
+        regionCompletesInProgress.register();
+        pool.execute(context.wrap(() -> {
+          try {
+            callback.onRegionError(region, error);
+          } finally {
+            regionCompletesInProgress.arriveAndDeregister();
+          }
+        }));
       }
 
       @Override
       public void onComplete() {
-        pool.execute(context.wrap(callback::onComplete));
+        pool.execute(context.wrap(() -> {
+          // Guarantee that onComplete() is called after all onRegionComplete()'s are called
+          regionCompletesInProgress.arriveAndAwaitAdvance();
+          callback.onComplete();
+        }));
       }
 
       @Override
