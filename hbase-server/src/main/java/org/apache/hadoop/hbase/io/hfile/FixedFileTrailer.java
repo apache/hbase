@@ -553,14 +553,23 @@ public class FixedFileTrailer {
   private static Class<? extends CellComparator> getComparatorClass(String comparatorClassName)
     throws IOException {
     Class<? extends CellComparator> comparatorKlass;
-    // for BC
-    if (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator")) {
+    // for backward compatibility
+    // We will force comparator class name to be "KeyValue$KVComparator" and
+    // "KeyValue$MetaComparator" on 2.x although we do not use them on newer 2.x versions, for
+    // maintaining compatibility while upgrading and downgrading between different 2.x versions. So
+    // here on 3.x, we still need to check these two class names although the actual classes have
+    // already been purged.
+    if (
+      comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$KVComparator")
+        || comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator")
+    ) {
       comparatorKlass = InnerStoreCellComparator.class;
     } else if (
-      comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator")
-        || (comparatorClassName
-          .equals("org.apache.hadoop.hbase.CellComparatorImpl$MetaCellComparator"))
-        || (comparatorClassName.equals("org.apache.hadoop.hbase.MetaCellComparator"))
+      comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$MetaComparator")
+        || comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator")
+        || comparatorClassName
+          .equals("org.apache.hadoop.hbase.CellComparatorImpl$MetaCellComparator")
+        || comparatorClassName.equals("org.apache.hadoop.hbase.MetaCellComparator")
     ) {
       comparatorKlass = MetaCellComparator.class;
     } else if (
