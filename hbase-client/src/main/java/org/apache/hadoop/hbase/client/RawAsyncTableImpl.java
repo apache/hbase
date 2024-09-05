@@ -214,8 +214,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
       .pause(pauseNs, TimeUnit.NANOSECONDS)
       .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
-      .maxAttempts(maxAttempts).setRequestAttributes(requestAttributes)
-      .startLogErrorsCnt(startLogErrorsCnt).setRequestAttributes(requestAttributes);
+      .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt)
+      .setRequestAttributes(requestAttributes);
   }
 
   private <T, R extends OperationWithAttributes & Row> SingleRequestCallerBuilder<T>

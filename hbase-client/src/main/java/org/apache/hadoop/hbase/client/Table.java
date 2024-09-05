@@ -757,6 +757,6 @@ public interface Table extends Closeable {
    * @return map of request attributes
    */
   default Map<String, byte[]> getRequestAttributes() {
-    throw new NotImplementedException("Add an implementation!");
+    return Collections.emptyMap();
   }
 }
