@@ -39,8 +39,10 @@
   String regionName = request.getParameter("name");
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
   FileSystem fs = rs.getFileSystem();
-
-  HRegion region = rs.getRegion(regionName);
+  HRegion region = null;
+  if (regionName != null) {
+    region = rs.getRegion(regionName);
+  }
   String displayName;
   boolean isReplicaRegion = false;
   if (region != null) {
@@ -48,7 +50,11 @@
             rs.getConfiguration());
     isReplicaRegion = region.getRegionInfo().getReplicaId() > RegionInfo.DEFAULT_REPLICA_ID;
   } else {
-    displayName = "region {" + regionName + "} is not currently online on this region server";
+    if (regionName != null) {
+      displayName = "region {" + regionName + "} is not currently online on this region server";
+    } else {
+      displayName = "you must specify a region name when accessing this page";
+    }
   }
   pageContext.setAttribute("pageTitle", "HBase RegionServer: " + rs.getServerName());
 %>
