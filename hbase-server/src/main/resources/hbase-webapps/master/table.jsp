@@ -148,11 +148,32 @@
     return "";
   }
 %>
+
+<jsp:include page="header.jsp">
+  <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
+
 <%
   final String ZEROMB = "0 MB";
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
   String fqtn = request.getParameter("name");
+  // handle the case for fqtn is null or master is not initialized with error message + redirect
+  if (fqtn == null || !master.isInitialized()) {
+%>
+    <div class="container-fluid content">
+      <div class="row inner_header">
+        <div class="page-header">
+          <h1>Table not ready</h1>
+        </div>
+      </div>
+      <p><hr><p>
+      <jsp:include page="redirect.jsp" />
+    </div>
+<%  return;
+  } %>
+
+<%
   final String escaped_fqtn = StringEscapeUtils.escapeHtml4(fqtn);
   Table table = master.getConnection().getTable(TableName.valueOf(fqtn));
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
@@ -200,24 +221,6 @@
     .build();
   final MetaBrowser metaBrowser = new MetaBrowser(connection, request);
 %>
-
-<jsp:include page="header.jsp">
-  <jsp:param name="pageTitle" value="${pageTitle}"/>
-</jsp:include>
-
-<% // handle the case for fqtn is null or master is not initialized with error message + redirect
-  if (fqtn == null || ! master.isInitialized()) { %>
-    <div class="container-fluid content">
-      <div class="row inner_header">
-        <div class="page-header">
-          <h1>Table not ready</h1>
-        </div>
-      </div>
-      <p><hr><p>
-      <jsp:include page="redirect.jsp" />
-    </div>
-<%  return;
-  } %>
 
 <% // unknow table
   if (! admin.tableExists(TableName.valueOf(fqtn)).get()) { %>
