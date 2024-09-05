@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.client.example;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -27,7 +29,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
@@ -67,12 +71,19 @@ public class BufferedMutatorExample extends Configured implements Tool {
         }
       }
     };
-    BufferedMutatorParams params = new BufferedMutatorParams(TABLE).listener(listener);
+
+    BufferedMutatorParams params = new BufferedMutatorParams(TABLE).listener(listener)
+      .setRequestAttribute("requestInfo", Bytes.toBytes("bar"));
 
     //
     // step 1: create a single Connection and a BufferedMutator, shared by all worker threads.
     //
-    try (final Connection conn = ConnectionFactory.createConnection(getConf());
+    Map<String, byte[]> connectionAttributes = new HashMap<>();
+    connectionAttributes.put("clientId", Bytes.toBytes("foo"));
+    Configuration conf = getConf();
+    try (
+      final Connection conn = ConnectionFactory.createConnection(conf, null,
+        AuthUtil.loginClient(conf), connectionAttributes);
       final BufferedMutator mutator = conn.getBufferedMutator(params)) {
 
       /** worker pool that operates on BufferedTable instances */
@@ -104,6 +115,7 @@ public class BufferedMutatorExample extends Configured implements Tool {
         f.get(5, TimeUnit.MINUTES);
       }
       workerPool.shutdown();
+      mutator.flush();
     } catch (IOException e) {
       // exception while creating/destroying Connection or BufferedMutator
       LOG.info("exception while creating/destroying Connection or BufferedMutator", e);
