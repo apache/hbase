@@ -371,7 +371,6 @@ public class BucketCache implements BlockCache, HeapSize {
     } else {
       bucketAllocator = new BucketAllocator(capacity, bucketSizes);
       this.cacheState = CacheState.ENABLED;
-      ;
       startWriterThreads();
     }
 
@@ -927,7 +926,9 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   public void logStats() {
-    if (!isCacheInitialized("BucketCache::logStats")) return;
+    if (!isCacheInitialized("BucketCache::logStats")) {
+      return;
+    }
 
     long totalSize = bucketAllocator.getTotalSize();
     long usedSize = bucketAllocator.getUsedSize();
@@ -1437,7 +1438,8 @@ public class BucketCache implements BlockCache, HeapSize {
       persistChunkedBackingMap(fos);
 
       LOG.debug(
-        "PersistToFile: after persisting backing map size: {}, fullycachedFiles size: {}, file name: {}",
+        "PersistToFile: after persisting backing map size: {}, fullycachedFiles size: {},"
+          + " file name: {}",
         backingMap.size(), fullyCachedFiles.size(), tempPersistencePath.getName());
     } catch (IOException e) {
       LOG.error("Failed to persist bucket cache to file", e);
@@ -1704,7 +1706,9 @@ public class BucketCache implements BlockCache, HeapSize {
    * Used to shut down the cache -or- turn it off in the case of something broken.
    */
   private void disableCache() {
-    if (!isCacheEnabled()) return;
+    if (!isCacheEnabled()) {
+      return;
+    }
     LOG.info("Disabling cache");
     cacheState = CacheState.DISABLED;
     ioEngine.shutdown();
