@@ -138,6 +138,8 @@ public class HStore
   public static final String DEFAULT_BLOCK_STORAGE_POLICY = "NONE";
   public static final int DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER = 1000;
   public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 16;
+  public static final String DELETE_EXPIRED_STOREFILE_KEY = "hbase.store.delete.expired.storefile";
+  public static final Boolean DEFAULT_DELETE_EXPIRED_STOREFILE = true;
 
   // HBASE-24428 : Update compaction priority for recently split daughter regions
   // so as to prioritize their compaction.
@@ -1453,6 +1455,15 @@ public class HStore
     // Before we do compaction, try to get rid of unneeded files to simplify things.
     removeUnneededFiles();
 
+    if (this.region.getTableDescriptor().shouldSkipMergingCompaction()) {
+      if (!conf.getBoolean(DELETE_EXPIRED_STOREFILE_KEY, DEFAULT_DELETE_EXPIRED_STOREFILE)) {
+        LOG.info("Since config 'hbase.store.delete.expired.storefile' is set to false, ignoring "
+          + "SKIP_MERGING_COMPACTION set at table level");
+      } else {
+        return Optional.empty();
+      }
+    }
+
     final CompactionContext compaction = storeEngine.createCompaction();
     CompactionRequestImpl request = null;
     this.storeEngine.readLock();
@@ -1555,7 +1566,7 @@ public class HStore
   }
 
   private void removeUnneededFiles() throws IOException {
-    if (!conf.getBoolean("hbase.store.delete.expired.storefile", true)) {
+    if (!conf.getBoolean(DELETE_EXPIRED_STOREFILE_KEY, DEFAULT_DELETE_EXPIRED_STOREFILE)) {
       return;
     }
     if (getColumnFamilyDescriptor().getMinVersions() > 0) {
