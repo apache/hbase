@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -414,9 +413,9 @@ public final class BackupSystemTable implements Closeable {
       LOG.debug("write bulk load descriptor to backup " + tabName + " with " + finalPaths.size()
         + " entries");
     }
-    try (Table table = connection.getTable(bulkLoadTableName)) {
+    try (BufferedMutator bufferedMutator = connection.getBufferedMutator(bulkLoadTableName)) {
       List<Put> puts = BackupSystemTable.createPutForCommittedBulkload(tabName, region, finalPaths);
-      executeBufferedMutations(table, puts);
+      bufferedMutator.mutate(puts);
       LOG.debug("written " + puts.size() + " rows for bulk load of " + tabName);
     }
   }
@@ -448,14 +447,14 @@ public final class BackupSystemTable implements Closeable {
    * @param rows the rows to be deleted
    */
   public void deleteBulkLoadedRows(List<byte[]> rows) throws IOException {
-    try (Table table = connection.getTable(bulkLoadTableName)) {
+    try (BufferedMutator bufferedMutator = connection.getBufferedMutator(bulkLoadTableName)) {
       List<Delete> lstDels = new ArrayList<>();
       for (byte[] row : rows) {
         Delete del = new Delete(row);
         lstDels.add(del);
         LOG.debug("orig deleting the row: " + Bytes.toString(row));
       }
-      executeBufferedMutations(table, lstDels);
+      bufferedMutator.mutate(lstDels);
       LOG.debug("deleted " + rows.size() + " original bulkload rows");
     }
   }
@@ -537,7 +536,7 @@ public final class BackupSystemTable implements Closeable {
    */
   public void writeBulkLoadedFiles(List<TableName> sTableList, Map<byte[], List<Path>>[] maps,
     String backupId) throws IOException {
-    try (Table table = connection.getTable(bulkLoadTableName)) {
+    try (BufferedMutator bufferedMutator = connection.getBufferedMutator(bulkLoadTableName)) {
       long ts = EnvironmentEdgeManager.currentTime();
       int cnt = 0;
       List<Put> puts = new ArrayList<>();
@@ -560,7 +559,7 @@ public final class BackupSystemTable implements Closeable {
         }
       }
       if (!puts.isEmpty()) {
-        executeBufferedMutations(table, puts);
+        bufferedMutator.mutate(puts);
       }
     }
   }
@@ -919,8 +918,8 @@ public final class BackupSystemTable implements Closeable {
       Put put = createPutForWriteRegionServerLogTimestamp(table, smapData, backupRoot);
       puts.add(put);
     }
-    try (Table table = connection.getTable(tableName)) {
-      executeBufferedMutations(table, puts);
+    try (BufferedMutator bufferedMutator = connection.getBufferedMutator(tableName)) {
+      bufferedMutator.mutate(puts);
     }
   }
 
@@ -1885,13 +1884,6 @@ public final class BackupSystemTable implements Closeable {
   private String cellKeyToBackupSetName(Cell current) {
     byte[] data = CellUtil.cloneRow(current);
     return Bytes.toString(data).substring(SET_KEY_PREFIX.length());
-  }
-
-  private void executeBufferedMutations(Table table, List<? extends Mutation> mutations)
-    throws IOException {
-    try (BufferedMutator bufferedMutator = connection.getBufferedMutator(table.getName())) {
-      bufferedMutator.mutate(mutations);
-    }
   }
 
   private static byte[] rowkey(String s, String... other) {
