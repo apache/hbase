@@ -84,7 +84,8 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
   private Map<Address, Long> getServerToLastBackupTs(List<BackupInfo> backups) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug(
-        "Cleaning WALs if they are older than the latest backups. Checking WALs against {} backups: {}",
+        "Cleaning WALs if they are older than the latest backups. "
+          + "Checking WALs against {} backups: {}",
         backups.size(),
         backups.stream().map(BackupInfo::getBackupId).sorted().collect(Collectors.joining(", ")));
     }
@@ -196,7 +197,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       }
 
       Long lastBackupTs = addressToLastBackupMap.get(walServerAddress);
-      if (lastBackupTs > walTimestamp) {
+      if (lastBackupTs >= walTimestamp) {
         if (LOG.isDebugEnabled()) {
           LOG.debug(
             "Backup found for server: {}. Backup from {} is newer than file, so deleting: {}",
