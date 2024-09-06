@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase;
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_CLOSE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_SPLIT_KEY;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -47,13 +49,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ MiscTests.class, MediumTests.class })
-public class TestSplitWithCache {
+public class TestCacheEviction {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitWithCache.class);
+    HBaseClassTestRule.forClass(TestCacheEviction.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestSplitWithCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCacheEviction.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -69,42 +71,44 @@ public class TestSplitWithCache {
 
   @Test
   public void testEvictOnSplit() throws Exception {
-    doTest("testEvictOnSplit", true,
+    doTestEvictOnSplit("testEvictOnSplit", true,
       (f, m) -> Waiter.waitFor(UTIL.getConfiguration(), 1000, () -> m.get(f) != null),
       (f, m) -> Waiter.waitFor(UTIL.getConfiguration(), 1000, () -> m.get(f) == null));
   }
 
   @Test
   public void testDoesntEvictOnSplit() throws Exception {
-    doTest("testDoesntEvictOnSplit", false,
+    doTestEvictOnSplit("testDoesntEvictOnSplit", false,
       (f, m) -> Waiter.waitFor(UTIL.getConfiguration(), 1000, () -> m.get(f) != null),
       (f, m) -> Waiter.waitFor(UTIL.getConfiguration(), 1000, () -> m.get(f) != null));
   }
 
-  private void doTest(String table, boolean evictOnSplit,
+  @Test
+  public void testEvictOnClose() throws Exception {
+    doTestEvictOnClose("testEvictOnClose", true,
+      (f, m) -> Waiter.waitFor(UTIL.getConfiguration(), 1000, () -> m.get(f) != null),
+      (f, m) -> Waiter.waitFor(UTIL.getConfiguration(), 1000, () -> m.get(f) == null));
+  }
+
+  @Test
+  public void testDoesntEvictOnClose() throws Exception {
+    doTestEvictOnClose("testDoesntEvictOnClose", false,
+      (f, m) -> Waiter.waitFor(UTIL.getConfiguration(), 1000, () -> m.get(f) != null),
+      (f, m) -> Waiter.waitFor(UTIL.getConfiguration(), 1000, () -> m.get(f) != null));
+  }
+
+  private void doTestEvictOnSplit(String table, boolean evictOnSplit,
     BiConsumer<String, Map<String, Pair<String, Long>>> predicateBeforeSplit,
     BiConsumer<String, Map<String, Pair<String, Long>>> predicateAfterSplit) throws Exception {
-    UTIL.getConfiguration().setBoolean(EVICT_BLOCKS_ON_SPLIT_KEY, evictOnSplit);
     UTIL.startMiniCluster(1);
     try {
       TableName tableName = TableName.valueOf(table);
-      byte[] family = Bytes.toBytes("CF");
-      TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
-      UTIL.getAdmin().createTable(td);
-      UTIL.waitTableAvailable(tableName);
-      Table tbl = UTIL.getConnection().getTable(tableName);
-      List<Put> puts = new ArrayList<>();
-      for (int i = 0; i < 1000; i++) {
-        Put p = new Put(Bytes.toBytes("row-" + i));
-        p.addColumn(family, Bytes.toBytes(1), Bytes.toBytes("val-" + i));
-        puts.add(p);
-      }
-      tbl.put(puts);
-      UTIL.getAdmin().flush(tableName);
+      createAndCacheTable(tableName);
       Collection<HStoreFile> files =
         UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getStores().get(0).getStorefiles();
       checkCacheForBlocks(tableName, files, predicateBeforeSplit);
+      UTIL.getMiniHBaseCluster().getRegionServer(0).getConfiguration()
+        .setBoolean(EVICT_BLOCKS_ON_SPLIT_KEY, evictOnSplit);
       UTIL.getAdmin().split(tableName, Bytes.toBytes("row-500"));
       Waiter.waitFor(UTIL.getConfiguration(), 30000,
         () -> UTIL.getMiniHBaseCluster().getRegions(tableName).size() == 2);
@@ -113,7 +117,43 @@ public class TestSplitWithCache {
     } finally {
       UTIL.shutdownMiniCluster();
     }
+  }
 
+  private void doTestEvictOnClose(String table, boolean evictOnClose,
+    BiConsumer<String, Map<String, Pair<String, Long>>> predicateBeforeClose,
+    BiConsumer<String, Map<String, Pair<String, Long>>> predicateAfterClose) throws Exception {
+    UTIL.startMiniCluster(1);
+    try {
+      TableName tableName = TableName.valueOf(table);
+      createAndCacheTable(tableName);
+      Collection<HStoreFile> files =
+        UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getStores().get(0).getStorefiles();
+      checkCacheForBlocks(tableName, files, predicateBeforeClose);
+      UTIL.getMiniHBaseCluster().getRegionServer(0).getConfiguration()
+        .setBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, evictOnClose);
+      UTIL.getAdmin().disableTable(tableName);
+      UTIL.waitUntilNoRegionsInTransition();
+      checkCacheForBlocks(tableName, files, predicateAfterClose);
+    } finally {
+      UTIL.shutdownMiniCluster();
+    }
+  }
+
+  private void createAndCacheTable(TableName tableName) throws IOException, InterruptedException {
+    byte[] family = Bytes.toBytes("CF");
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+    UTIL.getAdmin().createTable(td);
+    UTIL.waitTableAvailable(tableName);
+    Table tbl = UTIL.getConnection().getTable(tableName);
+    List<Put> puts = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      Put p = new Put(Bytes.toBytes("row-" + i));
+      p.addColumn(family, Bytes.toBytes(1), Bytes.toBytes("val-" + i));
+      puts.add(p);
+    }
+    tbl.put(puts);
+    UTIL.getAdmin().flush(tableName);
   }
 
   private void checkCacheForBlocks(TableName tableName, Collection<HStoreFile> files,

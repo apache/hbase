@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.handler;
 
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_EVICT_ON_CLOSE;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_EVICT_ON_SPLIT;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_CLOSE_KEY;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_SPLIT_KEY;
+
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -61,21 +66,21 @@ public class UnassignRegionHandler extends EventHandler {
 
   private final RetryCounter retryCounter;
 
-  private boolean evictCache;
+  private boolean isSplit;
 
   // active time of the master that sent this unassign request, used for fencing
   private final long initiatingMasterActiveTime;
 
   public UnassignRegionHandler(HRegionServer server, String encodedName, long closeProcId,
     boolean abort, @Nullable ServerName destination, EventType eventType,
-    long initiatingMasterActiveTime, boolean evictCache) {
+    long initiatingMasterActiveTime, boolean isSplit) {
     super(server, eventType);
     this.encodedName = encodedName;
     this.closeProcId = closeProcId;
     this.abort = abort;
     this.destination = destination;
     this.retryCounter = HandlerUtil.getRetryCounter();
-    this.evictCache = evictCache;
+    this.isSplit = isSplit;
     this.initiatingMasterActiveTime = initiatingMasterActiveTime;
   }
 
@@ -125,7 +130,11 @@ public class UnassignRegionHandler extends EventHandler {
     }
     // This should be true only in the case of splits/merges closing the parent regions, as
     // there's no point on keep blocks for those region files.
-    region.getStores().forEach(s -> s.getCacheConfig().setEvictOnClose(evictCache));
+    final boolean evictCacheOnClose = isSplit
+      ? server.getConfiguration().getBoolean(EVICT_BLOCKS_ON_SPLIT_KEY, DEFAULT_EVICT_ON_SPLIT)
+      : server.getConfiguration().getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE);
+    LOG.debug("Unassign region: split region: {}: evictCache: {}", isSplit, evictCacheOnClose);
+    region.getStores().forEach(s -> s.getCacheConfig().setEvictOnClose(evictCacheOnClose));
 
     if (region.close(abort) == null) {
       // XXX: Is this still possible? The old comment says about split, but now split is done at
