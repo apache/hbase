@@ -372,14 +372,14 @@ public class TransitRegionStateProcedure
   }
 
   private void closeRegionAfterUpdatingMeta(MasterProcedureEnv env, RegionStateNode regionNode) {
-    CloseRegionProcedure closeProc =
-      isSplit
-        ? new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(),
-          assignCandidate,
-          env.getMasterConfiguration().getBoolean(EVICT_BLOCKS_ON_SPLIT_KEY,
-            DEFAULT_EVICT_ON_SPLIT))
-        : new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(),
-          assignCandidate, evictCache);
+    LOG.debug("Close region: isSplit: {}: evictOnSplit: {}: evictOnClose: {}", isSplit,
+      env.getMasterConfiguration().getBoolean(EVICT_BLOCKS_ON_SPLIT_KEY, DEFAULT_EVICT_ON_SPLIT),
+      evictCache);
+    // Splits/Merges are special cases, rather than deciding on the cache eviction behaviour here at
+    // Master, we just need to tell this close is for a split/merge and let RSes decide on the
+    // eviction. See HBASE-28811 for more context.
+    CloseRegionProcedure closeProc = new CloseRegionProcedure(this, getRegion(),
+      regionNode.getRegionLocation(), assignCandidate, isSplit);
     addChildProcedure(closeProc);
     setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED);
   }
