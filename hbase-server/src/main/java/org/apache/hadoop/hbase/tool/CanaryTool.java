@@ -1734,26 +1734,22 @@ public class CanaryTool implements Tool, Canary {
     TableDescriptor tableDesc, ExecutorService executor, TaskType taskType, boolean rawScanEnabled,
     LongAdder rwLatency, boolean readAllCF) throws Exception {
     LOG.debug("Reading list of regions for table {}", tableDesc.getTableName());
-    try (Table table = admin.getConnection().getTable(tableDesc.getTableName())) {
-      List<RegionTask> tasks = new ArrayList<>();
-      try (RegionLocator regionLocator =
-        admin.getConnection().getRegionLocator(tableDesc.getTableName())) {
-        for (HRegionLocation location : regionLocator.getAllRegionLocations()) {
-          if (location == null) {
-            LOG.warn("Null location");
-            continue;
-          }
-          ServerName rs = location.getServerName();
-          RegionInfo region = location.getRegion();
-          tasks.add(new RegionTask(admin.getConnection(), region, rs, (RegionStdOutSink) sink,
-            taskType, rawScanEnabled, rwLatency, readAllCF));
-          Map<String, List<RegionTaskResult>> regionMap = ((RegionStdOutSink) sink).getRegionMap();
-          regionMap.put(region.getRegionNameAsString(), new ArrayList<RegionTaskResult>());
+    List<RegionTask> tasks = new ArrayList<>();
+    try (RegionLocator regionLocator =
+      admin.getConnection().getRegionLocator(tableDesc.getTableName())) {
+      for (HRegionLocation location : regionLocator.getAllRegionLocations()) {
+        if (location == null) {
+          LOG.warn("Null location for table {}", tableDesc.getTableName());
+          continue;
         }
-        return executor.invokeAll(tasks);
+        ServerName rs = location.getServerName();
+        RegionInfo region = location.getRegion();
+        tasks.add(new RegionTask(admin.getConnection(), region, rs, (RegionStdOutSink) sink,
+          taskType, rawScanEnabled, rwLatency, readAllCF));
+        Map<String, List<RegionTaskResult>> regionMap = ((RegionStdOutSink) sink).getRegionMap();
+        regionMap.put(region.getRegionNameAsString(), new ArrayList<RegionTaskResult>());
       }
-    } catch (TableNotFoundException e) {
-      return Collections.EMPTY_LIST;
+      return executor.invokeAll(tasks);
     }
   }
 
@@ -1959,7 +1955,7 @@ public class CanaryTool implements Tool, Canary {
             this.admin.getConnection().getRegionLocator(tableDesc.getTableName())) {
             for (HRegionLocation location : regionLocator.getAllRegionLocations()) {
               if (location == null) {
-                LOG.warn("Null location");
+                LOG.warn("Null location for table {}", tableDesc.getTableName());
                 continue;
               }
               ServerName rs = location.getServerName();
