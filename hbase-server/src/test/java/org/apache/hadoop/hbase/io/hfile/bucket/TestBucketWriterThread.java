@@ -84,6 +84,7 @@ public class TestBucketWriterThread {
     final int writerThreadsCount = 1;
     this.bc = new MockBucketCache("offheap", capacity, 1, new int[] { 1 }, writerThreadsCount,
       capacity, null, 100/* Tolerate ioerrors for 100ms */);
+    this.bc.waitForCacheInitialization(10000);
     assertEquals(writerThreadsCount, bc.writerThreads.length);
     assertEquals(writerThreadsCount, bc.writerQueues.size());
     // Get reference to our single WriterThread instance.
