@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BACKING_MAP_PERSISTENCE_CHUNK_SIZE;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -348,6 +349,52 @@ public class TestVerifyBucketCacheFile {
       newBucketCache.getBlock(blocks[2].getBlockName(), false, false, false));
     assertNull(newBucketCache.getBlock(blocks[3].getBlockName(), false, false, false));
     assertEquals(2, newBucketCache.backingMap.size());
+    TEST_UTIL.cleanupTestDir();
+  }
+
+  @Test
+  public void testSingleChunk() throws Exception {
+    testChunkedBackingMapRecovery(5, 5);
+  }
+
+  @Test
+  public void testMultipleChunks() throws Exception {
+    testChunkedBackingMapRecovery(5, 10);
+  }
+
+  private void testChunkedBackingMapRecovery(int chunkSize, int numBlocks) throws Exception {
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    Path testDir = TEST_UTIL.getDataTestDir();
+    TEST_UTIL.getTestFileSystem().mkdirs(testDir);
+    Configuration conf = HBaseConfiguration.create();
+    conf.setLong(BACKING_MAP_PERSISTENCE_CHUNK_SIZE, chunkSize);
+
+    String mapFileName = testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime();
+    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
+      DEFAULT_ERROR_TOLERATION_DURATION, conf);
+
+    CacheTestUtils.HFileBlockPair[] blocks =
+      CacheTestUtils.generateHFileBlocks(constructedBlockSize, numBlocks);
+
+    for (int i = 0; i < numBlocks; i++) {
+      cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[i].getBlockName(), blocks[i].getBlock());
+    }
+
+    // saves the current state
+    bucketCache.persistToFile();
+
+    // Create a new bucket which reads from persistence file.
+    BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
+      DEFAULT_ERROR_TOLERATION_DURATION, conf);
+
+    assertEquals(numBlocks, newBucketCache.backingMap.size());
+
+    for (int i = 0; i < numBlocks; i++) {
+      assertEquals(blocks[i].getBlock(),
+        newBucketCache.getBlock(blocks[i].getBlockName(), false, false, false));
+    }
     TEST_UTIL.cleanupTestDir();
   }
 
