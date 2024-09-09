@@ -1643,9 +1643,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean isGracefulStop) throws IOException {
     // Only allow one thread to close at a time. Serialize them so dual
     // threads attempting to close will run up against each other.
-    MonitoredTask status = TaskMonitor.get().createStatus(
-      "Closing region " + this.getRegionInfo().getEncodedName() + (abort ? " due to abort" : ""),
-      ignoreStatus, true);
+    MonitoredTask status =
+      TaskMonitor.get().createStatus("Closing region " + this.getRegionInfo().getEncodedName()
+        + (abort ? " due to abort" : " as it is being closed"), ignoreStatus, true);
     status.setStatus("Waiting for close lock");
     try {
       synchronized (closeLock) {
