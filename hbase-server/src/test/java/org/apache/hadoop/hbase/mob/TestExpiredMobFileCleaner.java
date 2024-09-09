@@ -19,7 +19,10 @@ package org.apache.hadoop.hbase.mob;
 
 import static org.apache.hadoop.hbase.mob.MobConstants.MOB_CLEANER_BATCH_SIZE_UPPER_BOUND;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 
+import java.io.IOException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -76,6 +79,7 @@ public class TestExpiredMobFileCleaner {
   @Before
   public void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(1);
+    init();
   }
 
   @After
@@ -128,8 +132,6 @@ public class TestExpiredMobFileCleaner {
    */
   @Test
   public void testCleaner() throws Exception {
-    init();
-
     Path mobDirPath = MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, family);
 
     byte[] dummyData = makeDummyData(600);
@@ -171,6 +173,14 @@ public class TestExpiredMobFileCleaner {
     // there are 4 mob files in total, but only 3 need to be cleaned
     assertEquals("After cleanup without delay 1", 1, filesAfterClean.length);
     assertEquals("After cleanup without delay 2", secondFile, lastFile);
+  }
+
+  @Test
+  public void testCleanerSpecifyNonExistingTable() throws Exception {
+    String nonExistingTableName = "nonExistingTable";
+    assertFalse(admin.tableExists(TableName.valueOf(nonExistingTableName)));
+    assertThrows(IOException.class, () -> ToolRunner.run(TEST_UTIL.getConfiguration(),
+      new ExpiredMobFileCleaner(), new String[] { nonExistingTableName, "info" }));
   }
 
   private int secondsOfDay() {

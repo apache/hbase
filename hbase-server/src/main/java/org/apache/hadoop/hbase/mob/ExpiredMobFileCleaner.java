@@ -85,7 +85,7 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "REC_CATCH_EXCEPTION",
       justification = "Intentional")
   @Override
-  public int run(String[] args) throws Exception {
+  public int run(String[] args) throws IOException {
     if (args.length != 2) {
       printUsage();
       return 1;
@@ -93,12 +93,17 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
     String tableName = args[0];
     String familyName = args[1];
     TableName tn = TableName.valueOf(tableName);
-    Connection connection = ConnectionFactory.createConnection(getConf());
-    Admin admin = connection.getAdmin();
-    try {
+    try (Connection connection = ConnectionFactory.createConnection(getConf());
+      Admin admin = connection.getAdmin()) {
+      if (!admin.tableExists(tn)) {
+        throw new IOException("The table " + tableName + " doesn't exist");
+      }
       TableDescriptor htd = admin.getDescriptor(tn);
       ColumnFamilyDescriptor family = htd.getColumnFamily(Bytes.toBytes(familyName));
-      if (family == null || !family.isMobEnabled()) {
+      if (family == null) {
+        throw new IOException("Column family " + familyName + " doesn't exist");
+      }
+      if (!family.isMobEnabled()) {
         throw new IOException("Column family " + familyName + " is not a MOB column family");
       }
       if (family.getMinVersions() > 0) {
@@ -106,14 +111,7 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
           "The minVersions of the column family is not 0, could not be handled by this cleaner");
       }
       cleanExpiredMobFiles(tableName, family);
-      return 0;
-    } finally {
-      admin.close();
-      try {
-        connection.close();
-      } catch (IOException e) {
-        LOG.error("Failed to close the connection.", e);
-      }
     }
+    return 0;
   }
 }
