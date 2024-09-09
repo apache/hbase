@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -412,9 +413,9 @@ public final class BackupSystemTable implements Closeable {
       LOG.debug("write bulk load descriptor to backup " + tabName + " with " + finalPaths.size()
         + " entries");
     }
-    try (Table table = connection.getTable(bulkLoadTableName)) {
+    try (BufferedMutator bufferedMutator = connection.getBufferedMutator(bulkLoadTableName)) {
       List<Put> puts = BackupSystemTable.createPutForCommittedBulkload(tabName, region, finalPaths);
-      table.put(puts);
+      bufferedMutator.mutate(puts);
       LOG.debug("written " + puts.size() + " rows for bulk load of " + tabName);
     }
   }
@@ -446,14 +447,14 @@ public final class BackupSystemTable implements Closeable {
    * @param rows the rows to be deleted
    */
   public void deleteBulkLoadedRows(List<byte[]> rows) throws IOException {
-    try (Table table = connection.getTable(bulkLoadTableName)) {
+    try (BufferedMutator bufferedMutator = connection.getBufferedMutator(bulkLoadTableName)) {
       List<Delete> lstDels = new ArrayList<>();
       for (byte[] row : rows) {
         Delete del = new Delete(row);
         lstDels.add(del);
         LOG.debug("orig deleting the row: " + Bytes.toString(row));
       }
-      table.delete(lstDels);
+      bufferedMutator.mutate(lstDels);
       LOG.debug("deleted " + rows.size() + " original bulkload rows");
     }
   }
@@ -535,7 +536,7 @@ public final class BackupSystemTable implements Closeable {
    */
   public void writeBulkLoadedFiles(List<TableName> sTableList, Map<byte[], List<Path>>[] maps,
     String backupId) throws IOException {
-    try (Table table = connection.getTable(bulkLoadTableName)) {
+    try (BufferedMutator bufferedMutator = connection.getBufferedMutator(bulkLoadTableName)) {
       long ts = EnvironmentEdgeManager.currentTime();
       int cnt = 0;
       List<Put> puts = new ArrayList<>();
@@ -558,7 +559,7 @@ public final class BackupSystemTable implements Closeable {
         }
       }
       if (!puts.isEmpty()) {
-        table.put(puts);
+        bufferedMutator.mutate(puts);
       }
     }
   }
@@ -917,8 +918,8 @@ public final class BackupSystemTable implements Closeable {
       Put put = createPutForWriteRegionServerLogTimestamp(table, smapData, backupRoot);
       puts.add(put);
     }
-    try (Table table = connection.getTable(tableName)) {
-      table.put(puts);
+    try (BufferedMutator bufferedMutator = connection.getBufferedMutator(tableName)) {
+      bufferedMutator.mutate(puts);
     }
   }
 
