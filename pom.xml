@@ -491,6 +491,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>rmattingly</id>
+      <name>Ray Mattingly</name>
+      <email>rmattingly@apache.org</email>
+      <timezone>-5</timezone>
+    </developer>
+    <developer>
       <id>sershe</id>
       <name>Sergey Shelukhin</name>
       <email>sershe@apache.org</email>
