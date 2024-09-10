@@ -181,8 +181,8 @@
       <!-- For JspC used in ant task, then needed at compile /runtime
            because the source code made from the JSP refers to its runtime
         -->
-      <groupId>org.glassfish.web</groupId>
-      <artifactId>javax.servlet.jsp</artifactId>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-jasper</artifactId>
     </dependency>
     <!-- Also used by generated sources from our JSP -->
     <dependency>
