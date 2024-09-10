@@ -97,19 +97,6 @@ under the License.
   </supplement>
   <supplement>
     <project>
-      <groupId>org.glassfish</groupId>
-      <artifactId>javax.el</artifactId>
-      <licenses>
-        <license>
-          <name>CDDL 1.1</name>
-          <url>https://glassfish.java.net/public/CDDL+GPL_1_1.html</url>
-          <distribution>repo</distribution>
-        </license>
-      </licenses>
-    </project>
-  </supplement>
-  <supplement>
-    <project>
       <groupId>org.glassfish.hk2</groupId>
       <artifactId>hk2-api</artifactId>
       <licenses>
@@ -255,32 +242,6 @@ under the License.
     <project>
       <groupId>org.glassfish.jersey.media</groupId>
       <artifactId>jersey-media-jaxb</artifactId>
-      <licenses>
-        <license>
-          <name>CDDL 1.1</name>
-          <url>https://glassfish.java.net/public/CDDL+GPL_1_1.html</url>
-          <distribution>repo</distribution>
-        </license>
-      </licenses>
-    </project>
-  </supplement>
-  <supplement>
-    <project>
-      <groupId>org.glassfish.web</groupId>
-      <artifactId>javax.servlet.jsp</artifactId>
-      <licenses>
-        <license>
-          <name>CDDL 1.1</name>
-          <url>https://glassfish.java.net/public/CDDL+GPL_1_1.html</url>
-          <distribution>repo</distribution>
-        </license>
-      </licenses>
-    </project>
-  </supplement>
-  <supplement>
-    <project>
-      <groupId>org.glassfish.web</groupId>
-      <artifactId>javax.servlet.jsp.jstl</artifactId>
       <licenses>
         <license>
           <name>CDDL 1.1</name>
