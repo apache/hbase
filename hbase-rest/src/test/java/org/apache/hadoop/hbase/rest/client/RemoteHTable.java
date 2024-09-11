@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hbase.rest.client;
 
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
@@ -61,7 +57,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -880,35 +875,8 @@ public class RemoteHTable implements Table {
   }
 
   @Override
-  public <T extends Service, R> Map<byte[], R> coprocessorService(Class<T> service, byte[] startKey,
-    byte[] endKey, Batch.Call<T, R> callable) throws ServiceException, Throwable {
-    throw new UnsupportedOperationException("coprocessorService not implemented");
-  }
-
-  @Override
-  public <T extends Service, R> void coprocessorService(Class<T> service, byte[] startKey,
-    byte[] endKey, Batch.Call<T, R> callable, Batch.Callback<R> callback)
-    throws ServiceException, Throwable {
-    throw new UnsupportedOperationException("coprocessorService not implemented");
-  }
-
-  @Override
   public Result mutateRow(RowMutations rm) throws IOException {
     throw new IOException("atomicMutation not supported");
-  }
-
-  @Override
-  public <R extends Message> Map<byte[], R> batchCoprocessorService(
-    Descriptors.MethodDescriptor method, Message request, byte[] startKey, byte[] endKey,
-    R responsePrototype) throws ServiceException, Throwable {
-    throw new UnsupportedOperationException("batchCoprocessorService not implemented");
-  }
-
-  @Override
-  public <R extends Message> void batchCoprocessorService(Descriptors.MethodDescriptor method,
-    Message request, byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
-    throws ServiceException, Throwable {
-    throw new UnsupportedOperationException("batchCoprocessorService not implemented");
   }
 
   @Override
