@@ -39,9 +39,8 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 public class CodecPerformance {
-  /** @deprecated LOG variable would be made private. since 1.2, remove in 3.0 */
-  @Deprecated
-  public static final Logger LOG = LoggerFactory.getLogger(CodecPerformance.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(CodecPerformance.class);
 
   static ExtendedCell[] getCells(final int howMany) {
     ExtendedCell[] cells = new ExtendedCell[howMany];
