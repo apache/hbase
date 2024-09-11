@@ -73,11 +73,15 @@ final class BucketProtoUtils {
     fos.write(Bytes.toBytes(chunkSize));
     fos.write(Bytes.toBytes(numChunks));
 
+    BucketCacheProtos.BackingMapEntry.Builder entryBuilder =
+      BucketCacheProtos.BackingMapEntry.newBuilder();
     for (Map.Entry<BlockCacheKey, BucketEntry> entry : cache.backingMap.entrySet()) {
       blockCount++;
-      builder.addEntry(
-        BucketCacheProtos.BackingMapEntry.newBuilder().setKey(BucketProtoUtils.toPB(entry.getKey()))
-          .setValue(BucketProtoUtils.toPB(entry.getValue())).build());
+      entryBuilder.clear();
+      entryBuilder.setKey(BucketProtoUtils.toPB(entry.getKey()));
+      entryBuilder.setValue(BucketProtoUtils.toPB(entry.getValue()));
+      builder.addEntry(entryBuilder.build());
+
       if (blockCount % chunkSize == 0 || (blockCount == backingMapSize)) {
         chunkCount++;
         if (chunkCount == 1) {
@@ -88,7 +92,7 @@ final class BucketProtoUtils {
           builder.build().writeDelimitedTo(fos);
         }
         if (blockCount < backingMapSize) {
-          builder = BucketCacheProtos.BackingMap.newBuilder();
+          builder.clear();
         }
       }
     }
