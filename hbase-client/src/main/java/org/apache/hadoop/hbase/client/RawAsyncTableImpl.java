@@ -915,46 +915,6 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     }
   }
 
-  private static class NoopPartialResultCoprocessorCallback<S, R>
-    implements PartialResultCoprocessorCallback<S, R> {
-
-    private final CoprocessorCallback<R> delegate;
-
-    public NoopPartialResultCoprocessorCallback(CoprocessorCallback<R> delegate) {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public void onRegionComplete(RegionInfo region, R resp) {
-      delegate.onRegionComplete(region, resp);
-    }
-
-    @Override
-    public void onRegionError(RegionInfo region, Throwable error) {
-      delegate.onRegionError(region, error);
-    }
-
-    @Override
-    public void onComplete() {
-      delegate.onComplete();
-    }
-
-    @Override
-    public void onError(Throwable error) {
-      delegate.onError(error);
-    }
-
-    @Override
-    public ServiceCaller<S, R> getNextCallable(R response, RegionInfo region) {
-      return null;
-    }
-
-    @Override
-    public long getWaitIntervalMs(R response, RegionInfo region) {
-      return 0;
-    }
-  }
-
   @Override
   public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
     Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,

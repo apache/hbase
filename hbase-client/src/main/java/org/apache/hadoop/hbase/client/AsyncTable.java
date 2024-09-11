@@ -676,10 +676,44 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
     void onError(Throwable error);
   }
 
+  /**
+   * Some coprocessors may support the idea of "partial results." If for some reason a coprocessor
+   * cannot return all results for a given region in a single response, the client side can be
+   * designed to recognize this and continuing requesting more results until they are completely
+   * accumulated in the client.
+   * <p>
+   * It is up to a particular coprocessor implementation and its corresponding clients to agree on
+   * what it means for results to be incomplete, how this state is communicated, and how multiple
+   * incomplete results are accumulated together.
+   * <p>
+   * Use this callback when you want to execute a coprocessor call on a range of regions, and that
+   * coprocessor may return incomplete results for a given region. See also the docs for
+   * {@link CoprocessorCallback}, which all apply here to its child interface too.
+   */
   @InterfaceAudience.Public
   interface PartialResultCoprocessorCallback<S, R> extends CoprocessorCallback<R> {
+    /**
+     * Subclasses should implement this to tell AsyncTable whether the given response is "final" or
+     * whether the AsyncTable should send another request to the coprocessor to fetch more results
+     * from the given region. This method of fetching more results can be used many times until
+     * there are no more results to fetch from the region.
+     * @param response The response received from the coprocessor
+     * @param region   The region the response came from
+     * @return A ServiceCaller object if the response was not final and therefore another request is
+     *         required to continuing fetching results. null if no more requests need to be sent to
+     *         the region.
+     */
     ServiceCaller<S, R> getNextCallable(R response, RegionInfo region);
 
+    /**
+     * Subclasses should implement this such that, when the above method returns non-null, this
+     * method returns the number of milliseconds that AsyncTable should wait before sending the next
+     * request to the given region. You can use this to create a back-off behavior to reduce load on
+     * the RegionServer. If that's not desired, you can always return 0.
+     * @param response The response received from the coprocessor
+     * @param region   The region the response came from
+     * @return The number of milliseconds to wait.
+     */
     long getWaitIntervalMs(R response, RegionInfo region);
   }
 
@@ -753,7 +787,9 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
     ServiceCaller<S, R> callable, CoprocessorCallback<R> callback);
 
   /**
-   * Similar to above. Use when your coprocessor client+endpoint supports partial results.
+   * Similar to above. Use when your coprocessor client+endpoint supports partial results. If the
+   * server does not offer partial results, it is still safe to use this, assuming you implement
+   * your {@link PartialResultCoprocessorCallback#getNextCallable(Object, RegionInfo)} correctly.
    */
   <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(Function<RpcChannel, S> stubMaker,
     ServiceCaller<S, R> callable, PartialResultCoprocessorCallback<S, R> callback);

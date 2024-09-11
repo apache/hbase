@@ -298,7 +298,7 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
     Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
     CoprocessorCallback<R> callback) {
     return coprocessorService(stubMaker, callable,
-      (PartialResultCoprocessorCallback<S, R>) callback);
+      new NoopPartialResultCoprocessorCallback<>(callback));
   }
 
   @Override
