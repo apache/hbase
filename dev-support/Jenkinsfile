@@ -154,7 +154,7 @@ pipeline {
         }
         stage ('hadoop 3 cache') {
           environment {
-            HADOOP3_VERSION="3.3.5"
+            HADOOP3_VERSION="3.3.6"
           }
           steps {
             // directory must be unique for each parallel stage, because jenkins runs them in the same workspace :(
