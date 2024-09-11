@@ -609,7 +609,7 @@
     <external.protoc.version>${external.protobuf.version}</external.protoc.version>
     <!--Version of protobuf that hbase uses internally (we shade our pb)
          Must match what is out in hbase-thirdparty include. -->
-    <internal.protobuf.version>4.26.1</internal.protobuf.version>
+    <internal.protobuf.version>4.27.3</internal.protobuf.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.14.1</thrift.version>
