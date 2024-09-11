@@ -960,10 +960,7 @@ public class RegionCoprocessorHost
    * @param get      - the get that could be used Note that the get only does not specify the family
    *                 and qualifier that should be used
    * @return true if default processing should be bypassed
-   * @deprecated In hbase-2.0.0. Will be removed in hbase-3.0.0. Added explicitly for a single
-   *             Coprocessor for its needs only. Will be removed.
    */
-  @Deprecated
   public boolean prePrepareTimeStampForDeleteVersion(final Mutation mutation, final Cell kv,
     final byte[] byteNow, final Get get) throws IOException {
     if (coprocEnvironments.isEmpty()) {
@@ -1654,10 +1651,6 @@ public class RegionCoprocessorHost
       });
   }
 
-  /**
-   * @deprecated Since 2.0 with out any replacement and will be removed in 3.0
-   */
-  @Deprecated
   public DeleteTracker postInstantiateDeleteTracker(DeleteTracker result) throws IOException {
     if (this.coprocEnvironments.isEmpty()) {
       return result;
