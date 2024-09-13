@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -38,6 +41,7 @@ public class BufferedMutatorParams implements Cloneable {
   private String implementationClassName = null;
   private int rpcTimeout = UNSET;
   private int operationTimeout = UNSET;
+  protected Map<String, byte[]> requestAttributes = Collections.emptyMap();
   private BufferedMutator.ExceptionListener listener = new BufferedMutator.ExceptionListener() {
     @Override
     public void onException(RetriesExhaustedWithDetailsException exception,
@@ -83,6 +87,19 @@ public class BufferedMutatorParams implements Cloneable {
 
   public int getOperationTimeout() {
     return operationTimeout;
+  }
+
+
+  public BufferedMutatorParams setRequestAttribute(String key, byte[] value) {
+    if (requestAttributes.isEmpty()) {
+      requestAttributes = new HashMap<>();
+    }
+    requestAttributes.put(key, value);
+    return this;
+  }
+
+  public Map<String, byte[]> getRequestAttributes() {
+    return requestAttributes;
   }
 
   /**

@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
-
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -102,6 +102,16 @@ public interface AsyncBufferedMutatorBuilder {
    * {@code hbase.client.keyvalue.maxsize}.
    */
   AsyncBufferedMutatorBuilder setMaxKeyValueSize(int maxKeyValueSize);
+
+  /**
+   * Set a rpc request attribute.
+   */
+  AsyncBufferedMutatorBuilder setRequestAttribute(String key, byte[] value);
+
+  /**
+   * Set multiple rpc request attributes.
+   */
+  AsyncBufferedMutatorBuilder setRequestAttributes(Map<String, byte[]> requestAttributes);
 
   /**
    * Create the {@link AsyncBufferedMutator} instance.

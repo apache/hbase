@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
@@ -92,5 +92,12 @@ public interface AsyncBufferedMutator extends Closeable {
    */
   default long getPeriodicalFlushTimeout(TimeUnit unit) {
     throw new UnsupportedOperationException("Not implemented");
+  }
+
+  /**
+   * Returns the rpc request attributes.
+   */
+  default Map<String, byte[]> getRequestAttributes() {
+    return Collections.emptyMap();
   }
 }
