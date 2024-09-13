@@ -98,52 +98,24 @@ public class MockPartialResultAggregateImplemention<T, S, P extends Message, Q e
 
   }
 
-  /**
-   * Gives the row count for the given column family and column qualifier, in the given row range as
-   * defined in the Scan object.
-   */
   @Override
   public void getRowNum(RpcController controller, AggregateRequest request,
     RpcCallback<AggregateResponse> done) {
 
   }
 
-  /**
-   * Gives a Pair with first object as Sum and second object as row count, computed for a given
-   * combination of column qualifier and column family in the given row range as defined in the Scan
-   * object. In its current implementation, it takes one column family and one column qualifier (if
-   * provided). In case of null column qualifier, an aggregate sum over all the entire column family
-   * will be returned.
-   * <p>
-   * The average is computed in AggregationClient#avg(byte[], ColumnInterpreter, Scan) by processing
-   * results from all regions, so its "ok" to pass sum and a Long type.
-   */
   @Override
   public void getAvg(RpcController controller, AggregateRequest request,
     RpcCallback<AggregateResponse> done) {
 
   }
 
-  /**
-   * Gives a Pair with first object a List containing Sum and sum of squares, and the second object
-   * as row count. It is computed for a given combination of column qualifier and column family in
-   * the given row range as defined in the Scan object. In its current implementation, it takes one
-   * column family and one column qualifier (if provided). The idea is get the value of variance
-   * first: the average of the squares less the square of the average a standard deviation is square
-   * root of variance.
-   */
   @Override
   public void getStd(RpcController controller, AggregateRequest request,
     RpcCallback<AggregateResponse> done) {
 
   }
 
-  /**
-   * Gives a List containing sum of values and sum of weights. It is computed for the combination of
-   * column family and column qualifier(s) in the given row range as defined in the Scan object. In
-   * its current implementation, it takes one column family and two column qualifiers. The first
-   * qualifier is for values column and the second qualifier (optional) is for weight column.
-   */
   @Override
   public void getMedian(RpcController controller, AggregateRequest request,
     RpcCallback<AggregateResponse> done) {
