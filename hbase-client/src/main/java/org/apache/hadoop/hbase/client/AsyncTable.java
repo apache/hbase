@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.toCheckExistenceOnly;
 import static org.apache.hadoop.hbase.util.FutureUtils.allOf;
+
 import com.google.protobuf.RpcChannel;
 import java.util.Collections;
 import java.util.List;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**

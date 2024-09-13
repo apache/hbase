@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.BufferedMutatorParams.UNSET;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;

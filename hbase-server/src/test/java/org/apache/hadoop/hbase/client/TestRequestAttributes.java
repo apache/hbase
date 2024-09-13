@@ -281,8 +281,7 @@ public class TestRequestAttributes {
     }
 
     @Override
-    public HBaseRpcController newController(RegionInfo regionInfo,
-      CellScanner cellScanner) {
+    public HBaseRpcController newController(RegionInfo regionInfo, CellScanner cellScanner) {
       return new RequestMetadataController(super.newController(regionInfo, cellScanner));
     }
 

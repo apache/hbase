@@ -89,7 +89,6 @@ public class BufferedMutatorParams implements Cloneable {
     return operationTimeout;
   }
 
-
   public BufferedMutatorParams setRequestAttribute(String key, byte[] value) {
     if (requestAttributes.isEmpty()) {
       requestAttributes = new HashMap<>();
