@@ -92,8 +92,9 @@ public interface RegionServerObserver {
   /**
    * This will be called before executing replication request to shipping log entries.
    * @param ctx the environment to interact with the framework and region server.
-   * @deprecated As of release 2.0.0 with out any replacement. This is maintained for internal usage
-   *             by AccessController. Do not use these hooks in custom co-processors.
+   * @deprecated As of release 2.0.0 with out any replacement, plan to remove in 4.0.0. This is
+   *             maintained for internal usage by AccessController. Do not use these hooks in custom
+   *             co-processors.
    */
   @Deprecated
   default void preReplicateLogEntries(final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
@@ -103,8 +104,9 @@ public interface RegionServerObserver {
   /**
    * This will be called after executing replication request to shipping log entries.
    * @param ctx the environment to interact with the framework and region server.
-   * @deprecated As of release 2.0.0 with out any replacement. This is maintained for internal usage
-   *             by AccessController. Do not use these hooks in custom co-processors.
+   * @deprecated As of release 2.0.0 with out any replacement, plan to remove in 4.0.0. This is
+   *             maintained for internal usage by AccessController. Do not use these hooks in custom
+   *             co-processors.
    */
   @Deprecated
   default void postReplicateLogEntries(
