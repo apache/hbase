@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
@@ -188,11 +189,10 @@ public interface BufferedMutator extends Closeable {
   }
 
   /**
-   * Get rpc request attribtues
+   * Get rpc request attributes
    */
   default Map<String, byte[]> getRequestAttributes() {
-    throw new UnsupportedOperationException(
-      "The BufferedMutator::getRequestAttributes has not been implemented");
+    return Collections.emptyMap();
   }
 
   /**
