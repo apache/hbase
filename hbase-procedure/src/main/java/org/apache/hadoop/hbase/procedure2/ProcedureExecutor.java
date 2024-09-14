@@ -1524,6 +1524,7 @@ public class ProcedureExecutor<TEnvironment> {
           procedureFinished(proc);
         } else {
           execCompletionCleanup(proc);
+          scheduler.completionCleanup(proc, true);
         }
         break;
       }

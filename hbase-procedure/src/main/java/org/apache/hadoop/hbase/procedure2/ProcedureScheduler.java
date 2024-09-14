@@ -128,4 +128,7 @@ public interface ProcedureScheduler {
    * resets its own state and calls clear() on scheduler.
    */
   void clear();
+
+  default void completionCleanup(Procedure proc, boolean isTableProcCleanupOnly) {
+  }
 }
