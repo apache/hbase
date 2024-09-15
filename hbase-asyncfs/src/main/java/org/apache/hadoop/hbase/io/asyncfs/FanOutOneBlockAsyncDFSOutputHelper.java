@@ -35,6 +35,7 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -42,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.Encryptor;
@@ -533,8 +535,10 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     Set<DatanodeInfo> toExcludeNodes =
       new HashSet<>(excludeDatanodeManager.getExcludeDNs().keySet());
     for (int retry = 0;; retry++) {
-      LOG.debug("When create output stream for {}, exclude list is {}, retry={}", src,
-        toExcludeNodes, retry);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("When create output stream for {}, exclude list is {}, retry={}", src,
+          getDataNodeInfo(toExcludeNodes), retry);
+      }
       HdfsFileStatus stat;
       try {
         stat = FILE_CREATOR.create(namenode, src,
@@ -679,5 +683,16 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       Thread.sleep(ConnectionUtils.getPauseTime(100, retry));
     } catch (InterruptedException e) {
     }
+  }
+
+  public static String getDataNodeInfo(Collection<DatanodeInfo> datanodeInfos) {
+    if (datanodeInfos.isEmpty()) {
+      return "[]";
+    }
+    return datanodeInfos.stream()
+      .map(datanodeInfo -> new StringBuilder().append("(").append(datanodeInfo.getHostName())
+        .append("/").append(datanodeInfo.getInfoAddr()).append(":")
+        .append(datanodeInfo.getInfoPort()).append(")").toString())
+      .collect(Collectors.joining(",", "[", "]"));
   }
 }
