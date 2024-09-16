@@ -101,7 +101,12 @@ public class TestFixedFileTrailer {
   @Test
   public void testCreateComparator() throws IOException {
     assertEquals(InnerStoreCellComparator.class,
+      createComparator("org.apache.hadoop.hbase.KeyValue$KVComparator").getClass());
+    assertEquals(InnerStoreCellComparator.class,
       createComparator(CellComparator.class.getName()).getClass());
+
+    assertEquals(MetaCellComparator.class,
+      createComparator("org.apache.hadoop.hbase.KeyValue$MetaComparator").getClass());
     assertEquals(MetaCellComparator.class,
       createComparator("org.apache.hadoop.hbase.CellComparator$MetaCellComparator").getClass());
     assertEquals(MetaCellComparator.class,
@@ -110,8 +115,10 @@ public class TestFixedFileTrailer {
       createComparator(MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
     assertEquals(MetaCellComparator.META_COMPARATOR.getClass(),
       createComparator(MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
+
     assertEquals(CellComparatorImpl.COMPARATOR.getClass(),
       createComparator(MetaCellComparator.COMPARATOR.getClass().getName()).getClass());
+
     assertNull(createComparator(Bytes.BYTES_RAWCOMPARATOR.getClass().getName()));
     assertNull(createComparator("org.apache.hadoop.hbase.KeyValue$RawBytesComparator"));
 
