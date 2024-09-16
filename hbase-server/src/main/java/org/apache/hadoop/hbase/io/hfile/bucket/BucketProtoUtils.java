@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -62,31 +61,29 @@ final class BucketProtoUtils {
       .build();
   }
 
-  public static void serializeAsPB(BucketCache cache, FileOutputStream fos, long chunkSize,
-    long numChunks) throws IOException {
+  public static void serializeAsPB(BucketCache cache, FileOutputStream fos, long chunkSize)
+    throws IOException {
+    // Write the new version of magic number.
+    fos.write(PB_MAGIC_V2);
+
     int blockCount = 0;
-    int chunkCount = 0;
     int backingMapSize = cache.backingMap.size();
     BucketCacheProtos.BackingMap.Builder builder = BucketCacheProtos.BackingMap.newBuilder();
-
-    fos.write(PB_MAGIC_V2);
-    fos.write(Bytes.toBytes(chunkSize));
-    fos.write(Bytes.toBytes(numChunks));
-
+    boolean firstChunkPersisted = false;
     BucketCacheProtos.BackingMapEntry.Builder entryBuilder =
       BucketCacheProtos.BackingMapEntry.newBuilder();
+
     for (Map.Entry<BlockCacheKey, BucketEntry> entry : cache.backingMap.entrySet()) {
       blockCount++;
       entryBuilder.clear();
       entryBuilder.setKey(BucketProtoUtils.toPB(entry.getKey()));
       entryBuilder.setValue(BucketProtoUtils.toPB(entry.getValue()));
       builder.addEntry(entryBuilder.build());
-
       if (blockCount % chunkSize == 0 || (blockCount == backingMapSize)) {
-        chunkCount++;
-        if (chunkCount == 1) {
+        if (firstChunkPersisted == false) {
           // Persist all details along with the first chunk into BucketCacheEntry
           BucketProtoUtils.toPB(cache, builder.build()).writeDelimitedTo(fos);
+          firstChunkPersisted = true;
         } else {
           // Directly persist subsequent backing-map chunks.
           builder.build().writeDelimitedTo(fos);
