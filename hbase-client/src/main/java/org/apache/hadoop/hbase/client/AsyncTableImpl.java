@@ -23,6 +23,7 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -355,8 +356,8 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
         }
 
         @Override
-        public long getWaitIntervalMs(R response, RegionInfo region) {
-          return callback.getWaitIntervalMs(response, region);
+        public Duration getWaitInterval(R response, RegionInfo region) {
+          return callback.getWaitInterval(response, region);
         }
 
       };

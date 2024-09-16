@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.toCheckExistenceOnl
 import static org.apache.hadoop.hbase.util.FutureUtils.allOf;
 
 import java.util.Collections;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -707,14 +708,14 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
 
     /**
      * Subclasses should implement this such that, when the above method returns non-null, this
-     * method returns the number of milliseconds that AsyncTable should wait before sending the next
-     * request to the given region. You can use this to create a back-off behavior to reduce load on
-     * the RegionServer. If that's not desired, you can always return 0.
+     * method returns the duration that AsyncTable should wait before sending the next request to
+     * the given region. You can use this to create a back-off behavior to reduce load on the
+     * RegionServer. If that's not desired, you can always return {@link Duration.ZERO}.
      * @param response The response received from the coprocessor
      * @param region   The region the response came from
-     * @return The number of milliseconds to wait.
+     * @return The duration to wait.
      */
-    long getWaitIntervalMs(R response, RegionInfo region);
+    Duration getWaitInterval(R response, RegionInfo region);
   }
 
   /**

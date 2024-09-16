@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.time.Duration;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -55,7 +56,7 @@ public class NoopPartialResultCoprocessorCallback<S, R>
   }
 
   @Override
-  public long getWaitIntervalMs(R response, RegionInfo region) {
-    return 0;
+  public Duration getWaitInterval(R response, RegionInfo region) {
+    return Duration.ZERO;
   }
 }

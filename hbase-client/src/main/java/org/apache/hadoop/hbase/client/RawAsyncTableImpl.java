@@ -31,6 +31,7 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -819,14 +820,14 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         ) {
           callback.onComplete();
         } else if (updatedCallable != null) {
-          long waitIntervalMs = callback.getWaitIntervalMs(r, region);
+          Duration waitInterval = callback.getWaitInterval(r, region);
           LOG.trace("Coprocessor returned incomplete result. "
-            + "Sleeping for {} millis before making follow-up request.", waitIntervalMs);
-          if (waitIntervalMs > 0) {
+            + "Sleeping for {} before making follow-up request.", waitInterval);
+          if (waitInterval.isZero()) {
             AsyncConnectionImpl.RETRY_TIMER.newTimeout(
               (timeout) -> coprocessorServiceUntilComplete(stubMaker, updatedCallable, callback,
                 locateFinished, unfinishedRequest, region, span),
-              waitIntervalMs, TimeUnit.MILLISECONDS);
+              waitInterval.toMillis(), TimeUnit.MILLISECONDS);
           } else {
             coprocessorServiceUntilComplete(stubMaker, updatedCallable, callback, locateFinished,
               unfinishedRequest, region, span);
