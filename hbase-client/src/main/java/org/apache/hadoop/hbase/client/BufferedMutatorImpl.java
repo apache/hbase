@@ -257,7 +257,8 @@ public class BufferedMutatorImpl implements BufferedMutator {
 
   private AsyncProcessTask createTask(QueueRowAccess access) {
     return new AsyncProcessTask(AsyncProcessTask.newBuilder().setPool(pool).setTableName(tableName)
-      .setRowAccess(access).setSubmittedRows(AsyncProcessTask.SubmittedRows.AT_LEAST_ONE).build()) {
+      .setRowAccess(access).setSubmittedRows(AsyncProcessTask.SubmittedRows.AT_LEAST_ONE)
+      .setRequestAttributes(requestAttributes).build()) {
       @Override
       public int getRpcTimeout() {
         return rpcTimeout.get();
