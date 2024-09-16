@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.valid
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -148,8 +149,8 @@ public final class AsyncAggregationClient {
     }
 
     @Override
-    public long getWaitIntervalMs(AggregateResponse response, RegionInfo region) {
-      return response.getWaitIntervalMs();
+    public Duration getWaitInterval(AggregateResponse response, RegionInfo region) {
+      return Duration.ofMillis(response.getWaitIntervalMs());
     }
   }
 
