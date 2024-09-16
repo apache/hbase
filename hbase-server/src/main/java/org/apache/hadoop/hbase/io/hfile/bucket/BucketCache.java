@@ -143,7 +143,7 @@ public class BucketCache implements BlockCache, HeapSize {
   final static int DEFAULT_WRITER_THREADS = 3;
   final static int DEFAULT_WRITER_QUEUE_ITEMS = 64;
 
-  final static long DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE = 10000000;
+  final static long DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE = 10000;
 
   // Store/read block data
   transient final IOEngine ioEngine;
