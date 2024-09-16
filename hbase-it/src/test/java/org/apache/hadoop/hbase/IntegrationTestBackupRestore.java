@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.LoadTestUtil;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Assert;
@@ -212,7 +213,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     LOG.info("Creating table {} with {} splits.", tableName,
       regionsCountPerServer * regionServerCount);
     startTime = EnvironmentEdgeManager.currentTime();
-    HBaseTestingUtil.createPreSplitLoadTestTable(util.getConfiguration(), desc, columns,
+    LoadTestUtil.createPreSplitLoadTestTable(util.getConfiguration(), desc, columns,
       regionsCountPerServer);
     util.waitTableAvailable(tableName);
     endTime = EnvironmentEdgeManager.currentTime();
