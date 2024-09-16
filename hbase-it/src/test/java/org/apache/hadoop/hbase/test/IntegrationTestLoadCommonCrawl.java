@@ -49,7 +49,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -79,6 +78,7 @@ import org.apache.hadoop.hbase.test.util.warc.WARCRecord;
 import org.apache.hadoop.hbase.test.util.warc.WARCWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.LoadTestUtil;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -479,15 +479,15 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             TableDescriptorBuilder.newBuilder(tableName).setColumnFamilies(families).build();
 
           if (
-            getConf().getBoolean(HBaseTestingUtil.PRESPLIT_TEST_TABLE_KEY,
-              HBaseTestingUtil.PRESPLIT_TEST_TABLE)
+            getConf().getBoolean(LoadTestUtil.PRESPLIT_TEST_TABLE_KEY,
+              LoadTestUtil.PRESPLIT_TEST_TABLE)
           ) {
             int numberOfServers = admin.getRegionServers().size();
             if (numberOfServers == 0) {
               throw new IllegalStateException("No live regionservers");
             }
-            int regionsPerServer = getConf().getInt(HBaseTestingUtil.REGIONS_PER_SERVER_KEY,
-              HBaseTestingUtil.DEFAULT_REGIONS_PER_SERVER);
+            int regionsPerServer = getConf().getInt(LoadTestUtil.REGIONS_PER_SERVER_KEY,
+              LoadTestUtil.DEFAULT_REGIONS_PER_SERVER);
             int totalNumberOfRegions = numberOfServers * regionsPerServer;
             LOG.info("Creating test table: " + tableDescriptor);
             LOG.info("Number of live regionservers: " + numberOfServers + ", "

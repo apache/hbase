@@ -46,6 +46,7 @@
         <include>org.apache.hbase:hbase-it</include>
         <include>org.apache.hbase:hbase-logging</include>
         <include>org.apache.hbase:hbase-mapreduce</include>
+        <include>org.apache.hbase:hbase-diagnostics</include>
         <include>org.apache.hbase:hbase-metrics</include>
         <include>org.apache.hbase:hbase-metrics-api</include>
         <include>org.apache.hbase:hbase-procedure</include>

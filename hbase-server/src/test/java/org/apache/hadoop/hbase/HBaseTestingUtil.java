@@ -183,14 +183,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 @InterfaceStability.Evolving
 public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
-  public static final String REGIONS_PER_SERVER_KEY = "hbase.test.regions-per-server";
-  /**
-   * The default number of regions per regionserver when creating a pre-split table.
-   */
   public static final int DEFAULT_REGIONS_PER_SERVER = 3;
-
-  public static final String PRESPLIT_TEST_TABLE_KEY = "hbase.test.pre-split-table";
-  public static final boolean PRESPLIT_TEST_TABLE = true;
 
   private MiniDFSCluster dfsCluster = null;
   private FsDatasetAsyncDiskServiceFixer dfsClusterFixer = null;

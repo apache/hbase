@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Random;
-import org.apache.hadoop.hbase.util.RandomDistribution;
+import org.apache.hadoop.hbase.util.RandomDistributionCopy;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparator;
 
@@ -33,13 +33,13 @@ class KVGenerator {
   private final Random random;
   private final byte[][] dict;
   private final boolean sorted;
-  private final RandomDistribution.DiscreteRNG keyLenRNG, valLenRNG;
+  private final RandomDistributionCopy.DiscreteRNG keyLenRNG, valLenRNG;
   private BytesWritable lastKey;
   private static final int MIN_KEY_LEN = 4;
   private final byte prefix[] = new byte[MIN_KEY_LEN];
 
-  public KVGenerator(Random random, boolean sorted, RandomDistribution.DiscreteRNG keyLenRNG,
-    RandomDistribution.DiscreteRNG valLenRNG, RandomDistribution.DiscreteRNG wordLenRNG,
+  public KVGenerator(Random random, boolean sorted, RandomDistributionCopy.DiscreteRNG keyLenRNG,
+    RandomDistributionCopy.DiscreteRNG valLenRNG, RandomDistributionCopy.DiscreteRNG wordLenRNG,
     int dictSize) {
     this.random = random;
     dict = new byte[dictSize][];
