@@ -21,8 +21,8 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.toCheckExistenceOnly;
 import static org.apache.hadoop.hbase.util.FutureUtils.allOf;
 
-import java.util.Collections;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
