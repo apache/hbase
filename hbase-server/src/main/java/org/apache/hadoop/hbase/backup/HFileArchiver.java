@@ -439,7 +439,7 @@ public class HFileArchiver {
 
     List<File> failures = new ArrayList<>();
     String startTime = Long.toString(start);
-    toArchive.parallelStream().forEach(file -> {
+    for (File file : toArchive) {
       // if its a file archive it
       try {
         LOG.trace("Archiving {}", file);
@@ -463,7 +463,7 @@ public class HFileArchiver {
         LOG.warn("Failed to archive {}", file, e);
         failures.add(file);
       }
-    });
+    }
     return failures;
   }
 
