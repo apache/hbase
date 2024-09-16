@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
+import org.apache.hadoop.hbase.util.LoadTestKVGeneratorCopy;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
@@ -365,7 +365,7 @@ public class TestSimpleRegionNormalizerOnCluster {
   private static void generateTestData(Region region, int numRows) throws IOException {
     // generating 1Mb values
     LOG.debug("writing {}mb to {}", numRows, region);
-    LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(1024 * 1024, 1024 * 1024);
+    LoadTestKVGeneratorCopy dataGenerator = new LoadTestKVGeneratorCopy(1024 * 1024, 1024 * 1024);
     for (int i = 0; i < numRows; ++i) {
       byte[] key = Bytes.add(region.getRegionInfo().getStartKey(), Bytes.toBytes(i));
       for (int j = 0; j < 1; ++j) {
