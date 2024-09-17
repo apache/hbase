@@ -146,6 +146,7 @@ public class TestHFileOutputFormat2 {
     HBaseClassTestRule.forClass(TestHFileOutputFormat2.class);
 
   private final static int ROWSPERSPLIT = 1024;
+  private static final int DEFAULT_VALUE_LENGTH = 1000;
 
   public static final byte[] FAMILY_NAME = TestHRegionFileSystem.FAMILY_NAME;
   private static final byte[][] FAMILIES =
@@ -557,9 +558,6 @@ public class TestHFileOutputFormat2 {
     }
     return ret;
   }
-
-  // TODO: Copied from PerformanceEvaluation
-  public static final int DEFAULT_VALUE_LENGTH = 1000;
 
   /*
    * This method takes some time and is done inline uploading data. For example, doing the mapfile
