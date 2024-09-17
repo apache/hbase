@@ -6996,14 +6996,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return getRowLock(row, readLock, null);
   }
 
+  @Override
+  public RowLock getRowLock(byte[] row, boolean readLock, int timeout) throws IOException {
+    checkRow(row, "row lock");
+    return getRowLock(row, readLock, null, timeout);
+  }
+
   Span createRegionSpan(String name) {
     return TraceUtil.createSpan(name).setAttribute(REGION_NAMES_KEY,
       Collections.singletonList(getRegionInfo().getRegionNameAsString()));
   }
 
   // will be override in tests
-  protected RowLock getRowLockInternal(byte[] row, boolean readLock, RowLock prevRowLock)
-    throws IOException {
+  protected RowLock getRowLockInternal(byte[] row, boolean readLock, RowLock prevRowLock,
+    int rowLockTimeout) throws IOException {
     // create an object to use a a key in the row lock map
     HashedBytes rowKey = new HashedBytes(row);
 
@@ -7035,14 +7041,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       }
 
-      int timeout = rowLockWaitDuration;
+      int timeout = rowLockTimeout;
       boolean reachDeadlineFirst = false;
       Optional<RpcCall> call = RpcServer.getCurrentCall();
       if (call.isPresent()) {
         long deadline = call.get().getDeadline();
         if (deadline < Long.MAX_VALUE) {
           int timeToDeadline = (int) (deadline - EnvironmentEdgeManager.currentTime());
-          if (timeToDeadline <= this.rowLockWaitDuration) {
+          if (timeToDeadline <= rowLockTimeout) {
             reachDeadlineFirst = true;
             timeout = timeToDeadline;
           }
@@ -7055,7 +7061,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (reachDeadlineFirst) {
           throw new TimeoutIOException(message);
         } else {
-          // If timeToDeadline is larger than rowLockWaitDuration, we can not drop the request.
+          // If timeToDeadline is larger than rowLockTimeout, we can not drop the request.
           throw new IOException(message);
         }
       }
@@ -7086,7 +7092,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private RowLock getRowLock(byte[] row, boolean readLock, final RowLock prevRowLock)
     throws IOException {
-    return TraceUtil.trace(() -> getRowLockInternal(row, readLock, prevRowLock),
+    return getRowLock(row, readLock, prevRowLock, this.rowLockWaitDuration);
+  }
+
+  private RowLock getRowLock(byte[] row, boolean readLock, final RowLock prevRowLock,
+    int rowLockTimeout) throws IOException {
+    return TraceUtil.trace(() -> getRowLockInternal(row, readLock, prevRowLock, rowLockTimeout),
       () -> createRegionSpan("Region.getRowLock").setAttribute(ROW_LOCK_READ_LOCK_KEY, readLock));
   }
 
