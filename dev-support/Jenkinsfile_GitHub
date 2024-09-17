@@ -92,7 +92,7 @@ pipeline {
                         DOCKERFILE = "${WORKDIR}/${DOCKERFILE_REL}"
                         YETUS_DRIVER = "${WORKDIR}/${YETUS_DRIVER_REL}"
                         ASF_NIGHTLIES_GENERAL_CHECK_BASE="${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}"
-                        HIDE_OLD_COMMENTS = "${SOURCEDIR}/dev-support/gh_hide_old_comments"
+                        HIDE_OLD_COMMENTS = "${SOURCEDIR}/dev-support/gh_hide_old_comments.sh"
                     }
                     when {
                         // this will return true if the pipeline is building a change request, such as a GitHub pull request.
