@@ -441,7 +441,7 @@ public class HFileArchiver {
       LOG.trace("Created archive directory {}", baseArchiveDir);
     }
 
-    List<File> failures = new ArrayList<>();
+    List<File> failures = Collections.synchronizedList(new ArrayList<>());
     String startTime = Long.toString(start);
     List<File> filesOnly = new ArrayList<>();
     for (File file : toArchive) {
@@ -467,7 +467,7 @@ public class HFileArchiver {
     ExecutorService executorService = Executors.newFixedThreadPool(25);
     Map<File, Future<Boolean>> futures = new HashMap<>();
     // In current baseDir all files will be process concurrently
-    for(File file : filesOnly) {
+    for (File file : filesOnly) {
       LOG.trace("Archiving {}", file);
       Future<Boolean> archiveTask =
         executorService.submit(() -> resolveAndArchiveFile(baseArchiveDir, file, startTime));
@@ -486,17 +486,16 @@ public class HFileArchiver {
     for (Map.Entry<File, Future<Boolean>> fileFutureEntry : futures.entrySet()) {
       try {
         boolean fileCleaned = fileFutureEntry.getValue().get();
-        if(!fileCleaned) {
-          LOG.warn(
-            "Couldn't archive %s into backup directory: %s".formatted(fileFutureEntry.getKey(),
-              baseArchiveDir));
+        if (!fileCleaned) {
+          LOG.warn("Couldn't archive %s into backup directory: %s"
+            .formatted(fileFutureEntry.getKey(), baseArchiveDir));
           failures.add(fileFutureEntry.getKey());
         }
       } catch (InterruptedException e) {
         LOG.warn("HFileArchive Cleanup thread was interrupted");
       } catch (ExecutionException e) {
         // this is IOException
-        LOG.warn("Failed to archive {}",fileFutureEntry.getKey() , e);
+        LOG.warn("Failed to archive {}", fileFutureEntry.getKey(), e);
         failures.add(fileFutureEntry.getKey());
       }
 
