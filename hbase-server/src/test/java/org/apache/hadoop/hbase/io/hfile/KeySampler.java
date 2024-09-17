@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Random;
-import org.apache.hadoop.hbase.util.RandomDistributionCopy.DiscreteRNG;
+import org.apache.hadoop.hbase.util.RandomDistribution.DiscreteRNG;
 import org.apache.hadoop.io.BytesWritable;
 
 /*

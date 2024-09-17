@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.RandomDistributionCopy;
+import org.apache.hadoop.hbase.util.RandomDistribution;
 import org.apache.hadoop.io.BytesWritable;
 import org.junit.After;
 import org.junit.Before;
@@ -76,7 +76,7 @@ public class TestHFileSeek {
   private FileSystem fs;
   private NanoTimer timer;
   private Random rng;
-  private RandomDistributionCopy.DiscreteRNG keyLenGen;
+  private RandomDistribution.DiscreteRNG keyLenGen;
   private KVGenerator kvGen;
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileSeek.class);
@@ -99,11 +99,11 @@ public class TestHFileSeek {
     fs = path.getFileSystem(conf);
     timer = new NanoTimer(false);
     rng = new Random(options.seed);
-    keyLenGen = new RandomDistributionCopy.Zipf(new Random(rng.nextLong()), options.minKeyLen,
+    keyLenGen = new RandomDistribution.Zipf(new Random(rng.nextLong()), options.minKeyLen,
       options.maxKeyLen, 1.2);
-    RandomDistributionCopy.DiscreteRNG valLenGen = new RandomDistributionCopy.Flat(
+    RandomDistribution.DiscreteRNG valLenGen = new RandomDistribution.Flat(
       new Random(rng.nextLong()), options.minValLength, options.maxValLength);
-    RandomDistributionCopy.DiscreteRNG wordLenGen = new RandomDistributionCopy.Flat(
+    RandomDistribution.DiscreteRNG wordLenGen = new RandomDistribution.Flat(
       new Random(rng.nextLong()), options.minWordLen, options.maxWordLen);
     kvGen = new KVGenerator(rng, true, keyLenGen, valLenGen, wordLenGen, options.dictSize);
   }

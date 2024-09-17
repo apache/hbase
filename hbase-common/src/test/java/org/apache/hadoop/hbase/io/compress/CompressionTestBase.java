@@ -26,7 +26,7 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.RandomDistributionCopy;
+import org.apache.hadoop.hbase.util.RandomDistribution;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
@@ -128,8 +128,8 @@ public class CompressionTestBase {
    * Test with a large input (1MB) divided into blocks of 4KB.
    */
   protected void codecLargeTest(final CompressionCodec codec, final double sigma) throws Exception {
-    RandomDistributionCopy.DiscreteRNG rng =
-      new RandomDistributionCopy.Zipf(new Random(), 0, Byte.MAX_VALUE, sigma);
+    RandomDistribution.DiscreteRNG rng =
+      new RandomDistribution.Zipf(new Random(), 0, Byte.MAX_VALUE, sigma);
     final byte[][] input = new byte[LARGE_SIZE / BLOCK_SIZE][BLOCK_SIZE];
     fill(rng, input);
     codecTest(codec, input);
@@ -140,20 +140,20 @@ public class CompressionTestBase {
    */
   protected void codecVeryLargeTest(final CompressionCodec codec, final double sigma)
     throws Exception {
-    RandomDistributionCopy.DiscreteRNG rng =
-      new RandomDistributionCopy.Zipf(new Random(), 0, Byte.MAX_VALUE, sigma);
+    RandomDistribution.DiscreteRNG rng =
+      new RandomDistribution.Zipf(new Random(), 0, Byte.MAX_VALUE, sigma);
     final byte[][] input = new byte[1][VERY_LARGE_SIZE];
     fill(rng, input);
     codecTest(codec, input);
   }
 
-  protected static void fill(RandomDistributionCopy.DiscreteRNG rng, byte[][] input) {
+  protected static void fill(RandomDistribution.DiscreteRNG rng, byte[][] input) {
     for (int i = 0; i < input.length; i++) {
       fill(rng, input[i]);
     }
   }
 
-  protected static void fill(RandomDistributionCopy.DiscreteRNG rng, byte[] input) {
+  protected static void fill(RandomDistribution.DiscreteRNG rng, byte[] input) {
     for (int i = 0; i < input.length; i++) {
       input[i] = (byte) rng.nextInt();
     }

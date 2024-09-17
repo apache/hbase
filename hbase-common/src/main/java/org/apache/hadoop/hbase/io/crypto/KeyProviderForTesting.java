@@ -19,11 +19,13 @@ package org.apache.hadoop.hbase.io.crypto;
 
 import java.security.Key;
 import javax.crypto.spec.SecretKeySpec;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Return a fixed secret key for AES for testing.
  */
-public class KeyProviderForTestingCopy implements KeyProvider {
+@InterfaceAudience.Private
+public class KeyProviderForTesting implements KeyProvider {
 
   @Override
   public void init(String parameters) {

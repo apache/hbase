@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.filter.FilterAllFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -509,30 +510,29 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
-  // TODO: Below test seems to be using FilterAllFilter
-  // @Test
-  // public void testHBASE14489() throws IOException {
-  // final TableName tableName = TableName.valueOf(name.getMethodName());
-  // Table table = util.createTable(tableName, new byte[][] { A });
-  // Put put = new Put(ROW);
-  // put.addColumn(A, A, A);
-  // table.put(put);
-  //
-  // Scan s = new Scan();
-  // s.setFilter(new FilterAllFilter());
-  // ResultScanner scanner = table.getScanner(s);
-  // try {
-  // for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
-  // }
-  // } finally {
-  // scanner.close();
-  // }
-  // verifyMethodResult(SimpleRegionObserver.class, new String[] { "wasScannerFilterRowCalled" },
-  // tableName, new Boolean[] { true });
-  // util.deleteTable(tableName);
-  // table.close();
-  //
-  // }
+  @Test
+  public void testHBASE14489() throws IOException {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table table = util.createTable(tableName, new byte[][] { A });
+    Put put = new Put(ROW);
+    put.addColumn(A, A, A);
+    table.put(put);
+
+    Scan s = new Scan();
+    s.setFilter(new FilterAllFilter());
+    ResultScanner scanner = table.getScanner(s);
+    try {
+      for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
+      }
+    } finally {
+      scanner.close();
+    }
+    verifyMethodResult(SimpleRegionObserver.class, new String[] { "wasScannerFilterRowCalled" },
+      tableName, new Boolean[] { true });
+    util.deleteTable(tableName);
+    table.close();
+
+  }
 
   @Test
   // HBase-3758

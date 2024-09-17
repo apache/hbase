@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.LoadTestKVGeneratorCopy;
+import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -76,8 +76,7 @@ public class TestNettyRpcServer {
   private static final int NUM_ROWS = 100;
   private static final int MIN_LEN = 1000;
   private static final int MAX_LEN = 1000000;
-  protected static final LoadTestKVGeneratorCopy GENERATOR =
-    new LoadTestKVGeneratorCopy(MIN_LEN, MAX_LEN);
+  protected static final LoadTestKVGenerator GENERATOR = new LoadTestKVGenerator(MIN_LEN, MAX_LEN);
   protected static HBaseTestingUtil TEST_UTIL;
 
   @Rule
@@ -123,18 +122,18 @@ public class TestNettyRpcServer {
       TEST_UTIL.createTable(desc, new byte[][] { FAMILY }, TEST_UTIL.getConfiguration())) {
       // put some test data
       for (int i = 0; i < NUM_ROWS; i++) {
-        final byte[] rowKey = Bytes.toBytes(LoadTestKVGeneratorCopy.md5PrefixedKey(i));
+        final byte[] rowKey = Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(i));
         final byte[] v = GENERATOR.generateRandomSizeValue(rowKey, QUALIFIER);
         table.put(new Put(rowKey).addColumn(FAMILY, QUALIFIER, v));
       }
       // read to verify it.
       for (int i = 0; i < NUM_ROWS; i++) {
-        final byte[] rowKey = Bytes.toBytes(LoadTestKVGeneratorCopy.md5PrefixedKey(i));
+        final byte[] rowKey = Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(i));
         final Result r = table.get(new Get(rowKey).addColumn(FAMILY, QUALIFIER));
         assertNotNull("Result was empty", r);
         final byte[] v = r.getValue(FAMILY, QUALIFIER);
         assertNotNull("Result did not contain expected value", v);
-        assertTrue("Value was not verified", LoadTestKVGeneratorCopy.verify(v, rowKey, QUALIFIER));
+        assertTrue("Value was not verified", LoadTestKVGenerator.verify(v, rowKey, QUALIFIER));
       }
     }
   }
