@@ -25,6 +25,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RESTServlet;
 import org.apache.hadoop.hbase.rest.RestUtil;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
@@ -54,6 +55,7 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
   private String osVersion;
   private String serverVersion;
   private String jerseyVersion;
+  private String version;
 
   /**
    * Default constructor. Do not use.
@@ -75,6 +77,8 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     jerseyVersion = ServletContainer.class.getPackage().getImplementationVersion();
     // Currently, this will always be null because the manifest doesn't have any useful information
     if (jerseyVersion == null) jerseyVersion = "";
+
+    version = VersionInfo.getVersion();
   }
 
   /** Returns the REST gateway version */
@@ -105,6 +109,12 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
   @XmlAttribute(name = "Jersey")
   public String getJerseyVersion() {
     return jerseyVersion;
+  }
+
+  /** Returns the build version of the REST server component */
+  @XmlAttribute(name = "Version")
+  public String getVersion() {
+    return version;
   }
 
   /**
@@ -142,6 +152,13 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     this.jerseyVersion = version;
   }
 
+  /**
+   * @param version the REST server component build version string
+   */
+  public void setVersion(String version) {
+    this.version = version;
+  }
+
   /*
    * (non-Javadoc)
    * @see java.lang.Object#toString()
@@ -159,6 +176,8 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     sb.append(serverVersion);
     sb.append("] [Jersey: ");
     sb.append(jerseyVersion);
+    sb.append("] [Version: ");
+    sb.append(version);
     sb.append("]\n");
     return sb.toString();
   }
@@ -171,6 +190,7 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     builder.setOsVersion(osVersion);
     builder.setServerVersion(serverVersion);
     builder.setJerseyVersion(jerseyVersion);
+    builder.setVersion(version);
     return builder.build();
   }
 
@@ -192,6 +212,9 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     }
     if (builder.hasJerseyVersion()) {
       jerseyVersion = builder.getJerseyVersion();
+    }
+    if (builder.hasVersion()) {
+      version = builder.getVersion();
     }
     return this;
   }
