@@ -100,6 +100,9 @@ public class TestVersionResource {
     String version = model.getVersion();
     assertNotNull(version);
     assertEquals(VersionInfo.getVersion(), version);
+    String revision = model.getRevision();
+    assertNotNull(revision);
+    assertEquals(VersionInfo.getRevision(), revision);
   }
 
   @Test

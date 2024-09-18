@@ -25,4 +25,5 @@ message Version {
   optional string serverVersion = 4;
   optional string jerseyVersion = 5;
   optional string version = 6;
+  optional string revision = 7;
 }
