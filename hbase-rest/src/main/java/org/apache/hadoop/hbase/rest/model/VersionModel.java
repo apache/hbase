@@ -55,6 +55,7 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
   private String serverVersion;
   private String jerseyVersion;
   private String version;
+  private String revision;
 
   /**
    * Default constructor. Do not use.
@@ -78,6 +79,7 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     if (jerseyVersion == null) jerseyVersion = "";
 
     version = VersionInfo.getVersion();
+    revision = VersionInfo.getRevision();
   }
 
   /** Returns the REST gateway version */
@@ -114,6 +116,12 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
   @XmlAttribute(name = "Version")
   public String getVersion() {
     return version;
+  }
+
+  /** Returns the source control revision of the REST server component */
+  @XmlAttribute(name = "Revision")
+  public String getRevision() {
+    return revision;
   }
 
   /**
@@ -158,6 +166,13 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     this.version = version;
   }
 
+  /**
+   * @param revision the REST server component source control revision string
+   */
+  public void setRevision(String revision) {
+    this.revision = revision;
+  }
+
   /*
    * (non-Javadoc)
    * @see java.lang.Object#toString()
@@ -177,6 +192,8 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     sb.append(jerseyVersion);
     sb.append("] [Version: ");
     sb.append(version);
+    sb.append("] [Revision: ");
+    sb.append(revision);
     sb.append("]\n");
     return sb.toString();
   }
@@ -190,6 +207,7 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     builder.setServerVersion(serverVersion);
     builder.setJerseyVersion(jerseyVersion);
     builder.setVersion(version);
+    builder.setRevision(revision);
     return builder.build();
   }
 
@@ -214,6 +232,9 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     }
     if (builder.hasVersion()) {
       version = builder.getVersion();
+    }
+    if (builder.hasRevision()) {
+      revision = builder.getRevision();
     }
     return this;
   }
