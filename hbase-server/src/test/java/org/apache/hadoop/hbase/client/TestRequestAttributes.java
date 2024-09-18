@@ -87,7 +87,7 @@ public class TestRequestAttributes {
     ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY5, addRandomRequestAttributes());
     ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY6, addRandomRequestAttributes());
     ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY7, addRandomRequestAttributes());
-    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY8, new HashMap<String, byte[]>());
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY8, new HashMap<>());
   }
   private static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(100);
   private static final byte[] FAMILY = Bytes.toBytes("0");
@@ -316,26 +316,20 @@ public class TestRequestAttributes {
     @Override
     public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
       List<Cell> result) throws IOException {
-      if (!isValidRequestAttributes(getRequestAttributesForRowKey(get.getRow()))) {
-        throw new IOException("Incorrect request attributes");
-      }
+      validateRequestAttributes(getRequestAttributesForRowKey(get.getRow()));
     }
 
     @Override
     public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
       InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
-      if (!isValidRequestAttributes(REQUEST_ATTRIBUTES_SCAN)) {
-        throw new IOException("Incorrect request attributes");
-      }
+      validateRequestAttributes(REQUEST_ATTRIBUTES_SCAN);
       return hasNext;
     }
 
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit)
       throws IOException {
-      if (!isValidRequestAttributes(getRequestAttributesForRowKey(put.getRow()))) {
-        throw new IOException("Incorrect request attributes");
-      }
+      validateRequestAttributes(getRequestAttributesForRowKey(put.getRow()));
     }
 
     private Map<String, byte[]> getRequestAttributesForRowKey(byte[] rowKey) {
@@ -347,21 +341,20 @@ public class TestRequestAttributes {
       return null;
     }
 
-    private boolean isValidRequestAttributes(Map<String, byte[]> requestAttributes) {
+    private void validateRequestAttributes(Map<String, byte[]> requestAttributes) {
       RpcCall rpcCall = RpcServer.getCurrentCall().get();
       Map<String, byte[]> attrs = rpcCall.getRequestAttributes();
       if (attrs.size() != requestAttributes.size()) {
-        return false;
+        return;
       }
       for (Map.Entry<String, byte[]> attr : attrs.entrySet()) {
         if (!requestAttributes.containsKey(attr.getKey())) {
-          return false;
+          return;
         }
         if (!Arrays.equals(requestAttributes.get(attr.getKey()), attr.getValue())) {
-          return false;
+          return;
         }
       }
-      return true;
     }
   }
 }
