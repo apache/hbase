@@ -127,11 +127,13 @@ public class TestMetricsWAL {
     // Validate the metrics
     for (int i = 0; i < numThreads; i++) {
       TableName tableName = TableName.valueOf("tab_" + i);
-      long tableAppendCount =
-        registry.getCounter(tableName + "." + MetricsWALSource.APPEND_COUNT, -1).value();
+      long tableAppendCount = registry
+        .getCounter(tableName.getMetricPrefixTableName() + "." + MetricsWALSource.APPEND_COUNT, -1)
+        .value();
       assertEquals(numIters, tableAppendCount);
-      long tableAppendSize =
-        registry.getCounter(tableName + "." + MetricsWALSource.APPEND_SIZE, -1).value();
+      long tableAppendSize = registry
+        .getCounter(tableName.getMetricPrefixTableName() + "." + MetricsWALSource.APPEND_SIZE, -1)
+        .value();
       assertEquals(i * numIters, tableAppendSize);
     }
   }

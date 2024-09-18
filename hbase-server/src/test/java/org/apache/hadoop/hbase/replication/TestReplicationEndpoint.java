@@ -390,9 +390,12 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       source.getSingleSourceSourceByTable().containsKey("RandomNewTable");
     Assert.assertEquals(false, containsRandomNewTable);
     source.updateTableLevelMetrics(createWALEntriesWithSize("RandomNewTable"));
-    containsRandomNewTable = source.getSingleSourceSourceByTable().containsKey("RandomNewTable");
+    TableName tableName1 = TableName.valueOf("RandomNewTable");
+    containsRandomNewTable =
+      source.getSingleSourceSourceByTable().containsKey(tableName1.getMetricPrefixTableName());
     Assert.assertEquals(true, containsRandomNewTable);
-    MetricsReplicationTableSource msr = source.getSingleSourceSourceByTable().get("RandomNewTable");
+    MetricsReplicationTableSource msr =
+      source.getSingleSourceSourceByTable().get(tableName1.getMetricPrefixTableName());
 
     // age should be greater than zero we created the entry with time in the past
     Assert.assertTrue(msr.getLastShippedAge() > 0);

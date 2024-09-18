@@ -260,6 +260,10 @@ public final class TableName implements Comparable<TableName> {
     return qualifierAsString;
   }
 
+  public String getMetricPrefixTableName() {
+    return "Namespace_" + this.getNamespaceAsString() + "table_" + this.getQualifierAsString();
+  }
+
   /** Returns A pointer to TableName as String bytes. */
   public byte[] toBytes() {
     return name;
