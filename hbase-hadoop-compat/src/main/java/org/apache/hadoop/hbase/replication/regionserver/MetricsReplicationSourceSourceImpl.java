@@ -63,6 +63,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String repeatedBytesKey;
   private final String completedLogsKey;
   private final String completedRecoveryKey;
+  private final String walAppendBytesKey;
   private final MutableFastCounter unknownFileLengthForClosedWAL;
   private final MutableFastCounter uncleanlyClosedWAL;
   private final MutableFastCounter uncleanlyClosedSkippedBytes;
@@ -72,6 +73,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final MutableFastCounter completedRecoveryQueue;
   private final MutableGaugeLong oldestWalAge;
   private final MutableGaugeInt sourceInitializing;
+  private final MutableFastCounter walAppendBytesCounter;
 
   public MetricsReplicationSourceSourceImpl(MetricsReplicationSourceImpl rms, String id) {
     this.rms = rms;
@@ -137,6 +139,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
     sourceInitializingKey = this.keyPrefix + "isInitializing";
     sourceInitializing = rms.getMetricsRegistry().getGaugeInt(sourceInitializingKey, 0);
+
+    walAppendBytesKey = this.keyPrefix + "walAppendBytes";
+    walAppendBytesCounter = rms.getMetricsRegistry().getCounter(walAppendBytesKey, 0L);
   }
 
   @Override
@@ -217,6 +222,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     rms.removeMetric(completedRecoveryKey);
     rms.removeMetric(oldestWalAgeKey);
     rms.removeMetric(sourceInitializingKey);
+    rms.removeMetric(walAppendBytesKey);
   }
 
   @Override
@@ -306,6 +312,16 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   @Override
   public int getSourceInitializing() {
     return sourceInitializing.value();
+  }
+
+  @Override
+  public long getWalAppendBytes() {
+    return walAppendBytesCounter.value();
+  }
+
+  @Override
+  public void incrWalAppendBytes(long size) {
+    walAppendBytesCounter.incr(size);
   }
 
   @Override

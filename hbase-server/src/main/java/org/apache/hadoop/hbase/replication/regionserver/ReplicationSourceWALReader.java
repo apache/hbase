@@ -309,7 +309,7 @@ class ReplicationSourceWALReader extends Thread {
     return entryBatchQueue.poll(timeout, TimeUnit.MILLISECONDS);
   }
 
-  private long getEntrySizeIncludeBulkLoad(Entry entry) {
+  public static long getEntrySizeIncludeBulkLoad(Entry entry) {
     WALEdit edit = entry.getEdit();
     return WALEntryBatch.getEntrySizeExcludeBulkLoad(entry) + sizeOfStoreFilesIncludeBulkLoad(edit);
   }
@@ -366,7 +366,7 @@ class ReplicationSourceWALReader extends Thread {
    * @param edit edit to count row keys from
    * @return the total size of the store files
    */
-  private int sizeOfStoreFilesIncludeBulkLoad(WALEdit edit) {
+  private static int sizeOfStoreFilesIncludeBulkLoad(WALEdit edit) {
     List<Cell> cells = edit.getCells();
     int totalStoreFilesSize = 0;
 
