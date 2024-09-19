@@ -43,6 +43,11 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
   private static final Logger LOG = LoggerFactory.getLogger(RestartMetaTest.class);
 
+  /** Column family used by the test */
+  private static byte[] DEFAULT_COLUMN_FAMILY = Bytes.toBytes("test_cf");
+  /** Column families used by the test */
+  private static final byte[][] DEFAULT_COLUMN_FAMILIES = { DEFAULT_COLUMN_FAMILY };
+
   /** The number of region servers used if not specified */
   private static final int DEFAULT_NUM_RS = 2;
 
@@ -77,7 +82,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     // start the writers
     LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(minColDataSize,
-      maxColDataSize, minColsPerKey, maxColsPerKey, LoadTestUtil.DEFAULT_COLUMN_FAMILY);
+      maxColDataSize, minColsPerKey, maxColsPerKey, DEFAULT_COLUMN_FAMILY);
     MultiThreadedWriter writer = new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
     writer.setMultiPut(true);
     writer.start(startKey, endKey, numThreads);
@@ -96,7 +101,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
     hbaseCluster.startHBase();
 
     // create tables if needed
-    LoadTestUtil.createPreSplitLoadTestTable(conf, TABLE_NAME, LoadTestUtil.DEFAULT_COLUMN_FAMILY,
+    LoadTestUtil.createPreSplitLoadTestTable(conf, TABLE_NAME, DEFAULT_COLUMN_FAMILY,
       Compression.Algorithm.NONE, DataBlockEncoding.NONE);
 
     LOG.debug("Loading data....\n\n");

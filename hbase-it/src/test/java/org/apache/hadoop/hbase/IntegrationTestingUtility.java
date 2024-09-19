@@ -19,7 +19,16 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Facility for <strong>integration/system</strong> tests. This extends {@link HBaseTestingUtil} and
@@ -39,6 +48,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  * {@link #setUseDistributedCluster(Configuration)}.
  */
 public class IntegrationTestingUtility extends HBaseTestingUtil {
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestingUtility.class);
 
   public IntegrationTestingUtility() {
     this(HBaseConfiguration.create());
@@ -63,6 +73,15 @@ public class IntegrationTestingUtility extends HBaseTestingUtil {
   public static final String HBASE_CLUSTER_MANAGER_CLASS = "hbase.it.clustermanager.class";
   private static final Class<? extends ClusterManager> DEFAULT_HBASE_CLUSTER_MANAGER_CLASS =
     HBaseClusterManager.class;
+
+  public static final String REGIONS_PER_SERVER_KEY = "hbase.test.regions-per-server";
+  /**
+   * The default number of regions per regionserver when creating a pre-split table.
+   */
+  public static final int DEFAULT_REGIONS_PER_SERVER = 3;
+
+  public static final String PRESPLIT_TEST_TABLE_KEY = "hbase.test.pre-split-table";
+  public static final boolean PRESPLIT_TEST_TABLE = true;
 
   /**
    * Initializes the state of the cluster. It starts a new in-process mini cluster, OR if we are
@@ -151,5 +170,52 @@ public class IntegrationTestingUtility extends HBaseTestingUtil {
     ClusterManager clusterManager = ReflectionUtils.newInstance(clusterManagerClass, conf);
     setHBaseCluster(new DistributedHBaseCluster(conf, clusterManager));
     getAdmin();
+  }
+
+  /**
+   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
+   * continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf, TableDescriptor td,
+    ColumnFamilyDescriptor[] cds, int numRegionsPerServer) throws IOException {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(td);
+    for (ColumnFamilyDescriptor cd : cds) {
+      if (!td.hasColumnFamily(cd.getName())) {
+        builder.setColumnFamily(cd);
+      }
+    }
+    td = builder.build();
+    int totalNumberOfRegions = 0;
+    Connection unmanagedConnection = ConnectionFactory.createConnection(conf);
+    Admin admin = unmanagedConnection.getAdmin();
+
+    try {
+      // create a table a pre-splits regions.
+      // The number of splits is set as:
+      // region servers * regions per region server).
+      int numberOfServers = admin.getRegionServers().size();
+      if (numberOfServers == 0) {
+        throw new IllegalStateException("No live regionservers");
+      }
+
+      totalNumberOfRegions = numberOfServers * numRegionsPerServer;
+      LOG.info("Number of live regionservers: " + numberOfServers + ", "
+        + "pre-splitting table into " + totalNumberOfRegions + " regions " + "(regions per server: "
+        + numRegionsPerServer + ")");
+
+      byte[][] splits = new RegionSplitter.HexStringSplit().split(totalNumberOfRegions);
+
+      admin.createTable(td, splits);
+    } catch (MasterNotRunningException e) {
+      LOG.error("Master not running", e);
+      throw new IOException(e);
+    } catch (TableExistsException e) {
+      LOG.warn("Table " + td.getTableName() + " already exists, continuing");
+    } finally {
+      admin.close();
+      unmanagedConnection.close();
+    }
+    return totalNumberOfRegions;
   }
 }

@@ -81,6 +81,10 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   /** Column families for the test */
   private byte[][] families;
+  /** Column family used by the test */
+  private static byte[] DEFAULT_COLUMN_FAMILY = Bytes.toBytes("test_cf");
+  /** Column families used by the test */
+  private static final byte[][] DEFAULT_COLUMN_FAMILIES = { DEFAULT_COLUMN_FAMILY };
 
   /** Table name to use of not overridden on the command line */
   protected static final String DEFAULT_TABLE_NAME = "cluster_test";
@@ -406,7 +410,7 @@ public class LoadTestTool extends AbstractHBaseTool {
         families[i] = Bytes.toBytes(list[i]);
       }
     } else {
-      families = LoadTestUtil.DEFAULT_COLUMN_FAMILIES;
+      families = DEFAULT_COLUMN_FAMILIES;
     }
 
     isVerbose = cmd.hasOption(OPT_VERBOSE);
@@ -606,7 +610,7 @@ public class LoadTestTool extends AbstractHBaseTool {
             LOG.error(exp.toString(), exp);
             return EXIT_FAILURE;
           }
-          userOwner = User.create(DiagnosticToolsCommonUtils.loginAndReturnUGI(conf, superUser));
+          userOwner = User.create(KerberosUtils.loginAndReturnUGI(conf, superUser));
         } else {
           superUser = clazzAndArgs[1];
           userNames = clazzAndArgs[2];
@@ -645,7 +649,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       User user = null;
       for (String userStr : users) {
         if (User.isHBaseSecurityEnabled(conf)) {
-          user = User.create(DiagnosticToolsCommonUtils.loginAndReturnUGI(conf, userStr));
+          user = User.create(KerberosUtils.loginAndReturnUGI(conf, userStr));
         } else {
           user = User.createUserForTesting(conf, userStr, new String[0]);
         }

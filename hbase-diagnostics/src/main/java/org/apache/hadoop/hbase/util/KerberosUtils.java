@@ -26,9 +26,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class DiagnosticToolsCommonUtils {
-  private static final Logger LOG = LoggerFactory.getLogger(DiagnosticToolsCommonUtils.class);
+/**
+ * Utility class for Kerberos authentication.
+ */
+public class KerberosUtils {
+  private static final Logger LOG = LoggerFactory.getLogger(KerberosUtils.class);
 
+  /**
+   * Logs in a user using Kerberos keytab and returns the UserGroupInformation (UGI) instance.
+   * @param conf     the configuration object
+   * @param username the username for which the keytab file and principal are configured.
+   * @return the UserGroupInformation instance for the logged-in user.
+   * @throws IOException If an I/O error occurs during login.
+   */
   public static UserGroupInformation loginAndReturnUGI(Configuration conf, String username)
     throws IOException {
     String hostname = InetAddress.getLocalHost().getHostName();
@@ -45,5 +55,4 @@ public class DiagnosticToolsCommonUtils {
       UserGroupInformation.loginUserFromKeytabAndReturnUGI(principal, keyTabFileLocation);
     return ugi;
   }
-
 }

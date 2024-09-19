@@ -31,12 +31,7 @@
   <description>Diagnostics Tools for HBase</description>
 
   <dependencies>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-server</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
+    <!-- Intra-project dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
@@ -53,7 +48,6 @@
       <groupId>org.apache.hbase.thirdparty</groupId>
       <artifactId>hbase-shaded-miscellaneous</artifactId>
     </dependency>
-    <!-- Intra-project dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-common</artifactId>
@@ -78,9 +72,16 @@
       <groupId>org.apache.hbase.thirdparty</groupId>
       <artifactId>hbase-shaded-gson</artifactId>
     </dependency>
+    <!-- Intra-project test dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-common</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -133,7 +134,7 @@
       <artifactId>hadoop-mapreduce-client-core</artifactId>
       <version>${hadoop-three.version}</version>
     </dependency>
-    <!-- Test dependencies -->
+    <!-- General test dependencies -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
@@ -144,6 +145,12 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-zookeeper</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-hadoop-compat</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -166,6 +173,21 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jul-to-slf4j</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-1.2-api</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
