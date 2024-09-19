@@ -147,8 +147,8 @@ public class TestRegionServerAbortTimeout {
     }
 
     @Override
-    public void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested)
-      throws IOException {
+    public void preClose(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      boolean abortRequested) throws IOException {
       Threads.sleep(SLEEP_TIME_WHEN_CLOSE_REGION);
     }
   }

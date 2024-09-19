@@ -215,8 +215,8 @@ public class TestReplicationWithWALExtendedAttributes {
     }
 
     @Override
-    public void preWALAppend(ObserverContext<RegionCoprocessorEnvironment> ctx, WALKey key,
-      WALEdit edit) throws IOException {
+    public void preWALAppend(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+      WALKey key, WALEdit edit) throws IOException {
       key.addExtendedAttribute("extendedAttr1", Bytes.toBytes("Value of Extended attribute 01"));
       key.addExtendedAttribute("extendedAttr2", Bytes.toBytes("Value of Extended attribute 02"));
     }
@@ -231,8 +231,8 @@ public class TestReplicationWithWALExtendedAttributes {
     }
 
     @Override
-    public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit)
-      throws IOException {
+    public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
+      WALEdit edit) throws IOException {
       String attrVal1 = Bytes.toString(put.getAttribute("extendedAttr1"));
       String attrVal2 = Bytes.toString(put.getAttribute("extendedAttr2"));
       if (attrVal1 == null || attrVal2 == null) {
@@ -248,7 +248,7 @@ public class TestReplicationWithWALExtendedAttributes {
     }
 
     @Override
-    public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
       String attrVal1 = Bytes.toString(miniBatchOp.getOperation(0).getAttribute("extendedAttr1"));
       String attrVal2 = Bytes.toString(miniBatchOp.getOperation(0).getAttribute("extendedAttr2"));

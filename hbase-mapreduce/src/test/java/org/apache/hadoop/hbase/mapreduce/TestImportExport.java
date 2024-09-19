@@ -865,7 +865,7 @@ public class TestImportExport {
     }
 
     @Override
-    public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
       if (c.getEnvironment().getRegion().getRegionInfo().getTable().isSystemTable()) {
         return;

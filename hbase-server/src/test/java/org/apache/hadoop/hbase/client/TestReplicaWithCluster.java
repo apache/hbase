@@ -96,8 +96,8 @@ public class TestReplicaWithCluster {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-      final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Get get, final List<Cell> results) throws IOException {
 
       if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() == 0) {
         CountDownLatch latch = cdl.get();
@@ -136,8 +136,8 @@ public class TestReplicaWithCluster {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-      final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Get get, final List<Cell> results) throws IOException {
 
       int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
 
@@ -152,7 +152,7 @@ public class TestReplicaWithCluster {
     }
 
     @Override
-    public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public void preScannerOpen(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Scan scan) throws IOException {
       int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
       // Fail for the primary replica and replica 1
@@ -180,8 +180,8 @@ public class TestReplicaWithCluster {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-      final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Get get, final List<Cell> results) throws IOException {
 
       int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
 
@@ -199,7 +199,7 @@ public class TestReplicaWithCluster {
     }
 
     @Override
-    public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public void preScannerOpen(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Scan scan) throws IOException {
 
       int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();

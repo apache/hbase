@@ -64,7 +64,7 @@ public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
     }
 
     @Override
-    public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+    public void preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> e,
       FlushLifeCycleTracker tracker) throws IOException {
       if (delayFlush) {
         try {

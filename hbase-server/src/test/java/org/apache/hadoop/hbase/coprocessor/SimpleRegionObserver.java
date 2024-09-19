@@ -154,12 +154,12 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void preOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
+  public void preOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c) {
     ctPreOpen.incrementAndGet();
   }
 
   @Override
-  public void postOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
+  public void postOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c) {
     ctPostOpen.incrementAndGet();
   }
 
@@ -168,12 +168,14 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested) {
+  public void preClose(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    boolean abortRequested) {
     ctPreClose.incrementAndGet();
   }
 
   @Override
-  public void postClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested) {
+  public void postClose(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    boolean abortRequested) {
     ctPostClose.incrementAndGet();
   }
 
@@ -182,14 +184,14 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
+  public InternalScanner preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
     ctPreFlush.incrementAndGet();
     return scanner;
   }
 
   @Override
-  public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+  public void postFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store,
     StoreFile resultFile, FlushLifeCycleTracker tracker) throws IOException {
     ctPostFlush.incrementAndGet();
     if (throwOnPostFlush.get()) {
@@ -202,28 +204,29 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker) throws IOException {
+  public void preCompactSelection(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
+    throws IOException {
     ctPreCompactSelect.incrementAndGet();
   }
 
   @Override
-  public void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
+  public void postCompactSelection(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
     CompactionRequest request) {
     ctPostCompactSelect.incrementAndGet();
   }
 
   @Override
-  public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+  public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
     CompactionRequest request) throws IOException {
     ctPreCompact.incrementAndGet();
     return scanner;
   }
 
   @Override
-  public void postCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+  public void postCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store,
     StoreFile resultFile, CompactionLifeCycleTracker tracker, CompactionRequest request)
     throws IOException {
     ctPostCompact.incrementAndGet();
@@ -234,20 +237,21 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c, final Scan scan)
-    throws IOException {
+  public void preScannerOpen(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Scan scan) throws IOException {
     ctPreScannerOpen.incrementAndGet();
   }
 
   @Override
-  public RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-    final Scan scan, final RegionScanner s) throws IOException {
+  public RegionScanner postScannerOpen(
+    final ObserverContext<? extends RegionCoprocessorEnvironment> c, final Scan scan,
+    final RegionScanner s) throws IOException {
     ctPostScannerOpen.incrementAndGet();
     return s;
   }
 
   @Override
-  public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public boolean preScannerNext(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final InternalScanner s, final List<Result> results, final int limit, final boolean hasMore)
     throws IOException {
     ctPreScannerNext.incrementAndGet();
@@ -255,7 +259,7 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public boolean postScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public boolean postScannerNext(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final InternalScanner s, final List<Result> results, final int limit, final boolean hasMore)
     throws IOException {
     ctPostScannerNext.incrementAndGet();
@@ -263,27 +267,28 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
-    final InternalScanner s, final Cell currentRow, final boolean hasMore) throws IOException {
+  public boolean postScannerFilterRow(
+    final ObserverContext<? extends RegionCoprocessorEnvironment> e, final InternalScanner s,
+    final Cell currentRow, final boolean hasMore) throws IOException {
     ctPostScannerFilterRow.incrementAndGet();
     return hasMore;
   }
 
   @Override
-  public void preScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public void preScannerClose(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final InternalScanner s) throws IOException {
     ctPreScannerClose.incrementAndGet();
   }
 
   @Override
-  public void postScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public void postScannerClose(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final InternalScanner s) throws IOException {
     ctPostScannerClose.incrementAndGet();
   }
 
   @Override
-  public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-    final List<Cell> results) throws IOException {
+  public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Get get, final List<Cell> results) throws IOException {
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -293,8 +298,8 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void postGetOp(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-    final List<Cell> results) {
+  public void postGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Get get, final List<Cell> results) {
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -326,7 +331,7 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
+  public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> c, final Put put,
     final WALEdit edit, final Durability durability) throws IOException {
     Map<byte[], List<Cell>> familyMap = put.getFamilyCellMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
@@ -363,8 +368,8 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
-    final WALEdit edit, final Durability durability) throws IOException {
+  public void postPut(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Put put, final WALEdit edit, final Durability durability) throws IOException {
     Map<byte[], List<Cell>> familyMap = put.getFamilyCellMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
@@ -403,8 +408,8 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, final Delete delete,
-    final WALEdit edit, final Durability durability) throws IOException {
+  public void preDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
     Map<byte[], List<Cell>> familyMap = delete.getFamilyCellMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
@@ -416,14 +421,15 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void prePrepareTimeStampForDeleteVersion(ObserverContext<RegionCoprocessorEnvironment> e,
-    Mutation delete, Cell cell, byte[] byteNow, Get get) throws IOException {
+  public void prePrepareTimeStampForDeleteVersion(
+    ObserverContext<? extends RegionCoprocessorEnvironment> e, Mutation delete, Cell cell,
+    byte[] byteNow, Get get) throws IOException {
     ctPrePrepareDeleteTS.incrementAndGet();
   }
 
   @Override
-  public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c, final Delete delete,
-    final WALEdit edit, final Durability durability) throws IOException {
+  public void postDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
     Map<byte[], List<Cell>> familyMap = delete.getFamilyCellMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
@@ -434,7 +440,7 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+  public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
@@ -444,7 +450,7 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public void postBatchMutate(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
@@ -454,181 +460,190 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void postStartRegionOperation(final ObserverContext<RegionCoprocessorEnvironment> ctx,
-    Operation op) throws IOException {
+  public void postStartRegionOperation(
+    final ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Operation op)
+    throws IOException {
     ctPostStartRegionOperation.incrementAndGet();
   }
 
   @Override
-  public void postCloseRegionOperation(final ObserverContext<RegionCoprocessorEnvironment> ctx,
-    Operation op) throws IOException {
+  public void postCloseRegionOperation(
+    final ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Operation op)
+    throws IOException {
     if (ctPostStartRegionOperation.get() > 0) {
       ctPostCloseRegionOperation.incrementAndGet();
     }
   }
 
   @Override
-  public void postBatchMutateIndispensably(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public void postBatchMutateIndispensably(
+    final ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     MiniBatchOperationInProgress<Mutation> miniBatchOp, final boolean success) throws IOException {
     ctPostBatchMutateIndispensably.incrementAndGet();
   }
 
   @Override
-  public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public Result preIncrement(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final Increment increment) throws IOException {
     ctPreIncrement.incrementAndGet();
     return null;
   }
 
   @Override
-  public Result preIncrementAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e,
+  public Result preIncrementAfterRowLock(ObserverContext<? extends RegionCoprocessorEnvironment> e,
     Increment increment) throws IOException {
     ctPreIncrementAfterRowLock.incrementAndGet();
     return null;
   }
 
   @Override
-  public Result postIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public Result postIncrement(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final Increment increment, final Result result) throws IOException {
     ctPostIncrement.incrementAndGet();
     return result;
   }
 
   @Override
-  public boolean preCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
-    byte[] family, byte[] qualifier, CompareOperator compareOp, ByteArrayComparable comparator,
-    Put put, boolean result) throws IOException {
+  public boolean preCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+    byte[] row, byte[] family, byte[] qualifier, CompareOperator compareOp,
+    ByteArrayComparable comparator, Put put, boolean result) throws IOException {
     ctPreCheckAndPut.incrementAndGet();
     return true;
   }
 
   @Override
-  public boolean preCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
-    Filter filter, Put put, boolean result) throws IOException {
+  public boolean preCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    byte[] row, Filter filter, Put put, boolean result) throws IOException {
     ctPreCheckAndPutWithFilter.incrementAndGet();
     return true;
   }
 
   @Override
-  public boolean preCheckAndPutAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e,
-    byte[] row, byte[] family, byte[] qualifier, CompareOperator compareOp,
-    ByteArrayComparable comparator, Put put, boolean result) throws IOException {
+  public boolean preCheckAndPutAfterRowLock(
+    ObserverContext<? extends RegionCoprocessorEnvironment> e, byte[] row, byte[] family,
+    byte[] qualifier, CompareOperator compareOp, ByteArrayComparable comparator, Put put,
+    boolean result) throws IOException {
     ctPreCheckAndPutAfterRowLock.incrementAndGet();
     return true;
   }
 
   @Override
-  public boolean preCheckAndPutAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
-    byte[] row, Filter filter, Put put, boolean result) throws IOException {
+  public boolean preCheckAndPutAfterRowLock(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, Filter filter, Put put,
+    boolean result) throws IOException {
     ctPreCheckAndPutWithFilterAfterRowLock.incrementAndGet();
     return true;
   }
 
   @Override
-  public boolean postCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
-    byte[] family, byte[] qualifier, CompareOperator compareOp, ByteArrayComparable comparator,
-    Put put, boolean result) throws IOException {
+  public boolean postCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+    byte[] row, byte[] family, byte[] qualifier, CompareOperator compareOp,
+    ByteArrayComparable comparator, Put put, boolean result) throws IOException {
     ctPostCheckAndPut.incrementAndGet();
     return true;
   }
 
   @Override
-  public boolean postCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
-    Filter filter, Put put, boolean result) throws IOException {
+  public boolean postCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    byte[] row, Filter filter, Put put, boolean result) throws IOException {
     ctPostCheckAndPutWithFilter.incrementAndGet();
     return true;
   }
 
   @Override
-  public boolean preCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
-    byte[] family, byte[] qualifier, CompareOperator compareOp, ByteArrayComparable comparator,
-    Delete delete, boolean result) throws IOException {
+  public boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+    byte[] row, byte[] family, byte[] qualifier, CompareOperator compareOp,
+    ByteArrayComparable comparator, Delete delete, boolean result) throws IOException {
     ctPreCheckAndDelete.incrementAndGet();
     return true;
   }
 
   @Override
-  public boolean preCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
-    Filter filter, Delete delete, boolean result) throws IOException {
+  public boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    byte[] row, Filter filter, Delete delete, boolean result) throws IOException {
     ctPreCheckAndDeleteWithFilter.incrementAndGet();
     return true;
   }
 
   @Override
-  public boolean preCheckAndDeleteAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e,
-    byte[] row, byte[] family, byte[] qualifier, CompareOperator compareOp,
-    ByteArrayComparable comparator, Delete delete, boolean result) throws IOException {
+  public boolean preCheckAndDeleteAfterRowLock(
+    ObserverContext<? extends RegionCoprocessorEnvironment> e, byte[] row, byte[] family,
+    byte[] qualifier, CompareOperator compareOp, ByteArrayComparable comparator, Delete delete,
+    boolean result) throws IOException {
     ctPreCheckAndDeleteAfterRowLock.incrementAndGet();
     return true;
   }
 
   @Override
-  public boolean preCheckAndDeleteAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
-    byte[] row, Filter filter, Delete delete, boolean result) throws IOException {
+  public boolean preCheckAndDeleteAfterRowLock(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, Filter filter,
+    Delete delete, boolean result) throws IOException {
     ctPreCheckAndDeleteWithFilterAfterRowLock.incrementAndGet();
     return true;
   }
 
   @Override
-  public boolean postCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
-    byte[] family, byte[] qualifier, CompareOperator compareOp, ByteArrayComparable comparator,
-    Delete delete, boolean result) throws IOException {
+  public boolean postCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+    byte[] row, byte[] family, byte[] qualifier, CompareOperator compareOp,
+    ByteArrayComparable comparator, Delete delete, boolean result) throws IOException {
     ctPostCheckAndDelete.incrementAndGet();
     return true;
   }
 
   @Override
-  public boolean postCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
-    Filter filter, Delete delete, boolean result) throws IOException {
+  public boolean postCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+    byte[] row, Filter filter, Delete delete, boolean result) throws IOException {
     ctPostCheckAndDeleteWithFilter.incrementAndGet();
     return true;
   }
 
   @Override
-  public CheckAndMutateResult preCheckAndMutate(ObserverContext<RegionCoprocessorEnvironment> c,
-    CheckAndMutate checkAndMutate, CheckAndMutateResult result) throws IOException {
+  public CheckAndMutateResult preCheckAndMutate(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
+    CheckAndMutateResult result) throws IOException {
     ctPreCheckAndMutate.incrementAndGet();
     return RegionObserver.super.preCheckAndMutate(c, checkAndMutate, result);
   }
 
   @Override
   public CheckAndMutateResult preCheckAndMutateAfterRowLock(
-    ObserverContext<RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
     CheckAndMutateResult result) throws IOException {
     ctPreCheckAndMutateAfterRowLock.incrementAndGet();
     return RegionObserver.super.preCheckAndMutateAfterRowLock(c, checkAndMutate, result);
   }
 
   @Override
-  public CheckAndMutateResult postCheckAndMutate(ObserverContext<RegionCoprocessorEnvironment> c,
-    CheckAndMutate checkAndMutate, CheckAndMutateResult result) throws IOException {
+  public CheckAndMutateResult postCheckAndMutate(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
+    CheckAndMutateResult result) throws IOException {
     ctPostCheckAndMutate.incrementAndGet();
     return RegionObserver.super.postCheckAndMutate(c, checkAndMutate, result);
   }
 
   @Override
-  public Result preAppendAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e,
+  public Result preAppendAfterRowLock(ObserverContext<? extends RegionCoprocessorEnvironment> e,
     Append append) throws IOException {
     ctPreAppendAfterRowLock.incrementAndGet();
     return null;
   }
 
   @Override
-  public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> e, Append append)
+  public Result preAppend(ObserverContext<? extends RegionCoprocessorEnvironment> e, Append append)
     throws IOException {
     ctPreAppend.incrementAndGet();
     return null;
   }
 
   @Override
-  public Result postAppend(ObserverContext<RegionCoprocessorEnvironment> e, Append append,
+  public Result postAppend(ObserverContext<? extends RegionCoprocessorEnvironment> e, Append append,
     Result result) throws IOException {
     ctPostAppend.incrementAndGet();
     return null;
   }
 
   @Override
-  public void preBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public void preBulkLoadHFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     List<Pair<byte[], String>> familyPaths) throws IOException {
     RegionCoprocessorEnvironment e = ctx.getEnvironment();
     assertNotNull(e);
@@ -649,7 +664,7 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public void postBulkLoadHFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     List<Pair<byte[], String>> familyPaths, Map<byte[], List<Path>> map) throws IOException {
     RegionCoprocessorEnvironment e = ctx.getEnvironment();
     assertNotNull(e);
@@ -682,43 +697,45 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public StoreFileReader preStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
-    FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
-    Reference r, StoreFileReader reader) throws IOException {
+  public StoreFileReader preStoreFileReaderOpen(
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, FileSystem fs, Path p,
+    FSDataInputStreamWrapper in, long size, CacheConfig cacheConf, Reference r,
+    StoreFileReader reader) throws IOException {
     ctPreStoreFileReaderOpen.incrementAndGet();
     return null;
   }
 
   @Override
-  public StoreFileReader postStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
-    FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
-    Reference r, StoreFileReader reader) throws IOException {
+  public StoreFileReader postStoreFileReaderOpen(
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, FileSystem fs, Path p,
+    FSDataInputStreamWrapper in, long size, CacheConfig cacheConf, Reference r,
+    StoreFileReader reader) throws IOException {
     ctPostStoreFileReaderOpen.incrementAndGet();
     return reader;
   }
 
   @Override
-  public void preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> ctx, Store store,
-    ScanOptions options) throws IOException {
+  public void preStoreScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    Store store, ScanOptions options) throws IOException {
     if (options.getScan().getTimeRange().isAllTime()) {
       setScanOptions(options);
     }
   }
 
   @Override
-  public void preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
+  public void preCompactScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
     CompactionRequest request) throws IOException {
     setScanOptions(options);
   }
 
-  public void preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
+  public void preFlushScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
     setScanOptions(options);
   }
 
   public void preMemStoreCompactionCompactScannerOpen(
-    ObserverContext<RegionCoprocessorEnvironment> c, Store store, ScanOptions options)
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store, ScanOptions options)
     throws IOException {
     setScanOptions(options);
   }
@@ -732,7 +749,7 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void preWALAppend(ObserverContext<RegionCoprocessorEnvironment> ctx, WALKey key,
+  public void preWALAppend(ObserverContext<? extends RegionCoprocessorEnvironment> ctx, WALKey key,
     WALEdit edit) throws IOException {
     ctPreWALAppend.incrementAndGet();
 

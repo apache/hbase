@@ -1882,7 +1882,7 @@ public class TestThriftHBaseServiceHandler {
     }
 
     @Override
-    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+    public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> e, Get get,
       List<Cell> results) throws IOException {
       try {
         long start = EnvironmentEdgeManager.currentTime();

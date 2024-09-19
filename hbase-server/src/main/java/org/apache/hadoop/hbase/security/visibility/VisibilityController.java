@@ -248,7 +248,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   /****************************** Region related hooks ******************************/
 
   @Override
-  public void postOpen(ObserverContext<RegionCoprocessorEnvironment> e) {
+  public void postOpen(ObserverContext<? extends RegionCoprocessorEnvironment> e) {
     // Read the entire labels table and populate the zk
     if (e.getEnvironment().getRegion().getRegionInfo().getTable().equals(LABELS_TABLE_NAME)) {
       this.labelsRegion = true;
@@ -280,7 +280,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+  public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
     if (c.getEnvironment().getRegion().getRegionInfo().getTable().isSystemTable()) {
       return;
@@ -370,8 +370,9 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public void prePrepareTimeStampForDeleteVersion(ObserverContext<RegionCoprocessorEnvironment> ctx,
-    Mutation delete, Cell cell, byte[] byteNow, Get get) throws IOException {
+  public void prePrepareTimeStampForDeleteVersion(
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation delete, Cell cell,
+    byte[] byteNow, Get get) throws IOException {
     // Nothing to do if we are not filtering by visibility
     if (!authorizationEnabled) {
       return;
@@ -482,7 +483,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan)
+  public void preScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> e, Scan scan)
     throws IOException {
     if (!initialized) {
       throw new VisibilityControllerNotReadyException("VisibilityController not yet initialized!");
@@ -522,7 +523,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
 
   @Override
   public DeleteTracker postInstantiateDeleteTracker(
-    ObserverContext<RegionCoprocessorEnvironment> ctx, DeleteTracker delTracker)
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, DeleteTracker delTracker)
     throws IOException {
     // Nothing to do if we are not filtering by visibility
     if (!authorizationEnabled) {
@@ -542,8 +543,9 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-    final Scan scan, final RegionScanner s) throws IOException {
+  public RegionScanner postScannerOpen(
+    final ObserverContext<? extends RegionCoprocessorEnvironment> c, final Scan scan,
+    final RegionScanner s) throws IOException {
     User user = VisibilityUtils.getActiveUser();
     if (user != null && user.getShortName() != null) {
       scannerOwners.put(s, user.getShortName());
@@ -552,7 +554,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public boolean preScannerNext(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final InternalScanner s, final List<Result> result, final int limit, final boolean hasNext)
     throws IOException {
     requireScannerOwner(s);
@@ -560,13 +562,13 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public void preScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public void preScannerClose(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final InternalScanner s) throws IOException {
     requireScannerOwner(s);
   }
 
   @Override
-  public void postScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public void postScannerClose(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final InternalScanner s) throws IOException {
     // clean up any associated owner mapping
     scannerOwners.remove(s);
@@ -586,8 +588,8 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get, List<Cell> results)
-    throws IOException {
+  public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> e, Get get,
+    List<Cell> results) throws IOException {
     if (!initialized) {
       throw new VisibilityControllerNotReadyException("VisibilityController not yet initialized");
     }
@@ -629,7 +631,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
 
   @Override
   public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
-    ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
     List<Pair<Cell, Cell>> cellPairs) throws IOException {
     List<Pair<Cell, Cell>> resultPairs = new ArrayList<>(cellPairs.size());
     for (Pair<Cell, Cell> pair : cellPairs) {
@@ -641,7 +643,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
 
   @Override
   public List<Pair<Cell, Cell>> postAppendBeforeWAL(
-    ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
     List<Pair<Cell, Cell>> cellPairs) throws IOException {
     List<Pair<Cell, Cell>> resultPairs = new ArrayList<>(cellPairs.size());
     for (Pair<Cell, Cell> pair : cellPairs) {

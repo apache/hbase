@@ -97,16 +97,17 @@ public class TestCompactionLifeCycleTracker {
     }
 
     @Override
-    public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker) throws IOException {
+    public void preCompactSelection(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Store store, List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
+      throws IOException {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
       }
     }
 
     @Override
-    public void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
+    public void postCompactSelection(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Store store, List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
       CompactionRequest request) {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
@@ -114,8 +115,8 @@ public class TestCompactionLifeCycleTracker {
     }
 
     @Override
-    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+    public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
       CompactionRequest request) throws IOException {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
@@ -124,7 +125,7 @@ public class TestCompactionLifeCycleTracker {
     }
 
     @Override
-    public void postCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+    public void postCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store,
       StoreFile resultFile, CompactionLifeCycleTracker tracker, CompactionRequest request)
       throws IOException {
       if (TRACKER != null) {

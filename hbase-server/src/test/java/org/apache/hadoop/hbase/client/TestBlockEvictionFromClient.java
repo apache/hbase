@@ -1565,8 +1565,8 @@ public class TestBlockEvictionFromClient {
 
   public static class CustomInnerRegionObserverWrapper extends CustomInnerRegionObserver {
     @Override
-    public RegionScanner postScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan,
-      RegionScanner s) throws IOException {
+    public RegionScanner postScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      Scan scan, RegionScanner s) throws IOException {
       return new CustomScanner(s);
     }
   }
@@ -1585,7 +1585,7 @@ public class TestBlockEvictionFromClient {
     }
 
     @Override
-    public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> e,
+    public boolean postScannerNext(ObserverContext<? extends RegionCoprocessorEnvironment> e,
       InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
       slowdownCode(e, false);
       if (getLatch != null && getLatch.getCount() > 0) {
@@ -1598,7 +1598,7 @@ public class TestBlockEvictionFromClient {
     }
 
     @Override
-    public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+    public void postGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> e, Get get,
       List<Cell> results) throws IOException {
       slowdownCode(e, true);
     }
@@ -1607,7 +1607,7 @@ public class TestBlockEvictionFromClient {
       return cdl;
     }
 
-    private void slowdownCode(final ObserverContext<RegionCoprocessorEnvironment> e,
+    private void slowdownCode(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       boolean isGet) {
       CountDownLatch latch = getCdl().get();
       try {
