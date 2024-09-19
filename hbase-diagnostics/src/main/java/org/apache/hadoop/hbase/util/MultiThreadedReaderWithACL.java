@@ -124,7 +124,7 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
         UserGroupInformation realUserUgi;
         if (!users.containsKey(userNames[mod])) {
           if (User.isHBaseSecurityEnabled(conf)) {
-            realUserUgi = DiagnosticToolsCommonUtils.loginAndReturnUGI(conf, userNames[mod]);
+            realUserUgi = KerberosUtils.loginAndReturnUGI(conf, userNames[mod]);
           } else {
             realUserUgi = UserGroupInformation.createRemoteUser(userNames[mod]);
           }

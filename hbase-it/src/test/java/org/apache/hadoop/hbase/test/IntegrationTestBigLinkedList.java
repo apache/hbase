@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.test;
 
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.DEFAULT_REGIONS_PER_SERVER;
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.PRESPLIT_TEST_TABLE;
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.PRESPLIT_TEST_TABLE_KEY;
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.REGIONS_PER_SERVER_KEY;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.FileNotFoundException;
@@ -76,7 +81,6 @@ import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.LoadTestUtil;
 import org.apache.hadoop.hbase.util.Random64;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -751,15 +755,12 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
             .build();
 
           // If we want to pre-split compute how many splits.
-          if (
-            conf.getBoolean(LoadTestUtil.PRESPLIT_TEST_TABLE_KEY, LoadTestUtil.PRESPLIT_TEST_TABLE)
-          ) {
+          if (conf.getBoolean(PRESPLIT_TEST_TABLE_KEY, PRESPLIT_TEST_TABLE)) {
             int numberOfServers = admin.getRegionServers().size();
             if (numberOfServers == 0) {
               throw new IllegalStateException("No live regionservers");
             }
-            int regionsPerServer = conf.getInt(LoadTestUtil.REGIONS_PER_SERVER_KEY,
-              LoadTestUtil.DEFAULT_REGIONS_PER_SERVER);
+            int regionsPerServer = conf.getInt(REGIONS_PER_SERVER_KEY, DEFAULT_REGIONS_PER_SERVER);
             int totalNumberOfRegions = numberOfServers * regionsPerServer;
             LOG.info("Number of live regionservers: " + numberOfServers + ", "
               + "pre-splitting table into " + totalNumberOfRegions + " regions "
@@ -1898,9 +1899,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     System.err.println(" -D" + TABLE_NAME_KEY + "=<tableName>");
     System.err.println(
       "    Run using the <tableName> as the tablename.  Defaults to " + DEFAULT_TABLE_NAME);
-    System.err.println(" -D" + LoadTestUtil.REGIONS_PER_SERVER_KEY + "=<# regions>");
+    System.err.println(" -D" + REGIONS_PER_SERVER_KEY + "=<# regions>");
     System.err.println("    Create table with presplit regions per server.  Defaults to "
-      + LoadTestUtil.DEFAULT_REGIONS_PER_SERVER);
+      + DEFAULT_REGIONS_PER_SERVER);
 
     System.err.println(" -DuseMob=<true|false>");
     System.err.println(

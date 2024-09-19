@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.test;
 
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.DEFAULT_REGIONS_PER_SERVER;
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.PRESPLIT_TEST_TABLE;
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.PRESPLIT_TEST_TABLE_KEY;
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.REGIONS_PER_SERVER_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.BufferedReader;
@@ -78,7 +82,6 @@ import org.apache.hadoop.hbase.test.util.warc.WARCRecord;
 import org.apache.hadoop.hbase.test.util.warc.WARCWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.LoadTestUtil;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -478,16 +481,13 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
           TableDescriptor tableDescriptor =
             TableDescriptorBuilder.newBuilder(tableName).setColumnFamilies(families).build();
 
-          if (
-            getConf().getBoolean(LoadTestUtil.PRESPLIT_TEST_TABLE_KEY,
-              LoadTestUtil.PRESPLIT_TEST_TABLE)
-          ) {
+          if (getConf().getBoolean(PRESPLIT_TEST_TABLE_KEY, PRESPLIT_TEST_TABLE)) {
             int numberOfServers = admin.getRegionServers().size();
             if (numberOfServers == 0) {
               throw new IllegalStateException("No live regionservers");
             }
-            int regionsPerServer = getConf().getInt(LoadTestUtil.REGIONS_PER_SERVER_KEY,
-              LoadTestUtil.DEFAULT_REGIONS_PER_SERVER);
+            int regionsPerServer =
+              getConf().getInt(REGIONS_PER_SERVER_KEY, DEFAULT_REGIONS_PER_SERVER);
             int totalNumberOfRegions = numberOfServers * regionsPerServer;
             LOG.info("Creating test table: " + tableDescriptor);
             LOG.info("Number of live regionservers: " + numberOfServers + ", "

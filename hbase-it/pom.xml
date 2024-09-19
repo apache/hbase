@@ -111,12 +111,7 @@
       <artifactId>hbase-diagnostics</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-diagnostics</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
+
     <!-- Required by tests using MiniMRCluster -->
     <dependency>
       <groupId>org.bouncycastle</groupId>

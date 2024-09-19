@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MockRegionServerServices;
 import org.apache.hadoop.hbase.TableName;
@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.WALPerformanceEvaluationUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -77,7 +78,7 @@ import org.slf4j.LoggerFactory;
  * This class runs performance benchmarks for {@link WAL}. See usage for this tool by running:
  * <code>$ hbase org.apache.hadoop.hbase.wal.WALPerformanceEvaluation -h</code>
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public final class WALPerformanceEvaluation extends Configured implements Tool {
   private static final Logger LOG = LoggerFactory.getLogger(WALPerformanceEvaluation.class);
 
@@ -95,8 +96,6 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     metrics.histogram(name(WALPerformanceEvaluation.class, "latencyHistogram", "nanos"));
 
   private final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
-
-  private HBaseTestingUtil TEST_UTIL;
 
   static final String TABLE_NAME = "WALPerformanceEvaluation";
   static final String QUALIFIER_PREFIX = "q";
@@ -273,8 +272,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     getConf().setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
 
     if (rootRegionDir == null) {
-      TEST_UTIL = new HBaseTestingUtil(getConf());
-      rootRegionDir = TEST_UTIL.getDataTestDirOnTestFS("WALPerformanceEvaluation");
+      rootRegionDir = new WALPerformanceEvaluationUtil(getConf())
+        .getDataTestDirOnTestFS("WALPerformanceEvaluation");
     }
     // Run WAL Performance Evaluation
     // First set the fs from configs. In case we are on hadoop1

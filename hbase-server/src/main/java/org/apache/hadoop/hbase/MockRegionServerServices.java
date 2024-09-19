@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,6 +71,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 /**
  * Basic mock region server services. Should only be instantiated by HBaseTestingUtility.b
  */
+@InterfaceAudience.Private
 public class MockRegionServerServices implements RegionServerServices {
   protected static final Logger LOG = LoggerFactory.getLogger(MockRegionServerServices.class);
   private final Map<String, HRegion> regions = new HashMap<>();

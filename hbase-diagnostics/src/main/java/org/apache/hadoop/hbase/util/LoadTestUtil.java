@@ -41,24 +41,18 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class LoadTestUtil {
+  private static final Logger LOG = LoggerFactory.getLogger(LoadTestUtil.class);
+
   public static final String OPT_DATA_BLOCK_ENCODING_USAGE = "Encoding algorithm (e.g. prefix "
     + "compression) to use for data blocks in the test column family, " + "one of "
     + Arrays.toString(DataBlockEncoding.values()) + ".";
   public static final String OPT_DATA_BLOCK_ENCODING =
     ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING.toLowerCase(Locale.ROOT);
-  /** Column family used by the test */
-  public static byte[] DEFAULT_COLUMN_FAMILY = Bytes.toBytes("test_cf");
-  /** Column families used by the test */
-  public static final byte[][] DEFAULT_COLUMN_FAMILIES = { DEFAULT_COLUMN_FAMILY };
 
-  public static final String REGIONS_PER_SERVER_KEY = "hbase.test.regions-per-server";
   /**
    * The default number of regions per regionserver when creating a pre-split table.
    */
-  public static final int DEFAULT_REGIONS_PER_SERVER = 3;
-  public static final String PRESPLIT_TEST_TABLE_KEY = "hbase.test.pre-split-table";
-  public static final boolean PRESPLIT_TEST_TABLE = true;
-  protected static final Logger LOG = LoggerFactory.getLogger(LoadTestUtil.class);
+  private static final int DEFAULT_REGIONS_PER_SERVER = 3;
 
   /**
    * Creates a pre-split table for load testing. If the table already exists, logs a warning and

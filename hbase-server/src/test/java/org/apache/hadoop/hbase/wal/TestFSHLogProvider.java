@@ -335,19 +335,6 @@ public class TestFSHLogProvider {
   }
 
   /**
-   * Write to a log file with three concurrent threads and verifying all data is written.
-   */
-  @Test
-  public void testConcurrentWrites() throws Exception {
-    // Run the WPE tool with three threads writing 3000 edits each concurrently.
-    // When done, verify that all edits were written.
-    int errCode =
-      WALPerformanceEvaluation.innerMain(new Configuration(TEST_UTIL.getConfiguration()),
-        new String[] { "-threads", "3", "-verify", "-noclosefs", "-iterations", "3000" });
-    assertEquals(0, errCode);
-  }
-
-  /**
    * Ensure that we can use Set.add to deduplicate WALs
    */
   @Test
