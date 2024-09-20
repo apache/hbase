@@ -21,7 +21,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,12 +50,13 @@ final class BucketProtoUtils {
   }
 
   static BucketCacheProtos.BucketCacheEntry toPB(BucketCache cache,
-    BucketCacheProtos.BackingMap backingMap) {
+    BucketCacheProtos.BackingMap.Builder backingMapBuilder) {
     return BucketCacheProtos.BucketCacheEntry.newBuilder().setCacheCapacity(cache.getMaxSize())
       .setIoClass(cache.ioEngine.getClass().getName())
       .setMapClass(cache.backingMap.getClass().getName())
       .putAllDeserializers(CacheableDeserializerIdManager.save())
-      .putAllCachedFiles(toCachedPB(cache.fullyCachedFiles)).setBackingMap(backingMap)
+      .putAllCachedFiles(toCachedPB(cache.fullyCachedFiles))
+      .setBackingMap(backingMapBuilder.build())
       .setChecksum(ByteString
         .copyFrom(((PersistentIOEngine) cache.ioEngine).calculateChecksum(cache.getAlgorithm())))
       .build();
@@ -67,42 +67,30 @@ final class BucketProtoUtils {
     // Write the new version of magic number.
     fos.write(PB_MAGIC_V2);
 
-    int blockCount = 0;
-    int backingMapSize = cache.backingMap.size();
     BucketCacheProtos.BackingMap.Builder builder = BucketCacheProtos.BackingMap.newBuilder();
     BucketCacheProtos.BackingMapEntry.Builder entryBuilder =
       BucketCacheProtos.BackingMapEntry.newBuilder();
-    Iterator<Map.Entry<BlockCacheKey, BucketEntry>> entrySetIter =
-      cache.backingMap.entrySet().iterator();
 
-    // Create the first chunk and persist all details along with it.
-    while (entrySetIter.hasNext()) {
+    // Persist the metadata first.
+    toPB(cache, builder).writeDelimitedTo(fos);
+
+    int blockCount = 0;
+    // Persist backing map entries in chunks of size 'chunkSize'.
+    for (Map.Entry<BlockCacheKey, BucketEntry> entry : cache.backingMap.entrySet()) {
       blockCount++;
-      Map.Entry<BlockCacheKey, BucketEntry> entry = entrySetIter.next();
-      addToBuilder(entry, entryBuilder, builder);
-      if (blockCount % chunkSize == 0 || (blockCount == backingMapSize)) {
-        BucketProtoUtils.toPB(cache, builder.build()).writeDelimitedTo(fos);
-        break;
+      addEntryToBuilder(entry, entryBuilder, builder);
+      if (blockCount % chunkSize == 0) {
+        builder.build().writeDelimitedTo(fos);
+        builder.clear();
       }
     }
-    builder.clear();
-
-    // Persist the remaining chunks.
-    // These chunks only have the backing map entries.
-    while (entrySetIter.hasNext()) {
-      blockCount++;
-      Map.Entry<BlockCacheKey, BucketEntry> entry = entrySetIter.next();
-      addToBuilder(entry, entryBuilder, builder);
-      if (blockCount % chunkSize == 0 || (blockCount == backingMapSize)) {
-        builder.build().writeDelimitedTo(fos);
-        if (blockCount < backingMapSize) {
-          builder.clear();
-        }
-      }
+    // Persist the last chunk.
+    if (builder.getEntryList().size() > 0) {
+      builder.build().writeDelimitedTo(fos);
     }
   }
 
-  private static void addToBuilder(Map.Entry<BlockCacheKey, BucketEntry> entry,
+  private static void addEntryToBuilder(Map.Entry<BlockCacheKey, BucketEntry> entry,
     BucketCacheProtos.BackingMapEntry.Builder entryBuilder,
     BucketCacheProtos.BackingMap.Builder builder) {
     entryBuilder.clear();

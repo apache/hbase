@@ -1592,17 +1592,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
-  private void parseFirstChunk(BucketCacheProtos.BucketCacheEntry firstChunk) throws IOException {
-    fullyCachedFiles.clear();
-    Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> pair =
-      BucketProtoUtils.fromPB(firstChunk.getDeserializersMap(), firstChunk.getBackingMap(),
-        this::createRecycler);
-    backingMap.putAll(pair.getFirst());
-    blocksByHFile.addAll(pair.getSecond());
-    fullyCachedFiles.putAll(BucketProtoUtils.fromPB(firstChunk.getCachedFilesMap()));
-  }
-
-  private void parseChunkPB(BucketCacheProtos.BackingMap chunk,
+  private void updateCacheIndex(BucketCacheProtos.BackingMap chunk,
     java.util.Map<java.lang.Integer, java.lang.String> deserializer) throws IOException {
     Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> pair2 =
       BucketProtoUtils.fromPB(deserializer, chunk, this::createRecycler);
@@ -1643,21 +1633,27 @@ public class BucketCache implements BlockCache, HeapSize {
   private void retrieveChunkedBackingMap(FileInputStream in) throws IOException {
 
     // Read the first chunk that has all the details.
-    BucketCacheProtos.BucketCacheEntry firstChunk =
+    BucketCacheProtos.BucketCacheEntry cacheEntry =
       BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in);
-    parseFirstChunk(firstChunk);
 
-    // Subsequent chunks have the backingMap entries.
+    fullyCachedFiles.clear();
+    fullyCachedFiles.putAll(BucketProtoUtils.fromPB(cacheEntry.getCachedFilesMap()));
+
+    backingMap.clear();
+    blocksByHFile.clear();
+
+    // Read the backing map entries in batches.
     int numChunks = 0;
     while (in.available() > 0) {
-      parseChunkPB(BucketCacheProtos.BackingMap.parseDelimitedFrom(in),
-        firstChunk.getDeserializersMap());
+      updateCacheIndex(BucketCacheProtos.BackingMap.parseDelimitedFrom(in),
+        cacheEntry.getDeserializersMap());
       numChunks++;
     }
+
     LOG.info("Retrieved {} of chunks with blockCount = {}.", numChunks, backingMap.size());
-    verifyFileIntegrity(firstChunk);
-    verifyCapacityAndClasses(firstChunk.getCacheCapacity(), firstChunk.getIoClass(),
-      firstChunk.getMapClass());
+    verifyFileIntegrity(cacheEntry);
+    verifyCapacityAndClasses(cacheEntry.getCacheCapacity(), cacheEntry.getIoClass(),
+      cacheEntry.getMapClass());
     updateRegionSizeMapWhileRetrievingFromFile();
   }
 
