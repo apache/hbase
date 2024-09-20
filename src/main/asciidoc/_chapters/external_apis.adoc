@@ -565,6 +565,8 @@ Detailed Explanation:
     <attribute name="OS" type="string"></attribute>
     <attribute name="Server" type="string"></attribute>
     <attribute name="Jersey" type="string"></attribute>
+    <attribute name="Version" type="string"></attribute>
+    <attribute name="Revision" type="string"></attribute>
   </complexType>
 
   <element name="TableList" type="tns:TableList"></element>
@@ -719,6 +721,8 @@ message Version {
   optional string osVersion = 3;
   optional string serverVersion = 4;
   optional string jerseyVersion = 5;
+  optional string version = 6;
+  optional string revision = 7;
 }
 
 message StorageClusterStatus {
