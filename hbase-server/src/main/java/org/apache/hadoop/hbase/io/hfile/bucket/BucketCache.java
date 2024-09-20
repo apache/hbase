@@ -391,7 +391,8 @@ public class BucketCache implements BlockCache, HeapSize {
         retrieveFromFile(bucketSizes);
         LOG.info("Persistent bucket cache recovery from {} is complete.", persistencePath);
       } catch (Throwable ex) {
-        LOG.error("Can't restore from file[{}] because of ", persistencePath, ex);
+        LOG.warn("Can't restore from file[{}]. The bucket cache will be reset and rebuilt."
+          + " Exception seen: ", persistencePath, ex);
         backingMap.clear();
         fullyCachedFiles.clear();
         backingMapValidated.set(true);
@@ -1629,7 +1630,7 @@ public class BucketCache implements BlockCache, HeapSize {
   private void persistChunkedBackingMap(FileOutputStream fos) throws IOException {
     LOG.debug(
       "persistToFile: before persisting backing map size: {}, "
-        + "fullycachedFiles size: {}, chunkSize: {}, numberofChunks: {}",
+        + "fullycachedFiles size: {}, chunkSize: {}",
       backingMap.size(), fullyCachedFiles.size(), persistenceChunkSize);
 
     BucketProtoUtils.serializeAsPB(this, fos, persistenceChunkSize);
