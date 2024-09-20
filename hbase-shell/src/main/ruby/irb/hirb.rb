@@ -17,6 +17,7 @@
 # limitations under the License.
 #
 require 'rbconfig'
+require 'ripper'
 
 module IRB
   WINDOZE = RbConfig::CONFIG['host_os'] =~ /mswin|mingw/
@@ -58,6 +59,22 @@ module IRB
       # Otherwise, when user types help, get ugly 'nil'
       # after all output.
       super(omit) unless @context.last_value.nil?
+    end
+
+    # Copied from https://github.com/ruby/irb/blob/v1.4.2/lib/irb.rb
+    def assignment_expression?(line)
+      # Try to parse the line and check if the last of possibly multiple
+      # expressions is an assignment type.
+
+      # If the expression is invalid, Ripper.sexp should return nil which will
+      # result in false being returned. Any valid expression should return an
+      # s-expression where the second element of the top level array is an
+      # array of parsed expressions. The first element of each expression is the
+      # expression's type.
+      verbose, $VERBOSE = $VERBOSE, nil
+      result = ASSIGNMENT_NODE_TYPES.include?(Ripper.sexp(line)&.dig(1,-1,0))
+      $VERBOSE = verbose
+      result
     end
 
     # Copied from https://github.com/ruby/irb/blob/v1.4.2/lib/irb.rb 
