@@ -1521,7 +1521,7 @@ public class ProcedureExecutor<TEnvironment> {
         LOG.info("Finished " + proc + " in " + StringUtils.humanTimeDiff(proc.elapsedTime()));
         // Finalize the procedure state
         if (proc.getProcId() == rootProcId) {
-          procedureFinished(proc);
+          rootProcedureFinished(proc);
         } else {
           execCompletionCleanup(proc);
         }
@@ -1706,7 +1706,7 @@ public class ProcedureExecutor<TEnvironment> {
       // Finalize the procedure state
       LOG.info("Rolled back {} exec-time={}", rootProc,
         StringUtils.humanTimeDiff(rootProc.elapsedTime()));
-      procedureFinished(rootProc);
+      rootProcedureFinished(rootProc);
     } finally {
       if (lockEntry != null) {
         procExecutionLock.releaseLockEntry(lockEntry);
@@ -2068,11 +2068,15 @@ public class ProcedureExecutor<TEnvironment> {
       proc.completionCleanup(env);
     } catch (Throwable e) {
       // Catch NullPointerExceptions or similar errors...
-      LOG.error("CODE-BUG: uncatched runtime exception for procedure: " + proc, e);
+      LOG.error("CODE-BUG: uncaught runtime exception for procedure: " + proc, e);
     }
+
+    // call schedulers completion cleanup, we have some special clean up logic in this method so if
+    // it throws any exceptions, we can not just ignore it like the above procedure's cleanup
+    scheduler.completionCleanup(proc);
   }
 
-  private void procedureFinished(Procedure<TEnvironment> proc) {
+  private void rootProcedureFinished(Procedure<TEnvironment> proc) {
     // call the procedure completion cleanup handler
     execCompletionCleanup(proc);
 
@@ -2086,14 +2090,6 @@ public class ProcedureExecutor<TEnvironment> {
     completed.put(proc.getProcId(), retainer);
     rollbackStack.remove(proc.getProcId());
     procedures.remove(proc.getProcId());
-
-    // call the runnableSet completion cleanup handler
-    try {
-      scheduler.completionCleanup(proc);
-    } catch (Throwable e) {
-      // Catch NullPointerExceptions or similar errors...
-      LOG.error("CODE-BUG: uncatched runtime exception for completion cleanup: {}", proc, e);
-    }
 
     // Notify the listeners
     sendProcedureFinishedNotification(proc.getProcId());
