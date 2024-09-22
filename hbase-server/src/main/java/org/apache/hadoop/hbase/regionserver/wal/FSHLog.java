@@ -460,12 +460,12 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       span.addEvent("writer closed");
     } catch (IOException ioe) {
       LOG.warn("close old writer failed.", ioe);
+      int errors = closeErrorCount.incrementAndGet();
       try {
         RecoverLeaseFSUtils.recoverFileLease(fs, path, conf, null);
       } catch (IOException ex) {
         LOG.error("Unable to recover lease after several attempts. Give up.", ex);
 
-        int errors = closeErrorCount.incrementAndGet();
         boolean hasUnflushedEntries = isUnflushedEntries();
         if (syncCloseCall && (hasUnflushedEntries || (errors > this.closeErrorsTolerated))) {
           LOG.error("Close of WAL " + path + " failed. Cause=\"" + ioe.getMessage() + "\", errors="

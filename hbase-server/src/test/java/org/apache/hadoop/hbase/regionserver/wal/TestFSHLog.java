@@ -324,7 +324,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
   /**
    * Test for jira https://issues.apache.org/jira/browse/HBASE-28665
    */
-  public void testWALClosureFailureAndCleanup() throws IOException {
+  public void testWALClosureFailureAndCleanup() throws Exception {
 
     class FailingWriter implements WALProvider.Writer {
       @Override
@@ -380,6 +380,12 @@ public class TestFSHLog extends AbstractTestFSWAL {
       region.put(new Put(b).addColumn(b, b, b));
       region.flush(true);
       log.rollWriter();
+      TEST_UTIL.waitFor(30000, 500, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return log.walFile2Props.isEmpty();
+        }
+      });
       assertEquals("WAL Files not cleaned ", 0, log.walFile2Props.size());
       region.close();
     }
