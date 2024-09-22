@@ -1191,7 +1191,8 @@ possible configurations would overwhelm and obscure the important.
     <value></value>
     <description>List of users or groups (comma-separated), who are allowed
     full privileges, regardless of stored ACLs, across the cluster.
-    Only used when HBase security is enabled.</description>
+    Only used when HBase security is enabled.
+    Group names should be prefixed with "@".</description>
   </property>
   <property>
     <name>hbase.auth.key.update.interval</name>
