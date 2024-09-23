@@ -217,9 +217,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
       return null;
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+    validateAdminPermissions(action);
   }
 
   @Test
@@ -229,9 +227,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
       return null;
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+    validateAdminPermissions(action);
   }
 
   @Test
@@ -241,9 +237,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
       return null;
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+    validateAdminPermissions(action);
   }
 
   @Test
@@ -253,9 +247,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
       return null;
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+    validateAdminPermissions(action);
   }
 
   @Test
@@ -265,9 +257,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
       return null;
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+    validateAdminPermissions(action);
   }
 
   @Test
@@ -277,9 +267,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
       return null;
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+    validateAdminPermissions(action);
   }
 
   @Test
@@ -289,9 +277,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
       return null;
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+    validateAdminPermissions(action);
   }
 
   @Test
@@ -301,9 +287,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
       return null;
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+    validateAdminPermissions(action);
   }
 
   @Test
@@ -313,9 +297,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
       return null;
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+    validateAdminPermissions(action);
   }
 
   @Test
@@ -325,9 +307,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
       return null;
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+    validateAdminPermissions(action);
   }
 
   @Test
@@ -337,6 +317,10 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
       return null;
     };
 
+    validateAdminPermissions(action);
+  }
+
+  private void validateAdminPermissions(AccessTestAction action) throws Exception {
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
     verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
       USER_GROUP_WRITE, USER_GROUP_CREATE);

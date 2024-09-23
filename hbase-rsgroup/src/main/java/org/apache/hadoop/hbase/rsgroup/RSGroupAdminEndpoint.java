@@ -167,10 +167,16 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
       LOG.info(
         master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, group=" + groupName);
       try {
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().preGetRSGroupInfo(groupName);
+        }
         checkPermission("getRSGroupInfo");
         RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
         if (rsGroupInfo != null) {
           builder.setRSGroupInfo(RSGroupProtobufUtil.toProtoGroupInfo(rsGroupInfo));
+        }
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().postGetRSGroupInfo(groupName);
         }
       } catch (IOException e) {
         CoprocessorRpcUtils.setControllerException(controller, e);
@@ -186,10 +192,16 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
       LOG.info(
         master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, table=" + tableName);
       try {
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().preGetRSGroupInfoOfTable(tableName);
+        }
         checkPermission("getRSGroupInfoOfTable");
         RSGroupInfo RSGroupInfo = groupAdminServer.getRSGroupInfoOfTable(tableName);
         if (RSGroupInfo != null) {
           builder.setRSGroupInfo(RSGroupProtobufUtil.toProtoGroupInfo(RSGroupInfo));
+        }
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().postGetRSGroupInfoOfTable(tableName);
         }
       } catch (IOException e) {
         CoprocessorRpcUtils.setControllerException(controller, e);
@@ -325,9 +337,15 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
       ListRSGroupInfosResponse.Builder builder = ListRSGroupInfosResponse.newBuilder();
       LOG.info(master.getClientIdAuditPrefix() + " list rsgroup");
       try {
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().preListRSGroups();
+        }
         checkPermission("listRSGroup");
         for (RSGroupInfo RSGroupInfo : groupAdminServer.listRSGroups()) {
           builder.addRSGroupInfo(RSGroupProtobufUtil.toProtoGroupInfo(RSGroupInfo));
+        }
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().postListRSGroups();
         }
       } catch (IOException e) {
         CoprocessorRpcUtils.setControllerException(controller, e);
@@ -343,10 +361,16 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         Address.fromParts(request.getServer().getHostName(), request.getServer().getPort());
       LOG.info(master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, server=" + hp);
       try {
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().preGetRSGroupInfoOfServer(hp);
+        }
         checkPermission("getRSGroupInfoOfServer");
         RSGroupInfo info = groupAdminServer.getRSGroupOfServer(hp);
         if (info != null) {
           builder.setRSGroupInfo(RSGroupProtobufUtil.toProtoGroupInfo(info));
+        }
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().postGetRSGroupInfoOfServer(hp);
         }
       } catch (IOException e) {
         CoprocessorRpcUtils.setControllerException(controller, e);
