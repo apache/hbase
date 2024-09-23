@@ -101,6 +101,13 @@ creation or mutation, and `DELETE` for deletion.
   -H "Accept: text/xml" \
   "http://example.com:8000/version/cluster"
 
+|/version/rest
+|GET
+|Version of the HBase REST Server
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/version/rest"
+
 |/status/cluster
 |GET
 |Cluster status
