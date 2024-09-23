@@ -180,4 +180,10 @@ public class DummyAsyncTable<C extends ScanResultConsumerBase> implements AsyncT
     return null;
   }
 
+  @Override
+  public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
+    Function<com.google.protobuf.RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
+    PartialResultCoprocessorCallback<S, R> callback) {
+    return null;
+  }
 }
