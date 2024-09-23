@@ -139,7 +139,7 @@ public class TestScannerBlockSizeLimits {
     // we fetch 2 columns from 1 row, so about 2 blocks
     assertEquals(4120, metrics.countOfBlockBytesScanned.get());
     assertEquals(1, metrics.countOfRowsScanned.get());
-    assertEquals(1, metrics.countOfRPCcalls.get());
+    assertEquals(1, metrics.getCountOfRPCcalls().get());
   }
 
   /**
@@ -180,7 +180,7 @@ public class TestScannerBlockSizeLimits {
     // in family2 since each row only has 1 cell there and 2 can fit per block)
     assertEquals(44290, metrics.countOfBlockBytesScanned.get());
     // We can return 22 blocks in 9 RPCs, but need an extra one to check for more rows at end
-    assertEquals(10, metrics.countOfRPCcalls.get());
+    assertEquals(10, metrics.getCountOfRPCcalls().get());
   }
 
   /**
@@ -208,7 +208,7 @@ public class TestScannerBlockSizeLimits {
     assertEquals(18540, metrics.countOfBlockBytesScanned.get());
     // limited to 4200 bytes per which is enough for 3 blocks (exceed limit after loading 3rd)
     // so that's 3 RPC and the last RPC pulls the cells loaded by the last block
-    assertEquals(4, metrics.countOfRPCcalls.get());
+    assertEquals(4, metrics.getCountOfRPCcalls().get());
   }
 
   /**
@@ -236,7 +236,7 @@ public class TestScannerBlockSizeLimits {
     assertEquals(64890, metrics.countOfBlockBytesScanned.get());
     // We can return 32 blocks in approx 11 RPCs but we need 2 cursors due to the narrow filter
     assertEquals(2, cursors);
-    assertEquals(11, metrics.countOfRPCcalls.get());
+    assertEquals(11, metrics.getCountOfRPCcalls().get());
   }
 
   /**
@@ -266,7 +266,7 @@ public class TestScannerBlockSizeLimits {
     // So we load 1 block per row, and there are 9 rows. So 9 blocks
     assertEquals(18540, metrics.countOfBlockBytesScanned.get());
     // We can return 9 blocks in 3 RPCs, but need 1 more to check for more results (returns 0)
-    assertEquals(4, metrics.countOfRPCcalls.get());
+    assertEquals(4, metrics.getCountOfRPCcalls().get());
   }
 
   /**
@@ -286,7 +286,7 @@ public class TestScannerBlockSizeLimits {
     // 2 blocks per row to read (18 blocks total)
     assertEquals(37080, metrics.countOfBlockBytesScanned.get());
     // Our max scan size is enough to read 3 blocks per RPC, plus one final RPC to finish region.
-    assertEquals(7, metrics.countOfRPCcalls.get());
+    assertEquals(7, metrics.getCountOfRPCcalls().get());
   }
 
   /**

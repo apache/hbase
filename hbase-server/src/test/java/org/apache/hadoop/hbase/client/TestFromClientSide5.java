@@ -1290,7 +1290,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
         }
         ScanMetrics scanMetrics = scanner.getScanMetrics();
         assertEquals("Did not access all the regions in the table", numOfRegions,
-          scanMetrics.countOfRegions.get());
+          scanMetrics.getCountOfRegions().get());
       }
 
       // check byte counters
@@ -1306,7 +1306,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
         }
         ScanMetrics scanMetrics = scanner.getScanMetrics();
         assertEquals("Did not count the result bytes", numBytes,
-          scanMetrics.countOfBytesInResults.get());
+          scanMetrics.getCountOfBytesInResults().get());
       }
 
       // check byte counters on a small scan
@@ -1323,7 +1323,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
         }
         ScanMetrics scanMetrics = scanner.getScanMetrics();
         assertEquals("Did not count the result bytes", numBytes,
-          scanMetrics.countOfBytesInResults.get());
+          scanMetrics.getCountOfBytesInResults().get());
       }
 
       // now, test that the metrics are still collected even if you don't call close, but do
@@ -1351,7 +1351,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
         scannerWithClose.close();
         ScanMetrics scanMetricsWithClose = scannerWithClose.getScanMetrics();
         assertEquals("Did not access all the regions in the table", numOfRegions,
-          scanMetricsWithClose.countOfRegions.get());
+          scanMetricsWithClose.getCountOfRegions().get());
       }
     } finally {
       TEST_UTIL.deleteTable(tableName);
