@@ -21,10 +21,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -32,7 +33,6 @@ import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -125,7 +125,7 @@ public class TestSplitOrMergeAtTableLevel {
     assertFalse(admin.getDescriptor(tableName).isMergeEnabled());
 
     trySplitAndEnsureItIsSuccess(tableName);
-    Threads.sleep(10000);
+
     tryMergeAndEnsureItFails(tableName);
     admin.disableTable(tableName);
     enableTableMerge(tableName);
@@ -157,15 +157,17 @@ public class TestSplitOrMergeAtTableLevel {
     List<RegionInfo> regions = admin.getRegions(tableName);
     int originalCount = regions.size();
 
-    // split the table and make sure region count does not increase
-    Future<?> f = admin.splitRegionAsync(regions.get(0).getEncodedNameAsBytes(), Bytes.toBytes(2));
     try {
+      // split the table and make sure region count does not increase
+      Future<?> f =
+        admin.splitRegionAsync(regions.get(0).getEncodedNameAsBytes(), Bytes.toBytes(2));
       f.get(10, TimeUnit.SECONDS);
       fail("Should not get here.");
-    } catch (ExecutionException ee) {
+    } catch (IOException ee) {
       // expected to reach here
       // check and ensure that table does not get splitted
       assertTrue(admin.getRegions(tableName).size() == originalCount);
+      assertTrue("Expected DoNotRetryIOException!", ee instanceof DoNotRetryIOException);
     }
   }
 
@@ -216,15 +218,16 @@ public class TestSplitOrMergeAtTableLevel {
     byte[] nameOfRegionA = regions.get(0).getEncodedNameAsBytes();
     byte[] nameOfRegionB = regions.get(1).getEncodedNameAsBytes();
 
-    // check and ensure that region do not get merged
-    Future<?> f = admin.mergeRegionsAsync(nameOfRegionA, nameOfRegionB, true);
     try {
+      // check and ensure that region do not get merged
+      Future<?> f = admin.mergeRegionsAsync(new byte[][] { nameOfRegionA, nameOfRegionB }, true);
       f.get(10, TimeUnit.SECONDS);
       fail("Should not get here.");
-    } catch (ExecutionException ee) {
+    } catch (IOException ee) {
       // expected to reach here
       // check and ensure that region do not get merged
       assertTrue(admin.getRegions(tableName).size() == originalCount);
+      assertTrue("Expected DoNotRetryIOException!", ee instanceof DoNotRetryIOException);
     }
   }
 
@@ -255,7 +258,7 @@ public class TestSplitOrMergeAtTableLevel {
     byte[] nameOfRegionB = regions.get(1).getEncodedNameAsBytes();
 
     // merge the table regions and wait until region count decreases
-    admin.mergeRegionsAsync(nameOfRegionA, nameOfRegionB, true);
+    admin.mergeRegionsAsync(new byte[][] { nameOfRegionA, nameOfRegionB }, true);
     TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
 
       @Override
