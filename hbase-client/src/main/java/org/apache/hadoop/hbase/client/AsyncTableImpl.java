@@ -24,6 +24,7 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -296,49 +297,69 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
     Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
     CoprocessorCallback<R> callback) {
+    return coprocessorService(stubMaker, callable,
+      new NoopPartialResultCoprocessorCallback<>(callback));
+  }
+
+  @Override
+  public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
+    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
+    PartialResultCoprocessorCallback<S, R> callback) {
     final Context context = Context.current();
-    CoprocessorCallback<R> wrappedCallback = new CoprocessorCallback<R>() {
+    PartialResultCoprocessorCallback<S, R> wrappedCallback =
+      new PartialResultCoprocessorCallback<S, R>() {
 
-      private final Phaser regionCompletesInProgress = new Phaser(1);
+        private final Phaser regionCompletesInProgress = new Phaser(1);
 
-      @Override
-      public void onRegionComplete(RegionInfo region, R resp) {
-        regionCompletesInProgress.register();
-        pool.execute(context.wrap(() -> {
-          try {
-            callback.onRegionComplete(region, resp);
-          } finally {
-            regionCompletesInProgress.arriveAndDeregister();
-          }
-        }));
-      }
+        @Override
+        public void onRegionComplete(RegionInfo region, R resp) {
+          regionCompletesInProgress.register();
+          pool.execute(context.wrap(() -> {
+            try {
+              callback.onRegionComplete(region, resp);
+            } finally {
+              regionCompletesInProgress.arriveAndDeregister();
+            }
+          }));
+        }
 
-      @Override
-      public void onRegionError(RegionInfo region, Throwable error) {
-        regionCompletesInProgress.register();
-        pool.execute(context.wrap(() -> {
-          try {
-            callback.onRegionError(region, error);
-          } finally {
-            regionCompletesInProgress.arriveAndDeregister();
-          }
-        }));
-      }
+        @Override
+        public void onRegionError(RegionInfo region, Throwable error) {
+          regionCompletesInProgress.register();
+          pool.execute(context.wrap(() -> {
+            try {
+              callback.onRegionError(region, error);
+            } finally {
+              regionCompletesInProgress.arriveAndDeregister();
+            }
+          }));
+        }
 
-      @Override
-      public void onComplete() {
-        pool.execute(context.wrap(() -> {
-          // Guarantee that onComplete() is called after all onRegionComplete()'s are called
-          regionCompletesInProgress.arriveAndAwaitAdvance();
-          callback.onComplete();
-        }));
-      }
+        @Override
+        public void onComplete() {
+          pool.execute(context.wrap(() -> {
+            // Guarantee that onComplete() is called after all onRegionComplete()'s are called
+            regionCompletesInProgress.arriveAndAwaitAdvance();
+            callback.onComplete();
+          }));
+        }
 
-      @Override
-      public void onError(Throwable error) {
-        pool.execute(context.wrap(() -> callback.onError(error)));
-      }
-    };
+        @Override
+        public void onError(Throwable error) {
+          pool.execute(context.wrap(() -> callback.onError(error)));
+        }
+
+        @Override
+        public ServiceCaller<S, R> getNextCallable(R response, RegionInfo region) {
+          return callback.getNextCallable(response, region);
+        }
+
+        @Override
+        public Duration getWaitInterval(R response, RegionInfo region) {
+          return callback.getWaitInterval(response, region);
+        }
+
+      };
     CoprocessorServiceBuilder<S, R> builder =
       rawTable.coprocessorService(stubMaker, callable, wrappedCallback);
     return new CoprocessorServiceBuilder<S, R>() {
