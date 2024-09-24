@@ -1776,8 +1776,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
         // Go behind the curtain so we can manage writing of the flush WAL marker
         HRegion.FlushResultImpl flushResult = null;
         if (request.hasFamily()) {
-          List families = new ArrayList();
+          List<byte[]> families = new ArrayList();
           families.add(request.getFamily().toByteArray());
+          TableDescriptor tableDescriptor = region.getTableDescriptor();
+          List<String> noSuchFamilies = families.stream()
+            .filter(f -> !tableDescriptor.hasColumnFamily(f)).map(Bytes::toString).toList();
+          if (!noSuchFamilies.isEmpty()) {
+            throw new NoSuchColumnFamilyException("Column families " + noSuchFamilies
+              + " don't exist in table " + tableDescriptor.getTableName().getNameAsString());
+          }
           flushResult =
             region.flushcache(families, writeFlushWalMarker, FlushLifeCycleTracker.DUMMY);
         } else {
