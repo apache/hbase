@@ -414,7 +414,7 @@ public class TestBackupBase {
     try {
       conn = ConnectionFactory.createConnection(conf1);
       badmin = new BackupAdminImpl(conn);
-      BackupRequest request = createBackupRequest(type, tables, path);
+      BackupRequest request = createBackupRequest(type, new ArrayList<>(tables), path);
       backupId = badmin.backupTables(request);
     } finally {
       if (badmin != null) {

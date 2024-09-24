@@ -90,7 +90,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug(
-        "Cleaning WALs if they are older than the newest backups (for all roots). "
+        "Cleaning WALs if they are older than the WAL cleanup time-boundary. "
           + "Checking WALs against {} backups: {}",
         backups.size(),
         backups.stream().map(BackupInfo::getBackupId).sorted().collect(Collectors.joining(", ")));
@@ -105,12 +105,21 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       }
     }
 
-    // This map tracks, for every address, the least recent (= oldest / lowest timestamp) inclusion
-    // in any backup. In other words, it is the timestamp boundary up to which all backups roots
-    // have included the WAL in their backup.
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("WAL cleanup time-boundary using info from: {}. ",
+        newestBackupPerRootDir.entrySet().stream()
+          .map(e -> "Backup root " + e.getKey() + ": " + e.getValue().getBackupId()).sorted()
+          .collect(Collectors.joining(", ")));
+    }
+
+    // This map tracks, for every RegionServer, the least recent (= oldest / lowest timestamp)
+    // inclusion in any backup. In other words, it is the timestamp boundary up to which all backup
+    // roots have included the WAL in their backup.
     Map<Address, Long> boundaries = new HashMap<>();
     for (BackupInfo backupInfo : newestBackupPerRootDir.values()) {
-      for (TableName table : backupInfo.getTables()) {
+      // Iterate over all tables in the timestamp map, which contains all tables covered in the
+      // backup root, not just the tables included in that specific backup (which could be a subset)
+      for (TableName table : backupInfo.getTableSetTimestampMap().keySet()) {
         for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
           .entrySet()) {
           Address address = Address.fromString(entry.getKey());
@@ -209,7 +218,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
 
       if (!addressToBoundaryTs.containsKey(walServerAddress)) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("No backup found for server: {}. Deleting file: {}",
+          LOG.debug("No cleanup WAL time-boundary found for server: {}. Ok to delete file: {}",
             walServerAddress.getHostName(), path);
         }
         return true;
@@ -219,15 +228,14 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       if (backupBoundary >= walTimestamp) {
         if (LOG.isDebugEnabled()) {
           LOG.debug(
-            "Backup found for server: {}. All backups from {} are newer than file, so deleting: {}",
+            "WAL cleanup time-boundary found for server {}: {}. Ok to delete older file: {}",
             walServerAddress.getHostName(), backupBoundary, path);
         }
         return true;
       }
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug(
-          "Backup found for server: {}. Backup from {} is older than the file, so keeping: {}",
+        LOG.debug("WAL cleanup time-boundary found for server {}: {}. Keeping younger file: {}",
           walServerAddress.getHostName(), backupBoundary, path);
       }
     } catch (Exception ex) {
