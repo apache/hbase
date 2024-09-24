@@ -378,17 +378,18 @@ public class BucketCache implements BlockCache, HeapSize {
       try {
         retrieveFromFile(bucketSizes);
         LOG.info("Persistent bucket cache recovery from {} is complete.", persistencePath);
-      } catch (IOException ioex) {
-        LOG.error("Can't restore from file[{}] because of ", persistencePath, ioex);
+      } catch (Throwable ex) {
+        LOG.warn("Can't restore from file[{}]. The bucket cache will be reset and rebuilt."
+          + " Exception seen: ", persistencePath, ex);
         backingMap.clear();
         fullyCachedFiles.clear();
         backingMapValidated.set(true);
+        regionCachedSize.clear();
         try {
           bucketAllocator = new BucketAllocator(capacity, bucketSizes);
-        } catch (BucketAllocatorException ex) {
-          LOG.error("Exception during Bucket Allocation", ex);
+        } catch (BucketAllocatorException allocatorException) {
+          LOG.error("Exception during Bucket Allocation", allocatorException);
         }
-        regionCachedSize.clear();
       } finally {
         this.cacheState = CacheState.ENABLED;
         startWriterThreads();
@@ -939,7 +940,8 @@ public class BucketCache implements BlockCache, HeapSize {
         : (StringUtils.formatPercent(cacheStats.getHitCachingRatio(), 2) + ", "))
       + "evictions=" + cacheStats.getEvictionCount() + ", " + "evicted="
       + cacheStats.getEvictedCount() + ", " + "evictedPerRun=" + cacheStats.evictedPerEviction()
-      + ", " + "allocationFailCount=" + cacheStats.getAllocationFailCount());
+      + ", " + "allocationFailCount=" + cacheStats.getAllocationFailCount() + ", blocksCount="
+      + backingMap.size());
     cacheStats.reset();
 
     bucketAllocator.logDebugStatistics();
@@ -1481,7 +1483,7 @@ public class BucketCache implements BlockCache, HeapSize {
       } else if (Arrays.equals(pbuf, BucketProtoUtils.PB_MAGIC_V2)) {
         // The new persistence format of chunked persistence.
         LOG.info("Reading new chunked format of persistence.");
-        retrieveChunkedBackingMap(in, bucketSizes);
+        retrieveChunkedBackingMap(in);
       } else {
         // In 3.0 we have enough flexibility to dump the old cache data.
         // TODO: In 2.x line, this might need to be filled in to support reading the old format
@@ -1575,17 +1577,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
-  private void parseFirstChunk(BucketCacheProtos.BucketCacheEntry firstChunk) throws IOException {
-    fullyCachedFiles.clear();
-    Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> pair =
-      BucketProtoUtils.fromPB(firstChunk.getDeserializersMap(), firstChunk.getBackingMap(),
-        this::createRecycler);
-    backingMap.putAll(pair.getFirst());
-    blocksByHFile.addAll(pair.getSecond());
-    fullyCachedFiles.putAll(BucketProtoUtils.fromPB(firstChunk.getCachedFilesMap()));
-  }
-
-  private void parseChunkPB(BucketCacheProtos.BackingMap chunk,
+  private void updateCacheIndex(BucketCacheProtos.BackingMap chunk,
     java.util.Map<java.lang.Integer, java.lang.String> deserializer) throws IOException {
     Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> pair2 =
       BucketProtoUtils.fromPB(deserializer, chunk, this::createRecycler);
@@ -1611,55 +1603,42 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private void persistChunkedBackingMap(FileOutputStream fos) throws IOException {
-    long numChunks = backingMap.size() / persistenceChunkSize;
-    if (backingMap.size() % persistenceChunkSize != 0) {
-      numChunks += 1;
-    }
-
     LOG.debug(
       "persistToFile: before persisting backing map size: {}, "
-        + "fullycachedFiles size: {}, chunkSize: {}, numberofChunks: {}",
-      backingMap.size(), fullyCachedFiles.size(), persistenceChunkSize, numChunks);
+        + "fullycachedFiles size: {}, chunkSize: {}",
+      backingMap.size(), fullyCachedFiles.size(), persistenceChunkSize);
 
-    BucketProtoUtils.serializeAsPB(this, fos, persistenceChunkSize, numChunks);
+    BucketProtoUtils.serializeAsPB(this, fos, persistenceChunkSize);
 
     LOG.debug(
-      "persistToFile: after persisting backing map size: {}, "
-        + "fullycachedFiles size: {}, numChunksPersisteed: {}",
-      backingMap.size(), fullyCachedFiles.size(), numChunks);
+      "persistToFile: after persisting backing map size: {}, " + "fullycachedFiles size: {}",
+      backingMap.size(), fullyCachedFiles.size());
   }
 
-  private void retrieveChunkedBackingMap(FileInputStream in, int[] bucketSizes) throws IOException {
-    byte[] bytes = new byte[Long.BYTES];
-    int readSize = in.read(bytes);
-    if (readSize != Long.BYTES) {
-      throw new IOException("Invalid size of chunk-size read from persistence: " + readSize);
-    }
-    long batchSize = Bytes.toLong(bytes, 0);
-
-    readSize = in.read(bytes);
-    if (readSize != Long.BYTES) {
-      throw new IOException("Invalid size for number of chunks read from persistence: " + readSize);
-    }
-    long numChunks = Bytes.toLong(bytes, 0);
-
-    LOG.info("Number of chunks: {}, chunk size: {}", numChunks, batchSize);
+  private void retrieveChunkedBackingMap(FileInputStream in) throws IOException {
 
     // Read the first chunk that has all the details.
-    BucketCacheProtos.BucketCacheEntry firstChunk =
+    BucketCacheProtos.BucketCacheEntry cacheEntry =
       BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in);
-    parseFirstChunk(firstChunk);
 
-    // Subsequent chunks have the backingMap entries.
-    for (int i = 1; i < numChunks; i++) {
-      LOG.info("Reading chunk no: {}", i + 1);
-      parseChunkPB(BucketCacheProtos.BackingMap.parseDelimitedFrom(in),
-        firstChunk.getDeserializersMap());
-      LOG.info("Retrieved chunk: {}", i + 1);
+    fullyCachedFiles.clear();
+    fullyCachedFiles.putAll(BucketProtoUtils.fromPB(cacheEntry.getCachedFilesMap()));
+
+    backingMap.clear();
+    blocksByHFile.clear();
+
+    // Read the backing map entries in batches.
+    int numChunks = 0;
+    while (in.available() > 0) {
+      updateCacheIndex(BucketCacheProtos.BackingMap.parseDelimitedFrom(in),
+        cacheEntry.getDeserializersMap());
+      numChunks++;
     }
-    verifyFileIntegrity(firstChunk);
-    verifyCapacityAndClasses(firstChunk.getCacheCapacity(), firstChunk.getIoClass(),
-      firstChunk.getMapClass());
+
+    LOG.info("Retrieved {} of chunks with blockCount = {}.", numChunks, backingMap.size());
+    verifyFileIntegrity(cacheEntry);
+    verifyCapacityAndClasses(cacheEntry.getCacheCapacity(), cacheEntry.getIoClass(),
+      cacheEntry.getMapClass());
     updateRegionSizeMapWhileRetrievingFromFile();
   }
 
