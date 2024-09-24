@@ -302,6 +302,14 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     boolean postMoveServersAndTables = false;
     boolean preRenameRSGroupCalled = false;
     boolean postRenameRSGroupCalled = false;
+    boolean preGetRSGroupInfoCalled = false;
+    boolean postGetRSGroupInfoCalled = false;
+    boolean preGetRSGroupInfoOfTableCalled = false;
+    boolean postGetRSGroupInfoOfTableCalled = false;
+    boolean preListRSGroupsCalled = false;
+    boolean postListRSGroupsCalled = false;
+    boolean preGetRSGroupInfoOfServerCalled = false;
+    boolean postGetRSGroupInfoOfServerCalled = false;
 
     public void resetFlags() {
       preBalanceRSGroupCalled = false;
@@ -320,6 +328,14 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
       postMoveServersAndTables = false;
       preRenameRSGroupCalled = false;
       postRenameRSGroupCalled = false;
+      preGetRSGroupInfoCalled = false;
+      postGetRSGroupInfoCalled = false;
+      preGetRSGroupInfoOfTableCalled = false;
+      postGetRSGroupInfoOfTableCalled = false;
+      preListRSGroupsCalled = false;
+      postListRSGroupsCalled = false;
+      preGetRSGroupInfoOfServerCalled = false;
+      postGetRSGroupInfoOfServerCalled = false;
     }
 
     @Override
@@ -421,6 +437,54 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     public void postRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String oldName,
       String newName) throws IOException {
       postRenameRSGroupCalled = true;
+    }
+
+    @Override
+    public void preGetRSGroupInfo(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String groupName) throws IOException {
+      preGetRSGroupInfoCalled = true;
+    }
+
+    @Override
+    public void postGetRSGroupInfo(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String groupName) throws IOException {
+      postGetRSGroupInfoCalled = true;
+    }
+
+    @Override
+    public void preGetRSGroupInfoOfTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {
+      preGetRSGroupInfoOfTableCalled = true;
+    }
+
+    @Override
+    public void postGetRSGroupInfoOfTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {
+      postGetRSGroupInfoOfTableCalled = true;
+    }
+
+    @Override
+    public void preListRSGroups(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+      preListRSGroupsCalled = true;
+    }
+
+    @Override
+    public void postListRSGroups(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+      postListRSGroupsCalled = true;
+    }
+
+    @Override
+    public void preGetRSGroupInfoOfServer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final Address server) throws IOException {
+      preGetRSGroupInfoOfServerCalled = true;
+    }
+
+    @Override
+    public void postGetRSGroupInfoOfServer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final Address server) throws IOException {
+      postGetRSGroupInfoOfServerCalled = true;
     }
   }
 
