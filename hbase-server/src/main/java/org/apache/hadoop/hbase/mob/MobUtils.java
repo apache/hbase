@@ -316,7 +316,18 @@ public final class MobUtils {
           fileName = hfileLink.getOriginPath().getName();
         }
 
-        Date fileDate = parseDate(MobFileName.getDateFromName(fileName));
+        String s = String.format("%s=%s-",
+          tableName.getNameAsString().replace(TableName.NAMESPACE_DELIM, '='),
+          getMobRegionInfo(tableName).getEncodedName());
+        String dateString;
+        // if the mob file was recovered through snapshot, the file name format is
+        // {namespace=}table_name=mob_region_name-old_mob_file_name
+        if (fileName.startsWith(s)) {
+          dateString = MobFileName.getDateFromName(fileName.substring(s.length()));
+        } else {
+          dateString = MobFileName.getDateFromName(fileName);
+        }
+        Date fileDate = parseDate(dateString);
 
         if (LOG.isDebugEnabled()) {
           LOG.debug("Checking file {}", fileName);

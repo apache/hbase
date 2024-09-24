@@ -19,8 +19,11 @@ package org.apache.hadoop.hbase.mob;
 
 import static org.apache.hadoop.hbase.mob.MobConstants.MOB_CLEANER_BATCH_SIZE_UPPER_BOUND;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -31,6 +34,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,6 +60,9 @@ public class TestExpiredMobFileCleaner {
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static TableName tableName = TableName.valueOf("TestExpiredMobFileCleaner");
+  private final static TableName testTableName =
+    TableName.valueOf("TestExpiredMobFileCleaner_snapshot_table");
+  private final static String testSnapshotName = "TestExpiredMobFileCleaner_snapshot";
   private final static String family = "family";
   private final static byte[] row1 = Bytes.toBytes("row1");
   private final static byte[] row2 = Bytes.toBytes("row2");
@@ -80,12 +87,22 @@ public class TestExpiredMobFileCleaner {
   @Before
   public void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(1);
+    init();
   }
 
   @After
   public void tearDown() throws Exception {
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
+    if (admin.tableExists(testTableName)) {
+      admin.disableTable(testTableName);
+      admin.deleteTable(testTableName);
+    }
+    boolean snapshotExist =
+      admin.listSnapshots().stream().anyMatch(s -> testSnapshotName.equals(s.getName()));
+    if (snapshotExist) {
+      admin.deleteSnapshot(testSnapshotName);
+    }
     admin.close();
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.getTestFileSystem().delete(TEST_UTIL.getDataTestDir(), true);
@@ -104,14 +121,14 @@ public class TestExpiredMobFileCleaner {
       .getBufferedMutator(tableName);
   }
 
-  private void modifyColumnExpiryDays(int expireDays) throws Exception {
+  private void modifyColumnExpiryDays(TableName t, int expireDays) throws Exception {
     ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder = ColumnFamilyDescriptorBuilder
       .newBuilder(Bytes.toBytes(family)).setMobEnabled(true).setMobThreshold(3L);
     // change ttl as expire days to make some row expired
     int timeToLive = expireDays * secondsOfDay();
     columnFamilyDescriptorBuilder.setTimeToLive(timeToLive);
 
-    admin.modifyColumnFamily(tableName, columnFamilyDescriptorBuilder.build());
+    admin.modifyColumnFamily(t, columnFamilyDescriptorBuilder.build());
   }
 
   private void putKVAndFlush(BufferedMutator table, byte[] row, byte[] value, long ts)
@@ -132,8 +149,6 @@ public class TestExpiredMobFileCleaner {
    */
   @Test
   public void testCleaner() throws Exception {
-    init();
-
     Path mobDirPath = MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, family);
 
     byte[] dummyData = makeDummyData(600);
@@ -165,7 +180,7 @@ public class TestExpiredMobFileCleaner {
     // now there are 4 mob files
     assertEquals("Before cleanup without delay 3", 4, thirdFiles.length);
 
-    modifyColumnExpiryDays(2); // ttl = 2, make the first row expired
+    modifyColumnExpiryDays(tableName, 2); // ttl = 2, make the first row expired
 
     // run the cleaner
     String[] args = new String[2];
@@ -178,6 +193,59 @@ public class TestExpiredMobFileCleaner {
     // there are 4 mob files in total, but only 3 need to be cleaned
     assertEquals("After cleanup without delay 1", 1, filesAfterClean.length);
     assertEquals("After cleanup without delay 2", secondFile, lastFile);
+  }
+
+  @Test
+  public void testCleanExpiredMobFileRecoveredBySnapshot() throws Exception {
+    // create MOB table with ttl is 3 days
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(testTableName);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family)).setMobEnabled(true)
+        .setMobThreshold(3L).setMaxVersions(4).setTimeToLive(3 * secondsOfDay()).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    admin.createTable(tableDescriptorBuilder.build());
+    Table testTable = admin.getConnection().getTable(testTableName);
+    long ts = EnvironmentEdgeManager.currentTime() - 2 * secondsOfDay() * 1000;
+    Put put1 = new Put(row1, ts);
+    put1.addColumn(Bytes.toBytes(family), qf, makeDummyData(600));
+    testTable.put(put1);
+    admin.flush(testTableName);
+    Put put2 = new Put(row2);
+    put2.addColumn(Bytes.toBytes(family), qf, makeDummyData(600));
+    testTable.put(put2);
+    admin.flush(testTableName);
+
+    Path mobDirPath =
+      MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), testTableName, family);
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    FileStatus[] fileStatuses = fs.listStatus(mobDirPath);
+    assertEquals(2, fileStatuses.length);
+
+    // snapshot table
+    admin.snapshot(testSnapshotName, testTableName);
+    boolean snapshotResult =
+      admin.listSnapshots().stream().anyMatch(s -> testSnapshotName.equals(s.getName()));
+    assertTrue(snapshotResult);
+
+    // delete table and restore it by snapshot
+    admin.disableTable(testTableName);
+    admin.deleteTable(testTableName);
+    assertFalse(admin.tableExists(testTableName));
+    admin.restoreSnapshot(testSnapshotName);
+    assertTrue(admin.tableExists(testTableName));
+
+    // update the TTL of column family from 3 days to 1 day
+    modifyColumnExpiryDays(testTableName, 1);
+
+    FileStatus[] filesBeforeClean = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
+    assertEquals(2, filesBeforeClean.length);
+
+    // run the cleaner
+    ToolRunner.run(TEST_UTIL.getConfiguration(), new ExpiredMobFileCleaner(),
+      new String[] { testTableName.getNameAsString(), family });
+    FileStatus[] filesAfterClean = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
+    assertEquals(1, filesAfterClean.length);
   }
 
   private int secondsOfDay() {
