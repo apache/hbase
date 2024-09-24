@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -439,7 +440,7 @@ public class BackupManifest {
           } catch (Exception e) {
             throw new BackupException(e);
           }
-          this.backupImage = BackupImage.fromProto(proto);
+          this.backupImage = hydrateRootDir(BackupImage.fromProto(proto), backupPath);
           LOG.debug("Loaded manifest instance from manifest file: "
             + BackupUtils.getPath(subFile.getPath()));
           return;
@@ -450,6 +451,26 @@ public class BackupManifest {
     } catch (IOException e) {
       throw new BackupException(e.getMessage());
     }
+  }
+
+  /* Visible for testing only */
+  @RestrictedApi(explanation = "Should only be called internally or in tests", link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupManifest.java)")
+  public static BackupImage hydrateRootDir(BackupImage backupImage, Path backupPath)
+    throws IOException {
+    String providedRootDir =
+      HBackupFileSystem.getRootDirFromBackupPath(backupPath, backupImage.backupId).toString();
+    if (!providedRootDir.startsWith(backupImage.getRootDir())) {
+      LOG.info(
+        "Provided backup root ({}) is different from the BackupImage's root ({}). "
+          + "We will prefer the provided root for this Backup and its ancestors.",
+        providedRootDir, backupImage.getRootDir());
+      backupImage.setRootDir(providedRootDir);
+      for (BackupImage ancestor : backupImage.getAncestors()) {
+        ancestor.setRootDir(providedRootDir);
+      }
+    }
+    return backupImage;
   }
 
   public BackupType getType() {
