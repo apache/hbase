@@ -471,6 +471,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().preUpdateRSGroupConfig(groupName, configuration);
         }
+        checkPermission("updateRSGroupConfig");
         groupAdminServer.updateRSGroupConfig(groupName, configuration);
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postUpdateRSGroupConfig(groupName, configuration);
