@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -1779,8 +1780,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
           List<byte[]> families = new ArrayList();
           families.add(request.getFamily().toByteArray());
           TableDescriptor tableDescriptor = region.getTableDescriptor();
-          List<String> noSuchFamilies = families.stream()
-            .filter(f -> !tableDescriptor.hasColumnFamily(f)).map(Bytes::toString).toList();
+          List<String> noSuchFamilies =
+            families.stream().filter(f -> !tableDescriptor.hasColumnFamily(f)).map(Bytes::toString)
+              .collect(Collectors.toList());
           if (!noSuchFamilies.isEmpty()) {
             throw new NoSuchColumnFamilyException("Column families " + noSuchFamilies
               + " don't exist in table " + tableDescriptor.getTableName().getNameAsString());
