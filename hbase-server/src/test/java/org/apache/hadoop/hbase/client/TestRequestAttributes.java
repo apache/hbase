@@ -352,8 +352,7 @@ public class TestRequestAttributes {
       return null;
     }
 
-    private boolean isValidRequestAttributes(Map<String, byte[]> requestAttributes)
-      throws IOException {
+    private boolean isValidRequestAttributes(Map<String, byte[]> requestAttributes) {
       RpcCall rpcCall = RpcServer.getCurrentCall().get();
       Map<String, byte[]> attrs = rpcCall.getRequestAttributes();
       if (attrs.size() != requestAttributes.size()) {
