@@ -147,6 +147,12 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
       return;
     }
 
+    if (!store.getHRegion().isAvailable()) {
+      LOG.trace("This store's region {} is no longer open, so it might have moved elsewhere. "
+        + "Skipping cleanup.", store.getRegionInfo().getEncodedName());
+      return;
+    }
+
     deleteFile(file, store, deletedFiles, failedDeletes);
   }
 
