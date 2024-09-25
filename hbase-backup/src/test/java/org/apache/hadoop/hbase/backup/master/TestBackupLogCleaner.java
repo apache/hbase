@@ -21,8 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -63,9 +65,9 @@ public class TestBackupLogCleaner extends TestBackupBase {
     Path backupRoot1 = new Path(BACKUP_ROOT_DIR, "root1");
     Path backupRoot2 = new Path(BACKUP_ROOT_DIR, "root2");
 
-    List<TableName> tableSetFull = List.of(table1, table2, table3, table4);
-    List<TableName> tableSet14 = List.of(table1, table4);
-    List<TableName> tableSet23 = List.of(table2, table3);
+    List<TableName> tableSetFull = Arrays.asList(table1, table2, table3, table4);
+    List<TableName> tableSet14 = Arrays.asList(table1, table4);
+    List<TableName> tableSet23 = Arrays.asList(table2, table3);
 
     try (BackupSystemTable systemTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
       // Verify that we have no backup sessions yet
@@ -73,7 +75,9 @@ public class TestBackupLogCleaner extends TestBackupBase {
 
       BackupLogCleaner cleaner = new BackupLogCleaner();
       cleaner.setConf(TEST_UTIL.getConfiguration());
-      cleaner.init(Map.of(HMaster.MASTER, TEST_UTIL.getHBaseCluster().getMaster()));
+      Map<String, Object> params = new HashMap<>(1);
+      params.put(HMaster.MASTER, TEST_UTIL.getHBaseCluster().getMaster());
+      cleaner.init(params);
 
       // All WAL files can be deleted because we do not have backups
       List<FileStatus> walFilesBeforeBackup = getListOfWALFiles(TEST_UTIL.getConfiguration());
