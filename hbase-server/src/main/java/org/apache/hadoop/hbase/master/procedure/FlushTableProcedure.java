@@ -123,8 +123,9 @@ public class FlushTableProcedure extends AbstractStateMachineTableProcedure<Flus
     MasterServices master = env.getMasterServices();
     try {
       TableDescriptor tableDescriptor = master.getTableDescriptors().get(tableName);
-      List<String> noSuchFamilies = columnFamilies.stream()
-        .filter(cf -> !tableDescriptor.hasColumnFamily(cf)).map(Bytes::toString).toList();
+      List<String> noSuchFamilies =
+        columnFamilies.stream().filter(cf -> !tableDescriptor.hasColumnFamily(cf))
+          .map(Bytes::toString).collect(Collectors.toList());
       if (!noSuchFamilies.isEmpty()) {
         throw new NoSuchColumnFamilyException("Column families " + noSuchFamilies
           + " don't exist in table " + tableName.getNameAsString());

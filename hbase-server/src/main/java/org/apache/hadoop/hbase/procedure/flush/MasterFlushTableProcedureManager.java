@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -163,7 +164,8 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
       TableDescriptor tableDescriptor = master.getTableDescriptors().get(tableName);
       List<String> noSuchFamilies =
         StreamSupport.stream(Strings.SPLITTER.split(families.getValue()).spliterator(), false)
-          .filter(cf -> !tableDescriptor.hasColumnFamily(Bytes.toBytes(cf))).toList();
+          .filter(cf -> !tableDescriptor.hasColumnFamily(Bytes.toBytes(cf)))
+          .collect(Collectors.toList());
       if (!noSuchFamilies.isEmpty()) {
         throw new NoSuchColumnFamilyException("Column families " + noSuchFamilies
           + " don't exist in table " + tableName.getNameAsString());

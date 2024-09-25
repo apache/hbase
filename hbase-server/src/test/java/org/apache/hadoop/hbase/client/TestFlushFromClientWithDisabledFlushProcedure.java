@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -57,7 +57,7 @@ public class TestFlushFromClientWithDisabledFlushProcedure {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestFlushFromClientWithDisabledFlushProcedure.class);
-  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static AsyncConnection asyncConn;
   private static final byte[] FAMILY = Bytes.toBytes("info");
   private static final byte[] QUALIFIER = Bytes.toBytes("name");
