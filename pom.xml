@@ -608,8 +608,10 @@
     <external.protobuf.groupid>com.google.protobuf</external.protobuf.groupid>
     <external.protobuf.version>2.5.0</external.protobuf.version>
     <external.protoc.version>${external.protobuf.version}</external.protoc.version>
-    <!--Version of protobuf that hbase uses internally (we shade our pb)
-         Must match what is out in hbase-thirdparty include. -->
+    <!--
+      Version of protobuf that hbase uses internally (we shade our pb) Must match what is out
+      in hbase-thirdparty include.
+    -->
     <internal.protobuf.version>4.28.2</internal.protobuf.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
