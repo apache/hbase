@@ -78,6 +78,11 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
       pool, params, null);
     this.pendingDelete = new LinkedBlockingQueue<>();
     int size = conf.getInt(OLD_WALS_CLEANER_THREAD_SIZE, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
+    if (size <= 0) {
+      LOG.warn("The size of old WALs cleaner thread is {}, which is invalid, "
+          + "the default value will be used.", size);
+      size = DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE;
+    }
     this.oldWALsCleaner = createOldWalsCleaner(size);
     this.cleanerThreadTimeoutMsec = conf.getLong(OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
       DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC);
