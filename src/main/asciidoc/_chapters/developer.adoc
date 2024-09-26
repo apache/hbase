@@ -46,7 +46,7 @@ As Apache HBase is an Apache Software Foundation project, see <<asf,asf>>       
 === Mailing Lists
 
 Sign up for the dev-list and the user-list.
-See the link:https://hbase.apache.org/mail-lists.html[mailing lists] page.
+See the link:https://hbase.apache.org/mailing-lists.html[mailing lists] page.
 Posing questions - and helping to answer other people's questions - is encouraged! There are varying levels of experience on both lists so patience and politeness are encouraged (and please stay on topic.)
 
 [[slack]]
