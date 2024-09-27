@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.rest.model.VersionModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -77,8 +78,9 @@ public class TestVersionResource {
 
   private static void validate(VersionModel model) {
     assertNotNull(model);
-    assertNotNull(model.getRESTVersion());
-    assertEquals(RESTServlet.VERSION_STRING, model.getRESTVersion());
+    String restVersion = model.getRESTVersion();
+    assertNotNull(restVersion);
+    assertEquals(RESTServlet.VERSION_STRING, restVersion);
     String osVersion = model.getOSVersion();
     assertNotNull(osVersion);
     assertTrue(osVersion.contains(System.getProperty("os.name")));
@@ -94,6 +96,13 @@ public class TestVersionResource {
     assertNotNull(jerseyVersion);
     // TODO: fix when we actually get a jersey version
     // assertEquals(jerseyVersion, ServletContainer.class.getPackage().getImplementationVersion());
+
+    String version = model.getVersion();
+    assertNotNull(version);
+    assertEquals(VersionInfo.getVersion(), version);
+    String revision = model.getRevision();
+    assertNotNull(revision);
+    assertEquals(VersionInfo.getRevision(), revision);
   }
 
   @Test
