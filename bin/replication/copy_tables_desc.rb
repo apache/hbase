@@ -39,13 +39,13 @@ def usage
   exit!
 end
 
-def create_namespace_if_not_exists(dst, namespace)
+def create_namespace_if_not_exists(src, dst, namespace)
   begin
     dst.getNamespaceDescriptor(namespace)
     puts format('Namespace "%s" already exists.', namespace)
   rescue org.apache.hadoop.hbase.NamespaceNotFoundException
-    descriptor = org.apache.hadoop.hbase.NamespaceDescriptor.create(namespace).build()
-    dst.createNamespace(descriptor)
+    n = src.getNamespaceDescriptor(namespace)
+    dst.createNamespace(n)
     puts format('Namespace "%s" was successfully created.', namespace)
   end
 end
@@ -61,7 +61,7 @@ def copy(src, dst, table)
 
   # verify if namespace *doesn't* exists in the target cluster
   namespace = TableName.valueOf(table).getNamespaceAsString
-  create_namespace_if_not_exists(dst, namespace)
+  create_namespace_if_not_exists(src, dst, namespace)
 
   # verify if table *doesn't* exists in the target cluster
   begin
