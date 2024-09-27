@@ -151,6 +151,12 @@
         <item name="Developer API" href="2.5/devapidocs/index.html" target="_blank" />
         <item name="Developer API (Test)" href="2.5/testdevapidocs/index.html" target="_blank" />
       </item>
+      <item name="2.6 Documentation">
+        <item name="User API" href="2.6/apidocs/index.html" target="_blank" />
+        <item name="User API (Test)" href="2.6/testapidocs/index.html" target="_blank" />
+        <item name="Developer API" href="2.6/devapidocs/index.html" target="_blank" />
+        <item name="Developer API (Test)" href="2.6/testdevapidocs/index.html" target="_blank" />
+      </item>
     </menu>
     <menu name="ASF">
       <item name="Apache Software Foundation" href="http://www.apache.org/foundation/" target="_blank" />
