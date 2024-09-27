@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RESTServlet;
 import org.apache.hadoop.hbase.rest.RestUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
@@ -53,6 +54,8 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
   private String osVersion;
   private String serverVersion;
   private String jerseyVersion;
+  private String version;
+  private String revision;
 
   /**
    * Default constructor. Do not use.
@@ -74,6 +77,9 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     jerseyVersion = ServletContainer.class.getPackage().getImplementationVersion();
     // Currently, this will always be null because the manifest doesn't have any useful information
     if (jerseyVersion == null) jerseyVersion = "";
+
+    version = VersionInfo.getVersion();
+    revision = VersionInfo.getRevision();
   }
 
   /** Returns the REST gateway version */
@@ -104,6 +110,18 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
   @XmlAttribute(name = "Jersey")
   public String getJerseyVersion() {
     return jerseyVersion;
+  }
+
+  /** Returns the build version of the REST server component */
+  @XmlAttribute(name = "Version")
+  public String getVersion() {
+    return version;
+  }
+
+  /** Returns the source control revision of the REST server component */
+  @XmlAttribute(name = "Revision")
+  public String getRevision() {
+    return revision;
   }
 
   /**
@@ -141,6 +159,20 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     this.jerseyVersion = version;
   }
 
+  /**
+   * @param version the REST server component build version string
+   */
+  public void setVersion(String version) {
+    this.version = version;
+  }
+
+  /**
+   * @param revision the REST server component source control revision string
+   */
+  public void setRevision(String revision) {
+    this.revision = revision;
+  }
+
   /*
    * (non-Javadoc)
    * @see java.lang.Object#toString()
@@ -158,6 +190,10 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     sb.append(serverVersion);
     sb.append("] [Jersey: ");
     sb.append(jerseyVersion);
+    sb.append("] [Version: ");
+    sb.append(version);
+    sb.append("] [Revision: ");
+    sb.append(revision);
     sb.append("]\n");
     return sb.toString();
   }
@@ -170,6 +206,8 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     builder.setOsVersion(osVersion);
     builder.setServerVersion(serverVersion);
     builder.setJerseyVersion(jerseyVersion);
+    builder.setVersion(version);
+    builder.setRevision(revision);
     return builder.build();
   }
 
@@ -191,6 +229,12 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     }
     if (builder.hasJerseyVersion()) {
       jerseyVersion = builder.getJerseyVersion();
+    }
+    if (builder.hasVersion()) {
+      version = builder.getVersion();
+    }
+    if (builder.hasRevision()) {
+      revision = builder.getRevision();
     }
     return this;
   }
