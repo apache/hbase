@@ -31,10 +31,11 @@
   <description>Shaded protobuf protocol classes used by HBase internally.</description>
   <properties>
     <maven.javadoc.skip>true</maven.javadoc.skip>
-    <!--Version of protobuf that hbase uses internally (we shade our pb)
-         Must match what is out in hbase-thirdparty include.
+    <!--
+      Version of protobuf that hbase uses internally (we shade our pb) Must match what is out
+      in hbase-thirdparty include.
     -->
-    <internal.protobuf.version>4.27.3</internal.protobuf.version>
+    <internal.protobuf.version>4.28.2</internal.protobuf.version>
   </properties>
   <dependencies>
     <!--BE CAREFUL! Any dependency added here needs to be
