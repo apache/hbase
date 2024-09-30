@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
+import org.apache.hadoop.hbase.regionserver.wal.WALSyncTimeoutIOException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -106,6 +108,8 @@ public final class MasterRegion {
 
   private static final int REGION_ID = 1;
 
+  private final Server server;
+
   private final WALFactory walFactory;
 
   final HRegion region;
@@ -114,8 +118,9 @@ public final class MasterRegion {
 
   private MasterRegionWALRoller walRoller;
 
-  private MasterRegion(HRegion region, WALFactory walFactory,
+  private MasterRegion(Server server, HRegion region, WALFactory walFactory,
     MasterRegionFlusherAndCompactor flusherAndCompactor, MasterRegionWALRoller walRoller) {
+    this.server = server;
     this.region = region;
     this.walFactory = walFactory;
     this.flusherAndCompactor = flusherAndCompactor;
@@ -139,8 +144,14 @@ public final class MasterRegion {
   }
 
   public void update(UpdateMasterRegion action) throws IOException {
-    action.update(region);
-    flusherAndCompactor.onUpdate();
+    try {
+      action.update(region);
+      flusherAndCompactor.onUpdate();
+    } catch (WALSyncTimeoutIOException e) {
+      LOG.error(HBaseMarkers.FATAL, "WAL sync timeout. Aborting server.");
+      server.abort("WAL sync timeout", e);
+      throw e;
+    }
   }
 
   public Result get(Get get) throws IOException {
@@ -156,10 +167,16 @@ public final class MasterRegion {
   }
 
   public FlushResult flush(boolean force) throws IOException {
-    flusherAndCompactor.resetChangesAfterLastFlush();
-    FlushResult flushResult = region.flush(force);
-    flusherAndCompactor.recordLastFlushTime();
-    return flushResult;
+    try {
+      flusherAndCompactor.resetChangesAfterLastFlush();
+      FlushResult flushResult = region.flush(force);
+      flusherAndCompactor.recordLastFlushTime();
+      return flushResult;
+    } catch (WALSyncTimeoutIOException e) {
+      LOG.error(HBaseMarkers.FATAL, "WAL sync timeout. Aborting server.");
+      server.abort("WAL sync timeout", e);
+      throw e;
+    }
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
@@ -444,6 +461,6 @@ public final class MasterRegion {
       LOG.warn("Failed to create archive directory {}. Usually this should not happen but it will"
         + " be created again when we actually archive the hfiles later, so continue", archiveDir);
     }
-    return new MasterRegion(region, walFactory, flusherAndCompactor, walRoller);
+    return new MasterRegion(server, region, walFactory, flusherAndCompactor, walRoller);
   }
 }
