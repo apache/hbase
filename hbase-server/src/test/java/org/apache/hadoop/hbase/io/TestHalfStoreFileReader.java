@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io;
 
+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.BUFFER_SIZE_KEY;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -24,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -36,6 +39,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -43,11 +47,14 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -84,7 +91,8 @@ public class TestHalfStoreFileReader {
    * top of the file while we are at it.
    */
   @Test
-  public void testHalfScanAndReseek() throws IOException {
+  public void testHalfScanAndReseek() throws Exception {
+    ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     Configuration conf = TEST_UTIL.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
     String root_dir = TEST_UTIL.getDataTestDir().toString();
@@ -93,8 +101,24 @@ public class TestHalfStoreFileReader {
     Path splitAPath = new Path(new Path(root_dir, "splita"), "CF");
     Path splitBPath = new Path(new Path(root_dir, "splitb"), "CF");
     Path filePath = StoreFileWriter.getUniqueFile(fs, parentPath);
+    String ioEngineName = "file:" + TEST_UTIL.getDataTestDir() + "/bucketNoRecycler.cache";
+    BucketCache bucketCache = new BucketCache(ioEngineName, 32 * 1024 * 1024, 1024,
+      new int[] {4 * 1024, 8 * 1024, 64 * 1024, 96 * 1024}, 1, 1, null);
+    conf.setBoolean(CACHE_BLOCKS_ON_WRITE_KEY, true);
+    conf.setInt(BUFFER_SIZE_KEY, 1024);
+    ByteBuffAllocator allocator = ByteBuffAllocator.create(conf, true);
 
-    CacheConfig cacheConf = new CacheConfig(conf);
+    final AtomicInteger counter = new AtomicInteger();
+    RefCnt.detector.setLeakListener(new ResourceLeakDetector.LeakListener() {
+      @Override
+      public void onLeak(String s, String s1) {
+        counter.incrementAndGet();
+      }
+    });
+
+    ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("CF"));
+    CacheConfig cacheConf = new CacheConfig(conf, cfBuilder.build(), bucketCache, allocator);
+
     HFileContext meta = new HFileContextBuilder().withBlockSize(1024).build();
     HFile.Writer w =
       HFile.getWriterFactory(conf, cacheConf).withPath(fs, filePath).withFileContext(meta).create();
@@ -122,10 +146,12 @@ public class TestHalfStoreFileReader {
     doTestOfScanAndReseek(splitFileB, fs, top, cacheConf);
 
     r.close();
+
+    assertEquals(0, counter.get());
   }
 
   private void doTestOfScanAndReseek(Path p, FileSystem fs, Reference bottom, CacheConfig cacheConf)
-    throws IOException {
+    throws Exception {
     Path referencePath = StoreFileInfo.getReferredToFile(p);
     FSDataInputStreamWrapper in = new FSDataInputStreamWrapper(fs, referencePath, false, 0);
     FileStatus status = fs.getFileStatus(referencePath);
@@ -158,6 +184,9 @@ public class TestHalfStoreFileReader {
     }
 
     halfreader.close(true);
+
+    System.gc();
+    Thread.sleep(1000);
   }
 
   // Tests the scanner on an HFile that is backed by HalfStoreFiles
