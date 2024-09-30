@@ -222,7 +222,7 @@ public class MetricsRegionServer {
     serverSource.updateFlushOutputSize(fileSize);
 
     if (table != null) {
-      metricsTable.updateFlushTime(table, t);
+      metricsTable.updateFlushTime(table, memstoreSize);
       metricsTable.updateFlushMemstoreSize(table, memstoreSize);
       metricsTable.updateFlushOutputSize(table, fileSize);
     }
