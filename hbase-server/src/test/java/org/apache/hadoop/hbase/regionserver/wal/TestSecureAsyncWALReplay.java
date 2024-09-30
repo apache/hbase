@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
+import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.BeforeClass;
@@ -37,7 +37,7 @@ public class TestSecureAsyncWALReplay extends TestAsyncWALReplay {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
     TestAsyncWALReplay.setUpBeforeClass();

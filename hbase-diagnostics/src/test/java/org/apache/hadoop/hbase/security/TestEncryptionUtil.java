@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
-import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
+import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -105,7 +105,7 @@ public class TestEncryptionUtil {
   public void testWALKeyWrappingWithIncorrectKey() throws Exception {
     // set up the key provider for testing to resolve a key for our test subject
     Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
 
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
@@ -144,7 +144,7 @@ public class TestEncryptionUtil {
   private void testKeyWrapping(String hashAlgorithm) throws Exception {
     // set up the key provider for testing to resolve a key for our test subject
     Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
     if (!hashAlgorithm.equals(DEFAULT_HASH_ALGORITHM)) {
       conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, hashAlgorithm);
     }
@@ -180,7 +180,7 @@ public class TestEncryptionUtil {
   private void testWALKeyWrapping(String hashAlgorithm) throws Exception {
     // set up the key provider for testing to resolve a key for our test subject
     Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
     if (!hashAlgorithm.equals(DEFAULT_HASH_ALGORITHM)) {
       conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, hashAlgorithm);
     }
@@ -207,7 +207,7 @@ public class TestEncryptionUtil {
 
   private void testKeyWrappingWithMismatchingAlgorithms(Configuration conf) throws Exception {
     // we use MD5 to hash the encryption key during wrapping
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
     conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, "MD5");
 
     // generate a test key
