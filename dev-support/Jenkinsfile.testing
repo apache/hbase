@@ -41,7 +41,8 @@ pipeline {
     OUTPUT_DIR_RELATIVE_JDK17_HADOOP3_BACKWARDS = 'output-jdk17-hadoop3-backwards'
 
     PROJECT = 'hbase'
-    PROJECT_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
+    // FIMXE for testing only
+    PROJECT_PERSONALITY = 'https://raw.githubusercontent.com/stoty/hbase/HBASE-28846/dev-support/hbase-personality.sh'
     PERSONALITY_FILE = 'tools/personality.sh'
     // This section of the docs tells folks not to use the javadoc tag. older branches have our old version of the check for said tag.
     AUTHOR_IGNORE_LIST = 'src/main/asciidoc/_chapters/developer.adoc'
