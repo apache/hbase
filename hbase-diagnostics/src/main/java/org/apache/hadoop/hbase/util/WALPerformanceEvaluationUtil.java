@@ -29,6 +29,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This class contains code copied from HBaseTestingUtil and its super classes required by
+ * WALPerformanceEvaluation. This was done as part of refactoring for hbase-diagnostics module
+ * creation in HBASE-28432 to break cyclic dependency.
+ */
 @InterfaceAudience.Private
 public class WALPerformanceEvaluationUtil {
   private static final Logger LOG = LoggerFactory.getLogger(WALPerformanceEvaluationUtil.class);

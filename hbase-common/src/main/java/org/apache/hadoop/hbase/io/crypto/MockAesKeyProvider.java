@@ -25,7 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Return a fixed secret key for AES for testing.
  */
 @InterfaceAudience.Private
-public class KeyProviderForTesting implements KeyProvider {
+public class MockAesKeyProvider implements KeyProvider {
 
   @Override
   public void init(String parameters) {

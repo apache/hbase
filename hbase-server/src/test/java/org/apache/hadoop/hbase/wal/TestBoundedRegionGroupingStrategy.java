@@ -60,10 +60,10 @@ public class TestBoundedRegionGroupingStrategy {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestBoundedRegionGroupingStrategy.class);
 
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  private static Configuration CONF;
-  private static DistributedFileSystem FS;
+  protected static Configuration CONF;
+  protected static DistributedFileSystem FS;
 
   @Parameter
   public String walProvider;
@@ -113,63 +113,6 @@ public class TestBoundedRegionGroupingStrategy {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-  }
-
-  /**
-   * Write to a log file with three concurrent threads and verifying all data is written.
-   */
-  @Test
-  public void testConcurrentWrites() throws Exception {
-    // Run the WPE tool with three threads writing 3000 edits each concurrently.
-    // When done, verify that all edits were written.
-    int errCode = WALPerformanceEvaluation.innerMain(new Configuration(CONF),
-      new String[] { "-threads", "3", "-verify", "-noclosefs", "-iterations", "3000" });
-    assertEquals(0, errCode);
-  }
-
-  /**
-   * Make sure we can successfully run with more regions then our bound.
-   */
-  @Test
-  public void testMoreRegionsThanBound() throws Exception {
-    final String parallelism =
-      Integer.toString(BoundedGroupingStrategy.DEFAULT_NUM_REGION_GROUPS * 2);
-    int errCode =
-      WALPerformanceEvaluation.innerMain(new Configuration(CONF), new String[] { "-threads",
-        parallelism, "-verify", "-noclosefs", "-iterations", "3000", "-regions", parallelism });
-    assertEquals(0, errCode);
-  }
-
-  @Test
-  public void testBoundsGreaterThanDefault() throws Exception {
-    final int temp = CONF.getInt(BoundedGroupingStrategy.NUM_REGION_GROUPS,
-      BoundedGroupingStrategy.DEFAULT_NUM_REGION_GROUPS);
-    try {
-      CONF.setInt(BoundedGroupingStrategy.NUM_REGION_GROUPS, temp * 4);
-      final String parallelism = Integer.toString(temp * 4);
-      int errCode =
-        WALPerformanceEvaluation.innerMain(new Configuration(CONF), new String[] { "-threads",
-          parallelism, "-verify", "-noclosefs", "-iterations", "3000", "-regions", parallelism });
-      assertEquals(0, errCode);
-    } finally {
-      CONF.setInt(BoundedGroupingStrategy.NUM_REGION_GROUPS, temp);
-    }
-  }
-
-  @Test
-  public void testMoreRegionsThanBoundWithBoundsGreaterThanDefault() throws Exception {
-    final int temp = CONF.getInt(BoundedGroupingStrategy.NUM_REGION_GROUPS,
-      BoundedGroupingStrategy.DEFAULT_NUM_REGION_GROUPS);
-    try {
-      CONF.setInt(BoundedGroupingStrategy.NUM_REGION_GROUPS, temp * 4);
-      final String parallelism = Integer.toString(temp * 4 * 2);
-      int errCode =
-        WALPerformanceEvaluation.innerMain(new Configuration(CONF), new String[] { "-threads",
-          parallelism, "-verify", "-noclosefs", "-iterations", "3000", "-regions", parallelism });
-      assertEquals(0, errCode);
-    } finally {
-      CONF.setInt(BoundedGroupingStrategy.NUM_REGION_GROUPS, temp);
-    }
   }
 
   /**

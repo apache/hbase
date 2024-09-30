@@ -39,6 +39,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This class was created by moving all load test related code from HFileTestUtil and
+ * HBaseTestingUtil as part of refactoring for hbase-diagnostics module creation in HBASE-28432
+ */
 @InterfaceAudience.Private
 public class LoadTestUtil {
   private static final Logger LOG = LoggerFactory.getLogger(LoadTestUtil.class);

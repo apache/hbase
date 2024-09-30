@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.crypto.CryptoCipherProvider;
 import org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
-import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
+import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -121,7 +121,7 @@ public class HFilePerformanceEvaluation {
 
     // Add configuration for AES cipher
     final Configuration aesconf = new Configuration();
-    aesconf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    aesconf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
     aesconf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     aesconf.setInt("hfile.format.version", 3);
     final FileSystem aesfs = FileSystem.get(aesconf);
@@ -137,7 +137,7 @@ public class HFilePerformanceEvaluation {
 
     // Add configuration for Commons cipher
     final Configuration cryptoconf = new Configuration();
-    cryptoconf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    cryptoconf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
     cryptoconf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     cryptoconf.setInt("hfile.format.version", 3);
     cryptoconf.set(HConstants.CRYPTO_CIPHERPROVIDER_CONF_KEY, CryptoCipherProvider.class.getName());
