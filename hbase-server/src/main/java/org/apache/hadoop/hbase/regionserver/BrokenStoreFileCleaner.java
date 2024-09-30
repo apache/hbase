@@ -147,6 +147,10 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
       return;
     }
 
+    //This last check ia needed in case the region got moved after we fetched the list of online
+    // region in this RS to iterate through. In such cases, the "isActiveStorefile(file, store)"
+    // check performed above would fail even if the file is still valid,
+    // because the store is now closed in this RS. See HBASE-28884 for further info.
     if (!store.getHRegion().isAvailable()) {
       LOG.trace("This store's region {} is no longer open, so it might have moved elsewhere. "
         + "Skipping cleanup.", store.getRegionInfo().getEncodedName());
