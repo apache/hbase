@@ -248,10 +248,9 @@ function personality_modules
     local tests_arg=""
 
     if [ -n "${TEST_PROFILE}" ]; then
-      extra="${extra} -P${TEST_PROFILE}
+      extra="${extra} -P${TEST_PROFILE}"
     else
-      # FIXME: Just for testing, the new parameter doesn't seem to be processed in re-exec mode
-      extra="${extra} -PrunSmallTests
+      extra="${extra} -PrunAllTests"
     fi
 
     get_include_exclude_tests_arg tests_arg
