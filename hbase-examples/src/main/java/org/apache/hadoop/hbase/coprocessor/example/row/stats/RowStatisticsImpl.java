@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.coprocessor.example.row.stats;
 
 import java.util.Map;
@@ -8,14 +25,16 @@ import org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatistics
 import org.apache.hadoop.hbase.regionserver.Shipper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.GsonUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
 
 /**
- * Holder for accumulating row statistics in {@link RowStatisticsCompactionObserver}
- * Creates various cell, row, and total stats.
+ * Holder for accumulating row statistics in {@link RowStatisticsCompactionObserver} Creates various
+ * cell, row, and total stats.
  */
 @InterfaceAudience.Private
 public class RowStatisticsImpl implements RowStatistics {
@@ -57,14 +76,8 @@ public class RowStatisticsImpl implements RowStatistics {
   private int totalRows;
   private long totalBytes;
 
-  RowStatisticsImpl(
-    String table,
-    String encodedRegion,
-    String columnFamily,
-    long blockSize,
-    long maxCacheSize,
-    boolean isMajor
-  ) {
+  RowStatisticsImpl(String table, String encodedRegion, String columnFamily, long blockSize,
+    long maxCacheSize, boolean isMajor) {
     this.table = table;
     this.region = encodedRegion;
     this.columnFamily = columnFamily;
@@ -83,17 +96,9 @@ public class RowStatisticsImpl implements RowStatistics {
     }
     if (rowBytes > blockSize) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug(
-          "RowTooLarge: rowBytes={}, blockSize={}, table={}, rowKey={}",
-          rowBytes,
-          blockSize,
-          table,
-          Bytes.toStringBinary(
-            lastCell.getRowArray(),
-            lastCell.getRowOffset(),
-            lastCell.getRowLength()
-          )
-        );
+        LOG.debug("RowTooLarge: rowBytes={}, blockSize={}, table={}, rowKey={}", rowBytes,
+          blockSize, table, Bytes.toStringBinary(lastCell.getRowArray(), lastCell.getRowOffset(),
+            lastCell.getRowLength()));
       }
       rowsLargerThanOneBlock++;
     }
@@ -120,14 +125,8 @@ public class RowStatisticsImpl implements RowStatistics {
     }
 
     if (tooLarge && LOG.isDebugEnabled()) {
-      LOG.debug(
-        "CellTooLarge: size={}, blockSize={}, maxCacheSize={}, table={}, cell={}",
-        cellSize,
-        blockSize,
-        maxCacheSize,
-        table,
-        CellUtil.toString(cell, false)
-      );
+      LOG.debug("CellTooLarge: size={}, blockSize={}, maxCacheSize={}, table={}, cell={}", cellSize,
+        blockSize, maxCacheSize, table, CellUtil.toString(cell, false));
     }
 
     if (cellSize > largestCellBytes) {
@@ -144,10 +143,9 @@ public class RowStatisticsImpl implements RowStatistics {
   }
 
   /**
-   * Clone the cell refs so they can be cleaned up by {@link Shipper#shipped()}.
-   * Doing this lazily here, rather than eagerly in the above two methods can save
-   * us on some allocations. We might change the largestCell/largestRow multiple times
-   * between shipped() calls.
+   * Clone the cell refs so they can be cleaned up by {@link Shipper#shipped()}. Doing this lazily
+   * here, rather than eagerly in the above two methods can save us on some allocations. We might
+   * change the largestCell/largestRow multiple times between shipped() calls.
    */
   public void shipped(RawCellBuilder cellBuilder) {
     if (largestRowRef != null) {
@@ -238,40 +236,14 @@ public class RowStatisticsImpl implements RowStatistics {
 
   @Override
   public String toString() {
-    return (
-      "RowStatistics{" +
-      "largestRow=" +
-      Bytes.toStringBinary(largestRow) +
-      ", largestRowBytes=" +
-      largestRowBytes +
-      ", largestRowCells=" +
-      largestRowCells +
-      ", largestCell=" +
-      largestCell +
-      ", largestCellBytes=" +
-      largestCellBytes +
-      ", cellsLargerThanOneBlock=" +
-      cellsLargerThanOneBlock +
-      ", rowsLargerThanOneBlock=" +
-      rowsLargerThanOneBlock +
-      ", cellsLargerThanMaxCacheSize=" +
-      cellsLargerThanMaxCacheSize +
-      ", totalDeletes=" +
-      totalDeletes +
-      ", totalCells=" +
-      totalCells +
-      ", totalRows=" +
-      totalRows +
-      ", totalBytes=" +
-      totalBytes +
-      ", rowSizeBuckets=" +
-      getRowSizeBuckets() +
-      ", valueSizeBuckets=" +
-      getValueSizeBuckets() +
-      ", isMajor=" +
-      isMajor +
-      '}'
-    );
+    return ("RowStatistics{" + "largestRow=" + Bytes.toStringBinary(largestRow)
+      + ", largestRowBytes=" + largestRowBytes + ", largestRowCells=" + largestRowCells
+      + ", largestCell=" + largestCell + ", largestCellBytes=" + largestCellBytes
+      + ", cellsLargerThanOneBlock=" + cellsLargerThanOneBlock + ", rowsLargerThanOneBlock="
+      + rowsLargerThanOneBlock + ", cellsLargerThanMaxCacheSize=" + cellsLargerThanMaxCacheSize
+      + ", totalDeletes=" + totalDeletes + ", totalCells=" + totalCells + ", totalRows=" + totalRows
+      + ", totalBytes=" + totalBytes + ", rowSizeBuckets=" + getRowSizeBuckets()
+      + ", valueSizeBuckets=" + getValueSizeBuckets() + ", isMajor=" + isMajor + '}');
   }
 
   @Override
@@ -287,26 +259,12 @@ public class RowStatisticsImpl implements RowStatistics {
   private JsonObject buildLargestCellPartsJson() {
     JsonObject cellJson = new JsonObject();
     Cell cell = getLargestCell();
-    cellJson.addProperty(
-      "rowKey",
-      Bytes.toStringBinary(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())
-    );
-    cellJson.addProperty(
-      "family",
-      Bytes.toStringBinary(
-        cell.getFamilyArray(),
-        cell.getFamilyOffset(),
-        cell.getFamilyLength()
-      )
-    );
-    cellJson.addProperty(
-      "qualifier",
-      Bytes.toStringBinary(
-        cell.getQualifierArray(),
-        cell.getQualifierOffset(),
-        cell.getQualifierLength()
-      )
-    );
+    cellJson.addProperty("rowKey",
+      Bytes.toStringBinary(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+    cellJson.addProperty("family",
+      Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()));
+    cellJson.addProperty("qualifier", Bytes.toStringBinary(cell.getQualifierArray(),
+      cell.getQualifierOffset(), cell.getQualifierLength()));
     cellJson.addProperty("timestamp", cell.getTimestamp());
     cellJson.addProperty("type", cell.getType().toString());
     return cellJson;
