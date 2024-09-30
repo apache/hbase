@@ -577,74 +577,82 @@ pipeline {
     } //stage:_health checks
     } //stages
   }
-//  post {
-//    always {
-//      script {
-//         try {
-//           sh "printenv"
-//           // wipe out all the output directories before unstashing
-//           sh'''
-//             echo "Clean up result directories"
-//             rm -rf ${OUTPUT_DIR_RELATIVE_GENERAL}
-//             rm -rf ${OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}
-//             rm -rf ${OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}
-//             rm -rf ${OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}
-//             rm -rf ${OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}
-//             rm -rf ${OUTPUT_DIR_RELATIVE_JDK17_HADOOP3_BACKWARDS}
-//             rm -rf output-srctarball
-//             rm -rf output-integration
-//           '''
-//           unstash 'general-result'
-//           unstash 'jdk8-hadoop2-result'
-//           unstash 'jdk8-hadoop3-result'
-//           unstash 'jdk11-hadoop3-result'
-//           unstash 'jdk17-hadoop3-result'
-//           unstash 'srctarball-result'
-//
-//           def results = ["${env.OUTPUT_DIR_RELATIVE_GENERAL}/commentfile",
-//                          "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}/commentfile",
-//                          "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}/commentfile",
-//                          "${env.OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}/commentfile",
-//                          "${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}/commentfile",
-//                          "${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3_BACKWARDS}/commentfile",
-//                          'output-srctarball/commentfile',
-//                          'output-integration/commentfile']
-//           echo env.BRANCH_NAME
-//           echo env.BUILD_URL
-//           echo currentBuild.result
-//           echo currentBuild.durationString
-//           def comment = "Results for branch ${env.BRANCH_NAME}\n"
-//           comment += "\t[build ${currentBuild.displayName} on builds.a.o|${env.BUILD_URL}]: "
-//           if (currentBuild.result == null || currentBuild.result == "SUCCESS") {
-//              comment += "(/) *{color:green}+1 overall{color}*\n"
-//           } else {
-//              comment += "(x) *{color:red}-1 overall{color}*\n"
-//              // Ideally get the committer our of the change and @ mention them in the per-jira comment
-//           }
-//           comment += "----\ndetails (if available):\n\n"
-//           echo ""
-//           echo "[DEBUG] trying to aggregate step-wise results"
-//           comment += results.collect { fileExists(file: it) ? readFile(file: it) : "" }.join("\n\n")
-//           echo "[INFO] Comment:"
-//           echo comment
-//           echo ""
-//           echo "[DEBUG] checking to see if feature branch"
-//           def jiras = getJirasToComment(env.BRANCH_NAME, [])
-//           if (jiras.isEmpty()) {
-//             echo "[DEBUG] non-feature branch, checking change messages for jira keys."
-//             echo "[INFO] There are ${currentBuild.changeSets.size()} change sets."
-//             jiras = getJirasToCommentFromChangesets(currentBuild)
-//           }
-//           jiras.each { currentIssue ->
-//             jiraComment issueKey: currentIssue, body: comment
-//           }
-//        } catch (Exception exception) {
-//          echo "Got exception: ${exception}"
-//          echo "    ${exception.getStackTrace()}"
-//        }
-//      }
-//    }
-//  }
+  post {
+    always {
+      script {
+         try {
+           sh "printenv"
+           // wipe out all the output directories before unstashing
+           sh'''
+             echo "Clean up result directories"
+             rm -rf ${OUTPUT_DIR_RELATIVE_GENERAL}
+             rm -rf ${OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}
+             rm -rf ${OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}
+             rm -rf ${OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}
+             rm -rf ${OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}
+             rm -rf ${OUTPUT_DIR_RELATIVE_JDK17_HADOOP3_BACKWARDS}-*
+             rm -rf output-srctarball
+             rm -rf output-integration
+           '''
+
+           unstash 'general-result'
+           unstash 'jdk8-hadoop2-result'
+           unstash 'jdk8-hadoop3-result'
+           unstash 'jdk11-hadoop3-result'
+           unstash 'jdk17-hadoop3-result'
+           unstash 'srctarball-result'
+           
+           def results = ["${env.OUTPUT_DIR_RELATIVE_GENERAL}/commentfile",
+                          "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}/commentfile",
+                          "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}/commentfile",
+                          "${env.OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}/commentfile",
+                          "${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}/commentfile"]
+
+           script {
+			for (hadoop3_version in hadoop3_versions) {
+				unstash("jdk17-hadoop3-backwards-result-${hadoop3_version}")
+				results.add("${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3_BACKWARDS}-${hadoop3_version}/commentfile")
+			}
+			results.add('output-srctarball/commentfile')
+			results.add('output-integration/commentfile')
+		   }
+
+           echo env.BRANCH_NAME
+           echo env.BUILD_URL
+           echo currentBuild.result
+           echo currentBuild.durationString
+           def comment = "Results for branch ${env.BRANCH_NAME}\n"
+           comment += "\t[build ${currentBuild.displayName} on builds.a.o|${env.BUILD_URL}]: "
+           if (currentBuild.result == null || currentBuild.result == "SUCCESS") {
+              comment += "(/) *{color:green}+1 overall{color}*\n"
+           } else {
+              comment += "(x) *{color:red}-1 overall{color}*\n"
+              // Ideally get the committer our of the change and @ mention them in the per-jira comment
+           }
+           comment += "----\ndetails (if available):\n\n"
+           echo ""
+           echo "[DEBUG] trying to aggregate step-wise results"
+           comment += results.collect { fileExists(file: it) ? readFile(file: it) : "" }.join("\n\n")
+           echo "[INFO] Comment:"
+           echo comment
+           echo ""
+           echo "[DEBUG] checking to see if feature branch"
+           def jiras = getJirasToComment(env.BRANCH_NAME, [])
+           if (jiras.isEmpty()) {
+             echo "[DEBUG] non-feature branch, checking change messages for jira keys."
+             echo "[INFO] There are ${currentBuild.changeSets.size()} change sets."
+             jiras = getJirasToCommentFromChangesets(currentBuild)
+           }
+           jiras.each { currentIssue ->
+             jiraComment issueKey: currentIssue, body: comment
+           }
+        } catch (Exception exception) {
+          echo "Got exception: ${exception}"
+          echo "    ${exception.getStackTrace()}"
+        }
+      }
+    }
+  }
 
 import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 @NonCPS
