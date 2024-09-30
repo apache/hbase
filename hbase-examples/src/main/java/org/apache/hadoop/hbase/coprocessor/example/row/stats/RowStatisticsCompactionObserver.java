@@ -1,9 +1,27 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.coprocessor.example.row.stats;
 
 import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.TableUtil.CF;
 import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.TableUtil.NAMESPACE;
 import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.TableUtil.NAMESPACED_TABLE_NAME;
 import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.TableUtil.TABLE_RECORDER_KEY;
+
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
@@ -12,7 +30,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -44,9 +61,11 @@ import org.apache.hadoop.hbase.regionserver.Shipper;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@InterfaceAudience.Private
 public class RowStatisticsCompactionObserver
   implements RegionCoprocessor, RegionObserver, MasterCoprocessor, MasterObserver {
 
@@ -54,8 +73,7 @@ public class RowStatisticsCompactionObserver
 
   // From private field BucketAllocator.DEFAULT_BUCKET_SIZES
   private static final long DEFAULT_MAX_BUCKET_SIZE = 512 * 1024 + 1024;
-  private static final ConcurrentMap<String, Long> TABLE_COUNTERS =
-    new ConcurrentHashMap();
+  private static final ConcurrentMap<String, Long> TABLE_COUNTERS = new ConcurrentHashMap();
   private static final String ROW_STATISTICS_DROPPED = "rowStatisticsDropped";
   private static final String ROW_STATISTICS_PUT_FAILED = "rowStatisticsPutFailures";
   private Counter rowStatisticsDropped;
@@ -92,21 +110,16 @@ public class RowStatisticsCompactionObserver
         return;
       }
 
-      String[] configuredBuckets = regionEnv
-        .getConfiguration()
-        .getStrings(BlockCacheFactory.BUCKET_CACHE_BUCKETS_KEY);
+      String[] configuredBuckets =
+        regionEnv.getConfiguration().getStrings(BlockCacheFactory.BUCKET_CACHE_BUCKETS_KEY);
       maxCacheSize = DEFAULT_MAX_BUCKET_SIZE;
       if (configuredBuckets != null && configuredBuckets.length > 0) {
         String lastBucket = configuredBuckets[configuredBuckets.length - 1];
         try {
           maxCacheSize = Integer.parseInt(lastBucket.trim());
         } catch (NumberFormatException ex) {
-          LOG.warn(
-            "Failed to parse {} value {} as int",
-            BlockCacheFactory.BUCKET_CACHE_BUCKETS_KEY,
-            lastBucket,
-            ex
-          );
+          LOG.warn("Failed to parse {} value {} as int", BlockCacheFactory.BUCKET_CACHE_BUCKETS_KEY,
+            lastBucket, ex);
         }
       }
 
@@ -135,15 +148,11 @@ public class RowStatisticsCompactionObserver
           regionCount += count;
         }
         if (regionCount == 0) {
-          regionEnv
-            .getMetricRegistryForRegionServer()
-            .remove(ROW_STATISTICS_DROPPED, rowStatisticsDropped);
-          regionEnv
-            .getMetricRegistryForRegionServer()
-            .remove(ROW_STATISTICS_PUT_FAILED, rowStatisticsPutFailed);
-          boolean removed = regionEnv
-            .getSharedData()
-            .remove(TABLE_RECORDER_KEY, tableRecorder);
+          regionEnv.getMetricRegistryForRegionServer().remove(ROW_STATISTICS_DROPPED,
+            rowStatisticsDropped);
+          regionEnv.getMetricRegistryForRegionServer().remove(ROW_STATISTICS_PUT_FAILED,
+            rowStatisticsPutFailed);
+          boolean removed = regionEnv.getSharedData().remove(TABLE_RECORDER_KEY, tableRecorder);
           if (removed) {
             tableRecorder.close();
           }
@@ -157,16 +166,12 @@ public class RowStatisticsCompactionObserver
     throws IOException {
     try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
       if (admin.tableExists(NAMESPACED_TABLE_NAME)) {
-        LOG.info(
-          "Table {} already exists. Skipping table creation process.",
-          NAMESPACED_TABLE_NAME
-        );
+        LOG.info("Table {} already exists. Skipping table creation process.",
+          NAMESPACED_TABLE_NAME);
       } else {
-        boolean shouldCreateNamespace = Arrays
-          .stream(admin.listNamespaces())
-          .filter(namespace -> namespace.equals(NAMESPACE))
-          .collect(Collectors.toUnmodifiableSet())
-          .isEmpty();
+        boolean shouldCreateNamespace =
+          Arrays.stream(admin.listNamespaces()).filter(namespace -> namespace.equals(NAMESPACE))
+            .collect(Collectors.toUnmodifiableSet()).isEmpty();
         if (shouldCreateNamespace) {
           NamespaceDescriptor nd = NamespaceDescriptor.create(NAMESPACE).build();
           try {
@@ -175,15 +180,10 @@ public class RowStatisticsCompactionObserver
             LOG.error("Failed to create namespace {}", NAMESPACE, e);
           }
         }
-        ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder
-          .newBuilder(CF)
-          .setMaxVersions(25)
-          .setTimeToLive((int) Duration.ofDays(7).toSeconds())
-          .build();
-        TableDescriptor td = TableDescriptorBuilder
-          .newBuilder(NAMESPACED_TABLE_NAME)
-          .setColumnFamily(cfd)
-          .build();
+        ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(CF).setMaxVersions(25)
+          .setTimeToLive((int) Duration.ofDays(7).toSeconds()).build();
+        TableDescriptor td =
+          TableDescriptorBuilder.newBuilder(NAMESPACED_TABLE_NAME).setColumnFamily(cfd).build();
         LOG.info("Creating table {}", NAMESPACED_TABLE_NAME);
         try {
           admin.createTable(td);
@@ -192,54 +192,31 @@ public class RowStatisticsCompactionObserver
         }
       }
     } catch (IOException e) {
-      LOG.error(
-        "Failed to get Connection or Admin. Cannot determine if table {} exists.",
-        NAMESPACED_TABLE_NAME,
-        e
-      );
+      LOG.error("Failed to get Connection or Admin. Cannot determine if table {} exists.",
+        NAMESPACED_TABLE_NAME, e);
     }
   }
 
   @Override
-  public InternalScanner preCompact(
-    ObserverContext<RegionCoprocessorEnvironment> context,
-    Store store,
-    InternalScanner scanner,
-    ScanType scanType,
-    CompactionLifeCycleTracker tracker,
-    CompactionRequest request
-  ) {
+  public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> context,
+    Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+    CompactionRequest request) {
     if (RowStatisticsUtil.isInternalTable(store.getTableName())) {
-      LOG.debug(
-        "Region {} belongs to an internal table {}, so no row statistics will be recorded",
-        store.getRegionInfo().getRegionNameAsString(),
-        store.getTableName().getNameAsString()
-      );
+      LOG.debug("Region {} belongs to an internal table {}, so no row statistics will be recorded",
+        store.getRegionInfo().getRegionNameAsString(), store.getTableName().getNameAsString());
       return scanner;
     }
     int blocksize = store.getColumnFamilyDescriptor().getBlocksize();
     boolean isMajor = request.isMajor();
     RowStatisticsImpl stats;
     if (isMajor) {
-      stats =
-        new RowStatisticsImpl(
-          store.getTableName().getNameAsString(),
-          store.getRegionInfo().getEncodedName(),
-          store.getColumnFamilyName(),
-          blocksize,
-          maxCacheSize,
-          true
-        );
+      stats = new RowStatisticsImpl(store.getTableName().getNameAsString(),
+        store.getRegionInfo().getEncodedName(), store.getColumnFamilyName(), blocksize,
+        maxCacheSize, true);
     } else {
-      stats =
-        new RowStatisticsImpl(
-          store.getTableName().getNameAsString(),
-          store.getRegionInfo().getEncodedName(),
-          store.getColumnFamilyName(),
-          blocksize,
-          maxCacheSize,
-          false
-        );
+      stats = new RowStatisticsImpl(store.getTableName().getNameAsString(),
+        store.getRegionInfo().getEncodedName(), store.getColumnFamilyName(), blocksize,
+        maxCacheSize, false);
     }
     return new RowStatisticsScanner(scanner, isMajor, stats, context.getEnvironment());
   }
@@ -254,12 +231,8 @@ public class RowStatisticsCompactionObserver
     private RawCellBuilder cellBuilder;
     private Cell lastCell;
 
-    public RowStatisticsScanner(
-      InternalScanner scanner,
-      boolean isMajor,
-      RowStatisticsImpl rowStatistics,
-      RegionCoprocessorEnvironment regionEnv
-    ) {
+    public RowStatisticsScanner(InternalScanner scanner, boolean isMajor,
+      RowStatisticsImpl rowStatistics, RegionCoprocessorEnvironment regionEnv) {
       this.scanner = scanner;
       if (scanner instanceof Shipper) {
         this.shipper = (Shipper) scanner;
@@ -297,7 +270,8 @@ public class RowStatisticsCompactionObserver
       return ret;
     }
 
-    @Override public boolean next(List<? super ExtendedCell> result) throws IOException {
+    @Override
+    public boolean next(List<? super ExtendedCell> result) throws IOException {
       return InternalScanner.super.next(result);
     }
 
@@ -326,29 +300,16 @@ public class RowStatisticsCompactionObserver
     }
 
     private void record() {
-      tableRecorder =
-        (TableRecorder) regionEnv
-          .getSharedData()
-          .computeIfAbsent(
-            TABLE_RECORDER_KEY,
-            k ->
-              TableRecorder.forClusterConnection(
-                regionEnv.getConnection(),
-                rowStatisticsDropped,
-                rowStatisticsPutFailed
-              )
-          );
+      tableRecorder = (TableRecorder) regionEnv.getSharedData().computeIfAbsent(TABLE_RECORDER_KEY,
+        k -> TableRecorder.forClusterConnection(regionEnv.getConnection(), rowStatisticsDropped,
+          rowStatisticsPutFailed));
       if (tableRecorder != null) {
-        tableRecorder.record(
-          this.rowStatistics,
-          this.isMajor,
-          Optional.of(regionEnv.getRegion().getRegionInfo().getRegionName())
-        );
+        tableRecorder.record(this.rowStatistics, this.isMajor,
+          Optional.of(regionEnv.getRegion().getRegionInfo().getRegionName()));
       } else {
         LOG.error(
           "Failed to initialize a TableRecorder. Will not record row statistics for region={}",
-          rowStatistics.getRegion()
-        );
+          rowStatistics.getRegion());
         rowStatisticsDropped.increment();
       }
       if (recorder != null) {
