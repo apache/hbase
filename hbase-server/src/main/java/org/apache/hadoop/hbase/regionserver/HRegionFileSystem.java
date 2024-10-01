@@ -313,28 +313,6 @@ public class HRegionFileSystem {
       familyName, new Path(familyDir, fileName), tracker);
   }
 
-  /**
-   * Returns true if the specified family has reference files
-   * @param familyName Column Family Name
-   * @return true if family contains reference files
-   */
-  public boolean hasReferences(final String familyName) throws IOException {
-    Path storeDir = getStoreDir(familyName);
-    FileStatus[] files = CommonFSUtils.listStatus(fs, storeDir);
-    if (files != null) {
-      for (FileStatus stat : files) {
-        if (stat.isDirectory()) {
-          continue;
-        }
-        if (StoreFileInfo.isReference(stat.getPath())) {
-          LOG.trace("Reference {}", stat.getPath());
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
   /** Returns the set of families present on disk n */
   public Collection<String> getFamilies() throws IOException {
     FileStatus[] fds =
