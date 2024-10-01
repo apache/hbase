@@ -303,7 +303,7 @@ pipeline {
               junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
               // zip surefire reports.
               sh '''#!/bin/bash -e
-                if [! -f "${OUTPUT_DIR}/commentfile"]; then
+                if [ ! -f "${OUTPUT_DIR}/commentfile" ]; then
                   echo "(x) {color:red}-1 jdk17 hadoop ${HADOOP_VERSION} backward compatibility checks{color}" >"${OUTPUT_DIR}/commentfile"
                   echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
                 fi
@@ -546,7 +546,7 @@ pipeline {
           post {
             always {
               sh '''#!/bin/bash -e
-                if [! -f "output-integration/commentfile"]; then
+                if [ ! -f "output-integration/commentfile" ]; then
                   echo "(x) {color:red}-1 source release artifact{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-srctarball/commentfile
                   echo "(x) {color:red}-1 client integration test{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-integration/commentfile
                 fi
