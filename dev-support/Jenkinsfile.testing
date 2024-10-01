@@ -261,7 +261,7 @@ pipeline {
             sh '''#!/usr/bin/env bash
               set -e
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
-              rm "${OUTPUT_DIR}/commentfile"
+              rm -f "${OUTPUT_DIR}/commentfile"
             '''
             unstash 'yetus'
             dir('component') {
@@ -393,7 +393,7 @@ pipeline {
               # remove old hadoop tarballs in workspace
               rm -rf hadoop-2*.tar.gz
               rm -rf hadoop-3*.tar.gz
-              rm "output-integration/commentfile"
+              rm -f "output-integration/commentfile"
             '''
             sh '''#!/usr/bin/env bash
               set -e
