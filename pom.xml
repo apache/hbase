@@ -1871,6 +1871,19 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <repositories>
+    <repository>
+      <id>${distMgmtSnapshotsId}</id>
+      <name>${distMgmtSnapshotsName}</name>
+      <url>${distMgmtSnapshotsUrl}</url>
+    </repository>
+    <repository>
+      <id>hadoop341rc2</id>
+      <name>Hadoop 3.4.1 RC2 repository</name>
+      <url>https://repository.apache.org/content/repositories/orgapachehadoop-1426</url>
+    </repository>
+  </repositories>
   <build>
     <!-- Plugin versions are inherited from ASF parent pom: https://maven.apache.org/pom/asf/
          For specific version use a property and define it in the parent pom.

@@ -500,6 +500,7 @@
                       <!-- We already concat NOTICE, safe to drop individual ones -->
                       <exclude>LICENSE</exclude>
                       <exclude>NOTICE</exclude>
+                      <exclude>messages.properties</exclude>
                     </excludes>
                   </filter>
                   <filter>
