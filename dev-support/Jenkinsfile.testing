@@ -228,8 +228,6 @@ pipeline {
 	// However, the a dev Test run takes 20-25% of the time of a full run, so we
 	// can run four of them serially, and have the tests finish at the same time, while
 	// hogging only a single executor, so GH checks may have a chance to run in parallel
-	
-	
 	    stage ('yetus jdk17 hadoop3 backwards compatibility checks') {
           agent {
             node {
@@ -263,8 +261,7 @@ pipeline {
             sh '''#!/usr/bin/env bash
               set -e
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
-              echo "(x) {color:red}-1 jdk17 hadoop ${HADOOP_VERSION} backward compatibility checks{color}" >"${OUTPUT_DIR}/commentfile"
-              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
+              rm "${OUTPUT_DIR}/commentfile"
             '''
             unstash 'yetus'
             dir('component') {
@@ -306,6 +303,10 @@ pipeline {
               junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
               // zip surefire reports.
               sh '''#!/bin/bash -e
+                if [! -f "${OUTPUT_DIR}/commentfile"]; then
+                  echo "(x) {color:red}-1 jdk17 hadoop ${HADOOP_VERSION} backward compatibility checks{color}" >"${OUTPUT_DIR}/commentfile"
+                  echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
+                fi
                 if [ -d "${OUTPUT_DIR}/archiver" ]; then
                   count=$(find "${OUTPUT_DIR}/archiver" -type f | wc -l)
                   if [[ 0 -ne ${count} ]]; then
@@ -392,8 +393,7 @@ pipeline {
               # remove old hadoop tarballs in workspace
               rm -rf hadoop-2*.tar.gz
               rm -rf hadoop-3*.tar.gz
-              echo "(x) {color:red}-1 source release artifact{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-srctarball/commentfile
-              echo "(x) {color:red}-1 client integration test{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-integration/commentfile
+              rm "output-integration/commentfile"
             '''
             sh '''#!/usr/bin/env bash
               set -e
@@ -545,6 +545,12 @@ pipeline {
           } //steps
           post {
             always {
+              sh '''#!/bin/bash -e
+                if [! -f "output-integration/commentfile"]; then
+                  echo "(x) {color:red}-1 source release artifact{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-srctarball/commentfile
+                  echo "(x) {color:red}-1 client integration test{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-integration/commentfile
+                fi
+              '''
               stash name: 'srctarball-result', includes: "output-srctarball/commentfile,output-integration/commentfile"
               sshPublisher(publishers: [
                 sshPublisherDesc(configName: 'Nightlies',
