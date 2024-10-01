@@ -147,10 +147,14 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
       return;
     }
 
-    //This last check ia needed in case the region got moved after we fetched the list of online
-    // region in this RS to iterate through. In such cases, the "isActiveStorefile(file, store)"
-    // check performed above would fail even if the file is still valid,
-    // because the store is now closed in this RS. See HBASE-28884 for further info.
+    // Adding the check here is enough to prevent accidentally deleting of intact HFiles.
+    // If the region is still available, i.e, not closed or closing, all above checks are valid
+    // so we are safe to delete the 'broken' files. And if the region is closed or closing when we
+    // reach here, since we will always give up deleting, the only possible inconsistency is that
+    // the file is broken since the region is not closing or close when performing above checks
+    // but here we give up deleting it. So in either way, we will not accidentally deleting intact
+    // HFiles, but only give up deleting broken files. But it is OK since we can still
+    // delete them in the next round of cleaner run.
     if (!store.getHRegion().isAvailable()) {
       LOG.trace("This store's region {} is no longer open, so it might have moved elsewhere. "
         + "Skipping cleanup.", store.getRegionInfo().getEncodedName());
