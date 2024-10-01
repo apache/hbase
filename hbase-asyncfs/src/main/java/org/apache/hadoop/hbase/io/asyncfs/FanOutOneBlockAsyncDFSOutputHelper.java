@@ -141,9 +141,9 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private interface LeaseManager {
 
-    void begin(DFSClient client, long inodeId);
+    void begin(DFSClient client, HdfsFileStatus stat);
 
-    void end(DFSClient client, long inodeId);
+    void end(DFSClient client, HdfsFileStatus stat);
   }
 
   private static final LeaseManager LEASE_MANAGER;
@@ -172,7 +172,58 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static final FileCreator FILE_CREATOR;
 
-  private static LeaseManager createLeaseManager() throws NoSuchMethodException {
+  private static LeaseManager createLeaseManager3_4() throws NoSuchMethodException {
+    Method beginFileLeaseMethod =
+      DFSClient.class.getDeclaredMethod("beginFileLease", String.class, DFSOutputStream.class);
+    beginFileLeaseMethod.setAccessible(true);
+    Method endFileLeaseMethod = DFSClient.class.getDeclaredMethod("endFileLease", String.class);
+    endFileLeaseMethod.setAccessible(true);
+    Method getConfigurationMethod = DFSClient.class.getDeclaredMethod("getConfiguration");
+    getConfigurationMethod.setAccessible(true);
+    Method getNamespaceMehtod = HdfsFileStatus.class.getDeclaredMethod("getNamespace");
+
+    return new LeaseManager() {
+
+      private static final String DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY =
+        "dfs.client.output.stream.uniq.default.key";
+      private static final String DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY_DEFAULT = "DEFAULT";
+
+      private String getUniqId(DFSClient client, HdfsFileStatus stat)
+        throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+        // Copied from DFSClient in Hadoop 3.4.0
+        long fileId = stat.getFileId();
+        String namespace = (String) getNamespaceMehtod.invoke(stat);
+        if (namespace == null) {
+          Configuration conf = (Configuration) getConfigurationMethod.invoke(client);
+          String defaultKey = conf.get(DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY,
+            DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY_DEFAULT);
+          return defaultKey + "_" + fileId;
+        } else {
+          return namespace + "_" + fileId;
+        }
+      }
+
+      @Override
+      public void begin(DFSClient client, HdfsFileStatus stat) {
+        try {
+          beginFileLeaseMethod.invoke(client, getUniqId(client, stat), null);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      @Override
+      public void end(DFSClient client, HdfsFileStatus stat) {
+        try {
+          endFileLeaseMethod.invoke(client, getUniqId(client, stat));
+        } catch (IllegalAccessException | InvocationTargetException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+  }
+
+  private static LeaseManager createLeaseManager3() throws NoSuchMethodException {
     Method beginFileLeaseMethod =
       DFSClient.class.getDeclaredMethod("beginFileLease", long.class, DFSOutputStream.class);
     beginFileLeaseMethod.setAccessible(true);
@@ -181,23 +232,33 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return new LeaseManager() {
 
       @Override
-      public void begin(DFSClient client, long inodeId) {
+      public void begin(DFSClient client, HdfsFileStatus stat) {
         try {
-          beginFileLeaseMethod.invoke(client, inodeId, null);
+          beginFileLeaseMethod.invoke(client, stat.getFileId(), null);
         } catch (IllegalAccessException | InvocationTargetException e) {
           throw new RuntimeException(e);
         }
       }
 
       @Override
-      public void end(DFSClient client, long inodeId) {
+      public void end(DFSClient client, HdfsFileStatus stat) {
         try {
-          endFileLeaseMethod.invoke(client, inodeId);
+          endFileLeaseMethod.invoke(client, stat.getFileId());
         } catch (IllegalAccessException | InvocationTargetException e) {
           throw new RuntimeException(e);
         }
       }
     };
+  }
+
+  private static LeaseManager createLeaseManager() throws NoSuchMethodException {
+    try {
+      return createLeaseManager3_4();
+    } catch (NoSuchMethodException e) {
+      LOG.debug("DFSClient::beginFileLease wrong arguments, should be hadoop 3.3 or below");
+    }
+
+    return createLeaseManager3();
   }
 
   private static FileCreator createFileCreator3_3() throws NoSuchMethodException {
@@ -262,12 +323,12 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     }
   }
 
-  static void beginFileLease(DFSClient client, long inodeId) {
-    LEASE_MANAGER.begin(client, inodeId);
+  static void beginFileLease(DFSClient client, HdfsFileStatus stat) {
+    LEASE_MANAGER.begin(client, stat);
   }
 
-  static void endFileLease(DFSClient client, long inodeId) {
-    LEASE_MANAGER.end(client, inodeId);
+  static void endFileLease(DFSClient client, HdfsFileStatus stat) {
+    LEASE_MANAGER.end(client, stat);
   }
 
   static DataChecksum createChecksum(DFSClient client) {
@@ -492,7 +553,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
           throw new NameNodeException(e);
         }
       }
-      beginFileLease(client, stat.getFileId());
+      beginFileLease(client, stat);
       boolean succ = false;
       LocatedBlock locatedBlock = null;
       List<Future<Channel>> futureList = null;
@@ -516,8 +577,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         }
         Encryptor encryptor = createEncryptor(conf, stat, client);
         FanOutOneBlockAsyncDFSOutput output =
-          new FanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src,
-            stat.getFileId(), locatedBlock, encryptor, datanodes, summer, ALLOC, monitor);
+          new FanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src, stat,
+            locatedBlock, encryptor, datanodes, summer, ALLOC, monitor);
         succ = true;
         return output;
       } catch (RemoteException e) {
@@ -556,7 +617,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
               });
             }
           }
-          endFileLease(client, stat.getFileId());
+          endFileLease(client, stat);
         }
       }
     }
@@ -594,11 +655,11 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
   }
 
   static void completeFile(DFSClient client, ClientProtocol namenode, String src, String clientName,
-    ExtendedBlock block, long fileId) {
+    ExtendedBlock block, HdfsFileStatus stat) {
     for (int retry = 0;; retry++) {
       try {
-        if (namenode.complete(src, clientName, block, fileId)) {
-          endFileLease(client, fileId);
+        if (namenode.complete(src, clientName, block, stat.getFileId())) {
+          endFileLease(client, stat);
           return;
         } else {
           LOG.warn("complete file " + src + " not finished, retry = " + retry);

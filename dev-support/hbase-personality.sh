@@ -111,6 +111,14 @@ function personality_parse_args
         delete_parameter "${i}"
         HADOOP_PROFILE=${i#*=}
       ;;
+      --hadoop-version=*)
+        delete_parameter "${i}"
+        HADOOP_VERSION=${i#*=}
+      ;;
+      --test-profile=*)
+        delete_parameter "${i}"
+        TEST_PROFILE=${i#*=}
+      ;;
       --skip-errorprone)
         delete_parameter "${i}"
         SKIP_ERRORPRONE=true
@@ -182,6 +190,11 @@ function personality_modules
     extra="${extra} -Dhadoop.profile=${HADOOP_PROFILE}"
   fi
 
+  # If we have HADOOP_VERSION specified it pass along in the hadoop.version system property.
+  if [[ -n "${HADOOP_VERSION}" ]] ; then
+    extra="${extra} -Dhadoop.version=${HADOOP_VERSION}"
+  fi
+
   # BUILDMODE value is 'full' when there is no patch to be tested, and we are running checks on
   # full source code instead. In this case, do full compiles, tests, etc instead of per
   # module.
@@ -233,8 +246,15 @@ function personality_modules
   # tests respectively.
   if [[ ${testtype} == unit ]]; then
     local tests_arg=""
+
+    if [ -n "${TEST_PROFILE}" ]; then
+      extra="${extra} -P${TEST_PROFILE}"
+    else
+      extra="${extra} -PrunAllTests"
+    fi
+
     get_include_exclude_tests_arg tests_arg
-    extra="${extra} -PrunAllTests ${tests_arg}"
+    extra="${extra} ${tests_arg}"
 
     # Inject the jenkins build-id for our surefire invocations
     # Used by zombie detection stuff, even though we're not including that yet.
@@ -589,6 +609,7 @@ function hadoopcheck_rebuild
   fi
 
   if [[ "${PATCH_BRANCH}" = *"branch-2.5"* ]]; then
+    # TODO remove this on non 2.5 branches ?
     yetus_info "Setting Hadoop 3 versions to test based on branch-2.5 rules"
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
       hbase_hadoop3_versions="3.2.4 3.3.6 3.4.0"
@@ -597,8 +618,9 @@ function hadoopcheck_rebuild
     fi
   else
     yetus_info "Setting Hadoop 3 versions to test based on branch-2.6+/master/feature branch rules"
+    # Isn't runnung these tests with the default Hadoop version redundant ?
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.3.6 3.4.0"
+      hbase_hadoop3_versions="3.3.5 3.4.0"
     else
       hbase_hadoop3_versions="3.3.5 3.3.6 3.4.0"
     fi
