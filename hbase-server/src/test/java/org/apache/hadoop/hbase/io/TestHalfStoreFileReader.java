@@ -54,12 +54,13 @@ import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 
 @Category({ IOTests.class, SmallTests.class })
 public class TestHalfStoreFileReader {
@@ -103,7 +104,7 @@ public class TestHalfStoreFileReader {
     Path filePath = StoreFileWriter.getUniqueFile(fs, parentPath);
     String ioEngineName = "file:" + TEST_UTIL.getDataTestDir() + "/bucketNoRecycler.cache";
     BucketCache bucketCache = new BucketCache(ioEngineName, 32 * 1024 * 1024, 1024,
-      new int[] {4 * 1024, 8 * 1024, 64 * 1024, 96 * 1024}, 1, 1, null);
+      new int[] { 4 * 1024, 8 * 1024, 64 * 1024, 96 * 1024 }, 1, 1, null);
     conf.setBoolean(CACHE_BLOCKS_ON_WRITE_KEY, true);
     conf.setInt(BUFFER_SIZE_KEY, 1024);
     ByteBuffAllocator allocator = ByteBuffAllocator.create(conf, true);
@@ -116,7 +117,8 @@ public class TestHalfStoreFileReader {
       }
     });
 
-    ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("CF"));
+    ColumnFamilyDescriptorBuilder cfBuilder =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("CF"));
     CacheConfig cacheConf = new CacheConfig(conf, cfBuilder.build(), bucketCache, allocator);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(1024).build();
