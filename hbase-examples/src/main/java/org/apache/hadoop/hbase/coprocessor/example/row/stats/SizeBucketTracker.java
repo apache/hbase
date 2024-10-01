@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.coprocessor.example.row.stats;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
 
 @InterfaceAudience.Private
