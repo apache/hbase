@@ -16,6 +16,80 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.6.1 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-25972](https://issues.apache.org/jira/browse/HBASE-25972) | *Major* | **Dual File Compaction**
+
+The default compactor in HBase compacts HFiles into one file. This change introduces a new store file writer which writes the retained cells by compaction into two files, which will be called DualFileWriter. One of these files will include the live cells. This file will be called a live-version file. The other file will include the rest of the cells, that is, historical versions. This file will be called a historical-version file. DualFileWriter will work with the default compactor. The historical files will not be read for the scans scanning latest row versions. This eliminates scanning unnecessary cell versions in compacted files and thus it is expected to improve performance of these scans.
+
+
+---
+
+* [HBASE-28616](https://issues.apache.org/jira/browse/HBASE-28616) | *Major* | **Remove/Deprecated the rs.\* related configuration in TableOutputFormat**
+
+Mark these two fileds in TableOutputFormat as deprecated as they do not take effect any more.
+
+REGION\_SERVER\_CLASS
+REGION\_SERVER\_IMPL
+
+Mark these two methods in TableMapReduceUtil as deprecated as the serverClass and serverImpl parameters do not take effect any more.
+
+void initTableReducerJob(String table, Class\<? extends TableReducer\> reducer, Job job, Class partitioner, String quorumAddress, String serverClass, String serverImpl) throws IOException
+void initTableReducerJob(String table, Class\<? extends TableReducer\> reducer, Job job, Class partitioner, String quorumAddress, String serverClass, String serverImpl, boolean addDependencyJars) throws IOException
+
+
+---
+
+* [HBASE-28679](https://issues.apache.org/jira/browse/HBASE-28679) | *Major* | **Upgrade yetus to a newer version**
+
+Upgrade yetus to 0.15.0.
+
+Some notable differences:
+Whitespace related checks are renamed to blanks.
+Use xmllint instead of jrunscript for validating xml files.
+For github there is an extra step to write commit status back to github but for HBase it does not work due to insufficient permission.
+
+
+---
+
+* [HBASE-28699](https://issues.apache.org/jira/browse/HBASE-28699) | *Major* | **Bump jdk and maven versions in pre commit and nighly dockerfile**
+
+maven 3.8.6 -\> 3.9.8
+temurin openjdk8 8u352-b08 -\> 8u412-b08
+temurin openjdk11 11.0.17\_8 -\> 11.0.23\_9
+temurin openjdk17 17.0.10\_7 -\> 17.0.11\_9
+
+
+---
+
+* [HBASE-28718](https://issues.apache.org/jira/browse/HBASE-28718) | *Major* | **Should support different license name for 'Apache License, Version 2.0'**
+
+Also accept "Apache-2.0" and "Apache Software License - Version 2.0" when aggregating license in resource bundle module.
+
+
+---
+
+* [HBASE-28805](https://issues.apache.org/jira/browse/HBASE-28805) | *Major* | **Implement chunked persistence of backing map for persistent bucket cache.**
+
+Earlier, all the entries of this backing map were serialised into as a single large protobuf message BucketCacheEntry. However, this serialisation would hit the 2GB limit of protobuf  message, and lead to serialisation failures.
+
+This change introduces a new serialisation format for the contents of backing-map in bucket cache. These backing map entries are serialised in chunk size of 10M. This size is configurable via the configuration parameter "hbase.bucketcache.persistence.chunksize". With this, the size of protobuf messages that is used to serialise these chunks will remain within the limit of 2GB avoiding the serialisation error. The backing map is reconstructed by reading these multiple chunks from the persistence file during the server restart.
+The bucket cache is capable of reading old format of persistence (of single protobuf) to maintain the backward compatibility with the older versions of the persistence.
+
+
+---
+
+* [HBASE-28803](https://issues.apache.org/jira/browse/HBASE-28803) | *Critical* | **HBase Master stuck due to improper handling of WALSyncTimeoutException within UncheckedIOException**
+
+The HMaster will now abort when it detects a WALSyncTimeoutException while making edits to the MasterRegion.
+
+
+
 # HBASE  2.6.0 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
