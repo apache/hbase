@@ -581,8 +581,7 @@ pipeline {
         } //stage packaging
       } // parallel
     } //stage:_health checks
-    } //stages
-  }
+  } //stages
   post {
     always {
       script {
@@ -614,14 +613,12 @@ pipeline {
                           "${env.OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}/commentfile"]
 
-           script {
-			for (hadoop3_version in hadoop3_versions) {
-				unstash("jdk17-hadoop3-backwards-result-${hadoop3_version}")
-				results.add("${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3_BACKWARDS}-${hadoop3_version}/commentfile")
-			}
-			results.add('output-srctarball/commentfile')
-			results.add('output-integration/commentfile')
-		   }
+           for (hadoop3_version in hadoop3_versions) {
+             unstash("jdk17-hadoop3-backwards-result-${hadoop3_version}")
+               results.add("${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3_BACKWARDS}-${hadoop3_version}/commentfile")
+           }
+           results.add('output-srctarball/commentfile')
+           results.add('output-integration/commentfile')
 
            echo env.BRANCH_NAME
            echo env.BUILD_URL
