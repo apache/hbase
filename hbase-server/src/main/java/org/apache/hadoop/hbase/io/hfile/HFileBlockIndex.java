@@ -1078,6 +1078,9 @@ public class HFileBlockIndex {
             HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
             cache.cacheBlock(new BlockCacheKey(nameForCaching, rootLevelIndexPos, true,
               blockForCaching.getBlockType()), blockForCaching);
+            // Index blocks always go to LRU, which then converts any off-heap buffer to on-heap,
+            // so we need to release any off-heap buffers now to avoid leak
+            blockForCaching.release();
           });
         }
       }
