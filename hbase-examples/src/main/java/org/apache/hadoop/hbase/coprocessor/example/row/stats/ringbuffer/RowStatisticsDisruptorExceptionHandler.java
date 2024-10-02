@@ -17,31 +17,35 @@
  */
 package org.apache.hadoop.hbase.coprocessor.example.row.stats.ringbuffer;
 
-import org.apache.hadoop.hbase.coprocessor.example.row.stats.RowStatistics;
+import com.lmax.disruptor.ExceptionHandler;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class RingBufferPayload {
+public class RowStatisticsDisruptorExceptionHandler
+  implements ExceptionHandler<RowStatisticsRingBufferEnvelope> {
 
-  private final RowStatistics rowStatistics;
-  private final boolean isMajor;
-  private final byte[] fullRegionName;
+  private static final Logger LOG =
+    LoggerFactory.getLogger(RowStatisticsDisruptorExceptionHandler.class);
 
-  public RingBufferPayload(RowStatistics rowStatistics, boolean isMajor, byte[] fullRegionName) {
-    this.rowStatistics = rowStatistics;
-    this.isMajor = isMajor;
-    this.fullRegionName = fullRegionName;
+  @Override
+  public void handleEventException(Throwable e, long sequence,
+    RowStatisticsRingBufferEnvelope event) {
+    if (event != null) {
+      LOG.error("Unable to persist event={} with sequence={}", event.getPayload(), sequence, e);
+    } else {
+      LOG.error("Event with sequence={} was null", sequence, e);
+    }
   }
 
-  public RowStatistics getRowStatistics() {
-    return rowStatistics;
+  @Override
+  public void handleOnStartException(Throwable e) {
+    LOG.error("Disruptor onStartException", e);
   }
 
-  public boolean getIsMajor() {
-    return isMajor;
-  }
-
-  public byte[] getFullRegionName() {
-    return fullRegionName;
+  @Override
+  public void handleOnShutdownException(Throwable e) {
+    LOG.error("Disruptor onShutdownException", e);
   }
 }

@@ -26,13 +26,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class TableUtil {
+public class RowStatisticsTableUtil {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TableUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RowStatisticsTableUtil.class);
   public static final String NAMESPACE = "stats";
   public static final String TABLE_STRING = "row-statistics";
-  public static final TableName NAMESPACED_TABLE_NAME =
-    TableName.valueOf(NAMESPACE, TABLE_STRING);
+  public static final TableName NAMESPACED_TABLE_NAME = TableName.valueOf(NAMESPACE, TABLE_STRING);
   public static final byte[] CF = Bytes.toBytes("0");
   public static final String TABLE_RECORDER_KEY = "tableRecorder";
 

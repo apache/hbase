@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor.example.row.stats.ringbuffer;
 
-import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.TableUtil.buildPutForRegion;
+import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsTableUtil.buildPutForRegion;
 
 import com.lmax.disruptor.EventHandler;
 import java.io.IOException;
@@ -30,7 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class RowStatisticsEventHandler implements EventHandler<RingBufferEnvelope> {
+public class RowStatisticsEventHandler implements EventHandler<RowStatisticsRingBufferEnvelope> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RowStatisticsEventHandler.class);
   private final BufferedMutator bufferedMutator;
@@ -43,9 +43,9 @@ public class RowStatisticsEventHandler implements EventHandler<RingBufferEnvelop
   }
 
   @Override
-  public void onEvent(RingBufferEnvelope event, long sequence, boolean endOfBatch)
+  public void onEvent(RowStatisticsRingBufferEnvelope event, long sequence, boolean endOfBatch)
     throws Exception {
-    final RingBufferPayload payload = event.getPayload();
+    final RowStatisticsRingBufferPayload payload = event.getPayload();
     if (payload != null) {
       final RowStatistics rowStatistics = payload.getRowStatistics();
       final boolean isMajor = payload.getIsMajor();
