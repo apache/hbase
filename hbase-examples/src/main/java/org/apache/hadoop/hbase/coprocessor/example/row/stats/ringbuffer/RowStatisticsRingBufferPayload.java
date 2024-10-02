@@ -17,20 +17,32 @@
  */
 package org.apache.hadoop.hbase.coprocessor.example.row.stats.ringbuffer;
 
+import org.apache.hadoop.hbase.coprocessor.example.row.stats.RowStatistics;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public final class RingBufferEnvelope {
+public class RowStatisticsRingBufferPayload {
 
-  private RingBufferPayload payload;
+  private final RowStatistics rowStatistics;
+  private final boolean isMajor;
+  private final byte[] fullRegionName;
 
-  public void load(RingBufferPayload payload) {
-    this.payload = payload;
+  public RowStatisticsRingBufferPayload(RowStatistics rowStatistics, boolean isMajor,
+    byte[] fullRegionName) {
+    this.rowStatistics = rowStatistics;
+    this.isMajor = isMajor;
+    this.fullRegionName = fullRegionName;
   }
 
-  public RingBufferPayload getPayload() {
-    final RingBufferPayload payload = this.payload;
-    this.payload = null;
-    return payload;
+  public RowStatistics getRowStatistics() {
+    return rowStatistics;
+  }
+
+  public boolean getIsMajor() {
+    return isMajor;
+  }
+
+  public byte[] getFullRegionName() {
+    return fullRegionName;
   }
 }
