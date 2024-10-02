@@ -656,7 +656,7 @@ pipeline {
       }
     }
   }
-
+}
 import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 @NonCPS
 List<String> getJirasToCommentFromChangesets(RunWrapper thisBuild) {
