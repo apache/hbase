@@ -29,11 +29,10 @@ import org.slf4j.LoggerFactory;
 public class TableUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(TableUtil.class);
-  public static final String NAMESPACE = "infra";
+  public static final String NAMESPACE = "stats";
   public static final String TABLE_STRING = "row-statistics";
-  public static final String VERSIONED_TABLE_STRING = TABLE_STRING + "-1";
   public static final TableName NAMESPACED_TABLE_NAME =
-    TableName.valueOf(NAMESPACE, VERSIONED_TABLE_STRING);
+    TableName.valueOf(NAMESPACE, TABLE_STRING);
   public static final byte[] CF = Bytes.toBytes("0");
   public static final String TABLE_RECORDER_KEY = "tableRecorder";
 
