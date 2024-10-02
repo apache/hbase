@@ -15,29 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.coprocessor.example.row.stats.utils;
+package org.apache.hadoop.hbase.coprocessor.example.row.stats.recorder;
 
-import org.apache.hadoop.conf.Configuration;
+import java.util.Optional;
+import org.apache.hadoop.hbase.coprocessor.example.row.stats.RowStatisticsImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class ConfigurationUtil {
+public class RowStatisticsCombinedRecorder implements RowStatisticsRecorder {
 
-  private static final String ROW_STATISTICS_PREFIX = "hubspot.row.statistics.";
+  private final RowStatisticsRecorder one;
+  private final RowStatisticsRecorder two;
 
-  public static int getInt(Configuration conf, String name, int defaultValue) {
-    return conf.getInt(ROW_STATISTICS_PREFIX + name, defaultValue);
+  public RowStatisticsCombinedRecorder(RowStatisticsRecorder one, RowStatisticsRecorder two) {
+    this.one = one;
+    this.two = two;
   }
 
-  public static long getLong(Configuration conf, String name, long defaultValue) {
-    return conf.getLong(ROW_STATISTICS_PREFIX + name, defaultValue);
+  @Override
+  public void record(RowStatisticsImpl stats, boolean isMajor, Optional<byte[]> fullRegionName) {
+    one.record(stats, isMajor, fullRegionName);
+    two.record(stats, isMajor, fullRegionName);
   }
 
-  private static void setInt(Configuration conf, String name, int defaultValue) {
-    conf.setInt(name, conf.getInt(ROW_STATISTICS_PREFIX + name, defaultValue));
+  public RowStatisticsRecorder getOne() {
+    return one;
   }
 
-  private static void setLong(Configuration conf, String name, long defaultValue) {
-    conf.setLong(name, conf.getLong(ROW_STATISTICS_PREFIX + name, defaultValue));
+  public RowStatisticsRecorder getTwo() {
+    return two;
   }
 }

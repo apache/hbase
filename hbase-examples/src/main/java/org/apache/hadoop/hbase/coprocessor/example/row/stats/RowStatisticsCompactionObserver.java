@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.coprocessor.example.row.stats;
 
-import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.TableUtil.CF;
-import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.TableUtil.NAMESPACE;
-import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.TableUtil.NAMESPACED_TABLE_NAME;
-import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.TableUtil.TABLE_RECORDER_KEY;
+import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsTableUtil.CF;
+import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsTableUtil.NAMESPACE;
+import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsTableUtil.NAMESPACED_TABLE_NAME;
+import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsTableUtil.TABLE_RECORDER_KEY;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.example.row.stats.recorder.RowStatisticsRecorder;
-import org.apache.hadoop.hbase.coprocessor.example.row.stats.recorder.TableRecorder;
+import org.apache.hadoop.hbase.coprocessor.example.row.stats.recorder.RowStatisticsTableRecorder;
 import org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsUtil;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.metrics.Counter;
@@ -80,7 +80,7 @@ public class RowStatisticsCompactionObserver
   private Counter rowStatisticsPutFailed;
   private long maxCacheSize;
   private final RowStatisticsRecorder recorder;
-  private TableRecorder tableRecorder;
+  private RowStatisticsTableRecorder tableRecorder;
 
   @InterfaceAudience.Private
   public RowStatisticsCompactionObserver(RowStatisticsRecorder recorder) {
@@ -300,9 +300,10 @@ public class RowStatisticsCompactionObserver
     }
 
     private void record() {
-      tableRecorder = (TableRecorder) regionEnv.getSharedData().computeIfAbsent(TABLE_RECORDER_KEY,
-        k -> TableRecorder.forClusterConnection(regionEnv.getConnection(), rowStatisticsDropped,
-          rowStatisticsPutFailed));
+      tableRecorder =
+        (RowStatisticsTableRecorder) regionEnv.getSharedData().computeIfAbsent(TABLE_RECORDER_KEY,
+          k -> RowStatisticsTableRecorder.forClusterConnection(regionEnv.getConnection(),
+            rowStatisticsDropped, rowStatisticsPutFailed));
       if (tableRecorder != null) {
         tableRecorder.record(this.rowStatistics, this.isMajor,
           Optional.of(regionEnv.getRegion().getRegionInfo().getRegionName()));
