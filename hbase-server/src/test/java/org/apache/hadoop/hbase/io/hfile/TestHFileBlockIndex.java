@@ -184,8 +184,8 @@ public class TestHFileBlockIndex {
       .withIncludesMvcc(includesMemstoreTS).withIncludesTags(true).withCompression(compr)
       .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM).build();
     ByteBuffAllocator allocator = ByteBuffAllocator.create(TEST_UTIL.getConfiguration(), true);
-    HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null, meta,
-      allocator);
+    HFileBlock.Writer hbw =
+      new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null, meta, allocator);
     FSDataOutputStream outputStream = fs.create(path);
 
     final AtomicInteger counter = new AtomicInteger();
