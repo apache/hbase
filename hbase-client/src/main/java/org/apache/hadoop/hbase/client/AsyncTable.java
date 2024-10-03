@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
@@ -792,6 +793,12 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * server does not offer partial results, it is still safe to use this, assuming you implement
    * your {@link PartialResultCoprocessorCallback#getNextCallable(Object, RegionInfo)} correctly.
    */
-  <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(Function<RpcChannel, S> stubMaker,
-    ServiceCaller<S, R> callable, PartialResultCoprocessorCallback<S, R> callback);
+  default <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
+    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
+    PartialResultCoprocessorCallback<S, R> callback) {
+    LoggerFactory.getLogger(AsyncTable.class).warn(
+      "Calling coprocessorService with default implementation that does not fully implement the"
+        + " PartialResultCoprocessorCallback interface.");
+    return coprocessorService(stubMaker, callable, (CoprocessorCallback<R>) callback);
+  }
 }
