@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -60,8 +61,7 @@ public class TestRowStatisticsTableRecorder {
     connection = ConnectionFactory.createConnection(cluster.getConf());
     connection.getAdmin().createNamespace(NAMESPACE_DESCRIPTOR);
     // need this table to write to
-    TEST_UTIL.createTable(RowStatisticsTableUtil.NAMESPACED_TABLE_NAME,
-      RowStatisticsTableUtil.CF);
+    TEST_UTIL.createTable(RowStatisticsTableUtil.NAMESPACED_TABLE_NAME, RowStatisticsTableUtil.CF);
   }
 
   @Before
