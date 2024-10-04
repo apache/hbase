@@ -197,15 +197,6 @@ public class TestScannerLeaseCount {
       }
       return TestNoopOperationQuota.INSTANCE;
     }
-
-    @Override
-    public OperationQuota checkBatchQuota(Region region, int numWrites, int numReads)
-      throws IOException, RpcThrottlingException {
-      if (SHOULD_THROW) {
-        throw EX;
-      }
-      return TestNoopOperationQuota.INSTANCE;
-    }
   }
 
   private static class ScannerTrackingRSRpcServicesForTest extends RSRpcServices {
