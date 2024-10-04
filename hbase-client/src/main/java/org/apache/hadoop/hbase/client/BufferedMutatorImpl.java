@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -90,7 +89,6 @@ public class BufferedMutatorImpl implements BufferedMutator {
   private final ExecutorService pool;
   private final AtomicInteger rpcTimeout;
   private final AtomicInteger operationTimeout;
-  private final Map<String, byte[]> requestAttributes;
   private final boolean cleanupPoolOnClose;
   private volatile boolean closed = false;
   private final AsyncProcess ap;
@@ -137,9 +135,6 @@ public class BufferedMutatorImpl implements BufferedMutator {
     this.operationTimeout = new AtomicInteger(params.getOperationTimeout() != UNSET
       ? params.getOperationTimeout()
       : conn.getConnectionConfiguration().getOperationTimeout());
-
-    this.requestAttributes = params.getRequestAttributes();
-
     this.ap = ap;
   }
 
@@ -257,8 +252,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
 
   private AsyncProcessTask createTask(QueueRowAccess access) {
     return new AsyncProcessTask(AsyncProcessTask.newBuilder().setPool(pool).setTableName(tableName)
-      .setRowAccess(access).setSubmittedRows(AsyncProcessTask.SubmittedRows.AT_LEAST_ONE)
-      .setRequestAttributes(requestAttributes).build()) {
+      .setRowAccess(access).setSubmittedRows(AsyncProcessTask.SubmittedRows.AT_LEAST_ONE).build()) {
       @Override
       public int getRpcTimeout() {
         return rpcTimeout.get();
@@ -395,11 +389,6 @@ public class BufferedMutatorImpl implements BufferedMutator {
   @Override
   public void setOperationTimeout(int operationTimeout) {
     this.operationTimeout.set(operationTimeout);
-  }
-
-  @Override
-  public Map<String, byte[]> getRequestAttributes() {
-    return requestAttributes;
   }
 
   long getCurrentWriteBufferSize() {

@@ -22,12 +22,12 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.toCheckExistenceOnl
 import static org.apache.hadoop.hbase.util.FutureUtils.allOf;
 
 import com.google.protobuf.RpcChannel;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
@@ -117,7 +117,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * @return a map of request attributes supplied by the client
    */
   default Map<String, byte[]> getRequestAttributes() {
-    return Collections.emptyMap();
+    throw new NotImplementedException("Add an implementation!");
   }
 
   /**

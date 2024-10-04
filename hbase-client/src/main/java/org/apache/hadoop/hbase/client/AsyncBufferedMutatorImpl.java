@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -170,10 +169,5 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   @Override
   public long getPeriodicalFlushTimeout(TimeUnit unit) {
     return unit.convert(periodicFlushTimeoutNs, TimeUnit.NANOSECONDS);
-  }
-
-  @Override
-  public Map<String, byte[]> getRequestAttributes() {
-    return table.getRequestAttributes();
   }
 }
