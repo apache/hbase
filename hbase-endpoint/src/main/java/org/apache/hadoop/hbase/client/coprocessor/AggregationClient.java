@@ -225,7 +225,7 @@ public class AggregationClient implements Closeable {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R max(final Table table,
     final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false, false);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class MaxCallBack implements Batch.Callback<R> {
       R max = null;
 
@@ -292,7 +292,7 @@ public class AggregationClient implements Closeable {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R min(final Table table,
     final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false, false);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class MinCallBack implements Batch.Callback<R> {
       private R min = null;
 
@@ -368,7 +368,7 @@ public class AggregationClient implements Closeable {
   public <R, S, P extends Message, Q extends Message, T extends Message> long
     rowCount(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, true, false);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, true);
     class RowNumCallback implements Batch.Callback<Long> {
       private final AtomicLong rowCountL = new AtomicLong(0);
 
@@ -434,7 +434,7 @@ public class AggregationClient implements Closeable {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> S sum(final Table table,
     final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false, false);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
 
     class SumCallBack implements Batch.Callback<S> {
       S sumVal = null;
@@ -503,7 +503,7 @@ public class AggregationClient implements Closeable {
   private <R, S, P extends Message, Q extends Message, T extends Message> Pair<S, Long>
     getAvgArgs(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false, false);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class AvgCallBack implements Batch.Callback<Pair<S, Long>> {
       S sum = null;
       Long rowCount = 0L;
@@ -600,7 +600,7 @@ public class AggregationClient implements Closeable {
   private <R, S, P extends Message, Q extends Message, T extends Message> Pair<List<S>, Long>
     getStdArgs(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false, false);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class StdCallback implements Batch.Callback<Pair<List<S>, Long>> {
       long rowCountVal = 0L;
       S sumVal = null, sumSqVal = null;
@@ -714,7 +714,7 @@ public class AggregationClient implements Closeable {
   private <R, S, P extends Message, Q extends Message, T extends Message>
     Pair<NavigableMap<byte[], List<S>>, List<S>> getMedianArgs(final Table table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
-    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false, false);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     final NavigableMap<byte[], List<S>> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     class StdCallback implements Batch.Callback<List<S>> {
       S sumVal = null, sumWeights = null;

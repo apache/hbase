@@ -32,7 +32,6 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -830,55 +829,10 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     }
   }
 
-  private <S, R> void coprocessorServiceUntilComplete(Function<RpcChannel, S> stubMaker,
-    ServiceCaller<S, R> callable, PartialResultCoprocessorCallback<S, R> callback,
-    AtomicBoolean locateFinished, AtomicInteger unfinishedRequest, RegionInfo region, Span span) {
-    addListener(coprocessorService(stubMaker, callable, region, region.getStartKey()), (r, e) -> {
-      try (Scope ignored = span.makeCurrent()) {
-        if (e != null) {
-          callback.onRegionError(region, e);
-        } else {
-          callback.onRegionComplete(region, r);
-        }
-
-        ServiceCaller<S, R> updatedCallable;
-        if (e == null && r != null) {
-          updatedCallable = callback.getNextCallable(r, region);
-        } else {
-          updatedCallable = null;
-        }
-
-        // If updatedCallable is non-null, we will be sending another request, so no need to
-        // decrement unfinishedRequest (recall that && short-circuits).
-        // If updatedCallable is null, and unfinishedRequest decrements to 0, we're done with the
-        // requests for this coprocessor call.
-        if (
-          updatedCallable == null && unfinishedRequest.decrementAndGet() == 0
-            && locateFinished.get()
-        ) {
-          callback.onComplete();
-        } else if (updatedCallable != null) {
-          Duration waitInterval = callback.getWaitInterval(r, region);
-          LOG.trace("Coprocessor returned incomplete result. "
-            + "Sleeping for {} before making follow-up request.", waitInterval);
-          if (waitInterval.isZero()) {
-            AsyncConnectionImpl.RETRY_TIMER.newTimeout(
-              (timeout) -> coprocessorServiceUntilComplete(stubMaker, updatedCallable, callback,
-                locateFinished, unfinishedRequest, region, span),
-              waitInterval.toMillis(), TimeUnit.MILLISECONDS);
-          } else {
-            coprocessorServiceUntilComplete(stubMaker, updatedCallable, callback, locateFinished,
-              unfinishedRequest, region, span);
-          }
-        }
-      }
-    });
-  }
-
   private <S, R> void onLocateComplete(Function<RpcChannel, S> stubMaker,
-    ServiceCaller<S, R> callable, PartialResultCoprocessorCallback<S, R> callback, byte[] endKey,
-    boolean endKeyInclusive, AtomicBoolean locateFinished, AtomicInteger unfinishedRequest,
-    HRegionLocation loc, Throwable error) {
+    ServiceCaller<S, R> callable, CoprocessorCallback<R> callback, List<HRegionLocation> locs,
+    byte[] endKey, boolean endKeyInclusive, AtomicBoolean locateFinished,
+    AtomicInteger unfinishedRequest, HRegionLocation loc, Throwable error) {
     final Span span = Span.current();
     if (error != null) {
       callback.onError(error);
@@ -894,13 +848,23 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       addListener(conn.getLocator().getRegionLocation(tableName, region.getEndKey(),
         RegionLocateType.CURRENT, operationTimeoutNs), (l, e) -> {
           try (Scope ignored = span.makeCurrent()) {
-            onLocateComplete(stubMaker, callable, callback, endKey, endKeyInclusive, locateFinished,
-              unfinishedRequest, l, e);
+            onLocateComplete(stubMaker, callable, callback, locs, endKey, endKeyInclusive,
+              locateFinished, unfinishedRequest, l, e);
           }
         });
     }
-    coprocessorServiceUntilComplete(stubMaker, callable, callback, locateFinished,
-      unfinishedRequest, region, span);
+    addListener(coprocessorService(stubMaker, callable, region, region.getStartKey()), (r, e) -> {
+      try (Scope ignored = span.makeCurrent()) {
+        if (e != null) {
+          callback.onRegionError(region, e);
+        } else {
+          callback.onRegionComplete(region, r);
+        }
+        if (unfinishedRequest.decrementAndGet() == 0 && locateFinished.get()) {
+          callback.onComplete();
+        }
+      }
+    });
   }
 
   private final class CoprocessorServiceBuilderImpl<S, R>
@@ -910,7 +874,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
     private final ServiceCaller<S, R> callable;
 
-    private final PartialResultCoprocessorCallback<S, R> callback;
+    private final CoprocessorCallback<R> callback;
 
     private byte[] startKey = HConstants.EMPTY_START_ROW;
 
@@ -921,7 +885,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     private boolean endKeyInclusive;
 
     public CoprocessorServiceBuilderImpl(Function<RpcChannel, S> stubMaker,
-      ServiceCaller<S, R> callable, PartialResultCoprocessorCallback<S, R> callback) {
+      ServiceCaller<S, R> callable, CoprocessorCallback<R> callback) {
       this.stubMaker = Preconditions.checkNotNull(stubMaker, "stubMaker is null");
       this.callable = Preconditions.checkNotNull(callable, "callable is null");
       this.callback = Preconditions.checkNotNull(callback, "callback is null");
@@ -958,8 +922,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
           .getRegionLocation(tableName, startKey, regionLocateType, operationTimeoutNs);
         addListener(future, (loc, error) -> {
           try (Scope ignored1 = span.makeCurrent()) {
-            onLocateComplete(stubMaker, callable, callback, endKey, endKeyInclusive,
-              new AtomicBoolean(false), new AtomicInteger(0), loc, error);
+            onLocateComplete(stubMaker, callable, callback, new ArrayList<>(), endKey,
+              endKeyInclusive, new AtomicBoolean(false), new AtomicInteger(0), loc, error);
           }
         });
       }
@@ -970,14 +934,6 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
     Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
     CoprocessorCallback<R> callback) {
-    return new CoprocessorServiceBuilderImpl<>(stubMaker, callable,
-      new NoopPartialResultCoprocessorCallback<>(callback));
-  }
-
-  @Override
-  public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
-    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
-    PartialResultCoprocessorCallback<S, R> callback) {
     return new CoprocessorServiceBuilderImpl<>(stubMaker, callable, callback);
   }
 }

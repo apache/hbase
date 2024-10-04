@@ -61,8 +61,8 @@ public final class AggregationHelper {
   }
 
   static <R, S, P extends Message, Q extends Message, T extends Message> AggregateRequest
-    validateArgAndGetPB(Scan scan, ColumnInterpreter<R, S, P, Q, T> ci, boolean canFamilyBeAbsent,
-      boolean supportPartialResults) throws IOException {
+    validateArgAndGetPB(Scan scan, ColumnInterpreter<R, S, P, Q, T> ci, boolean canFamilyBeAbsent)
+      throws IOException {
     validateParameters(scan, canFamilyBeAbsent);
     final AggregateRequest.Builder requestBuilder = AggregateRequest.newBuilder();
     requestBuilder.setInterpreterClassName(ci.getClass().getCanonicalName());
@@ -71,7 +71,6 @@ public final class AggregationHelper {
       requestBuilder.setInterpreterSpecificBytes(columnInterpreterSpecificData.toByteString());
     }
     requestBuilder.setScan(ProtobufUtil.toScan(scan));
-    requestBuilder.setClientSupportsPartialResult(supportPartialResults);
     return requestBuilder.build();
   }
 
