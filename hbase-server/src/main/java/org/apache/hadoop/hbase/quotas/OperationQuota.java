@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -88,12 +87,6 @@ public interface OperationQuota {
    * average size for the next time.
    */
   void addScanResult(List<Result> results);
-
-  /**
-   * Add a scan result in the form of cells. This will be used to calculate the exact quota and have
-   * a better long-read average size for the next time.
-   */
-  void addScanResultCells(List<Cell> cells);
 
   /**
    * Add a mutation result. This will be used to calculate the exact quota and have a better

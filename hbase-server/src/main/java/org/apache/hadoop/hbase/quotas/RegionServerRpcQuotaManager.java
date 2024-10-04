@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class RegionServerRpcQuotaManager implements RpcQuotaManager {
+public class RegionServerRpcQuotaManager {
   private static final Logger LOG = LoggerFactory.getLogger(RegionServerRpcQuotaManager.class);
 
   private final RegionServerServices rsServices;
@@ -154,7 +154,21 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager {
     return NoopOperationQuota.get();
   }
 
-  @Override
+  /**
+   * Check the quota for the current (rpc-context) user. Returns the OperationQuota used to get the
+   * available quota and to report the data/usage of the operation. This method is specific to scans
+   * because estimating a scan's workload is more complicated than estimating the workload of a
+   * get/put.
+   * @param region                          the region where the operation will be performed
+   * @param scanRequest                     the scan to be estimated against the quota
+   * @param maxScannerResultSize            the maximum bytes to be returned by the scanner
+   * @param maxBlockBytesScanned            the maximum bytes scanned in a single RPC call by the
+   *                                        scanner
+   * @param prevBlockBytesScannedDifference the difference between BBS of the previous two next
+   *                                        calls
+   * @return the OperationQuota
+   * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
+   */
   public OperationQuota checkScanQuota(final Region region,
     final ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
     long maxBlockBytesScanned, long prevBlockBytesScannedDifference)
@@ -181,7 +195,16 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager {
     return quota;
   }
 
-  @Override
+  /**
+   * Check the quota for the current (rpc-context) user. Returns the OperationQuota used to get the
+   * available quota and to report the data/usage of the operation. This method does not support
+   * scans because estimating a scan's workload is more complicated than estimating the workload of
+   * a get/put.
+   * @param region the region where the operation will be performed
+   * @param type   the operation type
+   * @return the OperationQuota
+   * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
+   */
   public OperationQuota checkBatchQuota(final Region region,
     final OperationQuota.OperationType type) throws IOException, RpcThrottlingException {
     switch (type) {
@@ -195,7 +218,17 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager {
     throw new RuntimeException("Invalid operation type: " + type);
   }
 
-  @Override
+  /**
+   * Check the quota for the current (rpc-context) user. Returns the OperationQuota used to get the
+   * available quota and to report the data/usage of the operation. This method does not support
+   * scans because estimating a scan's workload is more complicated than estimating the workload of
+   * a get/put.
+   * @param region       the region where the operation will be performed
+   * @param actions      the "multi" actions to perform
+   * @param hasCondition whether the RegionAction has a condition
+   * @return the OperationQuota
+   * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
+   */
   public OperationQuota checkBatchQuota(final Region region,
     final List<ClientProtos.Action> actions, boolean hasCondition)
     throws IOException, RpcThrottlingException {
@@ -225,8 +258,7 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager {
    * @return the OperationQuota
    * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
-  @Override
-  public OperationQuota checkBatchQuota(final Region region, final int numWrites,
+  private OperationQuota checkBatchQuota(final Region region, final int numWrites,
     final int numReads) throws IOException, RpcThrottlingException {
     Optional<User> user = RpcServer.getRequestUser();
     UserGroupInformation ugi;
