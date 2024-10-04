@@ -267,7 +267,8 @@ public final class FSUtils {
       return ((DistributedFileSystem)dfs).setSafeMode(SAFEMODE_GET, true);
     } else {
       try {
-        Object ret = dfs.getClass().getMethod("setSafeMode", new Class[] { safeModeActionClazz, Boolean.class })
+        Object ret = dfs.getClass()
+          .getMethod("setSafeMode", new Class[] { safeModeActionClazz, Boolean.class })
           .invoke(dfs, safeModeGet, true);
         return (Boolean) ret;
       } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
@@ -668,7 +669,9 @@ public final class FSUtils {
    */
   public static void waitOnSafeMode(final Configuration conf, final long wait) throws IOException {
     FileSystem fs = FileSystem.get(conf);
-    if (!supportSafeMode(fs)) return;
+    if (!supportSafeMode(fs)) {
+      return;
+    }
     // Make sure dfs is not in safe mode
     while (isInSafeMode(fs)) {
       LOG.info("Waiting for dfs to exit safe mode...");

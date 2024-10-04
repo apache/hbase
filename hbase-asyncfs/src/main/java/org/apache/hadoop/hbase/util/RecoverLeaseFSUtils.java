@@ -46,7 +46,8 @@ public final class RecoverLeaseFSUtils {
     try {
       leaseRecoverableClazz = Class.forName("org.apache.hadoop.fs.LeaseRecoverable");
     } catch (ClassNotFoundException e) {
-      LOG.debug("LeaseRecoverable interface not in the classpath, this means Hadoop 3.3.5 or below.");
+      LOG.debug("LeaseRecoverable interface not in the classpath, " +
+        "this means Hadoop 3.3.5 or below.");
     }
   }
 
