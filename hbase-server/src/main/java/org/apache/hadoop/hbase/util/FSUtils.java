@@ -264,7 +264,7 @@ public final class FSUtils {
    */
   private static boolean isInSafeMode(FileSystem dfs) throws IOException {
     if (isDistributedFileSystem(dfs)) {
-      return ((DistributedFileSystem)dfs).setSafeMode(SAFEMODE_GET, true);
+      return ((DistributedFileSystem) dfs).setSafeMode(SAFEMODE_GET, true);
     } else {
       try {
         Object ret = dfs.getClass()

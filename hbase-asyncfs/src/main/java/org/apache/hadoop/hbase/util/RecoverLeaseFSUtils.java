@@ -46,8 +46,8 @@ public final class RecoverLeaseFSUtils {
     try {
       leaseRecoverableClazz = Class.forName("org.apache.hadoop.fs.LeaseRecoverable");
     } catch (ClassNotFoundException e) {
-      LOG.debug("LeaseRecoverable interface not in the classpath, " +
-        "this means Hadoop 3.3.5 or below.");
+      LOG.debug(
+        "LeaseRecoverable interface not in the classpath, this means Hadoop 3.3.5 or below.");
     }
   }
 
@@ -192,8 +192,8 @@ public final class RecoverLeaseFSUtils {
    * Try to recover the lease.
    * @return True if dfs#recoverLease came by true.
    */
-  private static boolean recoverLease(final Object dfs, final int nbAttempt,
-    final Path p, final long startWaiting) throws FileNotFoundException {
+  private static boolean recoverLease(final Object dfs, final int nbAttempt, final Path p,
+    final long startWaiting) throws FileNotFoundException {
     boolean recovered = false;
     try {
       recovered = (Boolean) dfs.getClass().getMethod("recoverLease", new Class[] { Path.class })
@@ -226,8 +226,7 @@ public final class RecoverLeaseFSUtils {
    * Call HDFS-4525 isFileClosed if it is available.
    * @return True if file is closed.
    */
-  private static boolean isFileClosed(final Object dfs, final Method m,
-    final Path p) {
+  private static boolean isFileClosed(final Object dfs, final Method m, final Path p) {
     try {
       return (Boolean) m.invoke(dfs, p);
     } catch (SecurityException e) {
