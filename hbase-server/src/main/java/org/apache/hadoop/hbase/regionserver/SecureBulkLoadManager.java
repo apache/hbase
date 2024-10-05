@@ -278,6 +278,17 @@ public class SecureBulkLoadManager {
               if (!fs.exists(stageFamily)) {
                 fs.mkdirs(stageFamily);
                 fs.setPermission(stageFamily, PERM_ALL_ACCESS);
+                if (
+                  conf.getBoolean("hbase.bulkload.copyfile.storage-policy.enabled", false)
+                    && (!FSUtils.isSameHdfs(conf, new Path(el.getSecond()).getFileSystem(conf), fs)
+                      || request.getCopyFile())
+                ) {
+                  String policyName =
+                    region.getTableDescriptor().getColumnFamily(el.getFirst()).getStoragePolicy();
+                  if (policyName != null) {
+                    CommonFSUtils.setStoragePolicy(fs, stageFamily, policyName);
+                  }
+                }
               }
             }
             if (fsCreatedListener != null) {
