@@ -54,7 +54,7 @@ public class StoreFileInfo implements Configurable {
 
   /**
    * A non-capture group, for hfiles, so that this can be embedded. HFiles are uuid ([0-9a-z]+).
-   * Bulk loaded hfiles has (_SeqId_[0-9]+_) has suffix. The mob del file has (_del) as suffix.
+   * Bulk loaded hfiles have (_SeqId_[0-9]+_) as a suffix. The mob del file has (_del) as a suffix.
    */
   public static final String HFILE_NAME_REGEX = "[0-9a-f]+(?:(?:_SeqId_[0-9]+_)|(?:_del))?";
 
@@ -66,7 +66,7 @@ public class StoreFileInfo implements Configurable {
    * hfilelink reference names ({@code
    *
   <table>
-   * =<region>-<hfile>.<parentEncRegion>}) If reference, then the regex has more than just one
+   * =<region>-<hfile>.<parentEncRegion>}). If reference, then the regex has more than just one
    * group. Group 1, hfile/hfilelink pattern, is this file's id. Group 2 '(.+)' is the reference's
    * parent region name.
    */
@@ -533,6 +533,13 @@ public class StoreFileInfo implements Configurable {
    * @return True if the path has format of a HStoreFile reference.
    */
   public static boolean isReference(final String name) {
+    // The REF_NAME_PATTERN regex is not computationally trivial, so see if we can fast-fail
+    // on a simple heuristic first. The regex contains a literal ".", so if that character
+    // isn't in the name, then the regex cannot match.
+    if (!name.contains(".")) {
+      return false;
+    }
+
     Matcher m = REF_NAME_PATTERN.matcher(name);
     return m.matches() && m.groupCount() > 1;
   }
