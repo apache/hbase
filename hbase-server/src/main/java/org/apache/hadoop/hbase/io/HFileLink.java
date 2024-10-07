@@ -188,6 +188,13 @@ public class HFileLink extends FileLink {
    * @return True if the path is a HFileLink.
    */
   public static boolean isHFileLink(String fileName) {
+    // The LINK_NAME_PATTERN regex is not computationally trivial, so see if we can fast-fail
+    // on a simple heuristic first. The regex contains a literal "=", so if that character
+    // isn't in the fileName, then the regex cannot match.
+    if (!fileName.contains("=")) {
+      return false;
+    }
+
     Matcher m = LINK_NAME_PATTERN.matcher(fileName);
     if (!m.matches()) {
       return false;
