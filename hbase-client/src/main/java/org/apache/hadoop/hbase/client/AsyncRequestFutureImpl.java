@@ -448,6 +448,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
 
     boolean isReplica = false;
     List<Action> unknownReplicaActions = null;
+    List<Action> locateRegionFailedActions = null;
     for (Action action : currentActions) {
       if (isOperationTimeoutExceeded()) {
         String message = numAttempt == 1
@@ -462,16 +463,33 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
 
         // Clear any actions we already resolved, because none will have been executed yet
         // We are going to fail all passed actions because there's no way we can execute any
-        // if operation timeout is exceeded.
+        // if operation timeout is exceeded. We don't fail actions which we already failed locally
+        // due to location error and had action counter decremented for already, and for replica
+        // actions manageLocationError prevents double action counter decrementing in the case
+        // another replica action succeeded after one failed out here on location error
         actionsByServer.clear();
         for (Action actionToFail : currentActions) {
-          manageLocationError(actionToFail, exception);
+          // Action equality is implemented as row equality so we check action index equality
+          // since we don't want two different actions for the same row to be considered equal here
+          boolean actionAlreadyFailed =
+            locateRegionFailedActions != null && locateRegionFailedActions.stream().anyMatch(
+              failedAction -> failedAction.getOriginalIndex() == actionToFail.getOriginalIndex()
+                && failedAction.getReplicaId() == actionToFail.getReplicaId());
+          if (!actionAlreadyFailed) {
+            manageLocationError(actionToFail, exception);
+          }
         }
         return;
       }
 
       RegionLocations locs = findAllLocationsOrFail(action, true);
-      if (locs == null) continue;
+      if (locs == null) {
+        if (locateRegionFailedActions == null) {
+          locateRegionFailedActions = new ArrayList<>(1);
+        }
+        locateRegionFailedActions.add(action);
+        continue;
+      }
       boolean isReplicaAction = !RegionReplicaUtil.isDefaultReplica(action.getReplicaId());
       if (isReplica && !isReplicaAction) {
         // This is the property of the current implementation, not a requirement.
@@ -488,6 +506,10 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         } else {
           // TODO: relies on primary location always being fetched
           manageLocationError(action, null);
+          if (locateRegionFailedActions == null) {
+            locateRegionFailedActions = new ArrayList<>(1);
+          }
+          locateRegionFailedActions.add(action);
         }
       } else {
         byte[] regionName = loc.getRegionInfo().getRegionName();
