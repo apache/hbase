@@ -18,13 +18,24 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -40,9 +51,14 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -79,6 +95,7 @@ public class TestIncrementalBackup extends TestBackupBase {
 
   // implement all test cases in 1 test since incremental
   // backup/restore has dependencies
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   public void TestIncBackupRestore() throws Exception {
     int ADD_ROWS = 99;
@@ -224,7 +241,92 @@ public class TestIncrementalBackup extends TestBackupBase {
       hTable = conn.getTable(table2_restore);
       Assert.assertEquals(NB_ROWS_IN_BATCH + 5, HBaseTestingUtil.countRows(hTable));
       hTable.close();
+
+      // Test bulkloads
+      newTable1Desc = TableDescriptorBuilder.newBuilder(newTable1Desc)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam3Name)).build();
+      updateDesc(newTable1Desc, tables, conn);
+      testBulkloads(conn, famName, mobName);
       admin.close();
     }
+  }
+
+  private void updateDesc(TableDescriptor desc, List<TableName> tablesToBackup, Connection conn)
+    throws Exception {
+    TEST_UTIL.getAdmin().modifyTable(desc);
+    BackupAdminImpl backupAdmin = new BackupAdminImpl(conn);
+    BackupRequest req = createBackupRequest(BackupType.FULL, tablesToBackup, BACKUP_ROOT_DIR);
+    String backupId = backupAdmin.backupTables(req);
+    checkSucceeded(backupId);
+  }
+
+  private void testBulkloads(Connection conn, byte[]... famsToLoad) throws Exception {
+    BackupAdminImpl backupAdmin = new BackupAdminImpl(conn);
+    List<HRegion> allRegions = TEST_UTIL.getHBaseCluster().getRegions(table1);
+    HRegion regionToBulkload = allRegions.get(0);
+    String regionName = regionToBulkload.getRegionInfo().getEncodedName();
+    Path regionDir = createHFiles(table1, regionName, famsToLoad);
+    doBulkload(table1, regionDir);
+    TEST_UTIL.waitTableAvailable(table1);
+
+    BackupRequest request =
+      createBackupRequest(BackupType.INCREMENTAL, Lists.newArrayList(table1), BACKUP_ROOT_DIR);
+    String incrementalBackupId = backupAdmin.backupTables(request);
+    assertTrue(checkSucceeded(incrementalBackupId));
+    TableName[] fromTables = new TableName[] { table1 };
+    TableName[] toTables = new TableName[] { table1_restore };
+
+    backupAdmin.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, incrementalBackupId,
+      false, fromTables, toTables, true));
+
+    int rowsExpected = HBaseTestingUtil.countRows(conn.getTable(table1), famsToLoad);
+
+    Table hTable = conn.getTable(table1_restore);
+    Assert.assertEquals(HBaseTestingUtil.countRows(hTable, famsToLoad), rowsExpected);
+  }
+
+  private static Path createHFiles(TableName tn, String regionName, byte[]... fams)
+    throws IOException {
+    Path rootdir = CommonFSUtils.getRootDir(conf1);
+    Path regionDir = CommonFSUtils.getRegionDir(rootdir, tn, regionName);
+
+    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
+    fs.mkdirs(rootdir);
+
+    for (byte[] fam : fams) {
+      int rows = ThreadLocalRandom.current().nextInt(100);
+      Path famDir = new Path(regionDir, Bytes.toString(fam));
+      Path hFileLocation =
+        new Path(famDir, UUID.randomUUID() + StoreFileInfo.formatBulkloadSeqId(15));
+
+      try (HFile.Writer writer = HFile.getWriterFactoryNoCache(conf1).withPath(fs, hFileLocation)
+        .withFileContext(
+          new HFileContextBuilder().withTableName(tn.toBytes()).withColumnFamily(fam).build())
+        .create()) {
+        for (int i = 0; i < rows; i++) {
+          byte[] row = Bytes.add(Bytes.toBytes(i), Bytes.toBytes(UUID.randomUUID().toString()));
+          ExtendedCell cell =
+            ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(fam)
+              .setQualifier(Bytes.toBytes(i)).setValue(row).setType(Cell.Type.Put).build();
+          writer.append(cell);
+        }
+      }
+      verifyHFileHasNRows(hFileLocation, rows);
+    }
+
+    return regionDir;
+  }
+
+  private static void verifyHFileHasNRows(Path path, int rows) throws IOException {
+    FileSystem fs = FileSystem.get(conf1);
+    try (HFile.Reader reader = HFile.createReader(fs, path, conf1)) {
+      assertEquals(rows, reader.getEntries());
+    }
+  }
+
+  private static void doBulkload(TableName tn, Path regionDir) throws IOException {
+    Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer> results =
+      BulkLoadHFiles.create(conf1).bulkLoad(tn, regionDir);
+    assertFalse(results.isEmpty());
   }
 }
