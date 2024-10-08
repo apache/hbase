@@ -70,6 +70,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
@@ -81,6 +83,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 @RunWith(Parameterized.class)
 @Category({ IOTests.class, LargeTests.class })
 public class TestBucketCache {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestBucketCache.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -911,8 +915,16 @@ public class TestBucketCache {
     try {
       Path filePath =
         new Path(HBASE_TESTING_UTILITY.getDataTestDir(), "testNotifyFileCachingCompletedSuccess");
-      bucketCache = testNotifyFileCachingCompleted(filePath, 10);
-      assertTrue(bucketCache.fullyCachedFiles.containsKey(filePath.getName()));
+      bucketCache = testNotifyFileCachingCompletedForTenBlocks(filePath, 10);
+      if (bucketCache.getStats().getFailedInserts() > 0) {
+        LOG.info("There were {} fail inserts, "
+          + "will assert if total blocks in backingMap equals (10 - failInserts) "
+          + "and file isn't listed as fully cached.", bucketCache.getStats().getFailedInserts());
+        assertEquals(10 - bucketCache.getStats().getFailedInserts(), bucketCache.backingMap.size());
+        assertFalse(bucketCache.fullyCachedFiles.containsKey(filePath.getName()));
+      } else {
+        assertTrue(bucketCache.fullyCachedFiles.containsKey(filePath.getName()));
+      }
     } finally {
       if (bucketCache != null) {
         bucketCache.shutdown();
@@ -929,7 +941,7 @@ public class TestBucketCache {
         "testNotifyFileCachingCompletedNotAllCached");
       // Deliberately passing more blocks than we have created to test that
       // notifyFileCachingCompleted will not consider the file fully cached
-      bucketCache = testNotifyFileCachingCompleted(filePath, 12);
+      bucketCache = testNotifyFileCachingCompletedForTenBlocks(filePath, 12);
       assertFalse(bucketCache.fullyCachedFiles.containsKey(filePath.getName()));
     } finally {
       if (bucketCache != null) {
@@ -939,8 +951,8 @@ public class TestBucketCache {
     }
   }
 
-  private BucketCache testNotifyFileCachingCompleted(Path filePath, int totalBlocks)
-    throws Exception {
+  private BucketCache testNotifyFileCachingCompletedForTenBlocks(Path filePath,
+    int totalBlocksToCheck) throws Exception {
     final Path dataTestDir = createAndGetTestDir();
     String ioEngineName = "file:" + dataTestDir + "/bucketNoRecycler.cache";
     BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
@@ -954,8 +966,8 @@ public class TestBucketCache {
     for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
       bucketCache.cacheBlock(hfileBlockPair.getBlockName(), hfileBlockPair.getBlock(), false, true);
     }
-    bucketCache.notifyFileCachingCompleted(filePath, totalBlocks, totalBlocks,
-      totalBlocks * constructedBlockSize);
+    bucketCache.notifyFileCachingCompleted(filePath, totalBlocksToCheck, totalBlocksToCheck,
+      totalBlocksToCheck * constructedBlockSize);
     return bucketCache;
   }
 }
