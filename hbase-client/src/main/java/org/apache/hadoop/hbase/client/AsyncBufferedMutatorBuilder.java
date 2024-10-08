@@ -106,13 +106,25 @@ public interface AsyncBufferedMutatorBuilder {
 
   /**
    * Set a rpc request attribute.
+   * <p>
+   * Introduced in 2.6.1. Any custom implementations of this class should implement this method in
+   * order to take advantage of the new behavior.
+   * </p>
    */
-  AsyncBufferedMutatorBuilder setRequestAttribute(String key, byte[] value);
+  default AsyncBufferedMutatorBuilder setRequestAttribute(String key, byte[] value) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 
   /**
    * Set multiple rpc request attributes.
+   * <p>
+   * Introduced in 2.6.1. Any custom implementations of this class should implement this method in
+   * order to take advantage of the new behavior.
+   * </p>
    */
-  AsyncBufferedMutatorBuilder setRequestAttributes(Map<String, byte[]> requestAttributes);
+  default AsyncBufferedMutatorBuilder setRequestAttributes(Map<String, byte[]> requestAttributes) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 
   /**
    * Create the {@link AsyncBufferedMutator} instance.
