@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -595,13 +596,16 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   static void completeFile(DFSClient client, ClientProtocol namenode, String src, String clientName,
     ExtendedBlock block, long fileId) {
+    long startTime = EnvironmentEdgeManager.currentTime();
     for (int retry = 0;; retry++) {
       try {
         if (namenode.complete(src, clientName, block, fileId)) {
           endFileLease(client, fileId);
           return;
         } else {
-          LOG.warn("complete file " + src + " not finished, retry = " + retry);
+          if (EnvironmentEdgeManager.currentTime() - startTime > 5000) {
+            LOG.info("complete file " + src + " not finished, retry = " + retry);
+          }
         }
       } catch (RemoteException e) {
         IOException ioe = e.unwrapRemoteException();
