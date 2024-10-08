@@ -594,6 +594,7 @@ public class BucketCache implements BlockCache, HeapSize {
       successfulAddition = bq.offer(re);
     }
     if (!successfulAddition) {
+      LOG.debug("Failed to insert block {} into the cache writers queue", cacheKey);
       ramCache.remove(cacheKey);
       cacheStats.failInsert();
     } else {
