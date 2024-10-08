@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.filter;
 import java.util.ArrayList;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -39,6 +40,7 @@ public class PrefixFilter extends FilterBase {
   protected byte[] prefix = null;
   protected boolean passedPrefix = false;
   protected boolean filterRow = true;
+  protected boolean provideHint = false;
 
   public PrefixFilter(final byte[] prefix) {
     this.prefix = prefix;
@@ -69,13 +71,19 @@ public class PrefixFilter extends FilterBase {
     if ((!isReversed() && cmp > 0) || (isReversed() && cmp < 0)) {
       passedPrefix = true;
     }
-    filterRow = (cmp != 0);
+    filterRow = (cmp > 0);
+    provideHint = cmp < 0;
     return filterRow;
   }
 
   @Override
   public ReturnCode filterCell(final Cell c) {
-    if (filterRow) return ReturnCode.NEXT_ROW;
+    if (filterRow) {
+      return ReturnCode.NEXT_ROW;
+    }
+    if (provideHint) {
+      return ReturnCode.SEEK_NEXT_USING_HINT;
+    }
     return ReturnCode.INCLUDE;
   }
 
@@ -140,6 +148,11 @@ public class PrefixFilter extends FilterBase {
     }
     PrefixFilter other = (PrefixFilter) o;
     return Bytes.equals(this.getPrefix(), other.getPrefix());
+  }
+
+  @Override
+  public Cell getNextCellHint(Cell cell) {
+    return PrivateCellUtil.createFirstOnRow(prefix, 0, (short) prefix.length);
   }
 
   @Override

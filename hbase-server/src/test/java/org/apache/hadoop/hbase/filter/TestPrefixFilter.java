@@ -19,7 +19,10 @@ package org.apache.hadoop.hbase.filter;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -91,4 +94,35 @@ public class TestPrefixFilter {
     return Bytes.toBytes(HOST_PREFIX + Character.toString(c));
   }
 
+  @Test
+  public void shouldReturnSeekNextUsingHintWhenKeyBefore() throws IOException {
+    KeyValue cell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("com.yahoo.www.a."));
+
+    // Should include this row so that filterCell() will be invoked.
+    assertFalse(mainFilter.filterRowKey(cell));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, mainFilter.filterCell(cell));
+    Cell actualCellHint = mainFilter.getNextCellHint(cell);
+    assertNotNull(actualCellHint);
+    Cell expectedCellHint = KeyValueUtil.createFirstOnRow(Bytes.toBytes(HOST_PREFIX));
+    assertEquals(expectedCellHint, actualCellHint);
+    assertFalse(mainFilter.filterAllRemaining());
+  }
+
+  @Test
+  public void shouldReturnIncludeWhenKeyMatches() throws IOException {
+    KeyValue matchingCell = KeyValueUtil.createFirstOnRow(createRow('a'));
+
+    assertFalse(mainFilter.filterRowKey(matchingCell));
+    assertEquals(Filter.ReturnCode.INCLUDE, mainFilter.filterCell(matchingCell));
+    assertFalse(mainFilter.filterAllRemaining());
+  }
+
+  @Test
+  public void shouldReturnNextRowWhenKeyAfter() throws IOException {
+    KeyValue afterCell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("pt.example.www.1"));
+
+    assertTrue(mainFilter.filterRowKey(afterCell));
+    assertEquals(Filter.ReturnCode.NEXT_ROW, mainFilter.filterCell(afterCell));
+    assertTrue(mainFilter.filterAllRemaining());
+  }
 }
