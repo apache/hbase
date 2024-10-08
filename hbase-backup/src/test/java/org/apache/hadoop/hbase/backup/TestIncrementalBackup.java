@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.backup;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -104,6 +105,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       BackupAdminImpl client = new BackupAdminImpl(conn);
       BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
       String backupIdFull = client.backupTables(request);
+      validateRootPathCanBeOverridden(BACKUP_ROOT_DIR, backupIdFull);
       assertTrue(checkSucceeded(backupIdFull));
 
       // #2 - insert some data to table
@@ -156,6 +158,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       BackupManifest manifest =
         HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR), backupIdIncMultiple);
       assertEquals(Sets.newHashSet(table1, table2), new HashSet<>(manifest.getTableList()));
+      validateRootPathCanBeOverridden(BACKUP_ROOT_DIR, backupIdIncMultiple);
 
       // add column family f2 to table1
       // drop column family f3
@@ -176,6 +179,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
       String backupIdIncMultiple2 = client.backupTables(request);
       assertTrue(checkSucceeded(backupIdIncMultiple2));
+      validateRootPathCanBeOverridden(BACKUP_ROOT_DIR, backupIdIncMultiple2);
 
       // #5 - restore full backup for all tables
       TableName[] tablesRestoreFull = new TableName[] { table1, table2 };
@@ -225,6 +229,23 @@ public class TestIncrementalBackup extends TestBackupBase {
       Assert.assertEquals(NB_ROWS_IN_BATCH + 5, HBaseTestingUtil.countRows(hTable));
       hTable.close();
       admin.close();
+    }
+  }
+
+  /**
+   * Check that backup manifest can be produced for a different root. Users may want to move
+   * existing backups to a different location.
+   */
+  private void validateRootPathCanBeOverridden(String originalPath, String backupId)
+    throws IOException {
+    String anotherRootDir = "/some/other/root/dir";
+    Path anotherPath = new Path(anotherRootDir, backupId);
+    BackupManifest.BackupImage differentLocationImage = BackupManifest.hydrateRootDir(
+      HBackupFileSystem.getManifest(conf1, new Path(originalPath), backupId).getBackupImage(),
+      anotherPath);
+    assertEquals(differentLocationImage.getRootDir(), anotherRootDir);
+    for (BackupManifest.BackupImage ancestor : differentLocationImage.getAncestors()) {
+      assertEquals(ancestor.getRootDir(), anotherRootDir);
     }
   }
 }
