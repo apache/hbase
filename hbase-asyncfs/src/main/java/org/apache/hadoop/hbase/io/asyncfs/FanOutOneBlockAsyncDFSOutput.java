@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
@@ -121,7 +122,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   private final String src;
 
-  private final long fileId;
+  private HdfsFileStatus stat;
 
   private final ExtendedBlock block;
 
@@ -354,14 +355,14 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   }
 
   FanOutOneBlockAsyncDFSOutput(Configuration conf, DistributedFileSystem dfs, DFSClient client,
-    ClientProtocol namenode, String clientName, String src, long fileId, LocatedBlock locatedBlock,
-    Encryptor encryptor, Map<Channel, DatanodeInfo> datanodeInfoMap, DataChecksum summer,
-    ByteBufAllocator alloc, StreamSlowMonitor streamSlowMonitor) {
+    ClientProtocol namenode, String clientName, String src, HdfsFileStatus stat,
+    LocatedBlock locatedBlock, Encryptor encryptor, Map<Channel, DatanodeInfo> datanodeInfoMap,
+    DataChecksum summer, ByteBufAllocator alloc, StreamSlowMonitor streamSlowMonitor) {
     this.conf = conf;
     this.dfs = dfs;
     this.client = client;
     this.namenode = namenode;
-    this.fileId = fileId;
+    this.stat = stat;
     this.clientName = clientName;
     this.src = src;
     this.block = locatedBlock.getBlock();
@@ -592,7 +593,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       buf = null;
     }
     closeDataNodeChannelsAndAwait();
-    endFileLease(client, fileId);
+    endFileLease(client, stat);
     RecoverLeaseFSUtils.recoverFileLease(dfs, new Path(src), conf,
       reporter == null ? new CancelOnClose(client) : reporter);
   }
@@ -607,7 +608,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     state = State.CLOSED;
     closeDataNodeChannelsAndAwait();
     block.setNumBytes(ackedBlockLength);
-    completeFile(client, namenode, src, clientName, block, fileId);
+    completeFile(client, namenode, src, clientName, block, stat);
   }
 
   @Override
