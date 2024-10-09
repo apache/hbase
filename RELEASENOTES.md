@@ -89,6 +89,27 @@ The bucket cache is capable of reading old format of persistence (of single prot
 The HMaster will now abort when it detects a WALSyncTimeoutException while making edits to the MasterRegion.
 
 
+---
+
+* [HBASE-28346](https://issues.apache.org/jira/browse/HBASE-28346) | *Major* | **Expose checkQuota to Coprocessor Endpoints**
+
+For backward compatibility purposes, default, throwing implementations are provided for the new methods for 2.7.0 and 2.6.1. Custom implementation that want to take advantage of the new functionality should override those methods as appropriate.
+
+
+---
+
+* [HBASE-28001](https://issues.apache.org/jira/browse/HBASE-28001) | *Major* | **Add request attribute support to BufferedMutator**
+
+For backward compatibility purposes, default, throwing implementations are provided for the new methods for 2.7.0 and 2.6.1. Custom implementation that want to take advantage of the new functionality should override those methods as appropriate.
+
+
+---
+
+* [HBASE-28770](https://issues.apache.org/jira/browse/HBASE-28770) | *Major* | **Support partial results in AggregateImplementation and AsyncAggregationClient**
+
+For backward compatibility purposes, default, throwing implementations are provided for the new methods for 2.7.0 and 2.6.1. Custom implementation that want to take advantage of the new functionality should override those methods as appropriate.
+
+
 
 # HBASE  2.6.0 Release Notes
 

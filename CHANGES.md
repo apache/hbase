@@ -18,7 +18,7 @@
 -->
 # HBASE Changelog
 
-## Release 2.6.1 - Unreleased (as of 2024-10-01)
+## Release 2.6.1 - Unreleased (as of 2024-10-09)
 
 
 
@@ -59,16 +59,17 @@
 | [HBASE-28734](https://issues.apache.org/jira/browse/HBASE-28734) | Improve HBase shell snapshot command Doc with TTL option |  Minor | shell |
 | [HBASE-28686](https://issues.apache.org/jira/browse/HBASE-28686) | MapReduceBackupCopyJob should support custom DistCp options |  Major | . |
 | [HBASE-28522](https://issues.apache.org/jira/browse/HBASE-28522) | UNASSIGN proc indefinitely stuck on dead rs |  Critical | proc-v2, Region Assignment |
-| [HBASE-28346](https://issues.apache.org/jira/browse/HBASE-28346) | Expose checkQuota to Coprocessor Endpoints |  Major | . |
 | [HBASE-28732](https://issues.apache.org/jira/browse/HBASE-28732) | Fix typo in Jenkinsfile\_Github for jdk8 hadoop2 check |  Major | jenkins |
 | [HBASE-28725](https://issues.apache.org/jira/browse/HBASE-28725) | Use thirdparty protobuf for REST interface in HBase 2.x |  Major | REST |
 | [HBASE-28775](https://issues.apache.org/jira/browse/HBASE-28775) | Change the output of DatanodeInfo in the log to the hostname of the datanode |  Minor | wal |
-| [HBASE-28001](https://issues.apache.org/jira/browse/HBASE-28001) | Add request attribute support to BufferedMutator |  Major | . |
 | [HBASE-28850](https://issues.apache.org/jira/browse/HBASE-28850) | Only return from ReplicationSink.replicationEntries while all background tasks are finished |  Major | Replication, rpc |
 | [HBASE-27118](https://issues.apache.org/jira/browse/HBASE-27118) | Add security headers to Thrift/HTTP server |  Major | Thrift |
 | [HBASE-28816](https://issues.apache.org/jira/browse/HBASE-28816) | The description of "hbase.superuser" is confusing |  Major | documentation |
-| [HBASE-28770](https://issues.apache.org/jira/browse/HBASE-28770) | Support partial results in AggregateImplementation and AsyncAggregationClient |  Major | Client, Coprocessors, Quotas |
 | [HBASE-27903](https://issues.apache.org/jira/browse/HBASE-27903) | Skip submitting Split/Merge procedure when split/merge is disabled at table level |  Minor | Admin |
+| [HBASE-28346](https://issues.apache.org/jira/browse/HBASE-28346) | Expose checkQuota to Coprocessor Endpoints |  Major | . |
+| [HBASE-28001](https://issues.apache.org/jira/browse/HBASE-28001) | Add request attribute support to BufferedMutator |  Major | . |
+| [HBASE-28770](https://issues.apache.org/jira/browse/HBASE-28770) | Support partial results in AggregateImplementation and AsyncAggregationClient |  Major | Client, Coprocessors, Quotas |
+| [HBASE-28905](https://issues.apache.org/jira/browse/HBASE-28905) | Skip excessive evaluations of LINK\_NAME\_PATTERN and REF\_NAME\_PATTERN regular expressions |  Minor | . |
 
 
 ### BUG FIXES:
@@ -137,12 +138,14 @@
 | [HBASE-28778](https://issues.apache.org/jira/browse/HBASE-28778) | NPE may occur when opening master-status or table.jsp or procedure.jsp while Master is initializing |  Major | UI |
 | [HBASE-28810](https://issues.apache.org/jira/browse/HBASE-28810) | Improve BackupLogCleaner naming, debug logging |  Major | backup&restore |
 | [HBASE-28696](https://issues.apache.org/jira/browse/HBASE-28696) | Partition BackupSystemTable queries |  Major | . |
-| [HBASE-28396](https://issues.apache.org/jira/browse/HBASE-28396) | Quota throttling can cause a leak of scanners |  Major | . |
 | [HBASE-28867](https://issues.apache.org/jira/browse/HBASE-28867) | Backport "HBASE-20653 Add missing observer hooks for region server group to MasterObserver" to branch-2 |  Major | rsgroup |
-| [HBASE-28842](https://issues.apache.org/jira/browse/HBASE-28842) | TestRequestAttributes should fail when expected |  Major | . |
 | [HBASE-28705](https://issues.apache.org/jira/browse/HBASE-28705) | BackupLogCleaner cleans required WALs when using multiple backuproots |  Blocker | backup&restore |
 | [HBASE-28187](https://issues.apache.org/jira/browse/HBASE-28187) | NPE when flushing a non-existing column family |  Major | Client, regionserver |
 | [HBASE-28803](https://issues.apache.org/jira/browse/HBASE-28803) | HBase Master stuck due to improper handling of WALSyncTimeoutException within UncheckedIOException |  Critical | master, wal |
+| [HBASE-28890](https://issues.apache.org/jira/browse/HBASE-28890) | RefCnt Leak error when caching index blocks at write time |  Major | . |
+| [HBASE-28396](https://issues.apache.org/jira/browse/HBASE-28396) | Quota throttling can cause a leak of scanners |  Major | . |
+| [HBASE-28842](https://issues.apache.org/jira/browse/HBASE-28842) | TestRequestAttributes should fail when expected |  Major | . |
+| [HBASE-28721](https://issues.apache.org/jira/browse/HBASE-28721) | AsyncFSWAL is broken when running against hadoop 3.4.0 |  Major | hadoop3, wal |
 
 
 ### SUB-TASKS:
@@ -184,6 +187,7 @@
 | [HBASE-28868](https://issues.apache.org/jira/browse/HBASE-28868) | Add missing permission check for updateRSGroupConfig in branch-2 |  Minor | rsgroup |
 | [HBASE-28642](https://issues.apache.org/jira/browse/HBASE-28642) | Hide old PR comments when posting new |  Major | build, community |
 | [HBASE-28879](https://issues.apache.org/jira/browse/HBASE-28879) | Bump hbase-thirdparty to 4.1.9 |  Major | dependencies, thirdparty |
+| [HBASE-28895](https://issues.apache.org/jira/browse/HBASE-28895) | Bump Avro dependency version to 1.11.4 |  Major | . |
 
 
 ## Release 2.6.0 - Unreleased (as of 2024-04-29)
