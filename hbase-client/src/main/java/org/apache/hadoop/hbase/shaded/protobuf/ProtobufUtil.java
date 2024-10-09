@@ -2195,7 +2195,6 @@ public final class ProtobufUtil {
       return "coprocessorService= " + r.getCall().getServiceName() + ":"
         + r.getCall().getMethodName();
     } else if (m instanceof MasterProtos.MoveRegionRequest) {
-      // This should be small and safe to output. No data.
       return TextFormat.shortDebugString(m);
     }
     return "TODO: " + m.getClass().toString();
