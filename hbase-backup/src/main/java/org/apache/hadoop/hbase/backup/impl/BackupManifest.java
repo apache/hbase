@@ -159,12 +159,17 @@ public class BackupManifest {
       return image;
     }
 
+    /**
+     * This method deliberately does not include the backup root dir on the produced proto. This is
+     * because we don't want to persist the root dir on the backup itself, so that backups can still
+     * be used after they have moved locations. A restore's operator will always provide the root
+     * dir.
+     */
     BackupProtos.BackupImage toProto() {
       BackupProtos.BackupImage.Builder builder = BackupProtos.BackupImage.newBuilder();
       builder.setBackupId(backupId);
       builder.setCompleteTs(completeTs);
       builder.setStartTs(startTs);
-      builder.setBackupRootDir(rootDir);
       if (type == BackupType.FULL) {
         builder.setBackupType(BackupProtos.BackupType.FULL);
       } else {
@@ -460,15 +465,9 @@ public class BackupManifest {
     throws IOException {
     String providedRootDir =
       HBackupFileSystem.getRootDirFromBackupPath(backupPath, backupImage.backupId).toString();
-    if (!providedRootDir.startsWith(backupImage.getRootDir())) {
-      LOG.info(
-        "Provided backup root ({}) is different from the BackupImage's root ({}). "
-          + "We will prefer the provided root for this Backup and its ancestors.",
-        providedRootDir, backupImage.getRootDir());
-      backupImage.setRootDir(providedRootDir);
-      for (BackupImage ancestor : backupImage.getAncestors()) {
-        ancestor.setRootDir(providedRootDir);
-      }
+    backupImage.setRootDir(providedRootDir);
+    for (BackupImage ancestor : backupImage.getAncestors()) {
+      ancestor.setRootDir(providedRootDir);
     }
     return backupImage;
   }

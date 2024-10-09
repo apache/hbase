@@ -54,11 +54,12 @@ message TableServerTimestamp {
 
 /**
  * Structure keeps relevant info for backup restore session
+ * backup_root_dir is deprecated because we no longer store root dirs on disk HBASE-28882
  */
 message BackupImage {
   optional string backup_id = 1;
   optional BackupType backup_type = 2;
-  optional string backup_root_dir = 3;
+  optional string backup_root_dir = 3 [deprecated = true];
   repeated TableName table_list = 4;
   optional uint64 start_ts = 5;
   optional uint64 complete_ts = 6;

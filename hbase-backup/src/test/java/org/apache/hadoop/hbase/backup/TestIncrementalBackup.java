@@ -268,7 +268,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       anotherPath);
     assertEquals(differentLocationImage.getRootDir(), anotherRootDir);
     for (BackupManifest.BackupImage ancestor : differentLocationImage.getAncestors()) {
-      assertEquals(ancestor.getRootDir(), anotherRootDir);
+      assertEquals(anotherRootDir, ancestor.getRootDir());
     }
   }
 }

@@ -126,8 +126,7 @@ public final class HBackupFileSystem {
     }
     Preconditions.checkArgument(backupPath.getName().equals(backupId),
       String.format("Backup path %s must end in backupId %s", backupPath, backupId));
-    return new Path(
-      backupPath.toString().substring(0, backupPath.toString().indexOf("/" + backupId)));
+    return backupPath.getParent();
   }
 
   public static BackupManifest getManifest(Configuration conf, Path backupRootPath, String backupId)
