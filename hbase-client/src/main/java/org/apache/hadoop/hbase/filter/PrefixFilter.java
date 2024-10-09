@@ -152,7 +152,7 @@ public class PrefixFilter extends FilterBase {
 
   @Override
   public Cell getNextCellHint(Cell cell) {
-    return PrivateCellUtil.createFirstOnRowCol(cell, prefix, 0, prefix.length);
+    return PrivateCellUtil.createFirstOnRow(prefix, 0, (short) prefix.length);
   }
 
   @Override

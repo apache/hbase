@@ -101,9 +101,10 @@ public class TestPrefixFilter {
     // Should include this row so that filterCell() will be invoked.
     assertFalse(mainFilter.filterRowKey(cell));
     assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, mainFilter.filterCell(cell));
-    Cell nextCellHint = mainFilter.getNextCellHint(cell);
-    assertNotNull(nextCellHint);
-    assertEquals(HOST_PREFIX, Bytes.toString(nextCellHint.getRowArray()));
+    Cell actualCellHint = mainFilter.getNextCellHint(cell);
+    assertNotNull(actualCellHint);
+    Cell expectedCellHint = KeyValueUtil.createFirstOnRow(Bytes.toBytes(HOST_PREFIX));
+    assertEquals(expectedCellHint, actualCellHint);
     assertFalse(mainFilter.filterAllRemaining());
   }
 
@@ -111,7 +112,7 @@ public class TestPrefixFilter {
   public void shouldReturnIncludeWhenKeyMatches() throws IOException {
     KeyValue matchingCell = KeyValueUtil.createFirstOnRow(createRow('a'));
 
-    assertFalse(mainFilter.filterRowKey(matchingCell)); // -> include this row
+    assertFalse(mainFilter.filterRowKey(matchingCell));
     assertEquals(Filter.ReturnCode.INCLUDE, mainFilter.filterCell(matchingCell));
     assertFalse(mainFilter.filterAllRemaining());
   }
@@ -120,7 +121,7 @@ public class TestPrefixFilter {
   public void shouldReturnNextRowWhenKeyAfter() throws IOException {
     KeyValue afterCell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("pt.example.www.1"));
 
-    assertTrue(mainFilter.filterRowKey(afterCell)); // -> drop this row
+    assertTrue(mainFilter.filterRowKey(afterCell));
     assertEquals(Filter.ReturnCode.NEXT_ROW, mainFilter.filterCell(afterCell));
     assertTrue(mainFilter.filterAllRemaining());
   }
