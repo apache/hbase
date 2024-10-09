@@ -81,6 +81,11 @@ public class TestProtobufUtil {
     HBaseClassTestRule.forClass(TestProtobufUtil.class);
   private static final String TAG_STR = "tag-1";
   private static final byte TAG_TYPE = (byte) 10;
+  private static final HBaseProtos.ServerName SERVER_NAME =
+    HBaseProtos.ServerName.newBuilder().setHostName("a.b.com").build();
+  private static final HBaseProtos.RegionSpecifier REGION =
+    HBaseProtos.RegionSpecifier.newBuilder().setValue(ByteString.copyFromUtf8("test"))
+      .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).build();
 
   public TestProtobufUtil() {
   }
@@ -637,7 +642,7 @@ public class TestProtobufUtil {
   @Test
   public void testGetShortTextFormatScanRequest() {
     ClientProtos.ScanRequest.Builder builder = ClientProtos.ScanRequest.newBuilder();
-    builder.setRegion(givenRegion());
+    builder.setRegion(REGION);
     ClientProtos.ScanRequest scanRequest = builder.build();
 
     String actual = ProtobufUtil.getShortTextFormat(scanRequest);
@@ -650,7 +655,7 @@ public class TestProtobufUtil {
   public void testGetShortTextFormatRegionServerReportRequest() {
     RegionServerStatusProtos.RegionServerReportRequest.Builder builder =
       RegionServerStatusProtos.RegionServerReportRequest.newBuilder();
-    builder.setServer(givenServerName());
+    builder.setServer(SERVER_NAME);
     RegionServerStatusProtos.RegionServerReportRequest request = builder.build();
 
     String actual = ProtobufUtil.getShortTextFormat(request);
@@ -691,8 +696,8 @@ public class TestProtobufUtil {
 
   @Test
   public void testGetShortTextFormatGetRequest() throws IOException {
-    ClientProtos.GetRequest getRequest = ClientProtos.GetRequest.newBuilder()
-      .setRegion(givenRegion()).setGet(ProtobufUtil.toGet(new Get(Bytes.toBytes("foo")))).build();
+    ClientProtos.GetRequest getRequest = ClientProtos.GetRequest.newBuilder().setRegion(REGION)
+      .setGet(ProtobufUtil.toGet(new Get(Bytes.toBytes("foo")))).build();
 
     String actual = ProtobufUtil.getShortTextFormat(getRequest);
 
@@ -705,7 +710,7 @@ public class TestProtobufUtil {
     ClientProtos.Action action = ClientProtos.Action.newBuilder()
       .setGet(ProtobufUtil.toGet(new Get(Bytes.toBytes("foo")))).build();
     ClientProtos.RegionAction regionAction =
-      ClientProtos.RegionAction.newBuilder().addAction(action).setRegion(givenRegion()).build();
+      ClientProtos.RegionAction.newBuilder().addAction(action).setRegion(REGION).build();
 
     ClientProtos.MultiRequest multiRequest =
       ClientProtos.MultiRequest.newBuilder().addRegionAction(regionAction).build();
@@ -721,7 +726,7 @@ public class TestProtobufUtil {
     ClientProtos.MutateRequest mutateRequest = ClientProtos.MutateRequest.newBuilder()
       .setMutation(
         ProtobufUtil.toMutation(MutationType.INCREMENT, new Increment(Bytes.toBytes("foo"))))
-      .setRegion(givenRegion()).build();
+      .setRegion(REGION).build();
 
     String actual = ProtobufUtil.getShortTextFormat(mutateRequest);
 
@@ -738,7 +743,7 @@ public class TestProtobufUtil {
 
     ClientProtos.CoprocessorServiceRequest.Builder builder =
       ClientProtos.CoprocessorServiceRequest.newBuilder();
-    builder.setRegion(givenRegion());
+    builder.setRegion(REGION);
     builder.setCall(call);
     ClientProtos.CoprocessorServiceRequest coprocessorServiceRequest = builder.build();
 
@@ -751,8 +756,8 @@ public class TestProtobufUtil {
   @Test
   public void testGetShortTextFormatMoveRegionRequest() {
     MasterProtos.MoveRegionRequest.Builder builder = MasterProtos.MoveRegionRequest.newBuilder();
-    builder.setRegion(givenRegion());
-    builder.setDestServerName(givenServerName());
+    builder.setRegion(REGION);
+    builder.setDestServerName(SERVER_NAME);
     MasterProtos.MoveRegionRequest moveRegionRequest = builder.build();
 
     String actual = ProtobufUtil.getShortTextFormat(moveRegionRequest);
@@ -761,14 +766,5 @@ public class TestProtobufUtil {
     assertEquals(
       "region { type: REGION_NAME value: \"test\" } dest_server_name { host_name: \"a.b.com\" }",
       actual);
-  }
-
-  private static HBaseProtos.ServerName givenServerName() {
-    return HBaseProtos.ServerName.newBuilder().setHostName("a.b.com").build();
-  }
-
-  private static HBaseProtos.RegionSpecifier givenRegion() {
-    return HBaseProtos.RegionSpecifier.newBuilder().setValue(ByteString.copyFromUtf8("test"))
-      .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).build();
   }
 }
