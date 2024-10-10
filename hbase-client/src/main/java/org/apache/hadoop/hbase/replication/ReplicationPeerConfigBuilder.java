@@ -130,6 +130,17 @@ public interface ReplicationPeerConfigBuilder {
   ReplicationPeerConfigBuilder setExcludeTableCFsMap(Map<TableName, List<String>> tableCFsMap);
 
   /**
+   * Sets the mapping of source table names to target replication table names. This method sets
+   * state which is mutually exclusive to {@link #setSourceTablesToTargetTable(Map)}.
+   * @param sourceTablesToTargetTable A mapping of source table names to target table names. By
+   *                                  default, edits will be replicated to the same target table as
+   *                                  the source. Only applies to intercluster replication.
+   * @return {@code this}
+   */
+  ReplicationPeerConfigBuilder
+    setSourceTablesToTargetTable(Map<TableName, TableName> sourceTablesToTargetTable);
+
+  /**
    * Sets the collection of namespaces which should not be replicated when all user tables are
    * configured to be replicated. This method sets state which is mutually exclusive to
    * {@link #setNamespaces(Set)}. Invoking this method is only relevant when all user tables are
