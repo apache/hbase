@@ -677,9 +677,8 @@ public class TestProtobufUtil {
     String actual = ProtobufUtil.getShortTextFormat(regionServerStartupRequest);
 
     assertNotNull(actual);
-    assertEquals(
-      "port: 8080 server_start_code: 15 server_current_time: 111111 use_this_hostname_instead: \"some-host-name\"",
-      actual);
+    assertEquals("port: 8080 server_start_code: 15 server_current_time: 111111"
+      + " use_this_hostname_instead: \"some-host-name\"", actual);
   }
 
   @Test
