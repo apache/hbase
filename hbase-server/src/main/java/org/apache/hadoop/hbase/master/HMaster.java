@@ -52,8 +52,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -2403,6 +2403,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
       TransitRegionStateProcedure proc =
         this.assignmentManager.createMoveRegionProcedure(rp.getRegionInfo(), rp.getDestination());
+      CompletableFuture<String> completableFuture = new CompletableFuture<>();
+      proc.setCompletableFuture(completableFuture);
       if (conf.getBoolean(WARMUP_BEFORE_MOVE, DEFAULT_WARMUP_BEFORE_MOVE)) {
         // Warmup the region on the destination before initiating the move.
         // A region server could reject the close request because it either does not
@@ -2412,11 +2414,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         warmUpRegion(rp.getDestination(), hri);
       }
       LOG.info(getClientIdAuditPrefix() + " move " + rp + ", running balancer");
-      Future<byte[]> future = ProcedureSyncWait.submitProcedure(this.procedureExecutor, proc);
+      ProcedureSyncWait.submitProcedure(this.procedureExecutor, proc);
       try {
         // Is this going to work? Will we throw exception on error?
-        // TODO: CompletableFuture rather than this stunted Future.
-        future.get();
+        completableFuture.get();
       } catch (InterruptedException | ExecutionException e) {
         throw new HBaseIOException(e);
       }
