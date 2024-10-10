@@ -44,3 +44,11 @@ message Reference {
   required Range range = 2;
 }
 
+/**
+ * TODO: Reference file content used when we split an hfile under a region.
+ */
+message RangeReference {
+  required bytes startKey = 1;
+  required bytes endKey = 2;
+}
+

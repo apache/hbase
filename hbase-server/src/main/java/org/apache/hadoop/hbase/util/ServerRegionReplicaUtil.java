@@ -138,7 +138,7 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
       if (HFileLink.isHFileLink(referencePath)) {
         // HFileLink Reference
         HFileLink link = HFileLink.buildFromHFileLinkPattern(conf, referencePath);
-        return new StoreFileInfo(conf, fs, link.getFileStatus(fs), reference, link);
+        return new StoreFileInfo(conf, fs, link.getFileStatus(fs), reference, link, null);
       } else {
         // Reference
         HFileLink link = HFileLink.build(conf, regionInfoForFs.getTable(),
