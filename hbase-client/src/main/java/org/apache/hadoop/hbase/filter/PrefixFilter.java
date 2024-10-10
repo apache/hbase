@@ -52,10 +52,16 @@ public class PrefixFilter extends FilterBase {
 
   @Override
   public boolean filterRowKey(Cell firstRowCell) {
-    if (firstRowCell == null || this.prefix == null) return true;
-    if (filterAllRemaining()) return true;
+    if (firstRowCell == null || this.prefix == null) {
+      return true;
+    }
+    if (filterAllRemaining()) {
+      return true;
+    }
     int length = firstRowCell.getRowLength();
-    if (length < prefix.length) return true;
+    if (length < prefix.length) {
+      return true;
+    }
     // if they are equal, return false => pass row
     // else return true, filter row
     // if we are passed the prefix, set flag
@@ -113,7 +119,9 @@ public class PrefixFilter extends FilterBase {
   @Override
   public byte[] toByteArray() {
     FilterProtos.PrefixFilter.Builder builder = FilterProtos.PrefixFilter.newBuilder();
-    if (this.prefix != null) builder.setPrefix(UnsafeByteOperations.unsafeWrap(this.prefix));
+    if (this.prefix != null) {
+      builder.setPrefix(UnsafeByteOperations.unsafeWrap(this.prefix));
+    }
     return builder.build().toByteArray();
   }
 
