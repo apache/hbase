@@ -155,9 +155,9 @@ public class TestAsyncTableScanMetrics {
     long bytes = results.stream().flatMap(r -> Arrays.asList(r.rawCells()).stream())
       .mapToLong(c -> PrivateCellUtil.estimatedSerializedSizeOf(c)).sum();
     ScanMetrics scanMetrics = pair.getSecond();
-    assertEquals(NUM_REGIONS, scanMetrics.countOfRegions.get());
-    assertEquals(bytes, scanMetrics.countOfBytesInResults.get());
-    assertEquals(NUM_REGIONS, scanMetrics.countOfRPCcalls.get());
+    assertEquals(NUM_REGIONS, scanMetrics.getCountOfRegions().get());
+    assertEquals(bytes, scanMetrics.getCountOfBytesInResults().get());
+    assertEquals(NUM_REGIONS, scanMetrics.getCountOfRPCcalls().get());
     // also assert a server side metric to ensure that we have published them into the client side
     // metrics.
     assertEquals(3, scanMetrics.countOfRowsScanned.get());
