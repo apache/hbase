@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.createPreSplitLoadTestTable;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -212,8 +213,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     LOG.info("Creating table {} with {} splits.", tableName,
       regionsCountPerServer * regionServerCount);
     startTime = EnvironmentEdgeManager.currentTime();
-    HBaseTestingUtil.createPreSplitLoadTestTable(util.getConfiguration(), desc, columns,
-      regionsCountPerServer);
+    createPreSplitLoadTestTable(util.getConfiguration(), desc, columns, regionsCountPerServer);
     util.waitTableAvailable(tableName);
     endTime = EnvironmentEdgeManager.currentTime();
     LOG.info("Pre-split table created successfully in {}ms.", (endTime - startTime));

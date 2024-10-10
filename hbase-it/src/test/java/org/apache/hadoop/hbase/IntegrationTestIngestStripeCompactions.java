@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.createPreSplitLoadTestTable;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -45,8 +47,9 @@ public class IntegrationTestIngestStripeCompactions extends IntegrationTestInges
       .setValue(HStore.BLOCKING_STOREFILES_KEY, "100").build();
     ColumnFamilyDescriptor familyDescriptor =
       ColumnFamilyDescriptorBuilder.of(HFileTestUtil.DEFAULT_COLUMN_FAMILY);
-    HBaseTestingUtil.createPreSplitLoadTestTable(util.getConfiguration(), tableDescriptor,
-      familyDescriptor);
+    ColumnFamilyDescriptor[] columns = new ColumnFamilyDescriptor[] { familyDescriptor };
+    createPreSplitLoadTestTable(util.getConfiguration(), tableDescriptor, columns,
+      IntegrationTestingUtility.DEFAULT_REGIONS_PER_SERVER);
   }
 
   public static void main(String[] args) throws Exception {

@@ -130,8 +130,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -183,14 +181,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 @InterfaceStability.Evolving
 public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
-  public static final String REGIONS_PER_SERVER_KEY = "hbase.test.regions-per-server";
-  /**
-   * The default number of regions per regionserver when creating a pre-split table.
-   */
   public static final int DEFAULT_REGIONS_PER_SERVER = 3;
-
-  public static final String PRESPLIT_TEST_TABLE_KEY = "hbase.test.pre-split-table";
-  public static final boolean PRESPLIT_TEST_TABLE = true;
 
   private MiniDFSCluster dfsCluster = null;
   private FsDatasetAsyncDiskServiceFixer dfsClusterFixer = null;
@@ -3349,139 +3340,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     if (savedException != null) {
       throw savedException;
     }
-  }
-
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableName tableName,
-    byte[] columnFamily, Algorithm compression, DataBlockEncoding dataBlockEncoding)
-    throws IOException {
-    return createPreSplitLoadTestTable(conf, tableName, columnFamily, compression,
-      dataBlockEncoding, DEFAULT_REGIONS_PER_SERVER, 1, Durability.USE_DEFAULT);
-  }
-
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableName tableName,
-    byte[] columnFamily, Algorithm compression, DataBlockEncoding dataBlockEncoding,
-    int numRegionsPerServer, int regionReplication, Durability durability) throws IOException {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    builder.setDurability(durability);
-    builder.setRegionReplication(regionReplication);
-    ColumnFamilyDescriptorBuilder cfBuilder =
-      ColumnFamilyDescriptorBuilder.newBuilder(columnFamily);
-    cfBuilder.setDataBlockEncoding(dataBlockEncoding);
-    cfBuilder.setCompressionType(compression);
-    return createPreSplitLoadTestTable(conf, builder.build(), cfBuilder.build(),
-      numRegionsPerServer);
-  }
-
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableName tableName,
-    byte[][] columnFamilies, Algorithm compression, DataBlockEncoding dataBlockEncoding,
-    int numRegionsPerServer, int regionReplication, Durability durability) throws IOException {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    builder.setDurability(durability);
-    builder.setRegionReplication(regionReplication);
-    ColumnFamilyDescriptor[] hcds = new ColumnFamilyDescriptor[columnFamilies.length];
-    for (int i = 0; i < columnFamilies.length; i++) {
-      ColumnFamilyDescriptorBuilder cfBuilder =
-        ColumnFamilyDescriptorBuilder.newBuilder(columnFamilies[i]);
-      cfBuilder.setDataBlockEncoding(dataBlockEncoding);
-      cfBuilder.setCompressionType(compression);
-      hcds[i] = cfBuilder.build();
-    }
-    return createPreSplitLoadTestTable(conf, builder.build(), hcds, numRegionsPerServer);
-  }
-
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableDescriptor desc,
-    ColumnFamilyDescriptor hcd) throws IOException {
-    return createPreSplitLoadTestTable(conf, desc, hcd, DEFAULT_REGIONS_PER_SERVER);
-  }
-
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableDescriptor desc,
-    ColumnFamilyDescriptor hcd, int numRegionsPerServer) throws IOException {
-    return createPreSplitLoadTestTable(conf, desc, new ColumnFamilyDescriptor[] { hcd },
-      numRegionsPerServer);
-  }
-
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableDescriptor desc,
-    ColumnFamilyDescriptor[] hcds, int numRegionsPerServer) throws IOException {
-    return createPreSplitLoadTestTable(conf, desc, hcds, new RegionSplitter.HexStringSplit(),
-      numRegionsPerServer);
-  }
-
-  /**
-   * Creates a pre-split table for load testing. If the table already exists, logs a warning and
-   * continues.
-   * @return the number of regions the table was split into
-   */
-  public static int createPreSplitLoadTestTable(Configuration conf, TableDescriptor td,
-    ColumnFamilyDescriptor[] cds, SplitAlgorithm splitter, int numRegionsPerServer)
-    throws IOException {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(td);
-    for (ColumnFamilyDescriptor cd : cds) {
-      if (!td.hasColumnFamily(cd.getName())) {
-        builder.setColumnFamily(cd);
-      }
-    }
-    td = builder.build();
-    int totalNumberOfRegions = 0;
-    Connection unmanagedConnection = ConnectionFactory.createConnection(conf);
-    Admin admin = unmanagedConnection.getAdmin();
-
-    try {
-      // create a table a pre-splits regions.
-      // The number of splits is set as:
-      // region servers * regions per region server).
-      int numberOfServers = admin.getRegionServers().size();
-      if (numberOfServers == 0) {
-        throw new IllegalStateException("No live regionservers");
-      }
-
-      totalNumberOfRegions = numberOfServers * numRegionsPerServer;
-      LOG.info("Number of live regionservers: " + numberOfServers + ", "
-        + "pre-splitting table into " + totalNumberOfRegions + " regions " + "(regions per server: "
-        + numRegionsPerServer + ")");
-
-      byte[][] splits = splitter.split(totalNumberOfRegions);
-
-      admin.createTable(td, splits);
-    } catch (MasterNotRunningException e) {
-      LOG.error("Master not running", e);
-      throw new IOException(e);
-    } catch (TableExistsException e) {
-      LOG.warn("Table " + td.getTableName() + " already exists, continuing");
-    } finally {
-      admin.close();
-      unmanagedConnection.close();
-    }
-    return totalNumberOfRegions;
   }
 
   public static int getMetaRSPort(Connection connection) throws IOException {
