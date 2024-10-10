@@ -43,7 +43,6 @@ public class TestPrefixFilter {
   static final char FIRST_CHAR = 'a';
   static final char LAST_CHAR = 'e';
   static final String HOST_PREFIX = "org.apache.site-";
-  static final byte[] GOOD_BYTES = Bytes.toBytes("abc");
 
   @Before
   public void setUp() throws Exception {
