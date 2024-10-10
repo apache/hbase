@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -50,6 +51,8 @@ import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -422,13 +425,24 @@ public class CatalogJanitor extends ScheduledChore {
     try {
       HRegionFileSystem regionFs = HRegionFileSystem
         .openRegionFromFileSystem(services.getConfiguration(), fs, tabledir, region, true);
-      boolean references = regionFs.hasReferences(tableDescriptor);
+      boolean references = hasReferences(services.getConfiguration(), regionFs, tableDescriptor);
       return new Pair<>(Boolean.TRUE, references);
     } catch (IOException e) {
       LOG.error("Error trying to determine if region {} has references, assuming it does",
         region.getEncodedName(), e);
       return new Pair<>(Boolean.TRUE, Boolean.TRUE);
     }
+  }
+
+  private static boolean hasReferences(Configuration conf, HRegionFileSystem regionFs,
+    TableDescriptor htd) throws IOException {
+    for (ColumnFamilyDescriptor family : htd.getColumnFamilies()) {
+      StoreFileTracker sft = StoreFileTrackerFactory.create(conf, htd, family, regionFs, false);
+      if (sft.hasReferences(family.getNameAsString())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private void updateAssignmentManagerMetrics() {
