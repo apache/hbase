@@ -340,6 +340,7 @@ fi
 
 #If configured and available, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
 if [ -n "${HADOOP_IN_PATH}" ] && [ -f "${HADOOP_IN_PATH}" ]; then
+  # TODO: Drop/Modify this logic
   # If built hbase, temporarily add hbase-server*.jar to classpath for GetJavaProperty
   # Exclude hbase-server*-tests.jar
   temporary_cp=
@@ -766,13 +767,6 @@ elif [ "$COMMAND" = "copyreppeers" ] ; then
   CLASS='org.apache.hadoop.hbase.replication.CopyReplicationPeers'
 else
   CLASS=$COMMAND
-if [[ "$CLASS" =~ .*IntegrationTest.* ]] ; then
-    for f in ${HBASE_HOME}/lib/test/*.jar; do
-      if [ -f "${f}" ]; then
-        CLASSPATH="${CLASSPATH}:${f}"
-      fi
-    done
-  fi
 fi
 
 add_jdk17_jvm_flags
