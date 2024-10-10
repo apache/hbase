@@ -69,7 +69,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 
 @Category(SmallTests.class)
 public class TestProtobufUtil {
@@ -78,6 +80,11 @@ public class TestProtobufUtil {
     HBaseClassTestRule.forClass(TestProtobufUtil.class);
   private static final String TAG_STR = "tag-1";
   private static final byte TAG_TYPE = (byte) 10;
+  private static final HBaseProtos.ServerName SERVER_NAME =
+    HBaseProtos.ServerName.newBuilder().setHostName("a.b.com").build();
+  private static final HBaseProtos.RegionSpecifier REGION =
+    HBaseProtos.RegionSpecifier.newBuilder().setValue(ByteString.copyFromUtf8("test"))
+      .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).build();
 
   public TestProtobufUtil() {
   }
@@ -622,5 +629,140 @@ public class TestProtobufUtil {
 
     assertTrue(slowLogParams.getParams()
       .contains(Bytes.toStringBinary(mutationProto.getRow().toByteArray())));
+  }
+
+  @Test
+  public void testGetShortTextFormatNull() {
+    String actual = ProtobufUtil.getShortTextFormat(null);
+    assertNotNull(actual);
+    assertEquals("null", actual);
+  }
+
+  @Test
+  public void testGetShortTextFormatScanRequest() {
+    ClientProtos.ScanRequest.Builder builder = ClientProtos.ScanRequest.newBuilder();
+    builder.setRegion(REGION);
+    ClientProtos.ScanRequest scanRequest = builder.build();
+
+    String actual = ProtobufUtil.getShortTextFormat(scanRequest);
+
+    assertNotNull(actual);
+    assertEquals("region { type: REGION_NAME value: \"test\" }", actual);
+  }
+
+  @Test
+  public void testGetShortTextFormatRegionServerReportRequest() {
+    RegionServerStatusProtos.RegionServerReportRequest.Builder builder =
+      RegionServerStatusProtos.RegionServerReportRequest.newBuilder();
+    builder.setServer(SERVER_NAME);
+    RegionServerStatusProtos.RegionServerReportRequest request = builder.build();
+
+    String actual = ProtobufUtil.getShortTextFormat(request);
+
+    assertNotNull(actual);
+    assertEquals("server host_name: \"a.b.com\" load { numberOfRequests: 0 }", actual);
+  }
+
+  @Test
+  public void testGetShortTextFormatRegionServerStartupRequest() {
+    RegionServerStatusProtos.RegionServerStartupRequest.Builder builder =
+      RegionServerStatusProtos.RegionServerStartupRequest.newBuilder();
+    builder.setPort(8080);
+    builder.setServerCurrentTime(111111L);
+    builder.setServerStartCode(15L);
+    builder.setUseThisHostnameInstead("some-host-name");
+    RegionServerStatusProtos.RegionServerStartupRequest regionServerStartupRequest =
+      builder.build();
+
+    String actual = ProtobufUtil.getShortTextFormat(regionServerStartupRequest);
+
+    assertNotNull(actual);
+    assertEquals("port: 8080 server_start_code: 15 server_current_time: 111111"
+      + " use_this_hostname_instead: \"some-host-name\"", actual);
+  }
+
+  @Test
+  public void testGetShortTextFormatMutationProto() {
+    MutationProto mutationProto =
+      ClientProtos.MutationProto.newBuilder().setRow(ByteString.copyFromUtf8("row123")).build();
+
+    String actual = ProtobufUtil.getShortTextFormat(mutationProto);
+
+    assertNotNull(actual);
+    assertEquals("row=row123, type=APPEND", actual);
+  }
+
+  @Test
+  public void testGetShortTextFormatGetRequest() throws IOException {
+    ClientProtos.GetRequest getRequest = ClientProtos.GetRequest.newBuilder().setRegion(REGION)
+      .setGet(ProtobufUtil.toGet(new Get(Bytes.toBytes("foo")))).build();
+
+    String actual = ProtobufUtil.getShortTextFormat(getRequest);
+
+    assertNotNull(actual);
+    assertEquals("region= test, row=foo", actual);
+  }
+
+  @Test
+  public void testGetShortTextFormatMultiRequest() throws IOException {
+    ClientProtos.Action action = ClientProtos.Action.newBuilder()
+      .setGet(ProtobufUtil.toGet(new Get(Bytes.toBytes("foo")))).build();
+    ClientProtos.RegionAction regionAction =
+      ClientProtos.RegionAction.newBuilder().addAction(action).setRegion(REGION).build();
+
+    ClientProtos.MultiRequest multiRequest =
+      ClientProtos.MultiRequest.newBuilder().addRegionAction(regionAction).build();
+
+    String actual = ProtobufUtil.getShortTextFormat(multiRequest);
+
+    assertNotNull(actual);
+    assertEquals("region= test, for 1 action(s) and 1st row key=foo", actual);
+  }
+
+  @Test
+  public void testGetShortTextFormatMutateRequest() throws IOException {
+    ClientProtos.MutateRequest mutateRequest = ClientProtos.MutateRequest.newBuilder()
+      .setMutation(
+        ProtobufUtil.toMutation(MutationType.INCREMENT, new Increment(Bytes.toBytes("foo"))))
+      .setRegion(REGION).build();
+
+    String actual = ProtobufUtil.getShortTextFormat(mutateRequest);
+
+    assertNotNull(actual);
+    assertEquals("region= test, row=foo", actual);
+  }
+
+  @Test
+  public void testGetShortTextFormatCoprocessorServiceRequest() {
+    ClientProtos.CoprocessorServiceCall call = ClientProtos.CoprocessorServiceCall.newBuilder()
+      .setRow(ByteString.copyFrom(Bytes.toBytes("foo"))).setMethodName("awesomeMethod")
+      .setServiceName("awesomeService")
+      .setRequest(ByteString.copyFrom(Bytes.toBytes("foo-request"))).build();
+
+    ClientProtos.CoprocessorServiceRequest.Builder builder =
+      ClientProtos.CoprocessorServiceRequest.newBuilder();
+    builder.setRegion(REGION);
+    builder.setCall(call);
+    ClientProtos.CoprocessorServiceRequest coprocessorServiceRequest = builder.build();
+
+    String actual = ProtobufUtil.getShortTextFormat(coprocessorServiceRequest);
+
+    assertNotNull(actual);
+    assertEquals("coprocessorService= awesomeService:awesomeMethod", actual);
+  }
+
+  @Test
+  public void testGetShortTextFormatMoveRegionRequest() {
+    MasterProtos.MoveRegionRequest.Builder builder = MasterProtos.MoveRegionRequest.newBuilder();
+    builder.setRegion(REGION);
+    builder.setDestServerName(SERVER_NAME);
+    MasterProtos.MoveRegionRequest moveRegionRequest = builder.build();
+
+    String actual = ProtobufUtil.getShortTextFormat(moveRegionRequest);
+
+    assertNotNull(actual);
+    assertEquals(
+      "region { type: REGION_NAME value: \"test\" } dest_server_name { host_name: \"a.b.com\" }",
+      actual);
   }
 }
