@@ -57,7 +57,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Any;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.BytesValue;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -737,9 +736,9 @@ public class TestProtobufUtil {
   @Test
   public void testGetShortTextFormatCoprocessorServiceRequest() {
     ClientProtos.CoprocessorServiceCall call = ClientProtos.CoprocessorServiceCall.newBuilder()
-      .setRow(UnsafeByteOperations.unsafeWrap(Bytes.toBytes("foo"))).setMethodName("awesomeMethod")
+      .setRow(ByteString.copyFrom(Bytes.toBytes("foo"))).setMethodName("awesomeMethod")
       .setServiceName("awesomeService")
-      .setRequest(UnsafeByteOperations.unsafeWrap(Bytes.toBytes("foo-request"))).build();
+      .setRequest(ByteString.copyFrom(Bytes.toBytes("foo-request"))).build();
 
     ClientProtos.CoprocessorServiceRequest.Builder builder =
       ClientProtos.CoprocessorServiceRequest.newBuilder();
