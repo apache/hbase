@@ -465,6 +465,18 @@ public class RSRpcServices
     }
   }
 
+  static class RegionScannerContext {
+    final String scannerName;
+    final RegionScannerHolder holder;
+    final OperationQuota quota;
+
+    RegionScannerContext(String scannerName, RegionScannerHolder holder, OperationQuota quota) {
+      this.scannerName = scannerName;
+      this.holder = holder;
+      this.quota = quota;
+    }
+  }
+
   /**
    * Holder class which holds the RegionScanner, nextCallSeq and RpcCallbacks together.
    */
@@ -1340,12 +1352,12 @@ public class RSRpcServices
 
   /** Returns The outstanding RegionScanner for <code>scannerId</code> or null if none found. */
   RegionScanner getScanner(long scannerId) {
-    RegionScannerHolder rsh = getRegionScannerHolder(scannerId);
+    RegionScannerHolder rsh = checkQuotaAndGetRegionScannerContext(scannerId);
     return rsh == null ? null : rsh.s;
   }
 
   /** Returns The associated RegionScannerHolder for <code>scannerId</code> or null. */
-  private RegionScannerHolder getRegionScannerHolder(long scannerId) {
+  private RegionScannerHolder checkQuotaAndGetRegionScannerContext(long scannerId) {
     return scanners.get(toScannerName(scannerId));
   }
 
@@ -1386,7 +1398,7 @@ public class RSRpcServices
    * Get the vtime associated with the scanner. Currently the vtime is the number of "next" calls.
    */
   long getScannerVirtualTime(long scannerId) {
-    RegionScannerHolder rsh = getRegionScannerHolder(scannerId);
+    RegionScannerHolder rsh = checkQuotaAndGetRegionScannerContext(scannerId);
     return rsh == null ? 0L : rsh.getNextCallSeq();
   }
 
@@ -3158,9 +3170,8 @@ public class RSRpcServices
    * @return Pair with scannerName key to use with this new Scanner and its RegionScannerHolder
    *         value.
    */
-  private Pair<String, RegionScannerHolder> newRegionScanner(ScanRequest request,
+  private Pair<String, RegionScannerHolder> newRegionScanner(ScanRequest request, HRegion region,
     ScanResponse.Builder builder) throws IOException {
-    HRegion region = getRegion(request.getRegion());
     ClientProtos.Scan protoScan = request.getScan();
     boolean isLoadingCfsOnDemandSet = protoScan.hasLoadColumnFamiliesOnDemand();
     Scan scan = ProtobufUtil.toScan(protoScan);
@@ -3576,22 +3587,10 @@ public class RSRpcServices
     }
     requestCount.increment();
     rpcScanRequestCount.increment();
-    RegionScannerHolder rsh;
+    RegionScannerContext rsx;
     ScanResponse.Builder builder = ScanResponse.newBuilder();
-    String scannerName;
     try {
-      if (request.hasScannerId()) {
-        // The downstream projects such as AsyncHBase in OpenTSDB need this value. See HBASE-18000
-        // for more details.
-        long scannerId = request.getScannerId();
-        builder.setScannerId(scannerId);
-        scannerName = toScannerName(scannerId);
-        rsh = getRegionScanner(request);
-      } else {
-        Pair<String, RegionScannerHolder> scannerNameAndRSH = newRegionScanner(request, builder);
-        scannerName = scannerNameAndRSH.getFirst();
-        rsh = scannerNameAndRSH.getSecond();
-      }
+      rsx = checkQuotaAndGetRegionScannerContext(request, builder);
     } catch (IOException e) {
       if (e == SCANNER_ALREADY_CLOSED) {
         // Now we will close scanner automatically if there are no more results for this region but
@@ -3600,6 +3599,9 @@ public class RSRpcServices
       }
       throw new ServiceException(e);
     }
+    String scannerName = rsx.scannerName;
+    RegionScannerHolder rsh = rsx.holder;
+    OperationQuota quota = rsx.quota;
     if (rsh.fullRegionScan) {
       rpcFullScanRequestCount.increment();
     }
@@ -3621,14 +3623,6 @@ public class RSRpcServices
         throw new ServiceException(e);
       }
       return builder.build();
-    }
-    OperationQuota quota;
-    try {
-      quota = getRpcQuotaManager().checkScanQuota(region, request, maxScannerResultSize,
-        rsh.getMaxBlockBytesScanned(), rsh.getPrevBlockBytesScannedDifference());
-    } catch (IOException e) {
-      addScannerLeaseBack(lease);
-      throw new ServiceException(e);
     }
     try {
       checkScanNextCallSeq(request, rsh);
@@ -4137,5 +4131,27 @@ public class RSRpcServices
       conf.getBoolean(REJECT_BATCH_ROWS_OVER_THRESHOLD, DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD);
     maxScannerResultSize = conf.getLong(HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
       HConstants.DEFAULT_HBASE_SERVER_SCANNER_MAX_RESULT_SIZE);
+  }
+
+  RegionScannerContext checkQuotaAndGetRegionScannerContext(ScanRequest request,
+    ScanResponse.Builder builder) throws IOException {
+    if (request.hasScannerId()) {
+      // The downstream projects such as AsyncHBase in OpenTSDB need this value. See HBASE-18000
+      // for more details.
+      long scannerId = request.getScannerId();
+      builder.setScannerId(scannerId);
+      String scannerName = toScannerName(scannerId);
+      RegionScannerHolder rsh = getRegionScanner(request);
+      OperationQuota quota =
+        getRpcQuotaManager().checkScanQuota(rsh.r, request, maxScannerResultSize,
+          rsh.getMaxBlockBytesScanned(), rsh.getPrevBlockBytesScannedDifference());
+      return new RegionScannerContext(scannerName, rsh, quota);
+    }
+
+    HRegion region = getRegion(request.getRegion());
+    OperationQuota quota =
+      getRpcQuotaManager().checkScanQuota(region, request, maxScannerResultSize, 0L, 0L);
+    Pair<String, RegionScannerHolder> pair = newRegionScanner(request, region, builder);
+    return new RegionScannerContext(pair.getFirst(), pair.getSecond(), quota);
   }
 }
