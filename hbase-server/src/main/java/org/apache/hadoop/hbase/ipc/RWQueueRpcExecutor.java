@@ -142,13 +142,17 @@ public class RWQueueRpcExecutor extends RpcExecutor {
 
   protected boolean dispatchTo(boolean toWriteQueue, boolean toScanQueue,
     final CallRunner callTask) {
+    RpcCall call = callTask.getRpcCall();
     int queueIndex;
     if (toWriteQueue) {
       queueIndex = writeBalancer.getNextQueue(callTask);
+      call.setCallType(RpcCall.CallType.WRITE);
     } else if (toScanQueue) {
       queueIndex = numWriteQueues + numReadQueues + scanBalancer.getNextQueue(callTask);
+      call.setCallType(RpcCall.CallType.SCAN);
     } else {
       queueIndex = numWriteQueues + readBalancer.getNextQueue(callTask);
+      call.setCallType(RpcCall.CallType.READ);
     }
     Queue<CallRunner> queue = queues.get(queueIndex);
     if (queue.size() >= currentQueueLimit) {

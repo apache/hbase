@@ -46,6 +46,27 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String PROCESS_CALL_TIME_DESC = "Processing call time.";
   String TOTAL_CALL_TIME_NAME = "totalCallTime";
   String TOTAL_CALL_TIME_DESC = "Total call time, including both queued and processing time.";
+  String QUEUE_READ_CALL_TIME_NAME = "queueReadCallTime";
+  String QUEUE_READ_CALL_TIME_DESC = "Queue read call time.";
+  String PROCESS_READ_CALL_TIME_NAME = "processReadCallTime";
+  String PROCESS_READ_CALL_TIME_DESC = "Process read call time.";
+  String TOTAL_READ_CALL_TIME_NAME = "totalReadCallTime";
+  String TOTAL_READ_CALL_TIME_DESC =
+    "Total read call time, including both queued and processing time.";
+  String QUEUE_WRITE_CALL_TIME_NAME = "queueWriteCallTime";
+  String QUEUE_WRITE_CALL_TIME_DESC = "Queue write call time.";
+  String PROCESS_WRITE_CALL_TIME_NAME = "processWriteCallTime";
+  String PROCESS_WRITE_CALL_TIME_DESC = "Process write call time.";
+  String TOTAL_WRITE_CALL_TIME_NAME = "totalWriteCallTime";
+  String TOTAL_WRITE_CALL_TIME_DESC =
+    "Total write call time, including both queued and processing time.";
+  String QUEUE_SCAN_CALL_TIME_NAME = "queueScanCallTime";
+  String QUEUE_SCAN_CALL_TIME_DESC = "Queue scan call time.";
+  String PROCESS_SCAN_CALL_TIME_NAME = "processScanCallTime";
+  String PROCESS_SCAN_CALL_TIME_DESC = "Process scan call time.";
+  String TOTAL_SCAN_CALL_TIME_NAME = "totalScanCallTime";
+  String TOTAL_SCAN_CALL_TIME_DESC =
+    "Total scan call time, including both queued and processing time.";
 
   String UNWRITABLE_TIME_NAME = "unwritableTime";
   String UNWRITABLE_TIME_DESC =
@@ -137,4 +158,22 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   void unwritableTime(long unwritableTime);
 
   void maxOutboundBytesExceeded();
+
+  void dequeuedReadCall(int qTime);
+
+  void processReadCall(int processingTime);
+
+  void queuedAndProcessedReadCall(int totalTime);
+
+  void dequeuedWriteCall(int qTime);
+
+  void processWriteCall(int processingTime);
+
+  void queuedAndProcessedWriteCall(int totalTime);
+
+  void dequeuedScanCall(int qTime);
+
+  void processScanCall(int processingTime);
+
+  void queuedAndProcessedScanCall(int totalTime);
 }
