@@ -475,7 +475,7 @@ public class TestNamespaceAuditor {
     volatile CountDownLatch postCompact;
 
     @Override
-    public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
+    public void postCompact(ObserverContext<? extends RegionCoprocessorEnvironment> e, Store store,
       StoreFile resultFile, CompactionLifeCycleTracker tracker, CompactionRequest request)
       throws IOException {
       postCompact.countDown();

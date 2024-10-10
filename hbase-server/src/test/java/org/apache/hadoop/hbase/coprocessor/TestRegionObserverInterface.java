@@ -583,8 +583,8 @@ public class TestRegionObserverInterface {
     }
 
     @Override
-    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
-      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+    public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
       CompactionRequest request) {
       return new InternalScanner() {
 
@@ -620,13 +620,13 @@ public class TestRegionObserverInterface {
     }
 
     @Override
-    public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
+    public void postCompact(ObserverContext<? extends RegionCoprocessorEnvironment> e, Store store,
       StoreFile resultFile, CompactionLifeCycleTracker tracker, CompactionRequest request) {
       lastCompaction = EnvironmentEdgeManager.currentTime();
     }
 
     @Override
-    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+    public void postFlush(ObserverContext<? extends RegionCoprocessorEnvironment> e,
       FlushLifeCycleTracker tracker) {
       lastFlush = EnvironmentEdgeManager.currentTime();
     }

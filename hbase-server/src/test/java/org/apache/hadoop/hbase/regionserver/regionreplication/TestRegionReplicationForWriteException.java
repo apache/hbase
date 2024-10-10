@@ -316,7 +316,7 @@ public class TestRegionReplicationForWriteException {
     }
 
     @Override
-    public void postBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    public void postBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
       if (!testCP || !RegionReplicaUtil.isDefaultReplica(c.getEnvironment().getRegionInfo())) {
         return;

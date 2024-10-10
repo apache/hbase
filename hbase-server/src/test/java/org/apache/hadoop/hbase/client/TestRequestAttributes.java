@@ -314,7 +314,7 @@ public class TestRequestAttributes {
     }
 
     @Override
-    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
+    public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> c, Get get,
       List<Cell> result) throws IOException {
       if (!isValidRequestAttributes(getRequestAttributesForRowKey(get.getRow()))) {
         throw new IOException("Incorrect request attributes");
@@ -322,7 +322,7 @@ public class TestRequestAttributes {
     }
 
     @Override
-    public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
+    public boolean preScannerNext(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
       if (!isValidRequestAttributes(REQUEST_ATTRIBUTES_SCAN)) {
         throw new IOException("Incorrect request attributes");
@@ -331,8 +331,8 @@ public class TestRequestAttributes {
     }
 
     @Override
-    public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit)
-      throws IOException {
+    public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
+      WALEdit edit) throws IOException {
       if (!isValidRequestAttributes(getRequestAttributesForRowKey(put.getRow()))) {
         throw new IOException("Incorrect request attributes");
       }

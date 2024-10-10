@@ -96,7 +96,7 @@ public class TestProcedurePriority {
     }
 
     @Override
-    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
+    public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> c, Get get,
       List<Cell> result) throws IOException {
       if (FAIL && c.getEnvironment().getRegionInfo().isMetaRegion()) {
         throw new IOException("Inject error");
@@ -104,8 +104,8 @@ public class TestProcedurePriority {
     }
 
     @Override
-    public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
-      Durability durability) throws IOException {
+    public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
+      WALEdit edit, Durability durability) throws IOException {
       if (FAIL && c.getEnvironment().getRegionInfo().isMetaRegion()) {
         throw new IOException("Inject error");
       }

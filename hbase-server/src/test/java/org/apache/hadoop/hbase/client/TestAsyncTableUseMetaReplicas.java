@@ -75,7 +75,7 @@ public class TestAsyncTableUseMetaReplicas {
     }
 
     @Override
-    public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan)
+    public void preScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c, Scan scan)
       throws IOException {
       RegionInfo region = c.getEnvironment().getRegionInfo();
       if (

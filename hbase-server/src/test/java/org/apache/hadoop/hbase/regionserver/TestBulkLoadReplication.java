@@ -311,7 +311,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
       return Optional.of(new RegionObserver() {
 
         @Override
-        public void postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+        public void postBulkLoadHFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
           List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths)
           throws IOException {
           BULK_LOAD_LATCH.countDown();

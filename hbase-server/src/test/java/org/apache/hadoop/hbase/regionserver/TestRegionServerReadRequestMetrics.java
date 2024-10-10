@@ -463,7 +463,7 @@ public class TestRegionServerReadRequestMetrics {
     }
 
     @Override
-    public void postOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
+    public void postOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c) {
       RegionCoprocessorEnvironment env = c.getEnvironment();
       Region region = env.getRegion();
       try {

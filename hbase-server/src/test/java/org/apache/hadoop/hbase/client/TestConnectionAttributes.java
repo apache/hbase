@@ -108,7 +108,7 @@ public class TestConnectionAttributes {
     }
 
     @Override
-    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
+    public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> c, Get get,
       List<Cell> result) throws IOException {
       RpcCall rpcCall = RpcServer.getCurrentCall().get();
       for (Map.Entry<String, byte[]> attr : rpcCall.getConnectionAttributes().entrySet()) {

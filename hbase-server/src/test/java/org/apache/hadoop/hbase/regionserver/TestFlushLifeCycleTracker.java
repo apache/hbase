@@ -88,7 +88,7 @@ public class TestFlushLifeCycleTracker {
     }
 
     @Override
-    public void preFlush(ObserverContext<RegionCoprocessorEnvironment> c,
+    public void preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       FlushLifeCycleTracker tracker) throws IOException {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
@@ -96,8 +96,8 @@ public class TestFlushLifeCycleTracker {
     }
 
     @Override
-    public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
+    public InternalScanner preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Store store, InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
       }
@@ -105,7 +105,7 @@ public class TestFlushLifeCycleTracker {
     }
 
     @Override
-    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c,
+    public void postFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       FlushLifeCycleTracker tracker) throws IOException {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
@@ -113,7 +113,7 @@ public class TestFlushLifeCycleTracker {
     }
 
     @Override
-    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+    public void postFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store,
       StoreFile resultFile, FlushLifeCycleTracker tracker) throws IOException {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);

@@ -61,7 +61,7 @@ public class TestRegionCoprocessorQuotaUsage {
 
   public static class MyRegionObserver implements RegionObserver {
     @Override
-    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
+    public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> c, Get get,
       List<Cell> result) throws IOException {
 
       // For the purposes of this test, we only need to catch a throttle happening once, then

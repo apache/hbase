@@ -75,8 +75,8 @@ public class WriteHeavyIncrementObserver implements RegionCoprocessor, RegionObs
   }
 
   @Override
-  public void preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
+  public void preFlushScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
     options.readAllVersions();
   }
 
@@ -154,42 +154,42 @@ public class WriteHeavyIncrementObserver implements RegionCoprocessor, RegionObs
   }
 
   @Override
-  public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
+  public InternalScanner preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
     return wrap(store.getColumnFamilyDescriptor().getName(), scanner);
   }
 
   @Override
-  public void preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
+  public void preCompactScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
     CompactionRequest request) throws IOException {
     options.readAllVersions();
   }
 
   @Override
-  public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+  public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
     CompactionRequest request) throws IOException {
     return wrap(store.getColumnFamilyDescriptor().getName(), scanner);
   }
 
   @Override
   public void preMemStoreCompactionCompactScannerOpen(
-    ObserverContext<RegionCoprocessorEnvironment> c, Store store, ScanOptions options)
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store, ScanOptions options)
     throws IOException {
     options.readAllVersions();
   }
 
   @Override
   public InternalScanner preMemStoreCompactionCompact(
-    ObserverContext<RegionCoprocessorEnvironment> c, Store store, InternalScanner scanner)
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store, InternalScanner scanner)
     throws IOException {
     return wrap(store.getColumnFamilyDescriptor().getName(), scanner);
   }
 
   @Override
-  public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get, List<Cell> result)
-    throws IOException {
+  public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> c, Get get,
+    List<Cell> result) throws IOException {
     Scan scan =
       new Scan().withStartRow(get.getRow()).withStopRow(get.getRow(), true).readAllVersions();
     NavigableMap<byte[], NavigableMap<byte[], MutableLong>> sums =
@@ -249,8 +249,8 @@ public class WriteHeavyIncrementObserver implements RegionCoprocessor, RegionObs
   }
 
   @Override
-  public Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment)
-    throws IOException {
+  public Result preIncrement(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Increment increment) throws IOException {
     byte[] row = increment.getRow();
     Put put = new Put(row);
     long ts = getUniqueTimestamp(row);
@@ -270,8 +270,8 @@ public class WriteHeavyIncrementObserver implements RegionCoprocessor, RegionObs
   }
 
   @Override
-  public void preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> ctx, Store store,
-    ScanOptions options) throws IOException {
+  public void preStoreScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    Store store, ScanOptions options) throws IOException {
     options.readAllVersions();
   }
 }
