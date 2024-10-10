@@ -357,7 +357,12 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   }
 
   @Override
-  public void completionCleanup(final Procedure proc) {
+  public void completionCleanup(Procedure proc) {
+    completionCleanup(proc, false);
+  }
+
+  @Override
+  public void completionCleanup(final Procedure proc, boolean isTableProcCleanupOnly) {
     if (isTableProcedure(proc)) {
       TableProcedureInterface tableProc = (TableProcedureInterface) proc;
       if (shouldWaitBeforeEnqueuing(tableProc)) {
@@ -403,9 +408,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       if (tableDeleted) {
         markTableAsDeleted(tableProc.getTableName(), proc);
       }
-    } else if (proc instanceof PeerProcedureInterface) {
+    } else if (proc instanceof PeerProcedureInterface && !isTableProcCleanupOnly) {
       tryCleanupPeerQueue(getPeerId(proc), proc);
-    } else if (proc instanceof ServerProcedureInterface) {
+    } else if (proc instanceof ServerProcedureInterface && !isTableProcCleanupOnly) {
       tryCleanupServerQueue(getServerName(proc), proc);
     } else {
       // No cleanup for other procedure types, yet.
