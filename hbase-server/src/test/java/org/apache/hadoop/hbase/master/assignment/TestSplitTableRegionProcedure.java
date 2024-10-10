@@ -132,7 +132,8 @@ public class TestSplitTableRegionProcedure {
     }
 
     @Override
-    public void preOpen(ObserverContext<RegionCoprocessorEnvironment> c) throws IOException {
+    public void preOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c)
+      throws IOException {
       int replicaId = c.getEnvironment().getRegion().getRegionInfo().getReplicaId();
       if ((replicaId != RegionInfo.DEFAULT_REPLICA_ID) && (countForReplica == 0)) {
         countForReplica++;

@@ -80,8 +80,8 @@ public class TestOpenTableInCoprocessor {
     }
 
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       try (Table table = e.getEnvironment().getConnection().getTable(otherTable)) {
         table.put(put);
         completed[0] = true;
@@ -118,8 +118,8 @@ public class TestOpenTableInCoprocessor {
     }
 
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       try (Table table = e.getEnvironment().getConnection().getTable(otherTable, getPool())) {
         Put p = new Put(new byte[] { 'a' });
         p.addColumn(family, null, new byte[] { 'a' });

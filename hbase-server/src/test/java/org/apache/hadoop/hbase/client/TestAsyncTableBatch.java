@@ -265,7 +265,7 @@ public class TestAsyncTableBatch {
     }
 
     @Override
-    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+    public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> e, Get get,
       List<Cell> results) throws IOException {
       if (e.getEnvironment().getRegionInfo().getEndKey().length == 0) {
         throw new DoNotRetryRegionException("Inject Error");

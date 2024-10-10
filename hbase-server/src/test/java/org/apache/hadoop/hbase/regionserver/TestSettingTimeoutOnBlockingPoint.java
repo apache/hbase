@@ -83,8 +83,9 @@ public class TestSettingTimeoutOnBlockingPoint {
     }
 
     @Override
-    public Result preIncrementAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Increment increment) throws IOException {
+    public Result preIncrementAfterRowLock(
+      final ObserverContext<? extends RegionCoprocessorEnvironment> e, final Increment increment)
+      throws IOException {
       Threads.sleep(SLEEP_TIME);
       return null;
     }

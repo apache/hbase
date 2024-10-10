@@ -87,8 +87,8 @@ public class ConstraintProcessor implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit,
-    Durability durability) throws IOException {
+  public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> e, Put put,
+    WALEdit edit, Durability durability) throws IOException {
     // check the put against the stored constraints
     for (Constraint c : constraints) {
       c.check(put);

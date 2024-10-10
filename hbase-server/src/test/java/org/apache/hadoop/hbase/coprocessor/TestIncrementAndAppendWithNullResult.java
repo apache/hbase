@@ -86,25 +86,26 @@ public class TestIncrementAndAppendWithNullResult {
     }
 
     @Override
-    public Result preIncrementAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
-      Increment increment) throws IOException {
+    public Result preIncrementAfterRowLock(
+      ObserverContext<? extends RegionCoprocessorEnvironment> c, Increment increment)
+      throws IOException {
       return TMP_RESULT;
     }
 
     @Override
-    public Result postIncrement(ObserverContext<RegionCoprocessorEnvironment> c,
+    public Result postIncrement(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       Increment increment, Result result) throws IOException {
       return null;
     }
 
     @Override
-    public Result postAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append,
-      Result result) {
+    public Result postAppend(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Append append, Result result) {
       return null;
     }
 
     @Override
-    public Result preAppendAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
+    public Result preAppendAfterRowLock(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       Append append) {
       return TMP_RESULT;
     }

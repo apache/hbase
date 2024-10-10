@@ -70,9 +70,9 @@ public class ValueRewritingObserver implements RegionObserver, RegionCoprocessor
   }
 
   @Override
-  public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    final InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
-    CompactionRequest request) {
+  public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, final InternalScanner scanner, ScanType scanType,
+    CompactionLifeCycleTracker tracker, CompactionRequest request) {
     InternalScanner modifyingScanner = new InternalScanner() {
       @Override
       public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)

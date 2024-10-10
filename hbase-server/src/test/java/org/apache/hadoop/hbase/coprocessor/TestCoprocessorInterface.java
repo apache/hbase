@@ -184,54 +184,57 @@ public class TestCoprocessorInterface {
     }
 
     @Override
-    public void preOpen(ObserverContext<RegionCoprocessorEnvironment> e) {
+    public void preOpen(ObserverContext<? extends RegionCoprocessorEnvironment> e) {
       preOpenCalled = true;
     }
 
     @Override
-    public void postOpen(ObserverContext<RegionCoprocessorEnvironment> e) {
+    public void postOpen(ObserverContext<? extends RegionCoprocessorEnvironment> e) {
       postOpenCalled = true;
     }
 
     @Override
-    public void preClose(ObserverContext<RegionCoprocessorEnvironment> e, boolean abortRequested) {
+    public void preClose(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      boolean abortRequested) {
       preCloseCalled = true;
     }
 
     @Override
-    public void postClose(ObserverContext<RegionCoprocessorEnvironment> e, boolean abortRequested) {
+    public void postClose(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      boolean abortRequested) {
       postCloseCalled = true;
     }
 
     @Override
-    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
-      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+    public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
       CompactionRequest request) {
       preCompactCalled = true;
       return scanner;
     }
 
     @Override
-    public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
+    public void postCompact(ObserverContext<? extends RegionCoprocessorEnvironment> e, Store store,
       StoreFile resultFile, CompactionLifeCycleTracker tracker, CompactionRequest request) {
       postCompactCalled = true;
     }
 
     @Override
-    public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+    public void preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> e,
       FlushLifeCycleTracker tracker) {
       preFlushCalled = true;
     }
 
     @Override
-    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+    public void postFlush(ObserverContext<? extends RegionCoprocessorEnvironment> e,
       FlushLifeCycleTracker tracker) {
       postFlushCalled = true;
     }
 
     @Override
-    public RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Scan scan, final RegionScanner s) throws IOException {
+    public RegionScanner postScannerOpen(
+      final ObserverContext<? extends RegionCoprocessorEnvironment> e, final Scan scan,
+      final RegionScanner s) throws IOException {
       return new CustomScanner(s);
     }
 
@@ -282,8 +285,8 @@ public class TestCoprocessorInterface {
     public Optional<RegionObserver> getRegionObserver() {
       return Optional.of(new RegionObserver() {
         @Override
-        public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-          final List<Cell> results) throws IOException {
+        public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+          final Get get, final List<Cell> results) throws IOException {
           throw new RuntimeException();
         }
       });

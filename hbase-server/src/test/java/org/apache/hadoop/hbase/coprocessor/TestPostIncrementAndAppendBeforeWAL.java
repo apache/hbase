@@ -270,7 +270,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
     @Override
     public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
-      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
       return cellPairs.stream()
         .map(
@@ -288,7 +288,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
     @Override
     public List<Pair<Cell, Cell>> postAppendBeforeWAL(
-      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
       return cellPairs.stream()
         .map(
@@ -306,7 +306,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
     @Override
     public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
-      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
       return cellPairs.stream()
         .map(pair -> new Pair<>(pair.getFirst(), newCellWithNotExistColumnFamily(pair.getSecond())))
@@ -323,7 +323,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
     @Override
     public List<Pair<Cell, Cell>> postAppendBeforeWAL(
-      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
       return cellPairs.stream()
         .map(pair -> new Pair<>(pair.getFirst(), newCellWithNotExistColumnFamily(pair.getSecond())))
@@ -339,7 +339,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
     @Override
     public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
-      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
       List<Pair<Cell, Cell>> result = super.postIncrementBeforeWAL(ctx, mutation, cellPairs);
       for (Pair<Cell, Cell> pair : result) {
@@ -355,7 +355,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
     @Override
     public List<Pair<Cell, Cell>> postAppendBeforeWAL(
-      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
       List<Pair<Cell, Cell>> result = super.postAppendBeforeWAL(ctx, mutation, cellPairs);
       for (Pair<Cell, Cell> pair : result) {

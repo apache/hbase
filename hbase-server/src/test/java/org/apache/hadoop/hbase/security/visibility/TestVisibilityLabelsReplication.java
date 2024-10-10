@@ -411,8 +411,8 @@ public class TestVisibilityLabelsReplication {
     }
 
     @Override
-    public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put m, WALEdit edit,
-      Durability durability) throws IOException {
+    public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> e, Put m,
+      WALEdit edit, Durability durability) throws IOException {
       byte[] attribute = m.getAttribute(NON_VISIBILITY);
       byte[] cf = null;
       List<Cell> updatedCells = new ArrayList<>();
@@ -448,7 +448,7 @@ public class TestVisibilityLabelsReplication {
     }
 
     @Override
-    public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+    public void postGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> e, Get get,
       List<Cell> results) throws IOException {
       if (results.size() > 0) {
         // Check tag presence in the 1st cell in 1st Result

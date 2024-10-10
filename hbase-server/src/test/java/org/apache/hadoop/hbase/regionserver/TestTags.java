@@ -643,8 +643,8 @@ public class TestTags {
     }
 
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       updateMutationAddingTags(put);
     }
 
@@ -678,21 +678,21 @@ public class TestTags {
     }
 
     @Override
-    public Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> e, Increment increment)
-      throws IOException {
+    public Result preIncrement(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      Increment increment) throws IOException {
       updateMutationAddingTags(increment);
       return null;
     }
 
     @Override
-    public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> e, Append append)
-      throws IOException {
+    public Result preAppend(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      Append append) throws IOException {
       updateMutationAddingTags(append);
       return null;
     }
 
     @Override
-    public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> e,
+    public boolean postScannerNext(ObserverContext<? extends RegionCoprocessorEnvironment> e,
       InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
       if (checkTagPresence) {
         if (results.size() > 0) {

@@ -52,7 +52,7 @@ public class BackupObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public void postBulkLoadHFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths)
     throws IOException {
     Configuration cfg = ctx.getEnvironment().getConfiguration();
@@ -82,7 +82,7 @@ public class BackupObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void preCommitStoreFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public void preCommitStoreFile(final ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     final byte[] family, final List<Pair<Path, Path>> pairs) throws IOException {
     Configuration cfg = ctx.getEnvironment().getConfiguration();
     if (pairs == null || pairs.isEmpty() || !BackupManager.isBackupEnabled(cfg)) {

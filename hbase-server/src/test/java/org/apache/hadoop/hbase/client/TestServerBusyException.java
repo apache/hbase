@@ -73,26 +73,26 @@ public class TestServerBusyException {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-      final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Get get, final List<Cell> results) throws IOException {
       Threads.sleep(SLEEP_TIME);
     }
 
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       Threads.sleep(SLEEP_TIME);
     }
 
     @Override
-    public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public Result preIncrement(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Increment increment) throws IOException {
       Threads.sleep(SLEEP_TIME);
       return null;
     }
 
     @Override
-    public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public void preDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
       Threads.sleep(SLEEP_TIME);
     }
@@ -109,8 +109,8 @@ public class TestServerBusyException {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-      final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Get get, final List<Cell> results) throws IOException {
       // After first sleep, all requests are timeout except the last retry. If we handle
       // all the following requests, finally the last request is also timeout. If we drop all
       // timeout requests, we can handle the last request immediately and it will not timeout.

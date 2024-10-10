@@ -1086,7 +1086,7 @@ public class TestFromClientSide3 {
     }
 
     @Override
-    public void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
+    public void postBatchMutate(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
       final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
       try {
         latch.await();
@@ -1105,7 +1105,7 @@ public class TestFromClientSide3 {
     }
 
     @Override
-    public void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
+    public void postBatchMutate(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
       final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
       try {
         // waiting for scanner
@@ -1116,8 +1116,9 @@ public class TestFromClientSide3 {
     }
 
     @Override
-    public RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Scan scan, final RegionScanner s) throws IOException {
+    public RegionScanner postScannerOpen(
+      final ObserverContext<? extends RegionCoprocessorEnvironment> e, final Scan scan,
+      final RegionScanner s) throws IOException {
       latch.countDown();
       return s;
     }

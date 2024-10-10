@@ -52,7 +52,7 @@ public class ReplicationObserver implements RegionCoprocessor, RegionObserver {
   @Override
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
       justification = "NPE should never happen; if it does it is a bigger issue")
-  public void preCommitStoreFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public void preCommitStoreFile(final ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     final byte[] family, final List<Pair<Path, Path>> pairs) throws IOException {
     RegionCoprocessorEnvironment env = ctx.getEnvironment();
     Configuration c = env.getConfiguration();
