@@ -33,8 +33,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Tests for TestBoundedRegionGroupingStrategy which use WALPerformanceEvaluation for WAL data
- * creation. This class was created as part of refactoring for hbase-diagnostics module
- * creation in HBASE-28432 to break cyclic dependency.
+ * creation. This class was created as part of refactoring for hbase-diagnostics module creation in
+ * HBASE-28432 to break cyclic dependency.
  */
 @RunWith(Parameterized.class)
 @Category({ RegionServerTests.class, MediumTests.class })

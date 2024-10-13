@@ -38,6 +38,11 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Tests for TestFSHLogProvider which use WALPerformanceEvaluation for WAL data creation. This class
+ * was created as part of refactoring for hbase-diagnostics module creation in HBASE-28432 to break
+ * cyclic dependency.
+ */
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestFSHLogProviderWithConcurrentWrites {
 
