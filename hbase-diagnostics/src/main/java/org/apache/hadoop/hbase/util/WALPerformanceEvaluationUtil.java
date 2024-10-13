@@ -39,11 +39,12 @@ public class WALPerformanceEvaluationUtil {
   private static final Logger LOG = LoggerFactory.getLogger(WALPerformanceEvaluationUtil.class);
 
   /**
-   * Directory on test filesystem where we put the data for this instance of HBaseTestingUtility
+   * Directory on test filesystem where we put the data for this instance of
+   * WALPerformanceEvaluationUtil
    */
   private Path dataTestDirOnTestFS = null;
   /**
-   * Directory where we put the data for this instance of HBaseTestingUtility
+   * Directory where we put the data for this instance of WALPerformanceEvaluationUtil
    */
   private File dataTestDir = null;
   /**
@@ -98,10 +99,37 @@ public class WALPerformanceEvaluationUtil {
   }
 
   /**
+   * Home our data in a dir under {@link #DEFAULT_BASE_TEST_DIRECTORY}. Give it a random name so can
+   * have many concurrent tests running if we need to. Moding a System property is not the way to do
+   * concurrent instances -- another instance could grab the temporary value unintentionally -- but
+   * not anything can do about it at moment; single instance only is how the minidfscluster works.
+   * We also create the underlying directory names for hadoop.log.dir, mapreduce.cluster.local.dir
+   * and hadoop.tmp.dir, and set the values in the conf, and as a system property for hadoop.tmp.dir
+   * (We do not create them!).
+   * @return The calculated data test build directory, if newly-created.
+   */
+  protected Path setupDataTestDir() {
+    Path testPath = setupDataTestDirInternal();
+    if (null == testPath) {
+      return null;
+    }
+
+    createSubDirAndSystemProperty("hadoop.log.dir", testPath, "hadoop-log-dir");
+
+    // This is defaulted in core-default.xml to /tmp/hadoop-${user.name}, but
+    // we want our own value to ensure uniqueness on the same machine
+    createSubDirAndSystemProperty("hadoop.tmp.dir", testPath, "hadoop-tmp-dir");
+
+    // Read and modified in org.apache.hadoop.mapred.MiniMRCluster
+    createSubDir("mapreduce.cluster.local.dir", testPath, "mapred-local-dir");
+    return testPath;
+  }
+
+  /**
    * Sets up a directory for a test to use.
    * @return New directory path, if created.
    */
-  private Path setupDataTestDir() {
+  private Path setupDataTestDirInternal() {
     if (this.dataTestDir != null) {
       LOG.warn("Data test dir already setup in " + dataTestDir.getAbsolutePath());
       return null;
@@ -109,7 +137,7 @@ public class WALPerformanceEvaluationUtil {
     Path testPath = getRandomDir();
     this.dataTestDir = new File(testPath.toString()).getAbsoluteFile();
     // Set this property so if mapreduce jobs run, they will use this as their home dir.
-    System.setProperty("test.build.dir", this.dataTestDirOnTestFS.toString());
+    System.setProperty("test.build.dir", this.dataTestDir.toString());
 
     if (deleteOnExit()) {
       this.dataTestDir.deleteOnExit();
@@ -118,6 +146,29 @@ public class WALPerformanceEvaluationUtil {
     createSubDir("hbase.local.dir", testPath, "hbase-local-dir");
 
     return testPath;
+  }
+
+  private void createSubDirAndSystemProperty(String propertyName, Path parent, String subDirName) {
+
+    String sysValue = System.getProperty(propertyName);
+
+    if (sysValue != null) {
+      // There is already a value set. So we do nothing but hope
+      // that there will be no conflicts
+      LOG.info("System.getProperty(\"" + propertyName + "\") already set to: " + sysValue
+        + " so I do NOT create it in " + parent);
+      String confValue = conf.get(propertyName);
+      if (confValue != null && !confValue.endsWith(sysValue)) {
+        LOG.warn(propertyName + " property value differs in configuration and system: "
+          + "Configuration=" + confValue + " while System=" + sysValue
+          + " Erasing configuration value by system value.");
+      }
+      conf.set(propertyName, sysValue);
+    } else {
+      // Ok, it's not set, so we create it as a subdirectory
+      createSubDir(propertyName, parent, subDirName);
+      System.setProperty(propertyName, conf.get(propertyName));
+    }
   }
 
   private FileSystem getTestFileSystem() throws IOException {
