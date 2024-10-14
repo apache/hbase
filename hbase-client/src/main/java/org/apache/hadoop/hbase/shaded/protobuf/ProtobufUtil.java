@@ -2115,7 +2115,9 @@ public final class ProtobufUtil {
    * @return toString of passed <code>m</code>
    */
   public static String getShortTextFormat(Message m) {
-    if (m == null) return "null";
+    if (m == null) {
+      return "null";
+    }
     if (m instanceof ScanRequest) {
       // This should be small and safe to output. No data.
       return TextFormat.shortDebugString(m);
@@ -2157,6 +2159,8 @@ public final class ProtobufUtil {
       ClientProtos.CoprocessorServiceRequest r = (ClientProtos.CoprocessorServiceRequest) m;
       return "coprocessorService= " + r.getCall().getServiceName() + ":"
         + r.getCall().getMethodName();
+    } else if (m instanceof MasterProtos.MoveRegionRequest) {
+      return TextFormat.shortDebugString(m);
     }
     return "TODO: " + m.getClass().toString();
   }
