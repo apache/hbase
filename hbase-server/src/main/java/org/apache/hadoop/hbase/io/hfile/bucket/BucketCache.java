@@ -840,7 +840,7 @@ public class BucketCache implements BlockCache, HeapSize {
    *   it is {@link ByteBuffAllocator#putbackBuffer}.
    * </pre>
    */
-  private Recycler createRecycler(final BucketEntry bucketEntry) {
+  public Recycler createRecycler(final BucketEntry bucketEntry) {
     return () -> {
       freeBucketEntry(bucketEntry);
       return;
