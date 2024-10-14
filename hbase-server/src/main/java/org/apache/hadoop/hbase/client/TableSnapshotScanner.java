@@ -187,7 +187,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
         currentRegionScanner =
           new ClientSideRegionScanner(conf, fs, restoreDir, htd, hri, scan, scanMetrics);
         if (this.scanMetrics != null) {
-          this.scanMetrics.countOfRegions.incrementAndGet();
+          this.scanMetrics.getCountOfRegions().incrementAndGet();
         }
       }
 

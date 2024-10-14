@@ -174,7 +174,7 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     connection.close();
 
     ScanMetrics metrics = scanner.getScanMetrics();
-    long totalBytes = metrics.countOfBytesInResults.get();
+    long totalBytes = metrics.getCountOfBytesInResults().get();
     double throughput = (double) totalBytes / scanTimer.elapsed(TimeUnit.SECONDS);
     double throughputRows = (double) numRows / scanTimer.elapsed(TimeUnit.SECONDS);
     double throughputCells = (double) numCells / scanTimer.elapsed(TimeUnit.SECONDS);
@@ -231,7 +231,7 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     scanner.close();
 
     ScanMetrics metrics = scanner.getScanMetrics();
-    long totalBytes = metrics.countOfBytesInResults.get();
+    long totalBytes = metrics.getCountOfBytesInResults().get();
     double throughput = (double) totalBytes / scanTimer.elapsed(TimeUnit.SECONDS);
     double throughputRows = (double) numRows / scanTimer.elapsed(TimeUnit.SECONDS);
     double throughputCells = (double) numCells / scanTimer.elapsed(TimeUnit.SECONDS);
