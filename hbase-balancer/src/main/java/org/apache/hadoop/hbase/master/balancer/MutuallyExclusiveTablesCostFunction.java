@@ -42,7 +42,6 @@ public class MutuallyExclusiveTablesCostFunction extends CostFunction {
   public static final String MUTUALLY_EXCLUSIVE_TABLES_COST_KEY =
     "hbase.master.balancer.stochastic.mutuallyExclusiveTablesCost";
   public static final float DEFAULT_MUTUALLY_EXCLUSIVE_TABLES_COST = 10000;
-  private static final int VIOLATION_COST = 1000;
   private Set<String> mutuallyExclusiveTables = Collections.emptySet();
   private static final Map<ServerName, Set<String>> sharedState = new HashMap<>();
 
@@ -91,6 +90,8 @@ public class MutuallyExclusiveTablesCostFunction extends CostFunction {
     for (Map.Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
       List<RegionInfo> regions = entry.getValue();
       Set<String> exclusiveTablesOnServer = new HashSet<>();
+      if(totalCost == 1)
+        break;
       for (RegionInfo regionInfo : regions) {
         String tableName = regionInfo.getTable().getNameAsString();
         if (mutuallyExclusiveTables.contains(tableName)) {
@@ -100,7 +101,8 @@ public class MutuallyExclusiveTablesCostFunction extends CostFunction {
           }
           exclusiveTablesOnServer.add(tableName);
           if (exclusiveTablesOnServer.size() > 1) {
-            totalCost += VIOLATION_COST;
+            totalCost = 1;
+            break;
           }
         }
       }
