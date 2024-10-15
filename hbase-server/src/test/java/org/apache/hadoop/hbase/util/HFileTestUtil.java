@@ -22,7 +22,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -51,10 +50,6 @@ import org.apache.hadoop.hbase.mob.MobUtils;
  * Utility class for HFile-related testing.
  */
 public class HFileTestUtil {
-
-  public static final String OPT_DATA_BLOCK_ENCODING_USAGE = "Encoding algorithm (e.g. prefix "
-    + "compression) to use for data blocks in the test column family, " + "one of "
-    + Arrays.toString(DataBlockEncoding.values()) + ".";
   public static final String OPT_DATA_BLOCK_ENCODING =
     ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING.toLowerCase(Locale.ROOT);
   /** Column family used by the test */
