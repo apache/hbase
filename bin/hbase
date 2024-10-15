@@ -340,7 +340,6 @@ fi
 
 #If configured and available, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
 if [ -n "${HADOOP_IN_PATH}" ] && [ -f "${HADOOP_IN_PATH}" ]; then
-  # TODO: Drop/Modify this logic
   # If built hbase, temporarily add hbase-server*.jar to classpath for GetJavaProperty
   # Exclude hbase-server*-tests.jar
   temporary_cp=
@@ -478,6 +477,17 @@ add_maven_deps_to_classpath() {
       exit 1
   fi
   CLASSPATH=${CLASSPATH}:$(cat "${f}")
+}
+
+add_test_jars_from_compiled_source() {
+    # if in dev env, add test jars so that ITs/Chaos etc. can be run from compiled source directory
+    if $in_dev_env; then
+      for f in */target/*.jar; do
+        if [ -f "${f}" ]; then
+          CLASSPATH="${CLASSPATH}:${f}"
+        fi
+      done
+    fi
 }
 
 add_jdk17_jvm_flags() {
@@ -767,6 +777,17 @@ elif [ "$COMMAND" = "copyreppeers" ] ; then
   CLASS='org.apache.hadoop.hbase.replication.CopyReplicationPeers'
 else
   CLASS=$COMMAND
+
+  if [[ "$CLASS" =~ .*IntegrationTest.* ]] || [[ "$CLASS" =~ .*Chaos.* ]]; then
+    for f in ${HBASE_HOME}/lib/test/*.jar; do
+      if [ -f "${f}" ]; then
+        CLASSPATH="${CLASSPATH}:${f}"
+      fi
+    done
+
+    add_test_jars_from_compiled_source
+  fi
+
 fi
 
 add_jdk17_jvm_flags

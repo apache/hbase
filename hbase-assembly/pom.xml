@@ -47,6 +47,14 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-shaded-mapreduce</artifactId>
     </dependency>
+    <!-- Hamcrest is required by hbase-it (via junit), but as long as we're grabbing the hbase-it test-jar,
+     maven dependency resolution won't pick it up for us. -->
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-core</artifactId>
+      <!-- Overriding the scope in depMgmt -->
+      <scope>compile</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-openssl</artifactId>
@@ -205,6 +213,17 @@
     <dependency>
       <groupId>io.opentelemetry.javaagent</groupId>
       <artifactId>opentelemetry-javaagent</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <!-- Making it compile here so that it can be downloaded during packaging. -->
+      <!-- All other modules scope it as test or inherit test scope from parent pom.  -->
+      <scope>compile</scope>
     </dependency>
   </dependencies>
   <build>

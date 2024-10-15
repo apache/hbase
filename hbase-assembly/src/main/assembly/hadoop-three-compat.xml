@@ -206,6 +206,15 @@
         <include>io.opentelemetry.javaagent:*</include>
       </includes>
     </dependencySet>
+    <!-- Adds junit libs to lib/test -->
+    <dependencySet>
+      <outputDirectory>lib/test</outputDirectory>
+      <includes>
+        <include>junit:junit</include>
+        <include>org.hamcrest:hamcrest-core</include>
+        <include>org.mockito:mockito-core</include>
+      </includes>
+    </dependencySet>
   </dependencySets>
 
 </assembly>
