@@ -177,9 +177,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public static final int DEFAULT_REGIONS_PER_SERVER = 3;
 
-  public static final String PRESPLIT_TEST_TABLE_KEY = "hbase.test.pre-split-table";
-  public static final boolean PRESPLIT_TEST_TABLE = true;
-
   private MiniDFSCluster dfsCluster = null;
   private FsDatasetAsyncDiskServiceFixer dfsClusterFixer = null;
 

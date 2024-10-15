@@ -723,6 +723,7 @@
     <module>hbase-replication</module>
     <module>hbase-balancer</module>
     <module>hbase-mapreduce</module>
+    <module>hbase-diagnostics</module>
     <module>hbase-resource-bundle</module>
     <module>hbase-http</module>
     <module>hbase-server</module>
@@ -1152,6 +1153,13 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-diagnostics</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-endpoint</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -1335,6 +1343,11 @@
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-openssl</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-diagnostics</artifactId>
         <version>${project.version}</version>
       </dependency>
       <!-- General dependencies -->

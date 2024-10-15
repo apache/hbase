@@ -106,6 +106,12 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-diagnostics</artifactId>
+      <scope>test</scope>
+    </dependency>
+
     <!-- Required by tests using MiniMRCluster -->
     <dependency>
       <groupId>org.bouncycastle</groupId>

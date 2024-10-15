@@ -43,10 +43,10 @@ public class TestKeyProvider {
   @Test
   public void testTestProvider() {
     Configuration conf = HBaseConfiguration.create();
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
     KeyProvider provider = Encryption.getKeyProvider(conf);
     assertNotNull("Null returned for provider", provider);
-    assertTrue("Provider is not the expected type", provider instanceof KeyProviderForTesting);
+    assertTrue("Provider is not the expected type", provider instanceof MockAesKeyProvider);
 
     Key key = provider.getKey("foo");
     assertNotNull("Test provider did not return a key as expected", key);
