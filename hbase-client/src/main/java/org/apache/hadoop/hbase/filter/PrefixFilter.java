@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
  * Pass results that have same row prefix.
  */
 @InterfaceAudience.Public
-public class PrefixFilter extends FilterBase {
+public class PrefixFilter extends FilterBase implements HintingFilter {
   protected byte[] prefix = null;
   protected boolean passedPrefix = false;
   protected boolean filterRow = true;
