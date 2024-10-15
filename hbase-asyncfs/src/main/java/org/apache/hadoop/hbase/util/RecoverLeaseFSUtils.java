@@ -49,8 +49,10 @@ public final class RecoverLeaseFSUtils {
     initializeRecoverLeaseMethod(LEASE_RECOVERABLE_CLASS_NAME);
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
+  /**
+   * Initialize reflection classes and methods. If LeaseRecoverable class is not found,
+   * look for DistributedFilSystem#recoverLease method.
+   */
   static void initializeRecoverLeaseMethod(String className) {
     try {
       leaseRecoverableClazz = Class.forName(className);
@@ -99,7 +101,7 @@ public final class RecoverLeaseFSUtils {
     }
     // return true if the file system implements LeaseRecoverable interface.
     if (leaseRecoverableClazz != null) {
-      return (leaseRecoverableClazz.isAssignableFrom(fs.getClass()));
+      return leaseRecoverableClazz.isAssignableFrom(fs.getClass());
     }
     // return false if the file system is not HDFS and does not implement LeaseRecoverable.
     return false;
