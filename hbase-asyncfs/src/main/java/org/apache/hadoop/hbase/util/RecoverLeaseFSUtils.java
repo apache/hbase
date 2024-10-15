@@ -78,7 +78,7 @@ public final class RecoverLeaseFSUtils {
   }
 
   /**
-   * Recover the lease from HDFS or LeaseRecoverable fs, retrying multiple times.
+   * Recover the lease from Hadoop file system, retrying multiple times.
    */
   public static void recoverFileLease(FileSystem fs, Path p, Configuration conf,
     CancelableProgressable reporter) throws IOException {
