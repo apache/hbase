@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
@@ -50,7 +50,7 @@ public final class RecoverLeaseFSUtils {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   static void initializeRecoverLeaseMethod(String className) {
     try {
       leaseRecoverableClazz = Class.forName(className);

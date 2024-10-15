@@ -25,28 +25,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.util.Progressable;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 
 /**
  * Test our recoverLease loop against mocked up filesystem.
@@ -90,14 +81,17 @@ public class TestRecoverLeaseFSUtils {
 
   private interface FakeLeaseRecoverable {
     boolean recoverLease(Path p) throws IOException;
+
     boolean isFileClosed(Path p) throws IOException;
   }
 
-  private static abstract class RecoverableFileSystem extends FileSystem implements FakeLeaseRecoverable {
+  private static abstract class RecoverableFileSystem extends FileSystem
+    implements FakeLeaseRecoverable {
     @Override
     public boolean recoverLease(Path p) throws IOException {
       return true;
     }
+
     @Override
     public boolean isFileClosed(Path p) throws IOException {
       return true;
@@ -105,9 +99,7 @@ public class TestRecoverLeaseFSUtils {
   }
 
   /**
-   *
    * Test that we can use reflection to access LeaseRecoverable methods.
-   * @throws IOException
    */
   @Test
   public void testLeaseRecoverable() throws IOException {
