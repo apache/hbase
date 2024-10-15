@@ -77,8 +77,8 @@ public class PrefixFilter extends FilterBase {
     if ((!isReversed() && cmp > 0) || (isReversed() && cmp < 0)) {
       passedPrefix = true;
     }
-    filterRow = (cmp > 0);
-    provideHint = cmp < 0;
+    filterRow = (!isReversed() && cmp > 0) || (isReversed() && cmp < 0);
+    provideHint = (!isReversed() && cmp < 0) || (isReversed() && cmp > 0);
     return filterRow;
   }
 
