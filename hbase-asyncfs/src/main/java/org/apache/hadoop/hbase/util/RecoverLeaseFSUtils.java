@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.google.errorprone.annotations.RestrictedApi;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -50,8 +49,8 @@ public final class RecoverLeaseFSUtils {
   }
 
   /**
-   * Initialize reflection classes and methods. If LeaseRecoverable class is not found,
-   * look for DistributedFilSystem#recoverLease method.
+   * Initialize reflection classes and methods. If LeaseRecoverable class is not found, look for
+   * DistributedFilSystem#recoverLease method.
    */
   static void initializeRecoverLeaseMethod(String className) {
     try {

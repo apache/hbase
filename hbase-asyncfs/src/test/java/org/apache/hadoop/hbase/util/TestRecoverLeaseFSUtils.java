@@ -80,8 +80,10 @@ public class TestRecoverLeaseFSUtils {
   }
 
   private interface FakeLeaseRecoverable {
+    @SuppressWarnings("unused")
     boolean recoverLease(Path p) throws IOException;
 
+    @SuppressWarnings("unused")
     boolean isFileClosed(Path p) throws IOException;
   }
 
