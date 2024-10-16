@@ -124,6 +124,8 @@ public final class FSUtils {
     } catch (ClassNotFoundException | NoSuchFieldException e) {
       LOG.debug("SafeMode interface not in the classpath, this means Hadoop 3.3.5 or below.");
     } catch (IllegalAccessException e) {
+      LOG.error("SafeModeAction.SAFEMODE_GET is not accessible. " +
+        "Unexpected Hadoop version or messy classpath?", e);
       throw new RuntimeException(e);
     }
   }
@@ -272,6 +274,7 @@ public final class FSUtils {
           .invoke(dfs, safeModeGet, true);
         return (Boolean) ret;
       } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
+        LOG.error("The file system does not support setSafeMode(). Abort.", e);
         throw new RuntimeException(e);
       }
     }

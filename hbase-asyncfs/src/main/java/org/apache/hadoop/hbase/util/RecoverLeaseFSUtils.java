@@ -63,9 +63,11 @@ public final class RecoverLeaseFSUtils {
       try {
         recoverLeaseMethod = DistributedFileSystem.class.getMethod("recoverLease", Path.class);
       } catch (NoSuchMethodException ex) {
+        LOG.error("Cannot find recoverLease method in DistributedFileSystem class. Abort.", ex);
         throw new RuntimeException(ex);
       }
     } catch (NoSuchMethodException e) {
+      LOG.error("Cannot find recoverLease method in LeaseRecoverable class. Abort.", e);
       throw new RuntimeException(e);
     }
   }
@@ -228,6 +230,7 @@ public final class RecoverLeaseFSUtils {
       }
       LOG.warn(getLogMessageDetail(nbAttempt, p, startWaiting), e);
     } catch (IllegalAccessException e) {
+      LOG.error("Failed to call recoverLease on {}. Abort.", dfs, e);
       throw new RuntimeException(e);
     }
     return recovered;
