@@ -62,7 +62,6 @@
         <unpack>false</unpack>
         <dependencySets>
           <dependencySet>
-            <useTransitiveFiltering>false</useTransitiveFiltering>
             <excludes>
               <exclude>org.apache.hadoop:*:test-jar</exclude>
               <exclude>org.apache.hbase:*:test-jar</exclude>
