@@ -25,7 +25,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Put;
@@ -61,7 +60,7 @@ public class TestRowStatisticsEventHandler {
 
   @Test
   public void itPersistsRowStatistics() throws Exception {
-    EVENT.load(new RowStatisticsRingBufferPayload(ROW_STATISTICS, true, FULL_REGION));
+    EVENT.load(new RowStatisticsRingBufferPayload(ROW_STATISTICS, FULL_REGION));
     doNothing().when(bufferedMutator).mutate(any(Put.class));
     eventHandler.onEvent(EVENT, 0L, true);
     verify(bufferedMutator, times(1)).mutate(any(Put.class));
@@ -78,7 +77,7 @@ public class TestRowStatisticsEventHandler {
 
   @Test
   public void itCountsFailedPersists() throws Exception {
-    EVENT.load(new RowStatisticsRingBufferPayload(ROW_STATISTICS, true, FULL_REGION));
+    EVENT.load(new RowStatisticsRingBufferPayload(ROW_STATISTICS, FULL_REGION));
     doThrow(new IOException()).when(bufferedMutator).mutate(any(Put.class));
     eventHandler.onEvent(EVENT, 0L, true);
     verify(bufferedMutator, times(1)).mutate(any(Put.class));

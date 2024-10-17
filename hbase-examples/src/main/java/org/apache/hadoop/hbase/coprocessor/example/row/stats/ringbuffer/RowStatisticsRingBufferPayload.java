@@ -24,22 +24,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class RowStatisticsRingBufferPayload {
 
   private final RowStatistics rowStatistics;
-  private final boolean isMajor;
   private final byte[] fullRegionName;
 
-  public RowStatisticsRingBufferPayload(RowStatistics rowStatistics, boolean isMajor,
+  public RowStatisticsRingBufferPayload(RowStatistics rowStatistics,
     byte[] fullRegionName) {
     this.rowStatistics = rowStatistics;
-    this.isMajor = isMajor;
     this.fullRegionName = fullRegionName;
   }
 
   public RowStatistics getRowStatistics() {
     return rowStatistics;
-  }
-
-  public boolean getIsMajor() {
-    return isMajor;
   }
 
   public byte[] getFullRegionName() {
