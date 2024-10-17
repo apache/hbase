@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.util.TestRegionSplitCalculator.TEST_UTIL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
@@ -137,8 +136,8 @@ public class TestRowStatisticsCompactionObserver {
       lastIsMajor = RECORDER.getLastIsMajor();
     }
     assertFalse(lastIsMajor);
-    assertEquals(lastStats.getTotalDeletes(), 10);
-    assertEquals(lastStats.getTotalRows(), 10);
+    assertEquals(lastStats.getTotalDeletesCount(), 10);
+    assertEquals(lastStats.getTotalRowsCount(), 10);
 
     RECORDER.clear();
     lastStats = RECORDER.getLastStats();
@@ -155,8 +154,8 @@ public class TestRowStatisticsCompactionObserver {
     }
     assertTrue(lastIsMajor);
     // no deletes after major compact
-    assertEquals(lastStats.getTotalDeletes(), 0);
-    assertEquals(lastStats.getTotalRows(), 10);
+    assertEquals(lastStats.getTotalDeletesCount(), 0);
+    assertEquals(lastStats.getTotalRowsCount(), 10);
     // can only check largest values after major compact, since the above minor compact might not
     // contain all storefiles
     assertEquals(Bytes.toInt(lastStats.getLargestRow()), largestRowNum);
@@ -183,11 +182,10 @@ public class TestRowStatisticsCompactionObserver {
     private volatile Boolean lastIsMajor = null;
 
     @Override
-    public void record(RowStatisticsImpl stats, boolean isMajor, Optional<byte[]> fullRegionName) {
-      System.out.println("Record called with isMajor=" + isMajor + ", stats=" + stats
+    public void record(RowStatisticsImpl stats, Optional<byte[]> fullRegionName) {
+      System.out.println("Record called with isMajor=" + stats.isMajor() + ", stats=" + stats
         + ", fullRegionName=" + fullRegionName);
       lastStats = stats;
-      lastIsMajor = isMajor;
     }
 
     public void clear() {
