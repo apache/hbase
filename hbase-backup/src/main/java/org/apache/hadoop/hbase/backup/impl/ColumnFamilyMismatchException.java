@@ -20,12 +20,13 @@ package org.apache.hadoop.hbase.backup.impl;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
-public final class ColumnFamilyMismatchException extends BackupException {
+public final class ColumnFamilyMismatchException extends HBaseIOException {
   private final List<TableName> mismatchedTables;
 
   private ColumnFamilyMismatchException(String msg, List<TableName> mismatchedTables) {
