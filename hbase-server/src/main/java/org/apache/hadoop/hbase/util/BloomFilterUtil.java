@@ -138,6 +138,9 @@ public final class BloomFilterUtil {
   }
 
   public static int optimalFunctionCount(int maxKeys, long bitSize) {
+    if (maxKeys == 0) {
+      throw new IllegalArgumentException("Maximum number of keys for Bloom filter cannot be 0.");
+    }
     long i = bitSize / maxKeys;
     double result = Math.ceil(Math.log(2) * i);
     if (result > Integer.MAX_VALUE) {
