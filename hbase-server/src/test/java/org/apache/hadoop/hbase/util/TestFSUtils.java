@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -92,11 +93,21 @@ public class TestFSUtils {
     try {
       cluster = htu.startMiniDFSCluster(1);
       assertTrue(CommonFSUtils.isHDFS(conf));
+      assertTrue(FSUtils.supportSafeMode(cluster.getFileSystem()));
+      FSUtils.checkDfsSafeMode(conf);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
     }
+  }
+
+  @Test
+  public void testLocalFileSystemSafeMode() throws Exception {
+    conf.setClass("fs.file.impl", LocalFileSystem.class, FileSystem.class);
+    assertFalse(CommonFSUtils.isHDFS(conf));
+    assertFalse(FSUtils.supportSafeMode(FileSystem.get(conf)));
+    FSUtils.checkDfsSafeMode(conf);
   }
 
   private void WriteDataToHDFS(FileSystem fs, Path file, int dataSize) throws Exception {
