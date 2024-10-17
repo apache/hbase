@@ -86,6 +86,15 @@ public class TableDescriptorBuilder {
   private static final Bytes COMPACTION_ENABLED_KEY = new Bytes(Bytes.toBytes(COMPACTION_ENABLED));
 
   /**
+   * Used by HBase Shell interface to access this metadata attribute which denotes if the table
+   * compact only remove expired file, skipping merge files.
+   */
+  @InterfaceAudience.Private
+  public static final String SKIP_MERGING_COMPACTION = "SKIP_MERGING_COMPACTION";
+  private static final Bytes SKIP_MERGING_COMPACTION_KEY =
+    new Bytes(Bytes.toBytes(SKIP_MERGING_COMPACTION));
+
+  /**
    * Used by HBase Shell interface to access this metadata attribute which denotes if the table is
    * split enabled.
    */
@@ -213,6 +222,12 @@ public class TableDescriptorBuilder {
    * Constant that denotes whether the table is merge enabled by default
    */
   public static final boolean DEFAULT_MERGE_ENABLED = true;
+
+  /**
+   * Constant that denotes whether the table compaction only remove expired file, skipping merging
+   * file by default
+   */
+  public static final boolean DEFAULT_SKIP_MERGING_COMPACTION = false;
 
   /**
    * Constant that denotes the maximum default size of the memstore in bytes after which the
@@ -431,6 +446,12 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder setCompactionEnabled(final boolean isEnable) {
     desc.setCompactionEnabled(isEnable);
+    return this;
+  }
+
+  public TableDescriptorBuilder
+    setSkipMergingCompaction(final boolean shouldSkipMergingCompaction) {
+    desc.setSkipMergingCompaction(shouldSkipMergingCompaction);
     return this;
   }
 
@@ -796,12 +817,34 @@ public class TableDescriptorBuilder {
     }
 
     /**
+     * Check if the compaction only remove expired file flag of the table is true. If flag is false
+     * then do normal compactions.
+     * @return true if table compaction only remove expired file, skipping merge files.
+     */
+    @Override
+    public boolean shouldSkipMergingCompaction() {
+      return getOrDefault(SKIP_MERGING_COMPACTION_KEY, Boolean::valueOf,
+        DEFAULT_SKIP_MERGING_COMPACTION);
+    }
+
+    /**
      * Setting the table compaction enable flag.
      * @param isEnable True if enable compaction.
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setCompactionEnabled(final boolean isEnable) {
       return setValue(COMPACTION_ENABLED_KEY, Boolean.toString(isEnable));
+    }
+
+    /**
+     * Setting the table compaction only remove expired file, skipping merge files flag.
+     * @param shouldSkipMergingCompaction True if table compaction only remove expired file,
+     *                                    skipping merge files.
+     * @return the modifyable TD
+     */
+    public ModifyableTableDescriptor
+      setSkipMergingCompaction(final boolean shouldSkipMergingCompaction) {
+      return setValue(SKIP_MERGING_COMPACTION_KEY, Boolean.toString(shouldSkipMergingCompaction));
     }
 
     /**
