@@ -28,23 +28,25 @@ public interface RowStatistics {
 
   String getColumnFamily();
 
-  long getLargestRowBytes();
+  boolean isMajor();
 
-  int getLargestRowCells();
+  long getLargestRowNumBytes();
 
-  long getLargestCellBytes();
+  int getLargestRowCellsCount();
 
-  int getCellsLargerThanOneBlock();
+  long getLargestCellNumBytes();
 
-  int getRowsLargerThanOneBlock();
+  int getCellsLargerThanOneBlockCount();
 
-  int getCellsLargerThanMaxCacheSize();
+  int getRowsLargerThanOneBlockCount();
 
-  int getTotalDeletes();
+  int getCellsLargerThanMaxCacheSizeCount();
 
-  int getTotalCells();
+  int getTotalDeletesCount();
 
-  int getTotalRows();
+  int getTotalCellsCount();
+
+  int getTotalRowsCount();
 
   long getTotalBytes();
 

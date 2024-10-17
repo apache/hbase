@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.coprocessor.example.row.stats.recorder;
 import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsConfigurationUtil.getInt;
 import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsConfigurationUtil.getLong;
 import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsTableUtil.NAMESPACED_TABLE_NAME;
-
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.TimeoutException;
@@ -47,7 +46,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 @InterfaceAudience.Private
@@ -92,12 +90,11 @@ public class RowStatisticsTableRecorder implements RowStatisticsRecorder {
   }
 
   @Override
-  public void record(RowStatisticsImpl rowStatistics, boolean isMajor,
-    Optional<byte[]> fullRegionName) {
+  public void record(RowStatisticsImpl rowStatistics, Optional<byte[]> fullRegionName) {
     if (!closed.get()) {
       if (
         !ringBuffer.tryPublishEvent((envelope, seqId) -> envelope
-          .load(new RowStatisticsRingBufferPayload(rowStatistics, isMajor, fullRegionName.get())))
+          .load(new RowStatisticsRingBufferPayload(rowStatistics, fullRegionName.get())))
       ) {
         rowStatisticsDropped.increment();
         LOG.error("Failed to load row statistics for region={} into the ring buffer",
@@ -176,9 +173,7 @@ public class RowStatisticsTableRecorder implements RowStatisticsRecorder {
     public void onException(RetriesExhaustedWithDetailsException exception,
       BufferedMutator mutator) {
       long failedPuts = mutator.getWriteBufferSize();
-      for (int i = 0; i < failedPuts; i++) {
-        rowStatisticsPutFailures.increment();
-      }
+      rowStatisticsPutFailures.increment(failedPuts);
       LOG.error(
         "Periodic flush of buffered mutator failed. Cannot persist {} row statistics stored in buffer",
         failedPuts, exception);

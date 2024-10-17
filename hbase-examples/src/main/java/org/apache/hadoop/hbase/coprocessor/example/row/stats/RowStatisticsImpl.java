@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
 
@@ -170,6 +169,10 @@ public class RowStatisticsImpl implements RowStatistics {
     return columnFamily;
   }
 
+  public boolean isMajor() {
+    return isMajor;
+  }
+
   public byte[] getLargestRow() {
     return largestRow;
   }
@@ -178,11 +181,11 @@ public class RowStatisticsImpl implements RowStatistics {
     return Bytes.toStringBinary(getLargestRow());
   }
 
-  public long getLargestRowBytes() {
+  public long getLargestRowNumBytes() {
     return largestRowBytes;
   }
 
-  public int getLargestRowCells() {
+  public int getLargestRowCellsCount() {
     return largestRowCells;
   }
 
@@ -194,31 +197,31 @@ public class RowStatisticsImpl implements RowStatistics {
     return CellUtil.toString(getLargestCell(), false);
   }
 
-  public long getLargestCellBytes() {
+  public long getLargestCellNumBytes() {
     return largestCellBytes;
   }
 
-  public int getCellsLargerThanOneBlock() {
+  public int getCellsLargerThanOneBlockCount() {
     return cellsLargerThanOneBlock;
   }
 
-  public int getRowsLargerThanOneBlock() {
+  public int getRowsLargerThanOneBlockCount() {
     return rowsLargerThanOneBlock;
   }
 
-  public int getCellsLargerThanMaxCacheSize() {
+  public int getCellsLargerThanMaxCacheSizeCount() {
     return cellsLargerThanMaxCacheSize;
   }
 
-  public int getTotalDeletes() {
+  public int getTotalDeletesCount() {
     return totalDeletes;
   }
 
-  public int getTotalCells() {
+  public int getTotalCellsCount() {
     return totalCells;
   }
 
-  public int getTotalRows() {
+  public int getTotalRowsCount() {
     return totalRows;
   }
 

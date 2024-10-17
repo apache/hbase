@@ -33,9 +33,9 @@ public class RowStatisticsCombinedRecorder implements RowStatisticsRecorder {
   }
 
   @Override
-  public void record(RowStatisticsImpl stats, boolean isMajor, Optional<byte[]> fullRegionName) {
-    one.record(stats, isMajor, fullRegionName);
-    two.record(stats, isMajor, fullRegionName);
+  public void record(RowStatisticsImpl stats, Optional<byte[]> fullRegionName) {
+    one.record(stats, fullRegionName);
+    two.record(stats, fullRegionName);
   }
 
   public RowStatisticsRecorder getOne() {

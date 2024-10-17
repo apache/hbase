@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.coprocessor.example.row.stats.ringbuffer;
 
 import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsTableUtil.buildPutForRegion;
-
 import com.lmax.disruptor.EventHandler;
 import java.io.IOException;
 import org.apache.hadoop.hbase.client.BufferedMutator;
@@ -48,9 +47,8 @@ public class RowStatisticsEventHandler implements EventHandler<RowStatisticsRing
     final RowStatisticsRingBufferPayload payload = event.getPayload();
     if (payload != null) {
       final RowStatistics rowStatistics = payload.getRowStatistics();
-      final boolean isMajor = payload.getIsMajor();
       final byte[] fullRegionName = payload.getFullRegionName();
-      Put put = buildPutForRegion(fullRegionName, rowStatistics, isMajor);
+      Put put = buildPutForRegion(fullRegionName, rowStatistics, rowStatistics.isMajor());
       try {
         bufferedMutator.mutate(put);
       } catch (IOException e) {

@@ -24,7 +24,6 @@ import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -87,7 +86,7 @@ public class TestRowStatisticsTableRecorder {
     RowStatisticsTableRecorder recorder =
       RowStatisticsTableRecorder.forClusterConnection(connection, counter, counter);
     assertNotNull(recorder);
-    recorder.record(rowStatistics, true, Optional.of(FULL_REGION_NAME));
+    recorder.record(rowStatistics, Optional.of(FULL_REGION_NAME));
     assertEquals(counter.getCount(), 0);
   }
 
@@ -97,7 +96,7 @@ public class TestRowStatisticsTableRecorder {
       RowStatisticsTableRecorder.forClusterConnection(connection, counter, counter);
     assertNotNull(recorder);
     recorder.close();
-    recorder.record(rowStatistics, true, Optional.of(FULL_REGION_NAME));
+    recorder.record(rowStatistics, Optional.of(FULL_REGION_NAME));
     assertEquals(counter.getCount(), 1);
   }
 }
