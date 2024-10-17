@@ -813,7 +813,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       storeFileInfo.getHFileInfo().initMetaAndIndex(halfReader.getHFileReader());
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
-      int blocksize = familyDescriptor.getBlocksize();
+      int blocksize = StoreUtils.getBlockSize(conf, familyDescriptor.getBlocksize());
       Algorithm compression = familyDescriptor.getCompressionType();
       BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
       HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)

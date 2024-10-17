@@ -62,8 +62,8 @@ public class ScanInfo {
   public ScanInfo(Configuration conf, ColumnFamilyDescriptor family, long ttl,
     long timeToPurgeDeletes, CellComparator comparator) {
     this(conf, family.getName(), family.getMinVersions(), family.getMaxVersions(), ttl,
-      family.getKeepDeletedCells(), family.getBlocksize(), timeToPurgeDeletes, comparator,
-      family.isNewVersionBehavior());
+      family.getKeepDeletedCells(), StoreUtils.getBlockSize(conf, family.getBlocksize()),
+      timeToPurgeDeletes, comparator, family.isNewVersionBehavior());
   }
 
   private static long getCellsPerTimeoutCheck(Configuration conf) {
