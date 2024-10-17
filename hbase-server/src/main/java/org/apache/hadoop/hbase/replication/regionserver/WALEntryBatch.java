@@ -179,6 +179,6 @@ class WALEntryBatch {
   static long getEntrySizeExcludeBulkLoad(Entry entry) {
     WALEdit edit = entry.getEdit();
     WALKey key = entry.getKey();
-    return edit.heapSize() + key.estimatedSerializedSizeOf();
+    return edit.estimatedSerializedSizeOf() + key.estimatedSerializedSizeOf();
   }
 }
