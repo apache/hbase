@@ -823,7 +823,7 @@
     <maven.min.version>3.5.0</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
-    <hadoop-three.version>3.4.0</hadoop-three.version>
+    <hadoop-three.version>3.4.1</hadoop-three.version>
     <!-- These must be defined here for downstream build tools that don't look at profiles.
     -->
     <hadoop.version>${hadoop-three.version}</hadoop.version>
@@ -1879,9 +1879,9 @@
       <url>${distMgmtSnapshotsUrl}</url>
     </repository>
     <repository>
-      <id>hadoop341rc2</id>
-      <name>Hadoop 3.4.1 RC2 repository</name>
-      <url>https://repository.apache.org/content/repositories/orgapachehadoop-1426</url>
+      <id>hadoop341rc3</id>
+      <name>Hadoop 3.4.1 RC3 repository</name>
+      <url>https://repository.apache.org/content/repositories/orgapachehadoop-1430</url>
     </repository>
   </repositories>
   <build>
