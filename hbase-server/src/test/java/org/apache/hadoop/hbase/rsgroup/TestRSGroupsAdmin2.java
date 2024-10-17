@@ -729,4 +729,49 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     assertTrue(msg, timeTaken < 15000);
     LOG.info("Time taken to move a table with 100 region is {} ms", timeTaken);
   }
+
+  @Test
+  public void testMoveAllServers() throws IOException, Exception {
+    LOG.info("testMoveAllServers");
+    RSGroupInfo defaultGroup = ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
+    // create groups and assign servers
+    final RSGroupInfo srcGroup = addGroup(getGroupName(name.getMethodName()), 0);
+    final RSGroupInfo destGroup = addGroup(getGroupName(name.getMethodName()), 0);
+    assertEquals(0, srcGroup.getServers().size());
+    assertEquals(0, destGroup.getServers().size());
+    LOG.info("destGroup servers init", destGroup.getServers());
+    LOG.info("srcGroup servers init", srcGroup.getServers());
+    LOG.info("default group servers init", defaultGroup.getServers());
+
+    // test success case
+    if (ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size() > 1) {
+      Address serverInDefaultGroup = defaultGroup.getServers().iterator().next();
+      ADMIN.moveServersToRSGroup(Sets.newHashSet(serverInDefaultGroup), srcGroup.getName());
+    }
+    assertEquals(3, ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size());
+    assertEquals(1, ADMIN.getRSGroup(srcGroup.getName()).getServers().size());
+
+    LOG.info("moving all servers " + ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers()
+      + " to " + ADMIN.getRSGroup(srcGroup.getName()).getServers());
+    ADMIN.moveAllServersFromOneRSGroupToOther(srcGroup.getName(), destGroup.getName());
+    assertEquals(0, ADMIN.getRSGroup(srcGroup.getName()).getServers().size());
+    assertEquals(1, ADMIN.getRSGroup(destGroup.getName()).getServers().size());
+
+    ADMIN.moveAllServersFromOneRSGroupToOther(destGroup.getName(), RSGroupInfo.DEFAULT_GROUP);
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return getNumServers() == ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size();
+      }
+    });
+    assertEquals(0, ADMIN.getRSGroup(destGroup.getName()).getServers().size());
+
+    // test group removal
+    LOG.info("Remove group " + srcGroup.getName());
+    ADMIN.removeRSGroup(srcGroup.getName());
+    assertEquals(null, ADMIN.getRSGroup(srcGroup.getName()));
+    LOG.info("Remove group " + destGroup.getName());
+    ADMIN.removeRSGroup(destGroup.getName());
+    assertEquals(null, ADMIN.getRSGroup(destGroup.getName()));
+  }
 }
