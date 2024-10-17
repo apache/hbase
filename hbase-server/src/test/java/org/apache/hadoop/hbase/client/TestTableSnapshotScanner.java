@@ -36,6 +36,9 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -423,7 +426,20 @@ public class TestTableSnapshotScanner {
           Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
           HRegionFileSystem regionFs = HRegionFileSystem
             .openRegionFromFileSystem(UTIL.getConfiguration(), fs, tableDir, mergedRegion, true);
-          return !regionFs.hasReferences(admin.getDescriptor(tableName));
+          boolean references = false;
+          Path regionDir = new Path(tableDir, mergedRegion.getEncodedName());
+          for (Path familyDir : FSUtils.getFamilyDirs(fs, regionDir)) {
+            StoreContext storeContext = StoreContext.getBuilder()
+              .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(familyDir.getName()))
+              .withRegionFileSystem(regionFs).withFamilyStoreDirectoryPath(familyDir).build();
+            StoreFileTracker sft =
+              StoreFileTrackerFactory.create(UTIL.getConfiguration(), false, storeContext);
+            references = references || sft.hasReferences();
+            if (references) {
+              break;
+            }
+          }
+          return !references;
         } catch (IOException e) {
           LOG.warn("Failed check merged region has no reference", e);
           return false;

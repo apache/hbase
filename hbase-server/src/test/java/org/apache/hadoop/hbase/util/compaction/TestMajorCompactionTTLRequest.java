@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util.compaction;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -89,6 +91,8 @@ public class TestMajorCompactionTTLRequest extends TestMajorCompactionRequest {
     MajorCompactionTTLRequest request = new MajorCompactionTTLRequest(connection, regionInfo);
     MajorCompactionTTLRequest spy = spy(request);
     HRegionFileSystem fileSystem = mockFileSystem(regionInfo, false, storeFiles);
+    StoreFileTrackerForTest sft = mockSFT(false, storeFiles);
+    doReturn(sft).when(spy).getStoreFileTracker(any(), any());
     doReturn(fileSystem).when(spy).getFileSystem();
     return spy;
   }
