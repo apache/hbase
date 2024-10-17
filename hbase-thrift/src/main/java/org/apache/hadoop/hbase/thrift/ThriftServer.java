@@ -75,6 +75,8 @@ import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_TYPE_
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_TYPE_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SUPPORT_PROXYUSER_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.USE_HTTP_CONF_KEY;
+import static org.apache.hadoop.hbase.util.JvmPauseMonitor.PAUSE_MONITOR_ENABLE_DEFAULT;
+import static org.apache.hadoop.hbase.util.JvmPauseMonitor.PAUSE_MONITOR_ENABLE_KEY;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -195,6 +197,9 @@ public class ThriftServer extends Configured implements Tool {
 
   public ThriftServer(Configuration conf) {
     this.conf = HBaseConfiguration.create(conf);
+    // disable the pause monitor in connection because we will create a pause
+    // monitor that reports metric to JvmPauseMonitorSource
+    this.conf.setBoolean(PAUSE_MONITOR_ENABLE_KEY, PAUSE_MONITOR_ENABLE_DEFAULT);
   }
 
   protected ThriftMetrics createThriftMetrics(Configuration conf) {
@@ -227,7 +232,7 @@ public class ThriftServer extends Configured implements Tool {
 
     this.listenPort = conf.getInt(PORT_CONF_KEY, DEFAULT_LISTEN_PORT);
     this.metrics = createThriftMetrics(conf);
-    this.pauseMonitor = new JvmPauseMonitor(conf, this.metrics.getSource());
+    this.pauseMonitor = JvmPauseMonitor.getInstance(conf, this.metrics.getSource());
     this.hbaseServiceHandler = createHandler(conf, userProvider);
     this.hbaseServiceHandler.initMetrics(metrics);
     this.processor = createProcessor();
