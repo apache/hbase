@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -129,6 +130,11 @@ public class BucketCache implements BlockCache, HeapSize {
   /** Use strong reference for offsetLock or not */
   private static final String STRONG_REF_KEY = "hbase.bucketcache.offsetlock.usestrongref";
   private static final boolean STRONG_REF_DEFAULT = false;
+
+  /** The cache age of blocks to check if the related file is present on any online regions. */
+  static final String BLOCK_ORPHAN_GRACE_PERIOD = "hbase.bucketcache.block.orphan.evictgraceperiod";
+
+  static final long BLOCK_ORPHAN_GRACE_PERIOD_DEFAULT = 24 * 60 * 60 * 1000L;
 
   /** Priority buckets */
   static final float DEFAULT_SINGLE_FACTOR = 0.25f;
@@ -296,6 +302,10 @@ public class BucketCache implements BlockCache, HeapSize {
   private long allocFailLogPrevTs; // time of previous log event for allocation failure.
   private static final int ALLOCATION_FAIL_LOG_TIME_PERIOD = 60000; // Default 1 minute.
 
+  private Map<String, HRegion> onlineRegions;
+
+  private long orphanBlockGracePeriod = 0;
+
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
     int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
     this(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
@@ -305,6 +315,13 @@ public class BucketCache implements BlockCache, HeapSize {
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
     int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration,
     Configuration conf) throws IOException {
+    this(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
+      persistencePath, ioErrorsTolerationDuration, conf, null);
+  }
+
+  public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
+    int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration,
+    Configuration conf, Map<String, HRegion> onlineRegions) throws IOException {
     Preconditions.checkArgument(blockSize > 0,
       "BucketCache capacity is set to " + blockSize + ", can not be less than 0");
     boolean useStrongRef = conf.getBoolean(STRONG_REF_KEY, STRONG_REF_DEFAULT);
@@ -317,6 +334,9 @@ public class BucketCache implements BlockCache, HeapSize {
     this.algorithm = conf.get(FILE_VERIFY_ALGORITHM, DEFAULT_FILE_VERIFY_ALGORITHM);
     this.ioEngine = getIOEngineFromName(ioEngineName, capacity, persistencePath);
     this.writerThreads = new WriterThread[writerThreadNum];
+    this.onlineRegions = onlineRegions;
+    this.orphanBlockGracePeriod =
+      conf.getLong(BLOCK_ORPHAN_GRACE_PERIOD, BLOCK_ORPHAN_GRACE_PERIOD_DEFAULT);
     long blockNumCapacity = capacity / blockSize;
     if (blockNumCapacity >= Integer.MAX_VALUE) {
       // Enough for about 32TB of cache!
@@ -1091,10 +1111,52 @@ public class BucketCache implements BlockCache, HeapSize {
       BucketEntryGroup bucketMemory =
         new BucketEntryGroup(bytesToFreeWithExtra, blockSize, getPartitionSize(memoryFactor));
 
+      Set<String> allValidFiles = null;
+      // We need the region/stores/files tree, in order to figure out if a block is "orphan" or not.
+      // See further comments below for more details.
+      if (onlineRegions != null) {
+        allValidFiles = BlockCacheUtil.listAllFilesNames(onlineRegions);
+      }
+      // the cached time is recored in nanos, so we need to convert the grace period accordingly
+      long orphanGracePeriodNanos = orphanBlockGracePeriod * 1000000;
+      long bytesFreed = 0;
       // Scan entire map putting bucket entry into appropriate bucket entry
       // group
       for (Map.Entry<BlockCacheKey, BucketEntry> bucketEntryWithKey : backingMap.entrySet()) {
-        switch (bucketEntryWithKey.getValue().getPriority()) {
+        BlockCacheKey key = bucketEntryWithKey.getKey();
+        BucketEntry entry = bucketEntryWithKey.getValue();
+        // Under certain conditions, blocks for regions not on the current region server might
+        // be hanging on the cache. For example, when using the persistent cache feature, if the
+        // RS crashes, then if not the same regions are assigned back once its online again, blocks
+        // for the previous online regions would be recovered and stay in the cache. These would be
+        // "orphan" blocks, as the files these blocks belong to are not in any of the online
+        // regions.
+        // "Orphan" blocks are a pure waste of cache space and should be evicted first during
+        // the freespace run.
+        // Compactions and Flushes may cache blocks before its files are completely written. In
+        // these
+        // cases the file won't be found in any of the online regions stores, but the block
+        // shouldn't
+        // be evicted. To avoid this, we defined this
+        // hbase.bucketcache.block.orphan.evictgraceperiod
+        // property, to account for a grace period (default 24 hours) where a block should be
+        // checked
+        // if it's an orphan block.
+        if (
+          allValidFiles != null
+            && entry.getCachedTime() < (System.nanoTime() - orphanGracePeriodNanos)
+        ) {
+          if (!allValidFiles.contains(key.getHfileName())) {
+            if (evictBucketEntryIfNoRpcReferenced(key, entry)) {
+              // We calculate the freed bytes, but we don't stop if the goal was reached because
+              // these are orphan blocks anyway, so let's leverage this run of freeSpace
+              // to get rid of all orphans at once.
+              bytesFreed += entry.getLength();
+              continue;
+            }
+          }
+        }
+        switch (entry.getPriority()) {
           case SINGLE: {
             bucketSingle.add(bucketEntryWithKey);
             break;
@@ -1118,7 +1180,6 @@ public class BucketCache implements BlockCache, HeapSize {
       bucketQueue.add(bucketMemory);
 
       int remainingBuckets = bucketQueue.size();
-      long bytesFreed = 0;
 
       BucketEntryGroup bucketGroup;
       while ((bucketGroup = bucketQueue.poll()) != null) {

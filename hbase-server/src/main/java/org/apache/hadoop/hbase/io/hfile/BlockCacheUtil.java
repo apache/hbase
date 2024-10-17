@@ -21,13 +21,17 @@ import static org.apache.hadoop.hbase.io.hfile.HFileBlock.FILL_HEADER;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.GsonUtil;
@@ -240,6 +244,16 @@ public class BlockCacheUtil {
       // Release this block to decrement the reference count.
       existingBlock.release();
     }
+  }
+
+  public static Set<String> listAllFilesNames(Map<String, HRegion> onlineRegions) {
+    Set<String> files = new HashSet<>();
+    onlineRegions.values().forEach(r -> {
+      r.getStores().forEach(s -> {
+        s.getStorefiles().forEach(f -> files.add(f.getPath().getName()));
+      });
+    });
+    return files;
   }
 
   private static final int DEFAULT_MAX = 1000000;
