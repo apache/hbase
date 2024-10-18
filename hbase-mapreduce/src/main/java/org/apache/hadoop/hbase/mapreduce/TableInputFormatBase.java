@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import org.apache.hadoop.hbase.HConstants;
@@ -308,14 +309,15 @@ public abstract class TableInputFormatBase extends InputFormat<ImmutableBytesWri
       splits.add(split);
       return splits;
     }
+
+    byte[] startRow = scan.isReversed() ? scan.getStopRow() : scan.getStartRow();
+    byte[] stopRow = scan.isReversed() ? scan.getStartRow() : scan.getStopRow();
     List<InputSplit> splits = new ArrayList<>(keys.getFirst().length);
     for (int i = 0; i < keys.getFirst().length; i++) {
       if (!includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
         continue;
       }
 
-      byte[] startRow = scan.getStartRow();
-      byte[] stopRow = scan.getStopRow();
       // determine if the given start an stop key fall into the region
       if (
         (startRow.length == 0 || keys.getSecond()[i].length == 0
@@ -346,13 +348,19 @@ public abstract class TableInputFormatBase extends InputFormat<ImmutableBytesWri
         // In the table input format for single table we do not need to
         // store the scan object in table split because it can be memory intensive and redundant
         // information to what is already stored in conf SCAN. See HBASE-25212
-        TableSplit split = new TableSplit(tableName, null, splitStart, splitStop, regionLocation,
-          encodedRegionName, regionSize);
+        TableSplit split = scan.isReversed()
+          ? new TableSplit(tableName, null, splitStop, splitStart, regionLocation,
+            encodedRegionName, regionSize)
+          : new TableSplit(tableName, null, splitStart, splitStop, regionLocation,
+            encodedRegionName, regionSize);
         splits.add(split);
         if (LOG.isDebugEnabled()) {
           LOG.debug("getSplits: split -> " + i + " -> " + split);
         }
       }
+    }
+    if (scan.isReversed()) {
+      Collections.reverse(splits);
     }
     return splits;
   }
