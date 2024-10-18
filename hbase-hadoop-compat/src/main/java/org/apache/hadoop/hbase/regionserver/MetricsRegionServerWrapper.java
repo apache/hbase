@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
+import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -643,4 +644,6 @@ public interface MetricsRegionServerWrapper {
   long getByteBuffAllocatorUsedBufferCount();
 
   int getActiveScanners();
+
+  FastLongHistogram getAgeAtEviction();
 }
