@@ -58,9 +58,9 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   private final int writeHandlersCount;
   private final int readHandlersCount;
   private final int scanHandlersCount;
-  private final int numWriteQueues;
-  private final int numReadQueues;
-  private final int numScanQueues;
+  protected final int numWriteQueues;
+  protected final int numReadQueues;
+  protected final int numScanQueues;
 
   private final AtomicInteger activeWriteHandlerCount = new AtomicInteger(0);
   private final AtomicInteger activeReadHandlerCount = new AtomicInteger(0);
@@ -97,9 +97,7 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     numScanQueues = scanQueues;
     scanHandlersCount = scanHandlers;
 
-    initializeQueues(numWriteQueues);
-    initializeQueues(numReadQueues);
-    initializeQueues(numScanQueues);
+    initQueues();
 
     this.writeBalancer = getBalancer(name, conf, queues.subList(0, numWriteQueues));
     this.readBalancer =
@@ -113,6 +111,12 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     LOG.info(getName() + " writeQueues=" + numWriteQueues + " writeHandlers=" + writeHandlersCount
       + " readQueues=" + numReadQueues + " readHandlers=" + readHandlersCount + " scanQueues="
       + numScanQueues + " scanHandlers=" + scanHandlersCount);
+  }
+
+  protected void initQueues() {
+    initializeQueues(numWriteQueues);
+    initializeQueues(numReadQueues);
+    initializeQueues(numScanQueues);
   }
 
   @Override
