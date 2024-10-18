@@ -1591,6 +1591,10 @@ public final class HConstants {
   public static final String SLOW_LOG_SCAN_PAYLOAD_ENABLED = "hbase.slowlog.scan.payload.enabled";
   public static final boolean SLOW_LOG_SCAN_PAYLOAD_ENABLED_DEFAULT = false;
 
+  public static final String REGION_HISTORIAN_BUFFER_ENABLED_KEY =
+    "hbase.master.regionHistorian.buffer.enabled";
+  public static final Boolean DEFAULT_REGION_HISTORIAN_ENABLED_KEY = false;
+
   public static final String SHELL_TIMESTAMP_FORMAT_EPOCH_KEY =
     "hbase.shell.timestamp.format.epoch";
 
