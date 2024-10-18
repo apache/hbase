@@ -2530,4 +2530,20 @@ public class Bytes implements Comparable<Bytes> {
     return CommonPrefixerHolder.BEST_COMMON_PREFIXER.findCommonPrefix(left, leftOffset, leftLength,
       right, rightOffset, rightLength);
   }
+
+  public static byte[] min(byte[] left, byte[] right) {
+    if (compareTo(left, right) <= 0) {
+      return left;
+    } else {
+      return right;
+    }
+  }
+
+  public static byte[] max(byte[] left, byte[] right) {
+    if (compareTo(left, right) >= 0) {
+      return left;
+    } else {
+      return right;
+    }
+  }
 }
