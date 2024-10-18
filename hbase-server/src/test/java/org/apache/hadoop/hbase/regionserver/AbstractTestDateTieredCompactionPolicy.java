@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionRequest;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 
@@ -46,9 +47,11 @@ public class AbstractTestDateTieredCompactionPolicy extends TestCompactionPolicy
     }
 
     ArrayList<HStoreFile> ret = Lists.newArrayList();
+    StoreFileTrackerForTest storeFileTrackerForTest =
+      new StoreFileTrackerForTest(conf, true, store.getStoreContext());
     for (int i = 0; i < sizes.length; i++) {
-      MockHStoreFile msf =
-        new MockHStoreFile(TEST_UTIL, TEST_FILE, sizes[i], ageInDisk.get(i), false, i);
+      MockHStoreFile msf = new MockHStoreFile(TEST_UTIL, TEST_FILE, sizes[i], ageInDisk.get(i),
+        false, i, storeFileTrackerForTest);
       msf.setTimeRangeTracker(
         TimeRangeTracker.create(TimeRangeTracker.Type.SYNC, minTimestamps[i], maxTimestamps[i]));
       ret.add(msf);
