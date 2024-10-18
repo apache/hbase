@@ -620,7 +620,7 @@ function hadoopcheck_rebuild
     yetus_info "Setting Hadoop 3 versions to test based on branch-2.6+/master/feature branch rules"
     # Isn't runnung these tests with the default Hadoop version redundant ?
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.3.5 3.4.0"
+      hbase_hadoop3_versions="3.3.6 3.4.0"
     else
       hbase_hadoop3_versions="3.3.5 3.3.6 3.4.0"
     fi
