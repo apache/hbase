@@ -916,7 +916,7 @@ pipeline {
             sh '''#!/bin/bash -e
               echo "Setting up directories"
               rm -rf "output-srctarball" && mkdir "output-srctarball"
-              rm -rf "output-integration" && mkdir "output-integration" "output-integration/hadoop-2" "output-integration/hadoop-3*" "output-integration/hadoop-3*-shaded"
+              rm -rf "output-integration" && mkdir "output-integration" "output-integration/hadoop-2" "output-integration/hadoop-3" "output-integration/hadoop-3-shaded"
               rm -rf "unpacked_src_tarball" && mkdir "unpacked_src_tarball"
               rm -rf "hbase-install" && mkdir "hbase-install"
               rm -rf "hbase-client" && mkdir "hbase-client"
