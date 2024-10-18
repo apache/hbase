@@ -248,7 +248,7 @@ public class BlockCacheUtil {
 
   public static Set<String> listAllFilesNames(Map<String, HRegion> onlineRegions) {
     Set<String> files = new HashSet<>();
-    onlineRegions.values().forEach( r -> {
+    onlineRegions.values().forEach(r -> {
       r.getStores().forEach(s -> {
         s.getStorefiles().forEach(f -> files.add(f.getPath().getName()));
       });

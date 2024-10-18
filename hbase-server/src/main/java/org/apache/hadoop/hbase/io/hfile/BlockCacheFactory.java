@@ -85,7 +85,8 @@ public final class BlockCacheFactory {
   private BlockCacheFactory() {
   }
 
-  public static BlockCache createBlockCache(Configuration conf, Map<String, HRegion> onlineRegions) {
+  public static BlockCache createBlockCache(Configuration conf,
+    Map<String, HRegion> onlineRegions) {
     FirstLevelBlockCache l1Cache = createFirstLevelCache(conf);
     if (l1Cache == null) {
       return null;
@@ -107,6 +108,7 @@ public final class BlockCacheFactory {
       return bucketCache == null ? l1Cache : new CombinedBlockCache(l1Cache, bucketCache);
     }
   }
+
   public static BlockCache createBlockCache(Configuration conf) {
     return createBlockCache(conf, null);
   }
@@ -184,7 +186,8 @@ public final class BlockCacheFactory {
 
   }
 
-  private static BucketCache createBucketCache(Configuration c, Map<String, HRegion> onlineRegions) {
+  private static BucketCache createBucketCache(Configuration c,
+    Map<String, HRegion> onlineRegions) {
     // Check for L2. ioengine name must be non-null.
     String bucketCacheIOEngineName = c.get(BUCKET_CACHE_IOENGINE_KEY, null);
     if (bucketCacheIOEngineName == null || bucketCacheIOEngineName.length() <= 0) {
@@ -230,8 +233,8 @@ public final class BlockCacheFactory {
           BucketCache.DEFAULT_ERROR_TOLERATION_DURATION);
       // Bucket cache logs its stats on creation internal to the constructor.
       bucketCache = new BucketCache(bucketCacheIOEngineName, bucketCacheSize, blockSize,
-        bucketSizes, writerThreads, writerQueueLen, persistentPath,
-        ioErrorsTolerationDuration, c, onlineRegions);
+        bucketSizes, writerThreads, writerQueueLen, persistentPath, ioErrorsTolerationDuration, c,
+        onlineRegions);
     } catch (IOException ioex) {
       LOG.error("Can't instantiate bucket cache", ioex);
       throw new RuntimeException(ioex);

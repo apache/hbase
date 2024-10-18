@@ -131,11 +131,10 @@ public class BucketCache implements BlockCache, HeapSize {
   private static final String STRONG_REF_KEY = "hbase.bucketcache.offsetlock.usestrongref";
   private static final boolean STRONG_REF_DEFAULT = false;
 
-  /**The cache age of blocks to check if the related file is present on any online regions. */
-  static final String BLOCK_ORPHAN_GRACE_PERIOD =
-    "hbase.bucketcache.block.orphan.evictgraceperiod";
+  /** The cache age of blocks to check if the related file is present on any online regions. */
+  static final String BLOCK_ORPHAN_GRACE_PERIOD = "hbase.bucketcache.block.orphan.evictgraceperiod";
 
-  static final long BLOCK_ORPHAN_GRACE_PERIOD_DEFAULT = 24*60*60*1000L;
+  static final long BLOCK_ORPHAN_GRACE_PERIOD_DEFAULT = 24 * 60 * 60 * 1000L;
 
   /** Priority buckets */
   static final float DEFAULT_SINGLE_FACTOR = 0.25f;
@@ -1113,12 +1112,12 @@ public class BucketCache implements BlockCache, HeapSize {
         new BucketEntryGroup(bytesToFreeWithExtra, blockSize, getPartitionSize(memoryFactor));
 
       Set<String> allValidFiles = null;
-      //We need the region/stores/files tree, in order to figure out if a block is "orphan" or not.
-      //See further comments below for more details.
-      if(onlineRegions != null) {
+      // We need the region/stores/files tree, in order to figure out if a block is "orphan" or not.
+      // See further comments below for more details.
+      if (onlineRegions != null) {
         allValidFiles = BlockCacheUtil.listAllFilesNames(onlineRegions);
       }
-      //the cached time is recored in nanos, so we need to convert the grace period accordingly
+      // the cached time is recored in nanos, so we need to convert the grace period accordingly
       long orphanGracePeriodNanos = orphanBlockGracePeriod * 1000000;
       long bytesFreed = 0;
       // Scan entire map putting bucket entry into appropriate bucket entry
@@ -1126,25 +1125,32 @@ public class BucketCache implements BlockCache, HeapSize {
       for (Map.Entry<BlockCacheKey, BucketEntry> bucketEntryWithKey : backingMap.entrySet()) {
         BlockCacheKey key = bucketEntryWithKey.getKey();
         BucketEntry entry = bucketEntryWithKey.getValue();
-        //Under certain conditions, blocks for regions not on the current region server might
-        //be hanging on the cache. For example, when using the persistent cache feature, if the
-        //RS crashes, then if not the same regions are assigned back once its online again, blocks
-        //for the previous online regions would be recovered and stay in the cache. These would be
-        //"orphan" blocks, as the files these blocks belong to are not in any of the online regions.
-        //"Orphan" blocks are a pure waste of cache space and should be evicted first during
-        //the freespace run.
-        //Compactions and Flushes may cache blocks before its files are completely written. In these
-        //cases the file won't be found in any of the online regions stores, but the block shouldn't
-        //be evicted. To avoid this, we defined this hbase.bucketcache.block.orphan.evictgraceperiod
-        //property, to account for a grace period (default 24 hours) where a block should be checked
-        //if it's an orphan block.
-        if(allValidFiles != null && entry.getCachedTime() <
-          (System.nanoTime() - orphanGracePeriodNanos)) {
+        // Under certain conditions, blocks for regions not on the current region server might
+        // be hanging on the cache. For example, when using the persistent cache feature, if the
+        // RS crashes, then if not the same regions are assigned back once its online again, blocks
+        // for the previous online regions would be recovered and stay in the cache. These would be
+        // "orphan" blocks, as the files these blocks belong to are not in any of the online
+        // regions.
+        // "Orphan" blocks are a pure waste of cache space and should be evicted first during
+        // the freespace run.
+        // Compactions and Flushes may cache blocks before its files are completely written. In
+        // these
+        // cases the file won't be found in any of the online regions stores, but the block
+        // shouldn't
+        // be evicted. To avoid this, we defined this
+        // hbase.bucketcache.block.orphan.evictgraceperiod
+        // property, to account for a grace period (default 24 hours) where a block should be
+        // checked
+        // if it's an orphan block.
+        if (
+          allValidFiles != null
+            && entry.getCachedTime() < (System.nanoTime() - orphanGracePeriodNanos)
+        ) {
           if (!allValidFiles.contains(key.getHfileName())) {
             if (evictBucketEntryIfNoRpcReferenced(key, entry)) {
-              //We calculate the freed bytes, but we don't stop if the goal was reached because
-              //these are orphan blocks anyway, so let's leverage this run of freeSpace
-              //to get rid of all orphans at once.
+              // We calculate the freed bytes, but we don't stop if the goal was reached because
+              // these are orphan blocks anyway, so let's leverage this run of freeSpace
+              // to get rid of all orphans at once.
               bytesFreed += entry.getLength();
               continue;
             }
@@ -1174,7 +1180,6 @@ public class BucketCache implements BlockCache, HeapSize {
       bucketQueue.add(bucketMemory);
 
       int remainingBuckets = bucketQueue.size();
-
 
       BucketEntryGroup bucketGroup;
       while ((bucketGroup = bucketQueue.poll()) != null) {
