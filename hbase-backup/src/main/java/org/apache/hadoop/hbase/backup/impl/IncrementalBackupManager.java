@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -88,8 +87,7 @@ public class IncrementalBackupManager extends BackupManager {
     props.put("backupRoot", backupInfo.getBackupRootDir());
 
     try (Admin admin = conn.getAdmin()) {
-      admin.execProcedure(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE,
-        LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, props);
+      BackupUtils.rollWALWriters(admin, props);
     }
     newTimestamps = readRegionServerLastLogRollResult();
 
