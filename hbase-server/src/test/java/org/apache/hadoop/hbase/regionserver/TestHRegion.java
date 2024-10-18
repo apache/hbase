@@ -7878,6 +7878,72 @@ public class TestHRegion {
     assertEquals(regionCoprocessor, regionCoprocessorAfterOnConfigurationChange);
   }
 
+  @Test
+  public void testRowLockWithCustomTimeOut() throws IOException {
+    region = initHRegion(tableName, method, CONF, COLUMN_FAMILY_BYTES);
+    RowLock rowLock3 = region.getRowLock(Bytes.toBytes("row_33"));
+    // should get lock when the same thread is trying to lock
+    RowLock rowLock4 = region.getRowLock(Bytes.toBytes("row_33"), true, 10);
+    assertNotNull(rowLock4);
+    final CountDownLatch releaseLatch = new CountDownLatch(1);
+
+    MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(CONF);
+    CountDownLatch finishedPuts = new CountDownLatch(1);
+    CountDownLatch finalFinishedPuts = finishedPuts;
+    TestThread putter = new TestThread(ctx) {
+      @Override
+      public void doWork() throws IOException {
+        releaseLatch.countDown();
+        RowLock rowLock4 = region.getRowLock(Bytes.toBytes("row_33"), true, 1000);
+        assertNotNull(rowLock4);
+        rowLock4.release();
+        finalFinishedPuts.countDown();
+      }
+    };
+
+    ctx.addThread(putter);
+    ctx.startThreads();
+
+    try {
+      releaseLatch.await();
+      Thread.sleep(500);
+      rowLock3.release();
+      finishedPuts.await();
+    } catch (InterruptedException e) {
+      LOG.error("Interrupted!", e);
+    }
+
+    // test for time out scenario
+    rowLock3 = region.getRowLock(Bytes.toBytes("row_333"));
+    try {
+      ctx = new MultithreadedTestUtil.TestContext(CONF);
+      finishedPuts = new CountDownLatch(1);
+      CountDownLatch finalFinishedPuts1 = finishedPuts;
+      putter = new TestThread(ctx) {
+        @Override
+        public void doWork() throws IOException {
+          try {
+            RowLock rowLock4 = region.getRowLock(Bytes.toBytes("row_333"), true, 10);
+            fail("should not reach here");
+          } catch (IOException ex) {
+            assertTrue(ex.getMessage().contains("Timed out waiting for lock for row"));
+          }
+          finalFinishedPuts1.countDown();
+        }
+      };
+
+      ctx.addThread(putter);
+      ctx.startThreads();
+      try {
+        finishedPuts.await();
+      } catch (InterruptedException e) {
+        LOG.error("Interrupted!", e);
+      }
+    } finally {
+      rowLock3.release();
+    }
+  }
+
   public static class NoOpRegionCoprocessor implements RegionCoprocessor, RegionObserver {
     // a empty region coprocessor class
   }
