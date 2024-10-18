@@ -195,7 +195,7 @@ public class Reference {
    * delimiter, pb reads to EOF which may not be what you want).
    * @return This instance serialized as a delimited protobuf w/ a magic pb prefix.
    */
-  byte[] toByteArray() throws IOException {
+  public byte[] toByteArray() throws IOException {
     return ProtobufUtil.prependPBMagic(convert().toByteArray());
   }
 
