@@ -25,7 +25,7 @@ for running an Apache HBase release.
 Requires:
 * [VirtualBox](http://virtualbox.org)
 * [Vagrant](http://virtualbox.org)
-* The private portion of your signing key avilable in the local GPG agent
+* The private portion of your signing key available in the local GPG agent
 * The private portion of your Github authentication key available in either the local GPG agent or
   local SSH agent
 
