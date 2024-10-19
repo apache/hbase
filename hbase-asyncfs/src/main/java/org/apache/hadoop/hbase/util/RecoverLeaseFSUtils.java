@@ -44,7 +44,7 @@ public final class RecoverLeaseFSUtils {
   private static Method recoverLeaseMethod = null;
   public static final String LEASE_RECOVERABLE_CLASS_NAME = "org.apache.hadoop.fs.LeaseRecoverable";
   static {
-    LOG.debug("RecoverLeaseFSUtils loaded");
+    LOG.debug("Initialize RecoverLeaseFSUtils");
     initializeRecoverLeaseMethod(LEASE_RECOVERABLE_CLASS_NAME);
   }
 
@@ -63,11 +63,13 @@ public final class RecoverLeaseFSUtils {
       try {
         recoverLeaseMethod = DistributedFileSystem.class.getMethod("recoverLease", Path.class);
       } catch (NoSuchMethodException ex) {
-        LOG.error("Cannot find recoverLease method in DistributedFileSystem class. Abort.", ex);
+        LOG.error("Cannot find recoverLease method in DistributedFileSystem class. "
+          + "It should never happen. Abort.", ex);
         throw new RuntimeException(ex);
       }
     } catch (NoSuchMethodException e) {
-      LOG.error("Cannot find recoverLease method in LeaseRecoverable class. Abort.", e);
+      LOG.error("Cannot find recoverLease method in LeaseRecoverable class. "
+        + "It should never happen. Abort.", e);
       throw new RuntimeException(e);
     }
   }

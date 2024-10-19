@@ -124,8 +124,8 @@ public final class FSUtils {
     } catch (ClassNotFoundException | NoSuchFieldException e) {
       LOG.debug("SafeMode interface not in the classpath, this means Hadoop 3.3.5 or below.");
     } catch (IllegalAccessException e) {
-      LOG.error("SafeModeAction.SAFEMODE_GET is not accessible. " +
-        "Unexpected Hadoop version or messy classpath?", e);
+      LOG.error("SafeModeAction.SAFEMODE_GET is not accessible. "
+        + "Unexpected Hadoop version or messy classpath?", e);
       throw new RuntimeException(e);
     }
   }
