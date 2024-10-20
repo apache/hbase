@@ -120,6 +120,37 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private List<String> labels = new ArrayList<>();
   private boolean cacheBlocks = true;
 
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = IncludeStartRowFilter.class)
+  private boolean includeStartRow = true;
+
+  @JsonInclude(value = JsonInclude.Include.NON_DEFAULT)
+  private boolean includeStopRow = false;
+
+  @XmlAttribute
+  public boolean isIncludeStopRow() {
+    return includeStopRow;
+  }
+
+  public void setIncludeStopRow(boolean includeStopRow) {
+    this.includeStopRow = includeStopRow;
+  }
+
+  @XmlAttribute
+  public boolean isIncludeStartRow() {
+    return includeStartRow;
+  }
+
+  public void setIncludeStartRow(boolean includeStartRow) {
+    this.includeStartRow = includeStartRow;
+  }
+
+  private static class IncludeStartRowFilter {
+    @Override
+    public boolean equals(Object value) {
+      return Boolean.TRUE.equals(value);
+    }
+  }
+
   /**
    * Implement lazily-instantiated singleton as per recipe here:
    * http://literatejava.com/jvm/fastest-threadsafe-singleton-jvm/
@@ -726,6 +757,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         model.addLabel(label);
       }
     }
+    model.setIncludeStartRow(scan.includeStartRow());
+    model.setIncludeStopRow(scan.includeStopRow());
     return model;
   }
 
@@ -977,6 +1010,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         builder.addLabels(label);
     }
     builder.setCacheBlocks(cacheBlocks);
+    builder.setIncludeStartRow(includeStartRow);
+    builder.setIncludeStopRow(includeStopRow);
     return builder.build();
   }
 
@@ -1019,6 +1054,12 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     }
     if (builder.hasCacheBlocks()) {
       this.cacheBlocks = builder.getCacheBlocks();
+    }
+    if (builder.hasIncludeStartRow()) {
+      this.includeStartRow = builder.getIncludeStartRow();
+    }
+    if (builder.hasIncludeStopRow()) {
+      this.includeStopRow = builder.getIncludeStopRow();
     }
     return this;
   }
