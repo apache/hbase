@@ -30,4 +30,6 @@ message Scanner {
   optional int32 caching = 9;     // specifies REST scanner caching
   repeated string labels = 10;
   optional bool cacheBlocks = 11; // server side block caching hint
+  optional bool includeStartRow = 13;
+  optional bool includeStopRow = 14;
 }
