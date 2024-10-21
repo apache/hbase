@@ -79,12 +79,10 @@ public class RowStatisticsCompactionObserver
   private Counter rowStatisticsPutFailed;
   private long maxCacheSize;
   private final RowStatisticsRecorder recorder;
-  private RowStatisticsTableRecorder tableRecorder;
 
   @InterfaceAudience.Private
   public RowStatisticsCompactionObserver(RowStatisticsRecorder recorder) {
     this.recorder = recorder;
-    this.tableRecorder = null;
   }
 
   public RowStatisticsCompactionObserver() {
@@ -151,8 +149,10 @@ public class RowStatisticsCompactionObserver
           rowStatisticsDropped);
         regionEnv.getMetricRegistryForRegionServer().remove(ROW_STATISTICS_PUT_FAILED,
           rowStatisticsPutFailed);
-        regionEnv.getSharedData().remove(TABLE_RECORDER_KEY, tableRecorder);
+        RowStatisticsTableRecorder tableRecorder =
+          (RowStatisticsTableRecorder) regionEnv.getSharedData().get(TABLE_RECORDER_KEY);
         if (tableRecorder !=  null) {
+          regionEnv.getSharedData().remove(TABLE_RECORDER_KEY, tableRecorder);
           tableRecorder.close();
         }
       }
@@ -207,20 +207,23 @@ public class RowStatisticsCompactionObserver
     RowStatisticsImpl stats = new RowStatisticsImpl(store.getTableName().getNameAsString(),
       store.getRegionInfo().getEncodedName(), store.getColumnFamilyName(), blocksize,
         maxCacheSize, isMajor);
-    return new RowStatisticsScanner(scanner, stats, context.getEnvironment());
+    return new RowStatisticsScanner(scanner, stats, context.getEnvironment(), recorder);
   }
 
-  private class RowStatisticsScanner implements InternalScanner, Shipper {
+  private static class RowStatisticsScanner implements InternalScanner, Shipper {
 
     private final InternalScanner scanner;
     private final Shipper shipper;
     private final RowStatisticsImpl rowStatistics;
     private final RegionCoprocessorEnvironment regionEnv;
+    private final Counter rowStatisticsDropped;
+    private final Counter rowStatisticsPutFailed;
+    private final RowStatisticsRecorder customRecorder;
     private RawCellBuilder cellBuilder;
     private Cell lastCell;
 
     public RowStatisticsScanner(InternalScanner scanner,
-      RowStatisticsImpl rowStatistics, RegionCoprocessorEnvironment regionEnv) {
+      RowStatisticsImpl rowStatistics, RegionCoprocessorEnvironment regionEnv, RowStatisticsRecorder customRecorder) {
       this.scanner = scanner;
       if (scanner instanceof Shipper) {
         this.shipper = (Shipper) scanner;
@@ -230,6 +233,11 @@ public class RowStatisticsCompactionObserver
       this.rowStatistics = rowStatistics;
       this.regionEnv = regionEnv;
       this.cellBuilder = regionEnv.getCellBuilder();
+      this.rowStatisticsDropped =
+        regionEnv.getMetricRegistryForRegionServer().counter(ROW_STATISTICS_DROPPED);
+      this.rowStatisticsPutFailed =
+        regionEnv.getMetricRegistryForRegionServer().counter(ROW_STATISTICS_PUT_FAILED);
+      this.customRecorder = customRecorder;
     }
 
     @Override
@@ -289,7 +297,7 @@ public class RowStatisticsCompactionObserver
     }
 
     private void record() {
-      tableRecorder =
+      RowStatisticsTableRecorder tableRecorder =
         (RowStatisticsTableRecorder) regionEnv.getSharedData().computeIfAbsent(TABLE_RECORDER_KEY,
           k -> RowStatisticsTableRecorder.forClusterConnection(regionEnv.getConnection(),
             rowStatisticsDropped, rowStatisticsPutFailed));
@@ -302,8 +310,8 @@ public class RowStatisticsCompactionObserver
           rowStatistics.getRegion());
         rowStatisticsDropped.increment();
       }
-      if (recorder != null) {
-        recorder.record(this.rowStatistics,Optional.empty());
+      if (customRecorder != null) {
+        customRecorder.record(this.rowStatistics,Optional.empty());
       }
     }
   }
