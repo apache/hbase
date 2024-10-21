@@ -111,9 +111,9 @@ function personality_parse_args
         delete_parameter "${i}"
         HADOOP_PROFILE=${i#*=}
       ;;
-      --hadoop-version=*)
+      --hadoop-three-version=*)
         delete_parameter "${i}"
-        HADOOP_VERSION=${i#*=}
+        HADOOP_THREE_VERSION=${i#*=}
       ;;
       --test-profile=*)
         delete_parameter "${i}"
@@ -190,9 +190,9 @@ function personality_modules
     extra="${extra} -Dhadoop.profile=${HADOOP_PROFILE}"
   fi
 
-  # If we have HADOOP_VERSION specified it pass along in the hadoop.version system property.
-  if [[ -n "${HADOOP_VERSION}" ]] ; then
-    extra="${extra} -Dhadoop.version=${HADOOP_VERSION}"
+  # If we have HADOOP_THREE_VERSION specified it pass along in the hadoop.version system property.
+  if [[ -n "${HADOOP_THREE_VERSION}" ]] ; then
+    extra="${extra} -Dhadoop-three.version=${HADOOP_THREE_VERSION}"
   fi
 
   # BUILDMODE value is 'full' when there is no patch to be tested, and we are running checks on
