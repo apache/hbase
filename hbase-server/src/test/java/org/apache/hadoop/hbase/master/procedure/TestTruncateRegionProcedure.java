@@ -134,9 +134,10 @@ public class TestTruncateRegionProcedure extends TestTableDDLProcedureBase {
       .min((o1, o2) -> Bytes.compareTo(o1.getStartKey(), o2.getStartKey())).get();
 
     // Act - Execute Truncate region procedure
-    long procId =
-      procExec.submitProcedure(new TruncateRegionProcedure(environment, regionToBeTruncated));
-    ProcedureTestingUtility.waitProcedure(procExec, procId);
+    final ProcedurePrepareLatch prepareLatch = new ProcedurePrepareLatch.CompatibilityLatch();
+    procExec
+      .submitProcedure(new TruncateRegionProcedure(environment, regionToBeTruncated, prepareLatch));
+    prepareLatch.await();
     assertEquals(8 - 2, UTIL.countRows(tableName));
 
     int rowsAfterDropRegion = UTIL.countRows(tableName);
@@ -170,10 +171,10 @@ public class TestTruncateRegionProcedure extends TestTableDDLProcedureBase {
       RegionReplicaUtil.getRegionInfoForReplica(regionToBeTruncated, 1);
 
     // Act - Execute Truncate region procedure
-    long procId =
-      procExec.submitProcedure(new TruncateRegionProcedure(environment, replicatedRegionId));
-
-    ProcedureTestingUtility.waitProcedure(procExec, procId);
+    final ProcedurePrepareLatch prepareLatch = new ProcedurePrepareLatch.CompatibilityLatch();
+    long procId = procExec
+      .submitProcedure(new TruncateRegionProcedure(environment, replicatedRegionId, prepareLatch));
+    prepareLatch.await();
     Procedure<MasterProcedureEnv> result = procExec.getResult(procId);
     // Asserts
 

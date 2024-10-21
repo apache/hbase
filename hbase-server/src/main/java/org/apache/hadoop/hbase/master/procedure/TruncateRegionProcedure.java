@@ -26,17 +26,20 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TruncateRegionState;
 
 @InterfaceAudience.Private
 public class TruncateRegionProcedure
-  extends AbstractStateMachineRegionProcedure<TruncateRegionState> {
+  extends AbstractSnapshottingStateMachineRegionProcedure<TruncateRegionState> {
   private static final Logger LOG = LoggerFactory.getLogger(TruncateRegionProcedure.class);
 
   @SuppressWarnings("unused")
@@ -47,7 +50,7 @@ public class TruncateRegionProcedure
 
   public TruncateRegionProcedure(final MasterProcedureEnv env, final RegionInfo hri)
     throws HBaseIOException {
-    super(env, hri);
+    super(env, hri, null);
     checkOnline(env, getRegion());
   }
 
@@ -59,7 +62,7 @@ public class TruncateRegionProcedure
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, TruncateRegionState state)
-    throws InterruptedException {
+    throws InterruptedException, ProcedureSuspendedException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -75,6 +78,14 @@ public class TruncateRegionProcedure
             : "Can't truncate replicas directly. "
               + "Replicas are auto-truncated when their primary is truncated.";
           preTruncate(env);
+          setNextState(TruncateRegionState.TRUNCATE_REGION_SNAPSHOT);
+          break;
+        case TRUNCATE_REGION_SNAPSHOT:
+          if (isSnapshotEnabled()) {
+            takeSnapshot();
+          } else {
+            LOG.debug("Recovery snapshots are not enabled");
+          }
           setNextState(TruncateRegionState.TRUNCATE_REGION_MAKE_OFFLINE);
           break;
         case TRUNCATE_REGION_MAKE_OFFLINE:
@@ -124,22 +135,29 @@ public class TruncateRegionProcedure
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final TruncateRegionState state)
     throws IOException {
-    if (state == TruncateRegionState.TRUNCATE_REGION_PRE_OPERATION) {
-      // Nothing to rollback, pre-truncate is just table-state checks.
-      return;
+    switch (state) {
+      case TRUNCATE_REGION_PRE_OPERATION:
+        // Nothing to rollback, pre-truncate is just table-state checks.
+        break;
+      case TRUNCATE_REGION_SNAPSHOT:
+        if (isSnapshotEnabled()) {
+          // If a snapshot exists, we should delete it.
+          deleteSnapshot();
+        }
+        break;
+      case TRUNCATE_REGION_MAKE_OFFLINE:
+        RegionStateNode regionNode =
+          env.getAssignmentManager().getRegionStates().getRegionStateNode(getRegion());
+        if (regionNode == null) {
+          // Region was unassigned by state TRUNCATE_REGION_MAKE_OFFLINE.
+          // So Assign it back
+          addChildProcedure(createAssignProcedures(env));
+        }
+        break;
+      default:
+        // The truncate doesn't have a rollback. The execution will succeed, at some point.
+        throw new UnsupportedOperationException("unhandled state=" + state);
     }
-    if (state == TruncateRegionState.TRUNCATE_REGION_MAKE_OFFLINE) {
-      RegionStateNode regionNode =
-        env.getAssignmentManager().getRegionStates().getRegionStateNode(getRegion());
-      if (regionNode == null) {
-        // Region was unassigned by state TRUNCATE_REGION_MAKE_OFFLINE.
-        // So Assign it back
-        addChildProcedure(createAssignProcedures(env));
-      }
-      return;
-    }
-    // The truncate doesn't have a rollback. The execution will succeed, at some point.
-    throw new UnsupportedOperationException("unhandled state=" + state);
   }
 
   @Override
@@ -151,7 +169,7 @@ public class TruncateRegionProcedure
   protected boolean isRollbackSupported(final TruncateRegionState state) {
     switch (state) {
       case TRUNCATE_REGION_PRE_OPERATION:
-        return true;
+      case TRUNCATE_REGION_SNAPSHOT:
       case TRUNCATE_REGION_MAKE_OFFLINE:
         return true;
       default:
@@ -180,6 +198,32 @@ public class TruncateRegionProcedure
     sb.append(" (region=");
     sb.append(getRegion().getRegionNameAsString());
     sb.append(")");
+  }
+
+  @Override
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    super.serializeStateData(serializer);
+    MasterProcedureProtos.TruncateRegionStateData.Builder state =
+      MasterProcedureProtos.TruncateRegionStateData.newBuilder();
+    if (getSnapshotName() != null) {
+      state.setSnapshotName(getSnapshotName());
+    }
+    serializer.serialize(state.build());
+  }
+
+  @Override
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    super.deserializeStateData(serializer);
+    try {
+      MasterProcedureProtos.TruncateRegionStateData state =
+        serializer.deserialize(MasterProcedureProtos.TruncateRegionStateData.class);
+      if (state.hasSnapshotName()) {
+        setSnapshotName(state.getSnapshotName());
+      }
+    } catch (IOException e) {
+      // Earlier versions of HBase did not serialize state for this procedure
+      LOG.warn("No state to deserialize?", e);
+    }
   }
 
   private boolean prepareTruncate() throws IOException {

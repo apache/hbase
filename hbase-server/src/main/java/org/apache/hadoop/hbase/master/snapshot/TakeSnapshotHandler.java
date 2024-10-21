@@ -146,7 +146,7 @@ public abstract class TakeSnapshotHandler extends EventHandler
       conf.getLong(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT));
   }
 
-  private TableDescriptor loadTableDescriptor() throws IOException {
+  protected TableDescriptor loadTableDescriptor() throws IOException {
     TableDescriptor htd = this.master.getTableDescriptors().get(snapshotTable);
     if (htd == null) {
       throw new IOException("TableDescriptor missing for " + snapshotTable);

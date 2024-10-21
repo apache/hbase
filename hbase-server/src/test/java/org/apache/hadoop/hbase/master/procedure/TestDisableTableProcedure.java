@@ -104,8 +104,7 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     // Disable the table - expect failure from ProcedurePrepareLatch
     try {
       final ProcedurePrepareLatch prepareLatch = new ProcedurePrepareLatch.CompatibilityLatch();
-
-      long procId3 = procExec.submitProcedure(
+      procExec.submitProcedure(
         new DisableTableProcedure(procExec.getEnvironment(), tableName, false, prepareLatch));
       prepareLatch.await();
       Assert.fail("Disable should throw exception through latch.");

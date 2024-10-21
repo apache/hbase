@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerValidationUtils;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -58,7 +59,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyTableState;
 
 @InterfaceAudience.Private
-public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<ModifyTableState> {
+public class ModifyTableProcedure
+  extends AbstractSnapshottingStateMachineTableProcedure<ModifyTableState> {
   private static final Logger LOG = LoggerFactory.getLogger(ModifyTableProcedure.class);
 
   private TableDescriptor unmodifiedTableDescriptor = null;
@@ -181,7 +183,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final ModifyTableState state)
-    throws InterruptedException {
+    throws InterruptedException, ProcedureSuspendedException {
     LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
@@ -191,6 +193,15 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
           break;
         case MODIFY_TABLE_PRE_OPERATION:
           preModify(env, state);
+          setNextState(ModifyTableState.MODIFY_TABLE_SNAPSHOT);
+          break;
+        case MODIFY_TABLE_SNAPSHOT:
+          // We only want to take a snapshot if we are deleting a column family
+          if (isSnapshotEnabled() && deleteColumnFamilyInModify) {
+            takeSnapshot();
+          } else {
+            LOG.debug("Recovery snapshots are not enabled");
+          }
           // We cannot allow changes to region replicas when 'reopenRegions==false',
           // as this mode bypasses the state management required for modifying region replicas.
           if (reopenRegions) {
@@ -284,19 +295,23 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
   }
 
   @Override
-  protected void rollbackState(final MasterProcedureEnv env, final ModifyTableState state)
-    throws IOException {
-    if (
-      state == ModifyTableState.MODIFY_TABLE_PREPARE
-        || state == ModifyTableState.MODIFY_TABLE_PRE_OPERATION
-    ) {
-      // nothing to rollback, pre-modify is just checks.
-      // TODO: coprocessor rollback semantic is still undefined.
-      return;
+  protected void rollbackState(final MasterProcedureEnv env, final ModifyTableState state) {
+    switch (state) {
+      case MODIFY_TABLE_PREPARE:
+      case MODIFY_TABLE_PRE_OPERATION:
+        // nothing to rollback, pre-modify is just checks.
+        // TODO: coprocessor rollback semantic is still undefined.
+        break;
+      case MODIFY_TABLE_SNAPSHOT:
+        if (isSnapshotEnabled()) {
+          // If a snapshot exists, we should delete it.
+          deleteSnapshot();
+        }
+        break;
+      default:
+        // The delete doesn't have a rollback. The execution will succeed, at some point.
+        throw new UnsupportedOperationException("unhandled state=" + state);
     }
-
-    // The delete doesn't have a rollback. The execution will succeed, at some point.
-    throw new UnsupportedOperationException("unhandled state=" + state);
   }
 
   @Override
@@ -304,6 +319,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
     switch (state) {
       case MODIFY_TABLE_PRE_OPERATION:
       case MODIFY_TABLE_PREPARE:
+      case MODIFY_TABLE_SNAPSHOT:
         return true;
       default:
         return false;
@@ -333,39 +349,37 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
-
-    MasterProcedureProtos.ModifyTableStateData.Builder modifyTableMsg =
+    MasterProcedureProtos.ModifyTableStateData.Builder state =
       MasterProcedureProtos.ModifyTableStateData.newBuilder()
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor))
         .setDeleteColumnFamilyInModify(deleteColumnFamilyInModify)
         .setShouldCheckDescriptor(shouldCheckDescriptor).setReopenRegions(reopenRegions);
-
     if (unmodifiedTableDescriptor != null) {
-      modifyTableMsg
-        .setUnmodifiedTableSchema(ProtobufUtil.toTableSchema(unmodifiedTableDescriptor));
+      state.setUnmodifiedTableSchema(ProtobufUtil.toTableSchema(unmodifiedTableDescriptor));
     }
-
-    serializer.serialize(modifyTableMsg.build());
+    if (getSnapshotName() != null) {
+      state.setSnapshotName(getSnapshotName());
+    }
+    serializer.serialize(state.build());
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
-
-    MasterProcedureProtos.ModifyTableStateData modifyTableMsg =
+    MasterProcedureProtos.ModifyTableStateData state =
       serializer.deserialize(MasterProcedureProtos.ModifyTableStateData.class);
-    setUser(MasterProcedureUtil.toUserInfo(modifyTableMsg.getUserInfo()));
-    modifiedTableDescriptor =
-      ProtobufUtil.toTableDescriptor(modifyTableMsg.getModifiedTableSchema());
-    deleteColumnFamilyInModify = modifyTableMsg.getDeleteColumnFamilyInModify();
+    setUser(MasterProcedureUtil.toUserInfo(state.getUserInfo()));
+    modifiedTableDescriptor = ProtobufUtil.toTableDescriptor(state.getModifiedTableSchema());
+    deleteColumnFamilyInModify = state.getDeleteColumnFamilyInModify();
     shouldCheckDescriptor =
-      modifyTableMsg.hasShouldCheckDescriptor() ? modifyTableMsg.getShouldCheckDescriptor() : false;
-    reopenRegions = modifyTableMsg.hasReopenRegions() ? modifyTableMsg.getReopenRegions() : true;
-
-    if (modifyTableMsg.hasUnmodifiedTableSchema()) {
-      unmodifiedTableDescriptor =
-        ProtobufUtil.toTableDescriptor(modifyTableMsg.getUnmodifiedTableSchema());
+      state.hasShouldCheckDescriptor() ? state.getShouldCheckDescriptor() : false;
+    reopenRegions = state.hasReopenRegions() ? state.getReopenRegions() : true;
+    if (state.hasUnmodifiedTableSchema()) {
+      unmodifiedTableDescriptor = ProtobufUtil.toTableDescriptor(state.getUnmodifiedTableSchema());
+    }
+    if (state.hasSnapshotName()) {
+      setSnapshotName(state.getSnapshotName());
     }
   }
 

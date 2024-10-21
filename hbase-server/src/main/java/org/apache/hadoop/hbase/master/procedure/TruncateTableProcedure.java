@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -42,7 +43,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TruncateTableState;
 
 @InterfaceAudience.Private
-public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<TruncateTableState> {
+public class TruncateTableProcedure
+  extends AbstractSnapshottingStateMachineTableProcedure<TruncateTableState> {
   private static final Logger LOG = LoggerFactory.getLogger(TruncateTableProcedure.class);
 
   private boolean preserveSplits;
@@ -70,7 +72,7 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, TruncateTableState state)
-    throws InterruptedException {
+    throws InterruptedException, ProcedureSuspendedException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -97,6 +99,14 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
           // the procedure stage and can get recovered if the procedure crashes between
           // TRUNCATE_TABLE_REMOVE_FROM_META and TRUNCATE_TABLE_CREATE_FS_LAYOUT
           tableDescriptor = env.getMasterServices().getTableDescriptors().get(tableName);
+          setNextState(TruncateTableState.TRUNCATE_TABLE_SNAPSHOT);
+          break;
+        case TRUNCATE_TABLE_SNAPSHOT:
+          if (isSnapshotEnabled()) {
+            takeSnapshot();
+          } else {
+            LOG.debug("Recovery snapshots are not enabled");
+          }
           setNextState(TruncateTableState.TRUNCATE_TABLE_CLEAR_FS_LAYOUT);
           break;
         case TRUNCATE_TABLE_CLEAR_FS_LAYOUT:
@@ -160,15 +170,22 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
 
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final TruncateTableState state) {
-    if (state == TruncateTableState.TRUNCATE_TABLE_PRE_OPERATION) {
-      // nothing to rollback, pre-truncate is just table-state checks.
-      // We can fail if the table does not exist or is not disabled.
-      // TODO: coprocessor rollback semantic is still undefined.
-      return;
+    switch (state) {
+      case TRUNCATE_TABLE_PRE_OPERATION:
+        // nothing to rollback, pre-truncate is just table-state checks.
+        // We can fail if the table does not exist or is not disabled.
+        // TODO: coprocessor rollback semantic is still undefined.
+        break;
+      case TRUNCATE_TABLE_SNAPSHOT:
+        if (isSnapshotEnabled()) {
+          // If a snapshot exists, we should delete it.
+          deleteSnapshot();
+        }
+        break;
+      default:
+        // The truncate doesn't have a rollback. The execution will succeed, at some point.
+        throw new UnsupportedOperationException("unhandled state=" + state);
     }
-
-    // The truncate doesn't have a rollback. The execution will succeed, at some point.
-    throw new UnsupportedOperationException("unhandled state=" + state);
   }
 
   @Override
@@ -180,6 +197,7 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
   protected boolean isRollbackSupported(final TruncateTableState state) {
     switch (state) {
       case TRUNCATE_TABLE_PRE_OPERATION:
+      case TRUNCATE_TABLE_SNAPSHOT:
         return true;
       default:
         return false;
@@ -229,7 +247,6 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
-
     MasterProcedureProtos.TruncateTableStateData.Builder state =
       MasterProcedureProtos.TruncateTableStateData.newBuilder()
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
@@ -244,13 +261,15 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
         state.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
       }
     }
+    if (getSnapshotName() != null) {
+      state.setSnapshotName(getSnapshotName());
+    }
     serializer.serialize(state.build());
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
-
     MasterProcedureProtos.TruncateTableStateData state =
       serializer.deserialize(MasterProcedureProtos.TruncateTableStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(state.getUserInfo()));
@@ -268,6 +287,9 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
       for (HBaseProtos.RegionInfo hri : state.getRegionInfoList()) {
         regions.add(ProtobufUtil.toRegionInfo(hri));
       }
+    }
+    if (state.hasSnapshotName()) {
+      setSnapshotName(state.getSnapshotName());
     }
   }
 

@@ -29,10 +29,11 @@ import org.slf4j.LoggerFactory;
  */
 public class TruncateTableAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(TruncateTableAction.class);
-  private final TableName tableName;
+  protected final TableName tableName;
+  protected Admin admin;
 
-  public TruncateTableAction(String tableName) {
-    this.tableName = TableName.valueOf(tableName);
+  public TruncateTableAction(TableName tableName) {
+    this.tableName = tableName;
   }
 
   @Override
@@ -43,7 +44,7 @@ public class TruncateTableAction extends Action {
   @Override
   public void perform() throws Exception {
     HBaseTestingUtil util = context.getHBaseIntegrationTestingUtility();
-    Admin admin = util.getAdmin();
+    admin = util.getAdmin();
 
     // Don't try the truncate if we're stopping
     if (context.isStopping()) {

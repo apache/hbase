@@ -57,10 +57,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteTableState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 @InterfaceAudience.Private
-public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<DeleteTableState> {
+public class DeleteTableProcedure
+  extends AbstractSnapshottingStateMachineTableProcedure<DeleteTableState> {
   private static final Logger LOG = LoggerFactory.getLogger(DeleteTableProcedure.class);
 
   private List<RegionInfo> regions;
@@ -93,7 +93,6 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
         case DELETE_TABLE_PRE_OPERATION:
           // Verify if we can delete the table
           boolean deletable = prepareDelete(env);
-          releaseSyncLatch();
           if (!deletable) {
             assert isFailed() : "the delete should have an exception here";
             return Flow.NO_MORE_STATE;
@@ -109,6 +108,13 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
           // Call coprocessors
           preDelete(env);
 
+          setNextState(DeleteTableState.DELETE_TABLE_SNAPSHOT);
+        case DELETE_TABLE_SNAPSHOT:
+          if (isSnapshotEnabled()) {
+            takeSnapshot();
+          } else {
+            LOG.debug("Recovery snapshots are not enabled");
+          }
           setNextState(DeleteTableState.DELETE_TABLE_CLEAR_FS_LAYOUT);
           break;
         case DELETE_TABLE_CLEAR_FS_LAYOUT:
@@ -153,13 +159,6 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
   }
 
   @Override
-  protected synchronized boolean setTimeoutFailure(MasterProcedureEnv env) {
-    setState(ProcedureProtos.ProcedureState.RUNNABLE);
-    env.getProcedureScheduler().addFront(this);
-    return false;
-  }
-
-  @Override
   protected boolean abort(MasterProcedureEnv env) {
     // TODO: Current behavior is: with no rollback and no abort support, procedure may get stuck
     // looping in retrying failing a step forever. Default behavior of abort is changed to support
@@ -170,12 +169,20 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
 
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final DeleteTableState state) {
-    if (state == DeleteTableState.DELETE_TABLE_PRE_OPERATION) {
-      // nothing to rollback, pre-delete is just table-state checks.
-      // We can fail if the table does not exist or is not disabled.
-      // TODO: coprocessor rollback semantic is still undefined.
-      releaseSyncLatch();
-      return;
+    switch (state) {
+      case DELETE_TABLE_PRE_OPERATION:
+        // nothing to rollback, pre-delete is just table-state checks.
+        // We can fail if the table does not exist or is not disabled.
+        // TODO: coprocessor rollback semantic is still undefined.
+        break;
+      case DELETE_TABLE_SNAPSHOT:
+        if (isSnapshotEnabled()) {
+          // If a snapshot exists, we should delete it.
+          deleteSnapshot();
+        }
+        break;
+      default:
+        throw new UnsupportedOperationException("unhandled state=" + state);
     }
 
     // The delete doesn't have a rollback. The execution will succeed, at some point.
@@ -186,10 +193,16 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
   protected boolean isRollbackSupported(final DeleteTableState state) {
     switch (state) {
       case DELETE_TABLE_PRE_OPERATION:
+      case DELETE_TABLE_SNAPSHOT:
         return true;
       default:
         return false;
     }
+  }
+
+  @Override
+  protected void completionCleanup(final MasterProcedureEnv env) {
+    releaseSyncLatch();
   }
 
   @Override
@@ -225,7 +238,6 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
-
     MasterProcedureProtos.DeleteTableStateData.Builder state =
       MasterProcedureProtos.DeleteTableStateData.newBuilder()
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
@@ -235,13 +247,15 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
         state.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
       }
     }
+    if (getSnapshotName() != null) {
+      state.setSnapshotName(getSnapshotName());
+    }
     serializer.serialize(state.build());
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
-
     MasterProcedureProtos.DeleteTableStateData state =
       serializer.deserialize(MasterProcedureProtos.DeleteTableStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(state.getUserInfo()));
@@ -253,6 +267,9 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
       for (HBaseProtos.RegionInfo hri : state.getRegionInfoList()) {
         regions.add(ProtobufUtil.toRegionInfo(hri));
       }
+    }
+    if (state.hasSnapshotName()) {
+      setSnapshotName(state.getSnapshotName());
     }
   }
 
