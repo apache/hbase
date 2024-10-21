@@ -479,17 +479,6 @@ add_maven_deps_to_classpath() {
   CLASSPATH=${CLASSPATH}:$(cat "${f}")
 }
 
-add_jars_from_compiled_source() {
-    # if in dev env, add jars so that ITs/Chaos etc. can be run from compiled source directory
-    if $in_dev_env; then
-      for f in */target/*.jar; do
-        if [ -f "${f}" ]; then
-          CLASSPATH="${CLASSPATH}:${f}"
-        fi
-      done
-    fi
-}
-
 add_jdk17_jvm_flags() {
   # Keep in sync with hbase-surefire.jdk17.flags in the root pom.xml
   HBASE_OPTS="$HBASE_OPTS -Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true"
@@ -525,8 +514,9 @@ add_opentelemetry_agent() {
 
 #Add the development env class path stuff
 if $in_dev_env; then
+  # The below line makes available all the jars required in dev_env, even if we may not add them
+  # to assembly. See HBASE-28433 for more info.
   add_maven_deps_to_classpath "cached_classpath.txt"
-
   if [[ $jline_needed ]]; then
     add_maven_deps_to_classpath "cached_classpath_jline.txt"
   elif [[ $jruby_needed ]]; then
@@ -777,17 +767,6 @@ elif [ "$COMMAND" = "copyreppeers" ] ; then
   CLASS='org.apache.hadoop.hbase.replication.CopyReplicationPeers'
 else
   CLASS=$COMMAND
-
-  if [[ "$CLASS" =~ .*IntegrationTest.* ]] || [[ "$CLASS" =~ .*Chaos.* ]]; then
-    for f in ${HBASE_HOME}/lib/test/*.jar; do
-      if [ -f "${f}" ]; then
-        CLASSPATH="${CLASSPATH}:${f}"
-      fi
-    done
-
-    add_jars_from_compiled_source
-  fi
-
 fi
 
 add_jdk17_jvm_flags
