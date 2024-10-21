@@ -460,6 +460,7 @@
             <exclude>log4j.properties</exclude>
             <exclude>mapred-queues.xml</exclude>
             <exclude>mapred-site.xml</exclude>
+            <exclude>**/hbase-webapps/**</exclude>
           </excludes>
         </configuration>
       </plugin>
