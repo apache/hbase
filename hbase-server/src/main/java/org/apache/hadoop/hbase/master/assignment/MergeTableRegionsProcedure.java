@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -540,7 +541,10 @@ public class MergeTableRegionsProcedure
     }
     // TODO: Clean up split and merge. Currently all over the place.
     try {
-      env.getMasterServices().getMasterQuotaManager().onRegionMerged(this.mergedRegion);
+      MasterQuotaManager masterQuotaManager = env.getMasterServices().getMasterQuotaManager();
+      if (masterQuotaManager != null) {
+        masterQuotaManager.onRegionMerged(this.mergedRegion);
+      }
     } catch (QuotaExceededException e) {
       // TODO: why is this here? merge requests can be submitted by actors other than the normalizer
       env.getMasterServices().getRegionNormalizerManager()
