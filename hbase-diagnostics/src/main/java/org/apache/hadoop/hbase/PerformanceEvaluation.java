@@ -260,6 +260,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
       return this.compareTo((RunResult) obj) == 0;
     }
+
+    @Override
+    public int hashCode() {
+      return Long.hashCode(duration);
+    }
   }
 
   /**
