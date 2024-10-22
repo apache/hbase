@@ -99,7 +99,7 @@ public class LoadTestKVGenerator {
    * Generates random bytes of the given size for the given row and column qualifier. The random
    * seed is fully determined by these parameters.
    */
-  private synchronized static byte[] getValueForRowColumn(int dataSize, byte[]... seedStrings) {
+  private static byte[] getValueForRowColumn(int dataSize, byte[]... seedStrings) {
     long seed = dataSize;
     for (byte[] str : seedStrings) {
       final String bytesString = Bytes.toString(str);
@@ -107,9 +107,11 @@ public class LoadTestKVGenerator {
         seed += bytesString.hashCode();
       }
     }
-    SHARED_RANDOM.setSeed(seed);
     byte[] randomBytes = new byte[dataSize];
-    SHARED_RANDOM.nextBytes(randomBytes);
+    synchronized (SHARED_RANDOM) {
+      SHARED_RANDOM.setSeed(seed);
+      SHARED_RANDOM.nextBytes(randomBytes);
+    }
     return randomBytes;
   }
 
