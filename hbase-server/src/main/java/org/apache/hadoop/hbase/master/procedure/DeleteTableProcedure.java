@@ -109,6 +109,7 @@ public class DeleteTableProcedure
           preDelete(env);
 
           setNextState(DeleteTableState.DELETE_TABLE_SNAPSHOT);
+	  break;
         case DELETE_TABLE_SNAPSHOT:
           if (isSnapshotEnabled()) {
             takeSnapshot();
