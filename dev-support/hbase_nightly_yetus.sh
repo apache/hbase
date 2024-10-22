@@ -84,8 +84,8 @@ if [[ -n "${HADOOP_PROFILE}" ]]; then
 fi
 
 # For testing with specific hadoop version. Activates corresponding profile in maven runs.
-if [[ -n "${HADOOP_VERSION}" ]]; then
-  YETUS_ARGS=("--hadoop-version=${HADOOP_VERSION}" "${YETUS_ARGS[@]}")
+if [[ -n "${HADOOP_THREE_VERSION}" ]]; then
+  YETUS_ARGS=("--hadoop-three-version=${HADOOP_THREE_VERSION}" "${YETUS_ARGS[@]}")
 fi
 
 if [[ -n "${TEST_PROFILE}" ]]; then
