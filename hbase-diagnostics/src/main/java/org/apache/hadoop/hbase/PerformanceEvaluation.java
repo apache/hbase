@@ -249,6 +249,17 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public int compareTo(RunResult o) {
       return Long.compare(this.duration, o.duration);
     }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null || getClass() != obj.getClass()) {
+        return false;
+      }
+      return this.compareTo((RunResult) obj) == 0;
+    }
   }
 
   /**
@@ -3144,14 +3155,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
         && (opts.getCmdName().equals(RANDOM_READ) || opts.getCmdName().equals(RANDOM_SEEK_SCAN)))
         && opts.size != DEFAULT_OPTS.size && opts.perClientRunRows != DEFAULT_OPTS.perClientRunRows
     ) {
-      opts.totalRows = (int) opts.size * rowsPerGB;
+      opts.totalRows = (int) (opts.size * rowsPerGB);
     } else if (opts.size != DEFAULT_OPTS.size) {
       // total size in GB specified
-      opts.totalRows = (int) opts.size * rowsPerGB;
+      opts.totalRows = (int) (opts.size * rowsPerGB);
       opts.perClientRunRows = opts.totalRows / opts.numClientThreads;
     } else {
       opts.totalRows = opts.perClientRunRows * opts.numClientThreads;
-      opts.size = opts.totalRows / rowsPerGB;
+      // Cast to float to ensure floating-point division
+      opts.size = (float) opts.totalRows / rowsPerGB;
     }
     return opts;
   }

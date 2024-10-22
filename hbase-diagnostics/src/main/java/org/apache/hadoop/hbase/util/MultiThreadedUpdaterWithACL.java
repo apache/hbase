@@ -75,8 +75,6 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
   }
 
   public class HBaseUpdaterThreadWithACL extends HBaseUpdaterThread {
-
-    private Table table;
     private MutateAccessAction mutateAction = new MutateAccessAction();
 
     public HBaseUpdaterThreadWithACL(int updaterId) throws IOException {
