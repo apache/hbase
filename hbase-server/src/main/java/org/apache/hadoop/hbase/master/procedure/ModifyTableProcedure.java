@@ -298,6 +298,8 @@ public class ModifyTableProcedure
   protected void rollbackState(final MasterProcedureEnv env, final ModifyTableState state) {
     switch (state) {
       case MODIFY_TABLE_PREPARE:
+        // nothing to rollback, pre-modify is just checks.
+        break;
       case MODIFY_TABLE_PRE_OPERATION:
         // nothing to rollback, pre-modify is just checks.
         // TODO: coprocessor rollback semantic is still undefined.
@@ -318,7 +320,9 @@ public class ModifyTableProcedure
   protected boolean isRollbackSupported(final ModifyTableState state) {
     switch (state) {
       case MODIFY_TABLE_PRE_OPERATION:
+        return true;
       case MODIFY_TABLE_PREPARE:
+        return true;
       case MODIFY_TABLE_SNAPSHOT:
         return true;
       default:

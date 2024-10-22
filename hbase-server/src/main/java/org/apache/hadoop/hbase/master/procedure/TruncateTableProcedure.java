@@ -197,6 +197,7 @@ public class TruncateTableProcedure
   protected boolean isRollbackSupported(final TruncateTableState state) {
     switch (state) {
       case TRUNCATE_TABLE_PRE_OPERATION:
+        return true;
       case TRUNCATE_TABLE_SNAPSHOT:
         return true;
       default:

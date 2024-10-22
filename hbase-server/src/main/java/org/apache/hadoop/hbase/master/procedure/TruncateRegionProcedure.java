@@ -169,7 +169,9 @@ public class TruncateRegionProcedure
   protected boolean isRollbackSupported(final TruncateRegionState state) {
     switch (state) {
       case TRUNCATE_REGION_PRE_OPERATION:
+        return true;
       case TRUNCATE_REGION_SNAPSHOT:
+        return true;
       case TRUNCATE_REGION_MAKE_OFFLINE:
         return true;
       default:

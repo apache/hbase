@@ -193,6 +193,7 @@ public class DeleteTableProcedure
   protected boolean isRollbackSupported(final DeleteTableState state) {
     switch (state) {
       case DELETE_TABLE_PRE_OPERATION:
+        return true;
       case DELETE_TABLE_SNAPSHOT:
         return true;
       default:
