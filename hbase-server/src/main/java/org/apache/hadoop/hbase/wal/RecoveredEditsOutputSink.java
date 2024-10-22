@@ -89,20 +89,66 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
 
   @Override
   public List<Path> close() throws IOException {
-    boolean isSuccessful = true;
+    boolean isSuccessful;
     try {
       isSuccessful = finishWriterThreads();
-    } finally {
-      isSuccessful &= closeWriters();
+    } catch (IOException e) {
+      abortWriters();
+      throw e;
     }
+    if (!isSuccessful) {
+      // Even if an exception is not thrown, finishWriterThreads() not being successful is an
+      // error case where the WAL files should not be finalized.
+      abortWriters();
+      return null;
+    }
+    isSuccessful = closeWriters();
     return isSuccessful ? splits : null;
   }
 
   /**
-   * Close all of the output streams.
+   * abortWriters closes the output streams in the case of exception or error in
+   * finishWriterThreads. In the error case, it is important to not rename and finalize the
+   * temporary, possibly corrupted WAL files, as this can lead to issues in future region
+   * assignment. However, it is still important to make sure the output streams and writers are
+   * closed. Please see HBASE-28569.
+   */
+  void abortWriters() throws IOException {
+    List<IOException> thrown = Lists.newArrayList();
+    for (RecoveredEditsWriter writer : writers.values()) {
+      closeCompletionService.submit(() -> {
+        abortRecoveredEditsWriter(writer, thrown);
+        return null;
+      });
+    }
+    boolean progressFailed = false;
+    try {
+      for (int i = 0, n = this.writers.size(); i < n; i++) {
+        Future<Void> future = closeCompletionService.take();
+        future.get();
+        if (!progressFailed && reporter != null && !reporter.progress()) {
+          progressFailed = true;
+        }
+      }
+    } catch (InterruptedException e) {
+      IOException iie = new InterruptedIOException();
+      iie.initCause(e);
+      throw iie;
+    } catch (ExecutionException e) {
+      throw new IOException(e.getCause());
+    } finally {
+      closeThreadPool.shutdownNow();
+    }
+    if (!thrown.isEmpty()) {
+      throw MultipleIOException.createIOException(thrown);
+    }
+  }
+
+  /**
+   * Close all the output streams.
    * @return true when there is no error.
    */
-  private boolean closeWriters() throws IOException {
+  boolean closeWriters() throws IOException {
     List<IOException> thrown = Lists.newArrayList();
     for (RecoveredEditsWriter writer : writers.values()) {
       closeCompletionService.submit(() -> {
