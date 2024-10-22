@@ -33,7 +33,6 @@ public class LoadTestKVGenerator {
 
   private static final Logger LOG = LoggerFactory.getLogger(LoadTestKVGenerator.class);
   private static int logLimit = 10;
-  private static final Random SHARED_RANDOM = new Random();
 
   /** A random number generator for determining value size */
   private Random randomForValueSize = new Random(); // Seed may be set with Random#setSeed
@@ -99,6 +98,7 @@ public class LoadTestKVGenerator {
    * Generates random bytes of the given size for the given row and column qualifier. The random
    * seed is fully determined by these parameters.
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DMI_RANDOM_USED_ONLY_ONCE")
   private static byte[] getValueForRowColumn(int dataSize, byte[]... seedStrings) {
     long seed = dataSize;
     for (byte[] str : seedStrings) {
@@ -107,11 +107,9 @@ public class LoadTestKVGenerator {
         seed += bytesString.hashCode();
       }
     }
+    Random seededRandom = new Random(seed);
     byte[] randomBytes = new byte[dataSize];
-    synchronized (SHARED_RANDOM) {
-      SHARED_RANDOM.setSeed(seed);
-      SHARED_RANDOM.nextBytes(randomBytes);
-    }
+    seededRandom.nextBytes(randomBytes);
     return randomBytes;
   }
 
