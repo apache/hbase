@@ -393,6 +393,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             inflightWALClosures.remove(oldPath.getName());
             if (!isUnflushedEntries()) {
               markClosedAndClean(oldPath);
+            } else {
+              LOG.debug("WAL has unflushed entries path: " + oldPath);
             }
           }
         } else {
