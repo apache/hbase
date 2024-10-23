@@ -203,16 +203,16 @@ public abstract class MultiThreadedAction {
           long numKeysDelta = numKeys - priorNumKeys;
           long totalOpTimeDelta = totalOpTime - priorCumulativeOpTime;
 
-          double averageKeysPerSecond = (time > 0) ? (numKeys * 1000 / time) : 0;
+          double averageKeysPerSecond = (time > 0) ? (numKeys * 1000.0 / time) : 0;
 
           LOG.info(threadsLeft + "Keys=" + numKeys + ", cols="
             + StringUtils.humanReadableInt(numCols.get()) + ", time=" + formatTime(time)
             + ((numKeys > 0 && time > 0)
-              ? (" Overall: [" + "keys/s= " + numKeys * 1000 / time + ", latency="
+              ? (" Overall: [" + "keys/s= " + (numKeys * 1000.0 / time) + ", latency="
                 + String.format("%.2f", (double) totalOpTime / (double) numKeys) + " ms]")
               : "")
             + ((numKeysDelta > 0)
-              ? (" Current: [" + "keys/s=" + numKeysDelta * 1000 / REPORTING_INTERVAL_MS
+              ? (" Current: [" + "keys/s=" + (numKeysDelta * 1000.0 / REPORTING_INTERVAL_MS)
                 + ", latency="
                 + String.format("%.2f", (double) totalOpTimeDelta / (double) numKeysDelta) + " ms]")
               : "")
@@ -407,15 +407,15 @@ public abstract class MultiThreadedAction {
           verifyCfAndColumnIntegrity
             && !dataGenerator.verify(result.getRow(), cf, columnValues.keySet())
         ) {
-          String colsStr = "";
+          StringBuilder colsStr = new StringBuilder();
           for (byte[] col : columnValues.keySet()) {
             if (colsStr.length() > 0) {
-              colsStr += ", ";
+              colsStr.append(", ");
             }
-            colsStr += "[" + Bytes.toString(col) + "]";
+            colsStr.append("[").append(Bytes.toString(col)).append("]");
           }
-          LOG.error("Error checking data for key [" + rowKeyStr + "], bad columns for family ["
-            + cfStr + "]: " + colsStr);
+          LOG.error("Error checking data for key [{}], bad columns for family [{}]: {}", rowKeyStr,
+            cfStr, colsStr.toString());
           printLocations(result);
           return false;
         }

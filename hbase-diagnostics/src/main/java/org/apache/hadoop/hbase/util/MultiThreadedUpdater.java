@@ -76,7 +76,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
     this.isBatchUpdate = isBatchUpdate;
   }
 
-  public void linkToWriter(MultiThreadedWriterBase writer) {
+  public synchronized void linkToWriter(MultiThreadedWriterBase writer) {
     this.writer = writer;
     writer.setTrackWroteKeys(true);
   }

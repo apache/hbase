@@ -168,7 +168,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
             loopSpan.end();
           }
         }
-      } catch (Exception e) {
+      } catch (IOException e) {
         LOG.error(getClass().getSimpleName() + " Thread failed", e);
       } finally {
         threadSpan.end();
@@ -241,7 +241,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
           System.err.println("UNEXPECTED: " + cmd);
           printUsageAndExit();
         }
-      } catch (Exception e) {
+      } catch (NumberFormatException e) {
         printUsageAndExit();
       }
     }
@@ -411,7 +411,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
   }
 
   private void printUsageAndExit() {
-    System.err.printf("Usage: hbase %s [options]\n", getClass().getName());
+    System.err.printf("Usage: hbase %s [options]%n", getClass().getName());
     System.err.println(" where [options] are:");
     System.err.println("  -h|-help         Show this help and exit.");
     System.err.println("  -threads <N>     Number of threads writing on the WAL.");
