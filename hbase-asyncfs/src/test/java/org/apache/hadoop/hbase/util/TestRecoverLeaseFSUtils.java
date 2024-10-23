@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
@@ -90,6 +92,12 @@ public class TestRecoverLeaseFSUtils {
     RecoverLeaseFSUtils.recoverFileLease(dfs, FILE, HTU.getConfiguration(), reporter);
     Mockito.verify(dfs, Mockito.times(2)).recoverLease(FILE);
     Mockito.verify(dfs, Mockito.times(1)).isFileClosed(FILE);
+  }
+
+  @Test
+  public void testIsLeaseRecoverable() {
+    assertTrue(RecoverLeaseFSUtils.isLeaseRecoverable(new DistributedFileSystem()));
+    assertFalse(RecoverLeaseFSUtils.isLeaseRecoverable(new LocalFileSystem()));
   }
 
   /**
