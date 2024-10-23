@@ -35,6 +35,8 @@
     <license.bundles.bootstrap>true</license.bundles.bootstrap>
     <license.bundles.jquery>true</license.bundles.jquery>
     <license.bundles.vega>true</license.bundles.vega>
+    <hbase.webapps.dir>target/hbase-webapps</hbase.webapps.dir>
+    <test.classes.webapps.dir>target/test-classes/hbase-webapps</test.classes.webapps.dir>
   </properties>
   <dependencies>
     <dependency>
@@ -439,22 +441,84 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <!-- Copy hbase-webapps from build directory to test classes directory -->
+          <execution>
+            <id>copy-hbase-webapps-to-test</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>process-test-resources</phase>
+            <configuration>
+              <!-- Output directory for the copied resources -->
+              <outputDirectory>${test.classes.webapps.dir}</outputDirectory>
+              <resources>
+                <resource>
+                  <!-- Directory containing hbase-webapps, which needs to be copied -->
+                  <directory>${hbase.webapps.dir}</directory>
+                  <includes>
+                    <include>**/*</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <!-- Exclude these 2 packages, because their dependency _binary_ files
-            include the sources, and Maven 2.2 appears to add them to the sources to compile,
-            weird -->
-          <excludes>
-            <exclude>org/apache/jute/**</exclude>
-            <exclude>org/apache/zookeeper/**</exclude>
-            <exclude>**/*.jsp</exclude>
-            <exclude>hbase-site.xml</exclude>
-            <exclude>hdfs-site.xml</exclude>
-            <exclude>log4j.properties</exclude>
-            <exclude>mapred-queues.xml</exclude>
-            <exclude>mapred-site.xml</exclude>
-          </excludes>
-        </configuration>
+        <executions>
+          <!-- Exclude specified file(s) from the default JAR -->
+          <execution>
+            <id>default-jar</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+              <excludes>
+                <!-- Exclude these 2 packages, because their dependency _binary_ files
+                include the sources, and Maven 2.2 appears to add them to the sources to compile,
+                weird -->
+                <exclude>org/apache/jute/**</exclude>
+                <exclude>org/apache/zookeeper/**</exclude>
+                <exclude>**/*.jsp</exclude>
+                <exclude>hbase-site.xml</exclude>
+                <exclude>hdfs-site.xml</exclude>
+                <exclude>log4j.properties</exclude>
+                <exclude>mapred-queues.xml</exclude>
+                <exclude>mapred-site.xml</exclude>
+                <!-- NOTE: We have the below exclude only for the default JAR -->
+                <exclude>**/hbase-webapps/**</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <!-- Copy of default jar exclusions, minus not removing hbase-webapps-->
+          <execution>
+            <id>test-jar</id>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+              <classifier>tests</classifier>
+              <excludes>
+                <exclude>org/apache/jute/**</exclude>
+                <exclude>org/apache/zookeeper/**</exclude>
+                <exclude>**/*.jsp</exclude>
+                <exclude>hbase-site.xml</exclude>
+                <exclude>hdfs-site.xml</exclude>
+                <exclude>log4j.properties</exclude>
+                <exclude>mapred-queues.xml</exclude>
+                <exclude>mapred-site.xml</exclude>
+                <!-- We do not want to exclude hbase-webapps from tests. We actually copied it with
+                copy-hbase-webapps-to-test. See HBASE-28921 for details! -->
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <!-- General ant tasks, bound to different build phases -->
       <plugin>

@@ -803,9 +803,9 @@
     <!-- override on command line to have generated LICENSE files include
          diagnostic info for verifying notice requirements -->
     <license.debug.print.included>false</license.debug.print.included>
-    <!-- When a particular module bundles its depenendencies, should be true -->
+    <!-- When a particular module bundles its dependencies, should be true -->
     <license.bundles.dependencies>false</license.bundles.dependencies>
-    <!-- modules that include a the logo in their source tree should set true -->
+    <!-- modules that include a logo in their source tree should set true -->
     <license.bundles.logo>false</license.bundles.logo>
     <!-- modules that include bootstrap in their source tree should set true -->
     <license.bundles.bootstrap>false</license.bundles.bootstrap>
