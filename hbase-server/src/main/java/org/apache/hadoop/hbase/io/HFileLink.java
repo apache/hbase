@@ -463,7 +463,7 @@ public class HFileLink extends FileLink {
    * Create the back reference name
    */
   // package-private for testing
-  static String createBackReferenceName(final String tableNameStr, final String regionName) {
+  public static String createBackReferenceName(final String tableNameStr, final String regionName) {
 
     return regionName + "." + tableNameStr.replace(TableName.NAMESPACE_DELIM, '=');
   }

@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -207,7 +208,7 @@ public final class SnapshotManifest {
       monitor.rethrowException();
 
       Path storePath = MobUtils.getMobFamilyPath(mobRegionPath, hcd.getNameAsString());
-      List<StoreFileInfo> storeFiles = getStoreFiles(storePath);
+      List<StoreFileInfo> storeFiles = getStoreFiles(storePath, htd, hcd, regionInfo);
       if (storeFiles == null) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("No mob files under family: " + hcd.getNameAsString());
@@ -341,13 +342,18 @@ public final class SnapshotManifest {
     }
   }
 
-  private List<StoreFileInfo> getStoreFiles(Path storeDir) throws IOException {
-    FileStatus[] stats = CommonFSUtils.listStatus(rootFs, storeDir);
+  private List<StoreFileInfo> getStoreFiles(Path storePath, TableDescriptor htd,
+    ColumnFamilyDescriptor hcd, RegionInfo regionInfo) throws IOException {
+    FileStatus[] stats = CommonFSUtils.listStatus(rootFs, storePath);
     if (stats == null) return null;
 
+    HRegionFileSystem regionFS = HRegionFileSystem.create(conf, rootFs,
+      MobUtils.getMobTableDir(new Path(conf.get(HConstants.HBASE_DIR)), htd.getTableName()),
+      regionInfo);
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, htd, hcd, regionFS, false);
     ArrayList<StoreFileInfo> storeFiles = new ArrayList<>(stats.length);
     for (int i = 0; i < stats.length; ++i) {
-      storeFiles.add(new StoreFileInfo(conf, rootFs, stats[i]));
+      storeFiles.add(sft.getStoreFileInfo(stats[i], stats[i].getPath(), false));
     }
     return storeFiles;
   }
@@ -385,7 +391,7 @@ public final class SnapshotManifest {
         ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
         try {
           this.regionManifests =
-            SnapshotManifestV1.loadRegionManifests(conf, tpool, rootFs, workingDir, desc);
+            SnapshotManifestV1.loadRegionManifests(conf, tpool, rootFs, workingDir, desc, htd);
         } finally {
           tpool.shutdown();
         }
@@ -403,7 +409,7 @@ public final class SnapshotManifest {
           ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
           try {
             v1Regions =
-              SnapshotManifestV1.loadRegionManifests(conf, tpool, rootFs, workingDir, desc);
+              SnapshotManifestV1.loadRegionManifests(conf, tpool, rootFs, workingDir, desc, htd);
             v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, rootFs, workingDir,
               desc, manifestSizeLimit);
           } catch (InvalidProtocolBufferException e) {
@@ -502,7 +508,7 @@ public final class SnapshotManifest {
     setStatusMsg("Loading Region manifests for " + this.desc.getName());
     try {
       v1Regions =
-        SnapshotManifestV1.loadRegionManifests(conf, tpool, workingDirFs, workingDir, desc);
+        SnapshotManifestV1.loadRegionManifests(conf, tpool, workingDirFs, workingDir, desc, htd);
       v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, workingDirFs, workingDir,
         desc, manifestSizeLimit);
 

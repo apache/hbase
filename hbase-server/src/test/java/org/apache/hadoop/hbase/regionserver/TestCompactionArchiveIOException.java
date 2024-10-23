@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -155,7 +156,10 @@ public class TestCompactionArchiveIOException {
     out.writeInt(1);
     out.close();
 
-    HStoreFile errStoreFile = new MockHStoreFile(testUtil, errFile, 1, 0, false, 1);
+    StoreFileTrackerForTest storeFileTrackerForTest =
+      new StoreFileTrackerForTest(store.getReadOnlyConfiguration(), true, store.getStoreContext());
+    HStoreFile errStoreFile =
+      new MockHStoreFile(testUtil, errFile, 1, 0, false, 1, storeFileTrackerForTest);
     fileManager.addCompactionResults(ImmutableList.of(errStoreFile), ImmutableList.of());
 
     // cleanup compacted files

@@ -20,7 +20,10 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -94,4 +97,26 @@ public interface StoreFileTracker {
    * does not allow broken store files under the actual data directory.
    */
   boolean requireWritingToTmpDirFirst();
+
+  Reference createReference(Reference reference, Path path) throws IOException;
+
+  /**
+   * Reads the reference file from the given path.
+   * @param path the {@link Path} to the reference file in the file system.
+   * @return a {@link Reference} that points at top/bottom half of a an hfile
+   */
+  Reference readReference(Path path) throws IOException;
+
+  /**
+   * Returns true if the specified family has reference files
+   * @return true if family contains reference files
+   */
+  boolean hasReferences() throws IOException;
+
+  StoreFileInfo getStoreFileInfo(final FileStatus fileStatus, final Path initialPath,
+    final boolean primaryReplica) throws IOException;
+
+  StoreFileInfo getStoreFileInfo(final Path initialPath, final boolean primaryReplica)
+    throws IOException;
+
 }

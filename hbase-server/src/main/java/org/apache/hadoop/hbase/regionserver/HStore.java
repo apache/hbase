@@ -88,6 +88,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
@@ -429,7 +431,7 @@ public class HStore
     return ttl;
   }
 
-  StoreContext getStoreContext() {
+  public StoreContext getStoreContext() {
     return storeContext;
   }
 
@@ -1390,8 +1392,9 @@ public class HStore
         compactionOutputs.remove(sf.getPath().getName());
       }
       for (String compactionOutput : compactionOutputs) {
+        StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, storeContext);
         StoreFileInfo storeFileInfo =
-          getRegionFileSystem().getStoreFileInfo(getColumnFamilyName(), compactionOutput);
+          getRegionFileSystem().getStoreFileInfo(getColumnFamilyName(), compactionOutput, sft);
         HStoreFile storeFile = storeEngine.createStoreFileAndReader(storeFileInfo);
         outputStoreFiles.add(storeFile);
       }
@@ -2034,8 +2037,9 @@ public class HStore
       List<HStoreFile> storeFiles = new ArrayList<>(fileNames.size());
       for (String file : fileNames) {
         // open the file as a store file (hfile link, etc)
+        StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, storeContext);
         StoreFileInfo storeFileInfo =
-          getRegionFileSystem().getStoreFileInfo(getColumnFamilyName(), file);
+          getRegionFileSystem().getStoreFileInfo(getColumnFamilyName(), file, sft);
         HStoreFile storeFile = storeEngine.createStoreFileAndReader(storeFileInfo);
         storeFiles.add(storeFile);
         HStore.this.storeSize.addAndGet(storeFile.getReader().length());
