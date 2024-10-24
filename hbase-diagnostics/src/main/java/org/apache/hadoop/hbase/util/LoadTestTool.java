@@ -164,7 +164,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   public static final String OPT_NUM_REGIONS_PER_SERVER = "num_regions_per_server";
   protected static final String OPT_NUM_REGIONS_PER_SERVER_USAGE =
     "Desired number of regions per region server. Defaults to 5.";
-  public static int DEFAULT_NUM_REGIONS_PER_SERVER = 5;
+  public static final int DEFAULT_NUM_REGIONS_PER_SERVER = 5;
 
   public static final String OPT_REGION_REPLICATION = "region_replication";
   protected static final String OPT_REGION_REPLICATION_USAGE =

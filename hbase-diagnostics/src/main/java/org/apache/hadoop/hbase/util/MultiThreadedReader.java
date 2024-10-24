@@ -307,15 +307,15 @@ public class MultiThreadedReader extends MultiThreadedAction {
 
     protected Get createGet(long keyToRead) throws IOException {
       Get get = new Get(dataGenerator.getDeterministicUniqueKey(keyToRead));
-      String cfsString = "";
+      StringBuilder cfsString = new StringBuilder();
       byte[][] columnFamilies = dataGenerator.getColumnFamilies();
       for (byte[] cf : columnFamilies) {
         get.addFamily(cf);
         if (verbose) {
           if (cfsString.length() > 0) {
-            cfsString += ", ";
+            cfsString.append(", ");
           }
-          cfsString += "[" + Bytes.toStringBinary(cf) + "]";
+          cfsString.append("[").append(Bytes.toStringBinary(cf)).append("]");
         }
       }
       get = dataGenerator.beforeGet(keyToRead, get);
@@ -324,7 +324,7 @@ public class MultiThreadedReader extends MultiThreadedAction {
         get.setConsistency(Consistency.TIMELINE);
       }
       if (verbose) {
-        LOG.info("[" + readerId + "] " + "Querying key " + keyToRead + ", cfs " + cfsString);
+        LOG.info("[{}] Querying key {}, cfs {}", readerId, keyToRead, cfsString.toString());
       }
       return get;
     }

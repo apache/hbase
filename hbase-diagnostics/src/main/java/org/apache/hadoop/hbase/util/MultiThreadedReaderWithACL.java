@@ -88,8 +88,6 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
     @Override
     public void queryKey(final Get get, final boolean verify, final long keyToRead)
       throws IOException {
-      final String rowKey = Bytes.toString(get.getRow());
-
       // read the data
       final long start = System.nanoTime();
       PrivilegedExceptionAction<Object> action = new PrivilegedExceptionAction<Object>() {
