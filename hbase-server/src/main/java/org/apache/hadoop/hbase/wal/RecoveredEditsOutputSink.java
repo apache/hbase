@@ -89,12 +89,9 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
 
   @Override
   public List<Path> close() throws IOException {
-    boolean isSuccessful = true;
-    try {
-      isSuccessful = finishWriterThreads();
-    } finally {
-      isSuccessful &= closeWriters();
-    }
+    boolean isSuccessful;
+    isSuccessful = finishWriterThreads();
+    isSuccessful &= closeWriters();
     return isSuccessful ? splits : null;
   }
 
@@ -102,7 +99,7 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
    * Close all of the output streams.
    * @return true when there is no error.
    */
-  private boolean closeWriters() throws IOException {
+  boolean closeWriters() throws IOException {
     List<IOException> thrown = Lists.newArrayList();
     for (RecoveredEditsWriter writer : writers.values()) {
       closeCompletionService.submit(() -> {
