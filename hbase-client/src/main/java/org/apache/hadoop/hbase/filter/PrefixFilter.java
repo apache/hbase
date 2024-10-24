@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -56,10 +57,6 @@ public class PrefixFilter extends FilterBase implements HintingFilter {
       return true;
     }
     if (filterAllRemaining()) {
-      return true;
-    }
-    int length = firstRowCell.getRowLength();
-    if (length < prefix.length) {
       return true;
     }
     // if they are equal, return false => pass row
@@ -160,7 +157,27 @@ public class PrefixFilter extends FilterBase implements HintingFilter {
 
   @Override
   public Cell getNextCellHint(Cell cell) {
-    return PrivateCellUtil.createFirstOnRow(prefix, 0, (short) prefix.length);
+    byte[] hintBytes;
+    if (reversed) {
+      // On reversed scan hint should be the prefix with last byte incremented
+      hintBytes = increaseLastNonMaxByte(this.prefix);
+    } else {
+      // On forward scan hint should be the prefix
+      hintBytes = prefix;
+    }
+    return PrivateCellUtil.createFirstOnRow(hintBytes, 0, (short) hintBytes.length);
+  }
+
+  private byte[] increaseLastNonMaxByte(byte[] bytes) {
+    byte[] result = Arrays.copyOf(bytes, bytes.length);
+    for (int i = bytes.length - 1; i >= 0; i--) {
+      byte b = bytes[i];
+      if (b < Byte.MAX_VALUE) {
+        result[i] = (byte) (b + 1);
+        break;
+      }
+    }
+    return result;
   }
 
   @Override
