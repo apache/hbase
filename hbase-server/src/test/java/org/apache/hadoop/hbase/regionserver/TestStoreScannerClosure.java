@@ -130,7 +130,8 @@ public class TestStoreScannerClosure {
       region.put(p);
       HStore store = region.getStore(fam);
       // use the lock to manually get a new memstore scanner. this is what
-      // HStore#notifyChangedReadersObservers does under the lock.(lock is not needed here
+      // HStore#notifyChangedReadersObservers does under the lock.(lock is not needed
+      // here
       // since it is just a testcase).
       store.getStoreEngine().readLock();
       final List<KeyValueScanner> memScanners = store.memstore.getScanners(Long.MAX_VALUE);
@@ -215,9 +216,9 @@ public class TestStoreScannerClosure {
     }
   }
 
-  private HStoreFile readStoreFile(Path storeFilePath, Configuration conf) throws Exception {
+  private HStoreFile readStoreFile(StoreFileInfo fileinfo) throws Exception {
     // Open the file reader with block cache disabled.
-    HStoreFile file = new HStoreFile(fs, storeFilePath, conf, cacheConf, BloomType.NONE, true);
+    HStoreFile file = new HStoreFile(fileinfo, BloomType.NONE, cacheConf);
     return file;
   }
 
@@ -228,7 +229,8 @@ public class TestStoreScannerClosure {
     HStoreFile file = null;
     List<HStoreFile> files = new ArrayList<HStoreFile>();
     try {
-      file = readStoreFile(path, CONF);
+      StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(CONF, fs, path, true);
+      file = readStoreFile(storeFileInfo);
       files.add(file);
     } catch (Exception e) {
       // fail test

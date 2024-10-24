@@ -28,10 +28,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -98,23 +103,6 @@ public class TestStoreFileInfo {
   }
 
   @Test
-  public void testOpenErrorMessageHFileLink() throws IOException, IllegalStateException {
-    // Test file link exception
-    // Try to open nonsense hfilelink. Make sure exception is from HFileLink.
-    Path p = new Path("/hbase/test/0123/cf/testtb=4567-abcd");
-    try (FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration())) {
-      StoreFileInfo sfi = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, p, true);
-      try {
-        ReaderContext context = sfi.createReaderContext(false, 1000, ReaderType.PREAD);
-        sfi.createReader(context, null);
-        throw new IllegalStateException();
-      } catch (FileNotFoundException fnfe) {
-        assertTrue(fnfe.getMessage().contains(HFileLink.class.getSimpleName()));
-      }
-    }
-  }
-
-  @Test
   public void testOpenErrorMessageReference() throws IOException {
     // Test file link exception
     // Try to open nonsense hfilelink. Make sure exception is from HFileLink.
@@ -122,8 +110,17 @@ public class TestStoreFileInfo {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     fs.mkdirs(p.getParent());
     Reference r = Reference.createBottomReference(HConstants.EMPTY_START_ROW);
-    r.write(fs, p);
-    StoreFileInfo sfi = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, p, true);
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TableName.valueOf("table1")).build();
+    StoreContext storeContext = StoreContext.getBuilder()
+      .withRegionFileSystem(HRegionFileSystem.create(TEST_UTIL.getConfiguration(), fs,
+        TEST_UTIL.getDataTestDirOnTestFS(), regionInfo))
+      .withColumnFamilyDescriptor(
+        ColumnFamilyDescriptorBuilder.newBuilder("cf1".getBytes()).build())
+      .build();
+    StoreFileTrackerForTest storeFileTrackerForTest =
+      new StoreFileTrackerForTest(TEST_UTIL.getConfiguration(), true, storeContext);
+    storeFileTrackerForTest.createReference(r, p);
+    StoreFileInfo sfi = storeFileTrackerForTest.getStoreFileInfo(p, true);
     try {
       ReaderContext context = sfi.createReaderContext(false, 1000, ReaderType.PREAD);
       sfi.createReader(context, null);
