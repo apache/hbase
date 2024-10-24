@@ -160,8 +160,8 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
 
     FlushTableSubprocedurePool taskManager =
       new FlushTableSubprocedurePool(rss.getServerName().toString(), conf, rss);
-    return new FlushTableSubprocedure(member, exnDispatcher, wakeMillis, timeoutMillis,
-      involvedRegions, table, families, taskManager);
+    return new FlushTableSubprocedure((HRegionServer) rss, member, exnDispatcher, wakeMillis,
+      timeoutMillis, involvedRegions, table, families, taskManager);
   }
 
   /**

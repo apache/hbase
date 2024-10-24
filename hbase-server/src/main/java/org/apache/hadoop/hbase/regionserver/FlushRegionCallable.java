@@ -60,6 +60,11 @@ public class FlushRegionCallable extends BaseRSProcedureCallable {
       if (res.getResult() == HRegion.FlushResult.Result.CANNOT_FLUSH) {
         throw new IOException("Unable to complete flush " + regionInfo);
       }
+      boolean shouldCompact = res.isCompactionNeeded();
+      if (shouldCompact) {
+        rs.getCompactSplitThread().requestSystemCompaction(region,
+          "Compaction is triggered by flush procedure");
+      }
     } finally {
       LOG.debug("Closing region operation on {}", region);
       region.closeRegionOperation();
