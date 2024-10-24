@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
@@ -56,7 +58,7 @@ public class TestPrefixFilter {
 
   @Test
   public void testPrefixOnRowInsideWhileMatchRow() throws Exception {
-    prefixRowTests(new WhileMatchFilter(this.mainFilter), true);
+    prefixRowTests(new WhileMatchFilter(this.mainFilter));
   }
 
   @Test
@@ -72,10 +74,6 @@ public class TestPrefixFilter {
   }
 
   private void prefixRowTests(Filter filter) throws Exception {
-    prefixRowTests(filter, false);
-  }
-
-  private void prefixRowTests(Filter filter, boolean lastFilterAllRemaining) throws Exception {
     for (char c = FIRST_CHAR; c <= LAST_CHAR; c++) {
       byte[] t = createRow(c);
       assertFalse("Failed with character " + c,
@@ -84,9 +82,9 @@ public class TestPrefixFilter {
     }
     String yahooSite = "com.yahoo.www";
     byte[] yahooSiteBytes = Bytes.toBytes(yahooSite);
-    assertTrue("Failed with character " + yahooSite,
+    assertFalse("Failed with character " + yahooSite,
       filter.filterRowKey(KeyValueUtil.createFirstOnRow(yahooSiteBytes)));
-    assertEquals(filter.filterAllRemaining(), lastFilterAllRemaining);
+    assertFalse(filter.filterAllRemaining());
   }
 
   private byte[] createRow(final char c) {
@@ -94,72 +92,117 @@ public class TestPrefixFilter {
   }
 
   @Test
-  public void shouldReturnSeekNextUsingHintWhenKeyBefore() throws IOException {
-    KeyValue cell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("com.yahoo.www.a."));
+  public void shouldProvideHintWhenKeyBefore() {
+    byte[] prefix = Bytes.toBytes("gg");
+    PrefixFilter filter = new PrefixFilter(prefix);
+
+    KeyValue cell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("aa"));
 
     // Should include this row so that filterCell() will be invoked.
-    assertFalse(mainFilter.filterRowKey(cell));
-    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, mainFilter.filterCell(cell));
-    Cell actualCellHint = mainFilter.getNextCellHint(cell);
+    assertFalse(filter.filterRowKey(cell));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterCell(cell));
+    Cell actualCellHint = filter.getNextCellHint(cell);
     assertNotNull(actualCellHint);
-    Cell expectedCellHint = KeyValueUtil.createFirstOnRow(Bytes.toBytes(HOST_PREFIX));
+    Cell expectedCellHint = KeyValueUtil.createFirstOnRow(prefix);
     assertEquals(expectedCellHint, actualCellHint);
-    assertFalse(mainFilter.filterAllRemaining());
+    assertFalse(filter.filterAllRemaining());
   }
 
   @Test
-  public void shouldReturnIncludeWhenKeyMatches() throws IOException {
-    KeyValue matchingCell = KeyValueUtil.createFirstOnRow(createRow('a'));
+  public void shouldIncludeWhenKeyMatches() {
+    PrefixFilter filter = new PrefixFilter(Bytes.toBytes("gg"));
 
-    assertFalse(mainFilter.filterRowKey(matchingCell));
-    assertEquals(Filter.ReturnCode.INCLUDE, mainFilter.filterCell(matchingCell));
-    assertFalse(mainFilter.filterAllRemaining());
+    KeyValue matchingCell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("gg"));
+
+    assertFalse(filter.filterRowKey(matchingCell));
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterCell(matchingCell));
+    assertFalse(filter.filterAllRemaining());
   }
 
   @Test
-  public void shouldReturnNextRowWhenKeyAfter() throws IOException {
-    KeyValue afterCell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("pt.example.www.1"));
+  public void shouldReturnNextRowWhenKeyAfter() {
+    PrefixFilter filter = new PrefixFilter(Bytes.toBytes("gg"));
 
-    assertTrue(mainFilter.filterRowKey(afterCell));
-    assertEquals(Filter.ReturnCode.NEXT_ROW, mainFilter.filterCell(afterCell));
-    assertTrue(mainFilter.filterAllRemaining());
+    KeyValue afterCell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("pp"));
+
+    assertTrue(filter.filterRowKey(afterCell));
+    assertEquals(Filter.ReturnCode.NEXT_ROW, filter.filterCell(afterCell));
+    assertTrue(filter.filterAllRemaining());
   }
 
   @Test
-  public void shouldReturnSeekNextUsingHintWhenKeyBeforeReversed() throws IOException {
-    mainFilter.setReversed(true);
+  public void shouldProvideHintWhenKeyBeforeReversed() {
+    PrefixFilter filter = new PrefixFilter(Bytes.toBytes("aa"));
+    filter.setReversed(true);
 
-    KeyValue cell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("pt.example.www.1"));
+    KeyValue cell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("x"));
 
     // Should include this row so that filterCell() will be invoked.
-    assertFalse(mainFilter.filterRowKey(cell));
-    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, mainFilter.filterCell(cell));
-    Cell actualCellHint = mainFilter.getNextCellHint(cell);
+    assertFalse(filter.filterRowKey(cell));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterCell(cell));
+    Cell actualCellHint = filter.getNextCellHint(cell);
     assertNotNull(actualCellHint);
-    Cell expectedCellHint = KeyValueUtil.createFirstOnRow(Bytes.toBytes(HOST_PREFIX));
+    Cell expectedCellHint = KeyValueUtil.createFirstOnRow(Bytes.toBytes("ab"));
     assertEquals(expectedCellHint, actualCellHint);
-    assertFalse(mainFilter.filterAllRemaining());
+    assertFalse(filter.filterAllRemaining());
   }
 
   @Test
-  public void shouldReturnIncludeWhenKeyMatchesReversed() throws IOException {
-    mainFilter.setReversed(true);
+  public void hintShouldIncreaseLastNonMaxByteWhenReversed() {
+    PrefixFilter filter = new PrefixFilter(new byte[] { 'a', 'a', Byte.MAX_VALUE });
+    filter.setReversed(true);
 
-    KeyValue matchingCell = KeyValueUtil.createFirstOnRow(createRow('a'));
+    KeyValue cell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("x"));
 
-    assertFalse(mainFilter.filterRowKey(matchingCell));
-    assertEquals(Filter.ReturnCode.INCLUDE, mainFilter.filterCell(matchingCell));
-    assertFalse(mainFilter.filterAllRemaining());
+    // Should include this row so that filterCell() will be invoked.
+    assertFalse(filter.filterRowKey(cell));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterCell(cell));
+    Cell actualCellHint = filter.getNextCellHint(cell);
+    assertNotNull(actualCellHint);
+    Cell expectedCellHint = KeyValueUtil.createFirstOnRow(new byte[] { 'a', 'b', Byte.MAX_VALUE });
+    assertEquals(expectedCellHint, actualCellHint);
+    assertFalse(filter.filterAllRemaining());
   }
 
   @Test
-  public void shouldReturnNextRowWhenKeyAfterReversed() throws IOException {
-    mainFilter.setReversed(true);
+  public void shouldIncludeWhenKeyMatchesReversed() {
+    PrefixFilter filter = new PrefixFilter(Bytes.toBytes("aa"));
+    filter.setReversed(true);
 
-    KeyValue cell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("com.yahoo.www.a."));
+    KeyValue matchingCell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("aa"));
 
-    assertTrue(mainFilter.filterRowKey(cell));
-    assertEquals(Filter.ReturnCode.NEXT_ROW, mainFilter.filterCell(cell));
-    assertTrue(mainFilter.filterAllRemaining());
+    assertFalse(filter.filterRowKey(matchingCell));
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterCell(matchingCell));
+    assertFalse(filter.filterAllRemaining());
+  }
+
+  @Test
+  public void shouldReturnNextRowWhenKeyAfterReversed() {
+    PrefixFilter filter = new PrefixFilter(Bytes.toBytes("dd"));
+    filter.setReversed(true);
+
+    KeyValue cell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("aa"));
+
+    assertTrue(filter.filterRowKey(cell));
+    assertEquals(Filter.ReturnCode.NEXT_ROW, filter.filterCell(cell));
+    assertTrue(filter.filterAllRemaining());
+  }
+
+  @Test
+  public void hintShouldNotIncreaseMaxBytesWhenReversed() {
+    PrefixFilter filter =
+      new PrefixFilter(new byte[] { Byte.MAX_VALUE, Byte.MAX_VALUE, Byte.MAX_VALUE });
+    filter.setReversed(true);
+
+    KeyValue cell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("x"));
+
+    assertTrue(filter.filterRowKey(cell));
+    assertEquals(Filter.ReturnCode.NEXT_ROW, filter.filterCell(cell));
+    Cell actualCellHint = filter.getNextCellHint(cell);
+    assertNotNull(actualCellHint);
+    Cell expectedCellHint =
+      KeyValueUtil.createFirstOnRow(new byte[] { Byte.MAX_VALUE, Byte.MAX_VALUE, Byte.MAX_VALUE });
+    assertEquals(expectedCellHint, actualCellHint);
+    assertTrue(filter.filterAllRemaining());
   }
 }
