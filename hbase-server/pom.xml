@@ -35,8 +35,7 @@
     <license.bundles.bootstrap>true</license.bundles.bootstrap>
     <license.bundles.jquery>true</license.bundles.jquery>
     <license.bundles.vega>true</license.bundles.vega>
-    <hbase.webapps.dir>target/hbase-webapps</hbase.webapps.dir>
-    <test.classes.webapps.dir>target/test-classes/hbase-webapps</test.classes.webapps.dir>
+    <hbase.webapps.dir>hbase-webapps</hbase.webapps.dir>
   </properties>
   <dependencies>
     <dependency>
@@ -440,26 +439,23 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
         <executions>
-          <!-- Copy hbase-webapps from build directory to test classes directory -->
           <execution>
-            <id>copy-hbase-webapps-to-test</id>
+            <id>add-test-source</id>
             <goals>
-              <goal>copy-resources</goal>
+              <goal>add-test-resource</goal>
             </goals>
-            <phase>process-test-resources</phase>
+            <phase>generate-test-sources</phase>
             <configuration>
-              <!-- Output directory for the copied resources -->
-              <outputDirectory>${test.classes.webapps.dir}</outputDirectory>
+              <!-- Add the hbase-webapps directory to the test resources -->
               <resources>
                 <resource>
-                  <!-- Directory containing hbase-webapps, which needs to be copied -->
-                  <directory>${hbase.webapps.dir}</directory>
-                  <includes>
-                    <include>**/*</include>
-                  </includes>
+                  <!-- Directory containing hbase-webapps -->
+                  <directory>target/${hbase.webapps.dir}</directory>
+                  <!-- Target directory under test-classes -->
+                  <targetPath>${hbase.webapps.dir}</targetPath>
                 </resource>
               </resources>
             </configuration>
@@ -513,8 +509,8 @@
                 <exclude>log4j.properties</exclude>
                 <exclude>mapred-queues.xml</exclude>
                 <exclude>mapred-site.xml</exclude>
-                <!-- We do not want to exclude hbase-webapps from tests. We actually copied it with
-                copy-hbase-webapps-to-test. See HBASE-28921 for details! -->
+                <!-- We do not want to exclude hbase-webapps from tests. We actually intentionally
+                add this directory to out test resources. See HBASE-28921 for details! -->
               </excludes>
             </configuration>
           </execution>
