@@ -1050,6 +1050,29 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
+  private long calculateBytesToFree(StringBuilder msgBuffer) {
+    long bytesToFreeWithoutExtra = 0;
+    BucketAllocator.IndexStatistics[] stats = bucketAllocator.getIndexStatistics();
+    long[] bytesToFreeForBucket = new long[stats.length];
+    for (int i = 0; i < stats.length; i++) {
+      bytesToFreeForBucket[i] = 0;
+      long freeGoal = (long) Math.floor(stats[i].totalCount() * (1 - minFactor));
+      freeGoal = Math.max(freeGoal, 1);
+      if (stats[i].freeCount() < freeGoal) {
+        bytesToFreeForBucket[i] = stats[i].itemSize() * (freeGoal - stats[i].freeCount());
+        bytesToFreeWithoutExtra += bytesToFreeForBucket[i];
+        if (msgBuffer != null) {
+          msgBuffer.append("Free for bucketSize(" + stats[i].itemSize() + ")="
+            + StringUtils.byteDesc(bytesToFreeForBucket[i]) + ", ");
+        }
+      }
+    }
+    if (msgBuffer != null) {
+      msgBuffer.append("Free for total=" + StringUtils.byteDesc(bytesToFreeWithoutExtra) + ", ");
+    }
+    return bytesToFreeWithoutExtra;
+  }
+
   /**
    * Free the space if the used size reaches acceptableSize() or one size block couldn't be
    * allocated. When freeing the space, we use the LRU algorithm and ensure there must be some
@@ -1066,43 +1089,21 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     try {
       freeInProgress = true;
-      long bytesToFreeWithoutExtra = 0;
-      // Calculate free byte for each bucketSizeinfo
       StringBuilder msgBuffer = LOG.isDebugEnabled() ? new StringBuilder() : null;
-      BucketAllocator.IndexStatistics[] stats = bucketAllocator.getIndexStatistics();
-      long[] bytesToFreeForBucket = new long[stats.length];
-      for (int i = 0; i < stats.length; i++) {
-        bytesToFreeForBucket[i] = 0;
-        long freeGoal = (long) Math.floor(stats[i].totalCount() * (1 - minFactor));
-        freeGoal = Math.max(freeGoal, 1);
-        if (stats[i].freeCount() < freeGoal) {
-          bytesToFreeForBucket[i] = stats[i].itemSize() * (freeGoal - stats[i].freeCount());
-          bytesToFreeWithoutExtra += bytesToFreeForBucket[i];
-          if (msgBuffer != null) {
-            msgBuffer.append("Free for bucketSize(" + stats[i].itemSize() + ")="
-              + StringUtils.byteDesc(bytesToFreeForBucket[i]) + ", ");
-          }
-        }
-      }
-      if (msgBuffer != null) {
-        msgBuffer.append("Free for total=" + StringUtils.byteDesc(bytesToFreeWithoutExtra) + ", ");
-      }
-
+      long bytesToFreeWithoutExtra = calculateBytesToFree(msgBuffer);
       if (bytesToFreeWithoutExtra <= 0) {
         return;
       }
       long currentSize = bucketAllocator.getUsedSize();
       long totalSize = bucketAllocator.getTotalSize();
       if (LOG.isDebugEnabled() && msgBuffer != null) {
-        LOG.debug("Free started because \"" + why + "\"; " + msgBuffer.toString()
-          + " of current used=" + StringUtils.byteDesc(currentSize) + ", actual cacheSize="
+        LOG.debug("Free started because \"" + why + "\"; " + msgBuffer + " of current used="
+          + StringUtils.byteDesc(currentSize) + ", actual cacheSize="
           + StringUtils.byteDesc(realCacheSize.sum()) + ", total="
           + StringUtils.byteDesc(totalSize));
       }
-
       long bytesToFreeWithExtra =
         (long) Math.floor(bytesToFreeWithoutExtra * (1 + extraFreeFactor));
-
       // Instantiate priority buckets
       BucketEntryGroup bucketSingle =
         new BucketEntryGroup(bytesToFreeWithExtra, blockSize, getPartitionSize(singleFactor));
@@ -1134,14 +1135,10 @@ public class BucketCache implements BlockCache, HeapSize {
         // "Orphan" blocks are a pure waste of cache space and should be evicted first during
         // the freespace run.
         // Compactions and Flushes may cache blocks before its files are completely written. In
-        // these
-        // cases the file won't be found in any of the online regions stores, but the block
-        // shouldn't
-        // be evicted. To avoid this, we defined this
-        // hbase.bucketcache.block.orphan.evictgraceperiod
-        // property, to account for a grace period (default 24 hours) where a block should be
-        // checked
-        // if it's an orphan block.
+        // these cases the file won't be found in any of the online regions stores, but the block
+        // shouldn't be evicted. To avoid this, we defined this
+        // hbase.bucketcache.block.orphan.evictgraceperiod property, to account for a grace
+        // period (default 24 hours) where a block should be checked if it's an orphan block.
         if (
           allValidFiles != null
             && entry.getCachedTime() < (System.nanoTime() - orphanGracePeriodNanos)
@@ -1171,7 +1168,6 @@ public class BucketCache implements BlockCache, HeapSize {
           }
         }
       }
-
       PriorityQueue<BucketEntryGroup> bucketQueue =
         new PriorityQueue<>(3, Comparator.comparingLong(BucketEntryGroup::overflow));
 
@@ -1196,18 +1192,15 @@ public class BucketCache implements BlockCache, HeapSize {
       if (bucketSizesAboveThresholdCount(minFactor) > 0) {
         bucketQueue.clear();
         remainingBuckets = 3;
-
         bucketQueue.add(bucketSingle);
         bucketQueue.add(bucketMulti);
         bucketQueue.add(bucketMemory);
-
         while ((bucketGroup = bucketQueue.poll()) != null) {
           long bucketBytesToFree = (bytesToFreeWithExtra - bytesFreed) / remainingBuckets;
           bytesFreed += bucketGroup.free(bucketBytesToFree);
           remainingBuckets--;
         }
       }
-
       // Even after the above free we might still need freeing because of the
       // De-fragmentation of the buckets (also called Slab Calcification problem), i.e
       // there might be some buckets where the occupancy is very sparse and thus are not
@@ -1226,7 +1219,6 @@ public class BucketCache implements BlockCache, HeapSize {
             + StringUtils.byteDesc(multi) + ", " + "memory=" + StringUtils.byteDesc(memory));
         }
       }
-
     } catch (Throwable t) {
       LOG.warn("Failed freeing space", t);
     } finally {
