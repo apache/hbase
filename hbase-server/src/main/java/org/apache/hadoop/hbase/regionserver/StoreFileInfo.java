@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -119,12 +120,13 @@ public class StoreFileInfo implements Configurable {
    * @param primaryReplica true if this is a store file for primary replica, otherwise false.
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path initialPath,
-    final boolean primaryReplica) throws IOException {
-    this(conf, fs, null, initialPath, primaryReplica);
+    final boolean primaryReplica, final StoreFileTracker sft) throws IOException {
+    this(conf, fs, null, initialPath, primaryReplica, sft);
   }
 
   private StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-    final Path initialPath, final boolean primaryReplica) throws IOException {
+    final Path initialPath, final boolean primaryReplica, final StoreFileTracker sft)
+    throws IOException {
     assert fs != null;
     assert initialPath != null;
     assert conf != null;
@@ -142,7 +144,7 @@ public class StoreFileInfo implements Configurable {
       this.link = HFileLink.buildFromHFileLinkPattern(conf, p);
       LOG.trace("{} is a link", p);
     } else if (isReference(p)) {
-      this.reference = Reference.read(fs, p);
+      this.reference = sft.readReference(p);
       Path referencePath = getReferredToFile(p);
       if (HFileLink.isHFileLink(referencePath)) {
         // HFileLink Reference
@@ -175,9 +177,19 @@ public class StoreFileInfo implements Configurable {
    * @param fs         The current file system to use.
    * @param fileStatus The {@link FileStatus} of the file
    */
-  public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus)
-    throws IOException {
-    this(conf, fs, fileStatus, fileStatus.getPath(), true);
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
+    final StoreFileTracker sft) throws IOException {
+    this(conf, fs, fileStatus, fileStatus.getPath(), true, sft);
+  }
+
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path initialPath,
+    final StoreFileTracker sft) throws IOException {
+    this(conf, null, null, initialPath, true, sft);
+  }
+
+  public StoreFileInfo(final Configuration conf, final StoreFileTracker sft, final FileSystem fs,
+    final Path initialPath, final boolean primaryReplica) throws IOException {
+    this(conf, null, null, initialPath, primaryReplica, sft);
   }
 
   /**
