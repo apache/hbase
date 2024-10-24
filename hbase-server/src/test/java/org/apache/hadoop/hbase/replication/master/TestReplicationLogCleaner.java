@@ -123,7 +123,7 @@ public class TestReplicationLogCleaner {
   }
 
   private static ReplicationPeerDescription createPeer(String peerId) {
-    return new ReplicationPeerDescription(peerId, true, null, null);
+    return new ReplicationPeerDescription(peerId, true, null, null, null);
   }
 
   private void addServer(ServerName serverName) {
