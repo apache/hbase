@@ -109,6 +109,23 @@ public class TestPrefixFilter {
   }
 
   @Test
+  public void shouldProvideHintWhenKeyBeforeAndShorter() {
+    byte[] prefix = Bytes.toBytes("gggg");
+    PrefixFilter filter = new PrefixFilter(prefix);
+
+    KeyValue cell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("aa"));
+
+    // Should include this row so that filterCell() will be invoked.
+    assertFalse(filter.filterRowKey(cell));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterCell(cell));
+    Cell actualCellHint = filter.getNextCellHint(cell);
+    assertNotNull(actualCellHint);
+    Cell expectedCellHint = KeyValueUtil.createFirstOnRow(prefix);
+    assertEquals(expectedCellHint, actualCellHint);
+    assertFalse(filter.filterAllRemaining());
+  }
+
+  @Test
   public void shouldIncludeWhenKeyMatches() {
     PrefixFilter filter = new PrefixFilter(Bytes.toBytes("gg"));
 
