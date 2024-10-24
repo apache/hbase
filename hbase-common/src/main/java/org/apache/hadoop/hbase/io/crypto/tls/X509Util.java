@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.io.crypto.tls;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -516,7 +515,7 @@ public final class X509Util {
     }
     FileChangeWatcher fileChangeWatcher =
       new FileChangeWatcher(parentPath, Objects.toString(filePath.getFileName()), watchEvent -> {
-        handleWatchEvent(filePath, watchEvent, resetContext);
+        handleWatchEvent(watchEvent, resetContext);
       });
     fileChangeWatcher.start();
     return fileChangeWatcher;
@@ -524,37 +523,12 @@ public final class X509Util {
 
   /**
    * Handler for watch events that let us know a file we may care about has changed on disk.
-   * @param filePath the path to the file we are watching for changes.
-   * @param event    the WatchEvent.
+   * @param event the WatchEvent.
    */
-  private static void handleWatchEvent(Path filePath, WatchEvent<?> event, Runnable resetContext) {
-    boolean shouldResetContext = false;
-    Path dirPath = filePath.getParent();
-    if (event.kind().equals(StandardWatchEventKinds.OVERFLOW)) {
-      // If we get notified about possibly missed events, reload the key store / trust store just to
-      // be sure.
-      shouldResetContext = true;
-    } else if (
-      event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY)
-        || event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)
-    ) {
-      Path eventFilePath = dirPath.resolve((Path) event.context());
-      if (filePath.equals(eventFilePath)) {
-        shouldResetContext = true;
-      }
-    }
-    // Note: we don't care about delete events
-    if (shouldResetContext) {
-      LOG.info(
-        "Attempting to reset default SSL context after receiving watch event: {} with context: {}",
-        event.kind(), event.context());
-      resetContext.run();
-    } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-          "Ignoring watch event and keeping previous default SSL context. Event kind: {} with context: {}",
-          event.kind(), event.context());
-      }
-    }
+  private static void handleWatchEvent(WatchEvent<?> event, Runnable resetContext) {
+    LOG.info(
+      "Attempting to reset default SSL context after receiving watch event: {} with context: {}",
+      event.kind(), event.context());
+    resetContext.run();
   }
 }
