@@ -17,12 +17,17 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.ACCEPT_FACTOR_CONFIG_NAME;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BLOCK_ORPHAN_GRACE_PERIOD;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.MIN_FACTOR_CONFIG_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -30,6 +35,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,6 +63,9 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.IndexStatistics;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -464,7 +474,7 @@ public class TestBucketCache {
       BucketCache.DEFAULT_MIN_FACTOR);
 
     Configuration conf = HBaseConfiguration.create();
-    conf.setFloat(BucketCache.MIN_FACTOR_CONFIG_NAME, 0.5f);
+    conf.setFloat(MIN_FACTOR_CONFIG_NAME, 0.5f);
     conf.setFloat(BucketCache.SINGLE_FACTOR_CONFIG_NAME, 0.1f);
     conf.setFloat(BucketCache.MULTI_FACTOR_CONFIG_NAME, 0.7f);
     conf.setFloat(BucketCache.MEMORY_FACTOR_CONFIG_NAME, 0.2f);
@@ -500,9 +510,9 @@ public class TestBucketCache {
   @Test
   public void testValidBucketCacheConfigs() throws IOException {
     Configuration conf = HBaseConfiguration.create();
-    conf.setFloat(BucketCache.ACCEPT_FACTOR_CONFIG_NAME, 0.9f);
-    conf.setFloat(BucketCache.MIN_FACTOR_CONFIG_NAME, 0.5f);
-    conf.setFloat(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME, 0.5f);
+    conf.setFloat(ACCEPT_FACTOR_CONFIG_NAME, 0.9f);
+    conf.setFloat(MIN_FACTOR_CONFIG_NAME, 0.5f);
+    conf.setFloat(EXTRA_FREE_FACTOR_CONFIG_NAME, 0.5f);
     conf.setFloat(BucketCache.SINGLE_FACTOR_CONFIG_NAME, 0.1f);
     conf.setFloat(BucketCache.MULTI_FACTOR_CONFIG_NAME, 0.7f);
     conf.setFloat(BucketCache.MEMORY_FACTOR_CONFIG_NAME, 0.2f);
@@ -511,11 +521,10 @@ public class TestBucketCache {
       constructedBlockSizes, writeThreads, writerQLen, null, 100, conf);
     assertTrue(cache.waitForCacheInitialization(10000));
 
-    assertEquals(BucketCache.ACCEPT_FACTOR_CONFIG_NAME + " failed to propagate.", 0.9f,
+    assertEquals(ACCEPT_FACTOR_CONFIG_NAME + " failed to propagate.", 0.9f,
       cache.getAcceptableFactor(), 0);
-    assertEquals(BucketCache.MIN_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f,
-      cache.getMinFactor(), 0);
-    assertEquals(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f,
+    assertEquals(MIN_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f, cache.getMinFactor(), 0);
+    assertEquals(EXTRA_FREE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f,
       cache.getExtraFreeFactor(), 0);
     assertEquals(BucketCache.SINGLE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.1f,
       cache.getSingleFactor(), 0);
@@ -529,8 +538,7 @@ public class TestBucketCache {
   public void testInvalidAcceptFactorConfig() throws IOException {
     float[] configValues = { -1f, 0.2f, 0.86f, 1.05f };
     boolean[] expectedOutcomes = { false, false, true, false };
-    Map<String, float[]> configMappings =
-      ImmutableMap.of(BucketCache.ACCEPT_FACTOR_CONFIG_NAME, configValues);
+    Map<String, float[]> configMappings = ImmutableMap.of(ACCEPT_FACTOR_CONFIG_NAME, configValues);
     Configuration conf = HBaseConfiguration.create();
     checkConfigValues(conf, configMappings, expectedOutcomes);
   }
@@ -540,8 +548,7 @@ public class TestBucketCache {
     float[] configValues = { -1f, 0f, 0.96f, 1.05f };
     // throws due to <0, in expected range, minFactor > acceptableFactor, > 1.0
     boolean[] expectedOutcomes = { false, true, false, false };
-    Map<String, float[]> configMappings =
-      ImmutableMap.of(BucketCache.MIN_FACTOR_CONFIG_NAME, configValues);
+    Map<String, float[]> configMappings = ImmutableMap.of(MIN_FACTOR_CONFIG_NAME, configValues);
     Configuration conf = HBaseConfiguration.create();
     checkConfigValues(conf, configMappings, expectedOutcomes);
   }
@@ -552,7 +559,7 @@ public class TestBucketCache {
     // throws due to <0, in expected range, in expected range, config can be > 1.0
     boolean[] expectedOutcomes = { false, true, true, true };
     Map<String, float[]> configMappings =
-      ImmutableMap.of(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME, configValues);
+      ImmutableMap.of(EXTRA_FREE_FACTOR_CONFIG_NAME, configValues);
     Configuration conf = HBaseConfiguration.create();
     checkConfigValues(conf, configMappings, expectedOutcomes);
   }
@@ -968,6 +975,65 @@ public class TestBucketCache {
     }
     bucketCache.notifyFileCachingCompleted(filePath, totalBlocksToCheck, totalBlocksToCheck,
       totalBlocksToCheck * constructedBlockSize);
+    return bucketCache;
+  }
+
+  @Test
+  public void testEvictOrphansOutOfGracePeriod() throws Exception {
+    BucketCache bucketCache = testEvictOrphans(0);
+    assertEquals(10, bucketCache.getBackingMap().size());
+    assertEquals(0, bucketCache.blocksByHFile.stream()
+      .filter(key -> key.getHfileName().equals("testEvictOrphans-orphan")).count());
+  }
+
+  @Test
+  public void testEvictOrphansWithinGracePeriod() throws Exception {
+    BucketCache bucketCache = testEvictOrphans(60 * 60 * 1000L);
+    assertEquals(18, bucketCache.getBackingMap().size());
+    assertTrue(bucketCache.blocksByHFile.stream()
+      .filter(key -> key.getHfileName().equals("testEvictOrphans-orphan")).count() > 0);
+  }
+
+  private BucketCache testEvictOrphans(long orphanEvictionGracePeriod) throws Exception {
+    Path validFile = new Path(HBASE_TESTING_UTILITY.getDataTestDir(), "testEvictOrphans-valid");
+    Path orphanFile = new Path(HBASE_TESTING_UTILITY.getDataTestDir(), "testEvictOrphans-orphan");
+    Map<String, HRegion> onlineRegions = new HashMap<>();
+    List<HStore> stores = new ArrayList<>();
+    Collection<HStoreFile> storeFiles = new ArrayList<>();
+    HRegion mockedRegion = mock(HRegion.class);
+    HStore mockedStore = mock(HStore.class);
+    HStoreFile mockedStoreFile = mock(HStoreFile.class);
+    when(mockedStoreFile.getPath()).thenReturn(validFile);
+    storeFiles.add(mockedStoreFile);
+    when(mockedStore.getStorefiles()).thenReturn(storeFiles);
+    stores.add(mockedStore);
+    when(mockedRegion.getStores()).thenReturn(stores);
+    onlineRegions.put("mocked_region", mockedRegion);
+    HBASE_TESTING_UTILITY.getConfiguration().setDouble(MIN_FACTOR_CONFIG_NAME, 0.99);
+    HBASE_TESTING_UTILITY.getConfiguration().setDouble(ACCEPT_FACTOR_CONFIG_NAME, 1);
+    HBASE_TESTING_UTILITY.getConfiguration().setDouble(EXTRA_FREE_FACTOR_CONFIG_NAME, 0.01);
+    HBASE_TESTING_UTILITY.getConfiguration().setLong(BLOCK_ORPHAN_GRACE_PERIOD,
+      orphanEvictionGracePeriod);
+    BucketCache bucketCache = new BucketCache(ioEngineName, (constructedBlockSize + 1024) * 21,
+      constructedBlockSize, new int[] { constructedBlockSize + 1024 }, 1, 1, null, 60 * 1000,
+      HBASE_TESTING_UTILITY.getConfiguration(), onlineRegions);
+    HFileBlockPair[] validBlockPairs =
+      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 10, validFile);
+    HFileBlockPair[] orphanBlockPairs =
+      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 10, orphanFile);
+    for (HFileBlockPair pair : validBlockPairs) {
+      bucketCache.cacheBlockWithWait(pair.getBlockName(), pair.getBlock(), false, true);
+    }
+    waitUntilAllFlushedToBucket(bucketCache);
+    assertEquals(10, bucketCache.getBackingMap().size());
+    bucketCache.freeSpace("test");
+    assertEquals(10, bucketCache.getBackingMap().size());
+    for (HFileBlockPair pair : orphanBlockPairs) {
+      bucketCache.cacheBlockWithWait(pair.getBlockName(), pair.getBlock(), false, true);
+    }
+    waitUntilAllFlushedToBucket(bucketCache);
+    assertEquals(20, bucketCache.getBackingMap().size());
+    bucketCache.freeSpace("test");
     return bucketCache;
   }
 }
