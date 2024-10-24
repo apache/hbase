@@ -39,23 +39,27 @@ public class HFilePreadReader extends HFileReaderImpl {
   public HFilePreadReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
-    final MutableBoolean shouldCache = new MutableBoolean(true);
-
-    cacheConf.getBlockCache().ifPresent(cache -> {
-      cache.waitForCacheInitialization(WAIT_TIME_FOR_CACHE_INITIALIZATION);
-      Optional<Boolean> result = cache.shouldCacheFile(path.getName());
-      shouldCache.setValue(result.isPresent() ? result.get().booleanValue() : true);
-    });
 
     // Prefetch file blocks upon open if requested
-    if (cacheConf.shouldPrefetchOnOpen() && shouldCache.booleanValue()) {
+    if (cacheConf.shouldPrefetchOnOpen()) {
       PrefetchExecutor.request(path, new Runnable() {
         @Override
         public void run() {
           long offset = 0;
           long end = 0;
           HFile.Reader prefetchStreamReader = null;
+          final MutableBoolean shouldCache = new MutableBoolean(true);
           try {
+            cacheConf.getBlockCache().ifPresent(cache -> {
+              cache.waitForCacheInitialization(WAIT_TIME_FOR_CACHE_INITIALIZATION);
+              Optional<Boolean> result = cache.shouldCacheFile(path.getName());
+              shouldCache.setValue(result.isPresent() ? result.get().booleanValue() : true);
+            });
+            if (!shouldCache.booleanValue()) {
+              LOG.info("Prefetch skipped for the file: " + path.getName());
+              return;
+            }
+
             ReaderContext streamReaderContext = ReaderContextBuilder.newBuilder(context)
               .withReaderType(ReaderContext.ReaderType.STREAM)
               .withInputStreamWrapper(new FSDataInputStreamWrapper(context.getFileSystem(),
