@@ -18,8 +18,10 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -35,10 +37,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
  * Pass results that have same row prefix.
  */
 @InterfaceAudience.Public
-public class PrefixFilter extends FilterBase {
+public class PrefixFilter extends FilterBase implements HintingFilter {
   protected byte[] prefix = null;
   protected boolean passedPrefix = false;
   protected boolean filterRow = true;
+  protected boolean provideHint = false;
 
   public PrefixFilter(final byte[] prefix) {
     this.prefix = prefix;
@@ -50,10 +53,12 @@ public class PrefixFilter extends FilterBase {
 
   @Override
   public boolean filterRowKey(Cell firstRowCell) {
-    if (firstRowCell == null || this.prefix == null) return true;
-    if (filterAllRemaining()) return true;
-    int length = firstRowCell.getRowLength();
-    if (length < prefix.length) return true;
+    if (firstRowCell == null || this.prefix == null) {
+      return true;
+    }
+    if (filterAllRemaining()) {
+      return true;
+    }
     // if they are equal, return false => pass row
     // else return true, filter row
     // if we are passed the prefix, set flag
@@ -69,13 +74,19 @@ public class PrefixFilter extends FilterBase {
     if ((!isReversed() && cmp > 0) || (isReversed() && cmp < 0)) {
       passedPrefix = true;
     }
-    filterRow = (cmp != 0);
+    filterRow = (!isReversed() && cmp > 0) || (isReversed() && cmp < 0);
+    provideHint = (!isReversed() && cmp < 0) || (isReversed() && cmp > 0);
     return filterRow;
   }
 
   @Override
   public ReturnCode filterCell(final Cell c) {
-    if (filterRow) return ReturnCode.NEXT_ROW;
+    if (filterRow) {
+      return ReturnCode.NEXT_ROW;
+    }
+    if (provideHint) {
+      return ReturnCode.SEEK_NEXT_USING_HINT;
+    }
     return ReturnCode.INCLUDE;
   }
 
@@ -105,7 +116,9 @@ public class PrefixFilter extends FilterBase {
   @Override
   public byte[] toByteArray() {
     FilterProtos.PrefixFilter.Builder builder = FilterProtos.PrefixFilter.newBuilder();
-    if (this.prefix != null) builder.setPrefix(UnsafeByteOperations.unsafeWrap(this.prefix));
+    if (this.prefix != null) {
+      builder.setPrefix(UnsafeByteOperations.unsafeWrap(this.prefix));
+    }
     return builder.build().toByteArray();
   }
 
@@ -140,6 +153,31 @@ public class PrefixFilter extends FilterBase {
     }
     PrefixFilter other = (PrefixFilter) o;
     return Bytes.equals(this.getPrefix(), other.getPrefix());
+  }
+
+  @Override
+  public Cell getNextCellHint(Cell cell) {
+    byte[] hintBytes;
+    if (reversed) {
+      // On reversed scan hint should be the prefix with last byte incremented
+      hintBytes = increaseLastNonMaxByte(this.prefix);
+    } else {
+      // On forward scan hint should be the prefix
+      hintBytes = prefix;
+    }
+    return PrivateCellUtil.createFirstOnRow(hintBytes, 0, (short) hintBytes.length);
+  }
+
+  private byte[] increaseLastNonMaxByte(byte[] bytes) {
+    byte[] result = Arrays.copyOf(bytes, bytes.length);
+    for (int i = bytes.length - 1; i >= 0; i--) {
+      byte b = bytes[i];
+      if (b < Byte.MAX_VALUE) {
+        result[i] = (byte) (b + 1);
+        break;
+      }
+    }
+    return result;
   }
 
   @Override
