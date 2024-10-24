@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.util;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,6 +40,40 @@ public final class RecoverLeaseFSUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(RecoverLeaseFSUtils.class);
 
+  private static Class<?> leaseRecoverableClazz = null;
+  private static Method recoverLeaseMethod = null;
+  public static final String LEASE_RECOVERABLE_CLASS_NAME = "org.apache.hadoop.fs.LeaseRecoverable";
+  static {
+    LOG.debug("Initialize RecoverLeaseFSUtils");
+    initializeRecoverLeaseMethod(LEASE_RECOVERABLE_CLASS_NAME);
+  }
+
+  /**
+   * Initialize reflection classes and methods. If LeaseRecoverable class is not found, look for
+   * DistributedFilSystem#recoverLease method.
+   */
+  static void initializeRecoverLeaseMethod(String className) {
+    try {
+      leaseRecoverableClazz = Class.forName(className);
+      recoverLeaseMethod = leaseRecoverableClazz.getMethod("recoverLease", Path.class);
+      LOG.debug("set recoverLeaseMethod to " + className + ".recoverLease()");
+    } catch (ClassNotFoundException e) {
+      LOG.debug(
+        "LeaseRecoverable interface not in the classpath, this means Hadoop 3.3.5 or below.");
+      try {
+        recoverLeaseMethod = DistributedFileSystem.class.getMethod("recoverLease", Path.class);
+      } catch (NoSuchMethodException ex) {
+        LOG.error("Cannot find recoverLease method in DistributedFileSystem class. "
+          + "It should never happen. Abort.", ex);
+        throw new RuntimeException(ex);
+      }
+    } catch (NoSuchMethodException e) {
+      LOG.error("Cannot find recoverLease method in LeaseRecoverable class. "
+        + "It should never happen. Abort.", e);
+      throw new RuntimeException(e);
+    }
+  }
+
   private RecoverLeaseFSUtils() {
   }
 
@@ -48,18 +83,31 @@ public final class RecoverLeaseFSUtils {
   }
 
   /**
-   * Recover the lease from HDFS, retrying multiple times.
+   * Recover the lease from Hadoop file system, retrying multiple times.
    */
   public static void recoverFileLease(FileSystem fs, Path p, Configuration conf,
     CancelableProgressable reporter) throws IOException {
     if (fs instanceof FilterFileSystem) {
       fs = ((FilterFileSystem) fs).getRawFileSystem();
     }
+
     // lease recovery not needed for local file system case.
-    if (!(fs instanceof DistributedFileSystem)) {
-      return;
+    if (isLeaseRecoverable(fs)) {
+      recoverDFSFileLease(fs, p, conf, reporter);
     }
-    recoverDFSFileLease((DistributedFileSystem) fs, p, conf, reporter);
+  }
+
+  public static boolean isLeaseRecoverable(FileSystem fs) {
+    // return true if HDFS.
+    if (fs instanceof DistributedFileSystem) {
+      return true;
+    }
+    // return true if the file system implements LeaseRecoverable interface.
+    if (leaseRecoverableClazz != null) {
+      return leaseRecoverableClazz.isAssignableFrom(fs.getClass());
+    }
+    // return false if the file system is not HDFS and does not implement LeaseRecoverable.
+    return false;
   }
 
   /*
@@ -81,7 +129,7 @@ public final class RecoverLeaseFSUtils {
    * false, repeat starting at step 5. above. If HDFS-4525 is available, call it every second, and
    * we might be able to exit early.
    */
-  private static boolean recoverDFSFileLease(final DistributedFileSystem dfs, final Path p,
+  private static boolean recoverDFSFileLease(final FileSystem dfs, final Path p,
     final Configuration conf, final CancelableProgressable reporter) throws IOException {
     LOG.info("Recover lease on dfs file " + p);
     long startWaiting = EnvironmentEdgeManager.currentTime();
@@ -167,14 +215,15 @@ public final class RecoverLeaseFSUtils {
    * Try to recover the lease.
    * @return True if dfs#recoverLease came by true.
    */
-  private static boolean recoverLease(final DistributedFileSystem dfs, final int nbAttempt,
-    final Path p, final long startWaiting) throws FileNotFoundException {
+  private static boolean recoverLease(final FileSystem dfs, final int nbAttempt, final Path p,
+    final long startWaiting) throws FileNotFoundException {
     boolean recovered = false;
     try {
-      recovered = dfs.recoverLease(p);
+      recovered = (Boolean) recoverLeaseMethod.invoke(dfs, p);
       LOG.info((recovered ? "Recovered lease, " : "Failed to recover lease, ")
         + getLogMessageDetail(nbAttempt, p, startWaiting));
-    } catch (IOException e) {
+    } catch (InvocationTargetException ite) {
+      final Throwable e = ite.getCause();
       if (e instanceof LeaseExpiredException && e.getMessage().contains("File does not exist")) {
         // This exception comes out instead of FNFE, fix it
         throw new FileNotFoundException("The given WAL wasn't found at " + p);
@@ -182,6 +231,9 @@ public final class RecoverLeaseFSUtils {
         throw (FileNotFoundException) e;
       }
       LOG.warn(getLogMessageDetail(nbAttempt, p, startWaiting), e);
+    } catch (IllegalAccessException e) {
+      LOG.error("Failed to call recoverLease on {}. Abort.", dfs, e);
+      throw new RuntimeException(e);
     }
     return recovered;
   }
@@ -197,8 +249,7 @@ public final class RecoverLeaseFSUtils {
    * Call HDFS-4525 isFileClosed if it is available.
    * @return True if file is closed.
    */
-  private static boolean isFileClosed(final DistributedFileSystem dfs, final Method m,
-    final Path p) {
+  private static boolean isFileClosed(final FileSystem dfs, final Method m, final Path p) {
     try {
       return (Boolean) m.invoke(dfs, p);
     } catch (SecurityException e) {

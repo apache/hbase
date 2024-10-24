@@ -17,10 +17,18 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hbase.util.RecoverLeaseFSUtils.LEASE_RECOVERABLE_CLASS_NAME;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
@@ -30,7 +38,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 
 /**
  * Test our recoverLease loop against mocked up filesystem.
@@ -58,18 +65,58 @@ public class TestRecoverLeaseFSUtils {
   public void testRecoverLease() throws IOException {
     long startTime = EnvironmentEdgeManager.currentTime();
     HTU.getConfiguration().setInt("hbase.lease.recovery.dfs.timeout", 1000);
-    CancelableProgressable reporter = Mockito.mock(CancelableProgressable.class);
-    Mockito.when(reporter.progress()).thenReturn(true);
-    DistributedFileSystem dfs = Mockito.mock(DistributedFileSystem.class);
+    CancelableProgressable reporter = mock(CancelableProgressable.class);
+    when(reporter.progress()).thenReturn(true);
+    DistributedFileSystem dfs = mock(DistributedFileSystem.class);
     // Fail four times and pass on the fifth.
-    Mockito.when(dfs.recoverLease(FILE)).thenReturn(false).thenReturn(false).thenReturn(false)
+    when(dfs.recoverLease(FILE)).thenReturn(false).thenReturn(false).thenReturn(false)
       .thenReturn(false).thenReturn(true);
     RecoverLeaseFSUtils.recoverFileLease(dfs, FILE, HTU.getConfiguration(), reporter);
-    Mockito.verify(dfs, Mockito.times(5)).recoverLease(FILE);
+    verify(dfs, times(5)).recoverLease(FILE);
     // Make sure we waited at least hbase.lease.recovery.dfs.timeout * 3 (the first two
     // invocations will happen pretty fast... the we fall into the longer wait loop).
     assertTrue((EnvironmentEdgeManager.currentTime() - startTime)
         > (3 * HTU.getConfiguration().getInt("hbase.lease.recovery.dfs.timeout", 61000)));
+  }
+
+  private interface FakeLeaseRecoverable {
+    @SuppressWarnings("unused")
+    boolean recoverLease(Path p) throws IOException;
+
+    @SuppressWarnings("unused")
+    boolean isFileClosed(Path p) throws IOException;
+  }
+
+  private static abstract class RecoverableFileSystem extends FileSystem
+    implements FakeLeaseRecoverable {
+    @Override
+    public boolean recoverLease(Path p) throws IOException {
+      return true;
+    }
+
+    @Override
+    public boolean isFileClosed(Path p) throws IOException {
+      return true;
+    }
+  }
+
+  /**
+   * Test that we can use reflection to access LeaseRecoverable methods.
+   */
+  @Test
+  public void testLeaseRecoverable() throws IOException {
+    try {
+      // set LeaseRecoverable to FakeLeaseRecoverable for testing
+      RecoverLeaseFSUtils.initializeRecoverLeaseMethod(FakeLeaseRecoverable.class.getName());
+      RecoverableFileSystem mockFS = mock(RecoverableFileSystem.class);
+      when(mockFS.recoverLease(FILE)).thenReturn(true);
+      RecoverLeaseFSUtils.recoverFileLease(mockFS, FILE, HTU.getConfiguration());
+      verify(mockFS, times(1)).recoverLease(FILE);
+
+      assertTrue(RecoverLeaseFSUtils.isLeaseRecoverable(mock(RecoverableFileSystem.class)));
+    } finally {
+      RecoverLeaseFSUtils.initializeRecoverLeaseMethod(LEASE_RECOVERABLE_CLASS_NAME);
+    }
   }
 
   /**
@@ -79,17 +126,23 @@ public class TestRecoverLeaseFSUtils {
   public void testIsFileClosed() throws IOException {
     // Make this time long so it is plain we broke out because of the isFileClosed invocation.
     HTU.getConfiguration().setInt("hbase.lease.recovery.dfs.timeout", 100000);
-    CancelableProgressable reporter = Mockito.mock(CancelableProgressable.class);
-    Mockito.when(reporter.progress()).thenReturn(true);
-    IsFileClosedDistributedFileSystem dfs = Mockito.mock(IsFileClosedDistributedFileSystem.class);
+    CancelableProgressable reporter = mock(CancelableProgressable.class);
+    when(reporter.progress()).thenReturn(true);
+    IsFileClosedDistributedFileSystem dfs = mock(IsFileClosedDistributedFileSystem.class);
     // Now make it so we fail the first two times -- the two fast invocations, then we fall into
     // the long loop during which we will call isFileClosed.... the next invocation should
     // therefore return true if we are to break the loop.
-    Mockito.when(dfs.recoverLease(FILE)).thenReturn(false).thenReturn(false).thenReturn(true);
-    Mockito.when(dfs.isFileClosed(FILE)).thenReturn(true);
+    when(dfs.recoverLease(FILE)).thenReturn(false).thenReturn(false).thenReturn(true);
+    when(dfs.isFileClosed(FILE)).thenReturn(true);
     RecoverLeaseFSUtils.recoverFileLease(dfs, FILE, HTU.getConfiguration(), reporter);
-    Mockito.verify(dfs, Mockito.times(2)).recoverLease(FILE);
-    Mockito.verify(dfs, Mockito.times(1)).isFileClosed(FILE);
+    verify(dfs, times(2)).recoverLease(FILE);
+    verify(dfs, times(1)).isFileClosed(FILE);
+  }
+
+  @Test
+  public void testIsLeaseRecoverable() {
+    assertTrue(RecoverLeaseFSUtils.isLeaseRecoverable(new DistributedFileSystem()));
+    assertFalse(RecoverLeaseFSUtils.isLeaseRecoverable(new LocalFileSystem()));
   }
 
   /**
