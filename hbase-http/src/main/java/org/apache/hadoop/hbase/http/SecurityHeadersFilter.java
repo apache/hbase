@@ -36,10 +36,10 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SecurityHeadersFilter implements Filter {
+
   private static final Logger LOG = LoggerFactory.getLogger(SecurityHeadersFilter.class);
-  private static final String DEFAULT_HSTS = "max-age=63072000;includeSubDomains;preload";
-  private static final String DEFAULT_CSP =
-    "default-src https: data: 'unsafe-inline' 'unsafe-eval'";
+  private static final String DEFAULT_HSTS = "";
+  private static final String DEFAULT_CSP = "";
   private FilterConfig filterConfig;
 
   @Override
@@ -70,26 +70,14 @@ public class SecurityHeadersFilter implements Filter {
   }
 
   /**
-   * @param conf     configuration
-   * @param isSecure use secure defaults if 'true'
-   * @return default parameters, as a map
-   */
-  public static Map<String, String> getDefaultParameters(Configuration conf, boolean isSecure) {
-    Map<String, String> params = new HashMap<>();
-    params.put("hsts", conf.get("hbase.http.filter.hsts.value", isSecure ? DEFAULT_HSTS : ""));
-    params.put("csp", conf.get("hbase.http.filter.csp.value", isSecure ? DEFAULT_CSP : ""));
-    return params;
-  }
-
-  /**
    * @param conf configuration
    * @return default parameters, as a map
-   * @deprecated Use {@link SecurityHeadersFilter#getDefaultParameters(Configuration, boolean)}
-   *             instead.
    */
-  @Deprecated
   public static Map<String, String> getDefaultParameters(Configuration conf) {
-    return getDefaultParameters(conf, false);
+    Map<String, String> params = new HashMap<>();
+    params.put("hsts", conf.get("hbase.http.filter.hsts.value", DEFAULT_HSTS));
+    params.put("csp", conf.get("hbase.http.filter.csp.value", DEFAULT_CSP));
+    return params;
   }
 
 }
