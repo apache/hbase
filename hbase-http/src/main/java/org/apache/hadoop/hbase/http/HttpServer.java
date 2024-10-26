@@ -639,10 +639,9 @@ public class HttpServer implements FilterContainer {
     addGlobalFilter("clickjackingprevention", ClickjackingPreventionFilter.class.getName(),
       ClickjackingPreventionFilter.getDefaultParameters(conf));
 
-    HttpConfig httpConfig = new HttpConfig(conf);
-
-    addGlobalFilter("securityheaders", SecurityHeadersFilter.class.getName(),
-      SecurityHeadersFilter.getDefaultParameters(conf, httpConfig.isSecure()));
+    addGlobalFilter("securityheaders",
+        SecurityHeadersFilter.class.getName(),
+        SecurityHeadersFilter.getDefaultParameters(conf));
 
     // But security needs to be enabled prior to adding the other servlets
     if (authenticationEnabled) {
