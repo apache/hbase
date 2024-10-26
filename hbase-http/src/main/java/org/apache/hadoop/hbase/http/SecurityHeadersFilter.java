@@ -36,10 +36,11 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SecurityHeadersFilter implements Filter {
-  private static final Logger LOG = LoggerFactory.getLogger(SecurityHeadersFilter.class);
-  private static final String DEFAULT_HSTS = "max-age=63072000;includeSubDomains;preload";
-  private static final String DEFAULT_CSP =
-    "default-src https: data: 'unsafe-inline' 'unsafe-eval'";
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SecurityHeadersFilter.class);
+  private static final String DEFAULT_HSTS = "";
+  private static final String DEFAULT_CSP = "";
   private FilterConfig filterConfig;
 
   @Override
@@ -69,10 +70,12 @@ public class SecurityHeadersFilter implements Filter {
   public void destroy() {
   }
 
-  public static Map<String, String> getDefaultParameters(Configuration conf, boolean isSecure) {
+  public static Map<String, String> getDefaultParameters(Configuration conf) {
     Map<String, String> params = new HashMap<>();
-    params.put("hsts", conf.get("hbase.http.filter.hsts.value", isSecure ? DEFAULT_HSTS : ""));
-    params.put("csp", conf.get("hbase.http.filter.csp.value", isSecure ? DEFAULT_CSP : ""));
+    params.put("hsts", conf.get("hbase.http.filter.hsts.value",
+        DEFAULT_HSTS));
+    params.put("csp", conf.get("hbase.http.filter.csp.value",
+        DEFAULT_CSP));
     return params;
   }
 }
