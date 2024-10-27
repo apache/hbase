@@ -108,6 +108,8 @@ if [ -n "${allow_hadoop}" ]; then
   allowed_expr+="|^[^-]*-version-info.properties$"
   #   * Hadoop's application classloader properties file.
   allowed_expr+="|^org.apache.hadoop.application-classloader.properties$"
+  #   * Comes from dnssecjava via Hadoop
+  allowed_expr+="|^messages.properties$"
 else
   # We have some classes for integrating with the Hadoop Metrics2 system
   # that have to be in a particular package space due to access rules.
