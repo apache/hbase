@@ -81,7 +81,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
-import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.ScannerMessage.Scanner;
+import org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner;
 
 /**
  * A representation of Scanner parameters.

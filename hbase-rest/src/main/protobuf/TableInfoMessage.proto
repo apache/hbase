@@ -16,17 +16,16 @@
  * limitations under the License.
  */
 syntax = "proto2";
-package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
+package org.apache.hadoop.hbase.rest.protobuf.generated;
 
-message ColumnSchema {
-  optional string name = 1;
-  message Attribute {
+message TableInfo {
+  required string name = 1;
+  message Region {
     required string name = 1;
-    required string value = 2;
+    optional bytes startKey = 2;
+    optional bytes endKey = 3;
+    optional int64 id = 4;
+    optional string location = 5;
   }
-  repeated Attribute attrs = 2;
-  // optional helpful encodings of commonly used attributes
-  optional int32 ttl = 3;
-  optional int32 maxVersions = 4;
-  optional string compression = 5;
+  repeated Region regions = 2;
 }

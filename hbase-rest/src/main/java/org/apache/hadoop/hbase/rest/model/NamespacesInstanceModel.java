@@ -35,7 +35,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
-import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.NamespacePropertiesMessage.NamespaceProperties;
+import org.apache.hadoop.hbase.rest.protobuf.generated.NamespacePropertiesMessage.NamespaceProperties;
 
 /**
  * List a HBase namespace's key/value properties.

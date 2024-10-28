@@ -30,7 +30,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
-import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.TableListMessage.TableList;
+import org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList;
 
 /**
  * Simple representation of a list of table names.

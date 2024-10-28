@@ -32,7 +32,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
-import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.TableInfoMessage.TableInfo;
+import org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo;
 
 /**
  * Representation of a list of table regions.
