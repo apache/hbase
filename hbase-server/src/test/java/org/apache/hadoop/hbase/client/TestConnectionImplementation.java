@@ -83,8 +83,6 @@ import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -98,6 +96,8 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
@@ -1240,10 +1240,8 @@ public class TestConnectionImplementation {
       List<HRegionLocation> allRegions1 = table1.getRegionLocator().getAllRegionLocations();
       List<HRegionLocation> allRegions2 = table2.getRegionLocator().getAllRegionLocations();
 
-      Map<TableName, List<HRegionLocation>> tableToRegions = new HashMap<>(ImmutableMap.of(
-        TABLE_NAME1, allRegions1,
-        TABLE_NAME2, allRegions2
-      ));
+      Map<TableName, List<HRegionLocation>> tableToRegions =
+        new HashMap<>(ImmutableMap.of(TABLE_NAME1, allRegions1, TABLE_NAME2, allRegions2));
 
       // verify that all regions are cached
       ConnectionImplementation conn = (ConnectionImplementation) TEST_UTIL.getConnection();
@@ -1276,8 +1274,7 @@ public class TestConnectionImplementation {
           cacheRemainedCount++;
         }
       }
-      assertEquals(allRegions1.size() + allRegions2.size(),
-        cacheRemovedCount + cacheRemainedCount);
+      assertEquals(allRegions1.size() + allRegions2.size(), cacheRemovedCount + cacheRemainedCount);
     } finally {
       TEST_UTIL.deleteTableIfAny(TABLE_NAME1);
       TEST_UTIL.deleteTableIfAny(TABLE_NAME2);
@@ -1290,11 +1287,10 @@ public class TestConnectionImplementation {
       ConnectionImplementation conn = spy((ConnectionImplementation) TEST_UTIL.getConnection());
 
       // expectations: exception -> expected accumulated call times
-      List<Pair<Exception, Integer>> expectations = new ArrayList<>(ImmutableList.of(
-        Pair.newPair(new CallTimeoutException("test1"), 1),
-        Pair.newPair(new ConnectException("test2"), 2),
-        Pair.newPair(new NotServingRegionException("test3"), 2)
-      ));
+      List<Pair<Exception, Integer>> expectations =
+        new ArrayList<>(ImmutableList.of(Pair.newPair(new CallTimeoutException("test1"), 1),
+          Pair.newPair(new ConnectException("test2"), 2),
+          Pair.newPair(new NotServingRegionException("test3"), 2)));
 
       for (Pair<Exception, Integer> pair : expectations) {
         Exception exception = pair.getFirst();

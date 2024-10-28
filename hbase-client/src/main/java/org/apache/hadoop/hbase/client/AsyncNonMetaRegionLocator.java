@@ -576,8 +576,8 @@ class AsyncNonMetaRegionLocator {
   void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
     Optional<MetricsConnection> connectionMetrics = conn.getConnectionMetrics();
     AsyncRegionLocatorHelper.updateCachedLocationOnError(loc, exception, this::getCachedLocation,
-      this::addLocationToCache, this::removeLocationFromCache,
-      this::removeServerLocationFromCache, connectionMetrics.orElse(null));
+      this::addLocationToCache, this::removeLocationFromCache, this::removeServerLocationFromCache,
+      connectionMetrics.orElse(null));
   }
 
   void clearCache(TableName tableName) {
