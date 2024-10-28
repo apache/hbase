@@ -19,17 +19,25 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
@@ -50,6 +58,7 @@ import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -59,6 +68,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
+import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -70,6 +80,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
@@ -1210,6 +1221,96 @@ public class TestConnectionImplementation {
       Thread.sleep(1000);
       System.gc();
       Thread.sleep(1000);
+    }
+  }
+
+  @Test
+  public void testRemoveCachedLocationForServerOnError() throws IOException {
+    byte[] cf = "c".getBytes();
+    byte[][] splitKeys = new byte[8][];
+    for (int i = 0; i < 8; i++) {
+      splitKeys[i] = ("row" + i + 1).getBytes();
+    }
+
+    try (Table table1 = TEST_UTIL.createTable(TABLE_NAME1, cf, splitKeys);
+      Table table2 = TEST_UTIL.createTable(TABLE_NAME2, cf, splitKeys)) {
+      // cache all region locations
+      List<HRegionLocation> allRegions1 = table1.getRegionLocator().getAllRegionLocations();
+      List<HRegionLocation> allRegions2 = table2.getRegionLocator().getAllRegionLocations();
+
+      Map<TableName, List<HRegionLocation>> tableToRegions =
+        new HashMap<TableName, List<HRegionLocation>>(){
+          {
+            put(TABLE_NAME1, allRegions1);
+            put(TABLE_NAME2, allRegions2);
+          }
+        };
+
+      // verify that all regions are cached
+      ConnectionImplementation conn = (ConnectionImplementation) TEST_UTIL.getConnection();
+      for (Map.Entry<TableName, List<HRegionLocation>> entry : tableToRegions.entrySet()) {
+        for (HRegionLocation loc : entry.getValue()) {
+          assertNotNull(conn.getCachedLocation(entry.getKey(), loc.getRegion().getStartKey()));
+        }
+      }
+
+      // CallTimeoutException on a single region
+      byte[] rowOnError = allRegions1.get(0).getRegion().getStartKey();
+      HRegionLocation locOnError = conn.getRegionLocation(TABLE_NAME1, rowOnError, false);
+      conn.updateCachedLocations(TABLE_NAME1, locOnError.getRegion().getRegionName(), rowOnError,
+        new CallTimeoutException("test"), locOnError.getServerName());
+      ServerName cacheRemovedServer = locOnError.getServerName();
+
+      // But all location cache on the same server should be removed
+      int cacheRemovedCount = 0;
+      int cacheRemainedCount = 0;
+      for (Map.Entry<TableName, List<HRegionLocation>> entry : tableToRegions.entrySet()) {
+        for (HRegionLocation loc : entry.getValue()) {
+          RegionLocations locCached =
+            conn.getCachedLocation(entry.getKey(), loc.getRegion().getStartKey());
+          if (locCached == null) {
+            cacheRemovedCount++;
+            continue;
+          }
+
+          assertNotEquals(cacheRemovedServer, locCached.getRegionLocation().getServerName());
+          cacheRemainedCount++;
+        }
+      }
+      assertEquals(allRegions1.size() + allRegions2.size(),
+        cacheRemovedCount + cacheRemainedCount);
+    } finally {
+      TEST_UTIL.deleteTableIfAny(TABLE_NAME1);
+      TEST_UTIL.deleteTableIfAny(TABLE_NAME2);
+    }
+  }
+
+  @Test
+  public void testCallRemoveCachedLocationForServerOnError() throws IOException {
+    try (Table ignored = TEST_UTIL.createTable(TABLE_NAME, "c".getBytes())) {
+      ConnectionImplementation conn = spy((ConnectionImplementation) TEST_UTIL.getConnection());
+
+      // expectations: exception -> expected accumulated call times
+      List<Pair<Exception, Integer>> expectations = new ArrayList<Pair<Exception, Integer>>(){
+        {
+          add(Pair.newPair(new CallTimeoutException("test1"), 1));
+          add(Pair.newPair(new ConnectException("test2"), 2));
+          add(Pair.newPair(new NotServingRegionException("test3"), 2));
+        }
+      };
+
+      for (Pair<Exception, Integer> pair : expectations) {
+        Exception exception = pair.getFirst();
+        Integer expectedCallTimes = pair.getSecond();
+
+        byte[] rowOnError = "row".getBytes();
+        HRegionLocation locOnError = conn.getRegionLocation(TABLE_NAME, rowOnError, false);
+        conn.updateCachedLocations(TABLE_NAME, locOnError.getRegion().getRegionName(), rowOnError,
+          exception, locOnError.getServerName());
+        verify(conn, times(expectedCallTimes)).clearCache(any());
+      }
+    } finally {
+      TEST_UTIL.deleteTableIfAny(TABLE_NAME);
     }
   }
 }
