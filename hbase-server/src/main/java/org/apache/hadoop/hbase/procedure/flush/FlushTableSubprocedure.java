@@ -89,7 +89,7 @@ public class FlushTableSubprocedure extends Subprocedure {
         boolean shouldCompact = flushResult.isCompactionNeeded();
         if (shouldCompact) {
           rs.getCompactSplitThread().requestSystemCompaction(region,
-            "Compaction triggered by flush operation");
+            "Compaction is triggered by flush operation");
         }
       } finally {
         LOG.debug("Closing region operation on " + region);
