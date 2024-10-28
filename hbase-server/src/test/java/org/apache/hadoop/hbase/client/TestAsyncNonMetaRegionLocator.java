@@ -67,6 +67,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -565,12 +567,10 @@ public class TestAsyncNonMetaRegionLocator {
 
       List<RegionInfo> allRegions1 = TEST_UTIL.getAdmin().getRegions(TABLE_NAME);
       List<RegionInfo> allRegions2 = TEST_UTIL.getAdmin().getRegions(tableName2);
-      Map<TableName, List<RegionInfo>> tableToRegions = new HashMap<>() {
-        {
-          put(TABLE_NAME, allRegions1);
-          put(tableName2, allRegions2);
-        }
-      };
+      Map<TableName, List<RegionInfo>> tableToRegions = new HashMap<>(ImmutableMap.of(
+        TABLE_NAME, allRegions1,
+        tableName2, allRegions2
+      ));
 
       // cache all locations
       for (Map.Entry<TableName, List<RegionInfo>> entry : tableToRegions.entrySet()) {
@@ -580,6 +580,9 @@ public class TestAsyncNonMetaRegionLocator {
           assertNotNull(locs);
         }
       }
+
+      // due to timing issue when CatalogReplicaMode is LOAD_BALANCE
+      Thread.sleep(100);
 
       // CallTimeoutException on a single region
       HRegionLocation locOnError =
@@ -619,13 +622,11 @@ public class TestAsyncNonMetaRegionLocator {
     AsyncNonMetaRegionLocator locator = spy(new AsyncNonMetaRegionLocator(conn));
 
     // expectations: exception -> expected accumulated call times
-    List<Pair<Exception, Integer>> expectations = new ArrayList<Pair<Exception, Integer>>(){
-      {
-        add(Pair.newPair(new CallTimeoutException("test1"), 1));
-        add(Pair.newPair(new ConnectException("test2"), 2));
-        add(Pair.newPair(new NotServingRegionException("test3"), 2));
-      }
-    };
+    List<Pair<Exception, Integer>> expectations = new ArrayList<>(ImmutableList.of(
+      Pair.newPair(new CallTimeoutException("test1"), 1),
+      Pair.newPair(new ConnectException("test2"), 2),
+      Pair.newPair(new NotServingRegionException("test3"), 2)
+    ));
 
     for (Pair<Exception, Integer> pair : expectations) {
       Exception exception = pair.getFirst();
