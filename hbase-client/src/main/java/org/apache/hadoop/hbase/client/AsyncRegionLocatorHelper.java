@@ -86,8 +86,11 @@ final class AsyncRegionLocatorHelper {
       LOG.debug("Try updating {} with the new location {} constructed by {}", loc, newLoc,
         rme.toString());
       addToCache.accept(newLoc);
-    } if ((cause instanceof CallTimeoutException || cause instanceof ConnectException)
-      && removeServerFromCache != null) {
+    }
+    if (
+      (cause instanceof CallTimeoutException || cause instanceof ConnectException)
+        && removeServerFromCache != null
+    ) {
       // Clear all meta caches of the server on which hardware failure related exceptions occurred
       //
       // Those exceptions might be caused by a network or hardware issue of that server.

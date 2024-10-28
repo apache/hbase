@@ -67,8 +67,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -80,6 +78,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
@@ -562,15 +562,13 @@ public class TestAsyncNonMetaRegionLocator {
     createMultiRegionTable();
     TableName tableName2 = TableName.valueOf("async2");
 
-    try(Table ignored = TEST_UTIL.createTable(tableName2, FAMILY, SPLIT_KEYS)) {
+    try (Table ignored = TEST_UTIL.createTable(tableName2, FAMILY, SPLIT_KEYS)) {
       TEST_UTIL.waitTableAvailable(tableName2);
 
       List<RegionInfo> allRegions1 = TEST_UTIL.getAdmin().getRegions(TABLE_NAME);
       List<RegionInfo> allRegions2 = TEST_UTIL.getAdmin().getRegions(tableName2);
-      Map<TableName, List<RegionInfo>> tableToRegions = new HashMap<>(ImmutableMap.of(
-        TABLE_NAME, allRegions1,
-        tableName2, allRegions2
-      ));
+      Map<TableName, List<RegionInfo>> tableToRegions =
+        new HashMap<>(ImmutableMap.of(TABLE_NAME, allRegions1, tableName2, allRegions2));
 
       // cache all locations
       for (Map.Entry<TableName, List<RegionInfo>> entry : tableToRegions.entrySet()) {
@@ -596,8 +594,8 @@ public class TestAsyncNonMetaRegionLocator {
       int cacheRemainedCount = 0;
       for (Map.Entry<TableName, List<RegionInfo>> entry : tableToRegions.entrySet()) {
         for (RegionInfo region : entry.getValue()) {
-          RegionLocations locs = locator.getRegionLocationInCache(entry.getKey(),
-            region.getStartKey());
+          RegionLocations locs =
+            locator.getRegionLocationInCache(entry.getKey(), region.getStartKey());
           if (locs == null) {
             cacheRemovedCount++;
             continue;
@@ -608,8 +606,7 @@ public class TestAsyncNonMetaRegionLocator {
           cacheRemainedCount++;
         }
       }
-      assertEquals(allRegions1.size() + allRegions2.size(),
-        cacheRemovedCount + cacheRemainedCount);
+      assertEquals(allRegions1.size() + allRegions2.size(), cacheRemovedCount + cacheRemainedCount);
     } finally {
       TEST_UTIL.deleteTableIfAny(tableName2);
     }
@@ -622,20 +619,18 @@ public class TestAsyncNonMetaRegionLocator {
     AsyncNonMetaRegionLocator locator = spy(new AsyncNonMetaRegionLocator(conn));
 
     // expectations: exception -> expected accumulated call times
-    List<Pair<Exception, Integer>> expectations = new ArrayList<>(ImmutableList.of(
-      Pair.newPair(new CallTimeoutException("test1"), 1),
-      Pair.newPair(new ConnectException("test2"), 2),
-      Pair.newPair(new NotServingRegionException("test3"), 2)
-    ));
+    List<Pair<Exception, Integer>> expectations =
+      new ArrayList<>(ImmutableList.of(Pair.newPair(new CallTimeoutException("test1"), 1),
+        Pair.newPair(new ConnectException("test2"), 2),
+        Pair.newPair(new NotServingRegionException("test3"), 2)));
 
     for (Pair<Exception, Integer> pair : expectations) {
       Exception exception = pair.getFirst();
       Integer expectedCallTimes = pair.getSecond();
 
-      HRegionLocation loc =
-        locator.getRegionLocations(TABLE_NAME, EMPTY_START_ROW,
-          RegionReplicaUtil.DEFAULT_REPLICA_ID,
-          RegionLocateType.CURRENT, false).get().getDefaultRegionLocation();
+      HRegionLocation loc = locator.getRegionLocations(TABLE_NAME, EMPTY_START_ROW,
+        RegionReplicaUtil.DEFAULT_REPLICA_ID, RegionLocateType.CURRENT, false).get()
+        .getDefaultRegionLocation();
 
       locator.updateCachedLocationOnError(loc, exception);
       verify(locator, times(expectedCallTimes)).removeServerLocationFromCache(any());
