@@ -639,6 +639,7 @@ public class BucketCache implements BlockCache, HeapSize {
   public Cacheable getBlock(BlockCacheKey key, boolean caching, boolean repeat,
     boolean updateCacheMetrics) {
     if (!isCacheEnabled()) {
+      cacheStats.miss(caching, key.isPrimary(), key.getBlockType());
       return null;
     }
     RAMQueueEntry re = ramCache.get(key);
