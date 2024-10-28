@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil.findException;
 import static org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil.isMetaClearingException;
 
+import java.net.ConnectException;
 import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -27,6 +28,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +60,7 @@ final class AsyncRegionLocatorHelper {
   static void updateCachedLocationOnError(HRegionLocation loc, Throwable exception,
     Function<HRegionLocation, HRegionLocation> cachedLocationSupplier,
     Consumer<HRegionLocation> addToCache, Consumer<HRegionLocation> removeFromCache,
-    MetricsConnection metrics) {
+    Consumer<HRegionLocation> removeServerFromCache, MetricsConnection metrics) {
     HRegionLocation oldLoc = cachedLocationSupplier.apply(loc);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Try updating {} , the old value is {}, error={}", loc, oldLoc,
@@ -84,6 +86,20 @@ final class AsyncRegionLocatorHelper {
       LOG.debug("Try updating {} with the new location {} constructed by {}", loc, newLoc,
         rme.toString());
       addToCache.accept(newLoc);
+    } if ((cause instanceof CallTimeoutException || cause instanceof ConnectException)
+      && removeServerFromCache != null) {
+      // Clear all meta caches of the server on which hardware failure related exceptions occurred
+      //
+      // Those exceptions might be caused by a network or hardware issue of that server.
+      // So we might not be able to connect to that server for a while.
+      // If we don't clear the caches, we might get the same exceptions
+      // as many times as the number of location caches of that server.
+      LOG.debug("Try clearing all region locations of the server {} from cache",
+        loc.getServerName());
+      if (metrics != null) {
+        metrics.incrCacheDroppingExceptions(exception);
+      }
+      removeServerFromCache.accept(loc);
     } else {
       LOG.debug("Try removing {} from cache", loc);
       if (metrics != null) {

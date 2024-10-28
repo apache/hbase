@@ -543,6 +543,13 @@ class AsyncNonMetaRegionLocator {
     }
   }
 
+  void removeServerLocationFromCache(HRegionLocation loc) {
+    if (clearCache(loc.getServerName())) {
+      conn.getConnectionMetrics().ifPresent(MetricsConnection::incrMetaCacheNumClearServer);
+      updateMetaReplicaSelector(loc);
+    }
+  }
+
   private void updateMetaReplicaSelector(HRegionLocation loc) {
     // Tell metaReplicaSelector that the location is stale. It will create a stale entry
     // with timestamp internally. Next time the client looks up the same location,
@@ -568,7 +575,8 @@ class AsyncNonMetaRegionLocator {
   void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
     Optional<MetricsConnection> connectionMetrics = conn.getConnectionMetrics();
     AsyncRegionLocatorHelper.updateCachedLocationOnError(loc, exception, this::getCachedLocation,
-      this::addLocationToCache, this::removeLocationFromCache, connectionMetrics.orElse(null));
+      this::addLocationToCache, this::removeLocationFromCache,
+      this::removeServerLocationFromCache, connectionMetrics.orElse(null));
   }
 
   void clearCache(TableName tableName) {
@@ -594,10 +602,12 @@ class AsyncNonMetaRegionLocator {
     cache.clear();
   }
 
-  void clearCache(ServerName serverName) {
+  boolean clearCache(ServerName serverName) {
+    boolean removed = false;
     for (TableCache tableCache : cache.values()) {
-      tableCache.regionLocationCache.removeForServer(serverName);
+      removed |= tableCache.regionLocationCache.removeForServer(serverName);
     }
+    return removed;
   }
 
   // only used for testing whether we have cached the location for a region.
