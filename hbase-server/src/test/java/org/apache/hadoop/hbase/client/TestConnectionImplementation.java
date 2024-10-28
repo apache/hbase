@@ -83,6 +83,8 @@ import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -1238,13 +1240,10 @@ public class TestConnectionImplementation {
       List<HRegionLocation> allRegions1 = table1.getRegionLocator().getAllRegionLocations();
       List<HRegionLocation> allRegions2 = table2.getRegionLocator().getAllRegionLocations();
 
-      Map<TableName, List<HRegionLocation>> tableToRegions =
-        new HashMap<TableName, List<HRegionLocation>>(){
-          {
-            put(TABLE_NAME1, allRegions1);
-            put(TABLE_NAME2, allRegions2);
-          }
-        };
+      Map<TableName, List<HRegionLocation>> tableToRegions = new HashMap<>(ImmutableMap.of(
+        TABLE_NAME1, allRegions1,
+        TABLE_NAME2, allRegions2
+      ));
 
       // verify that all regions are cached
       ConnectionImplementation conn = (ConnectionImplementation) TEST_UTIL.getConnection();
@@ -1291,13 +1290,11 @@ public class TestConnectionImplementation {
       ConnectionImplementation conn = spy((ConnectionImplementation) TEST_UTIL.getConnection());
 
       // expectations: exception -> expected accumulated call times
-      List<Pair<Exception, Integer>> expectations = new ArrayList<Pair<Exception, Integer>>(){
-        {
-          add(Pair.newPair(new CallTimeoutException("test1"), 1));
-          add(Pair.newPair(new ConnectException("test2"), 2));
-          add(Pair.newPair(new NotServingRegionException("test3"), 2));
-        }
-      };
+      List<Pair<Exception, Integer>> expectations = new ArrayList<>(ImmutableList.of(
+        Pair.newPair(new CallTimeoutException("test1"), 1),
+        Pair.newPair(new ConnectException("test2"), 2),
+        Pair.newPair(new NotServingRegionException("test3"), 2)
+      ));
 
       for (Pair<Exception, Integer> pair : expectations) {
         Exception exception = pair.getFirst();
