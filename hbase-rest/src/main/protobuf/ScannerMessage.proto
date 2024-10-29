@@ -16,16 +16,19 @@
  * limitations under the License.
  */
 syntax = "proto2";
-package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
+package org.apache.hadoop.hbase.rest.protobuf.generated;
 
-message TableInfo {
-  required string name = 1;
-  message Region {
-    required string name = 1;
-    optional bytes startKey = 2;
-    optional bytes endKey = 3;
-    optional int64 id = 4;
-    optional string location = 5;
-  }
-  repeated Region regions = 2;
+message Scanner {
+  optional bytes startRow = 1;
+  optional bytes endRow = 2;
+  repeated bytes columns = 3;
+  optional int32 batch = 4;
+  optional int64 startTime = 5;
+  optional int64 endTime = 6;
+  optional int32 maxVersions = 7;
+  optional string filter = 8;
+  optional int32 caching = 9;     // specifies REST scanner caching
+  repeated string labels = 10;
+  optional bool cacheBlocks = 11; // server side block caching hint
+  optional int32 limit = 12;
 }

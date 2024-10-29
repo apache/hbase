@@ -16,8 +16,11 @@
  * limitations under the License.
  */
 syntax = "proto2";
-package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
+package org.apache.hadoop.hbase.rest.protobuf.generated;
 
-message Namespaces {
-  repeated string namespace = 1;
+message Cell {
+  optional bytes row = 1;       // unused if Cell is in a CellSet
+  optional bytes column = 2;
+  optional int64 timestamp = 3;
+  optional bytes data = 4;
 }

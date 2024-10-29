@@ -16,19 +16,8 @@
  * limitations under the License.
  */
 syntax = "proto2";
-import "rest/ColumnSchemaMessage.proto";
+package org.apache.hadoop.hbase.rest.protobuf.generated;
 
-package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
-
-message TableSchema {
-  optional string name = 1;
-  message Attribute {
-    required string name = 1;
-    required string value = 2;
-  }
-  repeated Attribute attrs = 2;
-  repeated ColumnSchema columns = 3;
-  // optional helpful encodings of commonly used attributes
-  optional bool inMemory = 4;
-  optional bool readOnly = 5;
+message TableList {
+  repeated string name = 1;
 }
