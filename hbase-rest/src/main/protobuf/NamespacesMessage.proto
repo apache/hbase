@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 syntax = "proto2";
-package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
+package org.apache.hadoop.hbase.rest.protobuf.generated;
 
-message TableList {
-  repeated string name = 1;
+message Namespaces {
+  repeated string namespace = 1;
 }

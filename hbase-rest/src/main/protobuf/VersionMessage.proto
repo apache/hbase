@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 syntax = "proto2";
-package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
+package org.apache.hadoop.hbase.rest.protobuf.generated;
 
-message NamespaceProperties {
-  message Property {
-    required string key = 1;
-    required string value = 2;
-  }
-  repeated Property props = 1;
+message Version {
+  optional string restVersion = 1;
+  optional string jvmVersion = 2;
+  optional string osVersion = 3;
+  optional string serverVersion = 4;
+  optional string jerseyVersion = 5;
+  optional string version = 6;
+  optional string revision = 7;
 }
