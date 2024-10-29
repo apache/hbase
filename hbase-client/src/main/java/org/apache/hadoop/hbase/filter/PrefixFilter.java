@@ -42,9 +42,19 @@ public class PrefixFilter extends FilterBase implements HintingFilter {
   protected boolean passedPrefix = false;
   protected boolean filterRow = true;
   protected boolean provideHint = false;
+  protected Cell reversedNextCellHint;
 
   public PrefixFilter(final byte[] prefix) {
     this.prefix = prefix;
+    // Pre-compute reverse hint at creation to avoid re-computing it several times in the corner
+    // case where there are a lot of cells between the hint and the first real match.
+    this.reversedNextCellHint = createReversedNextCellHint();
+  }
+
+  private Cell createReversedNextCellHint() {
+    // On reversed scan hint should be the prefix with last byte incremented
+    byte[] reversedHintBytes = increaseLastNonMaxByte(this.prefix);
+    return PrivateCellUtil.createFirstOnRow(reversedHintBytes, 0, (short) reversedHintBytes.length);
   }
 
   public byte[] getPrefix() {
@@ -157,15 +167,12 @@ public class PrefixFilter extends FilterBase implements HintingFilter {
 
   @Override
   public Cell getNextCellHint(Cell cell) {
-    byte[] hintBytes;
     if (reversed) {
-      // On reversed scan hint should be the prefix with last byte incremented
-      hintBytes = increaseLastNonMaxByte(this.prefix);
+      return reversedNextCellHint;
     } else {
       // On forward scan hint should be the prefix
-      hintBytes = prefix;
+      return PrivateCellUtil.createFirstOnRow(prefix, 0, (short) prefix.length);
     }
-    return PrivateCellUtil.createFirstOnRow(hintBytes, 0, (short) hintBytes.length);
   }
 
   private byte[] increaseLastNonMaxByte(byte[] bytes) {
