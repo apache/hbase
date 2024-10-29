@@ -99,7 +99,7 @@ public class TestMobFileCleanupUtil {
   }
 
   private void initConf() {
-
+    conf.setInt("hbase.hstore.compaction.min", 3);
     conf.setInt("hfile.format.version", 3);
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, 0);
     conf.setInt("hbase.client.retries.number", 100);
@@ -147,9 +147,9 @@ public class TestMobFileCleanupUtil {
 
     loadData(0, 10);
     loadData(10, 10);
-    loadData(20, 10);
+    // loadData(20, 10);
     long num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
-    assertEquals(3, num);
+    assertEquals(2, num);
     // Major compact
     admin.majorCompact(tableDescriptor.getTableName(), fam);
     // wait until compaction is complete
@@ -158,7 +158,7 @@ public class TestMobFileCleanupUtil {
     }
 
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
-    assertEquals(4, num);
+    assertEquals(3, num);
     // We have guarantee, that compcated file discharger will run during this pause
     // because it has interval less than this wait time
     LOG.info("Waiting for {}ms", minAgeToArchive + 1000);
@@ -170,16 +170,16 @@ public class TestMobFileCleanupUtil {
 
     // verify that nothing have happened
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
-    assertEquals(4, num);
+    assertEquals(3, num);
 
     long scanned = scanTable();
-    assertEquals(30, scanned);
+    assertEquals(20, scanned);
 
     // add a MOB file to with a name refering to a non-existing region
     Path extraMOBFile = MobTestUtil.generateMOBFileForRegion(conf, table.getName(),
       familyDescriptor, "nonExistentRegion");
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
-    assertEquals(5, num);
+    assertEquals(4, num);
 
     LOG.info("Waiting for {}ms", minAgeToArchive + 1000);
 
@@ -189,13 +189,13 @@ public class TestMobFileCleanupUtil {
 
     // check that the extra file got deleted
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
-    assertEquals(4, num);
+    assertEquals(3, num);
 
     FileSystem fs = FileSystem.get(conf);
     assertFalse(fs.exists(extraMOBFile));
 
     scanned = scanTable();
-    assertEquals(30, scanned);
+    assertEquals(20, scanned);
 
   }
 

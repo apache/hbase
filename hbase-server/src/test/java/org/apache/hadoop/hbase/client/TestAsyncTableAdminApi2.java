@@ -243,11 +243,25 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
       table.put(p).join();
       admin.flush(tableName).join();
     }
-    admin.majorCompact(tableName).join();
+
+    // The flush operation would trigger minor compaction because the number of store files in the
+    // same column family exceeds 3, After waiting for the minor compaction to complete, proceed
+    // with the following operations to avoid interference.
+    Thread.sleep(1000);
     long curt = EnvironmentEdgeManager.currentTime();
     long waitTime = 10000;
     long endt = curt + waitTime;
     CompactionState state = admin.getCompactionState(tableName).get();
+    while (state != CompactionState.NONE && curt < endt) {
+      Thread.sleep(10);
+      state = admin.getCompactionState(tableName).get();
+      curt = EnvironmentEdgeManager.currentTime();
+    }
+
+    admin.majorCompact(tableName).join();
+    curt = EnvironmentEdgeManager.currentTime();
+    endt = curt + waitTime;
+    state = admin.getCompactionState(tableName).get();
     LOG.info("Current compaction state 1 is " + state);
     while (state == CompactionState.NONE && curt < endt) {
       Thread.sleep(100);

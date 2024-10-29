@@ -275,17 +275,18 @@ public class TestFromClientSide3 {
       TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
       Admin admin = TEST_UTIL.getAdmin();
 
-      // Create 3 store files.
+      // Create 2 store files.
       byte[] row = Bytes.toBytes(ThreadLocalRandom.current().nextInt());
-      performMultiplePutAndFlush(admin, table, row, FAMILY, 3, 100);
+      performMultiplePutAndFlush(admin, table, row, FAMILY, 2, 100);
 
       try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
         // Verify we have multiple store files.
         HRegionLocation loc = locator.getRegionLocation(row, true);
         assertTrue(getStoreFileCount(admin, loc.getServerName(), loc.getRegion()) > 1);
 
-        // Issue a compaction request
-        admin.compact(tableName);
+        // Create 1 store file, which would trigger minor compaction automatically because the
+        // number of store files exceeds 3
+        performMultiplePutAndFlush(admin, table, row, FAMILY, 1, 100);
 
         // poll wait for the compactions to happen
         for (int i = 0; i < 10 * 1000 / 40; ++i) {

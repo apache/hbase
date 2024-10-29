@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
@@ -263,8 +264,14 @@ public class TestFlushFromClient {
       t.put(put);
       admin.flush(testCompactTable);
       Thread.sleep(1000);
-      while (admin.getCompactionState(tableName) != CompactionState.NONE) {
+      long curt = EnvironmentEdgeManager.currentTime();
+      long waitTime = 10000;
+      long endt = curt + waitTime;
+      CompactionState state = admin.getCompactionState(tableName);
+      while (state != CompactionState.NONE && curt < endt) {
         Thread.sleep(10);
+        state = admin.getCompactionState(tableName);
+        curt = EnvironmentEdgeManager.currentTime();
       }
       storefilesCount =
         regions.get(0).getStores().stream().mapToInt(Store::getStorefilesCount).sum();
