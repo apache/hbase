@@ -106,6 +106,7 @@ public class TestPrefixFilter {
     Cell expectedCellHint = KeyValueUtil.createFirstOnRow(prefix);
     assertEquals(expectedCellHint, actualCellHint);
     assertFalse(filter.filterAllRemaining());
+    assertTrue(filter.filterRow());
   }
 
   @Test
@@ -123,6 +124,7 @@ public class TestPrefixFilter {
     Cell expectedCellHint = KeyValueUtil.createFirstOnRow(prefix);
     assertEquals(expectedCellHint, actualCellHint);
     assertFalse(filter.filterAllRemaining());
+    assertTrue(filter.filterRow());
   }
 
   @Test
@@ -134,6 +136,7 @@ public class TestPrefixFilter {
     assertFalse(filter.filterRowKey(matchingCell));
     assertEquals(Filter.ReturnCode.INCLUDE, filter.filterCell(matchingCell));
     assertFalse(filter.filterAllRemaining());
+    assertFalse(filter.filterRow());
   }
 
   @Test
@@ -145,6 +148,7 @@ public class TestPrefixFilter {
     assertTrue(filter.filterRowKey(afterCell));
     assertEquals(Filter.ReturnCode.NEXT_ROW, filter.filterCell(afterCell));
     assertTrue(filter.filterAllRemaining());
+    assertTrue(filter.filterRow());
   }
 
   @Test
@@ -162,6 +166,7 @@ public class TestPrefixFilter {
     Cell expectedCellHint = KeyValueUtil.createFirstOnRow(Bytes.toBytes("ab"));
     assertEquals(expectedCellHint, actualCellHint);
     assertFalse(filter.filterAllRemaining());
+    assertTrue(filter.filterRow());
   }
 
   @Test
@@ -179,6 +184,7 @@ public class TestPrefixFilter {
     Cell expectedCellHint = KeyValueUtil.createFirstOnRow(new byte[] { 'a', 'b', Byte.MAX_VALUE });
     assertEquals(expectedCellHint, actualCellHint);
     assertFalse(filter.filterAllRemaining());
+    assertTrue(filter.filterRow());
   }
 
   @Test
@@ -191,6 +197,7 @@ public class TestPrefixFilter {
     assertFalse(filter.filterRowKey(matchingCell));
     assertEquals(Filter.ReturnCode.INCLUDE, filter.filterCell(matchingCell));
     assertFalse(filter.filterAllRemaining());
+    assertFalse(filter.filterRow());
   }
 
   @Test
@@ -203,6 +210,7 @@ public class TestPrefixFilter {
     assertTrue(filter.filterRowKey(cell));
     assertEquals(Filter.ReturnCode.NEXT_ROW, filter.filterCell(cell));
     assertTrue(filter.filterAllRemaining());
+    assertTrue(filter.filterRow());
   }
 
   @Test
@@ -221,5 +229,6 @@ public class TestPrefixFilter {
       KeyValueUtil.createFirstOnRow(new byte[] { Byte.MAX_VALUE, Byte.MAX_VALUE, Byte.MAX_VALUE });
     assertEquals(expectedCellHint, actualCellHint);
     assertTrue(filter.filterAllRemaining());
+    assertTrue(filter.filterRow());
   }
 }

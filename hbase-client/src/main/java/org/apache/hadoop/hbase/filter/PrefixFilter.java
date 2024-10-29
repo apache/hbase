@@ -74,18 +74,18 @@ public class PrefixFilter extends FilterBase implements HintingFilter {
     if ((!isReversed() && cmp > 0) || (isReversed() && cmp < 0)) {
       passedPrefix = true;
     }
-    filterRow = (!isReversed() && cmp > 0) || (isReversed() && cmp < 0);
+    filterRow = (cmp != 0);
     provideHint = (!isReversed() && cmp < 0) || (isReversed() && cmp > 0);
-    return filterRow;
+    return passedPrefix;
   }
 
   @Override
   public ReturnCode filterCell(final Cell c) {
-    if (filterRow) {
-      return ReturnCode.NEXT_ROW;
-    }
     if (provideHint) {
       return ReturnCode.SEEK_NEXT_USING_HINT;
+    }
+    if (filterRow) {
+      return ReturnCode.NEXT_ROW;
     }
     return ReturnCode.INCLUDE;
   }
