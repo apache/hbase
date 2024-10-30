@@ -32,6 +32,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import net.spy.memcached.CachedData;
+import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedClient;
@@ -122,9 +123,14 @@ public class MemcachedBlockCache implements BlockCache {
       serverAddresses.add(Addressing.createInetSocketAddressFromHostAndPortStr(s));
     }
 
-    client = new MemcachedClient(builder.build(), serverAddresses);
+    client = createMemcachedClient(builder.build(), serverAddresses);
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this), STAT_THREAD_PERIOD,
       STAT_THREAD_PERIOD, TimeUnit.SECONDS);
+  }
+
+  protected MemcachedClient createMemcachedClient(ConnectionFactory factory,
+    List<InetSocketAddress> serverAddresses) throws IOException {
+    return new MemcachedClient(factory, serverAddresses);
   }
 
   @Override
