@@ -93,20 +93,13 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-zookeeper</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.thimbleware.jmemcached</groupId>
-      <artifactId>jmemcached-core</artifactId>
-      <version>1.0.0</version>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
