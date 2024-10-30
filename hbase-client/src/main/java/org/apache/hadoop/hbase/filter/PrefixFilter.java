@@ -43,18 +43,25 @@ public class PrefixFilter extends FilterBase implements HintingFilter {
   protected boolean filterRow = true;
   protected boolean provideHint = false;
   protected Cell reversedNextCellHint;
+  protected Cell forwardNextCellHint;
 
   public PrefixFilter(final byte[] prefix) {
     this.prefix = prefix;
-    // Pre-compute reverse hint at creation to avoid re-computing it several times in the corner
+    // Pre-compute hints at creation to avoid re-computing them several times in the corner
     // case where there are a lot of cells between the hint and the first real match.
-    this.reversedNextCellHint = createReversedNextCellHint();
+    createCellHints();
   }
 
-  private Cell createReversedNextCellHint() {
+  private void createCellHints() {
+    if (prefix == null) {
+      return;
+    }
     // On reversed scan hint should be the prefix with last byte incremented
     byte[] reversedHintBytes = increaseLastNonMaxByte(this.prefix);
-    return PrivateCellUtil.createFirstOnRow(reversedHintBytes, 0, (short) reversedHintBytes.length);
+    this.reversedNextCellHint =
+      PrivateCellUtil.createFirstOnRow(reversedHintBytes, 0, (short) reversedHintBytes.length);
+    // On forward scan hint should be the prefix
+    this.forwardNextCellHint = PrivateCellUtil.createFirstOnRow(prefix, 0, (short) prefix.length);
   }
 
   public byte[] getPrefix() {
@@ -120,8 +127,7 @@ public class PrefixFilter extends FilterBase implements HintingFilter {
     if (reversed) {
       return reversedNextCellHint;
     } else {
-      // On forward scan hint should be the prefix
-      return PrivateCellUtil.createFirstOnRow(prefix, 0, (short) prefix.length);
+      return forwardNextCellHint;
     }
   }
 

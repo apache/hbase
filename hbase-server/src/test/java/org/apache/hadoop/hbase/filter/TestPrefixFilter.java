@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.filter;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.Cell;
@@ -235,5 +236,33 @@ public class TestPrefixFilter {
     assertEquals(expectedCellHint, actualCellHint);
     assertTrue(filter.filterAllRemaining());
     assertTrue(filter.filterRow());
+  }
+
+  @Test
+  public void shouldNotThrowWhenCreatedWithNullPrefix() {
+    PrefixFilter filter = new PrefixFilter(null);
+    KeyValue cell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("doesNotMatter"));
+
+    assertNull(filter.getNextCellHint(cell));
+    filter.setReversed(true);
+    assertNull(filter.getNextCellHint(cell));
+  }
+
+  @Test
+  public void shouldNotThrowWhenCreatedWithEmptyByteArrayPrefix() {
+    byte[] emptyPrefix = {};
+    KeyValue emptyPrefixCell = KeyValueUtil.createFirstOnRow(emptyPrefix);
+    KeyValue cell = KeyValueUtil.createFirstOnRow(Bytes.toBytes("doesNotMatter"));
+
+    PrefixFilter filter = new PrefixFilter(emptyPrefix);
+
+    Cell forwardNextCellHint = filter.getNextCellHint(cell);
+    assertNotNull(forwardNextCellHint);
+    assertEquals(emptyPrefixCell, forwardNextCellHint);
+
+    filter.setReversed(true);
+    Cell reverseNextCellHint = filter.getNextCellHint(cell);
+    assertNotNull(reverseNextCellHint);
+    assertEquals(emptyPrefixCell, reverseNextCellHint);
   }
 }
