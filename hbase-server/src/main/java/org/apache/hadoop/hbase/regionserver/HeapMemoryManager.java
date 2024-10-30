@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY;
 import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
 
 import java.lang.management.MemoryUsage;
@@ -128,8 +129,7 @@ public class HeapMemoryManager {
   private boolean doInit(Configuration conf) {
     boolean tuningEnabled = true;
     globalMemStorePercent = MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false);
-    blockCachePercent =
-      conf.getFloat(HFILE_BLOCK_CACHE_SIZE_KEY, HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
+    blockCachePercent = MemorySizeUtil.getBlockCacheHeapPercent(conf);
     MemorySizeUtil.checkForClusterFreeHeapMemoryLimit(conf);
     // Initialize max and min range for memstore heap space
     globalMemStorePercentMinRange =
@@ -161,14 +161,16 @@ public class HeapMemoryManager {
     blockCachePercentMaxRange = conf.getFloat(BLOCK_CACHE_SIZE_MAX_RANGE_KEY, blockCachePercent);
     if (blockCachePercent < blockCachePercentMinRange) {
       LOG.warn("Setting " + BLOCK_CACHE_SIZE_MIN_RANGE_KEY + " to " + blockCachePercent
-        + ", same value as " + HFILE_BLOCK_CACHE_SIZE_KEY
+        + " (lookup order: " + HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + " -> "
+        + HFILE_BLOCK_CACHE_SIZE_KEY + "),"
         + " because supplied value greater than initial block cache size.");
       blockCachePercentMinRange = blockCachePercent;
       conf.setFloat(BLOCK_CACHE_SIZE_MIN_RANGE_KEY, blockCachePercentMinRange);
     }
     if (blockCachePercent > blockCachePercentMaxRange) {
       LOG.warn("Setting " + BLOCK_CACHE_SIZE_MAX_RANGE_KEY + " to " + blockCachePercent
-        + ", same value as " + HFILE_BLOCK_CACHE_SIZE_KEY
+        + " (lookup order: " + HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + " -> "
+        + HFILE_BLOCK_CACHE_SIZE_KEY + "),"
         + " because supplied value less than initial block cache size.");
       blockCachePercentMaxRange = blockCachePercent;
       conf.setFloat(BLOCK_CACHE_SIZE_MAX_RANGE_KEY, blockCachePercentMaxRange);
