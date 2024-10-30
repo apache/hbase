@@ -115,6 +115,28 @@ public class PrefixFilter extends FilterBase implements HintingFilter {
     return passedPrefix;
   }
 
+  @Override
+  public Cell getNextCellHint(Cell cell) {
+    if (reversed) {
+      return reversedNextCellHint;
+    } else {
+      // On forward scan hint should be the prefix
+      return PrivateCellUtil.createFirstOnRow(prefix, 0, (short) prefix.length);
+    }
+  }
+
+  private byte[] increaseLastNonMaxByte(byte[] bytes) {
+    byte[] result = Arrays.copyOf(bytes, bytes.length);
+    for (int i = bytes.length - 1; i >= 0; i--) {
+      byte b = bytes[i];
+      if (b < Byte.MAX_VALUE) {
+        result[i] = (byte) (b + 1);
+        break;
+      }
+    }
+    return result;
+  }
+
   public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
     Preconditions.checkArgument(filterArguments.size() == 1, "Expected 1 but got: %s",
       filterArguments.size());
@@ -163,28 +185,6 @@ public class PrefixFilter extends FilterBase implements HintingFilter {
     }
     PrefixFilter other = (PrefixFilter) o;
     return Bytes.equals(this.getPrefix(), other.getPrefix());
-  }
-
-  @Override
-  public Cell getNextCellHint(Cell cell) {
-    if (reversed) {
-      return reversedNextCellHint;
-    } else {
-      // On forward scan hint should be the prefix
-      return PrivateCellUtil.createFirstOnRow(prefix, 0, (short) prefix.length);
-    }
-  }
-
-  private byte[] increaseLastNonMaxByte(byte[] bytes) {
-    byte[] result = Arrays.copyOf(bytes, bytes.length);
-    for (int i = bytes.length - 1; i >= 0; i--) {
-      byte b = bytes[i];
-      if (b < Byte.MAX_VALUE) {
-        result[i] = (byte) (b + 1);
-        break;
-      }
-    }
-    return result;
   }
 
   @Override
