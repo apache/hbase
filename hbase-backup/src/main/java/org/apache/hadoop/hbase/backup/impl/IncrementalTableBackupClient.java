@@ -267,6 +267,12 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     LOG.debug(newlyArchived.size() + " files have been archived.");
   }
 
+  /**
+   * @throws IOException                   If the execution of the backup fails
+   * @throws ColumnFamilyMismatchException If the column families of the current table do not match
+   *                                       the column families for the last full backup. In which
+   *                                       case, a full backup should be taken
+   */
   @Override
   public void execute() throws IOException, ColumnFamilyMismatchException {
     try {
@@ -489,7 +495,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         try {
           fs = FileSystem.get(new URI(fullBackupInfo.getBackupRootDir()), conf);
         } catch (URISyntaxException e) {
-          throw new IOException("Unable to get fs", e);
+          throw new IOException("Unable to get fs for backup " + fullBackupInfo.getBackupId(), e);
         }
 
         SnapshotProtos.SnapshotDescription snapshotDescription =
