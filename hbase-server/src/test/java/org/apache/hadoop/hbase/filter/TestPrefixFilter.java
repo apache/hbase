@@ -58,7 +58,7 @@ public class TestPrefixFilter {
 
   @Test
   public void testPrefixOnRowInsideWhileMatchRow() throws Exception {
-    prefixRowTests(new WhileMatchFilter(this.mainFilter));
+    prefixRowTests(new WhileMatchFilter(this.mainFilter), true);
   }
 
   @Test
@@ -74,6 +74,10 @@ public class TestPrefixFilter {
   }
 
   private void prefixRowTests(Filter filter) throws Exception {
+    prefixRowTests(filter, false);
+  }
+
+  private void prefixRowTests(Filter filter, boolean lastFilterAllRemaining) throws Exception {
     for (char c = FIRST_CHAR; c <= LAST_CHAR; c++) {
       byte[] t = createRow(c);
       assertFalse("Failed with character " + c,
@@ -82,9 +86,10 @@ public class TestPrefixFilter {
     }
     String yahooSite = "com.yahoo.www";
     byte[] yahooSiteBytes = Bytes.toBytes(yahooSite);
-    assertFalse("Failed with character " + yahooSite,
-      filter.filterRowKey(KeyValueUtil.createFirstOnRow(yahooSiteBytes)));
-    assertFalse(filter.filterAllRemaining());
+    KeyValue yahooSiteCell = KeyValueUtil.createFirstOnRow(yahooSiteBytes);
+    assertFalse("Failed with character " + yahooSite, filter.filterRowKey(yahooSiteCell));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterCell(yahooSiteCell));
+    assertEquals(lastFilterAllRemaining, filter.filterAllRemaining());
   }
 
   private byte[] createRow(final char c) {
