@@ -76,8 +76,9 @@ public class PrefixFilter extends FilterBase implements HintingFilter {
     if (filterAllRemaining()) {
       return true;
     }
+    // if the cell is smaller => return false so that getNextCellHint() is invoked.
     // if they are equal, return false => pass row
-    // else return true, filter row
+    // if the cell is bigger => return true, filter row
     // if we are passed the prefix, set flag
     int cmp;
     if (firstRowCell instanceof ByteBufferExtendedCell) {
