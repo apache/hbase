@@ -132,7 +132,8 @@ public class BucketCache implements BlockCache, HeapSize {
   private static final boolean STRONG_REF_DEFAULT = false;
 
   /** The cache age of blocks to check if the related file is present on any online regions. */
-  static final String BLOCK_ORPHAN_GRACE_PERIOD = "hbase.bucketcache.block.orphan.evictgraceperiod";
+  static final String BLOCK_ORPHAN_GRACE_PERIOD =
+    "hbase.bucketcache.block.orphan.evictgraceperiod.seconds";
 
   static final long BLOCK_ORPHAN_GRACE_PERIOD_DEFAULT = 24 * 60 * 60 * 1000L;
 
