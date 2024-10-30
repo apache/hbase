@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.procedure;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
@@ -27,7 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -420,7 +420,7 @@ public class TestProcedureMember {
     }
 
     // no request should reach the pool
-    verifyZeroInteractions(pool);
+    verifyNoInteractions(pool);
     // get two abort requests
     // TODO Need to do another refactor to get this to propagate to the coordinator.
     // verify(mockMemberComms, times(2)).sendMemberAborted(any(), any());

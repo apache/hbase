@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.procedure;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyListOf;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -291,7 +291,7 @@ public class TestZKProcedure {
       Mockito.spy(new ForeignExceptionDispatcher());
     Procedure coordinatorTask = Mockito.spy(new Procedure(coordinator, coordinatorTaskErrorMonitor,
       WAKE_FREQUENCY, TIMEOUT, opName, data, expected));
-    when(coordinator.createProcedure(any(), eq(opName), eq(data), anyListOf(String.class)))
+    when(coordinator.createProcedure(any(), eq(opName), eq(data), anyList()))
       .thenReturn(coordinatorTask);
     // count down the error latch when we get the remote error
     Mockito.doAnswer(new Answer<Void>() {
