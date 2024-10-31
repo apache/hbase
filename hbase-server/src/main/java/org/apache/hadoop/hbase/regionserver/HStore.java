@@ -212,6 +212,7 @@ public class HStore
   private AtomicLong majorCompactedCellsSize = new AtomicLong();
 
   private final StoreContext storeContext;
+  protected String policyName;
 
   // Used to track the store files which are currently being written. For compaction, if we want to
   // compact store file [a, b, c] to [d], then here we will record 'd'. And we will also use it to
@@ -264,11 +265,10 @@ public class HStore
     region.getRegionFileSystem().createStoreDir(family.getNameAsString());
 
     // set block storage policy for store directory
-    String policyName = family.getStoragePolicy();
-    if (null == policyName) {
-      policyName = this.conf.get(BLOCK_STORAGE_POLICY_KEY, DEFAULT_BLOCK_STORAGE_POLICY);
-    }
-    region.getRegionFileSystem().setStoragePolicy(family.getNameAsString(), policyName.trim());
+    this.policyName = Optional.ofNullable(family.getStoragePolicy())
+        .orElseGet(() -> conf.get(BLOCK_STORAGE_POLICY_KEY, DEFAULT_BLOCK_STORAGE_POLICY))
+        .trim();
+    region.getRegionFileSystem().setStoragePolicy(family.getNameAsString(), policyName);
 
     this.dataBlockEncoder = new HFileDataBlockEncoderImpl(family.getDataBlockEncoding());
 
