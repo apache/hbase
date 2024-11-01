@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1893,5 +1894,15 @@ public interface MasterObserver {
    */
   default void postUpdateMasterConfiguration(ObserverContext<MasterCoprocessorEnvironment> ctx,
     Configuration postReloadConf) throws IOException {
+  }
+
+  /**
+   * Called after successfully authorizing connection
+   * @param ctx                    the coprocessor instance's environment
+   * @param userName               the user name
+   * @param clientCertificateChain list of peer certificates from SSL connection
+   */
+  default void postAuthorizeConnection(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String userName, X509Certificate[] clientCertificateChain) {
   }
 }
