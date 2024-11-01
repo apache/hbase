@@ -84,7 +84,7 @@ public class TestStoreFileScannerWithTagCompression {
     writer.close();
 
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
-    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
+    StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(conf, fs, f, true);
     storeFileInfo.initHFileInfo(context);
     StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
     storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());

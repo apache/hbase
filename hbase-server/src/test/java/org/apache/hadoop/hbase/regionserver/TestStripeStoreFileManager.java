@@ -574,7 +574,10 @@ public class TestStripeStoreFileManager {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path testFilePath = StoreFileWriter.getUniqueFile(fs, CFDIR);
     fs.create(testFilePath).close();
-    MockHStoreFile sf = new MockHStoreFile(TEST_UTIL, testFilePath, size, 0, false, seqNum);
+    StoreFileInfo storeFileInfo = StoreFileInfo
+      .createStoreFileInfoForHFile(TEST_UTIL.getConfiguration(), fs, testFilePath, true);
+    MockHStoreFile sf =
+      new MockHStoreFile(TEST_UTIL, testFilePath, size, 0, false, seqNum, storeFileInfo);
     if (startKey != null) {
       sf.setMetadataValue(StripeStoreFileManager.STRIPE_START_KEY, startKey);
     }

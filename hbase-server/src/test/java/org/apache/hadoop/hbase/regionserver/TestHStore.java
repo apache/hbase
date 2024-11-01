@@ -119,6 +119,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.EverythingPolicy;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
@@ -786,8 +788,8 @@ public class TestHStore {
 
         LOG.info("Before flush, we should have no files");
 
-        Collection<StoreFileInfo> files =
-          store.getRegionFileSystem().getStoreFiles(store.getColumnFamilyName());
+        StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, store.getStoreContext());
+        Collection<StoreFileInfo> files = sft.load();
         assertEquals(0, files != null ? files.size() : 0);
 
         // flush
@@ -800,7 +802,7 @@ public class TestHStore {
         }
 
         LOG.info("After failed flush, we should still have no files!");
-        files = store.getRegionFileSystem().getStoreFiles(store.getColumnFamilyName());
+        files = sft.load();
         assertEquals(0, files != null ? files.size() : 0);
         store.getHRegion().getWAL().close();
         return null;

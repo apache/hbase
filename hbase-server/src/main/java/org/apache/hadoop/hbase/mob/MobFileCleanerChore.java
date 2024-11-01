@@ -92,7 +92,7 @@ public class MobFileCleanerChore extends ScheduledChore {
       for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
         if (hcd.isMobEnabled() && hcd.getMinVersions() == 0) {
           try {
-            cleaner.cleanExpiredMobFiles(htd.getTableName().getNameAsString(), hcd);
+            cleaner.cleanExpiredMobFiles(htd, hcd);
           } catch (IOException e) {
             LOG.error("Failed to clean the expired mob files table={} family={}",
               htd.getTableName().getNameAsString(), hcd.getNameAsString(), e);
