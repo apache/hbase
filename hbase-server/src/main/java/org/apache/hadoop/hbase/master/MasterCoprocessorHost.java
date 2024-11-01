@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -2129,6 +2130,16 @@ public class MasterCoprocessorHost
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.postUpdateMasterConfiguration(this, postReloadConf);
+      }
+    });
+  }
+
+  public void postAuthorizeConnection(String userName, X509Certificate[] clientCertificateChain)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postAuthorizeConnection(this, userName, clientCertificateChain);
       }
     });
   }

@@ -41,14 +41,21 @@ import org.apache.commons.crypto.random.CryptoRandom;
 import org.apache.commons.crypto.random.CryptoRandomFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.ConnectionRegistryEndpoint;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
 import org.apache.hadoop.hbase.security.SaslStatus;
@@ -373,6 +380,18 @@ abstract class ServerRpcConnection implements Closeable {
           + connectionHeader.getServiceName() + " is unauthorized for user: " + ugi);
       }
       this.user = this.rpcServer.userProvider.create(this.ugi);
+      Server server = this.rpcServer.server;
+      if (server != null) {
+        if (server instanceof HMaster) {
+          ((HMaster) server).getMasterCoprocessorHost()
+            .postAuthorizeConnection(this.user.getName(), this.clientCertificateChain);
+        }
+        if (server instanceof HRegionServer) {
+          RegionServerCoprocessorHost coprocessorHost =
+            ((HRegionServer) server).getRegionServerCoprocessorHost();
+
+        }
+      }
     }
   }
 
