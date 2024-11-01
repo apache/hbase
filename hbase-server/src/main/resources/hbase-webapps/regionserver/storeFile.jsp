@@ -54,7 +54,7 @@
      printer.setConf(conf);
      String[] options = {"-s"};
      printer.parseOptions(options);
-     StoreFileInfo sfi = new StoreFileInfo(conf, fs, new Path(storeFile), true);
+     StoreFileInfo sfi = StoreFileInfo.createStoreFileInfoForHFile(conf, fs, new Path(storeFile), true);
      printer.processFile(sfi.getFileStatus().getPath(), true);
      String text = byteStream.toString();%>
      <%=
