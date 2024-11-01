@@ -47,6 +47,8 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -121,11 +123,16 @@ public class TestMergesSplitsAddToTracker {
       .setRegionId(region.getRegionInfo().getRegionId()).build();
     HStoreFile file = (HStoreFile) region.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
     List<Path> splitFilesA = new ArrayList<>();
+    HRegionFileSystem regionFs = region.getRegionFileSystem();
+    StoreFileTracker sft = StoreFileTrackerFactory.create(region.getBaseConf(), true,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(regionFs.getRegionDir(), "info"))
+        .withRegionFileSystem(regionFs).build());
     splitFilesA.add(regionFS.splitStoreFile(daughterA, Bytes.toString(FAMILY_NAME), file,
-      Bytes.toBytes("002"), false, region.getSplitPolicy()));
+      Bytes.toBytes("002"), false, region.getSplitPolicy(), sft));
     List<Path> splitFilesB = new ArrayList<>();
     splitFilesB.add(regionFS.splitStoreFile(daughterB, Bytes.toString(FAMILY_NAME), file,
-      Bytes.toBytes("002"), true, region.getSplitPolicy()));
+      Bytes.toBytes("002"), true, region.getSplitPolicy(), sft));
     MasterProcedureEnv env =
       TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
     Path resultA = regionFS.commitDaughterRegion(daughterA, splitFilesA, env);
@@ -213,7 +220,13 @@ public class TestMergesSplitsAddToTracker {
   private Pair<StoreFileInfo, String> copyFileInTheStoreDir(HRegion region) throws IOException {
     Path storeDir = region.getRegionFileSystem().getStoreDir("info");
     // gets the single file
-    StoreFileInfo fileInfo = region.getRegionFileSystem().getStoreFiles("info").get(0);
+    HRegionFileSystem regionFs = region.getRegionFileSystem();
+    StoreFileTracker sft = StoreFileTrackerFactory.create(region.getBaseConf(), false,
+      StoreContext.getBuilder().withFamilyStoreDirectoryPath(storeDir)
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME))
+        .withRegionFileSystem(regionFs).build());
+    List<StoreFileInfo> infos = sft.load();
+    StoreFileInfo fileInfo = infos.get(0);
     // make a copy of the valid file staight into the store dir, so that it's not tracked.
     String copyName = UUID.randomUUID().toString().replaceAll("-", "");
     Path copy = new Path(storeDir, copyName);
@@ -225,7 +238,13 @@ public class TestMergesSplitsAddToTracker {
   private void validateDaughterRegionsFiles(HRegion region, String originalFileName,
     String untrackedFile) throws IOException {
     // verify there's no link for the untracked, copied file in first region
-    List<StoreFileInfo> infos = region.getRegionFileSystem().getStoreFiles("info");
+    HRegionFileSystem regionFs = region.getRegionFileSystem();
+    StoreFileTracker sft = StoreFileTrackerFactory.create(regionFs.getFileSystem().getConf(), false,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(regionFs.getRegionDir(), "info"))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME))
+        .withRegionFileSystem(regionFs).build());
+    List<StoreFileInfo> infos = sft.load();
     assertThat(infos, everyItem(hasProperty("activeFileName", not(containsString(untrackedFile)))));
     assertThat(infos, hasItem(hasProperty("activeFileName", containsString(originalFileName))));
   }
@@ -240,7 +259,13 @@ public class TestMergesSplitsAddToTracker {
   private Path mergeFileFromRegion(HRegion regionToMerge, HRegionFileSystem mergeFS)
     throws IOException {
     HStoreFile file = (HStoreFile) regionToMerge.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
-    return mergeFS.mergeStoreFile(regionToMerge.getRegionInfo(), Bytes.toString(FAMILY_NAME), file);
+    HRegionFileSystem regionFs = regionToMerge.getRegionFileSystem();
+    StoreFileTracker sft = StoreFileTrackerFactory.create(regionToMerge.getBaseConf(), true,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(regionFs.getRegionDir(), FAMILY_NAME_STR))
+        .withRegionFileSystem(regionFs).build());
+    return mergeFS.mergeStoreFile(regionToMerge.getRegionInfo(), Bytes.toString(FAMILY_NAME), file,
+      sft);
   }
 
   private void putThreeRowsAndFlush(TableName table) throws IOException {
