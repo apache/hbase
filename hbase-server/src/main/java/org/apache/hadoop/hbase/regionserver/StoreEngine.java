@@ -220,8 +220,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   }
 
   public HStoreFile createStoreFileAndReader(Path p) throws IOException {
-    StoreFileInfo info = new StoreFileInfo(conf, ctx.getRegionFileSystem().getFileSystem(), p,
-      ctx.isPrimaryReplicaStore());
+    StoreFileInfo info = storeFileTracker.getStoreFileInfo(p, ctx.isPrimaryReplicaStore());
     return createStoreFileAndReader(info);
   }
 
@@ -373,8 +372,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   public void refreshStoreFiles(Collection<String> newFiles) throws IOException {
     List<StoreFileInfo> storeFiles = new ArrayList<>(newFiles.size());
     for (String file : newFiles) {
-      storeFiles
-        .add(ctx.getRegionFileSystem().getStoreFileInfo(ctx.getFamily().getNameAsString(), file));
+      storeFiles.add(ctx.getRegionFileSystem().getStoreFileInfo(ctx.getFamily().getNameAsString(),
+        file, storeFileTracker));
     }
     refreshStoreFilesInternal(storeFiles);
   }

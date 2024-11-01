@@ -162,7 +162,6 @@ public class CacheConfig implements PropagatingConfigurationObserver {
 
   private final ByteBuffAllocator byteBuffAllocator;
 
-
   /**
    * Create a cache configuration using the specified configuration object and defaults for family
    * level settings. Only use if no column family context.

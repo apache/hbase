@@ -31,11 +31,15 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -111,7 +115,10 @@ public class TestSnapshotStoreFileSize {
     for (RegionInfo regionInfo : regionsInfo) {
       HRegionFileSystem hRegionFileSystem =
         HRegionFileSystem.openRegionFromFileSystem(conf, fs, path, regionInfo, true);
-      Collection<StoreFileInfo> storeFilesFS = hRegionFileSystem.getStoreFiles(FAMILY_NAME);
+      ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.of(FAMILY_NAME);
+      StoreFileTracker sft =
+        StoreFileTrackerFactory.create(conf, table.getDescriptor(), hcd, hRegionFileSystem);
+      Collection<StoreFileInfo> storeFilesFS = sft.load();
       Iterator<StoreFileInfo> sfIterator = storeFilesFS.iterator();
       while (sfIterator.hasNext()) {
         StoreFileInfo sfi = sfIterator.next();

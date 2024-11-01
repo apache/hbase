@@ -32,9 +32,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.compactions.CustomDateTieredCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionRequest;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -65,7 +67,13 @@ public class TestCustomCellTieredCompactionPolicy {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     HRegionFileSystem regionFileSystem =
       new HRegionFileSystem(TEST_UTIL.getConfiguration(), fs, file, regionInfo);
-    MockHStoreFile msf = new MockHStoreFile(TEST_UTIL, file, size, ageInDisk, false, (long) seqId);
+    StoreContext ctx = new StoreContext.Builder()
+      .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build())
+      .withRegionFileSystem(regionFileSystem).build();
+    StoreFileTrackerForTest sftForTest =
+      new StoreFileTrackerForTest(TEST_UTIL.getConfiguration(), true, ctx);
+    MockHStoreFile msf =
+      new MockHStoreFile(TEST_UTIL, file, size, ageInDisk, false, (long) seqId, sftForTest);
     TimeRangeTracker timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
     timeRangeTracker.setMin(minValue);
     timeRangeTracker.setMax(maxValue);
