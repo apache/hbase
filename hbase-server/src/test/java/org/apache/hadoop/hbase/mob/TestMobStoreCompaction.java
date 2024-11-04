@@ -334,8 +334,7 @@ public class TestMobStoreCompaction {
     if (fs.exists(mobDirPath)) {
       // TODO: use sft.load() api here
       HRegionFileSystem regionFs = HRegionFileSystem.create(copyOfConf, fs,
-        MobUtils.getMobTableDir(copyOfConf, htd.getTableName()),
-        region.getRegionInfo());
+        MobUtils.getMobTableDir(copyOfConf, htd.getTableName()), region.getRegionInfo());
       StoreFileTracker sft = StoreFileTrackerFactory.create(copyOfConf, false,
         StoreContext.getBuilder().withColumnFamilyDescriptor(hcd)
           .withFamilyStoreDirectoryPath(mobDirPath).withCacheConfig(cacheConfig)
