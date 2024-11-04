@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -65,12 +66,12 @@ public class TestRegionMover2 {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionMover2.class);
+  private static final String CF = "fam1";
 
   @Rule
   public TestName name = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMover2.class);
-
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @BeforeClass
@@ -87,12 +88,7 @@ public class TestRegionMover2 {
 
   @Before
   public void setUp() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
-    int startKey = 0;
-    int endKey = 80000;
-    TEST_UTIL.getAdmin().createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
+    createTable(name.getMethodName());
   }
 
   @After
@@ -102,17 +98,53 @@ public class TestRegionMover2 {
     TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
+  private TableName createTable(String name) throws IOException {
+    final TableName tableName = TableName.valueOf(name);
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build();
+    int startKey = 0;
+    int endKey = 80000;
+    TEST_UTIL.getAdmin().createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
+    return tableName;
+  }
+
+  @Test
+  public void testWithMergedRegions() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    Admin admin = TEST_UTIL.getAdmin();
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
+    List<Put> puts = createPuts(10000);
+    table.put(puts);
+    admin.flush(tableName);
+    HRegionServer regionServer = cluster.getRegionServer(0);
+    String rsName = regionServer.getServerName().getAddress().toString();
+    int numRegions = regionServer.getNumberOfOnlineRegions();
+    List<HRegion> hRegions = regionServer.getRegions().stream()
+      .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(tableName))
+      .collect(Collectors.toList());
+    RegionMover.RegionMoverBuilder rmBuilder =
+      new RegionMover.RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true)
+        .maxthreads(8);
+    try (RegionMover rm = rmBuilder.build()) {
+      LOG.debug("Unloading {}", regionServer.getServerName());
+      rm.unload();
+      Assert.assertEquals(0, regionServer.getNumberOfOnlineRegions());
+      LOG.debug("Successfully Unloaded, now Loading");
+      admin.mergeRegionsAsync(new byte[][] { hRegions.get(0).getRegionInfo().getRegionName(),
+        hRegions.get(1).getRegionInfo().getRegionName() }, true).get(5, TimeUnit.SECONDS);
+      Assert.assertTrue(rm.load());
+      Assert.assertEquals(numRegions - 2, regionServer.getNumberOfOnlineRegions());
+    }
+  }
+
   @Test
   public void testWithSplitRegions() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
-    List<Put> puts = new ArrayList<>();
-    for (int i = 10; i < 50000; i++) {
-      puts.add(new Put(Bytes.toBytes(i)).addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("q1"),
-        Bytes.toBytes("val_" + i)));
-    }
+    List<Put> puts = createPuts(50000);
     table.put(puts);
     admin.flush(tableName);
     admin.compact(tableName);
@@ -157,11 +189,7 @@ public class TestRegionMover2 {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
-    List<Put> puts = new ArrayList<>();
-    for (int i = 0; i < 1000; i++) {
-      puts.add(new Put(Bytes.toBytes("rowkey_" + i)).addColumn(Bytes.toBytes("fam1"),
-        Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)));
-    }
+    List<Put> puts = createPuts(1000);
     table.put(puts);
     admin.flush(tableName);
     HRegionServer regionServer = cluster.getRegionServer(0);
@@ -183,14 +211,30 @@ public class TestRegionMover2 {
     }
   }
 
+  @Test
+  public void testDeletedTable() throws Exception {
+    TableName tableNameToDelete = createTable(name.getMethodName() + "ToDelete");
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HRegionServer regionServer = cluster.getRegionServer(0);
+    String rsName = regionServer.getServerName().getAddress().toString();
+    RegionMover.RegionMoverBuilder rmBuilder =
+      new RegionMover.RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true)
+        .maxthreads(8);
+    try (Admin admin = TEST_UTIL.getAdmin(); RegionMover rm = rmBuilder.build()) {
+      LOG.debug("Unloading {}", regionServer.getServerName());
+      rm.unload();
+      Assert.assertEquals(0, regionServer.getNumberOfOnlineRegions());
+      LOG.debug("Successfully Unloaded, now delete table");
+      admin.disableTable(tableNameToDelete);
+      admin.deleteTable(tableNameToDelete);
+      Assert.assertTrue(rm.load());
+    }
+  }
+
   public void loadDummyDataInTable(TableName tableName) throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
-    List<Put> puts = new ArrayList<>();
-    for (int i = 0; i < 1000; i++) {
-      puts.add(new Put(Bytes.toBytes("rowkey_" + i)).addColumn(Bytes.toBytes("fam1"),
-        Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)));
-    }
+    List<Put> puts = createPuts(1000);
     table.put(puts);
     admin.flush(tableName);
   }
@@ -263,6 +307,15 @@ public class TestRegionMover2 {
     regionIsolationOperation(randomSeverRegion, randomSeverRegion, 2, true);
   }
 
+  private List<Put> createPuts(int count) {
+    List<Put> puts = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      puts.add(new Put(Bytes.toBytes("rowkey_" + i)).addColumn(Bytes.toBytes(CF),
+        Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)));
+    }
+    return puts;
+  }
+
   public ServerName findMetaRSLocation() throws Exception {
     ZKWatcher zkWatcher = new ZKWatcher(TEST_UTIL.getConfiguration(), null, null);
     List<HRegionLocation> result = new ArrayList<>();
@@ -291,7 +344,7 @@ public class TestRegionMover2 {
     }
     if (sourceServer == null) {
       throw new Exception(
-        "This shouln't happen, No RS found with more than 2 regions of table : " + tableName);
+        "This shouldn't happen, No RS found with more than 2 regions of table : " + tableName);
     }
     return sourceServer;
   }
@@ -338,7 +391,7 @@ public class TestRegionMover2 {
       new RegionMover.RegionMoverBuilder(destinationRSName, TEST_UTIL.getConfiguration()).ack(true)
         .maxthreads(8).isolateRegionIdArray(listOfRegionIDsToIsolate);
     try (RegionMover rm = rmBuilder.build()) {
-      LOG.debug("Unloading {} except regions : {}", destinationRS.getServerName(),
+      LOG.debug("Unloading {} except regions: {}", destinationRS.getServerName(),
         listOfRegionIDsToIsolate);
       rm.isolateRegions();
       Assert.assertEquals(numRegionsToIsolate, destinationRS.getNumberOfOnlineRegions());
@@ -347,8 +400,8 @@ public class TestRegionMover2 {
         Assert.assertTrue(
           listOfRegionIDsToIsolate.contains(onlineRegions.get(i).getRegionInfo().getEncodedName()));
       }
-      LOG.debug("Successfully Isolated " + listOfRegionIDsToIsolate.size() + " regions : "
-        + listOfRegionIDsToIsolate + " on " + destinationRS.getServerName());
+      LOG.debug("Successfully Isolated {} regions: {} on {}", listOfRegionIDsToIsolate.size(),
+        listOfRegionIDsToIsolate, destinationRS.getServerName());
     } finally {
       admin.recommissionRegionServer(destinationRS.getServerName(), null);
     }
