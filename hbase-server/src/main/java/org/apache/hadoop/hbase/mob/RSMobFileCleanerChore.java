@@ -108,6 +108,10 @@ public class RSMobFileCleanerChore extends ScheduledChore {
         // Now clean obsolete files for a table
         LOG.info("Cleaning obsolete MOB files from table={}", htd.getTableName());
         List<ColumnFamilyDescriptor> list = MobUtils.getMobColumnFamilies(htd);
+        if (list.isEmpty()) {
+          // The table is not MOB table, just skip it
+          continue;
+        }
         List<HRegion> regions = rs.getRegions(htd.getTableName());
         for (HRegion region : regions) {
           for (ColumnFamilyDescriptor hcd : list) {
@@ -116,14 +120,32 @@ public class RSMobFileCleanerChore extends ScheduledChore {
             Set<String> regionMobs = new HashSet<String>();
             Path currentPath = null;
             try {
-              // collectinng referenced MOBs
+              // collecting referenced MOBs
               for (HStoreFile sf : sfs) {
                 currentPath = sf.getPath();
-                sf.initReader();
-                byte[] mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
-                byte[] bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
-                // close store file to avoid memory leaks
-                sf.closeStoreFile(true);
+                byte[] mobRefData = null;
+                byte[] bulkloadMarkerData = null;
+                boolean needCreateReader = false;
+                if (sf.getReader() == null) {
+                  synchronized (sf) {
+                    if (sf.getReader() == null) {
+                      needCreateReader = true;
+                      sf.initReader();
+                      mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
+                      bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
+                      // close store file to avoid memory leaks
+                      sf.closeStoreFile(true);
+                    }
+                  }
+                }
+                // If the StoreFileReader object was created by another thread, even if the reader
+                // has been closed now, we can still obtain the data by HStoreFile.metataMap,
+                // because the map will not be cleared when the reader is closed.
+                if (!needCreateReader) {
+                  mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
+                  bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
+                }
+
                 if (mobRefData == null) {
                   if (bulkloadMarkerData == null) {
                     LOG.warn(
