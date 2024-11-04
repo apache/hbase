@@ -281,7 +281,7 @@ trap cleanup EXIT SIGQUIT
 
 echo "Starting up Hadoop"
 
-if [ "${hadoop_version%.*.*.*}" = "3.4.0" ]; then
+if [[ "${hadoop_version%.*.*.*}" = "3.4.0" || "${hadoop_version%.*.*.*}" = "3.4.1" ]]; then
   # writeDetails is broken in 3.4.0. See MAPREDUCE-7492
   "${mapred_exec}" minicluster -format -writeConfig "${working_dir}/hbase-conf/core-site.xml" >"${working_dir}/hadoop_cluster_command.out" 2>"${working_dir}/hadoop_cluster_command.err" &
 elif [ "${hadoop_version%.*.*}" -gt 2 ]; then
