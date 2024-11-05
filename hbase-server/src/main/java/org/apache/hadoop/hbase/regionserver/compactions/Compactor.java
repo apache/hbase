@@ -403,6 +403,10 @@ public abstract class Compactor<T extends CellSink> {
 
   protected abstract void abortWriter(T writer) throws IOException;
 
+  protected void decorateCells(List<ExtendedCell> cells) {
+    //no op
+  }
+
   /**
    * Performs the compaction.
    * @param fd                FileDetails of cell sink writer
@@ -459,6 +463,7 @@ public abstract class Compactor<T extends CellSink> {
         // output to writer:
         Cell lastCleanCell = null;
         long lastCleanCellSeqId = 0;
+        decorateCells(cells);
         for (ExtendedCell c : cells) {
           if (cleanSeqId && c.getSequenceId() <= smallestReadPoint) {
             lastCleanCell = c;

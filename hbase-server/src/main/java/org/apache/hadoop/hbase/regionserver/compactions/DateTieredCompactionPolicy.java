@@ -296,7 +296,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
   /**
    * Return a list of boundaries for multiple compaction output in ascending order.
    */
-  private List<Long> getCompactBoundariesForMajor(Collection<HStoreFile> filesToCompact, long now) {
+  protected List<Long> getCompactBoundariesForMajor(Collection<HStoreFile> filesToCompact, long now) {
     long minTimestamp = filesToCompact.stream()
       .mapToLong(f -> f.getMinimumTimestamp().orElse(Long.MAX_VALUE)).min().orElse(Long.MAX_VALUE);
 
