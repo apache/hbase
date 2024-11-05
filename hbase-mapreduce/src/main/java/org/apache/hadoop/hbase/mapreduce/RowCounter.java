@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -87,15 +87,21 @@ public class RowCounter extends AbstractHBaseTool {
 
     /** Counter enumeration to count the actual rows, cells and delete markers. */
     public static enum Counters {
-      ROWS, CELLS, DELETE, DELETE_COLUMN, DELETE_FAMILY, DELETE_FAMILY_VERSION,
+      ROWS,
+      CELLS,
+      DELETE,
+      DELETE_COLUMN,
+      DELETE_FAMILY,
+      DELETE_FAMILY_VERSION,
       ROWS_WITH_DELETE_MARKER
     }
 
     private boolean countDeleteMarkers;
 
     @Override
-    protected void setup(Mapper<ImmutableBytesWritable, Result, ImmutableBytesWritable,
-      Result>.Context context) throws IOException, InterruptedException {
+    protected void
+      setup(Mapper<ImmutableBytesWritable, Result, ImmutableBytesWritable, Result>.Context context)
+        throws IOException, InterruptedException {
       Configuration conf = context.getConfiguration();
       countDeleteMarkers = conf.getBoolean(OPT_COUNT_DELETE_MARKERS, false);
     }
