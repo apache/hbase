@@ -1902,7 +1902,7 @@ public interface MasterObserver {
    * @param userName               the user name
    * @param clientCertificateChain list of peer certificates from SSL connection
    */
-  default void postAuthorizeConnection(ObserverContext<MasterCoprocessorEnvironment> ctx,
+  default void postAuthorizeMasterConnection(ObserverContext<MasterCoprocessorEnvironment> ctx,
     String userName, X509Certificate[] clientCertificateChain) {
   }
 }

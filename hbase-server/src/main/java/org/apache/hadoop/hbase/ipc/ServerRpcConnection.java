@@ -387,9 +387,8 @@ abstract class ServerRpcConnection implements Closeable {
             .postAuthorizeConnection(this.user.getName(), this.clientCertificateChain);
         }
         if (server instanceof HRegionServer) {
-          RegionServerCoprocessorHost coprocessorHost =
-            ((HRegionServer) server).getRegionServerCoprocessorHost();
-
+          ((HRegionServer) server).getRegionServerCoprocessorHost()
+            .postAuthorizeConnection(this.user.getName(), this.clientCertificateChain);
         }
       }
     }

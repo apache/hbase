@@ -2139,7 +2139,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postAuthorizeConnection(this, userName, clientCertificateChain);
+        observer.postAuthorizeMasterConnection(this, userName, clientCertificateChain);
       }
     });
   }
