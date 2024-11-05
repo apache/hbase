@@ -109,11 +109,11 @@ public class RowCounter extends AbstractHBaseTool {
     public void map(ImmutableBytesWritable row, Result values, Context context) throws IOException {
       // Count every row containing data, whether it's in qualifiers or values
       context.getCounter(Counters.ROWS).increment(1);
-      context.getCounter(Counters.CELLS).increment(values.size());
-
-      boolean rowContainsDeleteMarker = true;
 
       if (countDeleteMarkers) {
+        context.getCounter(Counters.CELLS).increment(values.size());
+
+        boolean rowContainsDeleteMarker = true;
         for (Cell cell : values.rawCells()) {
           Cell.Type type = cell.getType();
           switch (type) {
@@ -134,10 +134,10 @@ public class RowCounter extends AbstractHBaseTool {
               break;
           }
         }
-      }
 
-      if (rowContainsDeleteMarker) {
-        context.getCounter(Counters.ROWS_WITH_DELETE_MARKER).increment(1);
+        if (rowContainsDeleteMarker) {
+          context.getCounter(Counters.ROWS_WITH_DELETE_MARKER).increment(1);
+        }
       }
     }
   }
