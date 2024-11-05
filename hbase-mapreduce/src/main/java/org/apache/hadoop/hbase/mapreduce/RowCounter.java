@@ -345,7 +345,8 @@ public class RowCounter extends AbstractHBaseTool {
     Option expectedOption = Option.builder(null).valueSeparator('=').hasArg(true)
       .desc("expected number of rows to be count.").longOpt(OPT_EXPECTED_COUNT).build();
     Option countDeleteMarkersOption = Option.builder(null).hasArg(false)
-      .desc("counts the number of Delete Markers of all types, i.e. (DELETE, DELETE_COLUMN, DELETE_FAMILY, DELETE_FAMILY_VERSION)")
+      .desc("counts the number of Delete Markers of all types, i.e. "
+        + "(DELETE, DELETE_COLUMN, DELETE_FAMILY, DELETE_FAMILY_VERSION)")
       .longOpt(OPT_COUNT_DELETE_MARKERS).build();
     addOption(startTimeOption);
     addOption(endTimeOption);
