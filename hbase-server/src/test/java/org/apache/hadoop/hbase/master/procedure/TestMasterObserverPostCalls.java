@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.security.cert.X509Certificate;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
@@ -136,6 +137,11 @@ public class TestMasterObserverPostCalls {
 
     @Override
     public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tn) {
+      postHookCalls.incrementAndGet();
+    }
+
+    @Override public void postAuthorizeMasterConnection(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String userName, X509Certificate[] clientCertificateChain) {
       postHookCalls.incrementAndGet();
     }
   }
@@ -368,5 +374,19 @@ public class TestMasterObserverPostCalls {
     postCount = observer.postHookCalls.get();
     assertEquals("Expected no invocations of postDeleteTable when the operation fails", preCount,
       postCount);
+  }
+
+  @Test
+  public void testPostAuthorizeConnection() throws IOException {
+    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
+    MasterObserverForTest observer =
+      master.getMasterCoprocessorHost().findCoprocessor(MasterObserverForTest.class);
+    UTIL.closeConnection();
+
+    int preCount = observer.postHookCalls.get();
+    UTIL.getAdmin();
+    int postCount = observer.postHookCalls.get();
+
+    assertEquals("Expected 1 invocation of postAuthorizeConnection", preCount + 1, postCount);
   }
 }

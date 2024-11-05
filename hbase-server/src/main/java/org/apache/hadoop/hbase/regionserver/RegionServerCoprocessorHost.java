@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.security.cert.X509Certificate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ServerName;
@@ -273,6 +274,16 @@ public class RegionServerCoprocessorHost
       @Override
       public void call(RegionServerObserver observer) throws IOException {
         observer.postClearRegionBlockCache(this, stats);
+      }
+    });
+  }
+
+  public void postAuthorizeConnection(String userName, X509Certificate[] certificates)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.postAuthorizeRegionServerConnection(this, userName, certificates);
       }
     });
   }
