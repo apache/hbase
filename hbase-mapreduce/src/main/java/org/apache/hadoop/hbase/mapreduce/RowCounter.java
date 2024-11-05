@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -76,6 +77,8 @@ public class RowCounter extends AbstractHBaseTool {
   private long expectedCount;
   private boolean countDeleteMarkers;
   private List<String> columns = new ArrayList<>();
+
+  private Job job;
 
   /**
    * Mapper that runs the count.
@@ -398,7 +401,7 @@ public class RowCounter extends AbstractHBaseTool {
 
   @Override
   protected int doWork() throws Exception {
-    Job job = createSubmittableJob(getConf());
+    job = createSubmittableJob(getConf());
     if (job == null) {
       return -1;
     }
@@ -437,6 +440,11 @@ public class RowCounter extends AbstractHBaseTool {
   @Override
   protected CommandLineParser newParser() {
     return new RowCounterCommandLineParser();
+  }
+
+  @VisibleForTesting
+  public Job getMapReduceJob() {
+    return job;
   }
 
 }
