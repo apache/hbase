@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -46,7 +46,7 @@ import java.io.IOException;
 @Category(MediumTests.class)
 public class TestTableOutputFormat {
 
-  private static final HBaseTestingUtility util = new HBaseTestingUtility();
+  private static final HBaseTestingUtil util = new HBaseTestingUtil();
   private static final TableName TABLE_NAME = TableName.valueOf("TEST_TABLE");
   private static final byte[] columnFamily = Bytes.toBytes("f");
   private static Configuration conf;
