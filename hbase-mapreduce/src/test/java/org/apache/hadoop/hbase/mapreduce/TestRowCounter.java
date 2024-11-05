@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -29,6 +30,7 @@ import java.util.Arrays;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -522,6 +525,99 @@ public class TestRowCounter {
     } catch (Throwable e) {
       assertTrue(e instanceof AssertionError);
     }
+  }
+
+  /**
+   * Step 1: Add 6 rows(row1, row2, row3, row4, row5 and row6) to a table. Each row contains 1 column family and 4 columns.
+   * Step 2: Delete a column for row1.
+   * Step 3: Delete a column family for row2 and row4.
+   * Step 4: Delete all versions of a specific column for row3, row5 and row6.
+   * <p>
+   * Case 1: Run row counter without countDeleteMarkers flag
+   *  Step a: Validate counter values.
+   *  Step b: Assert that the countOfDeleteMarker variable is false.
+   * <p>
+   * Case 2: Run row counter with countDeleteMarkers flag
+   *  Step a: Validate counter values.
+   *  Step b: Assert that the countOfDeleteMarker variable is true.
+   * @throws Exception
+   */
+  @Test
+  public void testRowCounterWithCountDeleteMarkersOption() throws Exception {
+    // Test Setup
+
+    final TableName tableName = TableName.valueOf(TABLE_NAME + "_" + "withCountDeleteMarkersOption");
+    final byte[][] rowKeys = {
+      Bytes.toBytes("row1"), Bytes.toBytes("row2"),
+      Bytes.toBytes("row3"), Bytes.toBytes("row4"),
+      Bytes.toBytes("row5"), Bytes.toBytes("row6")
+    };
+    final byte[] columnFamily = Bytes.toBytes("cf");
+    final byte[][] columns = {
+      Bytes.toBytes("A"), Bytes.toBytes("B"),
+      Bytes.toBytes("C"), Bytes.toBytes("D")
+    };
+    final byte[] value = Bytes.toBytes("a");
+
+    try (Table table = TEST_UTIL.createTable(tableName, columnFamily)) {
+      // Step 1: Insert rows with columns
+      for (byte[] rowKey : rowKeys) {
+        Put put = new Put(rowKey);
+        for (byte[] col : columns) {
+          put.addColumn(columnFamily, col, value);
+        }
+        table.put(put);
+      }
+      TEST_UTIL.getAdmin().flush(tableName);
+
+      // Steps 2, 3, and 4: Delete columns, families, and all versions of columns
+      Delete deleteA = new Delete(rowKeys[0]).addColumn(columnFamily, columns[0]);
+      Delete deleteB = new Delete(rowKeys[1]).addFamily(columnFamily);
+      Delete deleteC = new Delete(rowKeys[2]).addColumns(columnFamily, columns[0]);
+      Delete deleteD = new Delete(rowKeys[3]).addFamily(columnFamily);
+      Delete deleteE = new Delete(rowKeys[4]).addColumns(columnFamily, columns[0]);
+      Delete deleteF = new Delete(rowKeys[5]).addColumns(columnFamily, columns[0]);
+
+      table.delete(deleteA);
+      table.delete(deleteB);
+      table.delete(deleteC);
+      table.delete(deleteD);
+      table.delete(deleteE);
+      table.delete(deleteF);
+      TEST_UTIL.getAdmin().flush(tableName);
+    }
+
+    RowCounter rowCounterWithoutCountDeleteMarkers = new RowCounter();
+    RowCounter rowCounterWithCountDeleteMarkers = new RowCounter();
+    rowCounterWithoutCountDeleteMarkers.setConf(TEST_UTIL.getConfiguration());
+    rowCounterWithCountDeleteMarkers.setConf(TEST_UTIL.getConfiguration());
+
+    // Invocation
+
+    rowCounterWithoutCountDeleteMarkers.run(new String[]{tableName.getNameAsString()});
+    rowCounterWithCountDeleteMarkers.run(new String[]{ tableName.getNameAsString(), "--countDeleteMarkers"});
+
+    // Validation
+
+    // Case 1:
+    validateCounterCounts(rowCounterWithoutCountDeleteMarkers.getMapReduceJob().getCounters(), 4, 0, 0, 0, 0, 0, 0);
+    assertFalse(rowCounterWithoutCountDeleteMarkers.getConf().getBoolean("countDeleteMarkers", true));
+
+    // Case 2:
+    validateCounterCounts(rowCounterWithoutCountDeleteMarkers.getMapReduceJob().getCounters(), 6, 24, 6, 1, 3, 2, 0);
+    assertTrue(rowCounterWithoutCountDeleteMarkers.getConf().getBoolean("countDeleteMarkers", false));
+  }
+
+  private void validateCounterCounts(Counters counters, long rowCount, long cellCount,
+    long rowsWithDeleteMarkersCount, long deleteCount, long deleteColumnCount,
+    long deleteFamilyCount, long deleteFamilyVersionCount) {
+    assertEquals(rowCount, counters.findCounter(RowCounter.RowCounterMapper.Counters.ROWS).getValue());
+    assertEquals(cellCount, counters.findCounter(RowCounter.RowCounterMapper.Counters.CELLS).getValue());
+    assertEquals(rowsWithDeleteMarkersCount, counters.findCounter(RowCounter.RowCounterMapper.Counters.ROWS_WITH_DELETE_MARKER).getValue());
+    assertEquals(deleteCount, counters.findCounter(RowCounter.RowCounterMapper.Counters.DELETE).getValue());
+    assertEquals(deleteColumnCount, counters.findCounter(RowCounter.RowCounterMapper.Counters.DELETE_COLUMN).getValue());
+    assertEquals(deleteFamilyCount, counters.findCounter(RowCounter.RowCounterMapper.Counters.DELETE_FAMILY).getValue());
+    assertEquals(deleteFamilyVersionCount, counters.findCounter(RowCounter.RowCounterMapper.Counters.DELETE_FAMILY_VERSION).getValue());
   }
 
   private void assertUsageContent(String usage) {
