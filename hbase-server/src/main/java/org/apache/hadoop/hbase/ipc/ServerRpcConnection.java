@@ -49,13 +49,9 @@ import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
-import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
 import org.apache.hadoop.hbase.security.SaslStatus;
@@ -383,8 +379,8 @@ abstract class ServerRpcConnection implements Closeable {
       Server server = this.rpcServer.server;
       if (server != null) {
         if (server instanceof HMaster) {
-          ((HMaster) server).getMasterCoprocessorHost()
-            .postAuthorizeConnection(this.user.getName(), this.clientCertificateChain);
+          ((HMaster) server).getMasterCoprocessorHost().postAuthorizeConnection(this.user.getName(),
+            this.clientCertificateChain);
         }
         if (server instanceof HRegionServer) {
           ((HRegionServer) server).getRegionServerCoprocessorHost()

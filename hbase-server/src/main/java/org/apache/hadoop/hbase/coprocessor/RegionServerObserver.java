@@ -220,11 +220,9 @@ public interface RegionServerObserver {
    * @param ctx                    the coprocessor instance's environment
    * @param userName               the user name
    * @param clientCertificateChain list of peer certificates from SSL connection
-   * @throws IOException
    */
   default void postAuthorizeRegionServerConnection(
     ObserverContext<RegionServerCoprocessorEnvironment> ctx, String userName,
-    X509Certificate[] clientCertificateChain)
-    throws IOException {
+    X509Certificate[] clientCertificateChain) throws IOException {
   }
 }

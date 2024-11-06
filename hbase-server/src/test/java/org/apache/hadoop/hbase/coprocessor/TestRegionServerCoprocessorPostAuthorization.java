@@ -1,5 +1,28 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.junit.Assert.assertNotEquals;
+
+import java.io.IOException;
+import java.security.cert.X509Certificate;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -11,12 +34,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import java.io.IOException;
-import java.security.cert.X509Certificate;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 
 @Category({ CoprocessorTests.class, MediumTests.class })
 public class TestRegionServerCoprocessorPostAuthorization {
@@ -25,15 +42,18 @@ public class TestRegionServerCoprocessorPostAuthorization {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionServerCoprocessorPostAuthorization.class);
 
-  public static class AuthorizationRegionServerObserver implements RegionServerCoprocessor, RegionServerObserver {
+  public static class AuthorizationRegionServerObserver
+    implements RegionServerCoprocessor, RegionServerObserver {
     final AtomicInteger ctPostAuthorization = new AtomicInteger(0);
     String userName = null;
 
-    @Override public Optional<RegionServerObserver> getRegionServerObserver() {
+    @Override
+    public Optional<RegionServerObserver> getRegionServerObserver() {
       return Optional.of(this);
     }
 
-    @Override public void postAuthorizeRegionServerConnection(
+    @Override
+    public void postAuthorizeRegionServerConnection(
       ObserverContext<RegionServerCoprocessorEnvironment> ctx, String userName,
       X509Certificate[] clientCertificateChain) throws IOException {
       ctPostAuthorization.incrementAndGet();
@@ -60,8 +80,8 @@ public class TestRegionServerCoprocessorPostAuthorization {
   @Test
   public void testPostAuthorizationObserverCalled() {
     HRegionServer regionServer = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
-    AuthorizationRegionServerObserver observer =
-      regionServer.getRegionServerCoprocessorHost().findCoprocessor(AuthorizationRegionServerObserver.class);
+    AuthorizationRegionServerObserver observer = regionServer.getRegionServerCoprocessorHost()
+      .findCoprocessor(AuthorizationRegionServerObserver.class);
     assertNotEquals(0, observer.ctPostAuthorization.get());
   }
 }
