@@ -33,9 +33,9 @@ import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -190,7 +190,7 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
       if (!(value instanceof Put) && !(value instanceof Delete)) {
         throw new IOException("Pass a Delete or a Put");
       }
-      if(!useWriteAheadLogging) {
+      if (!useWriteAheadLogging) {
         value.setDurability(Durability.SKIP_WAL);
       }
       mutator.mutate(value);

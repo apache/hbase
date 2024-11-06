@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import java.io.IOException;
+import javax.validation.constraints.Null;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -29,7 +31,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -38,8 +39,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-import javax.validation.constraints.Null;
-import java.io.IOException;
 
 /**
  * Simple Tests to check whether the durability of the Mutation is changed or not, for
@@ -64,7 +63,7 @@ public class TestTableOutputFormat {
     util.startMiniCluster();
     util.createTable(TABLE_NAME, columnFamily);
 
-    conf =  new Configuration(util.getConfiguration());
+    conf = new Configuration(util.getConfiguration());
     context = Mockito.mock(TaskAttemptContext.class);
     tableOutputFormat = new TableOutputFormat<>();
     conf.set(TableOutputFormat.OUTPUT_TABLE, "TEST_TABLE");
@@ -82,46 +81,47 @@ public class TestTableOutputFormat {
 
   @Test
   public void testTableOutputFormatWhenWalIsOFFForPut() throws IOException, InterruptedException {
-    //setting up the configuration for the TableOutputFormat, with writing to the WAL off.
+    // setting up the configuration for the TableOutputFormat, with writing to the WAL off.
     conf.setBoolean(TableOutputFormat.WAL_PROPERTY, TableOutputFormat.WAL_OFF);
     tableOutputFormat.setConf(conf);
 
     writer = tableOutputFormat.getRecordWriter(context);
 
-    //creating mutation of the type put
+    // creating mutation of the type put
     Put put = new Put("row1".getBytes());
     put.addColumn(columnFamily, Bytes.toBytes("aa"), Bytes.toBytes("value"));
 
-    //verifying whether durability of mutation is USE_DEFAULT or not, before commiting write.
+    // verifying whether durability of mutation is USE_DEFAULT or not, before commiting write.
     Assert.assertEquals("Durability of the mutation should be USE_DEFAULT", Durability.USE_DEFAULT,
       put.getDurability());
 
     writer.write(null, put);
 
-    //verifying whether durability of mutation got changed to the SKIP_WAL or not.
+    // verifying whether durability of mutation got changed to the SKIP_WAL or not.
     Assert.assertEquals("Durability of the mutation should be SKIP_WAL", Durability.SKIP_WAL,
       put.getDurability());
   }
 
   @Test
-  public void testTableOutputFormatWhenWalIsOFFForDelete() throws IOException, InterruptedException {
-    //setting up the configuration for the TableOutputFormat, with writing to the WAL off.
+  public void testTableOutputFormatWhenWalIsOFFForDelete()
+    throws IOException, InterruptedException {
+    // setting up the configuration for the TableOutputFormat, with writing to the WAL off.
     conf.setBoolean(TableOutputFormat.WAL_PROPERTY, TableOutputFormat.WAL_OFF);
     tableOutputFormat.setConf(conf);
 
     writer = tableOutputFormat.getRecordWriter(context);
 
-    //creating mutation of the type delete
+    // creating mutation of the type delete
     Delete delete = new Delete("row2".getBytes());
     delete.addColumn(columnFamily, Bytes.toBytes("aa"));
 
-    //verifying whether durability of mutation is USE_DEFAULT or not, before commiting write.
+    // verifying whether durability of mutation is USE_DEFAULT or not, before commiting write.
     Assert.assertEquals("Durability of the mutation should be USE_DEFAULT", Durability.USE_DEFAULT,
       delete.getDurability());
 
     writer.write(null, delete);
 
-    //verifying whether durability of mutation got changed from  USE_DEFAULT to the SKIP_WAL or not.
+    // verifying whether durability of mutation got changed from USE_DEFAULT to the SKIP_WAL or not.
     Assert.assertEquals("Durability of the mutation should be SKIP_WAL", Durability.SKIP_WAL,
       delete.getDurability());
   }
