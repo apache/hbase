@@ -18,8 +18,10 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -35,13 +37,31 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
  * Pass results that have same row prefix.
  */
 @InterfaceAudience.Public
-public class PrefixFilter extends FilterBase {
+public class PrefixFilter extends FilterBase implements HintingFilter {
   protected byte[] prefix = null;
   protected boolean passedPrefix = false;
   protected boolean filterRow = true;
+  protected boolean provideHint = false;
+  protected Cell reversedNextCellHint;
+  protected Cell forwardNextCellHint;
 
   public PrefixFilter(final byte[] prefix) {
     this.prefix = prefix;
+    // Pre-compute hints at creation to avoid re-computing them several times in the corner
+    // case where there are a lot of cells between the hint and the first real match.
+    createCellHints();
+  }
+
+  private void createCellHints() {
+    if (prefix == null) {
+      return;
+    }
+    // On reversed scan hint should be the prefix with last byte incremented
+    byte[] reversedHintBytes = increaseLastNonMaxByte(this.prefix);
+    this.reversedNextCellHint =
+      PrivateCellUtil.createFirstOnRow(reversedHintBytes, 0, (short) reversedHintBytes.length);
+    // On forward scan hint should be the prefix
+    this.forwardNextCellHint = PrivateCellUtil.createFirstOnRow(prefix, 0, (short) prefix.length);
   }
 
   public byte[] getPrefix() {
@@ -50,12 +70,15 @@ public class PrefixFilter extends FilterBase {
 
   @Override
   public boolean filterRowKey(Cell firstRowCell) {
-    if (firstRowCell == null || this.prefix == null) return true;
-    if (filterAllRemaining()) return true;
-    int length = firstRowCell.getRowLength();
-    if (length < prefix.length) return true;
+    if (firstRowCell == null || this.prefix == null) {
+      return true;
+    }
+    if (filterAllRemaining()) {
+      return true;
+    }
+    // if the cell is before => return false so that getNextCellHint() is invoked.
     // if they are equal, return false => pass row
-    // else return true, filter row
+    // if the cell is after => return true, filter row
     // if we are passed the prefix, set flag
     int cmp;
     if (firstRowCell instanceof ByteBufferExtendedCell) {
@@ -70,12 +93,18 @@ public class PrefixFilter extends FilterBase {
       passedPrefix = true;
     }
     filterRow = (cmp != 0);
-    return filterRow;
+    provideHint = (!isReversed() && cmp < 0) || (isReversed() && cmp > 0);
+    return passedPrefix;
   }
 
   @Override
   public ReturnCode filterCell(final Cell c) {
-    if (filterRow) return ReturnCode.NEXT_ROW;
+    if (provideHint) {
+      return ReturnCode.SEEK_NEXT_USING_HINT;
+    }
+    if (filterRow) {
+      return ReturnCode.NEXT_ROW;
+    }
     return ReturnCode.INCLUDE;
   }
 
@@ -94,6 +123,27 @@ public class PrefixFilter extends FilterBase {
     return passedPrefix;
   }
 
+  @Override
+  public Cell getNextCellHint(Cell cell) {
+    if (reversed) {
+      return reversedNextCellHint;
+    } else {
+      return forwardNextCellHint;
+    }
+  }
+
+  private byte[] increaseLastNonMaxByte(byte[] bytes) {
+    byte[] result = Arrays.copyOf(bytes, bytes.length);
+    for (int i = bytes.length - 1; i >= 0; i--) {
+      byte b = bytes[i];
+      if (b < Byte.MAX_VALUE) {
+        result[i] = (byte) (b + 1);
+        break;
+      }
+    }
+    return result;
+  }
+
   public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
     Preconditions.checkArgument(filterArguments.size() == 1, "Expected 1 but got: %s",
       filterArguments.size());
@@ -105,7 +155,9 @@ public class PrefixFilter extends FilterBase {
   @Override
   public byte[] toByteArray() {
     FilterProtos.PrefixFilter.Builder builder = FilterProtos.PrefixFilter.newBuilder();
-    if (this.prefix != null) builder.setPrefix(UnsafeByteOperations.unsafeWrap(this.prefix));
+    if (this.prefix != null) {
+      builder.setPrefix(UnsafeByteOperations.unsafeWrap(this.prefix));
+    }
     return builder.build().toByteArray();
   }
 
