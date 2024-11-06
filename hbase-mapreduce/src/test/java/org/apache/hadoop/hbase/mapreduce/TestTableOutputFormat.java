@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
@@ -33,6 +34,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -45,6 +47,9 @@ import java.io.IOException;
  */
 @Category(MediumTests.class)
 public class TestTableOutputFormat {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestTableOutputFormat.class);
 
   private static final HBaseTestingUtil util = new HBaseTestingUtil();
   private static final TableName TABLE_NAME = TableName.valueOf("TEST_TABLE");
