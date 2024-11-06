@@ -140,7 +140,8 @@ public class TestMasterObserverPostCalls {
       postHookCalls.incrementAndGet();
     }
 
-    @Override public void postAuthorizeMasterConnection(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    @Override
+    public void postAuthorizeMasterConnection(ObserverContext<MasterCoprocessorEnvironment> ctx,
       String userName, X509Certificate[] clientCertificateChain) {
       postHookCalls.incrementAndGet();
     }
