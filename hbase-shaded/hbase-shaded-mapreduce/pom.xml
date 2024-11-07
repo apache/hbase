@@ -101,8 +101,8 @@
           <artifactId>jetty-util-ajax</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.glassfish</groupId>
-          <artifactId>javax.el</artifactId>
+          <groupId>org.apache.tomcat</groupId>
+          <artifactId>tomcat-jasper</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.eclipse.jetty</groupId>
