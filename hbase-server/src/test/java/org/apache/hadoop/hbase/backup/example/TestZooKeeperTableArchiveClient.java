@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.backup.example;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -384,7 +385,7 @@ public class TestZooKeeperTableArchiveClient {
 
         return ret;
       }
-    }).when(delegateSpy).getDeletableFiles(Mockito.anyListOf(FileStatus.class));
+    }).when(delegateSpy).getDeletableFiles(anyList());
     cleaners.set(0, delegateSpy);
 
     return finished;

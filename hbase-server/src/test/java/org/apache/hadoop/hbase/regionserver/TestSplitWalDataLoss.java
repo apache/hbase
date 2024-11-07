@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Map;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
@@ -40,19 +40,15 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
-import org.apache.hadoop.hbase.regionserver.HRegion.PrepareFlushResult;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Matchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -120,9 +116,7 @@ public class TestSplitWalDataLoss {
           .abortCacheFlush(region.getRegionInfo().getEncodedNameAsBytes());
         throw new DroppedSnapshotException("testcase");
       }
-    }).when(spiedRegion).internalFlushCacheAndCommit(Matchers.<WAL> any(),
-      Matchers.<MonitoredTask> any(), Matchers.<PrepareFlushResult> any(),
-      Matchers.<Collection<HStore>> any());
+    }).when(spiedRegion).internalFlushCacheAndCommit(any(), any(), any(), any());
     // Find region key; don't pick up key for hbase:meta by mistake.
     String key = null;
     for (Map.Entry<String, HRegion> entry : rs.getOnlineRegions().entrySet()) {

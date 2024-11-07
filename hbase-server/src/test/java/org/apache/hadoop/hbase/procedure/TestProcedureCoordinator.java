@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.procedure;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyListOf;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -111,7 +111,7 @@ public class TestProcedureCoordinator {
     Procedure proc2 = new Procedure(coordinator, monitor, WAKE_FREQUENCY, TIMEOUT, procName + "2",
       procData, expected);
     Procedure procSpy2 = spy(proc2);
-    when(coordinator.createProcedure(any(), eq(procName), eq(procData), anyListOf(String.class)))
+    when(coordinator.createProcedure(any(), eq(procName), eq(procData), anyList()))
       .thenReturn(procSpy, procSpy2);
 
     coordinator.startProcedure(procSpy.getErrorMonitor(), procName, procData, expected);
@@ -132,13 +132,12 @@ public class TestProcedureCoordinator {
       new Procedure(coordinator, WAKE_FREQUENCY, TIMEOUT, procName, procData, expected);
     final Procedure procSpy = spy(proc);
 
-    when(coordinator.createProcedure(any(), eq(procName), eq(procData), anyListOf(String.class)))
+    when(coordinator.createProcedure(any(), eq(procName), eq(procData), anyList()))
       .thenReturn(procSpy);
 
     // use the passed controller responses
     IOException cause = new IOException("Failed to reach comms during acquire");
-    doThrow(cause).when(controller).sendGlobalBarrierAcquire(eq(procSpy), eq(procData),
-      anyListOf(String.class));
+    doThrow(cause).when(controller).sendGlobalBarrierAcquire(eq(procSpy), eq(procData), anyList());
 
     // run the operation
     proc = coordinator.startProcedure(proc.getErrorMonitor(), procName, procData, expected);
@@ -148,7 +147,7 @@ public class TestProcedureCoordinator {
     verify(procSpy, atLeastOnce()).receive(any());
     verify(coordinator, times(1)).rpcConnectionFailure(anyString(), eq(cause));
     verify(controller, times(1)).sendGlobalBarrierAcquire(procSpy, procData, expected);
-    verify(controller, never()).sendGlobalBarrierReached(any(), anyListOf(String.class));
+    verify(controller, never()).sendGlobalBarrierReached(any(), anyList());
   }
 
   /**
@@ -163,14 +162,13 @@ public class TestProcedureCoordinator {
     final Procedure spy =
       spy(new Procedure(coordinator, WAKE_FREQUENCY, TIMEOUT, procName, procData, expected));
 
-    when(coordinator.createProcedure(any(), eq(procName), eq(procData), anyListOf(String.class)))
-      .thenReturn(spy);
+    when(coordinator.createProcedure(any(), eq(procName), eq(procData), anyList())).thenReturn(spy);
 
     // use the passed controller responses
     IOException cause = new IOException("Failed to reach controller during prepare");
     doAnswer(new AcquireBarrierAnswer(procName, new String[] { "cohort" })).when(controller)
-      .sendGlobalBarrierAcquire(eq(spy), eq(procData), anyListOf(String.class));
-    doThrow(cause).when(controller).sendGlobalBarrierReached(eq(spy), anyListOf(String.class));
+      .sendGlobalBarrierAcquire(eq(spy), eq(procData), anyList());
+    doThrow(cause).when(controller).sendGlobalBarrierReached(eq(spy), anyList());
 
     // run the operation
     Procedure task =
@@ -180,9 +178,8 @@ public class TestProcedureCoordinator {
       ;
     verify(spy, atLeastOnce()).receive(any());
     verify(coordinator, times(1)).rpcConnectionFailure(anyString(), eq(cause));
-    verify(controller, times(1)).sendGlobalBarrierAcquire(eq(spy), eq(procData),
-      anyListOf(String.class));
-    verify(controller, times(1)).sendGlobalBarrierReached(any(), anyListOf(String.class));
+    verify(controller, times(1)).sendGlobalBarrierAcquire(eq(spy), eq(procData), anyList());
+    verify(controller, times(1)).sendGlobalBarrierReached(any(), anyList());
   }
 
   @Test
@@ -273,13 +270,11 @@ public class TestProcedureCoordinator {
   public void runCoordinatedOperation(Procedure spy, AcquireBarrierAnswer prepareOperation,
     BarrierAnswer commitOperation, String... cohort) throws Exception {
     List<String> expected = Arrays.asList(cohort);
-    when(coordinator.createProcedure(any(), eq(procName), eq(procData), anyListOf(String.class)))
-      .thenReturn(spy);
+    when(coordinator.createProcedure(any(), eq(procName), eq(procData), anyList())).thenReturn(spy);
 
     // use the passed controller responses
     doAnswer(prepareOperation).when(controller).sendGlobalBarrierAcquire(spy, procData, expected);
-    doAnswer(commitOperation).when(controller).sendGlobalBarrierReached(eq(spy),
-      anyListOf(String.class));
+    doAnswer(commitOperation).when(controller).sendGlobalBarrierReached(eq(spy), anyList());
 
     // run the operation
     Procedure task =
@@ -294,7 +289,7 @@ public class TestProcedureCoordinator {
     inorder.verify(spy).sendGlobalBarrierStart();
     inorder.verify(controller).sendGlobalBarrierAcquire(task, procData, expected);
     inorder.verify(spy).sendGlobalBarrierReached();
-    inorder.verify(controller).sendGlobalBarrierReached(eq(task), anyListOf(String.class));
+    inorder.verify(controller).sendGlobalBarrierReached(eq(task), anyList());
   }
 
   private static abstract class OperationAnswer implements Answer<Void> {

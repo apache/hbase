@@ -19,8 +19,9 @@ package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -43,7 +44,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -68,7 +68,7 @@ public class TestFileSystemUtilizationChore {
       .reportRegionSizesForQuotas(any(RegionSizeStore.class));
 
     final Region region = mockRegionWithSize(regionSizes);
-    Mockito.doReturn(Arrays.asList(region)).when(rs).getRegions();
+    doReturn(Arrays.asList(region)).when(rs).getRegions();
     chore.chore();
   }
 
@@ -83,7 +83,7 @@ public class TestFileSystemUtilizationChore {
       .reportRegionSizesForQuotas(any(RegionSizeStore.class));
 
     final Region region = mockRegionWithSize(regionSizes);
-    Mockito.doReturn(Arrays.asList(region)).when(rs).getRegions();
+    doReturn(Arrays.asList(region)).when(rs).getRegions();
     chore.chore();
   }
 
@@ -107,7 +107,7 @@ public class TestFileSystemUtilizationChore {
     final Region r1 = mockRegionWithSize(r1Sizes);
     final Region r2 = mockRegionWithSize(r2Sizes);
     final Region r3 = mockRegionWithSize(r3Sizes);
-    Mockito.doReturn(Arrays.asList(r1, r2, r3)).when(rs).getRegions();
+    doReturn(Arrays.asList(r1, r2, r3)).when(rs).getRegions();
     chore.chore();
   }
 
@@ -169,7 +169,7 @@ public class TestFileSystemUtilizationChore {
     final Region r1 = mockRegionWithSize(Arrays.asList(1024L, 2048L));
     final Region r2 = mockRegionWithSize(Arrays.asList(1024L * 1024L));
     final Region r3 = mockRegionWithSize(Arrays.asList(10L * 1024L * 1024L));
-    Mockito.doReturn(Arrays.asList(r1, r2, r3, lr1, lr2)).when(rs).getRegions();
+    doReturn(Arrays.asList(r1, r2, r3, lr1, lr2)).when(rs).getRegions();
 
     chore.chore();
   }
@@ -200,7 +200,7 @@ public class TestFileSystemUtilizationChore {
     final Region r2 = mockRegionWithSize(Arrays.asList(1024L * 1024L));
     final Region r3 = mockRegionWithSize(Arrays.asList(10L * 1024L * 1024L));
     // lr2 is no longer online, so it should be ignored
-    Mockito.doReturn(Arrays.asList(r1, r2, r3, lr1)).when(rs).getRegions();
+    doReturn(Arrays.asList(r1, r2, r3, lr1)).when(rs).getRegions();
 
     chore.chore();
   }
@@ -221,7 +221,7 @@ public class TestFileSystemUtilizationChore {
 
     final Region r1 = mockRegionWithSize(r1Sizes);
     final Region r2 = mockSplitParentRegionWithSize(r2Sizes);
-    Mockito.doReturn(Arrays.asList(r1, r2)).when(rs).getRegions();
+    doReturn(Arrays.asList(r1, r2)).when(rs).getRegions();
     chore.chore();
   }
 
@@ -241,7 +241,7 @@ public class TestFileSystemUtilizationChore {
 
     final Region r1 = mockRegionWithSize(r1Sizes);
     final Region r2 = mockRegionReplicaWithSize(r2Sizes);
-    Mockito.doReturn(Arrays.asList(r1, r2)).when(rs).getRegions();
+    doReturn(Arrays.asList(r1, r2)).when(rs).getRegions();
     chore.chore();
   }
 
@@ -267,7 +267,7 @@ public class TestFileSystemUtilizationChore {
 
     final Region r1 = mockRegionWithHFileLinks(r1StoreFileSizes, r1HFileSizes);
     final Region r2 = mockRegionWithHFileLinks(r2StoreFileSizes, r2HFileSizes);
-    Mockito.doReturn(Arrays.asList(r1, r2)).when(rs).getRegions();
+    doReturn(Arrays.asList(r1, r2)).when(rs).getRegions();
     chore.chore();
   }
 

@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.executor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -205,7 +205,7 @@ public class TestExecutorService {
       @Override
       public boolean evaluate() throws Exception {
         try {
-          verify(server, times(1)).abort(anyString(), (Throwable) anyObject());
+          verify(server, times(1)).abort(anyString(), any());
           return true;
         } catch (Throwable t) {
           return false;

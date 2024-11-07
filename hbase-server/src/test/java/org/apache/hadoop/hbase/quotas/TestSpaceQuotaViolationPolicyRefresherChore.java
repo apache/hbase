@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.quotas;
 
 import static org.apache.hadoop.hbase.util.Bytes.toBytes;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -68,7 +68,6 @@ public class TestSpaceQuotaViolationPolicyRefresherChore {
   private Configuration conf;
   private Connection conn;
 
-  @SuppressWarnings("unchecked")
   @Before
   public void setup() throws IOException {
     conf = HBaseConfiguration.create();

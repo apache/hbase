@@ -19,7 +19,11 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -53,7 +57,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.mockito.Mockito;
 import org.mockito.exceptions.verification.WantedButNotInvoked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -246,8 +249,7 @@ public class TestFailedAppendAndSync {
       // to just continue.
 
       // So, should be no abort at this stage. Verify.
-      Mockito.verify(services, Mockito.atLeast(0)).abort(Mockito.anyString(),
-        (Throwable) Mockito.anyObject());
+      verify(services, atLeast(0)).abort(anyString(), any(Throwable.class));
       try {
         dodgyWAL.throwAppendException = false;
         dodgyWAL.throwSyncException = true;
@@ -262,8 +264,7 @@ public class TestFailedAppendAndSync {
       // happens. If it don't we'll timeout the whole test. That is fine.
       while (true) {
         try {
-          Mockito.verify(services, Mockito.atLeast(1)).abort(Mockito.anyString(),
-            (Throwable) Mockito.anyObject());
+          verify(services, atLeast(1)).abort(anyString(), any(Throwable.class));
           break;
         } catch (WantedButNotInvoked t) {
           Threads.sleep(1);
@@ -283,8 +284,7 @@ public class TestFailedAppendAndSync {
       while (true) {
         try {
           // one more abort needs to be called
-          Mockito.verify(services, Mockito.atLeast(2)).abort(Mockito.anyString(),
-            (Throwable) Mockito.anyObject());
+          verify(services, atLeast(2)).abort(anyString(), any());
           break;
         } catch (WantedButNotInvoked t) {
           Threads.sleep(1);
@@ -292,7 +292,7 @@ public class TestFailedAppendAndSync {
       }
     } finally {
       // To stop logRoller, its server has to say it is stopped.
-      Mockito.when(services.isStopped()).thenReturn(true);
+      when(services.isStopped()).thenReturn(true);
       if (logRoller != null) logRoller.close();
       if (region != null) {
         try {

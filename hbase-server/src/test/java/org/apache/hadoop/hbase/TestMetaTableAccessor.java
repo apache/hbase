@@ -23,7 +23,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -603,31 +603,31 @@ public class TestMetaTableAccessor {
     UTIL.countRows(table);
 
     MetaTableAccessor.Visitor visitor = mock(MetaTableAccessor.Visitor.class);
-    doReturn(true).when(visitor).visit((Result) anyObject());
+    doReturn(true).when(visitor).visit(any());
 
     // Scanning the entire table should give us three rows
     MetaTableAccessor.scanMetaForTableRegions(connection, visitor, tableName);
-    verify(visitor, times(3)).visit((Result) anyObject());
+    verify(visitor, times(3)).visit(any());
 
     // Scanning the table with a specified empty start row should also
     // give us three hbase:meta rows
     reset(visitor);
-    doReturn(true).when(visitor).visit((Result) anyObject());
+    doReturn(true).when(visitor).visit(any());
     MetaTableAccessor.scanMeta(connection, visitor, tableName, null, 1000);
-    verify(visitor, times(3)).visit((Result) anyObject());
+    verify(visitor, times(3)).visit(any());
 
     // Scanning the table starting in the middle should give us two rows:
     // region_a and region_b
     reset(visitor);
-    doReturn(true).when(visitor).visit((Result) anyObject());
+    doReturn(true).when(visitor).visit(any());
     MetaTableAccessor.scanMeta(connection, visitor, tableName, Bytes.toBytes("region_ac"), 1000);
-    verify(visitor, times(2)).visit((Result) anyObject());
+    verify(visitor, times(2)).visit(any());
 
     // Scanning with a limit of 1 should only give us one row
     reset(visitor);
-    doReturn(true).when(visitor).visit((Result) anyObject());
+    doReturn(true).when(visitor).visit(any());
     MetaTableAccessor.scanMeta(connection, visitor, tableName, Bytes.toBytes("region_ac"), 1);
-    verify(visitor, times(1)).visit((Result) anyObject());
+    verify(visitor, times(1)).visit(any());
     table.close();
   }
 

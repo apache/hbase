@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -44,7 +45,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -323,7 +323,7 @@ public class TestHBaseAdminNoCluster {
       admin = Mockito.spy(new HBaseAdmin(connection));
       // mock the call to getRegion since in the absence of a cluster (which means the meta
       // is not assigned), getRegion can't function
-      Mockito.doReturn(null).when(((HBaseAdmin) admin)).getRegion(Matchers.<byte[]> any());
+      Mockito.doReturn(null).when(((HBaseAdmin) admin)).getRegion(any());
       try {
         caller.call(admin); // invoke the HBaseAdmin method
         fail();
