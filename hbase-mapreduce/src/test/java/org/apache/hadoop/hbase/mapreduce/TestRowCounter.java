@@ -594,21 +594,28 @@ public class TestRowCounter {
       0, 0, 0, 0, 0);
 
     // Case 2:
-    validateCounterCounts(rowCounterWithCountDeleteMarkers.getMapReduceJob().getCounters(), 6,
-      30, 6, 1, 3, 2, 0);
+    validateCounterCounts(rowCounterWithCountDeleteMarkers.getMapReduceJob().getCounters(), 6, 30,
+      6, 1, 3, 2, 0);
   }
 
   private void validateCounterCounts(Counters counters, long rowCount, long cellCount,
     long rowsWithDeleteMarkersCount, long deleteCount, long deleteColumnCount,
     long deleteFamilyCount, long deleteFamilyVersionCount) {
-    
-    long actualRowCount = counters.findCounter(RowCounter.RowCounterMapper.Counters.ROWS).getValue();
-    long actualCellCount = counters.findCounter(RowCounter.RowCounterMapper.Counters.CELLS).getValue();
-    long actualRowsWithDeleteMarkersCount = counters.findCounter(RowCounter.RowCounterMapper.Counters.ROWS_WITH_DELETE_MARKER).getValue();
-    long actualDeleteCount = counters.findCounter(RowCounter.RowCounterMapper.Counters.DELETE).getValue();
-    long actualDeleteColumnCount = counters.findCounter(RowCounter.RowCounterMapper.Counters.DELETE_COLUMN).getValue();
-    long actualDeleteFamilyCount = counters.findCounter(RowCounter.RowCounterMapper.Counters.DELETE_FAMILY).getValue();
-    long actualDeleteFamilyVersionCount = counters.findCounter(RowCounter.RowCounterMapper.Counters.DELETE_FAMILY_VERSION).getValue();
+
+    long actualRowCount =
+      counters.findCounter(RowCounter.RowCounterMapper.Counters.ROWS).getValue();
+    long actualCellCount =
+      counters.findCounter(RowCounter.RowCounterMapper.Counters.CELLS).getValue();
+    long actualRowsWithDeleteMarkersCount =
+      counters.findCounter(RowCounter.RowCounterMapper.Counters.ROWS_WITH_DELETE_MARKER).getValue();
+    long actualDeleteCount =
+      counters.findCounter(RowCounter.RowCounterMapper.Counters.DELETE).getValue();
+    long actualDeleteColumnCount =
+      counters.findCounter(RowCounter.RowCounterMapper.Counters.DELETE_COLUMN).getValue();
+    long actualDeleteFamilyCount =
+      counters.findCounter(RowCounter.RowCounterMapper.Counters.DELETE_FAMILY).getValue();
+    long actualDeleteFamilyVersionCount =
+      counters.findCounter(RowCounter.RowCounterMapper.Counters.DELETE_FAMILY_VERSION).getValue();
 
     assertEquals(rowCount, actualRowCount);
     assertEquals(cellCount, actualCellCount);
