@@ -29,6 +29,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -127,6 +129,12 @@ public class HFileWriterImpl implements HFile.Writer {
   /** Cache configuration for caching data on write. */
   protected final CacheConfig cacheConf;
 
+  public void setTimeRangeToTrack(Supplier<TimeRangeTracker> timeRangeToTrack) {
+    this.timeRangeToTrack = timeRangeToTrack;
+  }
+
+  private Supplier<TimeRangeTracker> timeRangeToTrack;
+
   /**
    * Name for this object used when logging or in toString. Is either the result of a toString on
    * stream or else name of passed file Path.
@@ -186,7 +194,9 @@ public class HFileWriterImpl implements HFile.Writer {
     this.path = path;
     this.name = path != null ? path.getName() : outputStream.toString();
     this.hFileContext = fileContext;
+    //TODO: Move this back to upper layer
     this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
+    this.timeRangeToTrack = () -> this.timeRangeTracker;
     DataBlockEncoding encoding = hFileContext.getDataBlockEncoding();
     if (encoding != DataBlockEncoding.NONE) {
       this.blockEncoder = new HFileDataBlockEncoderImpl(encoding);
@@ -588,7 +598,7 @@ public class HFileWriterImpl implements HFile.Writer {
   }
 
   private boolean shouldCacheBlock(BlockCache cache, BlockCacheKey key) {
-    Optional<Boolean> result = cache.shouldCacheBlock(key, timeRangeTracker, conf);
+    Optional<Boolean> result = cache.shouldCacheBlock(key, timeRangeToTrack.get(), conf);
     return result.orElse(true);
   }
 

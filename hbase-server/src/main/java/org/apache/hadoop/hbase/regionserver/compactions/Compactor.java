@@ -403,8 +403,9 @@ public abstract class Compactor<T extends CellSink> {
 
   protected abstract void abortWriter(T writer) throws IOException;
 
-  protected void decorateCells(List<ExtendedCell> cells) {
+  protected List<ExtendedCell> decorateCells(List<ExtendedCell> cells) {
     //no op
+    return cells;
   }
 
   /**
@@ -463,7 +464,7 @@ public abstract class Compactor<T extends CellSink> {
         // output to writer:
         Cell lastCleanCell = null;
         long lastCleanCellSeqId = 0;
-        decorateCells(cells);
+        cells = decorateCells(cells);
         for (ExtendedCell c : cells) {
           if (cleanSeqId && c.getSequenceId() <= smallestReadPoint) {
             lastCleanCell = c;

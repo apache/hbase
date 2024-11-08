@@ -36,4 +36,6 @@ public final class TagType {
   // String based tag type used in replication
   public static final byte STRING_VIS_TAG_TYPE = (byte) 7;
   public static final byte TTL_TAG_TYPE = (byte) 8;
+  //tag with the custom cell tiering value for the row
+  public static final byte CELL_VALUE_TIERING_TAG_TYPE = (byte) 9;
 }
