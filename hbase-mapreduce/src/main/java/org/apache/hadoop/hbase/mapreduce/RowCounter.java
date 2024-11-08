@@ -121,24 +121,27 @@ public class RowCounter extends AbstractHBaseTool {
       if (countDeleteMarkers) {
         context.getCounter(Counters.CELLS).increment(values.size());
 
-        boolean rowContainsDeleteMarker = true;
+        boolean rowContainsDeleteMarker = false;
         for (Cell cell : values.rawCells()) {
           Cell.Type type = cell.getType();
           switch (type) {
             case Delete:
+              rowContainsDeleteMarker = true;
               context.getCounter(Counters.DELETE).increment(1);
               break;
             case DeleteColumn:
+              rowContainsDeleteMarker = true;
               context.getCounter(Counters.DELETE_COLUMN).increment(1);
               break;
             case DeleteFamily:
+              rowContainsDeleteMarker = true;
               context.getCounter(Counters.DELETE_FAMILY).increment(1);
               break;
             case DeleteFamilyVersion:
+              rowContainsDeleteMarker = true;
               context.getCounter(Counters.DELETE_FAMILY_VERSION).increment(1);
               break;
             default:
-              rowContainsDeleteMarker = false;
               break;
           }
         }
@@ -163,7 +166,7 @@ public class RowCounter extends AbstractHBaseTool {
     Scan scan = new Scan();
     scan.setRaw(this.countDeleteMarkers);
     scan.setCacheBlocks(false);
-    setScanFilter(scan, rowRangeList);
+    setScanFilter(scan, rowRangeList, this.countDeleteMarkers);
 
     for (String columnName : this.columns) {
       String family = StringUtils.substringBefore(columnName, ":");
@@ -201,6 +204,7 @@ public class RowCounter extends AbstractHBaseTool {
     List<MultiRowRangeFilter.RowRange> rowRangeList = null;
     long startTime = 0;
     long endTime = 0;
+    boolean countDeleteMarkers = false;
 
     StringBuilder sb = new StringBuilder();
 
@@ -208,6 +212,7 @@ public class RowCounter extends AbstractHBaseTool {
     final String startTimeArgKey = "--starttime=";
     final String endTimeArgKey = "--endtime=";
     final String expectedCountArg = "--expected-count=";
+    final String countDeleteMarkersArg = "--countDeleteMarkers";
 
     // First argument is table name, starting from second
     for (int i = 1; i < args.length; i++) {
@@ -233,10 +238,15 @@ public class RowCounter extends AbstractHBaseTool {
           Long.parseLong(args[i].substring(expectedCountArg.length())));
         continue;
       }
+      if (args[i].startsWith(countDeleteMarkersArg)) {
+        countDeleteMarkers = true;
+        continue;
+      }
       // if no switch, assume column names
       sb.append(args[i]);
       sb.append(" ");
     }
+    conf.setBoolean(OPT_COUNT_DELETE_MARKERS, countDeleteMarkers);
     if (endTime < startTime) {
       printUsage("--endtime=" + endTime + " needs to be greater than --starttime=" + startTime);
       return null;
@@ -246,7 +256,8 @@ public class RowCounter extends AbstractHBaseTool {
     job.setJarByClass(RowCounter.class);
     Scan scan = new Scan();
     scan.setCacheBlocks(false);
-    setScanFilter(scan, rowRangeList);
+    scan.setRaw(countDeleteMarkers);
+    setScanFilter(scan, rowRangeList, countDeleteMarkers);
     if (sb.length() > 0) {
       for (String columnName : sb.toString().trim().split(" ")) {
         String family = StringUtils.substringBefore(columnName, ":");
@@ -304,9 +315,9 @@ public class RowCounter extends AbstractHBaseTool {
    * Otherwise, method sets filter which is instance of {@link FirstKeyOnlyFilter}. If rowRangeList
    * contains exactly one element, startRow and stopRow are set to the scan.
    */
-  private static void setScanFilter(Scan scan, List<MultiRowRangeFilter.RowRange> rowRangeList) {
+  private static void setScanFilter(Scan scan, List<MultiRowRangeFilter.RowRange> rowRangeList, boolean countDeleteMarkers) {
     final int size = rowRangeList == null ? 0 : rowRangeList.size();
-    if (size <= 1) {
+    if (size <= 1 && !countDeleteMarkers) {
       scan.setFilter(new FirstKeyOnlyFilter());
     }
     if (size == 1) {
