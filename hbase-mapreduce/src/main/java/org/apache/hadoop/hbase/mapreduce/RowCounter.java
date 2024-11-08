@@ -164,6 +164,7 @@ public class RowCounter extends AbstractHBaseTool {
     Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(RowCounter.class);
     Scan scan = new Scan();
+    // raw scan will be needed to account for delete markers when --countDeleteMarkers flag is set
     scan.setRaw(this.countDeleteMarkers);
     scan.setCacheBlocks(false);
     setScanFilter(scan, rowRangeList, this.countDeleteMarkers);
@@ -256,6 +257,7 @@ public class RowCounter extends AbstractHBaseTool {
     job.setJarByClass(RowCounter.class);
     Scan scan = new Scan();
     scan.setCacheBlocks(false);
+    // raw scan will be needed to account for delete markers when --countDeleteMarkers flag is set
     scan.setRaw(countDeleteMarkers);
     setScanFilter(scan, rowRangeList, countDeleteMarkers);
     if (sb.length() > 0) {
@@ -315,8 +317,10 @@ public class RowCounter extends AbstractHBaseTool {
    * Otherwise, method sets filter which is instance of {@link FirstKeyOnlyFilter}. If rowRangeList
    * contains exactly one element, startRow and stopRow are set to the scan.
    */
-  private static void setScanFilter(Scan scan, List<MultiRowRangeFilter.RowRange> rowRangeList, boolean countDeleteMarkers) {
+  private static void setScanFilter(Scan scan, List<MultiRowRangeFilter.RowRange> rowRangeList,
+    boolean countDeleteMarkers) {
     final int size = rowRangeList == null ? 0 : rowRangeList.size();
+    // all cells will be needed if --countDeleteMarkers flag is set, hence, skipping filter
     if (size <= 1 && !countDeleteMarkers) {
       scan.setFilter(new FirstKeyOnlyFilter());
     }
