@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -532,11 +531,9 @@ public class TestRowCounter {
    * column family and 4 columns. Step 2: Delete a column for row1. Step 3: Delete a column family
    * for row2 and row4. Step 4: Delete all versions of a specific column for row3, row5 and row6.
    * <p>
-   * Case 1: Run row counter without countDeleteMarkers flag Step a: Validate counter values. Step
-   * b: Assert that the countOfDeleteMarker variable is false.
+   * Case 1: Run row counter without countDeleteMarkers flag Step a: Validate counter values.
    * <p>
-   * Case 2: Run row counter with countDeleteMarkers flag Step a: Validate counter values. Step b:
-   * Assert that the countOfDeleteMarker variable is true.
+   * Case 2: Run row counter with countDeleteMarkers flag Step a: Validate counter values.
    */
   @Test
   public void testRowCounterWithCountDeleteMarkersOption() throws Exception {
@@ -595,14 +592,10 @@ public class TestRowCounter {
     // Case 1:
     validateCounterCounts(rowCounterWithoutCountDeleteMarkers.getMapReduceJob().getCounters(), 4, 0,
       0, 0, 0, 0, 0);
-    assertFalse(
-      rowCounterWithoutCountDeleteMarkers.getConf().getBoolean("countDeleteMarkers", true));
 
     // Case 2:
-    validateCounterCounts(rowCounterWithoutCountDeleteMarkers.getMapReduceJob().getCounters(), 6,
-      24, 6, 1, 3, 2, 0);
-    assertTrue(
-      rowCounterWithoutCountDeleteMarkers.getConf().getBoolean("countDeleteMarkers", false));
+    validateCounterCounts(rowCounterWithCountDeleteMarkers.getMapReduceJob().getCounters(), 6,
+      6, 6, 1, 3, 2, 0);
   }
 
   private void validateCounterCounts(Counters counters, long rowCount, long cellCount,
