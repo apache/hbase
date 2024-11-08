@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
-import java.security.cert.X509Certificate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -215,14 +214,4 @@ public interface RegionServerObserver {
     throws IOException {
   }
 
-  /**
-   * Called after successfully authorizing connection
-   * @param ctx                    the coprocessor instance's environment
-   * @param userName               the user name
-   * @param clientCertificateChain list of peer certificates from SSL connection
-   */
-  default void postAuthorizeRegionServerConnection(
-    ObserverContext<RegionServerCoprocessorEnvironment> ctx, String userName,
-    X509Certificate[] clientCertificateChain) throws IOException {
-  }
 }
