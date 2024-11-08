@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.security.cert.X509Certificate;
@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.ipc.RpcCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
@@ -36,27 +36,26 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ CoprocessorTests.class, MediumTests.class })
-public class TestRegionServerCoprocessorPostAuthorization {
+public class TestRpcCoprocessor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerCoprocessorPostAuthorization.class);
+    HBaseClassTestRule.forClass(TestRpcCoprocessor.class);
 
-  public static class AuthorizationRegionServerObserver
-    implements RegionServerCoprocessor, RegionServerObserver {
+  public static class AuthorizationRpcObserver implements RpcCoprocessor, RpcObserver {
     final AtomicInteger ctPostAuthorization = new AtomicInteger(0);
     String userName = null;
 
     @Override
-    public Optional<RegionServerObserver> getRegionServerObserver() {
+    public Optional<RpcObserver> getRpcObserver() {
       return Optional.of(this);
     }
 
     @Override
-    public void postAuthorizeRegionServerConnection(
-      ObserverContext<RegionServerCoprocessorEnvironment> ctx, String userName,
-      X509Certificate[] clientCertificateChain) throws IOException {
+    public void postAuthorizeConnection(ObserverContext<RpcCoprocessorEnvironment> ctx,
+      String userName, X509Certificate[] clientCertificateChain) throws IOException {
       ctPostAuthorization.incrementAndGet();
+      this.userName = userName;
     }
   }
 
@@ -66,8 +65,7 @@ public class TestRegionServerCoprocessorPostAuthorization {
   public static void setupBeforeClass() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-      AuthorizationRegionServerObserver.class.getName());
+    conf.set(CoprocessorHost.RPC_COPROCESSOR_CONF_KEY, AuthorizationRpcObserver.class.getName());
     TEST_UTIL.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
     TEST_UTIL.startMiniCluster();
   }
@@ -78,10 +76,22 @@ public class TestRegionServerCoprocessorPostAuthorization {
   }
 
   @Test
-  public void testPostAuthorizationObserverCalled() {
-    HRegionServer regionServer = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
-    AuthorizationRegionServerObserver observer = regionServer.getRegionServerCoprocessorHost()
-      .findCoprocessor(AuthorizationRegionServerObserver.class);
-    assertNotEquals(0, observer.ctPostAuthorization.get());
+  public void testPostAuthorizationHookCalledInMaster() {
+    RpcCoprocessorHost coprocHostMaster =
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getRpcServer().getRpcCoprocessorHost();
+    AuthorizationRpcObserver observer =
+      coprocHostMaster.findCoprocessor(AuthorizationRpcObserver.class);
+    assertEquals(2, observer.ctPostAuthorization.get());
+    assertEquals(System.getProperty("user.name"), observer.userName);
+  }
+
+  @Test
+  public void testPostAuthorizationHookCalledInRegionServer() {
+    RpcCoprocessorHost coprocHostRs =
+      TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getRpcServer().getRpcCoprocessorHost();
+    AuthorizationRpcObserver observer =
+      coprocHostRs.findCoprocessor(AuthorizationRpcObserver.class);
+    assertEquals(3, observer.ctPostAuthorization.get());
+    assertEquals(System.getProperty("user.name"), observer.userName);
   }
 }

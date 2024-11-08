@@ -62,6 +62,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     "hbase.coprocessor.user.region.classes";
   public static final String MASTER_COPROCESSOR_CONF_KEY = "hbase.coprocessor.master.classes";
   public static final String WAL_COPROCESSOR_CONF_KEY = "hbase.coprocessor.wal.classes";
+  public static final String RPC_COPROCESSOR_CONF_KEY = "hbase.coprocessor.rpc.classes";
   public static final String ABORT_ON_ERROR_KEY = "hbase.coprocessor.abortonerror";
   public static final boolean DEFAULT_ABORT_ON_ERROR = true;
   public static final String COPROCESSORS_ENABLED_CONF_KEY = "hbase.coprocessor.enabled";
