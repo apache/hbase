@@ -307,9 +307,13 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>>
    * @return the relative WAL directory name, e.g. <code>.logs/1.example.org,60030,12345</code> if
    *         <code>serverName</code> passed is <code>1.example.org,60030,12345</code>
    */
-  public static String getWALDirectoryName(final String serverName) {
+  public static String getWALDirectoryName(String serverName) {
+    // If ServerName is IPV6 address, then need to encode server address
+    if (ServerName.isIpv6ServerName(serverName, ServerName.COLON)) {
+      serverName = ServerName.getEncodedServerName(serverName).getServerName();
+    }
     StringBuilder dirName = new StringBuilder(HConstants.HREGION_LOGDIR_NAME);
-    dirName.append("/");
+    dirName.append(Path.SEPARATOR);
     dirName.append(serverName);
     return dirName.toString();
   }
@@ -321,9 +325,13 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>>
    * @param serverName Server name formatted as described in {@link ServerName}
    * @return the relative WAL directory name
    */
-  public static String getWALArchiveDirectoryName(Configuration conf, final String serverName) {
+  public static String getWALArchiveDirectoryName(Configuration conf, String serverName) {
     StringBuilder dirName = new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME);
     if (conf.getBoolean(SEPARATE_OLDLOGDIR, DEFAULT_SEPARATE_OLDLOGDIR)) {
+      // If ServerName is IPV6 address, then need to encode server address
+      if (ServerName.isIpv6ServerName(serverName, ServerName.COLON)) {
+        serverName = ServerName.getEncodedServerName(serverName).getServerName();
+      }
       dirName.append(Path.SEPARATOR);
       dirName.append(serverName);
     }
