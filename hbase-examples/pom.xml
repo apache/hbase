@@ -29,13 +29,6 @@
   <artifactId>hbase-examples</artifactId>
   <name>Apache HBase - Examples</name>
   <description>Examples of HBase usage</description>
-  <properties>
-    <!--
-      Version of protobuf that hbase uses internally (we shade our pb) Must match what is out
-      in hbase-thirdparty include.
-    -->
-    <internal.protobuf.version>4.28.2</internal.protobuf.version>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>org.apache.hbase.thirdparty</groupId>
