@@ -574,8 +574,11 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
   }
 
   /**
-   * @return greater byte array than given (row) which satisfies the fuzzy rule if it exists, null
-   *         otherwise
+   * Find out the closes next byte array that satisfies fuzzy rule and is after the given one. In
+   * the reverse case it returns increased byte array to make sure that the proper row is selected
+   * next.
+   * @return byte array which is after the given row and which satisfies the fuzzy rule if it
+   *         exists, null otherwise
    */
   static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, int offset, int length,
     byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
@@ -638,7 +641,12 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
       }
     }
 
-    return reverse ? result : trimTrailingZeroes(result, fuzzyKeyMeta, toInc);
+    byte[] trailingZerosTrimmed = trimTrailingZeroes(result, fuzzyKeyMeta, toInc);
+    if (reverse) {
+      return PrivateCellUtil.increaseLastNonMaxByte(trailingZerosTrimmed);
+    } else {
+      return trailingZerosTrimmed;
+    }
   }
 
   /**
