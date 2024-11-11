@@ -83,7 +83,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
-import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -715,8 +714,9 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
   }
 
   static void completeFile(DFSClient client, ClientProtocol namenode, String src, String clientName,
-    ExtendedBlock block, HdfsFileStatus stat) {
-    for (int retry = 0;; retry++) {
+    ExtendedBlock block, HdfsFileStatus stat) throws IOException {
+    int maxRetries = client.getConf().getNumBlockWriteLocateFollowingRetry();
+    for (int retry = 0; retry < maxRetries; retry++) {
       try {
         if (namenode.complete(src, clientName, block, stat.getFileId())) {
           endFileLease(client, stat);
@@ -725,18 +725,11 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
           LOG.warn("complete file " + src + " not finished, retry = " + retry);
         }
       } catch (RemoteException e) {
-        IOException ioe = e.unwrapRemoteException();
-        if (ioe instanceof LeaseExpiredException) {
-          LOG.warn("lease for file " + src + " is expired, give up", e);
-          return;
-        } else {
-          LOG.warn("complete file " + src + " failed, retry = " + retry, e);
-        }
-      } catch (Exception e) {
-        LOG.warn("complete file " + src + " failed, retry = " + retry, e);
+        throw e.unwrapRemoteException();
       }
       sleepIgnoreInterrupt(retry);
     }
+    throw new IOException("can not complete file after retrying " + maxRetries + " times");
   }
 
   static void sleepIgnoreInterrupt(int retry) {
