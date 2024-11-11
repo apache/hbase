@@ -507,9 +507,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       // big this can make the logs way too noisy.
       // So we log 2%
       if (stats.failInsert() % 50 == 0) {
-        LOG.warn("Trying to cache too large a block " + cacheKey.getHfileName() + " @ "
-          + cacheKey.getOffset() + " is " + buf.heapSize() + " which is larger than "
-          + maxBlockSize);
+        LOG.warn("Trying to cache too large a block {} @ {} is {} which is larger than {}",
+          cacheKey.getHfileName(), cacheKey.getOffset(), buf.heapSize(), maxBlockSize);
       }
       return;
     }
@@ -524,10 +523,10 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     if (currentSize >= hardLimitSize) {
       stats.failInsert();
       if (LOG.isTraceEnabled()) {
-        LOG.trace("LruAdaptiveBlockCache current size " + StringUtils.byteDesc(currentSize)
-          + " has exceeded acceptable size " + StringUtils.byteDesc(currentAcceptableSize) + "."
-          + " The hard limit size is " + StringUtils.byteDesc(hardLimitSize)
-          + ", failed to put cacheKey:" + cacheKey + " into LruAdaptiveBlockCache.");
+        LOG.trace(
+          "LruAdaptiveBlockCache current size {} has exceeded acceptable size {}. The hard limit size is {}, failed to put cacheKey:{} into LruAdaptiveBlockCache.",
+          StringUtils.byteDesc(currentSize), StringUtils.byteDesc(currentAcceptableSize),
+          StringUtils.byteDesc(hardLimitSize), cacheKey);
       }
       if (!evictionInProgress) {
         runEviction();
@@ -558,15 +557,15 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
    */
   private static void assertCounterSanity(long mapSize, long counterVal) {
     if (counterVal < 0) {
-      LOG.trace("counterVal overflow. Assertions unreliable. counterVal=" + counterVal
-        + ", mapSize=" + mapSize);
+      LOG.trace("counterVal overflow. Assertions unreliable. counterVal={}, mapSize={}", counterVal,
+        mapSize);
       return;
     }
     if (mapSize < Integer.MAX_VALUE) {
       double pct_diff = Math.abs((((double) counterVal) / ((double) mapSize)) - 1.);
       if (pct_diff > 0.05) {
-        LOG.trace("delta between reported and actual size > 5%. counterVal=" + counterVal
-          + ", mapSize=" + mapSize);
+        LOG.trace("delta between reported and actual size > 5%. counterVal={}, mapSize={}",
+          counterVal, mapSize);
       }
     }
   }
@@ -756,8 +755,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       bytesToFree = currentSize - minSize();
 
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Block cache LRU eviction started; Attempting to free "
-          + StringUtils.byteDesc(bytesToFree) + " of total=" + StringUtils.byteDesc(currentSize));
+        LOG.trace("Block cache LRU eviction started; Attempting to free {} of total={}",
+          StringUtils.byteDesc(bytesToFree), StringUtils.byteDesc(currentSize));
       }
 
       if (bytesToFree <= 0) {
@@ -797,13 +796,11 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
           bytesFreed = bucketSingle.free(s);
           bytesFreed += bucketMulti.free(m);
           if (LOG.isTraceEnabled()) {
-            LOG.trace(
-              "freed " + StringUtils.byteDesc(bytesFreed) + " from single and multi buckets");
+            LOG.trace("freed {} from single and multi buckets", StringUtils.byteDesc(bytesFreed));
           }
           bytesFreed += bucketMemory.free(bytesToFree - bytesFreed);
           if (LOG.isTraceEnabled()) {
-            LOG.trace(
-              "freed " + StringUtils.byteDesc(bytesFreed) + " total from all three buckets ");
+            LOG.trace("freed {} total from all three buckets ", StringUtils.byteDesc(bytesFreed));
           }
         } else {
           // this means no need to evict block in memory bucket,
@@ -851,10 +848,9 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
         long multi = bucketMulti.totalSize();
         long memory = bucketMemory.totalSize();
         LOG.trace(
-          "Block cache LRU eviction completed; " + "freed=" + StringUtils.byteDesc(bytesFreed)
-            + ", " + "total=" + StringUtils.byteDesc(this.size.get()) + ", " + "single="
-            + StringUtils.byteDesc(single) + ", " + "multi=" + StringUtils.byteDesc(multi) + ", "
-            + "memory=" + StringUtils.byteDesc(memory));
+          "Block cache LRU eviction completed; freed={}, total={}, single={}, multi={}, memory={}",
+          StringUtils.byteDesc(bytesFreed), StringUtils.byteDesc(this.size.get()),
+          StringUtils.byteDesc(single), StringUtils.byteDesc(multi), StringUtils.byteDesc(memory));
       }
     } finally {
       stats.evict();
@@ -1163,21 +1159,17 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     // Log size
     long totalSize = heapSize();
     long freeSize = maxSize - totalSize;
-    LruAdaptiveBlockCache.LOG
-      .info("totalSize=" + StringUtils.byteDesc(totalSize) + ", " + "freeSize="
-        + StringUtils.byteDesc(freeSize) + ", " + "max=" + StringUtils.byteDesc(this.maxSize) + ", "
-        + "blockCount=" + getBlockCount() + ", " + "accesses=" + stats.getRequestCount() + ", "
-        + "hits=" + stats.getHitCount() + ", " + "hitRatio="
-        + (stats.getHitCount() == 0
-          ? "0"
-          : (StringUtils.formatPercent(stats.getHitRatio(), 2) + ", "))
-        + ", " + "cachingAccesses=" + stats.getRequestCachingCount() + ", " + "cachingHits="
-        + stats.getHitCachingCount() + ", " + "cachingHitsRatio="
-        + (stats.getHitCachingCount() == 0
-          ? "0,"
-          : (StringUtils.formatPercent(stats.getHitCachingRatio(), 2) + ", "))
-        + "evictions=" + stats.getEvictionCount() + ", " + "evicted=" + stats.getEvictedCount()
-        + ", " + "evictedPerRun=" + stats.evictedPerEviction());
+    LruAdaptiveBlockCache.LOG.info(
+      "totalSize={}, freeSize={}, max={}, blockCount={}, accesses={}, hits={}, hitRatio={}, cachingAccesses={}, cachingHits={}, cachingHitsRatio={}evictions={}, evicted={}, evictedPerRun={}",
+      StringUtils.byteDesc(totalSize), StringUtils.byteDesc(freeSize),
+      StringUtils.byteDesc(this.maxSize), getBlockCount(), stats.getRequestCount(),
+      stats.getHitCount(),
+      stats.getHitCount() == 0 ? "0" : (StringUtils.formatPercent(stats.getHitRatio(), 2) + ", "),
+      stats.getRequestCachingCount(), stats.getHitCachingCount(),
+      stats.getHitCachingCount() == 0
+        ? "0,"
+        : (StringUtils.formatPercent(stats.getHitCachingRatio(), 2) + ", "),
+      stats.getEvictionCount(), stats.getEvictedCount(), stats.evictedPerEviction());
   }
 
   /**
@@ -1338,7 +1330,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
 
     if (!this.scheduleThreadPool.isShutdown()) {
       List<Runnable> runnables = this.scheduleThreadPool.shutdownNow();
-      LOG.debug("Still running " + runnables);
+      LOG.debug("Still running {}", runnables);
     }
     this.evictionThread.shutdown();
   }
