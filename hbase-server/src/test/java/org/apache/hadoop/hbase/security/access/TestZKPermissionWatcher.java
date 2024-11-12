@@ -148,6 +148,31 @@ public class TestZKPermissionWatcher {
     assertFalse(AUTH_B.authorizeUserTable(hubert, TEST_TABLE, Permission.Action.WRITE));
   }
 
+  @Test
+  public void testRaceConditionOnPermissionUpdate() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    User george = User.createUserForTesting(conf, "george", new String[] {});
+    User hubert = User.createUserForTesting(conf, "hubert", new String[] {});
+    ListMultimap<String, UserPermission> permissions = ArrayListMultimap.create();
+
+    // update ACL: george RW
+    writeToZookeeper(WATCHER_A, updatePermissions(permissions, george, Permission.Action.READ, Permission.Action.WRITE));
+    waitForModification(AUTH_A, 1000);
+
+    // check it
+    assertTrue(AUTH_A.authorizeUserTable(george, TEST_TABLE, Permission.Action.READ));
+    assertTrue(AUTH_A.authorizeUserTable(george, TEST_TABLE, Permission.Action.WRITE));
+
+    // update ACL: hubert A
+    writeToZookeeper(WATCHER_A, updatePermissions(permissions, hubert, Permission.Action.ADMIN));
+    // intended not to waitForModification(AUTH_A, 1000);
+    // check george permission should not be updated/removed while updating permission for hubert
+    for (int i = 0; i < 5000; i++) {
+      assertTrue(AUTH_A.authorizeUserTable(george, TEST_TABLE, Permission.Action.READ));
+      assertTrue(AUTH_A.authorizeUserTable(george, TEST_TABLE, Permission.Action.WRITE));
+    }
+  }
+
   private ListMultimap<String, UserPermission> updatePermissions(
     ListMultimap<String, UserPermission> permissions, User user, Permission.Action... actions
   ) {
