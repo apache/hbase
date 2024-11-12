@@ -343,7 +343,6 @@ public class TestHStoreFile {
     Path storeFilePath = regionFs.commitStoreFile(TEST_FAMILY, writer.getPath());
     Path dstPath =
       new Path(regionFs.getTableDir(), new Path(dstHri.getRegionNameAsString(), TEST_FAMILY));
-    HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
     Path linkFilePath =
       new Path(dstPath, HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
 
@@ -355,7 +354,9 @@ public class TestHStoreFile {
     StoreFileTracker sft = StoreFileTrackerFactory.create(testConf, false,
       StoreContext.getBuilder()
         .withFamilyStoreDirectoryPath(new Path(dstHri.getRegionNameAsString(), TEST_FAMILY))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
         .withRegionFileSystem(dstRegionFs).build());
+    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), storeFilePath.getName(), true);
     StoreFileInfo storeFileInfo = sft.getStoreFileInfo(linkFilePath, true);
     HStoreFile hsf = new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf);
     assertTrue(storeFileInfo.isLink());
@@ -406,7 +407,6 @@ public class TestHStoreFile {
     HRegionFileSystem cloneRegionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
       CommonFSUtils.getTableDir(testDir, hri.getTable()), hriClone);
     Path dstPath = cloneRegionFs.getStoreDir(TEST_FAMILY);
-    HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
     Path linkFilePath =
       new Path(dstPath, HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
 
@@ -420,7 +420,9 @@ public class TestHStoreFile {
     StoreFileTracker sft = StoreFileTrackerFactory.create(testConf, true,
       StoreContext.getBuilder()
         .withFamilyStoreDirectoryPath(new Path(hriClone.getRegionNameAsString(), TEST_FAMILY))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
         .withRegionFileSystem(cloneRegionFs).build());
+    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), storeFilePath.getName(), true);
 
     HRegionFileSystem splitRegionAFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
       CommonFSUtils.getTableDir(testDir, splitHriA.getTable()), splitHriA);
