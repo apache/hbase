@@ -645,6 +645,8 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
 
     byte[] trailingZerosTrimmed = trimTrailingZeroes(result, fuzzyKeyMeta, toInc);
     if (reverse) {
+      // In the reverse case we increase last non-max byte to make sure that the proper row is
+      // selected next.
       return PrivateCellUtil.increaseLastNonMaxByte(trailingZerosTrimmed);
     } else {
       return trailingZerosTrimmed;
