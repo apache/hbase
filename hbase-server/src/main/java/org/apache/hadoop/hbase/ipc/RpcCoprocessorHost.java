@@ -97,6 +97,15 @@ public class RpcCoprocessorHost extends CoprocessorHost<RpcCoprocessor, RpcCopro
     }
   }
 
+  public void preAuthorizeConnection() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RpcObserverOperation() {
+      @Override
+      protected void call(RpcObserver observer) throws IOException {
+        observer.preAuthorizeConnection(this);
+      }
+    });
+  }
+
   public void postAuthorizeConnection(final String userName,
     final X509Certificate[] clientCertificates) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new RpcObserverOperation() {
