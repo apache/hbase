@@ -75,6 +75,9 @@ public class StoreFileInfo implements Configurable {
   private static final Pattern REF_NAME_PATTERN =
     Pattern.compile(String.format("^(%s|%s)\\.(.+)$", HFILE_NAME_REGEX, HFileLink.LINK_NAME_REGEX));
 
+  private static final Pattern MOB_REF_NAME_PATTERN =
+    Pattern.compile(String.format("^(%s)\\.(.+)$", HFileLink.LINK_NAME_REGEX));
+
   public static final String STORE_FILE_READER_NO_READAHEAD = "hbase.store.reader.no-readahead";
   public static final boolean DEFAULT_STORE_FILE_READER_NO_READAHEAD = true;
 
@@ -519,7 +522,7 @@ public class StoreFileInfo implements Configurable {
     parts[0] = fileName.substring(0, lastIndex);
     parts[1] = fileName.substring(lastIndex + 1);
     String name = parts[0] + "." + parts[1];
-    Matcher m = REF_NAME_PATTERN.matcher(name);
+    Matcher m = MOB_REF_NAME_PATTERN.matcher(name);
     return m.matches() && m.groupCount() > 1;
   }
 

@@ -49,6 +49,7 @@ public final class MobFileName {
   private static final int DATE_END_INDEX = 40;
   private static final int UUID_END_INDEX = 72;
   public static final String REGION_SEP = "_";
+  public static final String REF_MOB_FILE_PRE_SEP = "-";
 
   /**
    * Creates an instance of MobFileName
@@ -142,6 +143,17 @@ public final class MobFileName {
    */
   public static String getDateFromName(final String fileName) {
     return fileName.substring(STARTKEY_END_INDEX, DATE_END_INDEX);
+  }
+
+  /**
+   * get date from a mob reference fileName which created by snapshot
+   * @param fileName mob reference fileName
+   */
+  public static String getDateFromMobRefFileName(final String fileName) {
+    // if the mob file was a mob reference file which created by snapshot, the file name format is
+    // [namespace=]table_name=mob_region_name-old_mob_file_name
+    int index = fileName.indexOf(REF_MOB_FILE_PRE_SEP);
+    return getDateFromName(fileName.substring(index + 1));
   }
 
   /**

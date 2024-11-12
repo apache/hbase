@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
@@ -316,17 +317,9 @@ public final class MobUtils {
           fileName = hfileLink.getOriginPath().getName();
         }
 
-        String s = String.format("%s=%s-",
-          tableName.getNameAsString().replace(TableName.NAMESPACE_DELIM, '='),
-          getMobRegionInfo(tableName).getEncodedName());
-        String dateString;
-        // if the mob file was recovered through snapshot, the file name format is
-        // {namespace=}table_name=mob_region_name-old_mob_file_name
-        if (fileName.startsWith(s)) {
-          dateString = MobFileName.getDateFromName(fileName.substring(s.length()));
-        } else {
-          dateString = MobFileName.getDateFromName(fileName);
-        }
+        String dateString = StoreFileInfo.isMobRefFile(file.getPath())
+          ? MobFileName.getDateFromMobRefFileName(fileName)
+          : MobFileName.getDateFromName(fileName);
         Date fileDate = parseDate(dateString);
 
         if (LOG.isDebugEnabled()) {
