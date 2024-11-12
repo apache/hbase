@@ -50,6 +50,15 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface RpcObserver {
+
+  /**
+   * Called before authorizing connection
+   * @param ctx the coprocessor instance's environment
+   */
+  default void preAuthorizeConnection(ObserverContext<RpcCoprocessorEnvironment> ctx)
+    throws IOException {
+  }
+
   /**
    * Called after successfully authorizing connection
    * @param ctx                    the coprocessor instance's environment
