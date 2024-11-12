@@ -125,23 +125,18 @@ public class RSMobFileCleanerChore extends ScheduledChore {
                 currentPath = sf.getPath();
                 byte[] mobRefData = null;
                 byte[] bulkloadMarkerData = null;
-                boolean needCreateReader = false;
                 if (sf.getReader() == null) {
                   synchronized (sf) {
-                    if (sf.getReader() == null) {
-                      needCreateReader = true;
-                      sf.initReader();
-                      mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
-                      bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
+                    boolean needCreateReader = sf.getReader() == null;
+                    sf.initReader();
+                    mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
+                    bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
+                    if (needCreateReader) {
                       // close store file to avoid memory leaks
                       sf.closeStoreFile(true);
                     }
                   }
-                }
-                // If the StoreFileReader object was created by another thread, even if the reader
-                // has been closed now, we can still obtain the data by HStoreFile.metataMap,
-                // because the map will not be cleared when the reader is closed.
-                if (!needCreateReader) {
+                } else {
                   mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
                   bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
                 }
