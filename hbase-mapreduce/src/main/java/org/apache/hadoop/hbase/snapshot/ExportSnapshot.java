@@ -28,8 +28,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -661,7 +659,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
     // Get snapshot files
     LOG.info("Loading Snapshot '" + snapshotDesc.getName() + "' hfile list");
-    Set<String> existingFiles = new TreeSet<>();
     SnapshotReferenceUtil.visitReferencedFiles(conf, fs, snapshotDir, snapshotDesc,
       new SnapshotReferenceUtil.SnapshotVisitor() {
         @Override
@@ -681,13 +678,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
             snapshotFileAndSize = getSnapshotFileAndSize(fs, conf, table, referencedRegion, family,
               referencedHFile, storeFile.hasFileSize() ? storeFile.getFileSize() : -1);
           }
-          String fileToExport = snapshotFileAndSize.getFirst().getHfile();
-          if (!existingFiles.contains(fileToExport)) {
-            files.add(snapshotFileAndSize);
-            existingFiles.add(fileToExport);
-          } else {
-            LOG.debug("Skip the existing file: {}.", fileToExport);
-          }
+          files.add(snapshotFileAndSize);
         }
       });
 
