@@ -106,6 +106,7 @@ public class TestExportSnapshot {
     // If a single node has enough failures (default 3), resource manager will blacklist it.
     // With only 2 nodes and tests injecting faults, we don't want that.
     conf.setInt("mapreduce.job.maxtaskfailures.per.tracker", 100);
+    conf.setInt("snapshot.export.default.map.group", 1);
   }
 
   @BeforeClass
@@ -204,6 +205,48 @@ public class TestExportSnapshot {
     testExportFileSystemState(tableName0, snapshotName0, snapshotName0, tableNumFiles);
     // delete table
     TEST_UTIL.deleteTable(tableName0);
+  }
+
+  @Test
+  public void testExportFileSystemStateWithSplitRegion() throws Exception {
+    // disable compaction
+    admin.compactionSwitch(false,
+      admin.getRegionServers().stream().map(a -> a.getServerName()).collect(Collectors.toList()));
+    // create Table
+    TableName splitTableName = TableName.valueOf(testName.getMethodName());
+    String splitTableSnap = "snapshot-" + testName.getMethodName();
+    admin.createTable(TableDescriptorBuilder.newBuilder(splitTableName).setColumnFamilies(
+      Lists.newArrayList(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build())).build());
+
+    // put some data
+    try (Table table = admin.getConnection().getTable(splitTableName)) {
+      table.put(new Put(Bytes.toBytes("row1")).addColumn(FAMILY, null, Bytes.toBytes("value1")));
+      table.put(new Put(Bytes.toBytes("row2")).addColumn(FAMILY, null, Bytes.toBytes("value2")));
+      table.put(new Put(Bytes.toBytes("row3")).addColumn(FAMILY, null, Bytes.toBytes("value3")));
+      table.put(new Put(Bytes.toBytes("row4")).addColumn(FAMILY, null, Bytes.toBytes("value4")));
+      table.put(new Put(Bytes.toBytes("row5")).addColumn(FAMILY, null, Bytes.toBytes("value5")));
+      table.put(new Put(Bytes.toBytes("row6")).addColumn(FAMILY, null, Bytes.toBytes("value6")));
+      table.put(new Put(Bytes.toBytes("row7")).addColumn(FAMILY, null, Bytes.toBytes("value7")));
+      table.put(new Put(Bytes.toBytes("row8")).addColumn(FAMILY, null, Bytes.toBytes("value8")));
+      // Flush to HFile
+      admin.flush(tableName);
+    }
+
+    List<RegionInfo> regions = admin.getRegions(splitTableName);
+    assertEquals(1, regions.size());
+    tableNumFiles = regions.size();
+
+    // split region
+    admin.split(splitTableName, Bytes.toBytes("row5"));
+    regions = admin.getRegions(splitTableName);
+    assertEquals(2, regions.size());
+
+    // take a snapshot
+    admin.snapshot(splitTableSnap, splitTableName);
+    // export snapshot and verify
+    testExportFileSystemState(splitTableName, splitTableSnap, splitTableSnap, tableNumFiles);
+    // delete table
+    TEST_UTIL.deleteTable(splitTableName);
   }
 
   @Test
