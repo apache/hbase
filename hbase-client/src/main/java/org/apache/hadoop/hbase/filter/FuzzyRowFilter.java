@@ -592,10 +592,12 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
     // values than otherwise.
     byte[] result =
       Arrays.copyOf(fuzzyKeyBytes, length > fuzzyKeyBytes.length ? length : fuzzyKeyBytes.length);
-    if (reverse && length > fuzzyKeyBytes.length) {
-      // we need trailing 0xff's instead of trailing 0x00's
-      for (int i = fuzzyKeyBytes.length; i < result.length; i++) {
-        result[i] = (byte) 0xFF;
+    if (reverse) {
+      // we need 0xff's instead of 0x00's
+      for (int i = 0; i < result.length; i++) {
+        if (result[i] == 0) {
+          result[i] = (byte) 0xFF;
+        }
       }
     }
     int toInc = -1;
