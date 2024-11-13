@@ -582,8 +582,8 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
    */
   static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, int offset, int length,
     byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
-    // To find out the next "smallest" byte array that satisfies fuzzy rule and "greater" than
-    // the given one we do the following:
+    // To find out the closest next byte array that satisfies fuzzy rule and is after the given one
+    // we do the following:
     // 1. setting values on all "fixed" positions to the values from fuzzyKeyBytes
     // 2. if during the first step given row did not increase, then we increase the value at
     // the first "non-fixed" position (where it is not maximum already)
