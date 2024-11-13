@@ -44,11 +44,18 @@ public class TestRpcCoprocessor {
 
   public static class AuthorizationRpcObserver implements RpcCoprocessor, RpcObserver {
     final AtomicInteger ctPostAuthorization = new AtomicInteger(0);
+    final AtomicInteger ctPreAuthorization = new AtomicInteger(0);
     String userName = null;
 
     @Override
     public Optional<RpcObserver> getRpcObserver() {
       return Optional.of(this);
+    }
+
+    @Override
+    public void preAuthorizeConnection(ObserverContext<RpcCoprocessorEnvironment> ctx)
+      throws IOException {
+      ctPreAuthorization.incrementAndGet();
     }
 
     @Override
@@ -76,21 +83,23 @@ public class TestRpcCoprocessor {
   }
 
   @Test
-  public void testPostAuthorizationHookCalledInMaster() {
+  public void testHooksCalledFromMaster() {
     RpcCoprocessorHost coprocHostMaster =
       TEST_UTIL.getMiniHBaseCluster().getMaster().getRpcServer().getRpcCoprocessorHost();
     AuthorizationRpcObserver observer =
       coprocHostMaster.findCoprocessor(AuthorizationRpcObserver.class);
+    assertEquals(2, observer.ctPreAuthorization.get());
     assertEquals(2, observer.ctPostAuthorization.get());
     assertEquals(System.getProperty("user.name"), observer.userName);
   }
 
   @Test
-  public void testPostAuthorizationHookCalledInRegionServer() {
+  public void testHooksCalledFromRegionServer() {
     RpcCoprocessorHost coprocHostRs =
       TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getRpcServer().getRpcCoprocessorHost();
     AuthorizationRpcObserver observer =
       coprocHostRs.findCoprocessor(AuthorizationRpcObserver.class);
+    assertEquals(3, observer.ctPreAuthorization.get());
     assertEquals(3, observer.ctPostAuthorization.get());
     assertEquals(System.getProperty("user.name"), observer.userName);
   }
