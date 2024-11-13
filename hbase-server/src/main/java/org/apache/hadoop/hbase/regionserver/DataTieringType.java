@@ -17,10 +17,17 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
 public enum DataTieringType {
-  NONE,
-  TIME_RANGE
+  NONE(null),
+  TIME_RANGE(new CellTSTiering()),
+  CUSTOM_CELL_VALUE(new CustomCellValueTiering());
+
+  final DataTiering instance;
+  DataTieringType(DataTiering instance) {
+    this.instance = instance;
+  }
 }

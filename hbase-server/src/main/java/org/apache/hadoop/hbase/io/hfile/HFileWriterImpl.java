@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.MAX_BLOCK_SIZE_UNCOMPRESSED;
+import static org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.TIERING_CELL_TIME_RANGE;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
 
@@ -598,7 +599,7 @@ public class HFileWriterImpl implements HFile.Writer {
   }
 
   private boolean shouldCacheBlock(BlockCache cache, BlockCacheKey key) {
-    Optional<Boolean> result = cache.shouldCacheBlock(key, timeRangeToTrack.get(), conf);
+    Optional<Boolean> result = cache.shouldCacheBlock(key, timeRangeToTrack.get().getMax(), conf);
     return result.orElse(true);
   }
 
@@ -907,6 +908,13 @@ public class HFileWriterImpl implements HFile.Writer {
     // via TimeRangeTracker, so we should write the serialization data of TimeRange directly.
     appendFileInfo(TIMERANGE_KEY, TimeRangeTracker.toByteArray(timeRangeTracker));
     appendFileInfo(EARLIEST_PUT_TS, Bytes.toBytes(earliestPutTs));
+  }
+
+  public void appendCustomCellTimestampsToMetadata(TimeRangeTracker timeRangeTracker)
+    throws IOException {
+    // TODO: The StoreFileReader always converts the byte[] to TimeRange
+    // via TimeRangeTracker, so we should write the serialization data of TimeRange directly.
+    appendFileInfo(TIERING_CELL_TIME_RANGE, TimeRangeTracker.toByteArray(timeRangeTracker));
   }
 
   /**
