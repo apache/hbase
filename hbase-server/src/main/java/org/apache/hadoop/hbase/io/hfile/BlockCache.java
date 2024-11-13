@@ -220,7 +220,7 @@ public interface BlockCache extends Iterable<CachedBlock>, ConfigurationObserver
    * @return An empty Optional if this method is not supported; otherwise, the returned Optional
    *         contains the boolean value indicating if the block should be cached.
    */
-  default Optional<Boolean> shouldCacheBlock(BlockCacheKey key, TimeRangeTracker timeRangeTracker,
+  default Optional<Boolean> shouldCacheBlock(BlockCacheKey key, long maxTimeStamp,
     Configuration conf) {
     return Optional.empty();
   }
