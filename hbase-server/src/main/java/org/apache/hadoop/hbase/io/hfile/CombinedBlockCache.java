@@ -494,10 +494,10 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
-  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, TimeRangeTracker timeRangeTracker,
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, long maxTimeStamp,
     Configuration conf) {
-    return combineCacheResults(l1Cache.shouldCacheBlock(key, timeRangeTracker, conf),
-      l2Cache.shouldCacheBlock(key, timeRangeTracker, conf));
+    return combineCacheResults(l1Cache.shouldCacheBlock(key, maxTimeStamp, conf),
+      l2Cache.shouldCacheBlock(key, maxTimeStamp, conf));
   }
 
   private Optional<Boolean> combineCacheResults(Optional<Boolean> result1,
