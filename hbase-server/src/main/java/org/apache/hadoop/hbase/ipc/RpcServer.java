@@ -317,7 +317,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     this.isOnlineLogProviderEnabled = getIsOnlineLogProviderEnabled(conf);
     this.scheduler = scheduler;
 
-    this.cpHost = new RpcCoprocessorHost(getConf());
+    initializeCoprocessorHost(getConf());
   }
 
   @Override
@@ -913,7 +913,6 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   }
 
   private void initializeCoprocessorHost(Configuration conf) {
-    // initialize master side coprocessors before we start handling requests
     this.cpHost = new RpcCoprocessorHost(conf);
   }
 
