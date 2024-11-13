@@ -375,8 +375,7 @@ abstract class ServerRpcConnection implements Closeable {
       }
       this.user = this.rpcServer.userProvider.create(this.ugi);
       this.rpcServer.getRpcCoprocessorHost().postAuthorizeConnection(
-        this.user != null ? this.user.getName() : null,
-        this.clientCertificateChain);
+        this.user != null ? this.user.getName() : null, this.clientCertificateChain);
     }
   }
 
