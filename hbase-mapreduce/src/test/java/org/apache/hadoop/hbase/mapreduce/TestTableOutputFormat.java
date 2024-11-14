@@ -76,7 +76,9 @@ public class TestTableOutputFormat {
 
   @After
   public void close() throws IOException, InterruptedException {
-    if (writer != null && context != null) writer.close(context);
+    if (writer != null && context != null) {
+      writer.close(context);
+    }
   }
 
   @Test
