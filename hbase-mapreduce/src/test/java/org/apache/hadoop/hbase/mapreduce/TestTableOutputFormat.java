@@ -21,7 +21,7 @@ import java.io.IOException;
 import javax.validation.constraints.Null;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -50,7 +50,7 @@ public class TestTableOutputFormat {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestTableOutputFormat.class);
 
-  private static final HBaseTestingUtil util = new HBaseTestingUtil();
+  private static final HBaseTestingUtility util = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("TEST_TABLE");
   private static final byte[] columnFamily = Bytes.toBytes("f");
   private static Configuration conf;
