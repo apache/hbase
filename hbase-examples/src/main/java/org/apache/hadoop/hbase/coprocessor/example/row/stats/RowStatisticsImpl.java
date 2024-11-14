@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.coprocessor.example.row.stats;
 
 import java.util.Map;
+import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang.builder.ToStringStyle;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.RawCellBuilder;
@@ -64,16 +66,16 @@ public class RowStatisticsImpl implements RowStatistics {
   private final String table;
   private final String region;
   private final String columnFamily;
-  private long largestRowBytes;
-  private int largestRowCells;
-  private long largestCellBytes;
-  private int cellsLargerThanOneBlock;
-  private int rowsLargerThanOneBlock;
-  private int cellsLargerThanMaxCacheSize;
-  private int totalDeletes;
-  private int totalCells;
-  private int totalRows;
-  private long totalBytes;
+  private long largestRowNumBytes;
+  private int largestRowCellsCount;
+  private long largestCellNumBytes;
+  private int cellsLargerThanOneBlockCount;
+  private int rowsLargerThanOneBlockCount;
+  private int cellsLargerThanMaxCacheSizeCount;
+  private int totalDeletesCount;
+  private int totalCellsCount;
+  private int totalRowsCount;
+  private long totalBytesCount;
 
   RowStatisticsImpl(String table, String encodedRegion, String columnFamily, long blockSize,
     long maxCacheSize, boolean isMajor) {
@@ -88,10 +90,10 @@ public class RowStatisticsImpl implements RowStatistics {
   }
 
   public void handleRowChanged(Cell lastCell) {
-    if (rowBytes > largestRowBytes) {
+    if (rowBytes > largestRowNumBytes) {
       largestRowRef = lastCell;
-      largestRowBytes = rowBytes;
-      largestRowCells = rowCells;
+      largestRowNumBytes = rowBytes;
+      largestRowCellsCount = rowCells;
     }
     if (rowBytes > blockSize) {
       if (LOG.isDebugEnabled()) {
@@ -99,12 +101,12 @@ public class RowStatisticsImpl implements RowStatistics {
           blockSize, table, Bytes.toStringBinary(lastCell.getRowArray(), lastCell.getRowOffset(),
             lastCell.getRowLength()));
       }
-      rowsLargerThanOneBlock++;
+      rowsLargerThanOneBlockCount++;
     }
     rowSizeBuckets.add(rowBytes);
     rowBytes = 0;
     rowCells = 0;
-    totalRows++;
+    totalRowsCount++;
   }
 
   public void consumeCell(Cell cell) {
@@ -115,11 +117,11 @@ public class RowStatisticsImpl implements RowStatistics {
 
     boolean tooLarge = false;
     if (cellSize > maxCacheSize) {
-      cellsLargerThanMaxCacheSize++;
+      cellsLargerThanMaxCacheSizeCount++;
       tooLarge = true;
     }
     if (cellSize > blockSize) {
-      cellsLargerThanOneBlock++;
+      cellsLargerThanOneBlockCount++;
       tooLarge = true;
     }
 
@@ -128,17 +130,17 @@ public class RowStatisticsImpl implements RowStatistics {
         blockSize, maxCacheSize, table, CellUtil.toString(cell, false));
     }
 
-    if (cellSize > largestCellBytes) {
+    if (cellSize > largestCellNumBytes) {
       largestCellRef = cell;
-      largestCellBytes = cellSize;
+      largestCellNumBytes = cellSize;
     }
     valueSizeBuckets.add(cell.getValueLength());
 
-    totalCells++;
+    totalCellsCount++;
     if (CellUtil.isDelete(cell)) {
-      totalDeletes++;
+      totalDeletesCount++;
     }
-    totalBytes += cellSize;
+    totalBytesCount += cellSize;
   }
 
   /**
@@ -182,11 +184,11 @@ public class RowStatisticsImpl implements RowStatistics {
   }
 
   public long getLargestRowNumBytes() {
-    return largestRowBytes;
+    return largestRowNumBytes;
   }
 
   public int getLargestRowCellsCount() {
-    return largestRowCells;
+    return largestRowCellsCount;
   }
 
   public Cell getLargestCell() {
@@ -198,35 +200,35 @@ public class RowStatisticsImpl implements RowStatistics {
   }
 
   public long getLargestCellNumBytes() {
-    return largestCellBytes;
+    return largestCellNumBytes;
   }
 
   public int getCellsLargerThanOneBlockCount() {
-    return cellsLargerThanOneBlock;
+    return cellsLargerThanOneBlockCount;
   }
 
   public int getRowsLargerThanOneBlockCount() {
-    return rowsLargerThanOneBlock;
+    return rowsLargerThanOneBlockCount;
   }
 
   public int getCellsLargerThanMaxCacheSizeCount() {
-    return cellsLargerThanMaxCacheSize;
+    return cellsLargerThanMaxCacheSizeCount;
   }
 
   public int getTotalDeletesCount() {
-    return totalDeletes;
+    return totalDeletesCount;
   }
 
   public int getTotalCellsCount() {
-    return totalCells;
+    return totalCellsCount;
   }
 
   public int getTotalRowsCount() {
-    return totalRows;
+    return totalRowsCount;
   }
 
   public long getTotalBytes() {
-    return totalBytes;
+    return totalBytesCount;
   }
 
   public Map<String, Long> getRowSizeBuckets() {
@@ -239,14 +241,23 @@ public class RowStatisticsImpl implements RowStatistics {
 
   @Override
   public String toString() {
-    return ("RowStatistics{" + "largestRow=" + Bytes.toStringBinary(largestRow)
-      + ", largestRowBytes=" + largestRowBytes + ", largestRowCells=" + largestRowCells
-      + ", largestCell=" + largestCell + ", largestCellBytes=" + largestCellBytes
-      + ", cellsLargerThanOneBlock=" + cellsLargerThanOneBlock + ", rowsLargerThanOneBlock="
-      + rowsLargerThanOneBlock + ", cellsLargerThanMaxCacheSize=" + cellsLargerThanMaxCacheSize
-      + ", totalDeletes=" + totalDeletes + ", totalCells=" + totalCells + ", totalRows=" + totalRows
-      + ", totalBytes=" + totalBytes + ", rowSizeBuckets=" + getRowSizeBuckets()
-      + ", valueSizeBuckets=" + getValueSizeBuckets() + ", isMajor=" + isMajor + '}');
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+      .append("largestRowAsString", Bytes.toStringBinary(largestRow))
+      .append("largestCellAsString", largestCell)
+      .append("largestRowNumBytes", largestRowNumBytes)
+      .append("largestRowCellsCount", largestRowCellsCount)
+      .append("largestCellNumBytes", largestCellNumBytes)
+      .append("cellsLargerThanOneBlockCount", cellsLargerThanOneBlockCount)
+      .append("rowsLargerThanOneBlockCount", rowsLargerThanOneBlockCount)
+      .append("cellsLargerThanMaxCacheSizeCount", cellsLargerThanMaxCacheSizeCount)
+      .append("totalDeletesCount", totalDeletesCount)
+      .append("totalCellsCount", totalCellsCount)
+      .append("totalRowsCount", totalRowsCount)
+      .append("totalBytesCount", totalBytesCount)
+      .append("rowSizeBuckets", getRowSizeBuckets())
+      .append("valueSizeBuckets", getValueSizeBuckets())
+      .append("isMajor", isMajor)
+      .toString();
   }
 
   @Override
