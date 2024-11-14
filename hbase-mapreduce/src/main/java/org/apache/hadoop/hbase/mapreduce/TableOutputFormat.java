@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -52,6 +53,15 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
 
   /** Job parameter that specifies the output table. */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
+
+  /** Property value to use write-ahead logging */
+  public static final boolean WAL_ON = true;
+
+  /** Property value to disable write-ahead logging */
+  public static final boolean WAL_OFF = false;
+
+  /** Set this to {@link #WAL_OFF} to turn off write-ahead logging (WAL) */
+  public static final String WAL_PROPERTY = "hbase.mapreduce.tableoutputformat.write.wal";
 
   /**
    * Prefix for configuration property overrides to apply in {@link #setConf(Configuration)}. For
@@ -98,6 +108,7 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
 
     private Connection connection;
     private BufferedMutator mutator;
+    boolean useWriteAheadLogging;
 
     /**
      *
@@ -108,6 +119,7 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
       this.connection = ConnectionFactory.createConnection(conf);
       this.mutator = connection.getBufferedMutator(TableName.valueOf(tableName));
       LOG.info("Created table instance for " + tableName);
+      this.useWriteAheadLogging = conf.getBoolean(WAL_PROPERTY, WAL_ON);
     }
 
     /**
@@ -140,6 +152,9 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
     public void write(KEY key, Mutation value) throws IOException {
       if (!(value instanceof Put) && !(value instanceof Delete)) {
         throw new IOException("Pass a Delete or a Put");
+      }
+      if (!useWriteAheadLogging) {
+        value.setDurability(Durability.SKIP_WAL);
       }
       mutator.mutate(value);
     }
