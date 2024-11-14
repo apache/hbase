@@ -196,7 +196,7 @@ public class RowStatisticsCompactionObserver
   }
 
   @Override
-  public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> context,
+  public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> context,
     Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
     CompactionRequest request) {
     if (store.getTableName().isSystemTable()) {
