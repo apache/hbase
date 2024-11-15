@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
@@ -127,20 +128,23 @@ public class TestVerifyBucketCacheFile {
       FileSystems.getDefault().getPath(testDir.toString(), "bucket.cache");
     assertTrue(Files.deleteIfExists(cacheFile));
     // can't restore cache from file
-    bucketCache =
+    final BucketCache recoveredBucketCache =
       new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
         constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
-    assertTrue(bucketCache.waitForCacheInitialization(10000));
-    assertEquals(0, bucketCache.getAllocator().getUsedSize());
-    assertEquals(0, bucketCache.backingMap.size());
+    assertTrue(recoveredBucketCache.waitForCacheInitialization(10000));
+    Waiter.waitFor(HBaseConfiguration.create(), 1000,
+      () -> recoveredBucketCache.getBackingMapValidated().get());
+    assertEquals(0, recoveredBucketCache.getAllocator().getUsedSize());
+    assertEquals(0, recoveredBucketCache.backingMap.size());
     // Add blocks
     for (CacheTestUtils.HFileBlockPair block : blocks) {
-      cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock());
+      cacheAndWaitUntilFlushedToBucket(recoveredBucketCache, block.getBlockName(),
+        block.getBlock());
     }
-    usedSize = bucketCache.getAllocator().getUsedSize();
+    usedSize = recoveredBucketCache.getAllocator().getUsedSize();
     assertNotEquals(0, usedSize);
     // persist cache to file
-    bucketCache.shutdown();
+    recoveredBucketCache.shutdown();
 
     // 3.delete backingMap persistence file
     final java.nio.file.Path mapFile =
