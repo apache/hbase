@@ -382,6 +382,28 @@ public class TestPrefetch {
   }
 
   @Test
+  public void testPrefetchWhenNoBlockCache() throws Exception {
+    PrefetchExecutorNotifier prefetchExecutorNotifier = new PrefetchExecutorNotifier(conf);
+    try {
+      // Set a delay to max, as we don't need to have the thread running, but rather
+      // assert that it never gets scheduled
+      conf.setInt(PREFETCH_DELAY, Integer.MAX_VALUE);
+      conf.setFloat(PREFETCH_DELAY_VARIATION, 0.0f);
+      prefetchExecutorNotifier.onConfigurationChange(conf);
+
+      HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
+        .withBlockSize(DATA_BLOCK_SIZE).build();
+      Path storeFile = writeStoreFile("testPrefetchWhenNoBlockCache", context);
+      HFile.createReader(fs, storeFile, new CacheConfig(conf), true, conf);
+      assertEquals(0, PrefetchExecutor.getPrefetchFutures().size());
+    } finally {
+      conf.setInt(PREFETCH_DELAY, 1000);
+      conf.setFloat(PREFETCH_DELAY_VARIATION, PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
+      prefetchExecutorNotifier.onConfigurationChange(conf);
+    }
+  }
+
+  @Test
   public void testPrefetchDoesntSkipHFileLink() throws Exception {
     testPrefetchWhenHFileLink(c -> {
       boolean isCached = c != null;

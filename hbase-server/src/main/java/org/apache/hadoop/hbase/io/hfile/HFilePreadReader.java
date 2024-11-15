@@ -39,16 +39,16 @@ public class HFilePreadReader extends HFileReaderImpl {
   public HFilePreadReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
-
+    // master hosted regions, like the master procedures store wouldn't have a block cache
+    final MutableBoolean shouldCache = new MutableBoolean(cacheConf.getBlockCache().isPresent());
     // Prefetch file blocks upon open if requested
-    if (cacheConf.shouldPrefetchOnOpen()) {
+    if (shouldCache.booleanValue() && cacheConf.shouldPrefetchOnOpen()) {
       PrefetchExecutor.request(path, new Runnable() {
         @Override
         public void run() {
           long offset = 0;
           long end = 0;
           HFile.Reader prefetchStreamReader = null;
-          final MutableBoolean shouldCache = new MutableBoolean(true);
           try {
             cacheConf.getBlockCache().ifPresent(cache -> {
               cache.waitForCacheInitialization(WAIT_TIME_FOR_CACHE_INITIALIZATION);
@@ -56,7 +56,7 @@ public class HFilePreadReader extends HFileReaderImpl {
               shouldCache.setValue(result.isPresent() ? result.get().booleanValue() : true);
             });
             if (!shouldCache.booleanValue()) {
-              LOG.info("Prefetch skipped for the file: " + path.getName());
+              LOG.info("Prefetch skipped for file: {}", path);
               return;
             }
 
