@@ -23,7 +23,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class RowStatisticsConfigurationUtil {
 
-  private static final String ROW_STATISTICS_PREFIX = "org.apache.hbase.coprocessor.row.statistics.";
+  private static final String ROW_STATISTICS_PREFIX =
+    "org.apache.hbase.coprocessor.row.statistics.";
 
   public static int getInt(Configuration conf, String name, int defaultValue) {
     return conf.getInt(ROW_STATISTICS_PREFIX + name, defaultValue);

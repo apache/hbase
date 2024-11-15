@@ -26,8 +26,7 @@ public class RowStatisticsRingBufferPayload {
   private final RowStatistics rowStatistics;
   private final byte[] fullRegionName;
 
-  public RowStatisticsRingBufferPayload(RowStatistics rowStatistics,
-    byte[] fullRegionName) {
+  public RowStatisticsRingBufferPayload(RowStatistics rowStatistics, byte[] fullRegionName) {
     this.rowStatistics = rowStatistics;
     this.fullRegionName = fullRegionName;
   }
