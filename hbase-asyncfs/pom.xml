@@ -100,6 +100,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-inline</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>jcl-over-slf4j</artifactId>
       <scope>test</scope>
@@ -194,6 +199,27 @@
           <scope>test</scope>
         </dependency>
       </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <!--
+                These files can not compile against hadoop 2.x and we also do not need these
+                hacks when working with hadoop 2.x, so exclude them here.
+                See HBASE-28965 for more details
+              -->
+              <excludes>
+                <exclude>**/org/apache/hadoop/hdfs/**</exclude>
+              </excludes>
+              <testExcludes>
+                <testExclude>**/org/apache/hadoop/hbase/io/asyncfs/TestLeaseRenewal**</testExclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <!--
       profile for building against Hadoop 3.0.x. Activate using:
