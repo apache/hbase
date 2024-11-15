@@ -36,6 +36,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.Encryptor;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.CancelOnClose;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
@@ -56,6 +58,7 @@ import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -68,6 +71,8 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.PipelineAckProto
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
@@ -106,6 +111,8 @@ import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateHandler;
 @InterfaceAudience.Private
 public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
+  private static final Logger LOG = LoggerFactory.getLogger(FanOutOneBlockAsyncDFSOutput.class);
+
   // The MAX_PACKET_SIZE is 16MB, but it includes the header size and checksum size. So here we set
   // a smaller limit for data size.
   private static final int MAX_DATA_LEN = 12 * 1024 * 1024;
@@ -122,7 +129,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   private final String src;
 
-  private HdfsFileStatus stat;
+  private final HdfsFileStatus stat;
 
   private final ExtendedBlock block;
 
@@ -137,6 +144,9 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   private final int maxDataLen;
 
   private final ByteBufAllocator alloc;
+
+  // a dummy DFSOutputStream used for lease renewal
+  private final DFSOutputStream dummyStream;
 
   private static final class Callback {
 
@@ -356,8 +366,9 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   FanOutOneBlockAsyncDFSOutput(Configuration conf, DistributedFileSystem dfs, DFSClient client,
     ClientProtocol namenode, String clientName, String src, HdfsFileStatus stat,
-    LocatedBlock locatedBlock, Encryptor encryptor, Map<Channel, DatanodeInfo> datanodeInfoMap,
-    DataChecksum summer, ByteBufAllocator alloc, StreamSlowMonitor streamSlowMonitor) {
+    EnumSet<CreateFlag> createFlags, LocatedBlock locatedBlock, Encryptor encryptor,
+    Map<Channel, DatanodeInfo> datanodeInfoMap, DataChecksum summer, ByteBufAllocator alloc,
+    StreamSlowMonitor streamSlowMonitor) {
     this.conf = conf;
     this.dfs = dfs;
     this.client = client;
@@ -376,6 +387,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     this.state = State.STREAMING;
     setupReceiver(conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT));
     this.streamSlowMonitor = streamSlowMonitor;
+    this.dummyStream = FanOutOneBlockAsyncDFSOutputHelper.createDummyDFSOutputStream(this, client,
+      src, stat, createFlags, summer);
   }
 
   @Override
@@ -593,7 +606,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       buf = null;
     }
     closeDataNodeChannelsAndAwait();
-    endFileLease(client, stat);
+    endFileLease(this);
     RecoverLeaseFSUtils.recoverFileLease(dfs, new Path(src), conf,
       reporter == null ? new CancelOnClose(client) : reporter);
   }
@@ -608,7 +621,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     state = State.CLOSED;
     closeDataNodeChannelsAndAwait();
     block.setNumBytes(ackedBlockLength);
-    completeFile(client, namenode, src, clientName, block, stat);
+    completeFile(this, client, namenode, src, clientName, block, stat);
   }
 
   @Override
@@ -625,5 +638,21 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       allowedOnPath = ".*/src/test/.*")
   Map<Channel, DatanodeInfo> getDatanodeInfoMap() {
     return this.datanodeInfoMap;
+  }
+
+  DFSClient getClient() {
+    return client;
+  }
+
+  DFSOutputStream getDummyStream() {
+    return dummyStream;
+  }
+
+  boolean isClosed() {
+    return state == State.CLOSED;
+  }
+
+  HdfsFileStatus getStat() {
+    return stat;
   }
 }

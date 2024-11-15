@@ -32,6 +32,7 @@ import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.REA
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -140,9 +141,9 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private interface LeaseManager {
 
-    void begin(DFSClient client, HdfsFileStatus stat);
+    void begin(FanOutOneBlockAsyncDFSOutput output);
 
-    void end(DFSClient client, HdfsFileStatus stat);
+    void end(FanOutOneBlockAsyncDFSOutput output);
   }
 
   private static final LeaseManager LEASE_MANAGER;
@@ -178,6 +179,16 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       CryptoProtocolVersion[] supportedVersions) throws Exception;
   }
 
+  // helper class for creating the dummy DFSOutputStream
+  private interface DummyDFSOutputStreamCreator {
+
+    DFSOutputStream createDummyDFSOutputStream(AsyncFSOutput output, DFSClient dfsClient,
+      String src, HdfsFileStatus stat, EnumSet<CreateFlag> flag, DataChecksum checksum);
+  }
+
+  private static final DummyDFSOutputStreamCreator DUMMY_DFS_OUTPUT_STREAM_CREATOR =
+    createDummyDFSOutputStreamCreator();
+
   private static final FileCreator FILE_CREATOR;
 
   // CreateFlag.SHOULD_REPLICATE is to make OutputStream on a EC directory support hflush/hsync, but
@@ -207,44 +218,28 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     beginFileLeaseMethod.setAccessible(true);
     Method endFileLeaseMethod = DFSClient.class.getDeclaredMethod("endFileLease", String.class);
     endFileLeaseMethod.setAccessible(true);
-    Method getConfigurationMethod = DFSClient.class.getDeclaredMethod("getConfiguration");
-    getConfigurationMethod.setAccessible(true);
-    Method getNamespaceMehtod = HdfsFileStatus.class.getDeclaredMethod("getNamespace");
-
+    Method getUniqKeyMethod = DFSOutputStream.class.getMethod("getUniqKey");
     return new LeaseManager() {
 
-      private static final String DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY =
-        "dfs.client.output.stream.uniq.default.key";
-      private static final String DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY_DEFAULT = "DEFAULT";
-
-      private String getUniqId(DFSClient client, HdfsFileStatus stat)
-        throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-        // Copied from DFSClient in Hadoop 3.4.0
-        long fileId = stat.getFileId();
-        String namespace = (String) getNamespaceMehtod.invoke(stat);
-        if (namespace == null) {
-          Configuration conf = (Configuration) getConfigurationMethod.invoke(client);
-          String defaultKey = conf.get(DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY,
-            DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY_DEFAULT);
-          return defaultKey + "_" + fileId;
-        } else {
-          return namespace + "_" + fileId;
-        }
+      private String getUniqKey(FanOutOneBlockAsyncDFSOutput output)
+        throws IllegalAccessException, InvocationTargetException {
+        return (String) getUniqKeyMethod.invoke(output.getDummyStream());
       }
 
       @Override
-      public void begin(DFSClient client, HdfsFileStatus stat) {
+      public void begin(FanOutOneBlockAsyncDFSOutput output) {
         try {
-          beginFileLeaseMethod.invoke(client, getUniqId(client, stat), null);
+          beginFileLeaseMethod.invoke(output.getClient(), getUniqKey(output),
+            output.getDummyStream());
         } catch (IllegalAccessException | InvocationTargetException e) {
           throw new RuntimeException(e);
         }
       }
 
       @Override
-      public void end(DFSClient client, HdfsFileStatus stat) {
+      public void end(FanOutOneBlockAsyncDFSOutput output) {
         try {
-          endFileLeaseMethod.invoke(client, getUniqId(client, stat));
+          endFileLeaseMethod.invoke(output.getClient(), getUniqKey(output));
         } catch (IllegalAccessException | InvocationTargetException e) {
           throw new RuntimeException(e);
         }
@@ -261,18 +256,19 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return new LeaseManager() {
 
       @Override
-      public void begin(DFSClient client, HdfsFileStatus stat) {
+      public void begin(FanOutOneBlockAsyncDFSOutput output) {
         try {
-          beginFileLeaseMethod.invoke(client, stat.getFileId(), null);
+          beginFileLeaseMethod.invoke(output.getClient(), output.getStat().getFileId(),
+            output.getDummyStream());
         } catch (IllegalAccessException | InvocationTargetException e) {
           throw new RuntimeException(e);
         }
       }
 
       @Override
-      public void end(DFSClient client, HdfsFileStatus stat) {
+      public void end(FanOutOneBlockAsyncDFSOutput output) {
         try {
-          endFileLeaseMethod.invoke(client, stat.getFileId());
+          endFileLeaseMethod.invoke(output.getClient(), output.getStat().getFileId());
         } catch (IllegalAccessException | InvocationTargetException e) {
           throw new RuntimeException(e);
         }
@@ -341,6 +337,28 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return createFileCreator2();
   }
 
+  private static final String DUMMY_DFS_OUTPUT_STREAM_CLASS =
+    "org.apache.hadoop.hdfs.DummyDFSOutputStream";
+
+  @SuppressWarnings("unchecked")
+  private static DummyDFSOutputStreamCreator createDummyDFSOutputStreamCreator() {
+    Constructor<? extends DFSOutputStream> constructor;
+    try {
+      constructor = (Constructor<? extends DFSOutputStream>) Class
+        .forName(DUMMY_DFS_OUTPUT_STREAM_CLASS).getConstructors()[0];
+      return (output, dfsClient, src, stat, flag, checksum) -> {
+        try {
+          return constructor.newInstance(output, dfsClient, src, stat, flag, checksum);
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+          throw new RuntimeException(e);
+        }
+      };
+    } catch (Exception e) {
+      LOG.debug("can not find DummyDFSOutputStream, should be hadoop 2.x", e);
+      return (output, dfsClient, src, stat, flag, checksum) -> null;
+    }
+  }
+
   private static CreateFlag loadShouldReplicateFlag() {
     try {
       return CreateFlag.valueOf("SHOULD_REPLICATE");
@@ -380,12 +398,12 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     }
   }
 
-  static void beginFileLease(DFSClient client, HdfsFileStatus stat) {
-    LEASE_MANAGER.begin(client, stat);
+  private static void beginFileLease(FanOutOneBlockAsyncDFSOutput output) {
+    LEASE_MANAGER.begin(output);
   }
 
-  static void endFileLease(DFSClient client, HdfsFileStatus stat) {
-    LEASE_MANAGER.end(client, stat);
+  static void endFileLease(FanOutOneBlockAsyncDFSOutput output) {
+    LEASE_MANAGER.end(output);
   }
 
   static DataChecksum createChecksum(DFSClient client) {
@@ -599,12 +617,12 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         LOG.debug("When create output stream for {}, exclude list is {}, retry={}", src,
           getDataNodeInfo(toExcludeNodes), retry);
       }
+      EnumSetWritable<CreateFlag> createFlags = getCreateFlags(overwrite, noLocalWrite);
       HdfsFileStatus stat;
       try {
         stat = FILE_CREATOR.create(namenode, src,
           FsPermission.getFileDefault().applyUMask(FsPermission.getUMask(conf)), clientName,
-          getCreateFlags(overwrite, noLocalWrite), createParent, replication, blockSize,
-          CryptoProtocolVersion.supported());
+          createFlags, createParent, replication, blockSize, CryptoProtocolVersion.supported());
       } catch (Exception e) {
         if (e instanceof RemoteException) {
           throw (RemoteException) e;
@@ -612,7 +630,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
           throw new NameNodeException(e);
         }
       }
-      beginFileLease(client, stat);
       boolean succ = false;
       LocatedBlock locatedBlock = null;
       List<Future<Channel>> futureList = null;
@@ -637,7 +654,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         Encryptor encryptor = createEncryptor(conf, stat, client);
         FanOutOneBlockAsyncDFSOutput output =
           new FanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src, stat,
-            locatedBlock, encryptor, datanodes, summer, ALLOC, monitor);
+            createFlags.get(), locatedBlock, encryptor, datanodes, summer, ALLOC, monitor);
+        beginFileLease(output);
         succ = true;
         return output;
       } catch (RemoteException e) {
@@ -676,7 +694,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
               });
             }
           }
-          endFileLease(client, stat);
         }
       }
     }
@@ -713,13 +730,14 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return e.getClassName().endsWith("RetryStartFileException");
   }
 
-  static void completeFile(DFSClient client, ClientProtocol namenode, String src, String clientName,
-    ExtendedBlock block, HdfsFileStatus stat) throws IOException {
+  static void completeFile(FanOutOneBlockAsyncDFSOutput output, DFSClient client,
+    ClientProtocol namenode, String src, String clientName, ExtendedBlock block,
+    HdfsFileStatus stat) throws IOException {
     int maxRetries = client.getConf().getNumBlockWriteLocateFollowingRetry();
     for (int retry = 0; retry < maxRetries; retry++) {
       try {
         if (namenode.complete(src, clientName, block, stat.getFileId())) {
-          endFileLease(client, stat);
+          endFileLease(output);
           return;
         } else {
           LOG.warn("complete file " + src + " not finished, retry = " + retry);
@@ -748,5 +766,11 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         .append("/").append(datanodeInfo.getInfoAddr()).append(":")
         .append(datanodeInfo.getInfoPort()).append(")").toString())
       .collect(Collectors.joining(",", "[", "]"));
+  }
+
+  static DFSOutputStream createDummyDFSOutputStream(AsyncFSOutput output, DFSClient dfsClient,
+    String src, HdfsFileStatus stat, EnumSet<CreateFlag> flag, DataChecksum checksum) {
+    return DUMMY_DFS_OUTPUT_STREAM_CREATOR.createDummyDFSOutputStream(output, dfsClient, src, stat,
+      flag, checksum);
   }
 }
