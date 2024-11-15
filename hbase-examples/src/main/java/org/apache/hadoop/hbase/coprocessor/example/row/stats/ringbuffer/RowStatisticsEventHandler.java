@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.coprocessor.example.row.stats.ringbuffer;
 
 import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsTableUtil.buildPutForRegion;
+
 import com.lmax.disruptor.EventHandler;
 import java.io.IOException;
 import org.apache.hadoop.hbase.client.BufferedMutator;

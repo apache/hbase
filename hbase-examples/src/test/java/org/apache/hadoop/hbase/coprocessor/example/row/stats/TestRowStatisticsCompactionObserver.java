@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.util.TestRegionSplitCalculator.TEST_UTIL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
