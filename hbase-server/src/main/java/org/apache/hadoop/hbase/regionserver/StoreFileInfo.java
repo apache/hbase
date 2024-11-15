@@ -523,7 +523,7 @@ public class StoreFileInfo implements Configurable {
    */
   public static boolean isMobRefFile(final String mobFileName) {
     // The MOB_REF_NAME_PATTERN regex is not computationally trivial, so see if we can fast-fail
-    // on a simple heuristic first. The regex contains a literal ".", so if that character
+    // on a simple heuristic first. The regex contains a literal "_", so if that character
     // isn't in the name, then the regex cannot match.
     if (!mobFileName.contains(MobUtils.SEP)) {
       return false;
