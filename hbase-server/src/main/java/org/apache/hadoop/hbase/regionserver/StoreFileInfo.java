@@ -75,6 +75,9 @@ public class StoreFileInfo implements Configurable {
   private static final Pattern REF_NAME_PATTERN =
     Pattern.compile(String.format("^(%s|%s)\\.(.+)$", HFILE_NAME_REGEX, HFileLink.LINK_NAME_REGEX));
 
+  private static final Pattern MOB_REF_NAME_PATTERN =
+    Pattern.compile(String.format(String.format("^(%s)_(.+)$", HFileLink.LINK_NAME_REGEX)));
+
   public static final String STORE_FILE_READER_NO_READAHEAD = "hbase.store.reader.no-readahead";
   public static final boolean DEFAULT_STORE_FILE_READER_NO_READAHEAD = true;
 
@@ -510,16 +513,23 @@ public class StoreFileInfo implements Configurable {
    * @return true, if - yes, false otherwise
    */
   public static boolean isMobRefFile(final Path path) {
-    String fileName = path.getName();
-    int lastIndex = fileName.lastIndexOf(MobUtils.SEP);
-    if (lastIndex < 0) {
+    return isMobRefFile(path.getName());
+  }
+
+  /**
+   * Checks if the file is a MOB reference file, created by snapshot
+   * @param mobFileName mob file name to check
+   * @return true, if - yes, false otherwise
+   */
+  public static boolean isMobRefFile(final String mobFileName) {
+    // The MOB_REF_NAME_PATTERN regex is not computationally trivial, so see if we can fast-fail
+    // on a simple heuristic first. The regex contains a literal ".", so if that character
+    // isn't in the name, then the regex cannot match.
+    if (!mobFileName.contains(MobUtils.SEP)) {
       return false;
     }
-    String[] parts = new String[2];
-    parts[0] = fileName.substring(0, lastIndex);
-    parts[1] = fileName.substring(lastIndex + 1);
-    String name = parts[0] + "." + parts[1];
-    Matcher m = REF_NAME_PATTERN.matcher(name);
+
+    Matcher m = MOB_REF_NAME_PATTERN.matcher(mobFileName);
     return m.matches() && m.groupCount() > 1;
   }
 
