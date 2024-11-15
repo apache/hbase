@@ -40,7 +40,7 @@ public class TestQuotaCache {
     HBaseClassTestRule.forClass(TestQuotaCache.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final int REFRESH_TIME = 30_000;
+  private static final int REFRESH_TIME_MS = 1000;
 
   @After
   public void tearDown() throws Exception {
@@ -52,7 +52,7 @@ public class TestQuotaCache {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
-    TEST_UTIL.getConfiguration().setInt(QuotaCache.REFRESH_CONF_KEY, REFRESH_TIME);
+    TEST_UTIL.getConfiguration().setInt(QuotaCache.REFRESH_CONF_KEY, REFRESH_TIME_MS);
     TEST_UTIL.getConfiguration().setInt(QuotaUtil.QUOTA_DEFAULT_USER_MACHINE_READ_NUM, 1000);
 
     TEST_UTIL.startMiniCluster(1);
