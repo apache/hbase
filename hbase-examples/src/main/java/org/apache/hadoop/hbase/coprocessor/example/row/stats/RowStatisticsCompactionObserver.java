@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowSta
 import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsTableUtil.NAMESPACE;
 import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsTableUtil.NAMESPACED_TABLE_NAME;
 import static org.apache.hadoop.hbase.coprocessor.example.row.stats.utils.RowStatisticsTableUtil.TABLE_RECORDER_KEY;
+
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
@@ -151,7 +152,7 @@ public class RowStatisticsCompactionObserver
           rowStatisticsPutFailed);
         RowStatisticsTableRecorder tableRecorder =
           (RowStatisticsTableRecorder) regionEnv.getSharedData().get(TABLE_RECORDER_KEY);
-        if (tableRecorder !=  null) {
+        if (tableRecorder != null) {
           regionEnv.getSharedData().remove(TABLE_RECORDER_KEY, tableRecorder);
           tableRecorder.close();
         }
@@ -205,8 +206,8 @@ public class RowStatisticsCompactionObserver
     int blocksize = store.getColumnFamilyDescriptor().getBlocksize();
     boolean isMajor = request.isMajor();
     RowStatisticsImpl stats = new RowStatisticsImpl(store.getTableName().getNameAsString(),
-      store.getRegionInfo().getEncodedName(), store.getColumnFamilyName(), blocksize,
-        maxCacheSize, isMajor);
+      store.getRegionInfo().getEncodedName(), store.getColumnFamilyName(), blocksize, maxCacheSize,
+      isMajor);
     return new RowStatisticsScanner(scanner, stats, context.getEnvironment(), recorder);
   }
 
@@ -222,8 +223,8 @@ public class RowStatisticsCompactionObserver
     private RawCellBuilder cellBuilder;
     private Cell lastCell;
 
-    public RowStatisticsScanner(InternalScanner scanner,
-      RowStatisticsImpl rowStatistics, RegionCoprocessorEnvironment regionEnv, RowStatisticsRecorder customRecorder) {
+    public RowStatisticsScanner(InternalScanner scanner, RowStatisticsImpl rowStatistics,
+      RegionCoprocessorEnvironment regionEnv, RowStatisticsRecorder customRecorder) {
       this.scanner = scanner;
       if (scanner instanceof Shipper) {
         this.shipper = (Shipper) scanner;
@@ -311,7 +312,7 @@ public class RowStatisticsCompactionObserver
         rowStatisticsDropped.increment();
       }
       if (customRecorder != null) {
-        customRecorder.record(this.rowStatistics,Optional.empty());
+        customRecorder.record(this.rowStatistics, Optional.empty());
       }
     }
   }

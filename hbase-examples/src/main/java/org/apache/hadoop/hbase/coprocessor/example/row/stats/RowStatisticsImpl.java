@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
 
@@ -243,21 +244,16 @@ public class RowStatisticsImpl implements RowStatistics {
   public String toString() {
     return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
       .append("largestRowAsString", Bytes.toStringBinary(largestRow))
-      .append("largestCellAsString", largestCell)
-      .append("largestRowNumBytes", largestRowNumBytes)
+      .append("largestCellAsString", largestCell).append("largestRowNumBytes", largestRowNumBytes)
       .append("largestRowCellsCount", largestRowCellsCount)
       .append("largestCellNumBytes", largestCellNumBytes)
       .append("cellsLargerThanOneBlockCount", cellsLargerThanOneBlockCount)
       .append("rowsLargerThanOneBlockCount", rowsLargerThanOneBlockCount)
       .append("cellsLargerThanMaxCacheSizeCount", cellsLargerThanMaxCacheSizeCount)
-      .append("totalDeletesCount", totalDeletesCount)
-      .append("totalCellsCount", totalCellsCount)
-      .append("totalRowsCount", totalRowsCount)
-      .append("totalBytesCount", totalBytesCount)
+      .append("totalDeletesCount", totalDeletesCount).append("totalCellsCount", totalCellsCount)
+      .append("totalRowsCount", totalRowsCount).append("totalBytesCount", totalBytesCount)
       .append("rowSizeBuckets", getRowSizeBuckets())
-      .append("valueSizeBuckets", getValueSizeBuckets())
-      .append("isMajor", isMajor)
-      .toString();
+      .append("valueSizeBuckets", getValueSizeBuckets()).append("isMajor", isMajor).toString();
   }
 
   @Override
