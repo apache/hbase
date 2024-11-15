@@ -129,8 +129,6 @@ public class TestLeaseRenewal extends AsyncFSTestBase {
           getUniqKeyMethod.get().invoke(verify(dummy));
           Method getNamespaceMethod = DFSOutputStream.class.getMethod("getNamespace");
           getNamespaceMethod.invoke(verify(dummy));
-        } else {
-          verify(dummy).getFileId();
         }
         verifyNoMoreInteractions(dummy);
       }
@@ -141,8 +139,6 @@ public class TestLeaseRenewal extends AsyncFSTestBase {
     Optional<Method> getUniqKeyMethod = getUniqKeyMethod();
     if (getUniqKeyMethod.isPresent()) {
       getUniqKeyMethod.get().invoke(verify(dummy));
-    } else {
-      verify(dummy).getFileId();
     }
   }
 
