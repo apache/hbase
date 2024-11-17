@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.io.crypto.tls;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.WatchEvent;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.Security;
 import java.security.cert.PKIXBuilderParameters;
 import java.security.cert.X509CertSelector;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -153,6 +153,8 @@ public final class X509Util {
       getCBCCiphers(), String.class);
 
   private static final String[] DEFAULT_CIPHERS_OPENSSL = getOpenSslFilteredDefaultCiphers();
+
+  private static final Duration FILE_POLL_INTERVAL = Duration.ofMinutes(1);
 
   /**
    * Not all of our default ciphers are available in OpenSSL. Takes our default cipher lists and
@@ -509,26 +511,19 @@ public final class X509Util {
       return null;
     }
     final Path filePath = Paths.get(fileLocation).toAbsolutePath();
-    Path parentPath = filePath.getParent();
-    if (parentPath == null) {
-      throw new IOException("Key/trust store path does not have a parent: " + filePath);
-    }
     FileChangeWatcher fileChangeWatcher =
-      new FileChangeWatcher(parentPath, Objects.toString(filePath.getFileName()), watchEvent -> {
-        handleWatchEvent(watchEvent, resetContext);
-      });
+      new FileChangeWatcher(filePath, Objects.toString(filePath.getFileName()), FILE_POLL_INTERVAL,
+        watchEventFilePath -> handleWatchEvent(watchEventFilePath, resetContext));
     fileChangeWatcher.start();
     return fileChangeWatcher;
   }
 
   /**
    * Handler for watch events that let us know a file we may care about has changed on disk.
-   * @param event the WatchEvent.
    */
-  private static void handleWatchEvent(WatchEvent<?> event, Runnable resetContext) {
-    LOG.info(
-      "Attempting to reset default SSL context after receiving watch event: {} with context: {}",
-      event.kind(), event.context());
+  private static void handleWatchEvent(Path filePath, Runnable resetContext) {
+    LOG.info("Attempting to reset default SSL context after receiving watch event on file {}",
+      filePath);
     resetContext.run();
   }
 }
