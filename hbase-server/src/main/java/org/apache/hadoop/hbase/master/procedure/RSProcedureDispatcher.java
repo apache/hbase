@@ -254,14 +254,16 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
      * limit applies to only specific errors. These errors could potentially get the remote
      * procedure stuck for several minutes unless the retry limit is applied.
      */
-    private static final String RS_REMOTE_PROC_RETRY_LIMIT =
-      "hbase.master.rs.remote.proc.retry.limit";
+    private static final String RS_REMOTE_PROC_FAIL_FAST_LIMIT =
+      "hbase.master.rs.remote.proc.fail.fast.limit";
     /**
-     * The default retry limit. Value = {@value}
+     * The default retry limit. Waiting for more than {@value} attempts is not going to help much
+     * for genuine connectivity errors. Therefore, consider fail-fast after {@value} retries. Value
+     * = {@value}
      */
     private static final int DEFAULT_RS_REMOTE_PROC_RETRY_LIMIT = 5;
 
-    private final int retryLimit;
+    private final int failFastRetryLimit;
 
     private ExecuteProceduresRequest.Builder request = null;
 
@@ -271,7 +273,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       this.remoteProcedures = remoteProcedures;
       this.rsRpcRetryInterval = master.getConfiguration().getLong(RS_RPC_RETRY_INTERVAL_CONF_KEY,
         DEFAULT_RS_RPC_RETRY_INTERVAL);
-      this.retryLimit = master.getConfiguration().getInt(RS_REMOTE_PROC_RETRY_LIMIT,
+      this.failFastRetryLimit = master.getConfiguration().getInt(RS_REMOTE_PROC_FAIL_FAST_LIMIT,
         DEFAULT_RS_REMOTE_PROC_RETRY_LIMIT);
     }
 
@@ -318,12 +320,12 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       }
       ExecuteProceduresRequest executeProceduresRequest = request.build();
 
-      // Check if the num of attempts have crossed the retry limit, and if the error type is
-      // eligible for imposing the retry limit.
-      if (numberOfAttemptsSoFar >= retryLimit - 1 && isErrorTypeEligibleForRetryLimit(e)) {
+      // Check if the num of attempts have crossed the retry limit, and if the error type can
+      // fail-fast.
+      if (numberOfAttemptsSoFar >= failFastRetryLimit - 1 && isErrorTypeFailFast(e)) {
         LOG
           .warn("Number of retries {} exceeded limit {} for the given error type. Scheduling server"
-            + " crash for {}", numberOfAttemptsSoFar + 1, retryLimit, serverName, e);
+            + " crash for {}", numberOfAttemptsSoFar + 1, failFastRetryLimit, serverName, e);
         // Expiring the server will schedule SCP and also reject the regionserver report from the
         // regionserver if regionserver is somehow able to send the regionserver report to master.
         // The master rejects the report by throwing YouAreDeadException, which would eventually
@@ -428,11 +430,11 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     }
 
     /**
-     * Returns true if the error is eligible for imposing retry limit.
+     * Returns true if the error type can allow fail-fast.
      * @param e IOException thrown by the underlying rpc framework.
-     * @return True if the error is eligible for imposing retry limit.
+     * @return True if the error type can allow fail-fast.
      */
-    private boolean isErrorTypeEligibleForRetryLimit(IOException e) {
+    private boolean isErrorTypeFailFast(IOException e) {
       return e instanceof CallQueueTooBigException || isSaslError(e) || isConnectionClosedError(e);
     }
 

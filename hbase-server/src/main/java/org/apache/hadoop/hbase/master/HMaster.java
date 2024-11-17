@@ -493,7 +493,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   /**
    * Use RSProcedureDispatcher instance to initiate master -> rs remote procedure execution. Use
-   * this config to provide customized RSProcedureDispatcher.
+   * this config to extend RSProcedureDispatcher (mainly for testing purpose).
    */
   public static final String HBASE_MASTER_RSPROC_DISPATCHER_CLASS =
     "hbase.master.rsproc.dispatcher.class";
