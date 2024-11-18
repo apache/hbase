@@ -37,7 +37,6 @@
     <meta name="author" content="">
 
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
     <link href="/static/css/hbase.css" rel="stylesheet">
   </head>
   <body>
