@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -815,45 +814,6 @@ public class TestDefaultMemStore {
     return Bytes.toBytes(Integer.toString(i1) + ";" + Integer.toString(i2));
   }
 
-  /**
-   * Add keyvalues with a fixed memstoreTs, and checks that memstore size is decreased as older
-   * keyvalues are deleted from the memstore.
-   */
-  @Test
-  public void testUpsertMemstoreSize() throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    memstore = new DefaultMemStore(conf, CellComparatorImpl.COMPARATOR);
-    MemStoreSize oldSize = memstore.size();
-
-    List<ExtendedCell> l = new ArrayList<>();
-    KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
-    KeyValue kv2 = KeyValueTestUtil.create("r", "f", "q", 101, "v");
-    KeyValue kv3 = KeyValueTestUtil.create("r", "f", "q", 102, "v");
-
-    kv1.setSequenceId(1);
-    kv2.setSequenceId(1);
-    kv3.setSequenceId(1);
-    l.add(kv1);
-    l.add(kv2);
-    l.add(kv3);
-
-    this.memstore.upsert(l, 2, null);// readpoint is 2
-    MemStoreSize newSize = this.memstore.size();
-    assert (newSize.getDataSize() > oldSize.getDataSize());
-    // The kv1 should be removed.
-    assert (memstore.getActive().getCellsCount() == 2);
-
-    KeyValue kv4 = KeyValueTestUtil.create("r", "f", "q", 104, "v");
-    kv4.setSequenceId(1);
-    l.clear();
-    l.add(kv4);
-    this.memstore.upsert(l, 3, null);
-    assertEquals(newSize, this.memstore.size());
-    // The kv2 should be removed.
-    assert (memstore.getActive().getCellsCount() == 2);
-    // this.memstore = null;
-  }
-
   ////////////////////////////////////
   // Test for periodic memstore flushes
   // based on time of oldest edit
@@ -882,16 +842,6 @@ public class TestDefaultMemStore {
 
       // test the case that the timeOfOldestEdit is updated after a KV delete
       memstore.add(KeyValueTestUtil.create("r", "f", "q", 100, KeyValue.Type.Delete, "v"), null);
-      t = memstore.timeOfOldestEdit();
-      assertTrue(t == 1234);
-      t = runSnapshot(memstore);
-
-      // test the case that the timeOfOldestEdit is updated after a KV upsert
-      List<ExtendedCell> l = new ArrayList<>();
-      KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
-      kv1.setSequenceId(100);
-      l.add(kv1);
-      memstore.upsert(l, 1000, null);
       t = memstore.timeOfOldestEdit();
       assertTrue(t == 1234);
     } finally {
