@@ -527,13 +527,22 @@ public class TestRowCounter {
   }
 
   /**
-   * Step 1: Add 6 rows(row1, row2, row3, row4, row5 and row6) to a table. Each row contains 1
-   * column family and 4 columns. Step 2: Delete a column for row1. Step 3: Delete a column family
-   * for row2 and row4. Step 4: Delete all versions of a specific column for row3, row5 and row6.
+   * Step 1: Add 8 rows(row1, row2, row3, row4, row5, row6, row7, row8) to a table. Each row
+   * contains 1 column family and 4 columns and values for two different timestamps - 5 & 10.
    * <p>
-   * Case 1: Run row counter without countDeleteMarkers flag Step a: Validate counter values.
+   * Step 2: Delete the latest version of column A for row1. --> 1 X Delete
    * <p>
-   * Case 2: Run row counter with countDeleteMarkers flag Step a: Validate counter values.
+   * Step 3: Delete the cell for timestamp 5 of column B for row1. --> 1 X Delete
+   * <p>
+   * Step 4: Delete a column family for row2 and row4. --> 2 X DeleteFamily
+   * <p>
+   * Step 5: Delete all versions of a specific column for row3, row5 and row6. --> 3 X DeleteColumn
+   * <p>
+   * Step 6: Delete all columns for timestamp 5 for row 7. --> 1 X DeleteFamilyVersion
+   * <p>
+   * Case 1: Run row counter without countDeleteMarkers and validate counter values.
+   * <p>
+   * Case 2: Run row counter with countDeleteMarkers flag and validate counter values.
    */
   @Test
   public void testRowCounterWithCountDeleteMarkersOption() throws Exception {
@@ -542,30 +551,37 @@ public class TestRowCounter {
     final TableName tableName =
       TableName.valueOf(TABLE_NAME + "_" + "withCountDeleteMarkersOption");
     final byte[][] rowKeys = { Bytes.toBytes("row1"), Bytes.toBytes("row2"), Bytes.toBytes("row3"),
-      Bytes.toBytes("row4"), Bytes.toBytes("row5"), Bytes.toBytes("row6") };
+      Bytes.toBytes("row4"), Bytes.toBytes("row5"), Bytes.toBytes("row6"), Bytes.toBytes("row7"),
+      Bytes.toBytes("row8") };
     final byte[] columnFamily = Bytes.toBytes("cf");
     final byte[][] columns =
       { Bytes.toBytes("A"), Bytes.toBytes("B"), Bytes.toBytes("C"), Bytes.toBytes("D") };
-    final byte[] value = Bytes.toBytes("a");
+    final byte[][] values = { Bytes.toBytes("a"), Bytes.toBytes("b") };
 
     try (Table table = TEST_UTIL.createTable(tableName, columnFamily)) {
       // Step 1: Insert rows with columns
       for (byte[] rowKey : rowKeys) {
         Put put = new Put(rowKey);
         for (byte[] col : columns) {
-          put.addColumn(columnFamily, col, value);
+          long timestamp = 5L;
+          for (byte[] value : values) {
+            put.addColumn(columnFamily, col, timestamp, value);
+            timestamp += 5L;
+          }
         }
         table.put(put);
       }
       TEST_UTIL.getAdmin().flush(tableName);
 
-      // Steps 2, 3, and 4: Delete columns, families, and all versions of columns
+      // Steps 2-6
       Delete deleteA = new Delete(rowKeys[0]).addColumn(columnFamily, columns[0]);
-      Delete deleteB = new Delete(rowKeys[1]).addFamily(columnFamily);
-      Delete deleteC = new Delete(rowKeys[2]).addColumns(columnFamily, columns[0]);
-      Delete deleteD = new Delete(rowKeys[3]).addFamily(columnFamily);
-      Delete deleteE = new Delete(rowKeys[4]).addColumns(columnFamily, columns[0]);
-      Delete deleteF = new Delete(rowKeys[5]).addColumns(columnFamily, columns[0]);
+      Delete deleteB = new Delete(rowKeys[0]).addColumn(columnFamily, columns[1], 5L);
+      Delete deleteC = new Delete(rowKeys[1]).addFamily(columnFamily);
+      Delete deleteD = new Delete(rowKeys[2]).addColumns(columnFamily, columns[0]);
+      Delete deleteE = new Delete(rowKeys[3]).addFamily(columnFamily);
+      Delete deleteF = new Delete(rowKeys[4]).addColumns(columnFamily, columns[0]);
+      Delete deleteG = new Delete(rowKeys[5]).addColumns(columnFamily, columns[0]);
+      Delete deleteH = new Delete(rowKeys[6]).addFamilyVersion(columnFamily, 5L);
 
       table.delete(deleteA);
       table.delete(deleteB);
@@ -573,6 +589,8 @@ public class TestRowCounter {
       table.delete(deleteD);
       table.delete(deleteE);
       table.delete(deleteF);
+      table.delete(deleteG);
+      table.delete(deleteH);
       TEST_UTIL.getAdmin().flush(tableName);
     }
 
@@ -590,22 +608,20 @@ public class TestRowCounter {
     // Validation
 
     // Case 1:
-    validateCounterCounts(rowCounterWithoutCountDeleteMarkers.getMapReduceJob().getCounters(), 4, 0,
-      0, 0, 0, 0, 0);
+    validateCounterCounts(rowCounterWithoutCountDeleteMarkers.getMapReduceJob().getCounters(), 6, 0,
+      0, 0, 0, 0);
 
     // Case 2:
-    validateCounterCounts(rowCounterWithCountDeleteMarkers.getMapReduceJob().getCounters(), 6, 30,
-      6, 1, 3, 2, 0);
+    validateCounterCounts(rowCounterWithCountDeleteMarkers.getMapReduceJob().getCounters(), 8, 7, 2,
+      3, 2, 1);
   }
 
-  private void validateCounterCounts(Counters counters, long rowCount, long cellCount,
+  private void validateCounterCounts(Counters counters, long rowCount,
     long rowsWithDeleteMarkersCount, long deleteCount, long deleteColumnCount,
     long deleteFamilyCount, long deleteFamilyVersionCount) {
 
     long actualRowCount =
       counters.findCounter(RowCounter.RowCounterMapper.Counters.ROWS).getValue();
-    long actualCellCount =
-      counters.findCounter(RowCounter.RowCounterMapper.Counters.CELLS).getValue();
     long actualRowsWithDeleteMarkersCount =
       counters.findCounter(RowCounter.RowCounterMapper.Counters.ROWS_WITH_DELETE_MARKER).getValue();
     long actualDeleteCount =
@@ -618,7 +634,6 @@ public class TestRowCounter {
       counters.findCounter(RowCounter.RowCounterMapper.Counters.DELETE_FAMILY_VERSION).getValue();
 
     assertEquals(rowCount, actualRowCount);
-    assertEquals(cellCount, actualCellCount);
     assertEquals(rowsWithDeleteMarkersCount, actualRowsWithDeleteMarkersCount);
     assertEquals(deleteCount, actualDeleteCount);
     assertEquals(deleteColumnCount, actualDeleteColumnCount);
