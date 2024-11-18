@@ -18,10 +18,13 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.security.cert.X509Certificate;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
 /**
  * Coprocessors implement this interface to observe and mediate RPC events in Master and RS
@@ -55,8 +58,8 @@ public interface RpcObserver {
    * Called before authorizing connection
    * @param ctx the coprocessor instance's environment
    */
-  default void preAuthorizeConnection(ObserverContext<RpcCoprocessorEnvironment> ctx)
-    throws IOException {
+  default void preAuthorizeConnection(ObserverContext<RpcCoprocessorEnvironment> ctx,
+    RPCProtos.ConnectionHeader connectionHeader, InetAddress remoteAddr) throws IOException {
   }
 
   /**
