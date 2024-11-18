@@ -20,7 +20,6 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
   import="java.util.ArrayList"
-  import="java.util.Collection"
   import="java.util.HashMap"
   import="java.util.LinkedHashMap"
   import="java.util.List"
@@ -62,8 +61,7 @@
   import="org.apache.hadoop.hbase.master.http.MetaBrowser"
   import="org.apache.hadoop.hbase.master.http.RegionReplicaInfo"
   import="org.apache.hadoop.hbase.quotas.QuotaSettingsFactory"
-  import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"
-  import="org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException" %>
+  import="org.apache.hadoop.hbase.quotas.QuotaTableUtil" %>
 <%@ page import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot" %>
 <%@ page import="org.apache.hadoop.hbase.quotas.ThrottleSettings" %>
 <%@ page import="org.apache.hadoop.hbase.util.Bytes" %>
@@ -236,25 +234,21 @@
       <h1>Table <small><%= escaped_fqtn %></small></h1>
     </div>
   </div>
+
   <div class="row">
     <%
       if(fqtn.equals(TableName.META_TABLE_NAME.getNameAsString())) {
     %>
+  <section>
     <h2>Table Regions</h2>
     <div class="tabbable">
-      <ul class="nav nav-pills">
-        <li class="active">
-          <a href="#metaTab_baseStats" data-toggle="tab">Base Stats</a>
-        </li>
-        <li class="">
-          <a href="#metaTab_localityStats" data-toggle="tab">Localities</a>
-        </li>
-        <li class="">
-          <a href="#metaTab_compactStats" data-toggle="tab">Compactions</a>
-        </li>
+      <ul class="nav nav-pills" role="tablist">
+        <li class="nav-item"><a class="nav-link active" href="#metaTab_baseStats" data-toggle="tab" role="tab">Base Stats</a></li>
+        <li class="nav-item"><a class="nav-link" href="#metaTab_localityStats" data-toggle="tab" role="tab">Localities</a></li>
+        <li class="nav-item"><a class="nav-link" href="#metaTab_compactStats" data-toggle="tab" role="tab">Compactions</a></li>
       </ul>
-      <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-        <div class="tab-pane active" id="metaTab_baseStats">
+      <div class="tab-content">
+        <div class="tab-pane active" id="metaTab_baseStats" role="tabpanel">
           <table id="tableRegionTable" class="tablesorter table table-striped">
             <thead>
             <tr>
@@ -347,7 +341,7 @@
             </tbody>
           </table>
         </div>
-        <div class="tab-pane" id="metaTab_localityStats">
+        <div class="tab-pane" id="metaTab_localityStats" role="tabpanel">
            <table id="tableRegionTable" class="tablesorter table table-striped">
              <thead>
                <tr>
@@ -396,7 +390,7 @@
              </tbody>
            </table>
          </div>
-        <div class="tab-pane" id="metaTab_compactStats">
+        <div class="tab-pane" id="metaTab_compactStats" role="tabpanel">
           <table id="metaTableCompactStatsTable" class="tablesorter table table-striped">
             <thead>
             <tr>
@@ -456,6 +450,10 @@
         </div>
       </div>
     </div>
+  </section>
+</div>
+
+<div class="row">
     <h2 id="meta-entries">Meta Entries</h2>
 <%
   if (!metaBrowser.getErrorMessages().isEmpty()) {
@@ -560,44 +558,46 @@
     metaScanHasMore = results.hasMoreResults();
   }
 %>
-      </table>
-    </div>
-    <div class="row">
-      <div class="col-md-4">
+    </table>
+  </div>
+</div>
+  <div class="row mb-5">
+    <div class="col-md-4">
         <ul class="pagination" style="margin: 20px 0">
-          <li>
-            <a href="<%= metaBrowser.buildFirstPageUrl() %>" aria-label="Previous">
+          <li class="page-item">
+            <a class="page-link" href="<%= metaBrowser.buildFirstPageUrl() %>" aria-label="First" title="First">
               <span aria-hidden="true">&#x21E4;</span>
             </a>
           </li>
-          <li<%= metaScanHasMore ? "" : " class=\"disabled\"" %>>
-            <a<%= metaScanHasMore ? " href=\"" + metaBrowser.buildNextPageUrl(lastRow) + "\"" : "" %> aria-label="Next">
+          <li<%= metaScanHasMore ? " class=\"page-item\"" : " class=\"page-item disabled\"" %>>
+            <a class="page-link" <%= metaScanHasMore ? " href=\"" + metaBrowser.buildNextPageUrl(lastRow) + "\"" : "" %> aria-label="Next" title="Next">
               <span aria-hidden="true">&raquo;</span>
             </a>
           </li>
         </ul>
       </div>
       <div class="col-md-8">
-        <form action="/table.jsp" method="get" class="form-inline pull-right" style="margin: 20px 0">
+        <form action="/table.jsp" method="get" class="form-inline justify-content-end" style="margin: 20px 0">
           <input type="hidden" name="name" value="<%= TableName.META_TABLE_NAME %>" />
           <div class="form-group">
-            <label for="scan-limit">Scan Limit</label>
+            <label for="scan-limit" class="mx-sm-1">Scan Limit</label>
             <input type="text" id="scan-limit" name="<%= MetaBrowser.SCAN_LIMIT_PARAM %>"
-                              class="form-control" placeholder="<%= MetaBrowser.SCAN_LIMIT_DEFAULT %>"
+                              class="form-control mx-sm-1" placeholder="<%= MetaBrowser.SCAN_LIMIT_DEFAULT %>"
                               <%= metaBrowser.getScanLimit() != null
                 ? "value=\"" + metaBrowser.getScanLimit() + "\""
                 : ""
               %>
-                              aria-describedby="scan-limit" style="display:inline; width:auto" />
-            <label for="table-name-filter">Table</label>
+                              aria-describedby="scan-limit" />
+            <label for="table-name-filter" class="mx-sm-1">Table</label>
             <input type="text" id="table-name-filter" name="<%= MetaBrowser.SCAN_TABLE_PARAM %>"
+                   class="form-control mx-sm-1"
                               <%= metaBrowser.getScanTable() != null
                 ? "value=\"" + metaBrowser.getScanTable() + "\""
                 : ""
               %>
-                              aria-describedby="scan-filter-table" style="display:inline; width:auto" />
-            <label for="region-state-filter">Region State</label>
-            <select class="form-control" id="region-state-filter" style="display:inline; width:auto"
+                              aria-describedby="scan-filter-table" />
+            <label for="region-state-filter" class="mx-sm-1">Region State</label>
+            <select class="form-control mx-sm-1" id="region-state-filter"
                                name="<%= MetaBrowser.SCAN_REGION_STATE_PARAM %>">
               <option></option>
 <%
@@ -609,7 +609,7 @@
   }
 %>
             </select>
-            <button type="submit" class="btn btn-primary" style="display:inline; width:auto">
+            <button type="submit" class="btn btn-primary mx-sm-1">
               Filter Results
             </button>
           </div>
@@ -750,6 +750,7 @@
       %>
     </table>
     <h2>Table Schema</h2>
+
     <table class="table table-striped">
     <%
       ColumnFamilyDescriptor[] families = table.getDescriptor().getColumnFamilies();
@@ -869,21 +870,18 @@
           ((float) totalBlocksLocalWithSsdWeight / totalBlocksTotalWeight));
       }
       if(regions != null && regions.size() > 0) { %>
+<div class="row">
+  <div class="col">
+    <section>
     <h2>Table Regions</h2>
     <div class="tabbable">
-      <ul class="nav nav-pills">
-        <li class="active">
-          <a href="#tab_baseStats" data-toggle="tab">Base Stats</a>
-        </li>
-        <li class="">
-          <a href="#tab_localityStats" data-toggle="tab">Localities</a>
-        </li>
-        <li class="">
-          <a href="#tab_compactStats" data-toggle="tab">Compactions</a>
-        </li>
+      <ul class="nav nav-pills" role="tablist">
+        <li class="nav-item"><a class="nav-link active" href="#tab_baseStats" data-toggle="tab" role="tab">Base Stats</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_localityStats" data-toggle="tab" role="tab">Localities</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_compactStats" data-toggle="tab" role="tab">Compactions</a></li>
       </ul>
-      <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-        <div class="tab-pane active" id="tab_baseStats">
+      <div class="tab-content">
+        <div class="tab-pane active" id="tab_baseStats" role="tabpanel">
           <table id="regionServerDetailsTable" class="tablesorter table table-striped">
             <thead>
             <tr>
@@ -1010,7 +1008,7 @@
               here</a> to see all regions.</p>
           <% } %>
         </div>
-        <div class="tab-pane" id="tab_localityStats">
+        <div class="tab-pane" id="tab_localityStats" role="tabpanel">
           <table id="regionServerDetailsTable" class="tablesorter table table-striped">
             <thead>
               <tr>
@@ -1065,7 +1063,7 @@
             </tbody>
           </table>
         </div>
-        <div class="tab-pane" id="tab_compactStats">
+        <div class="tab-pane" id="tab_compactStats" role="tabpanel">
           <table id="tableCompactStatsTable" class="tablesorter table table-striped">
             <thead>
             <tr>
@@ -1135,8 +1133,13 @@
               here</a> to see all regions.</p>
           <% } %>
         </div>
+        </div>
       </div>
-    </div>
+    </section>
+  </div>
+</div>
+
+  <section>
     <h2>Regions by Region Server</h2>
     <%
       if (withReplica) {
@@ -1188,6 +1191,7 @@
 }
 } // end else
 %>
+</section>
 
       <h2>Table Stats</h2>
       <table class="table table-striped">
@@ -1333,9 +1337,7 @@ else { // handle the case for fqtn is null or master is not initialized with err
 <% } %>
 
 <jsp:include page="footer.jsp" />
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
 <script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
 
 <script>
     $(document).ready(function()
