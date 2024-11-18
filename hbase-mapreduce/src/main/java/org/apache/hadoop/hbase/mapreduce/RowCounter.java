@@ -160,7 +160,6 @@ public class RowCounter extends AbstractHBaseTool {
    * @throws IOException When setting up the job fails.
    */
   public Job createSubmittableJob(Configuration conf) throws IOException {
-    conf.setBoolean(OPT_COUNT_DELETE_MARKERS, this.countDeleteMarkers);
     Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(RowCounter.class);
     Scan scan = new Scan();
@@ -182,6 +181,7 @@ public class RowCounter extends AbstractHBaseTool {
     if (this.expectedCount >= 0) {
       conf.setLong(EXPECTED_COUNT_KEY, this.expectedCount);
     }
+    conf.setBoolean(OPT_COUNT_DELETE_MARKERS, this.countDeleteMarkers);
 
     scan.setTimeRange(startTime, endTime);
     job.setOutputFormatClass(NullOutputFormat.class);
