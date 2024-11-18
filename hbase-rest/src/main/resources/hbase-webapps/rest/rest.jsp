@@ -38,7 +38,6 @@ String listenPort = conf.get("hbase.rest.port", "8080");
     <meta name="description" content="">
 
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
     <link href="/static/css/hbase.css" rel="stylesheet">
   </head>
 
