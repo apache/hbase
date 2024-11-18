@@ -23,12 +23,11 @@ relicensed so we could use it as Creative Commons Attribution 3.0.
 The license is bundled with the download available here:
 http://www.vectorportal.com/subcategory/205/KILLER-WHALE-FREE-VECTOR.eps/ifile/9136/detailtest.asp
 --
-TODO (HBASE-28832): Update Bootstrap version here!
-This product includes portions of the Bootstrap project v3.0.0
+This product includes portions of the Bootstrap project v4.6.2
 
-Copyright 2013 Twitter, Inc.
+Copyright 2024 Twitter, Inc.
 
-Licensed under the Apache License v2.0
+Licensed under the MIT license
 
 --
 This product includes portions of the Guava project v14 and v21, specifically
