@@ -46,7 +46,6 @@ String compact = conf.get("hbase.regionserver.thrift.compact", "false");
     <meta name="description" content="">
 
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
     <link href="/static/css/hbase.css" rel="stylesheet">
   </head>
 
