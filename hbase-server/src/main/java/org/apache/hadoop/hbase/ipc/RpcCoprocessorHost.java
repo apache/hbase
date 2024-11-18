@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.net.InetAddress;
 import java.security.cert.X509Certificate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
@@ -30,6 +31,8 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
 @InterfaceAudience.Private
 public class RpcCoprocessorHost extends CoprocessorHost<RpcCoprocessor, RpcCoprocessorEnvironment> {
@@ -97,11 +100,12 @@ public class RpcCoprocessorHost extends CoprocessorHost<RpcCoprocessor, RpcCopro
     }
   }
 
-  public void preAuthorizeConnection() throws IOException {
+  public void preAuthorizeConnection(RPCProtos.ConnectionHeader connectionHeader,
+    InetAddress remoteAddr) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new RpcObserverOperation() {
       @Override
       protected void call(RpcObserver observer) throws IOException {
-        observer.preAuthorizeConnection(this);
+        observer.preAuthorizeConnection(this, connectionHeader, remoteAddr);
       }
     });
   }

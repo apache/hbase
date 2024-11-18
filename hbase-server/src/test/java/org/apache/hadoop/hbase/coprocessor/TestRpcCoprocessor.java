@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.coprocessor;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.security.cert.X509Certificate;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,6 +35,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
 @Category({ CoprocessorTests.class, MediumTests.class })
 public class TestRpcCoprocessor {
@@ -53,8 +56,8 @@ public class TestRpcCoprocessor {
     }
 
     @Override
-    public void preAuthorizeConnection(ObserverContext<RpcCoprocessorEnvironment> ctx)
-      throws IOException {
+    public void preAuthorizeConnection(ObserverContext<RpcCoprocessorEnvironment> ctx,
+      RPCProtos.ConnectionHeader connectionHeader, InetAddress remoteAddr) throws IOException {
       ctPreAuthorization.incrementAndGet();
     }
 
