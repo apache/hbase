@@ -54,12 +54,11 @@ http://www.vectorportal.com/subcategory/205/KILLER-WHALE-FREE-VECTOR.eps/ifile/9
 ## For modules that have bootstrap in their source tree
 #macro(bootstrap_notice)
 --
-TODO (HBASE-28832): Update Bootstrap version here!
-This product includes portions of the Bootstrap project v3.0.0
+This product includes portions of the Bootstrap project v4.6.2
 
-Copyright 2013 Twitter, Inc.
+Copyright 2024 Twitter, Inc.
 
-Licensed under the Apache License v2.0
+Licensed under the MIT license
 #end
 ## no NOTICE file.
 #macro(findbugs_cleanroom_notice)

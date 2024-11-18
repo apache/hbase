@@ -113,7 +113,7 @@ pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.
       <a href="#tab_gc2" data-toggle="tab"><%=collector2.getName() %></a>
      </li>
   </ul>
-    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
+    <div class="tab-content">
       <div class="tab-pane active" id="tab_gc1">
           <table class="table table-striped">
             <tr>
