@@ -139,8 +139,18 @@ public class ReplicationPeerImpl implements ReplicationPeer, ConfigurationObserv
   }
 
   @Override
+  public Map<TableName, TableName> getSourceToSinkTableOverrides() {
+    return this.peerConfig.getSourceToSinkTableOverrides();
+  }
+
+  @Override
   public Set<String> getNamespaces() {
     return this.peerConfig.getNamespaces();
+  }
+
+  @Override
+  public Map<String, String> getSourceToSinkNamespaceOverrides() {
+    return this.peerConfig.getSourceToSinkNamespaceOverrides();
   }
 
   @Override

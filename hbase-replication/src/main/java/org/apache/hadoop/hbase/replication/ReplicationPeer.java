@@ -88,10 +88,22 @@ public interface ReplicationPeer {
   Map<TableName, List<String>> getTableCFs();
 
   /**
+   * Get replicable (sourceTable, sinkTable) overrides map of this peer
+   * @return the replicable (sourceTable, sinkTable) map
+   */
+  Map<TableName, TableName> getSourceToSinkTableOverrides();
+
+  /**
    * Get replicable namespace set of this peer
    * @return the replicable namespaces set
    */
   Set<String> getNamespaces();
+
+  /**
+   * Get replicable (sourceNamespace, sinkNamespace) overrides map of this peer
+   * @return the replicable (sourceNamespace, sinkNamespace) map
+   */
+  Map<String, String> getSourceToSinkNamespaceOverrides();
 
   /**
    * Get the per node bandwidth upper limit for this peer
