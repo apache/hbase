@@ -98,11 +98,37 @@ public interface ReplicationPeerConfigBuilder {
   ReplicationPeerConfigBuilder setTableCFsMap(Map<TableName, List<String>> tableCFsMap);
 
   /**
+   * Sets an explicit map of source to sink tables that should be replicated to the given peer. If
+   * the map is empty for a table, the source table is used for the given peer.
+   * @param sourceToSinkTableOverrides A map from a source tableName to sink tableName. By default,
+   *                                   edits will be replicated to the same target table as the
+   *                                   source table. A null or empty collection can be passed to
+   *                                   indicate there are no overrides.
+   * @return {@code this}
+   */
+  ReplicationPeerConfigBuilder
+    setSourceToSinkTableOverrides(Map<TableName, TableName> sourceToSinkTableOverrides);
+
+  /**
    * Sets a unique collection of HBase namespaces that should be replicated to this peer.
    * @param namespaces A set of namespaces to be replicated to this peer.
    * @return {@code this}
    */
   ReplicationPeerConfigBuilder setNamespaces(Set<String> namespaces);
+
+  /**
+   * Sets an explicit map of source to sink namespaces that should be replicated to the given peer.
+   * If the map is empty for a namespace, the source namespace is used for the given peer. Use
+   * {@link #setSourceToSinkTableOverrides} to override the namespace overrides set in this method
+   * for a given table.
+   * @param sourceToSinkNamespaceOverrides A map from a source namespace to sink namespace. By
+   *                                       default, edits will be replicated to the same namespace
+   *                                       as the source namespace. A null or empty collection can
+   *                                       be passed to indicate there are no overrides.
+   * @return {@code this}
+   */
+  ReplicationPeerConfigBuilder
+    setSourceToSinkNamespaceOverrides(Map<String, String> sourceToSinkNamespaceOverrides);
 
   /**
    * Sets the speed, in bytes per second, for any one RegionServer to replicate data to the peer.

@@ -98,6 +98,46 @@ public final class ReplicationPeerConfigUtil {
     return tableCFList.toArray(new ReplicationProtos.TableCF[tableCFList.size()]);
   }
 
+  public static ReplicationProtos.SourceToSinkTableOverride[]
+    convertTableOverrides(Map<TableName, TableName> sourceToSinkTableOverrides) {
+    if (sourceToSinkTableOverrides == null) {
+      return null;
+    }
+    List<ReplicationProtos.SourceToSinkTableOverride> sourceToSinkTableOverridesList =
+      new ArrayList<>(sourceToSinkTableOverrides.entrySet().size());
+    ReplicationProtos.SourceToSinkTableOverride.Builder sourceToSinkTableOverrideBuilder =
+      ReplicationProtos.SourceToSinkTableOverride.newBuilder();
+    for (Map.Entry<TableName, TableName> entry : sourceToSinkTableOverrides.entrySet()) {
+      sourceToSinkTableOverrideBuilder.clear();
+      sourceToSinkTableOverrideBuilder.setTableName(ProtobufUtil.toProtoTableName(entry.getKey()));
+      sourceToSinkTableOverrideBuilder
+        .setSinkTableName(ProtobufUtil.toProtoTableName(entry.getValue()));
+      sourceToSinkTableOverridesList.add(sourceToSinkTableOverrideBuilder.build());
+    }
+    return sourceToSinkTableOverridesList.toArray(
+      new ReplicationProtos.SourceToSinkTableOverride[sourceToSinkTableOverridesList.size()]);
+  }
+
+  private static ReplicationProtos.SourceToSinkNamespaceOverride[]
+    convertNamespaceOverrides(Map<String, String> sourceToSinkNamespaceOverrides) {
+    if (sourceToSinkNamespaceOverrides == null) {
+      return null;
+    }
+    List<ReplicationProtos.SourceToSinkNamespaceOverride> sourceToSinkNamespaceOverridesList =
+      new ArrayList<>(sourceToSinkNamespaceOverrides.entrySet().size());
+    ReplicationProtos.SourceToSinkNamespaceOverride.Builder sourceToSinkNamespaceOverrideBuilder =
+      ReplicationProtos.SourceToSinkNamespaceOverride.newBuilder();
+    for (Map.Entry<String, String> entry : sourceToSinkNamespaceOverrides.entrySet()) {
+      sourceToSinkNamespaceOverrideBuilder.clear();
+      sourceToSinkNamespaceOverrideBuilder.setNamespace(entry.getKey());
+      sourceToSinkNamespaceOverrideBuilder.setSinkNamespace(entry.getValue());
+      sourceToSinkNamespaceOverridesList.add(sourceToSinkNamespaceOverrideBuilder.build());
+    }
+    return sourceToSinkNamespaceOverridesList.toArray(
+      new ReplicationProtos.SourceToSinkNamespaceOverride[sourceToSinkNamespaceOverridesList
+        .size()]);
+  }
+
   public static String convertToString(Map<TableName, ? extends Collection<String>> tableCfs) {
     if (tableCfs == null) {
       return null;
@@ -250,6 +290,41 @@ public final class ReplicationPeerConfigUtil {
   }
 
   /**
+   * Convert sourceToSinkTableOverrides Object to Map.
+   */
+  public static Map<TableName, TableName>
+    convert2Map(ReplicationProtos.SourceToSinkTableOverride[] sourceToSinkTableOverrides) {
+    if (sourceToSinkTableOverrides == null || sourceToSinkTableOverrides.length == 0) {
+      return null;
+    }
+    Map<TableName, TableName> sourceToSinkTableOverridesMap = new HashMap<>();
+    for (int i = 0, n = sourceToSinkTableOverrides.length; i < n; i++) {
+      ReplicationProtos.SourceToSinkTableOverride override = sourceToSinkTableOverrides[i];
+      sourceToSinkTableOverridesMap.put(ProtobufUtil.toTableName(override.getTableName()),
+        ProtobufUtil.toTableName(override.getSinkTableName()));
+    }
+
+    return sourceToSinkTableOverridesMap;
+  }
+
+  /**
+   * Convert sourceToSinkNamespaceOverrides Object to Map.
+   */
+  public static Map<String, String>
+    convert2Map(ReplicationProtos.SourceToSinkNamespaceOverride[] sourceToSinkNamespaceOverrides) {
+    if (sourceToSinkNamespaceOverrides == null || sourceToSinkNamespaceOverrides.length == 0) {
+      return null;
+    }
+    Map<String, String> sourceToSinkNamespaceOverridesMap = new HashMap<>();
+    for (int i = 0, n = sourceToSinkNamespaceOverrides.length; i < n; i++) {
+      ReplicationProtos.SourceToSinkNamespaceOverride override = sourceToSinkNamespaceOverrides[i];
+      sourceToSinkNamespaceOverridesMap.put(override.getNamespace(), override.getSinkNamespace());
+    }
+
+    return sourceToSinkNamespaceOverridesMap;
+  }
+
+  /**
    * Parse the serialized representation of a peer configuration.
    * @param bytes Content of a peer znode.
    * @return ClusterKey parsed from the passed bytes.
@@ -300,10 +375,26 @@ public final class ReplicationPeerConfigUtil {
       builder.setTableCFsMap(tableCFsMap);
     }
 
+    Map<TableName,
+      TableName> sourceToSinkTableOverrides = convert2Map(peer.getSourceToSinkTableOverridesList()
+        .toArray(new ReplicationProtos.SourceToSinkTableOverride[peer
+          .getSourceToSinkTableOverridesCount()]));
+    if (sourceToSinkTableOverrides != null) {
+      builder.setSourceToSinkTableOverrides(sourceToSinkTableOverrides);
+    }
+
     List<ByteString> namespacesList = peer.getNamespacesList();
     if (namespacesList != null && namespacesList.size() != 0) {
       builder.setNamespaces(
         namespacesList.stream().map(ByteString::toStringUtf8).collect(Collectors.toSet()));
+    }
+
+    Map<String, String> sourceToSinkNamespaceOverrides =
+      convert2Map(peer.getSourceToSinkNamespaceOverridesList()
+        .toArray(new ReplicationProtos.SourceToSinkNamespaceOverride[peer
+          .getSourceToSinkNamespaceOverridesCount()]));
+    if (sourceToSinkNamespaceOverrides != null) {
+      builder.setSourceToSinkNamespaceOverrides(sourceToSinkNamespaceOverrides);
     }
 
     if (peer.hasBandwidth()) {
@@ -363,10 +454,27 @@ public final class ReplicationPeerConfigUtil {
         builder.addTableCfs(tableCFs[i]);
       }
     }
+
+    ReplicationProtos.SourceToSinkTableOverride[] sourceToSinkTableOverrides =
+      convertTableOverrides(peerConfig.getSourceToSinkTableOverrides());
+    if (sourceToSinkTableOverrides != null) {
+      for (int i = 0; i < sourceToSinkTableOverrides.length; i++) {
+        builder.addSourceToSinkTableOverrides(sourceToSinkTableOverrides[i]);
+      }
+    }
+
     Set<String> namespaces = peerConfig.getNamespaces();
     if (namespaces != null) {
       for (String namespace : namespaces) {
         builder.addNamespaces(ByteString.copyFromUtf8(namespace));
+      }
+    }
+
+    ReplicationProtos.SourceToSinkNamespaceOverride[] sourceToSinkNamespaceOverrides =
+      convertNamespaceOverrides(peerConfig.getSourceToSinkNamespaceOverrides());
+    if (sourceToSinkNamespaceOverrides != null) {
+      for (int i = 0; i < sourceToSinkNamespaceOverrides.length; i++) {
+        builder.addSourceToSinkNamespaceOverrides(sourceToSinkNamespaceOverrides[i]);
       }
     }
 
@@ -458,7 +566,7 @@ public final class ReplicationPeerConfigUtil {
   }
 
   /**
-   * Helper method to add/removev base peer configs from Configuration to ReplicationPeerConfig This
+   * Helper method to add/remove base peer configs from Configuration to ReplicationPeerConfig This
    * merges the user supplied peer configuration
    * {@link org.apache.hadoop.hbase.replication.ReplicationPeerConfig} with peer configs provided as
    * property hbase.replication.peer.base.configs in hbase configuration. Expected format for this

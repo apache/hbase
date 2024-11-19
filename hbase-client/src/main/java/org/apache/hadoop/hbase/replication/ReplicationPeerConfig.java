@@ -42,7 +42,10 @@ public class ReplicationPeerConfig {
   private final Map<byte[], byte[]> peerData;
   private final Map<String, String> configuration;
   private Map<TableName, ? extends Collection<String>> tableCFsMap = null;
+  private Map<TableName, TableName> sourceToSinkTableOverrides = null;
   private Set<String> namespaces = null;
+  private Map<String, String> sourceToSinkNamespaceOverrides = null;
+
   // Default value is true, means replicate all user tables to peer cluster.
   private boolean replicateAllUserTables = true;
   private Map<TableName, ? extends Collection<String>> excludeTableCFsMap = null;
@@ -59,8 +62,14 @@ public class ReplicationPeerConfig {
     this.configuration = Collections.unmodifiableMap(builder.configuration);
     this.tableCFsMap =
       builder.tableCFsMap != null ? unmodifiableTableCFsMap(builder.tableCFsMap) : null;
+    this.sourceToSinkTableOverrides = builder.sourceToSinkTableOverrides != null
+      ? Collections.unmodifiableMap(builder.sourceToSinkTableOverrides)
+      : null;
     this.namespaces =
       builder.namespaces != null ? Collections.unmodifiableSet(builder.namespaces) : null;
+    this.sourceToSinkNamespaceOverrides = builder.sourceToSinkNamespaceOverrides != null
+      ? Collections.unmodifiableMap(builder.sourceToSinkNamespaceOverrides)
+      : null;
     this.replicateAllUserTables = builder.replicateAllUserTables;
     this.excludeTableCFsMap = builder.excludeTableCFsMap != null
       ? unmodifiableTableCFsMap(builder.excludeTableCFsMap)
@@ -101,8 +110,16 @@ public class ReplicationPeerConfig {
     return (Map<TableName, List<String>>) tableCFsMap;
   }
 
+  public Map<TableName, TableName> getSourceToSinkTableOverrides() {
+    return sourceToSinkTableOverrides;
+  }
+
   public Set<String> getNamespaces() {
     return this.namespaces;
+  }
+
+  public Map<String, String> getSourceToSinkNamespaceOverrides() {
+    return sourceToSinkNamespaceOverrides;
   }
 
   public long getBandwidth() {
@@ -166,7 +183,11 @@ public class ReplicationPeerConfig {
 
     private Map<TableName, List<String>> tableCFsMap = null;
 
+    private Map<TableName, TableName> sourceToSinkTableOverrides = null;
+
     private Set<String> namespaces = null;
+
+    private Map<String, String> sourceToSinkNamespaceOverrides = null;
 
     // Default value is true, means replicate all user tables to peer cluster.
     private boolean replicateAllUserTables = true;
@@ -218,8 +239,22 @@ public class ReplicationPeerConfig {
     }
 
     @Override
+    public ReplicationPeerConfigBuilder
+      setSourceToSinkTableOverrides(Map<TableName, TableName> sourceToSinkTableOverrides) {
+      this.sourceToSinkTableOverrides = sourceToSinkTableOverrides;
+      return this;
+    }
+
+    @Override
     public ReplicationPeerConfigBuilder setNamespaces(Set<String> namespaces) {
       this.namespaces = namespaces;
+      return this;
+    }
+
+    @Override
+    public ReplicationPeerConfigBuilder
+      setSourceToSinkNamespaceOverrides(Map<String, String> sourceToSinkNamespaceOverrides) {
+      this.sourceToSinkNamespaceOverrides = sourceToSinkNamespaceOverrides;
       return this;
     }
 
