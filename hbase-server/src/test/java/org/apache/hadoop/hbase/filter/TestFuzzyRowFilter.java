@@ -239,9 +239,14 @@ public class TestFuzzyRowFilter {
 
   @Test
   public void testGetNextForFuzzyRuleReverse() {
-    // In the reverse case the last non-max byte should be increased to make sure that the proper
-    // row is selected next.
-    // e.g. 112 -> 113 or 11(0xFF)2 -> 11(0xFF)3, 5101 -> 5102 etc.
+    // In these reverse cases for the next row key the last non-max byte should be increased
+    // to make sure that the proper row is selected next by the scanner.
+    // For example:
+    // fuzzy row: 0,1,2
+    // mask: 0,-1,-1
+    // current: 1,2,1,0,1
+    // next would be: 1,1,2
+    // this has to be increased to 1,1,3 to make sure that the proper row is selected next.
     assertNext(true, new byte[] { 0, 1, 2 }, // fuzzy row
       new byte[] { 0, -1, -1 }, // mask
       new byte[] { 1, 2, 1, 0, 1 }, // current
