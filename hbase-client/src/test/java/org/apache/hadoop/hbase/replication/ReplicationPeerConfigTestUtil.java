@@ -22,6 +22,7 @@ import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -82,7 +83,6 @@ public final class ReplicationPeerConfigTestUtil {
     return map;
   }
 
-
   public static ReplicationPeerConfig getConfig(int seed) {
     RNG.setSeed(seed);
     return ReplicationPeerConfig.newBuilder().setClusterKey(Long.toHexString(RNG.nextLong()))
@@ -136,7 +136,8 @@ public final class ReplicationPeerConfigTestUtil {
     assertMapEquals(expected.getTableCFsMap(), actual.getTableCFsMap());
     assertMapEquals(expected.getExcludeTableCFsMap(), actual.getExcludeTableCFsMap());
     assertEquals(expected.replicateAllUserTables(), actual.replicateAllUserTables());
-    assertEquals(expected.getSourceToSinkNamespaceOverrides(), actual.getSourceToSinkNamespaceOverrides());
+    assertEquals(expected.getSourceToSinkNamespaceOverrides(),
+      actual.getSourceToSinkNamespaceOverrides());
     assertEquals(expected.getSourceToSinkTableOverrides(), actual.getSourceToSinkTableOverrides());
     assertEquals(expected.getBandwidth(), actual.getBandwidth());
   }
