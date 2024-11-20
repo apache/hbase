@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
@@ -37,7 +39,6 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 @InterfaceAudience.Private
@@ -58,9 +59,11 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
   @Override
   public void replicateLogEntries(List<AdminProtos.WALEntry> entries, ExtendedCellScanner cells,
     String replicationClusterId, String sourceBaseNamespaceDirPath,
-    String sourceHFileArchiveDirPath) throws IOException {
+    String sourceHFileArchiveDirPath, Map<String, String> sourceToSinkNamespaceOverrides,
+    Map<TableName, TableName> sourceToSinkTableOverrides) throws IOException {
     this.replicationSink.replicateEntries(entries, cells, replicationClusterId,
-      sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath);
+      sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, sourceToSinkNamespaceOverrides,
+      sourceToSinkTableOverrides);
   }
 
   @Override

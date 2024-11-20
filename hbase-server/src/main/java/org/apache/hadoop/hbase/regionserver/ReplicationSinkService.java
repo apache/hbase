@@ -19,9 +19,10 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 
 /**
@@ -32,15 +33,19 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 public interface ReplicationSinkService extends ReplicationService {
   /**
    * Carry on the list of log entries down to the sink
-   * @param entries                    list of WALEntries to replicate
-   * @param cells                      Cells that the WALEntries refer to (if cells is non-null)
-   * @param replicationClusterId       Id which will uniquely identify source cluster FS client
-   *                                   configurations in the replication configuration directory
-   * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
-   *                                   directory required for replicating hfiles
-   * @param sourceHFileArchiveDirPath  Path that point to the source cluster hfile archive directory
+   * @param entries                        List of WALEntries to replicate
+   * @param cells                          Cells that the WALEntries refer to (if cells is non-null)
+   * @param replicationClusterId           Id which will uniquely identify source cluster FS client
+   *                                       configurations in the replication configuration directory
+   * @param sourceBaseNamespaceDirPath     Path that point to the source cluster base namespace
+   *                                       directory required for replicating hfiles
+   * @param sourceHFileArchiveDirPath      Path that point to the source cluster hfile archive
+   *                                       directory
+   * @param sourceToSinkNamespaceOverrides Map of source to sink namespace overrides
+   * @param sourceToSinkTableOverrides     Map of source to sink table overrides
    */
   void replicateLogEntries(List<WALEntry> entries, ExtendedCellScanner cells,
     String replicationClusterId, String sourceBaseNamespaceDirPath,
-    String sourceHFileArchiveDirPath) throws IOException;
+    String sourceHFileArchiveDirPath, Map<String, String> sourceToSinkNamespaceOverrides,
+    Map<TableName, TableName> sourceToSinkTableOverrides) throws IOException;
 }
