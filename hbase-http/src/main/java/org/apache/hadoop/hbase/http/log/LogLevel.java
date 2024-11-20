@@ -373,23 +373,19 @@ public final class LogLevel {
 
     static final String FORMS = "<div class='container-fluid content'>\n"
       + "<div class='row inner_header top_header'>\n" + "<div class='page-header'>\n"
-      + "<h1>Get/Set Log Level</h1>\n" + "</div>\n" + "</div>\n" + "Actions:" + "<p>" + "<center>\n"
-      + "<table class='table' style='border: 0;' width='95%' >\n" + "<tr>\n" + "<form>\n"
-      + "<td class='centered'>\n"
-      + "<input style='font-size: 12pt; width: 10em' type='submit' value='Get Log Level'"
-      + " class='btn' />\n" + "</td>\n" + "<td style='text-align: center;'>\n"
-      + "<input type='text' name='log' size='50' required='required'"
-      + " placeholder='Log Name (required)' />\n" + "</td>\n" + "<td width=\"40%\">"
-      + "Get the current log level for the specified log name." + "</td>\n" + "</form>\n"
-      + "</tr>\n" + "<tr>\n" + "<form>\n" + "<td class='centered'>\n"
-      + "<input style='font-size: 12pt; width: 10em' type='submit'"
-      + " value='Set Log Level' class='btn' />\n" + "</td>\n" + "<td style='text-align: center;'>\n"
-      + "<input type='text' name='log' size='50' required='required'"
-      + " placeholder='Log Name (required)' />\n"
-      + "<input type='text' name='level' size='50' required='required'"
-      + " placeholder='Log Level (required)' />\n" + "</td>\n" + "<td width=\"40%\" style=\"\">"
-      + "Set the specified log level for the specified log name." + "</td>\n" + "</form>\n"
-      + "</tr>\n" + "</table>\n" + "</center>\n" + "</p>\n" + "<hr/>\n";
+      + "<h1>Get/Set Log Level</h1>\n" + "</div>\n" + "</div>\n" + "\n" + "<h2>Actions</h2>\n"
+      + "\n" + "<div class='row'>\n" + "<div class='col'>\n" + "<section>\n"
+      + "<form class='form-inline'>\n"
+      + "<button type='submit' class='btn btn-primary'>Get Log Level</button>\n"
+      + "<input type='text' name='log' class='form-control mx-sm-3' size='50' required='required' placeholder='Log Name (required)'>\n"
+      + "<span>Gets the current log level for the specified log name.</span>\n" + "</form>\n"
+      + "</section>\n" + "</div>\n" + "</div>\n" + "\n" + "<div class='row'>\n"
+      + "<div class='col'>\n" + "<section>\n" + "<form class='form-inline'>\n"
+      + "<button type='submit' class='btn btn-primary'>Set Log Level</button>\n"
+      + "<input type='text' name='log' class='form-control mx-sm-3' size='50' required='required' placeholder='Log Name (required)'>\n"
+      + "<input type='text' name='level' class='form-control mx-sm-3' size='50' required='required' placeholder='Log Level (required)'>\n"
+      + "<span>Sets the specified log level for the specified log name.</span>\n" + "</form>\n"
+      + "    </section>\n" + "</div>\n" + "</div>\n" + "<hr>\n";
 
     private static void process(Logger logger, String levelName, PrintWriter out) {
       if (levelName != null) {
