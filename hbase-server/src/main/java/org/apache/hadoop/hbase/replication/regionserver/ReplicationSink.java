@@ -185,7 +185,7 @@ public class ReplicationSink {
    * Replicate this array of entries directly into the local cluster using the native client. Only
    * operates against raw protobuf type saving on a conversion from pb to pojo.
    * @param entries                    WAL entries to be replicated.
-   * @param cells                      cell scanner for iteration.
+   * @param cells                      Cell scanner for iteration.
    * @param replicationClusterId       Id which will uniquely identify source cluster FS client
    *                                   configurations in the replication configuration directory
    * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
@@ -196,6 +196,29 @@ public class ReplicationSink {
   public void replicateEntries(List<WALEntry> entries, final ExtendedCellScanner cells,
     String replicationClusterId, String sourceBaseNamespaceDirPath,
     String sourceHFileArchiveDirPath) throws IOException {
+    replicateEntries(entries, cells, replicationClusterId, sourceBaseNamespaceDirPath,
+      sourceHFileArchiveDirPath, null, null);
+  }
+
+  /**
+   * Replicate this array of entries directly into the local cluster using the native client. Only
+   * operates against raw protobuf type saving on a conversion from pb to pojo.
+   * @param entries                        WAL entries to be replicated.
+   * @param cells                          Cell scanner for iteration.
+   * @param replicationClusterId           Id which will uniquely identify source cluster FS client
+   *                                       configurations in the replication configuration directory
+   * @param sourceBaseNamespaceDirPath     Path that point to the source cluster base namespace
+   *                                       directory
+   * @param sourceHFileArchiveDirPath      Path that point to the source cluster hfile archive
+   *                                       directory
+   * @param sourceToSinkNamespaceOverrides Map of source to sink namespace overrides
+   * @param sourceToSinkTableOverrides     Map of source to sink table overrides
+   * @throws IOException If failed to replicate the data
+   */
+  public void replicateEntries(List<WALEntry> entries, final ExtendedCellScanner cells,
+    String replicationClusterId, String sourceBaseNamespaceDirPath,
+    String sourceHFileArchiveDirPath, Map<String, String> sourceToSinkNamespaceOverrides,
+    Map<TableName, TableName> sourceToSinkTableOverrides) throws IOException {
     if (entries.isEmpty()) {
       return;
     }
