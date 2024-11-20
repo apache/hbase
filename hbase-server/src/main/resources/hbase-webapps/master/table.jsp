@@ -563,41 +563,51 @@
 </div>
   <div class="row mb-5">
     <div class="col-md-4">
-        <ul class="pagination" style="margin: 20px 0">
-          <li class="page-item">
-            <a class="page-link" href="<%= metaBrowser.buildFirstPageUrl() %>" aria-label="First" title="First">
-              <span aria-hidden="true">&#x21E4;</span>
-            </a>
-          </li>
-          <li<%= metaScanHasMore ? " class=\"page-item\"" : " class=\"page-item disabled\"" %>>
-            <a class="page-link" <%= metaScanHasMore ? " href=\"" + metaBrowser.buildNextPageUrl(lastRow) + "\"" : "" %> aria-label="Next" title="Next">
-              <span aria-hidden="true">&raquo;</span>
-            </a>
-          </li>
-        </ul>
-      </div>
+      <ul class="pagination" style="margin: 20px 0">
+        <li class="page-item">
+          <a class="page-link" href="<%= metaBrowser.buildFirstPageUrl() %>" aria-label="First" title="First">
+            <span aria-hidden="true">&#x21E4;</span>
+          </a>
+        </li>
+        <li<%= metaScanHasMore ? " class=\"page-item\"" : " class=\"page-item disabled\"" %>>
+          <a class="page-link" <%= metaScanHasMore ? " href=\"" + metaBrowser.buildNextPageUrl(lastRow) + "\"" : "" %> aria-label="Next" title="Next">
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+      </ul>
+    </div>
       <div class="col-md-8">
-        <form action="/table.jsp" method="get" class="form-inline justify-content-end" style="margin: 20px 0">
+        <form action="/table.jsp" method="get" class="row g-1 justify-content-end align-items-center" style="margin: 20px 0">
           <input type="hidden" name="name" value="<%= TableName.META_TABLE_NAME %>" />
-          <div class="form-group">
-            <label for="scan-limit" class="mx-sm-1">Scan Limit</label>
+          <div class="col-sm-auto">
+            <label for="scan-limit" class="form-label">Scan Limit</label>
+          </div>
+          <div class="col-sm-auto">
             <input type="text" id="scan-limit" name="<%= MetaBrowser.SCAN_LIMIT_PARAM %>"
-                              class="form-control mx-sm-1" placeholder="<%= MetaBrowser.SCAN_LIMIT_DEFAULT %>"
+                              class="form-control" placeholder="<%= MetaBrowser.SCAN_LIMIT_DEFAULT %>"
                               <%= metaBrowser.getScanLimit() != null
                 ? "value=\"" + metaBrowser.getScanLimit() + "\""
                 : ""
               %>
                               aria-describedby="scan-limit" />
-            <label for="table-name-filter" class="mx-sm-1">Table</label>
+          </div>
+          <div class="col-sm-auto">
+            <label for="table-name-filter" class="form-label">Table</label>
+          </div>
+          <div class="col-sm-auto">
             <input type="text" id="table-name-filter" name="<%= MetaBrowser.SCAN_TABLE_PARAM %>"
-                   class="form-control mx-sm-1"
+                   class="form-control"
                               <%= metaBrowser.getScanTable() != null
                 ? "value=\"" + metaBrowser.getScanTable() + "\""
                 : ""
               %>
                               aria-describedby="scan-filter-table" />
-            <label for="region-state-filter" class="mx-sm-1">Region State</label>
-            <select class="form-control mx-sm-1" id="region-state-filter"
+          </div>
+          <div class="col-sm-auto">
+            <label for="region-state-filter" class="form-label">Region State</label>
+          </div>
+          <div class="col-sm-auto">
+            <select class="form-control" id="region-state-filter"
                                name="<%= MetaBrowser.SCAN_REGION_STATE_PARAM %>">
               <option></option>
 <%
@@ -609,13 +619,15 @@
   }
 %>
             </select>
-            <button type="submit" class="btn btn-primary mx-sm-1">
+          </div>
+          <div class="col-sm-auto">
+            <button type="submit" class="btn btn-primary">
               Filter Results
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </div><!--/.col-md-8 -->
+    </div><!--/.row .mb-5 -->
     <%} else {
       RegionStates states = master.getAssignmentManager().getRegionStates();
       Map<RegionState.State, List<RegionInfo>> regionStates = states.getRegionByStateOfTable(table.getName());
