@@ -60,10 +60,10 @@
 <div class="tabbable">
   <ul class="nav nav-pills" role="tablist">
     <li class="nav-item">
-      <a class="nav-link active" href="#tab_named_queue1" data-toggle="tab" role="tab"> Balancer Rejection </a>
+      <a class="nav-link active" href="#tab_named_queue1" data-bs-toggle="tab" role="tab"> Balancer Rejection </a>
     </li>
     <li class="nav-item">
-      <a class="nav-link" href="#tab_named_queue2" data-toggle="tab" role="tab"> Balancer Decision </a>
+      <a class="nav-link" href="#tab_named_queue2" data-bs-toggle="tab" role="tab"> Balancer Decision </a>
     </li>
   </ul>
     <div class="tab-content">

@@ -37,13 +37,13 @@ org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 </%import>
 <div class="tabbable">
     <ul class="nav nav-pills" role="tablist">
-        <li class="nav-item"><a class="nav-link active" href="#tab_baseStats" data-toggle="tab" role="tab">Base Stats</a></li>
-        <li class="nav-item"><a class="nav-link" href="#tab_memoryStats" data-toggle="tab" role="tab">Memory</a></li>
-        <li class="nav-item"><a class="nav-link" href="#tab_requestStats" data-toggle="tab" role="tab">Requests</a></li>
-        <li class="nav-item"><a class="nav-link" href="#tab_walStats" data-toggle="tab" role="tab">WALs</a></li>
-        <li class="nav-item"><a class="nav-link" href="#tab_storeStats" data-toggle="tab" role="tab">Storefiles</a></li>
-        <li class="nav-item"><a class="nav-link" href="#tab_queueStats" data-toggle="tab" role="tab">Queues</a></li>
-        <li class="nav-item"><a class="nav-link" href="#tab_byteBuffAllocatorStats" data-toggle="tab" role="tab">ByteBuffAllocator Stats</a></li>
+        <li class="nav-item"><a class="nav-link active" href="#tab_baseStats" data-bs-toggle="tab" role="tab">Base Stats</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_memoryStats" data-bs-toggle="tab" role="tab">Memory</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_requestStats" data-bs-toggle="tab" role="tab">Requests</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_walStats" data-bs-toggle="tab" role="tab">WALs</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_storeStats" data-bs-toggle="tab" role="tab">Storefiles</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_queueStats" data-bs-toggle="tab" role="tab">Queues</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_byteBuffAllocatorStats" data-bs-toggle="tab" role="tab">ByteBuffAllocator Stats</a></li>
     </ul>
     <div class="tab-content">
         <div class="tab-pane active" id="tab_baseStats" role="tabpanel">
