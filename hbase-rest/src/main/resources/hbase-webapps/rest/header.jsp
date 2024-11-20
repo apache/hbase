@@ -31,43 +31,38 @@
 
   <link href="/static/css/bootstrap.min.css" rel="stylesheet">
   <link href="/static/css/hbase.css" rel="stylesheet">
+  <link rel="shortcut icon" href="/static/favicon.ico">
 </head>
 
 <body>
-<div class="navbar  navbar-fixed-top navbar-default">
-  <div class="container-fluid">
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-      <a class="navbar-brand" href="/rest.jsp"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-    </div>
-    <div class="collapse navbar-collapse">
-      <ul class="nav navbar-nav">
-        <li class="active"><a href="/rest.jsp">Home</a></li>
-        <li><a href="/logs/">Local logs</a></li>
-        <li><a href="/processRest.jsp">Process Metrics</a></li>
-        <li><a href="/logLevel">Log Level</a></li>
-        <li><a href="/dump">Debug Dump</a></li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            Metrics <span class="caret"></span>
-          </a>
-          <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-            <li><a target="_blank" href="/jmx">JMX</a></li>
-            <li><a target="_blank" href="/jmx?description=true">JMX with description</a></li>
-            <li><a target="_blank" href="/prometheus">Prometheus</a></li>
-            <li><a target="_blank" href="/prometheus?description=true">Prometheus with description</a></li>
-          </ul>
-        </li>
-        <li><a href="/prof">Profiler</a></li>
-        <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-        <li><a href="/conf">HBase Configuration</a></li>
-        <% } %>
-      </ul>
-    </div><!--/.nav-collapse -->
-  </div>
-</div>
+<nav class="navbar navbar-expand-md navbar-light fixed-top bg-light">
+  <a class="navbar-brand" href="/rest.jsp"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
+  <button type="button" class="navbar-toggler" data-toggle="collapse" data-target=".navbar-collapse">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse">
+    <ul class="navbar-nav">
+      <li class="nav-item"><a class="nav-link" href="/rest.jsp">Home</a></li>
+      <li class="nav-item"><a class="nav-link" href="/logs/">Local logs</a></li>
+      <li class="nav-item"><a class="nav-link" href="/processRest.jsp">Process Metrics</a></li>
+      <li class="nav-item"><a class="nav-link" href="/logLevel">Log Level</a></li>
+      <li class="nav-item"><a class="nav-link" href="/dump">Debug Dump</a></li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Metrics <span class="caret"></span>
+        </a>
+        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+          <a class="dropdown-item" target="_blank" href="/jmx">JMX</a>
+          <a class="dropdown-item" target="_blank" href="/jmx?description=true">JMX with description</a>
+          <a class="dropdown-item" target="_blank" href="/prometheus">Prometheus</a>
+          <a class="dropdown-item" target="_blank" href="/prometheus?description=true">Prometheus with description</a>
+        </div>
+      </li>
+      <li class="nav-item"><a class="nav-link" href="/prof">Profiler</a></li>
+      <% if (HBaseConfiguration.isShowConfInServlet()) { %>
+      <li class="nav-item"><a class="nav-link" href="/conf">HBase Configuration</a></li>
+      <% } %>
+    </ul>
+  </div><!--/.navbar-collapse -->
+</nav>
 
