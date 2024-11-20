@@ -19,14 +19,26 @@
 /* General styling */
 body { padding-top: 50px; }
 html .content {
-  margin-left: 2.0em;
-  margin-right: 2.0em;
+  padding: 0 2.0em;
 }
 .navbar-brand img {
   margin-top: -7px;
 }
 .inner_header { margin-bottom: 1em;}
-section { margin-bottom: 3em; }
+section {
+  width: 100%;
+  margin-bottom: 3em;
+}
+.page-header {
+  padding-bottom: 9px;
+  margin: 40px 0 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.page-header small {
+  font-size: 65%;
+  color: #6c757d;
+}
 
 
 /* Master page styling */
