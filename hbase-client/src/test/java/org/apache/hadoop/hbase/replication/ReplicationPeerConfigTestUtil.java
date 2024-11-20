@@ -22,7 +22,6 @@ import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -60,6 +59,30 @@ public final class ReplicationPeerConfigTestUtil {
     return map;
   }
 
+  private static Map<TableName, TableName> randSourceToSinkTableOverrides(Random rand) {
+    int size = rand.nextInt(5);
+    Map<TableName, TableName> map = new HashMap<>(size);
+    for (int i = 0; i < size; i++) {
+      TableName source = TableName.valueOf(Long.toHexString(rand.nextLong()));
+      TableName sink = TableName.valueOf(Long.toHexString(rand.nextLong()));
+      map.put(source, sink);
+    }
+    return map;
+  }
+
+  // TODO eboland: might want this to align with sourceToSinkTableOverrides
+  private static Map<String, String> randSourceToSinkNamespaceOverrides(Random rand) {
+    int size = rand.nextInt(5);
+    Map<String, String> map = new HashMap<>(size);
+    for (int i = 0; i < size; i++) {
+      String source = Long.toHexString(rand.nextLong());
+      String sink = Long.toHexString(rand.nextLong());
+      map.put(source, sink);
+    }
+    return map;
+  }
+
+
   public static ReplicationPeerConfig getConfig(int seed) {
     RNG.setSeed(seed);
     return ReplicationPeerConfig.newBuilder().setClusterKey(Long.toHexString(RNG.nextLong()))
@@ -67,6 +90,8 @@ public final class ReplicationPeerConfigTestUtil {
       .setRemoteWALDir(Long.toHexString(RNG.nextLong())).setNamespaces(randNamespaces(RNG))
       .setExcludeNamespaces(randNamespaces(RNG)).setTableCFsMap(randTableCFs(RNG))
       .setExcludeTableCFsMap(randTableCFs(RNG)).setReplicateAllUserTables(RNG.nextBoolean())
+      .setSourceToSinkNamespaceOverrides(randSourceToSinkNamespaceOverrides(RNG))
+      .setSourceToSinkTableOverrides(randSourceToSinkTableOverrides(RNG))
       .setBandwidth(RNG.nextInt(1000)).build();
   }
 
@@ -111,6 +136,8 @@ public final class ReplicationPeerConfigTestUtil {
     assertMapEquals(expected.getTableCFsMap(), actual.getTableCFsMap());
     assertMapEquals(expected.getExcludeTableCFsMap(), actual.getExcludeTableCFsMap());
     assertEquals(expected.replicateAllUserTables(), actual.replicateAllUserTables());
+    assertEquals(expected.getSourceToSinkNamespaceOverrides(), actual.getSourceToSinkNamespaceOverrides());
+    assertEquals(expected.getSourceToSinkTableOverrides(), actual.getSourceToSinkTableOverrides());
     assertEquals(expected.getBandwidth(), actual.getBandwidth());
   }
 }
