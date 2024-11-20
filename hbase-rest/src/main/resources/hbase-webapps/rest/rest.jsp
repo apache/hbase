@@ -45,7 +45,7 @@ String listenPort = conf.get("hbase.rest.port", "8080");
   <body>
   <nav class="navbar navbar-expand-md navbar-light fixed-top bg-light">
     <a class="navbar-brand" href="/rest.jsp"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-    <button type="button" class="navbar-toggler" data-toggle="collapse" data-target=".navbar-collapse">
+    <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse">

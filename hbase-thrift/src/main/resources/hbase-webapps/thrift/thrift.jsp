@@ -55,7 +55,7 @@ String compact = conf.get("hbase.regionserver.thrift.compact", "false");
     <a class="navbar-brand" href="/thrift.jsp">
       <img src="/static/hbase_logo_small.png" alt="HBase Logo"/>
     </a>
-    <button type="button" class="navbar-toggler" data-toggle="collapse" data-target=".navbar-collapse">
+    <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse">

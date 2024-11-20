@@ -105,10 +105,10 @@ pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.
 <div class="tabbable">
   <ul class="nav nav-pills" role="tablist">
     <li class="nav-item">
-      <a class="nav-link active" href="#tab_gc1" data-toggle="tab" role="tab"><%=collector1.getName() %></a>
+      <a class="nav-link active" href="#tab_gc1" data-bs-toggle="tab" role="tab"><%=collector1.getName() %></a>
     </li>
     <li class="nav-item">
-      <a class="nav-link" href="#tab_gc2" data-toggle="tab" role="tab"><%=collector2.getName() %></a>
+      <a class="nav-link" href="#tab_gc2" data-bs-toggle="tab" role="tab"><%=collector2.getName() %></a>
      </li>
   </ul>
     <div class="tab-content">
