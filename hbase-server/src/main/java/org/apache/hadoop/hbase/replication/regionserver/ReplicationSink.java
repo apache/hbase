@@ -184,25 +184,6 @@ public class ReplicationSink {
   /**
    * Replicate this array of entries directly into the local cluster using the native client. Only
    * operates against raw protobuf type saving on a conversion from pb to pojo.
-   * @param entries                    WAL entries to be replicated.
-   * @param cells                      Cell scanner for iteration.
-   * @param replicationClusterId       Id which will uniquely identify source cluster FS client
-   *                                   configurations in the replication configuration directory
-   * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
-   *                                   directory
-   * @param sourceHFileArchiveDirPath  Path that point to the source cluster hfile archive directory
-   * @throws IOException If failed to replicate the data
-   */
-  public void replicateEntries(List<WALEntry> entries, final ExtendedCellScanner cells,
-    String replicationClusterId, String sourceBaseNamespaceDirPath,
-    String sourceHFileArchiveDirPath) throws IOException {
-    replicateEntries(entries, cells, replicationClusterId, sourceBaseNamespaceDirPath,
-      sourceHFileArchiveDirPath, null, null);
-  }
-
-  /**
-   * Replicate this array of entries directly into the local cluster using the native client. Only
-   * operates against raw protobuf type saving on a conversion from pb to pojo.
    * @param entries                        WAL entries to be replicated.
    * @param cells                          Cell scanner for iteration.
    * @param replicationClusterId           Id which will uniquely identify source cluster FS client
@@ -234,9 +215,9 @@ public class ReplicationSink {
       Pair<List<Mutation>, List<WALEntry>> mutationsToWalEntriesPairs =
         new Pair<>(new ArrayList<>(), new ArrayList<>());
       for (WALEntry entry : entries) {
-        TableName table = TableName.valueOf(entry.getKey().getTableName().toByteArray());
+        TableName sourceTable = TableName.valueOf(entry.getKey().getTableName().toByteArray());
         if (this.walEntrySinkFilter != null) {
-          if (this.walEntrySinkFilter.filter(table, entry.getKey().getWriteTime())) {
+          if (this.walEntrySinkFilter.filter(sourceTable, entry.getKey().getWriteTime())) {
             // Skip Cells in CellScanner associated with this entry.
             int count = entry.getAssociatedCellCount();
             for (int i = 0; i < count; i++) {
@@ -266,24 +247,23 @@ public class ReplicationSink {
               if (bulkLoadsPerClusters == null) {
                 bulkLoadsPerClusters = new HashMap<>();
               }
-              // Map of table name Vs list of pair of family and list of
-              // hfile paths from its namespace
+              // Map of source table name to list of (family, list of hfile paths) pairs in its
+              // namespace
               Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
                 bulkLoadsPerClusters.computeIfAbsent(bld.getClusterIdsList(), k -> new HashMap<>());
-              buildBulkLoadHFileMap(bulkLoadHFileMap, table, bld);
+              buildBulkLoadHFileMap(bulkLoadHFileMap, sourceTable, bld);
             }
           } else if (CellUtil.matchingQualifier(cell, WALEdit.REPLICATION_MARKER)) {
             Mutation put = processReplicationMarkerEntry(cell);
             if (put == null) {
               continue;
             }
-            table = REPLICATION_SINK_TRACKER_TABLE_NAME;
             List<UUID> clusterIds = new ArrayList<>();
             for (HBaseProtos.UUID clusterId : entry.getKey().getClusterIdsList()) {
               clusterIds.add(toUUID(clusterId));
             }
             put.setClusterIds(clusterIds);
-            addToHashMultiMap(rowMap, table, clusterIds, put);
+            addToHashMultiMap(rowMap, REPLICATION_SINK_TRACKER_TABLE_NAME, clusterIds, put);
           } else {
             // Handle wal replication
             if (isNewRowOrType(previousCell, cell)) {
@@ -303,7 +283,7 @@ public class ReplicationSink {
                 mutationsToWalEntriesPairs.getFirst().add(mutation);
                 mutationsToWalEntriesPairs.getSecond().add(entry);
               }
-              addToHashMultiMap(rowMap, table, clusterIds, mutation);
+              addToHashMultiMap(rowMap, sourceTable, clusterIds, mutation);
             }
             if (CellUtil.isDelete(cell)) {
               ((Delete) mutation).add(cell);
@@ -320,7 +300,9 @@ public class ReplicationSink {
       if (!rowMap.isEmpty()) {
         LOG.debug("Started replicating mutations.");
         for (Entry<TableName, Map<List<UUID>, List<Row>>> entry : rowMap.entrySet()) {
-          batch(entry.getKey(), entry.getValue().values(), rowSizeWarnThreshold);
+          TableName sinkTable = ReplicationUtils.getSinkTableName(entry.getKey(),
+            sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+          batch(sinkTable, entry.getValue().values(), rowSizeWarnThreshold);
         }
         LOG.debug("Finished replicating mutations.");
       }
@@ -329,6 +311,8 @@ public class ReplicationSink {
         List<Mutation> mutations = mutationsToWalEntriesPairs.getFirst();
         List<WALEntry> walEntries = mutationsToWalEntriesPairs.getSecond();
         for (int i = 0; i < mutations.size(); i++) {
+          // TODO eboland: should we send updated WAL entries to the postReplicationSinkBatchMutate
+          // method?
           rsServerHost.postReplicationSinkBatchMutate(walEntries.get(i), mutations.get(i));
         }
       }
@@ -336,15 +320,17 @@ public class ReplicationSink {
       if (bulkLoadsPerClusters != null) {
         for (Entry<List<String>,
           Map<String, List<Pair<byte[], List<String>>>>> entry : bulkLoadsPerClusters.entrySet()) {
-          Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = entry.getValue();
-          if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
-            LOG.debug("Replicating {} bulk loaded data", entry.getKey().toString());
+          List<String> sourceClusterIds = entry.getKey();
+          Map<String, List<Pair<byte[], List<String>>>> sourceBulkLoadHFileMap = entry.getValue();
+          if (sourceBulkLoadHFileMap != null && !sourceBulkLoadHFileMap.isEmpty()) {
+            LOG.debug("Replicating {} bulk loaded data", sourceClusterIds);
             Configuration providerConf = this.provider.getConf(this.conf, replicationClusterId);
             try (HFileReplicator hFileReplicator = new HFileReplicator(providerConf,
-              sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
-              getConnection(), entry.getKey())) {
+              sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, sourceToSinkNamespaceOverrides,
+              sourceToSinkTableOverrides, sourceBulkLoadHFileMap, conf, getConnection(),
+              sourceClusterIds)) {
               hFileReplicator.replicate();
-              LOG.debug("Finished replicating {} bulk loaded data", entry.getKey().toString());
+              LOG.debug("Finished replicating {} bulk loaded data", sourceClusterIds);
             }
           }
         }
@@ -389,7 +375,7 @@ public class ReplicationSink {
   }
 
   private void buildBulkLoadHFileMap(
-    final Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap, TableName table,
+    final Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap, TableName sourceTable,
     BulkLoadDescriptor bld) throws IOException {
     List<StoreDescriptor> storesList = bld.getStoresList();
     int storesSize = storesList.size();
@@ -402,9 +388,10 @@ public class ReplicationSink {
         byte[] family = storeDescriptor.getFamilyName().toByteArray();
 
         // Build hfile relative path from its namespace
-        String pathToHfileFromNS = getHFilePath(table, bld, storeFileList.get(k), family);
-        String tableName = table.getNameWithNamespaceInclAsString();
-        List<Pair<byte[], List<String>>> familyHFilePathsList = bulkLoadHFileMap.get(tableName);
+        String pathToHfileFromNS = getHFilePath(sourceTable, bld, storeFileList.get(k), family);
+        String sourceTableName = sourceTable.getNameWithNamespaceInclAsString();
+        List<Pair<byte[], List<String>>> familyHFilePathsList =
+          bulkLoadHFileMap.get(sourceTableName);
         if (familyHFilePathsList != null) {
           boolean foundFamily = false;
           for (Pair<byte[], List<String>> familyHFilePathsPair : familyHFilePathsList) {
@@ -421,7 +408,7 @@ public class ReplicationSink {
           }
         } else {
           // Add this table entry into the map
-          addNewTableEntryInMap(bulkLoadHFileMap, family, pathToHfileFromNS, tableName);
+          addNewTableEntryInMap(bulkLoadHFileMap, family, pathToHfileFromNS, sourceTableName);
         }
       }
     }

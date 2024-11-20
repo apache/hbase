@@ -179,4 +179,26 @@ public final class ReplicationUtils {
     }
     return initialValue * HConstants.RETRY_BACKOFF[ntries];
   }
+
+  public static TableName getSinkTableName(TableName sourceTableName,
+    Map<String, String> sourceToSinkNamespaceOverrides,
+    Map<TableName, TableName> sourceToSinkTableOverrides) {
+    String sourceNamespace = sourceTableName.getNamespaceAsString();
+    String sinkNamespace = sourceNamespace;
+    String sinkTable = sourceTableName.getQualifierAsString();
+    if (
+      sourceToSinkNamespaceOverrides != null
+        && sourceToSinkNamespaceOverrides.get(sourceNamespace) != null
+    ) {
+      sinkNamespace = sourceToSinkNamespaceOverrides.get(sourceNamespace);
+    }
+    if (
+      sourceToSinkTableOverrides != null && sourceToSinkTableOverrides.get(sourceTableName) != null
+    ) {
+      TableName sinkTableName = sourceToSinkTableOverrides.get(sourceTableName);
+      sinkNamespace = sinkTableName.getNamespaceAsString();
+      sinkTable = sinkTableName.getQualifierAsString();
+    }
+    return TableName.valueOf(sinkNamespace, sinkTable);
+  }
 }
