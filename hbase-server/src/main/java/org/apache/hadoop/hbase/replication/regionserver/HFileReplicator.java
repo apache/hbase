@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -227,8 +228,9 @@ public class HFileReplicator implements Closeable {
 
       User user = userProvider.getCurrent();
       // For each table name in the map
-      for (Entry<String, List<Pair<byte[], List<String>>>> sourceTableEntry : sourceTableToBulkLoadHFileMap
-        .entrySet()) {
+      for (Entry<String,
+        List<Pair<byte[], List<String>>>> sourceTableEntry : sourceTableToBulkLoadHFileMap
+          .entrySet()) {
         String sourceTable = sourceTableEntry.getKey();
         TableName sinkTableName = ReplicationUtils.getSinkTableName(TableName.valueOf(sourceTable),
           sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
