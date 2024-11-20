@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.ACCEPT_FACTOR_
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BLOCK_ORPHAN_GRACE_PERIOD;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.MIN_FACTOR_CONFIG_NAME;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.QUEUE_ADDITION_WAIT_TIME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -864,6 +865,9 @@ public class TestBucketCache {
 
       String ioEngineName = "file:" + dataTestDir + "/bucketNoRecycler.cache";
       String persistencePath = dataTestDir + "/bucketNoRecycler.persistence";
+
+      Configuration config = HBASE_TESTING_UTILITY.getConfiguration();
+      config.setLong(QUEUE_ADDITION_WAIT_TIME, 1000);
 
       bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
         constructedBlockSizes, 1, 1, persistencePath);
