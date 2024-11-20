@@ -461,7 +461,7 @@ public class RowCounter extends AbstractHBaseTool {
   }
 
   // Visible for testing
-  public Job getMapReduceJob() {
+  Job getMapReduceJob() {
     return job;
   }
 
