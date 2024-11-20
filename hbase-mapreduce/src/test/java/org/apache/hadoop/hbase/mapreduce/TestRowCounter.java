@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -527,8 +528,9 @@ public class TestRowCounter {
   }
 
   /**
-   * Step 1: Add 8 rows(row1, row2, row3, row4, row5, row6, row7, row8) to a table. Each row
-   * contains 1 column family and 4 columns and values for two different timestamps - 5 & 10.
+   * Step 1: Add 10 rows(row1, row2, row3, row4, row5, row6, row7, row8, row9, row10) to a table.
+   * Each row contains 1 column family and 4 columns and values for two different timestamps - 5 &
+   * 10.
    * <p>
    * Step 2: Delete the latest version of column A for row1. --> 1 X Delete
    * <p>
@@ -543,6 +545,9 @@ public class TestRowCounter {
    * Case 1: Run row counter without countDeleteMarkers and validate counter values.
    * <p>
    * Case 2: Run row counter with countDeleteMarkers flag and validate counter values.
+   * <p>
+   * Case 3: Run row counter with countDeleteMarkers flag for a row range and validate counter
+   * values.
    */
   @Test
   public void testRowCounterWithCountDeleteMarkersOption() throws Exception {
@@ -550,9 +555,12 @@ public class TestRowCounter {
 
     final TableName tableName =
       TableName.valueOf(TABLE_NAME + "_" + "withCountDeleteMarkersOption");
-    final byte[][] rowKeys = { Bytes.toBytes("row1"), Bytes.toBytes("row2"), Bytes.toBytes("row3"),
-      Bytes.toBytes("row4"), Bytes.toBytes("row5"), Bytes.toBytes("row6"), Bytes.toBytes("row7"),
-      Bytes.toBytes("row8") };
+    // Row keys are represented in this way because of HBASE-15287
+    final byte[][] rowKeys = { Bytes.toBytesBinary("\\x00row1"), Bytes.toBytesBinary("\\x00row2"),
+      Bytes.toBytesBinary("\\x00row3"), Bytes.toBytesBinary("\\x00row4"),
+      Bytes.toBytesBinary("\\x00row5"), Bytes.toBytesBinary("\\x00row6"),
+      Bytes.toBytesBinary("\\x00row7"), Bytes.toBytesBinary("\\x00row8"),
+      Bytes.toBytesBinary("\\x00row9"), Bytes.toBytesBinary("\\x00row10") };
     final byte[] columnFamily = Bytes.toBytes("cf");
     final byte[][] columns =
       { Bytes.toBytes("A"), Bytes.toBytes("B"), Bytes.toBytes("C"), Bytes.toBytes("D") };
@@ -596,24 +604,33 @@ public class TestRowCounter {
 
     RowCounter rowCounterWithoutCountDeleteMarkers = new RowCounter();
     RowCounter rowCounterWithCountDeleteMarkers = new RowCounter();
-    rowCounterWithoutCountDeleteMarkers.setConf(TEST_UTIL.getConfiguration());
-    rowCounterWithCountDeleteMarkers.setConf(TEST_UTIL.getConfiguration());
+    RowCounter rowCounterForRangeWithCountDeleteMarkers = new RowCounter();
+    rowCounterWithoutCountDeleteMarkers.setConf(new Configuration(TEST_UTIL.getConfiguration()));
+    rowCounterWithCountDeleteMarkers.setConf(new Configuration(TEST_UTIL.getConfiguration()));
+    rowCounterForRangeWithCountDeleteMarkers
+      .setConf(new Configuration(TEST_UTIL.getConfiguration()));
 
     // Invocation
 
     rowCounterWithoutCountDeleteMarkers.run(new String[] { tableName.getNameAsString() });
     rowCounterWithCountDeleteMarkers
       .run(new String[] { tableName.getNameAsString(), "--countDeleteMarkers" });
+    rowCounterForRangeWithCountDeleteMarkers.run(new String[] { tableName.getNameAsString(),
+      "--countDeleteMarkers", "--range=\\x00row8,\\x00row9" });
 
     // Validation
 
     // Case 1:
-    validateCounterCounts(rowCounterWithoutCountDeleteMarkers.getMapReduceJob().getCounters(), 6, 0,
+    validateCounterCounts(rowCounterWithoutCountDeleteMarkers.getMapReduceJob().getCounters(), 8, 0,
       0, 0, 0, 0);
 
     // Case 2:
-    validateCounterCounts(rowCounterWithCountDeleteMarkers.getMapReduceJob().getCounters(), 8, 7, 2,
-      3, 2, 1);
+    validateCounterCounts(rowCounterWithCountDeleteMarkers.getMapReduceJob().getCounters(), 10, 7,
+      2, 3, 2, 1);
+
+    // Case 3:
+    validateCounterCounts(rowCounterForRangeWithCountDeleteMarkers.getMapReduceJob().getCounters(),
+      1, 0, 0, 0, 0, 0);
   }
 
   private void validateCounterCounts(Counters counters, long rowCount,
