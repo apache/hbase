@@ -299,9 +299,9 @@
     <h2>Table Regions</h2>
     <div class="tabbable">
       <ul class="nav nav-pills" role="tablist">
-        <li class="nav-item"><a class="nav-link active" href="#metaTab_baseStats" data-toggle="tab" role="tab">Base Stats</a></li>
-        <li class="nav-item"><a class="nav-link" href="#metaTab_localityStats" data-toggle="tab" role="tab">Localities</a></li>
-        <li class="nav-item"><a class="nav-link" href="#metaTab_compactStats" data-toggle="tab" role="tab">Compactions</a></li>
+        <li class="nav-item"><a class="nav-link active" href="#metaTab_baseStats" data-bs-toggle="tab" role="tab">Base Stats</a></li>
+        <li class="nav-item"><a class="nav-link" href="#metaTab_localityStats" data-bs-toggle="tab" role="tab">Localities</a></li>
+        <li class="nav-item"><a class="nav-link" href="#metaTab_compactStats" data-bs-toggle="tab" role="tab">Compactions</a></li>
       </ul>
 
       <div class="tab-content">
@@ -926,9 +926,9 @@
       <h2>Table Regions</h2>
       <div class="tabbable">
         <ul class="nav nav-pills" role="tablist">
-          <li class="nav-item"><a class="nav-link active" href="#tab_baseStats" data-toggle="tab" role="tab">Base Stats</a></li>
-          <li class="nav-item"><a class="nav-link" href="#tab_localityStats" data-toggle="tab" role="tab">Localities</a></li>
-          <li class="nav-item"><a class="nav-link" href="#tab_compactStats" data-toggle="tab" role="tab">Compactions</a></li>
+          <li class="nav-item"><a class="nav-link active" href="#tab_baseStats" data-bs-toggle="tab" role="tab">Base Stats</a></li>
+          <li class="nav-item"><a class="nav-link" href="#tab_localityStats" data-bs-toggle="tab" role="tab">Localities</a></li>
+          <li class="nav-item"><a class="nav-link" href="#tab_compactStats" data-bs-toggle="tab" role="tab">Compactions</a></li>
         </ul>
         <div class="tab-content">
           <div class="tab-pane active" id="tab_baseStats" role="tabpanel">
