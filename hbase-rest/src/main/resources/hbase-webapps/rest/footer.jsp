@@ -24,7 +24,7 @@
     <script type="text/javascript">
       $(document).ready(function() {
         $('nav.navbar li.active').removeClass('active');
-        $('a[href="' + location.pathname + '"]').closest('li').addClass('active');
+        $('a[href="' + location.pathname + '"]').addClass('active');
       });
     </script>
 </body>
