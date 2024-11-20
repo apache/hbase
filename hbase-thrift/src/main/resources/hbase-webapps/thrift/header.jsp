@@ -36,32 +36,34 @@
 
 <body>
 <nav class="navbar navbar-expand-md navbar-light fixed-top bg-light">
-  <a class="navbar-brand" href="/thrift.jsp">
-    <img src="/static/hbase_logo_small.png" alt="HBase Logo"/>
-  </a>
-  <button type="button" class="navbar-toggler" data-toggle="collapse" data-target=".navbar-collapse">
-    <span class="navbar-toggler-icon"></span>
-  </button>
-  <div class="collapse navbar-collapse">
-    <div class="navbar-nav">
-      <li class="nav-item"><a class="nav-link" href="/thrift.jsp">Home</a></li>
-      <li class="nav-item"><a class="nav-link" href="/logs/">Local logs</a></li>
-      <li class="nav-item"><a class="nav-link" href="/logLevel">Log Level</a></li>
-      <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-          Metrics <span class="caret"></span>
-        </a>
-        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-          <a class="dropdown-item" target="_blank" href="/jmx">JMX</a>
-          <a class="dropdown-item" target="_blank" href="/jmx?description=true">JMX with description</a>
-          <a class="dropdown-item" target="_blank" href="/prometheus">Prometheus</a>
-          <a class="dropdown-item" target="_blank" href="/prometheus?description=true">Prometheus with description</a>
-        </div>
-      </li>
-      <li class="nav-item"><a class="nav-link" href="/prof">Profiler</a></li>
-      <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-      <li class="nav-item"><a class="nav-link" href="/conf">HBase Configuration</a></li>
-      <% } %>
-    </ul>
-  </div><!--/.navbar-collapse -->
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/thrift.jsp">
+      <img src="/static/hbase_logo_small.png" alt="HBase Logo"/>
+    </a>
+    <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse">
+      <div class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/thrift.jsp">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="/logs/">Local logs</a></li>
+        <li class="nav-item"><a class="nav-link" href="/logLevel">Log Level</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Metrics <span class="caret"></span>
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+            <a class="dropdown-item" target="_blank" href="/jmx">JMX</a>
+            <a class="dropdown-item" target="_blank" href="/jmx?description=true">JMX with description</a>
+            <a class="dropdown-item" target="_blank" href="/prometheus">Prometheus</a>
+            <a class="dropdown-item" target="_blank" href="/prometheus?description=true">Prometheus with description</a>
+          </div>
+        </li>
+        <li class="nav-item"><a class="nav-link" href="/prof">Profiler</a></li>
+        <% if (HBaseConfiguration.isShowConfInServlet()) { %>
+        <li class="nav-item"><a class="nav-link" href="/conf">HBase Configuration</a></li>
+        <% } %>
+      </ul>
+    </div><!--/.navbar-collapse -->
+  </div><!--/.container-fluid -->
 </nav>
