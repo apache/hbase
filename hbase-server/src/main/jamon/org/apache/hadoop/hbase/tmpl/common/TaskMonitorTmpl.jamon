@@ -36,19 +36,19 @@ String parent = "";
   <div class="tabbable">
       <ul class="nav nav-pills" role="tablist">
         <li class="nav-item">
-            <a class="nav-link" href="#tab_alltasks" data-toggle="tab" role="tab">Show All Monitored Tasks</a>
+            <a class="nav-link" href="#tab_alltasks" data-bs-toggle="tab" role="tab">Show All Monitored Tasks</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link active" href="#tab_generaltasks" data-toggle="tab" role="tab">Show non-RPC Tasks</a>
+            <a class="nav-link active" href="#tab_generaltasks" data-bs-toggle="tab" role="tab">Show non-RPC Tasks</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="#tab_handlertasks" data-toggle="tab" role="tab">Show All RPC Handler Tasks</a>
+            <a class="nav-link" href="#tab_handlertasks" data-bs-toggle="tab" role="tab">Show All RPC Handler Tasks</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="#tab_rpctasks" data-toggle="tab" role="tab">Show Active RPC Calls</a>
+            <a class="nav-link" href="#tab_rpctasks" data-bs-toggle="tab" role="tab">Show Active RPC Calls</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="#tab_operationtasks" data-toggle="tab" role="tab">Show Client Operations</a>
+            <a class="nav-link" href="#tab_operationtasks" data-bs-toggle="tab" role="tab">Show Client Operations</a>
         </li>
       </ul>
       <div class="tab-content">

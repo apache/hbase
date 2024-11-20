@@ -120,19 +120,19 @@
       <% if (rsGroupServers != null && rsGroupServers.size() > 0) { %>
         <ul class="nav nav-pills" role="tablist">
           <li class="nav-item">
-            <a class="nav-link active" href="#tab_baseStats" data-toggle="tab" role="tab">Base Stats</a>
+            <a class="nav-link active" href="#tab_baseStats" data-bs-toggle="tab" role="tab">Base Stats</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#tab_memoryStats" data-toggle="tab" role="tab">Memory</a>
+            <a class="nav-link" href="#tab_memoryStats" data-bs-toggle="tab" role="tab">Memory</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#tab_requestStats" data-toggle="tab" role="tab">Requests</a>
+            <a class="nav-link" href="#tab_requestStats" data-bs-toggle="tab" role="tab">Requests</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#tab_storeStats" data-toggle="tab" role="tab">Storefiles</a>
+            <a class="nav-link" href="#tab_storeStats" data-bs-toggle="tab" role="tab">Storefiles</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#tab_compactStats" data-toggle="tab" role="tab">Compactions</a>
+            <a class="nav-link" href="#tab_compactStats" data-bs-toggle="tab" role="tab">Compactions</a>
           </li>
         </ul>
 
