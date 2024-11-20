@@ -326,7 +326,7 @@ public final class LogLevel {
       String[] readOnlyLogLevels = conf.getStrings(READONLY_LOGGERS_CONF_KEY);
 
       if (logName != null) {
-        out.println("<p>Results:</p>");
+        out.println("<h2>Results</h2>");
         out.println(MARKER + "Submitted Log Name: <b>" + logName + "</b><br />");
 
         Logger log = LoggerFactory.getLogger(logName);
@@ -374,18 +374,24 @@ public final class LogLevel {
     static final String FORMS = "<div class='container-fluid content'>\n"
       + "<div class='row inner_header top_header'>\n" + "<div class='page-header'>\n"
       + "<h1>Get/Set Log Level</h1>\n" + "</div>\n" + "</div>\n" + "\n" + "<h2>Actions</h2>\n"
-      + "\n" + "<div class='row'>\n" + "<div class='col'>\n" + "<section>\n"
-      + "<form class='form-inline'>\n"
-      + "<button type='submit' class='btn btn-primary'>Get Log Level</button>\n"
-      + "<input type='text' name='log' class='form-control mx-sm-3' size='50' required='required' placeholder='Log Name (required)'>\n"
-      + "<span>Gets the current log level for the specified log name.</span>\n" + "</form>\n"
-      + "</section>\n" + "</div>\n" + "</div>\n" + "\n" + "<div class='row'>\n"
-      + "<div class='col'>\n" + "<section>\n" + "<form class='form-inline'>\n"
-      + "<button type='submit' class='btn btn-primary'>Set Log Level</button>\n"
-      + "<input type='text' name='log' class='form-control mx-sm-3' size='50' required='required' placeholder='Log Name (required)'>\n"
-      + "<input type='text' name='level' class='form-control mx-sm-3' size='50' required='required' placeholder='Log Level (required)'>\n"
-      + "<span>Sets the specified log level for the specified log name.</span>\n" + "</form>\n"
-      + "    </section>\n" + "</div>\n" + "</div>\n" + "<hr>\n";
+      + "\n" + "<div class='row mb-4'>\n" + "<div class='col'>\n"
+      + "<form class='row g-3 align-items-center justify-content-center'>\n"
+      + "<div class='col-sm-auto'>\n"
+      + "<button type='submit' class='btn btn-primary'>Get Log Level</button>\n" + "</div>\n"
+      + "  <div class='col-sm-auto'>\n"
+      + "<input type='text' name='log' class='form-control' size='50' required='required' placeholder='Log Name (required)'>\n"
+      + "</div>\n" + "  <div class='col-sm-auto'>\n"
+      + "<span>Gets the current log level for the specified log name.</span>\n" + "</div>\n"
+      + "</form>\n" + "</div>\n" + "</div>\n" + "\n" + "<div class='row'>\n" + "<div class='col'>\n"
+      + "\n" + "<form class='row g-3 align-items-center justify-content-center'>\n"
+      + "<div class='col-sm-auto'>\n"
+      + "<button type='submit' class='btn btn-primary'>Set Log Level</button>\n" + "</div>\n"
+      + "<div class='col-sm-auto'>\n"
+      + "<input type='text' name='log' class='form-control mb-2' size='50' required='required' placeholder='Log Name (required)'>\n"
+      + "<input type='text' name='level' class='form-control' size='50' required='required' placeholder='Log Level (required)'>\n"
+      + "</div>\n" + "<div class='col-sm-auto'>\n"
+      + "<span>Sets the specified log level for the specified log name.</span>\n" + "</div>\n"
+      + "</form>\n" + "\n" + "</div>\n" + "</div>" + "<hr>\n";
 
     private static void process(Logger logger, String levelName, PrintWriter out) {
       if (levelName != null) {
