@@ -49,11 +49,11 @@
 
     <div class="tabbable">
         <ul class="nav nav-pills" role="tablist">
-            <li class="nav-item"><a class="nav-link active" href="#tab_regionBaseInfo" data-toggle="tab" role="tab">Base Info</a> </li>
-            <li class="nav-item"><a class="nav-link" href="#tab_regionRequestStats" data-toggle="tab" role="tab">Request metrics</a></li>
-            <li class="nav-item"><a class="nav-link" href="#tab_regionStoreStats" data-toggle="tab" role="tab">Storefile Metrics</a></li>
-            <li class="nav-item"><a class="nav-link" href="#tab_regionMemstoreStats" data-toggle="tab" role="tab">Memstore Metrics</a></li>
-            <li class="nav-item"><a class="nav-link" href="#tab_regionCompactStats" data-toggle="tab" role="tab">Compaction Metrics</a></li>
+            <li class="nav-item"><a class="nav-link active" href="#tab_regionBaseInfo" data-bs-toggle="tab" role="tab">Base Info</a> </li>
+            <li class="nav-item"><a class="nav-link" href="#tab_regionRequestStats" data-bs-toggle="tab" role="tab">Request metrics</a></li>
+            <li class="nav-item"><a class="nav-link" href="#tab_regionStoreStats" data-bs-toggle="tab" role="tab">Storefile Metrics</a></li>
+            <li class="nav-item"><a class="nav-link" href="#tab_regionMemstoreStats" data-bs-toggle="tab" role="tab">Memstore Metrics</a></li>
+            <li class="nav-item"><a class="nav-link" href="#tab_regionCompactStats" data-bs-toggle="tab" role="tab">Compaction Metrics</a></li>
         </ul>
         <div class="tab-content">
             <div class="tab-pane active" id="tab_regionBaseInfo" role="tabpanel">

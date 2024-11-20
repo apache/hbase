@@ -269,13 +269,13 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
               <div class="tabbable">
                   <ul class="nav nav-pills" role="tablist">
                       <li class="nav-item">
-                          <a class="nav-link active" href="#tab_userTables" data-toggle="tab" role="tab">User Tables</a>
+                          <a class="nav-link active" href="#tab_userTables" data-bs-toggle="tab" role="tab">User Tables</a>
                       </li>
                       <li class="nav-item">
-                          <a class="nav-link" href="#tab_catalogTables" data-toggle="tab" role="tab">System Tables</a>
+                          <a class="nav-link" href="#tab_catalogTables" data-bs-toggle="tab" role="tab">System Tables</a>
                       </li>
                       <li class="nav-item">
-                          <a class="nav-link" href="#tab_userSnapshots" data-toggle="tab" role="tab">Snapshots</a>
+                          <a class="nav-link" href="#tab_userSnapshots" data-bs-toggle="tab" role="tab">Snapshots</a>
                       </li>
                   </ul>
                   <div class="tab-content">
