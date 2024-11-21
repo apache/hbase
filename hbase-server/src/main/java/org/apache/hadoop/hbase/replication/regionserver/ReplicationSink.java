@@ -25,7 +25,6 @@ import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerT
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.RS_COLUMN;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.TIMESTAMP_COLUMN;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.WAL_NAME_COLUMN;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -69,9 +68,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
@@ -209,7 +206,7 @@ public class ReplicationSink {
       long totalReplicated = 0;
       // Map of table => list of Rows, grouped by cluster id, we only want to flushCommits once per
       // invocation of this method per table and cluster id.
-      Map<TableName, Map<List<UUID>, List<Row>>> rowMap = new TreeMap<>();
+      Map<TableName, Map<List<UUID>, List<Row>>> sourceTableNameToRowMap = new TreeMap<>();
 
       Map<List<String>, Map<String, List<Pair<byte[], List<String>>>>> bulkLoadsPerClusters = null;
       Pair<List<Mutation>, List<WALEntry>> mutationsToWalEntriesPairs =
@@ -258,12 +255,13 @@ public class ReplicationSink {
             if (put == null) {
               continue;
             }
+            sourceTable = REPLICATION_SINK_TRACKER_TABLE_NAME;
             List<UUID> clusterIds = new ArrayList<>();
             for (HBaseProtos.UUID clusterId : entry.getKey().getClusterIdsList()) {
               clusterIds.add(toUUID(clusterId));
             }
             put.setClusterIds(clusterIds);
-            addToHashMultiMap(rowMap, REPLICATION_SINK_TRACKER_TABLE_NAME, clusterIds, put);
+            addToHashMultiMap(sourceTableNameToRowMap, sourceTable, clusterIds, put);
           } else {
             // Handle wal replication
             if (isNewRowOrType(previousCell, cell)) {
@@ -283,7 +281,7 @@ public class ReplicationSink {
                 mutationsToWalEntriesPairs.getFirst().add(mutation);
                 mutationsToWalEntriesPairs.getSecond().add(entry);
               }
-              addToHashMultiMap(rowMap, sourceTable, clusterIds, mutation);
+              addToHashMultiMap(sourceTableNameToRowMap, sourceTable, clusterIds, mutation);
             }
             if (CellUtil.isDelete(cell)) {
               ((Delete) mutation).add(cell);
@@ -297,9 +295,9 @@ public class ReplicationSink {
       }
 
       // TODO Replicating mutations and bulk loaded data can be made parallel
-      if (!rowMap.isEmpty()) {
+      if (!sourceTableNameToRowMap.isEmpty()) {
         LOG.debug("Started replicating mutations.");
-        for (Entry<TableName, Map<List<UUID>, List<Row>>> entry : rowMap.entrySet()) {
+        for (Entry<TableName, Map<List<UUID>, List<Row>>> entry : sourceTableNameToRowMap.entrySet()) {
           TableName sinkTable = ReplicationUtils.getSinkTableName(entry.getKey(),
             sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
           batch(sinkTable, entry.getValue().values(), rowSizeWarnThreshold);
@@ -451,7 +449,7 @@ public class ReplicationSink {
   }
 
   /**
-   * Simple helper to a map from key to (a list of) values TODO: Make a general utility method
+   * Simple helper to a map from key to a list of values TODO: Make a general utility method
    * @return the list of values corresponding to key1 and key2
    */
   private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2, List<V>>> map, K1 key1, K2 key2,
