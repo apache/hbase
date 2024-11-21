@@ -20,12 +20,7 @@ package org.apache.hadoop.hbase.mapreduce.replication;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy;
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionRegistryFactory;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -53,7 +49,6 @@ import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableSplit;
-import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication.Verifier.Counters;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerStorage;
@@ -63,12 +58,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Strings;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -92,11 +87,6 @@ public class VerifyReplication extends Configured implements Tool {
 
   public final static String NAME = "verifyrep";
   private final static String PEER_CONFIG_PREFIX = NAME + ".peer.";
-  private static ThreadPoolExecutor reCompareExecutor = null;
-  int reCompareTries = 0;
-  int reCompareBackoffExponent = 0;
-  int reCompareThreads = 0;
-  int sleepMsBeforeReCompare = 0;
   long startTime = 0;
   long endTime = Long.MAX_VALUE;
   int batch = -1;
@@ -107,6 +97,7 @@ public class VerifyReplication extends Configured implements Tool {
   String peerId = null;
   String peerQuorumAddress = null;
   String rowPrefixes = null;
+  int sleepMsBeforeReCompare = 0;
   boolean verbose = false;
   boolean includeDeletedCells = false;
   // Source table snapshot name
@@ -136,12 +127,7 @@ public class VerifyReplication extends Configured implements Tool {
       BADROWS,
       ONLY_IN_SOURCE_TABLE_ROWS,
       ONLY_IN_PEER_TABLE_ROWS,
-      CONTENT_DIFFERENT_ROWS,
-      RECOMPARES,
-      MAIN_THREAD_RECOMPARES,
-      SOURCE_ROW_CHANGED,
-      PEER_ROW_CHANGED,
-      FAILED_RECOMPARE
+      CONTENT_DIFFERENT_ROWS
     }
 
     private Connection sourceConnection;
@@ -150,9 +136,6 @@ public class VerifyReplication extends Configured implements Tool {
     private Table replicatedTable;
     private ResultScanner replicatedScanner;
     private Result currentCompareRowInPeerTable;
-    private Scan tableScan;
-    private int reCompareTries;
-    private int reCompareBackoffExponent;
     private int sleepMsBeforeReCompare;
     private String delimiter = "";
     private boolean verbose = false;
@@ -170,12 +153,7 @@ public class VerifyReplication extends Configured implements Tool {
       throws IOException {
       if (replicatedScanner == null) {
         Configuration conf = context.getConfiguration();
-        reCompareTries = conf.getInt(NAME + ".recompareTries", 0);
-        reCompareBackoffExponent = conf.getInt(NAME + ".recompareBackoffExponent", 1);
         sleepMsBeforeReCompare = conf.getInt(NAME + ".sleepMsBeforeReCompare", 0);
-        if (sleepMsBeforeReCompare > 0) {
-          reCompareTries = Math.max(reCompareTries, 1);
-        }
         delimiter = conf.get(NAME + ".delimiter", "");
         verbose = conf.getBoolean(NAME + ".verbose", false);
         batch = conf.getInt(NAME + ".batch", -1);
@@ -204,12 +182,9 @@ public class VerifyReplication extends Configured implements Tool {
         if (versions >= 0) {
           scan.readVersions(versions);
         }
-        int reCompareThreads = conf.getInt(NAME + ".recompareThreads", 0);
-        reCompareExecutor = buildReCompareExecutor(reCompareThreads, context);
         TableName tableName = TableName.valueOf(conf.get(NAME + ".tableName"));
         sourceConnection = ConnectionFactory.createConnection(conf);
         sourceTable = sourceConnection.getTable(tableName);
-        tableScan = scan;
 
         final InputSplit tableSplit = context.getInputSplit();
 
@@ -259,7 +234,7 @@ public class VerifyReplication extends Configured implements Tool {
       while (true) {
         if (currentCompareRowInPeerTable == null) {
           // reach the region end of peer table, row only in source table
-          logFailRowAndIncreaseCounter(context, Counters.ONLY_IN_SOURCE_TABLE_ROWS, value, null);
+          logFailRowAndIncreaseCounter(context, Counters.ONLY_IN_SOURCE_TABLE_ROWS, value);
           break;
         }
         int rowCmpRet = Bytes.compareTo(value.getRow(), currentCompareRowInPeerTable.getRow());
@@ -273,77 +248,55 @@ public class VerifyReplication extends Configured implements Tool {
                 "Good row key: " + delimiter + Bytes.toStringBinary(value.getRow()) + delimiter);
             }
           } catch (Exception e) {
-            logFailRowAndIncreaseCounter(context, Counters.CONTENT_DIFFERENT_ROWS, value,
-              currentCompareRowInPeerTable);
+            logFailRowAndIncreaseCounter(context, Counters.CONTENT_DIFFERENT_ROWS, value);
           }
           currentCompareRowInPeerTable = replicatedScanner.next();
           break;
         } else if (rowCmpRet < 0) {
           // row only exists in source table
-          logFailRowAndIncreaseCounter(context, Counters.ONLY_IN_SOURCE_TABLE_ROWS, value, null);
+          logFailRowAndIncreaseCounter(context, Counters.ONLY_IN_SOURCE_TABLE_ROWS, value);
           break;
         } else {
           // row only exists in peer table
-          logFailRowAndIncreaseCounter(context, Counters.ONLY_IN_PEER_TABLE_ROWS, null,
+          logFailRowAndIncreaseCounter(context, Counters.ONLY_IN_PEER_TABLE_ROWS,
             currentCompareRowInPeerTable);
           currentCompareRowInPeerTable = replicatedScanner.next();
         }
       }
     }
 
-    @SuppressWarnings("FutureReturnValueIgnored")
-    private void logFailRowAndIncreaseCounter(Context context, Counters counter, Result row,
-      Result replicatedRow) {
-      byte[] rowKey = getRow(row, replicatedRow);
-      if (reCompareTries == 0) {
-        context.getCounter(counter).increment(1);
-        context.getCounter(Counters.BADROWS).increment(1);
-        LOG.error("{}, rowkey={}{}{}", counter, delimiter, Bytes.toStringBinary(rowKey), delimiter);
-        return;
+    private void logFailRowAndIncreaseCounter(Context context, Counters counter, Result row) {
+      if (sleepMsBeforeReCompare > 0) {
+        Threads.sleep(sleepMsBeforeReCompare);
+        try {
+          Result sourceResult = sourceTable.get(new Get(row.getRow()));
+          Result replicatedResult = replicatedTable.get(new Get(row.getRow()));
+          Result.compareResults(sourceResult, replicatedResult, false);
+          if (!sourceResult.isEmpty()) {
+            context.getCounter(Counters.GOODROWS).increment(1);
+            if (verbose) {
+              LOG.info("Good row key (with recompare): " + delimiter
+                + Bytes.toStringBinary(row.getRow()) + delimiter);
+            }
+          }
+          return;
+        } catch (Exception e) {
+          LOG.error("recompare fail after sleep, rowkey=" + delimiter
+            + Bytes.toStringBinary(row.getRow()) + delimiter);
+        }
       }
-
-      VerifyReplicationRecompareRunnable runnable = new VerifyReplicationRecompareRunnable(context,
-        row, replicatedRow, counter, delimiter, tableScan, sourceTable, replicatedTable,
-        reCompareTries, sleepMsBeforeReCompare, reCompareBackoffExponent, verbose);
-
-      if (reCompareExecutor == null) {
-        runnable.run();
-        return;
-      }
-
-      reCompareExecutor.submit(runnable);
+      context.getCounter(counter).increment(1);
+      context.getCounter(Counters.BADROWS).increment(1);
+      LOG.error(counter.toString() + ", rowkey=" + delimiter + Bytes.toStringBinary(row.getRow())
+        + delimiter);
     }
 
     @Override
     protected void cleanup(Context context) {
-      if (reCompareExecutor != null && !reCompareExecutor.isShutdown()) {
-        reCompareExecutor.shutdown();
-        try {
-          boolean terminated = reCompareExecutor.awaitTermination(1, TimeUnit.MINUTES);
-          if (!terminated) {
-            List<Runnable> queue = reCompareExecutor.shutdownNow();
-            for (Runnable runnable : queue) {
-              ((VerifyReplicationRecompareRunnable) runnable).fail();
-            }
-
-            terminated = reCompareExecutor.awaitTermination(1, TimeUnit.MINUTES);
-
-            if (!terminated) {
-              int activeCount = Math.max(1, reCompareExecutor.getActiveCount());
-              LOG.warn("Found {} possible recompares still running in the executable"
-                + " incrementing BADROWS and FAILED_RECOMPARE", activeCount);
-              context.getCounter(Counters.BADROWS).increment(activeCount);
-              context.getCounter(Counters.FAILED_RECOMPARE).increment(activeCount);
-            }
-          }
-        } catch (InterruptedException e) {
-          throw new RuntimeException("Failed to await executor termination in cleanup", e);
-        }
-      }
       if (replicatedScanner != null) {
         try {
           while (currentCompareRowInPeerTable != null) {
-            logFailRowAndIncreaseCounter(context, Counters.ONLY_IN_PEER_TABLE_ROWS, null,
+            logFailRowAndIncreaseCounter(context, Counters.ONLY_IN_PEER_TABLE_ROWS,
               currentCompareRowInPeerTable);
             currentCompareRowInPeerTable = replicatedScanner.next();
           }
@@ -491,10 +444,6 @@ public class VerifyReplication extends Configured implements Tool {
     conf.setInt(NAME + ".versions", versions);
     LOG.info("Number of version: " + versions);
 
-    conf.setInt(NAME + ".recompareTries", reCompareTries);
-    conf.setInt(NAME + ".recompareBackoffExponent", reCompareBackoffExponent);
-    conf.setInt(NAME + ".recompareThreads", reCompareThreads);
-
     // Set Snapshot specific parameters
     if (peerSnapshotName != null) {
       conf.set(NAME + ".peerSnapshotName", peerSnapshotName);
@@ -568,15 +517,6 @@ public class VerifyReplication extends Configured implements Tool {
     job.setOutputFormatClass(NullOutputFormat.class);
     job.setNumReduceTasks(0);
     return job;
-  }
-
-  protected static byte[] getRow(Result sourceResult, Result replicatedResult) {
-    if (sourceResult != null) {
-      return sourceResult.getRow();
-    } else if (replicatedResult != null) {
-      return replicatedResult.getRow();
-    }
-    throw new RuntimeException("Both sourceResult and replicatedResult are null!");
   }
 
   private static void setRowPrefixFilter(Scan scan, String rowPrefixes) {
@@ -663,20 +603,11 @@ public class VerifyReplication extends Configured implements Tool {
           continue;
         }
 
-        final String deprecatedSleepToReCompareKey = "--recomparesleep=";
-        final String sleepToReCompareKey = "--recompareSleep=";
-        if (cmd.startsWith(deprecatedSleepToReCompareKey)) {
-          LOG.warn("--recomparesleep is deprecated and will be removed in 4.0.0."
-            + " Use --recompareSleep instead.");
-          sleepMsBeforeReCompare =
-            Integer.parseInt(cmd.substring(deprecatedSleepToReCompareKey.length()));
-          continue;
-        }
+        final String sleepToReCompareKey = "--recomparesleep=";
         if (cmd.startsWith(sleepToReCompareKey)) {
           sleepMsBeforeReCompare = Integer.parseInt(cmd.substring(sleepToReCompareKey.length()));
           continue;
         }
-
         final String verboseKey = "--verbose";
         if (cmd.startsWith(verboseKey)) {
           verbose = true;
@@ -722,25 +653,6 @@ public class VerifyReplication extends Configured implements Tool {
         final String peerTableNameArgKey = "--peerTableName=";
         if (cmd.startsWith(peerTableNameArgKey)) {
           peerTableName = cmd.substring(peerTableNameArgKey.length());
-          continue;
-        }
-
-        final String reCompareThreadArgs = "--recompareThreads=";
-        if (cmd.startsWith(reCompareThreadArgs)) {
-          reCompareThreads = Integer.parseInt(cmd.substring(reCompareThreadArgs.length()));
-          continue;
-        }
-
-        final String reCompareTriesKey = "--recompareTries=";
-        if (cmd.startsWith(reCompareTriesKey)) {
-          reCompareTries = Integer.parseInt(cmd.substring(reCompareTriesKey.length()));
-          continue;
-        }
-
-        final String reCompareBackoffExponentKey = "--recompareBackoffExponent=";
-        if (cmd.startsWith(reCompareBackoffExponentKey)) {
-          reCompareBackoffExponent =
-            Integer.parseInt(cmd.substring(reCompareBackoffExponentKey.length()));
           continue;
         }
 
@@ -823,8 +735,7 @@ public class VerifyReplication extends Configured implements Tool {
       System.err.println("ERROR: " + errorMsg);
     }
     System.err.println("Usage: verifyrep [--starttime=X]"
-      + " [--endtime=Y] [--families=A] [--row-prefixes=B] [--delimiter=] [--recompareSleep=] "
-      + "[--recompareThreads=] [--recompareTries=] [--recompareBackoffExponent=]"
+      + " [--endtime=Y] [--families=A] [--row-prefixes=B] [--delimiter=] [--recomparesleep=] "
       + "[--batch=] [--verbose] [--peerTableName=] [--sourceSnapshotName=P] "
       + "[--sourceSnapshotTmpDir=Q] [--peerSnapshotName=R] [--peerSnapshotTmpDir=S] "
       + "[--peerFSAddress=T] [--peerHBaseRootAddress=U] <peerid|peerQuorumAddress> <tablename>");
@@ -840,14 +751,8 @@ public class VerifyReplication extends Configured implements Tool {
     System.err.println(" families     comma-separated list of families to copy");
     System.err.println(" row-prefixes comma-separated list of row key prefixes to filter on ");
     System.err.println(" delimiter    the delimiter used in display around rowkey");
-    System.err.println(" recompareSleep   milliseconds to sleep before recompare row, "
+    System.err.println(" recomparesleep   milliseconds to sleep before recompare row, "
       + "default value is 0 which disables the recompare.");
-    System.err.println(" recompareThreads number of threads to run recompares in");
-    System.err.println(" recompareTries   number of recompare attempts before incrementing "
-      + "the BADROWS counter. Defaults to 1 recompare");
-    System.out.println(" recompareBackoffExponent exponential multiplier to increase "
-      + "recompareSleep after each recompare attempt, "
-      + "default value is 0 which results in a constant sleep time");
     System.err.println(" verbose      logs row keys of good rows");
     System.err.println(" peerTableName  Peer Table Name");
     System.err.println(" sourceSnapshotName  Source Snapshot Name");
@@ -912,27 +817,6 @@ public class VerifyReplication extends Configured implements Tool {
         + "     -D verifyrep.peer.hbase.master.kerberos.principal=cluster-b/_HOST@EXAMPLE.COM \\\n"
         + "     cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:"
         + "2181:/cluster-b \\\n" + "     TestTable");
-  }
-
-  private static ThreadPoolExecutor buildReCompareExecutor(int maxThreads, Mapper.Context context) {
-    if (maxThreads == 0) {
-      return null;
-    }
-
-    return new ThreadPoolExecutor(0, maxThreads, 1L, TimeUnit.SECONDS, new SynchronousQueue<>(),
-      buildRejectedReComparePolicy(context));
-  }
-
-  private static CallerRunsPolicy buildRejectedReComparePolicy(Mapper.Context context) {
-    return new CallerRunsPolicy() {
-      @Override
-      public void rejectedExecution(Runnable runnable, ThreadPoolExecutor e) {
-        LOG.debug("Re-comparison execution rejected. Running in main thread.");
-        context.getCounter(Counters.MAIN_THREAD_RECOMPARES).increment(1);
-        // will run in the current thread
-        super.rejectedExecution(runnable, e);
-      }
-    };
   }
 
   @Override
