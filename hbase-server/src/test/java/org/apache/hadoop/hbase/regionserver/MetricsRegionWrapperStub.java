@@ -78,6 +78,16 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
+  public long getMemStoreHeapSize() {
+    return 103;
+  }
+
+  @Override
+  public long getMemStoreOffHeapSize() {
+    return 103;
+  }
+
+  @Override
   public long getStoreFileSize() {
     return 104;
   }
