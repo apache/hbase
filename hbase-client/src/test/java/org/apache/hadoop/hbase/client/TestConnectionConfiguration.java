@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -51,4 +52,15 @@ public class TestConnectionConfiguration {
     config = new ConnectionConfiguration(conf);
     assertEquals(timeoutMs, config.getPauseMillisForServerOverloaded());
   }
+
+  @Test
+  public void testDefaultMetaOperationTimeout() {
+    Configuration conf = HBaseConfiguration.create();
+    long clientOperationTimeoutMs = 1000;
+    conf.setLong(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, clientOperationTimeoutMs);
+    ConnectionConfiguration config = new ConnectionConfiguration(conf);
+    assertEquals(clientOperationTimeoutMs, config.getOperationTimeout());
+    assertEquals(clientOperationTimeoutMs, config.getMetaOperationTimeout());
+  }
+
 }

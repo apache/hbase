@@ -32,7 +32,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * See HBASE-24513.
+ * See HBASE-24513, HBASE-28608.
  */
 @Category({ ClientTests.class, SmallTests.class })
 public class TestAsyncConnectionConfiguration {
@@ -69,4 +69,16 @@ public class TestAsyncConnectionConfiguration {
     assertEquals(expected, config.getReadRpcTimeoutNs());
     assertEquals(expected, config.getWriteRpcTimeoutNs());
   }
+
+  @Test
+  public void testDefaultMetaOperationTimeout() {
+    Configuration conf = HBaseConfiguration.create();
+    long timeoutMs = 1000;
+    conf.setLong(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, timeoutMs);
+    AsyncConnectionConfiguration config = new AsyncConnectionConfiguration(conf);
+    long expected = TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+    assertEquals(expected, config.getOperationTimeoutNs());
+    assertEquals(expected, config.getMetaOperationTimeoutNs());
+  }
+
 }
