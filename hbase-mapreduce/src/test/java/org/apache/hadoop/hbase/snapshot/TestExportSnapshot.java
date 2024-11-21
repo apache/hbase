@@ -51,10 +51,12 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
+import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -106,7 +108,6 @@ public class TestExportSnapshot {
     // If a single node has enough failures (default 3), resource manager will blacklist it.
     // With only 2 nodes and tests injecting faults, we don't want that.
     conf.setInt("mapreduce.job.maxtaskfailures.per.tracker", 100);
-    conf.setInt("snapshot.export.default.map.group", 1);
   }
 
   @BeforeClass
@@ -218,33 +219,31 @@ public class TestExportSnapshot {
     admin.createTable(TableDescriptorBuilder.newBuilder(splitTableName).setColumnFamilies(
       Lists.newArrayList(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build())).build());
 
-    // put some data
-    try (Table table = admin.getConnection().getTable(splitTableName)) {
-      table.put(new Put(Bytes.toBytes("row1")).addColumn(FAMILY, null, Bytes.toBytes("value1")));
-      table.put(new Put(Bytes.toBytes("row2")).addColumn(FAMILY, null, Bytes.toBytes("value2")));
-      table.put(new Put(Bytes.toBytes("row3")).addColumn(FAMILY, null, Bytes.toBytes("value3")));
-      table.put(new Put(Bytes.toBytes("row4")).addColumn(FAMILY, null, Bytes.toBytes("value4")));
-      table.put(new Put(Bytes.toBytes("row5")).addColumn(FAMILY, null, Bytes.toBytes("value5")));
-      table.put(new Put(Bytes.toBytes("row6")).addColumn(FAMILY, null, Bytes.toBytes("value6")));
-      table.put(new Put(Bytes.toBytes("row7")).addColumn(FAMILY, null, Bytes.toBytes("value7")));
-      table.put(new Put(Bytes.toBytes("row8")).addColumn(FAMILY, null, Bytes.toBytes("value8")));
-      // Flush to HFile
-      admin.flush(tableName);
-    }
+    Path output = TEST_UTIL.getDataTestDir("output/cf");
+    TEST_UTIL.getTestFileSystem().mkdirs(output);
+    HFileTestUtil.createHFile(TEST_UTIL.getConfiguration(), TEST_UTIL.getTestFileSystem(), new Path(output, "test_file"), FAMILY, Bytes.toBytes("q"),
+        Bytes.toBytes("1"), Bytes.toBytes("9"), 9999999);
+    BulkLoadHFilesTool tool = new BulkLoadHFilesTool(TEST_UTIL.getConfiguration());
+    tool.run(new String[]{output.getParent().toString(), splitTableName.getNameAsString()});
 
     List<RegionInfo> regions = admin.getRegions(splitTableName);
     assertEquals(1, regions.size());
     tableNumFiles = regions.size();
 
     // split region
-    admin.split(splitTableName, Bytes.toBytes("row5"));
+    admin.split(splitTableName, Bytes.toBytes("5"));
     regions = admin.getRegions(splitTableName);
     assertEquals(2, regions.size());
 
     // take a snapshot
     admin.snapshot(splitTableSnap, splitTableName);
     // export snapshot and verify
-    testExportFileSystemState(splitTableName, splitTableSnap, splitTableSnap, tableNumFiles);
+    Configuration tmpConf = TEST_UTIL.getConfiguration();
+    tmpConf.setInt("snapshot.export.buffer.size", 1);
+    tmpConf.setInt("snapshot.export.default.map.group", 1);
+    testExportFileSystemState(tmpConf, splitTableName, splitTableSnap, splitTableSnap,
+        tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), getHdfsDestinationDir(), false, false,
+        getBypassRegionPredicate(), true, false);
     // delete table
     TEST_UTIL.deleteTable(splitTableName);
   }
