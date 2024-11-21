@@ -221,10 +221,12 @@ public class TestExportSnapshot {
 
     Path output = TEST_UTIL.getDataTestDir("output/cf");
     TEST_UTIL.getTestFileSystem().mkdirs(output);
-    HFileTestUtil.createHFile(TEST_UTIL.getConfiguration(), TEST_UTIL.getTestFileSystem(), new Path(output, "test_file"), FAMILY, Bytes.toBytes("q"),
-        Bytes.toBytes("1"), Bytes.toBytes("9"), 9999999);
+    // Create and load a large hfile to ensure the execution time of MR job.
+    HFileTestUtil.createHFile(TEST_UTIL.getConfiguration(), TEST_UTIL.getTestFileSystem(),
+      new Path(output, "test_file"), FAMILY, Bytes.toBytes("q"), Bytes.toBytes("1"),
+      Bytes.toBytes("9"), 9999999);
     BulkLoadHFilesTool tool = new BulkLoadHFilesTool(TEST_UTIL.getConfiguration());
-    tool.run(new String[]{output.getParent().toString(), splitTableName.getNameAsString()});
+    tool.run(new String[] { output.getParent().toString(), splitTableName.getNameAsString() });
 
     List<RegionInfo> regions = admin.getRegions(splitTableName);
     assertEquals(1, regions.size());
@@ -239,11 +241,15 @@ public class TestExportSnapshot {
     admin.snapshot(splitTableSnap, splitTableName);
     // export snapshot and verify
     Configuration tmpConf = TEST_UTIL.getConfiguration();
+    // Decrease the buffer size of copier to avoid the export task finished shortly
     tmpConf.setInt("snapshot.export.buffer.size", 1);
+    // Decrease the maximum files of each mapper to ensure the three files(1 hfile + 2 reference
+    // files)
+    // copied in different mappers concurrently.
     tmpConf.setInt("snapshot.export.default.map.group", 1);
     testExportFileSystemState(tmpConf, splitTableName, splitTableSnap, splitTableSnap,
-        tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), getHdfsDestinationDir(), false, false,
-        getBypassRegionPredicate(), true, false);
+      tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), getHdfsDestinationDir(), false, false,
+      getBypassRegionPredicate(), true, false);
     // delete table
     TEST_UTIL.deleteTable(splitTableName);
   }

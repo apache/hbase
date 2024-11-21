@@ -26,10 +26,10 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -661,7 +661,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
     // Get snapshot files
     LOG.info("Loading Snapshot '" + snapshotDesc.getName() + "' hfile list");
-    Set<String> existingFiles = new TreeSet<>();
+    Set<String> addedFiles = new HashSet<>();
     SnapshotReferenceUtil.visitReferencedFiles(conf, fs, snapshotDir, snapshotDesc,
       new SnapshotReferenceUtil.SnapshotVisitor() {
         @Override
@@ -682,9 +682,9 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
               referencedHFile, storeFile.hasFileSize() ? storeFile.getFileSize() : -1);
           }
           String fileToExport = snapshotFileAndSize.getFirst().getHfile();
-          if (!existingFiles.contains(fileToExport)) {
+          if (!addedFiles.contains(fileToExport)) {
             files.add(snapshotFileAndSize);
-            existingFiles.add(fileToExport);
+            addedFiles.add(fileToExport);
           } else {
             LOG.debug("Skip the existing file: {}.", fileToExport);
           }
