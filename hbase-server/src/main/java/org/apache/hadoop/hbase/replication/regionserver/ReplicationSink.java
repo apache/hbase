@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerT
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.RS_COLUMN;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.TIMESTAMP_COLUMN;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.WAL_NAME_COLUMN;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -68,7 +69,9 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
@@ -297,7 +300,8 @@ public class ReplicationSink {
       // TODO Replicating mutations and bulk loaded data can be made parallel
       if (!sourceTableNameToRowMap.isEmpty()) {
         LOG.debug("Started replicating mutations.");
-        for (Entry<TableName, Map<List<UUID>, List<Row>>> entry : sourceTableNameToRowMap.entrySet()) {
+        for (Entry<TableName, Map<List<UUID>, List<Row>>> entry : sourceTableNameToRowMap
+          .entrySet()) {
           TableName sinkTable = ReplicationUtils.getSinkTableName(entry.getKey(),
             sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
           batch(sinkTable, entry.getValue().values(), rowSizeWarnThreshold);
