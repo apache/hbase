@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -460,7 +461,8 @@ public class RowCounter extends AbstractHBaseTool {
     return new RowCounterCommandLineParser();
   }
 
-  // Visible for testing
+  @RestrictedApi(explanation = "Only visible for testing", link = "",
+      allowedOnPath = ".*/src/test/.*")
   Job getMapReduceJob() {
     return job;
   }
