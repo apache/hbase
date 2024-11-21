@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -71,7 +72,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.UUID;
@@ -184,15 +187,18 @@ public class TestReplicationSink {
     table6 = TEST_UTIL.deleteTableData(TABLE_NAME6);
   }
 
-  @Test public void testBatchSink() throws Exception {
+  @Test
+  public void testBatchSink() throws Exception {
     testBatchSink(TABLE_NAME1, table1);
   }
 
-  @Test public void testBatchWithSinkTableOverrides() throws Exception {
+  @Test
+  public void testBatchWithSinkTableOverrides() throws Exception {
     testBatchSink(TABLE_NAME3, table4);
   }
 
-  @Test public void testBatchWithSinkNamespaceOverrides() throws Exception {
+  @Test
+  public void testBatchWithSinkNamespaceOverrides() throws Exception {
     testBatchSink(TABLE_NAME5, table6);
   }
 
@@ -213,11 +219,13 @@ public class TestReplicationSink {
     assertEquals(BATCH_SIZE, scanRes.next(BATCH_SIZE).length);
   }
 
-  @Test public void testMixedPutDelete() throws Exception {
+  @Test
+  public void testMixedPutDelete() throws Exception {
     testMixedPutDelete(TABLE_NAME1, table1);
   }
 
-  @Test public void testMixedPutDeleteWithSinkTableOverrides() throws Exception {
+  @Test
+  public void testMixedPutDeleteWithSinkTableOverrides() throws Exception {
     testMixedPutDelete(TABLE_NAME3, table4);
   }
 
@@ -446,7 +454,8 @@ public class TestReplicationSink {
     testRethrowRetriesExhaustedException(TABLE_NAME5, TABLE_NAME6);
   }
 
-  private void testRethrowRetriesExhaustedException(TableName sourceTableName, TableName sinkTableName) throws Exception {
+  private void testRethrowRetriesExhaustedException(TableName sourceTableName,
+    TableName sinkTableName) throws Exception {
     TableName notExistTable = TableName.valueOf("notExistTable");
     List<WALEntry> entries = new ArrayList<>();
     List<ExtendedCell> cells = new ArrayList<>();
@@ -598,7 +607,8 @@ public class TestReplicationSink {
   /**
    * Test failure metrics produced for failed replication edits
    */
-  private void testFailedReplicationSinkMetrics(TableName sourceTableName, TableName sinkTableName) throws IOException {
+  private void testFailedReplicationSinkMetrics(TableName sourceTableName, TableName sinkTableName)
+    throws IOException {
     long initialFailedBatches = SINK.getSinkMetrics().getFailedBatches();
     long errorCount = 0L;
     List<WALEntry> entries = new ArrayList<>(BATCH_SIZE);
