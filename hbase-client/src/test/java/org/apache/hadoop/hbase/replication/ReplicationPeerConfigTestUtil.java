@@ -60,7 +60,7 @@ public final class ReplicationPeerConfigTestUtil {
     return map;
   }
 
-  private static Map<TableName, TableName> randSourceToSinkTableOverrides(Random rand) {
+  private static Map<TableName, TableName> randTableNameOverrides(Random rand) {
     int size = rand.nextInt(5);
     Map<TableName, TableName> map = new HashMap<>(size);
     for (int i = 0; i < size; i++) {
@@ -71,8 +71,7 @@ public final class ReplicationPeerConfigTestUtil {
     return map;
   }
 
-  // TODO eboland: might want this to align with sourceToSinkTableOverrides
-  private static Map<String, String> randSourceToSinkNamespaceOverrides(Random rand) {
+  private static Map<String, String> randNamespaceOverrides(Random rand) {
     int size = rand.nextInt(5);
     Map<String, String> map = new HashMap<>(size);
     for (int i = 0; i < size; i++) {
@@ -90,9 +89,8 @@ public final class ReplicationPeerConfigTestUtil {
       .setRemoteWALDir(Long.toHexString(RNG.nextLong())).setNamespaces(randNamespaces(RNG))
       .setExcludeNamespaces(randNamespaces(RNG)).setTableCFsMap(randTableCFs(RNG))
       .setExcludeTableCFsMap(randTableCFs(RNG)).setReplicateAllUserTables(RNG.nextBoolean())
-      .setSourceToSinkNamespaceOverrides(randSourceToSinkNamespaceOverrides(RNG))
-      .setSourceToSinkTableOverrides(randSourceToSinkTableOverrides(RNG))
-      .setBandwidth(RNG.nextInt(1000)).build();
+      .setNamespaceOverrides(randNamespaceOverrides(RNG))
+      .setTableNameOverrides(randTableNameOverrides(RNG)).setBandwidth(RNG.nextInt(1000)).build();
   }
 
   private static void assertSetEquals(Set<String> expected, Set<String> actual) {
@@ -154,10 +152,9 @@ public final class ReplicationPeerConfigTestUtil {
     assertTableCFsMapEquals(expected.getTableCFsMap(), actual.getTableCFsMap());
     assertTableCFsMapEquals(expected.getExcludeTableCFsMap(), actual.getExcludeTableCFsMap());
     assertEquals(expected.replicateAllUserTables(), actual.replicateAllUserTables());
-    assertNamespaceOverridesMapEquals(expected.getSourceToSinkNamespaceOverrides(),
-      actual.getSourceToSinkNamespaceOverrides());
-    assertTableOverridesMapEquals(expected.getSourceToSinkTableOverrides(),
-      actual.getSourceToSinkTableOverrides());
+    assertNamespaceOverridesMapEquals(expected.getNamespaceOverrides(),
+      actual.getNamespaceOverrides());
+    assertTableOverridesMapEquals(expected.getTableNameOverrides(), actual.getTableNameOverrides());
     assertEquals(expected.getBandwidth(), actual.getBandwidth());
   }
 }

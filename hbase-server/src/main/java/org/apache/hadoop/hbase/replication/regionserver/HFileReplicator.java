@@ -83,8 +83,8 @@ public class HFileReplicator implements Closeable {
 
   private Configuration sourceClusterConf;
   private String sourceBaseNamespaceDirPath;
-  private Map<String, String> sourceToSinkNamespaceOverrides;
-  private Map<TableName, TableName> sourceToSinkTableOverrides;
+  private Map<String, String> namespaceOverrides;
+  private Map<TableName, TableName> tableNameOverrides;
   private String sourceHFileArchiveDirPath;
   private Map<String, List<Pair<byte[], List<String>>>> sourceTableToBulkLoadHFileMap;
   private FileSystem sinkFs;
@@ -99,15 +99,15 @@ public class HFileReplicator implements Closeable {
   private List<String> sourceClusterIds;
 
   public HFileReplicator(Configuration sourceClusterConf, String sourceBaseNamespaceDirPath,
-    String sourceHFileArchiveDirPath, Map<String, String> sourceToSinkNamespaceOverrides,
-    Map<TableName, TableName> sourceToSinkTableOverrides,
+    String sourceHFileArchiveDirPath, Map<String, String> namespaceOverrides,
+    Map<TableName, TableName> tableNameOverrides,
     Map<String, List<Pair<byte[], List<String>>>> sourceTableQueueMap, Configuration conf,
     AsyncClusterConnection connection, List<String> sourceClusterIds) throws IOException {
     this.sourceClusterConf = sourceClusterConf;
     this.sourceBaseNamespaceDirPath = sourceBaseNamespaceDirPath;
     this.sourceHFileArchiveDirPath = sourceHFileArchiveDirPath;
-    this.sourceToSinkNamespaceOverrides = sourceToSinkNamespaceOverrides;
-    this.sourceToSinkTableOverrides = sourceToSinkTableOverrides;
+    this.namespaceOverrides = namespaceOverrides;
+    this.tableNameOverrides = tableNameOverrides;
     this.sourceTableToBulkLoadHFileMap = sourceTableQueueMap;
     this.conf = conf;
     this.connection = connection;
@@ -233,7 +233,7 @@ public class HFileReplicator implements Closeable {
           .entrySet()) {
         String sourceTable = sourceTableEntry.getKey();
         TableName sinkTableName = ReplicationUtils.getSinkTableName(TableName.valueOf(sourceTable),
-          sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+          namespaceOverrides, tableNameOverrides);
 
         // Create staging directory for each table
         Path sinkStagingDir = createStagingDir(hbaseStagingDir, user, sinkTableName);

@@ -60,11 +60,11 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
   @Override
   public void replicateLogEntries(List<AdminProtos.WALEntry> entries, ExtendedCellScanner cells,
     String replicationClusterId, String sourceBaseNamespaceDirPath,
-    String sourceHFileArchiveDirPath, Map<String, String> sourceToSinkNamespaceOverrides,
-    Map<TableName, TableName> sourceToSinkTableOverrides) throws IOException {
+    String sourceHFileArchiveDirPath, Map<String, String> namespaceOverrides,
+    Map<TableName, TableName> tableNameOverrides) throws IOException {
     this.replicationSink.replicateEntries(entries, cells, replicationClusterId,
-      sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, sourceToSinkNamespaceOverrides,
-      sourceToSinkTableOverrides);
+      sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, namespaceOverrides,
+      tableNameOverrides);
   }
 
   @Override

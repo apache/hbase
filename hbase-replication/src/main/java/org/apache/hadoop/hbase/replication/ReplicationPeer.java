@@ -91,7 +91,7 @@ public interface ReplicationPeer {
    * Get replicable (sourceTable, sinkTable) overrides map of this peer
    * @return the replicable (sourceTable, sinkTable) map
    */
-  Map<TableName, TableName> getSourceToSinkTableOverrides();
+  Map<TableName, TableName> getTableNameOverrides();
 
   /**
    * Get replicable namespace set of this peer
@@ -103,7 +103,7 @@ public interface ReplicationPeer {
    * Get replicable (sourceNamespace, sinkNamespace) overrides map of this peer
    * @return the replicable (sourceNamespace, sinkNamespace) map
    */
-  Map<String, String> getSourceToSinkNamespaceOverrides();
+  Map<String, String> getNamespaceOverrides();
 
   /**
    * Get the per node bandwidth upper limit for this peer

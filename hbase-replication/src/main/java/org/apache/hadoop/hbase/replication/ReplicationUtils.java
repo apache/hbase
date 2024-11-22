@@ -181,21 +181,15 @@ public final class ReplicationUtils {
   }
 
   public static TableName getSinkTableName(TableName sourceTableName,
-    Map<String, String> sourceToSinkNamespaceOverrides,
-    Map<TableName, TableName> sourceToSinkTableOverrides) {
+    Map<String, String> namespaceOverrides, Map<TableName, TableName> tableNameOverrides) {
     String sourceNamespace = sourceTableName.getNamespaceAsString();
     String sinkNamespace = sourceNamespace;
     String sinkTable = sourceTableName.getQualifierAsString();
-    if (
-      sourceToSinkNamespaceOverrides != null
-        && sourceToSinkNamespaceOverrides.get(sourceNamespace) != null
-    ) {
-      sinkNamespace = sourceToSinkNamespaceOverrides.get(sourceNamespace);
+    if (namespaceOverrides != null && namespaceOverrides.get(sourceNamespace) != null) {
+      sinkNamespace = namespaceOverrides.get(sourceNamespace);
     }
-    if (
-      sourceToSinkTableOverrides != null && sourceToSinkTableOverrides.get(sourceTableName) != null
-    ) {
-      TableName sinkTableName = sourceToSinkTableOverrides.get(sourceTableName);
+    if (tableNameOverrides != null && tableNameOverrides.get(sourceTableName) != null) {
+      TableName sinkTableName = tableNameOverrides.get(sourceTableName);
       sinkNamespace = sinkTableName.getNamespaceAsString();
       sinkTable = sinkTableName.getQualifierAsString();
     }
