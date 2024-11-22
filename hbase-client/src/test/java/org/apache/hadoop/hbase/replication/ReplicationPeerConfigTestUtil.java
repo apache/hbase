@@ -22,6 +22,7 @@ import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -126,7 +127,8 @@ public final class ReplicationPeerConfigTestUtil {
     });
   }
 
-  private static void assertNamespaceOverridesMapEquals(Map<String, String> expected, Map<String, String> actual) {
+  private static void assertNamespaceOverridesMapEquals(Map<String, String> expected,
+    Map<String, String> actual) {
     if (expected == null || expected.size() == 0) {
       assertTrue(actual == null || actual.size() == 0);
       return;
@@ -134,7 +136,8 @@ public final class ReplicationPeerConfigTestUtil {
     assertEquals(expected, actual);
   }
 
-  private static void assertTableOverridesMapEquals(Map<TableName, TableName> expected, Map<TableName, TableName> actual) {
+  private static void assertTableOverridesMapEquals(Map<TableName, TableName> expected,
+    Map<TableName, TableName> actual) {
     if (expected == null || expected.size() == 0) {
       assertTrue(actual == null || actual.size() == 0);
       return;
@@ -153,7 +156,8 @@ public final class ReplicationPeerConfigTestUtil {
     assertEquals(expected.replicateAllUserTables(), actual.replicateAllUserTables());
     assertNamespaceOverridesMapEquals(expected.getSourceToSinkNamespaceOverrides(),
       actual.getSourceToSinkNamespaceOverrides());
-    assertTableOverridesMapEquals(expected.getSourceToSinkTableOverrides(), actual.getSourceToSinkTableOverrides());
+    assertTableOverridesMapEquals(expected.getSourceToSinkTableOverrides(),
+      actual.getSourceToSinkTableOverrides());
     assertEquals(expected.getBandwidth(), actual.getBandwidth());
   }
 }
