@@ -22,7 +22,6 @@ import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -104,7 +103,7 @@ public final class ReplicationPeerConfigTestUtil {
     expected.forEach(s -> assertTrue(actual.contains(s)));
   }
 
-  private static void assertMapEquals(Map<TableName, List<String>> expected,
+  private static void assertTableCFsMapEquals(Map<TableName, List<String>> expected,
     Map<TableName, List<String>> actual) {
     if (expected == null || expected.size() == 0) {
       assertTrue(actual == null || actual.size() == 0);
@@ -127,18 +126,34 @@ public final class ReplicationPeerConfigTestUtil {
     });
   }
 
+  private static void assertNamespaceOverridesMapEquals(Map<String, String> expected, Map<String, String> actual) {
+    if (expected == null || expected.size() == 0) {
+      assertTrue(actual == null || actual.size() == 0);
+      return;
+    }
+    assertEquals(expected, actual);
+  }
+
+  private static void assertTableOverridesMapEquals(Map<TableName, TableName> expected, Map<TableName, TableName> actual) {
+    if (expected == null || expected.size() == 0) {
+      assertTrue(actual == null || actual.size() == 0);
+      return;
+    }
+    assertEquals(expected, actual);
+  }
+
   public static void assertConfigEquals(ReplicationPeerConfig expected,
     ReplicationPeerConfig actual) {
     assertEquals(expected.getClusterKey(), actual.getClusterKey());
     assertEquals(expected.getReplicationEndpointImpl(), actual.getReplicationEndpointImpl());
     assertSetEquals(expected.getNamespaces(), actual.getNamespaces());
     assertSetEquals(expected.getExcludeNamespaces(), actual.getExcludeNamespaces());
-    assertMapEquals(expected.getTableCFsMap(), actual.getTableCFsMap());
-    assertMapEquals(expected.getExcludeTableCFsMap(), actual.getExcludeTableCFsMap());
+    assertTableCFsMapEquals(expected.getTableCFsMap(), actual.getTableCFsMap());
+    assertTableCFsMapEquals(expected.getExcludeTableCFsMap(), actual.getExcludeTableCFsMap());
     assertEquals(expected.replicateAllUserTables(), actual.replicateAllUserTables());
-    assertEquals(expected.getSourceToSinkNamespaceOverrides(),
+    assertNamespaceOverridesMapEquals(expected.getSourceToSinkNamespaceOverrides(),
       actual.getSourceToSinkNamespaceOverrides());
-    assertEquals(expected.getSourceToSinkTableOverrides(), actual.getSourceToSinkTableOverrides());
+    assertTableOverridesMapEquals(expected.getSourceToSinkTableOverrides(), actual.getSourceToSinkTableOverrides());
     assertEquals(expected.getBandwidth(), actual.getBandwidth());
   }
 }
