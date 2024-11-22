@@ -33,12 +33,12 @@ message TableCF {
   repeated bytes families = 2;
 }
 
-message SourceToSinkTableOverride {
+message TableNameOverride {
   optional TableName table_name = 1;
   optional TableName sink_table_name = 2;
 }
 
-message SourceToSinkNamespaceOverride {
+message NamespaceOverride {
   optional string namespace = 1;
   optional string sink_namespace = 2;
 }
@@ -61,8 +61,8 @@ message ReplicationPeer {
   repeated bytes exclude_namespaces = 10;
   optional bool serial = 11;
   optional string remoteWALDir = 12;
-  repeated SourceToSinkTableOverride source_to_sink_table_overrides = 13;
-  repeated SourceToSinkNamespaceOverride source_to_sink_namespace_overrides = 14;
+  repeated TableNameOverride table_name_overrides = 13;
+  repeated NamespaceOverride namespace_overrides = 14;
 }
 
 /**

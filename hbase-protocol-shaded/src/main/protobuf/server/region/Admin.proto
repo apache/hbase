@@ -208,8 +208,8 @@ message ReplicateWALEntryRequest {
   optional string replicationClusterId = 2;
   optional string sourceBaseNamespaceDirPath = 3;
   optional string sourceHFileArchiveDirPath = 4;
-  repeated SourceToSinkNamespaceOverride sourceToSinkNamespaceOverrides = 5;
-  repeated SourceToSinkTableOverride sourceToSinkTableOverrides = 6;
+  repeated NamespaceOverride namespaceOverrides = 5;
+  repeated TableNameOverride tableNameOverrides = 6;
 }
 
 message ReplicateWALEntryResponse {

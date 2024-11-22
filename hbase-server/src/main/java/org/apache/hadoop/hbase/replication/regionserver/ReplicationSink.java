@@ -184,22 +184,21 @@ public class ReplicationSink {
   /**
    * Replicate this array of entries directly into the local cluster using the native client. Only
    * operates against raw protobuf type saving on a conversion from pb to pojo.
-   * @param entries                        WAL entries to be replicated.
-   * @param cells                          Cell scanner for iteration.
-   * @param replicationClusterId           Id which will uniquely identify source cluster FS client
-   *                                       configurations in the replication configuration directory
-   * @param sourceBaseNamespaceDirPath     Path that point to the source cluster base namespace
-   *                                       directory
-   * @param sourceHFileArchiveDirPath      Path that point to the source cluster hfile archive
-   *                                       directory
-   * @param sourceToSinkNamespaceOverrides Map of source to sink namespace overrides
-   * @param sourceToSinkTableOverrides     Map of source to sink table overrides
+   * @param entries                    WAL entries to be replicated.
+   * @param cells                      Cell scanner for iteration.
+   * @param replicationClusterId       Id which will uniquely identify source cluster FS client
+   *                                   configurations in the replication configuration directory
+   * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
+   *                                   directory
+   * @param sourceHFileArchiveDirPath  Path that point to the source cluster hfile archive directory
+   * @param namespaceOverrides         Map of source to sink namespace overrides
+   * @param tableNameOverrides         Map of source to sink table overrides
    * @throws IOException If failed to replicate the data
    */
   public void replicateEntries(List<WALEntry> entries, final ExtendedCellScanner cells,
     String replicationClusterId, String sourceBaseNamespaceDirPath,
-    String sourceHFileArchiveDirPath, Map<String, String> sourceToSinkNamespaceOverrides,
-    Map<TableName, TableName> sourceToSinkTableOverrides) throws IOException {
+    String sourceHFileArchiveDirPath, Map<String, String> namespaceOverrides,
+    Map<TableName, TableName> tableNameOverrides) throws IOException {
     if (entries.isEmpty()) {
       return;
     }
@@ -303,7 +302,7 @@ public class ReplicationSink {
         for (Entry<TableName, Map<List<UUID>, List<Row>>> entry : sourceTableNameToRowMap
           .entrySet()) {
           TableName sinkTable = ReplicationUtils.getSinkTableName(entry.getKey(),
-            sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+            namespaceOverrides, tableNameOverrides);
           batch(sinkTable, entry.getValue().values(), rowSizeWarnThreshold);
         }
         LOG.debug("Finished replicating mutations.");
@@ -327,10 +326,10 @@ public class ReplicationSink {
           if (sourceBulkLoadHFileMap != null && !sourceBulkLoadHFileMap.isEmpty()) {
             LOG.debug("Replicating {} bulk loaded data", sourceClusterIds);
             Configuration providerConf = this.provider.getConf(this.conf, replicationClusterId);
-            try (HFileReplicator hFileReplicator = new HFileReplicator(providerConf,
-              sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, sourceToSinkNamespaceOverrides,
-              sourceToSinkTableOverrides, sourceBulkLoadHFileMap, conf, getConnection(),
-              sourceClusterIds)) {
+            try (HFileReplicator hFileReplicator =
+              new HFileReplicator(providerConf, sourceBaseNamespaceDirPath,
+                sourceHFileArchiveDirPath, namespaceOverrides, tableNameOverrides,
+                sourceBulkLoadHFileMap, conf, getConnection(), sourceClusterIds)) {
               hFileReplicator.replicate();
               LOG.debug("Finished replicating {} bulk loaded data", sourceClusterIds);
             }

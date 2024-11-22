@@ -533,12 +533,10 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     assert sinkPeer != null;
     AsyncRegionServerAdmin rsAdmin = sinkPeer.getRegionServer();
     final SinkPeer sinkPeerToUse = sinkPeer;
-    FutureUtils.addListener(
-      ReplicationProtobufUtil.replicateWALEntry(rsAdmin, entries.toArray(new Entry[entries.size()]),
-        replicationClusterId, baseNamespaceDir, hfileArchiveDir,
-        ctx.getPeerConfig().getSourceToSinkNamespaceOverrides(),
-        ctx.getReplicationPeer().getSourceToSinkTableOverrides(), timeout),
-      (response, exception) -> {
+    FutureUtils.addListener(ReplicationProtobufUtil.replicateWALEntry(rsAdmin,
+      entries.toArray(new Entry[entries.size()]), replicationClusterId, baseNamespaceDir,
+      hfileArchiveDir, ctx.getPeerConfig().getNamespaceOverrides(),
+      ctx.getReplicationPeer().getTableNameOverrides(), timeout), (response, exception) -> {
         if (exception != null) {
           onReplicateWALEntryException(entriesHashCode, exception, sinkPeerToUse);
           resultCompletableFuture.completeExceptionally(exception);

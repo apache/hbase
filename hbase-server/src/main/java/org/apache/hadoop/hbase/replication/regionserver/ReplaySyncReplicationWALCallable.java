@@ -115,12 +115,10 @@ public class ReplaySyncReplicationWALCallable extends BaseRSProcedureCallable {
         rs.getReplicationSinkService().replicateLogEntries(request.getEntryList(), pair.getSecond(),
           request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
           request.getSourceHFileArchiveDirPath(),
-          ReplicationPeerConfigUtil.convert2Map(request.getSourceToSinkNamespaceOverridesList()
-            .toArray(new ReplicationProtos.SourceToSinkNamespaceOverride[request
-              .getSourceToSinkNamespaceOverridesCount()])),
-          ReplicationPeerConfigUtil.convert2Map(request.getSourceToSinkTableOverridesList()
-            .toArray(new ReplicationProtos.SourceToSinkTableOverride[request
-              .getSourceToSinkTableOverridesCount()])));
+          ReplicationPeerConfigUtil.convert2Map(request.getNamespaceOverridesList().toArray(
+            new ReplicationProtos.NamespaceOverride[request.getNamespaceOverridesCount()])),
+          ReplicationPeerConfigUtil.convert2Map(request.getTableNameOverridesList().toArray(
+            new ReplicationProtos.TableNameOverride[request.getTableNameOverridesCount()])));
         // Read next entries.
         entries = readWALEntries(reader, wal);
       }

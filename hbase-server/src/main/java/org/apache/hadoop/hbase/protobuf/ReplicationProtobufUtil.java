@@ -51,24 +51,23 @@ public class ReplicationProtobufUtil {
 
   /**
    * A helper to replicate a list of WAL entries using region server admin
-   * @param admin                          The region server admin
-   * @param entries                        Array of WAL entries to be replicated
-   * @param replicationClusterId           Id which will uniquely identify source cluster FS client
-   *                                       configurations in the replication configuration directory
-   * @param sourceBaseNamespaceDir         Path to source cluster base namespace directory
-   * @param sourceHFileArchiveDir          Path to the source cluster hfile archive directory
-   * @param sourceToSinkNamespaceOverrides Map of source to sink namespace overrides
-   * @param sourceToSinkTableOverrides     Map of source to sink table overrides
-   * @param timeout                        Request timeout
+   * @param admin                  The region server admin
+   * @param entries                Array of WAL entries to be replicated
+   * @param replicationClusterId   Id which will uniquely identify source cluster FS client
+   *                               configurations in the replication configuration directory
+   * @param sourceBaseNamespaceDir Path to source cluster base namespace directory
+   * @param sourceHFileArchiveDir  Path to the source cluster hfile archive directory
+   * @param namespaceOverrides     Map of source to sink namespace overrides
+   * @param tableNameOverrides     Map of source to sink table overrides
+   * @param timeout                Request timeout
    */
   public static CompletableFuture<ReplicateWALEntryResponse> replicateWALEntry(
     AsyncRegionServerAdmin admin, Entry[] entries, String replicationClusterId,
-    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir,
-    Map<String, String> sourceToSinkNamespaceOverrides,
-    Map<TableName, TableName> sourceToSinkTableOverrides, int timeout) {
+    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir, Map<String, String> namespaceOverrides,
+    Map<TableName, TableName> tableNameOverrides, int timeout) {
     Pair<ReplicateWALEntryRequest, ExtendedCellScanner> p =
       buildReplicateWALEntryRequest(entries, null, replicationClusterId, sourceBaseNamespaceDir,
-        sourceHFileArchiveDir, sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+        sourceHFileArchiveDir, namespaceOverrides, tableNameOverrides);
     return admin.replicateWALEntry(p.getFirst(), p.getSecond(), timeout);
   }
 
@@ -84,21 +83,20 @@ public class ReplicationProtobufUtil {
 
   /**
    * Create a new ReplicateWALEntryRequest from a list of WAL entries
-   * @param entries                        The WAL entries to be replicated
-   * @param encodedRegionName              Alternative region name to use if not null
-   * @param replicationClusterId           Id which will uniquely identify source cluster FS client
-   *                                       configurations in the replication configuration directory
-   * @param sourceBaseNamespaceDir         Path to source cluster base namespace directory
-   * @param sourceHFileArchiveDir          Path to the source cluster hfile archive directory
-   * @param sourceToSinkNamespaceOverrides Map of source to sink namespace overrides
-   * @param sourceToSinkTableOverrides     Map of source to sink table overrides
+   * @param entries                The WAL entries to be replicated
+   * @param encodedRegionName      Alternative region name to use if not null
+   * @param replicationClusterId   Id which will uniquely identify source cluster FS client
+   *                               configurations in the replication configuration directory
+   * @param sourceBaseNamespaceDir Path to source cluster base namespace directory
+   * @param sourceHFileArchiveDir  Path to the source cluster hfile archive directory
+   * @param namespaceOverrides     Map of source to sink namespace overrides
+   * @param tableNameOverrides     Map of source to sink table overrides
    * @return a pair of ReplicateWALEntryRequest and a CellScanner over all the WALEdit values found.
    */
   public static Pair<ReplicateWALEntryRequest, ExtendedCellScanner> buildReplicateWALEntryRequest(
     final Entry[] entries, byte[] encodedRegionName, String replicationClusterId,
-    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir,
-    Map<String, String> sourceToSinkNamespaceOverrides,
-    Map<TableName, TableName> sourceToSinkTableOverrides) {
+    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir, Map<String, String> namespaceOverrides,
+    Map<TableName, TableName> tableNameOverrides) {
     // Accumulate all the Cells seen in here.
     List<List<? extends ExtendedCell>> allCells = new ArrayList<>(entries.length);
     int size = 0;
@@ -141,24 +139,24 @@ public class ReplicationProtobufUtil {
     if (sourceHFileArchiveDir != null) {
       builder.setSourceHFileArchiveDirPath(sourceHFileArchiveDir.toString());
     }
-    if (sourceToSinkNamespaceOverrides != null) {
-      ReplicationProtos.SourceToSinkNamespaceOverride.Builder namespaceOverrideBuilder =
-        ReplicationProtos.SourceToSinkNamespaceOverride.newBuilder();
+    if (namespaceOverrides != null) {
+      ReplicationProtos.NamespaceOverride.Builder namespaceOverrideBuilder =
+        ReplicationProtos.NamespaceOverride.newBuilder();
       int i = 0;
-      for (Map.Entry<String, String> entry : sourceToSinkNamespaceOverrides.entrySet()) {
+      for (Map.Entry<String, String> entry : namespaceOverrides.entrySet()) {
         namespaceOverrideBuilder.clear();
-        builder.setSourceToSinkNamespaceOverrides(i, namespaceOverrideBuilder
-          .setNamespace(entry.getKey()).setSinkNamespace(entry.getValue()).build());
+        builder.setNamespaceOverrides(i, namespaceOverrideBuilder.setNamespace(entry.getKey())
+          .setSinkNamespace(entry.getValue()).build());
         i++;
       }
     }
-    if (sourceToSinkTableOverrides != null) {
-      ReplicationProtos.SourceToSinkTableOverride.Builder tableOverrideBuilder =
-        ReplicationProtos.SourceToSinkTableOverride.newBuilder();
+    if (tableNameOverrides != null) {
+      ReplicationProtos.TableNameOverride.Builder tableOverrideBuilder =
+        ReplicationProtos.TableNameOverride.newBuilder();
       int i = 0;
-      for (Map.Entry<TableName, TableName> entry : sourceToSinkTableOverrides.entrySet()) {
+      for (Map.Entry<TableName, TableName> entry : tableNameOverrides.entrySet()) {
         tableOverrideBuilder.clear();
-        builder.setSourceToSinkTableOverrides(i,
+        builder.setTableNameOverrides(i,
           tableOverrideBuilder.setTableName(ProtobufUtil.toProtoTableName(entry.getKey()))
             .setSinkTableName(ProtobufUtil.toProtoTableName(entry.getValue())).build());
         i++;

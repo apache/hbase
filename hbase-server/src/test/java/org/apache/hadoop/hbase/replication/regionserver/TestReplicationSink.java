@@ -132,8 +132,8 @@ public class TestReplicationSink {
   protected static String sourceBaseNamespaceDir;
   protected static String sourceHFileArchiveDir;
   protected static String replicationClusterId;
-  protected static Map<String, String> sourceToSinkNamespaceOverrides;
-  protected static Map<TableName, TableName> sourceToSinkTableOverrides;
+  protected static Map<String, String> namespaceOverrides;
+  protected static Map<TableName, TableName> tableNameOverrides;
 
   /**
    * @throws java.lang.Exception
@@ -159,10 +159,10 @@ public class TestReplicationSink {
     sourceHFileArchiveDir =
       new Path(rootDir, new Path(HConstants.HFILE_ARCHIVE_DIRECTORY)).toString();
     replicationClusterId = "12345";
-    sourceToSinkNamespaceOverrides = new HashMap<>();
-    sourceToSinkNamespaceOverrides.put(SOURCE_NAMESPACE, SINK_NAMESPACE);
-    sourceToSinkTableOverrides = new HashMap<>();
-    sourceToSinkTableOverrides.put(TABLE_NAME3, TABLE_NAME4);
+    namespaceOverrides = new HashMap<>();
+    namespaceOverrides.put(SOURCE_NAMESPACE, SINK_NAMESPACE);
+    tableNameOverrides = new HashMap<>();
+    tableNameOverrides.put(TABLE_NAME3, TABLE_NAME4);
   }
 
   /**
@@ -212,8 +212,8 @@ public class TestReplicationSink {
       entries.add(createEntry(sourceTableName, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
-      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir,
-      sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides,
+      tableNameOverrides);
     Scan scan = new Scan();
     ResultScanner scanRes = sinkTable.getScanner(scan);
     assertEquals(BATCH_SIZE, scanRes.next(BATCH_SIZE).length);
@@ -244,8 +244,8 @@ public class TestReplicationSink {
       entries.add(createEntry(sourceTableName, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells),
-      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir,
-      sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides,
+      tableNameOverrides);
 
     entries = new ArrayList<>(BATCH_SIZE);
     cells = new ArrayList<>();
@@ -255,8 +255,8 @@ public class TestReplicationSink {
     }
 
     SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
-      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir,
-      sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides,
+      tableNameOverrides);
     Scan scan = new Scan();
     ResultScanner scanRes = sinkTable.getScanner(scan);
     assertEquals(BATCH_SIZE / 2, scanRes.next(BATCH_SIZE).length);
@@ -285,8 +285,8 @@ public class TestReplicationSink {
       entries.add(createEntry(sourceTableName, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells),
-      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir,
-      sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides,
+      tableNameOverrides);
 
     ResultScanner resultScanner = sinkTable.getScanner(new Scan());
     int totalRows = 0;
@@ -302,8 +302,8 @@ public class TestReplicationSink {
         i % 2 != 0 ? KeyValue.Type.Put : KeyValue.Type.DeleteColumn, cells));
     }
     SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells),
-      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir,
-      sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides,
+      tableNameOverrides);
     resultScanner = sinkTable.getScanner(new Scan());
     totalRows = 0;
     while (resultScanner.next() != null) {
@@ -341,8 +341,8 @@ public class TestReplicationSink {
     }
 
     SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
-      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir,
-      sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides,
+      tableNameOverrides);
     Scan scan = new Scan();
     ResultScanner scanRes = sinkTable2.getScanner(scan);
     for (Result res : scanRes) {
@@ -379,8 +379,8 @@ public class TestReplicationSink {
       entries.add(createEntry(sourceTableName, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
-      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir,
-      sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides,
+      tableNameOverrides);
 
     Scan scan = new Scan();
     ResultScanner scanRes = sinkTable.getScanner(scan);
@@ -393,8 +393,8 @@ public class TestReplicationSink {
     entries.add(createEntry(sourceTableName, 2, KeyValue.Type.DeleteColumn, cells));
 
     SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
-      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir,
-      sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides,
+      tableNameOverrides);
 
     scan = new Scan();
     scanRes = sinkTable.getScanner(scan);
@@ -432,8 +432,8 @@ public class TestReplicationSink {
       entries.add(createEntry(sourceTableName, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
-      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir,
-      sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides,
+      tableNameOverrides);
     Get get = new Get(Bytes.toBytes(1));
     Result res = sinkTable.get(get);
     assertEquals(0, res.size());
@@ -464,8 +464,8 @@ public class TestReplicationSink {
     }
     try {
       SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
-        replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir,
-        sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+        replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides,
+        tableNameOverrides);
       Assert.fail("Should re-throw TableNotFoundException.");
     } catch (TableNotFoundException e) {
     }
@@ -480,8 +480,7 @@ public class TestReplicationSink {
         try {
           SINK.replicateEntries(entries,
             PrivateCellUtil.createExtendedCellScanner(cells.iterator()), replicationClusterId,
-            sourceBaseNamespaceDir, sourceHFileArchiveDir, sourceToSinkNamespaceOverrides,
-            sourceToSinkTableOverrides);
+            sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides, tableNameOverrides);
           Assert.fail("Should re-throw RetriesExhaustedWithDetailsException.");
         } catch (RetriesExhaustedException e) {
         } finally {
@@ -578,10 +577,10 @@ public class TestReplicationSink {
     }
     // 7. Replicate the bulk loaded entry
     SINK.replicateEntries(entries,
-      PrivateCellUtil
-        .createExtendedCellScanner(WALEditInternalHelper.getExtendedCells(edit).iterator()),
-      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir,
-      sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+      PrivateCellUtil.createExtendedCellScanner(
+        WALEditInternalHelper.getExtendedCells(edit).iterator()),
+      replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides,
+      tableNameOverrides);
     try (ResultScanner scanner = sinkTable.getScanner(new Scan())) {
       // 8. Assert data is replicated
       assertEquals(numRows, scanner.next(numRows).length);
@@ -619,8 +618,8 @@ public class TestReplicationSink {
     cells.clear(); // cause IndexOutOfBoundsException
     try {
       SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
-        replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir,
-        sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+        replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides,
+        tableNameOverrides);
       Assert.fail("Should re-throw ArrayIndexOutOfBoundsException.");
     } catch (ArrayIndexOutOfBoundsException e) {
       errorCount++;
@@ -635,8 +634,8 @@ public class TestReplicationSink {
     }
     try {
       SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
-        replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir,
-        sourceToSinkNamespaceOverrides, sourceToSinkTableOverrides);
+        replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides,
+        tableNameOverrides);
       Assert.fail("Should re-throw TableNotFoundException.");
     } catch (TableNotFoundException e) {
       errorCount++;
@@ -655,8 +654,7 @@ public class TestReplicationSink {
         try {
           SINK.replicateEntries(entries,
             PrivateCellUtil.createExtendedCellScanner(cells.iterator()), replicationClusterId,
-            sourceBaseNamespaceDir, sourceHFileArchiveDir, sourceToSinkNamespaceOverrides,
-            sourceToSinkTableOverrides);
+            sourceBaseNamespaceDir, sourceHFileArchiveDir, namespaceOverrides, tableNameOverrides);
           Assert.fail("Should re-throw IOException.");
         } catch (IOException e) {
           errorCount++;
