@@ -32,6 +32,8 @@
   import="java.util.TreeMap"
   import="java.util.concurrent.TimeoutException"
   import="java.util.concurrent.TimeUnit"
+  import="java.text.DecimalFormat"
+  import="java.math.RoundingMode"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HConstants"
@@ -914,10 +916,10 @@
       ((float) totalCompactedCells / totalCompactingCells)) + "%";
   }
   if (totalBlocksTotalWeight > 0) {
-    totalLocality = String.format("%.1f",
-      ((float) totalBlocksLocalWeight / totalBlocksTotalWeight));
-    totalLocalityForSsd = String.format("%.1f",
-      ((float) totalBlocksLocalWithSsdWeight / totalBlocksTotalWeight));
+    DecimalFormat df = new DecimalFormat("0.0#");
+    df.setRoundingMode(RoundingMode.DOWN);
+    totalLocality = df.format(((float) totalBlocksLocalWeight / totalBlocksTotalWeight));
+    totalLocalityForSsd = df.format(((float) totalBlocksLocalWithSsdWeight / totalBlocksTotalWeight));
   }
   if(regions != null && regions.size() > 0) { %>
 <h2>Table Regions</h2>
