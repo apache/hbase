@@ -199,7 +199,7 @@ public final class FileChangeWatcher {
     @Override
     public void run() {
       try {
-        LOG.info("{} thread started", getName());
+        LOG.debug("{} thread started", getName());
         if (
           !compareAndSetState(FileChangeWatcher.State.STARTING, FileChangeWatcher.State.RUNNING)
         ) {
@@ -216,7 +216,7 @@ public final class FileChangeWatcher {
         LOG.warn("Error in runLoop()", e);
         throw new RuntimeException(e);
       } finally {
-        LOG.info("{} thread finished", getName());
+        LOG.debug("{} thread finished", getName());
         FileChangeWatcher.this.setState(FileChangeWatcher.State.STOPPED);
       }
     }
@@ -245,7 +245,7 @@ public final class FileChangeWatcher {
         try {
           Thread.sleep(pollInterval.toMillis());
         } catch (InterruptedException e) {
-          LOG.info("Interrupted", e);
+          LOG.debug("Interrupted", e);
           Thread.currentThread().interrupt();
           return;
         }
