@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -349,6 +350,69 @@ public class TestFuzzyRowFilterEndToEnd {
 
     // Only one row who's rowKey=1
     assertNull(scanner.next());
+
+    TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
+  }
+
+  @Test
+  public void testHBASE28634() throws IOException {
+    final String CF = "f";
+    final String CQ = "name";
+
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(CF));
+
+    // Put data
+    List<Put> puts = Lists.newArrayList();
+    puts.add(new Put(Bytes.toBytes("111311")).addColumn(Bytes.toBytes(CF), Bytes.toBytes(CQ),
+      Bytes.toBytes("a1")));
+    puts.add(new Put(Bytes.toBytes("111444")).addColumn(Bytes.toBytes(CF), Bytes.toBytes(CQ),
+      Bytes.toBytes("a2")));
+    puts.add(new Put(Bytes.toBytes("111511")).addColumn(Bytes.toBytes(CF), Bytes.toBytes(CQ),
+      Bytes.toBytes("a3")));
+    puts.add(new Put(Bytes.toBytes("111611")).addColumn(Bytes.toBytes(CF), Bytes.toBytes(CQ),
+      Bytes.toBytes("a4")));
+    puts.add(new Put(Bytes.toBytes("111446")).addColumn(Bytes.toBytes(CF), Bytes.toBytes(CQ),
+      Bytes.toBytes("a5")));
+    puts.add(new Put(Bytes.toBytes("111777")).addColumn(Bytes.toBytes(CF), Bytes.toBytes(CQ),
+      Bytes.toBytes("a6")));
+    puts.add(new Put(Bytes.toBytes("111777")).addColumn(Bytes.toBytes(CF), Bytes.toBytes(CQ),
+      Bytes.toBytes("a")));
+    ht.put(puts);
+
+    TEST_UTIL.flush();
+
+    // Forward scan
+    LinkedList<Pair<byte[], byte[]>> fuzzyList = new LinkedList<>();
+    byte[] fuzzyRowKey = Bytes.toBytes("111433");
+    byte[] mask = Bytes.toBytesBinary("\\xFF\\xFF\\xFF\\xFF\\x02\\x02");
+    fuzzyList.add(new Pair<>(fuzzyRowKey, mask));
+    FuzzyRowFilter fuzzyRowFilter = new FuzzyRowFilter(fuzzyList);
+
+    Scan scan = new Scan();
+    scan.setFilter(fuzzyRowFilter);
+
+    ResultScanner scanner = ht.getScanner(scan);
+    List<byte[]> actualRowsList = new ArrayList<>();
+    for (Result result : scanner) {
+      byte[] row = result.getRow();
+      actualRowsList.add(row);
+    }
+
+    assertEquals(2, actualRowsList.size());
+
+    // Reverse scan
+    scan = new Scan();
+    scan.setFilter(fuzzyRowFilter);
+    scan.setReversed(true);
+
+    scanner = ht.getScanner(scan);
+    actualRowsList = new ArrayList<>();
+    for (Result result : scanner) {
+      byte[] row = result.getRow();
+      actualRowsList.add(row);
+    }
+
+    assertEquals(2, actualRowsList.size());
 
     TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
   }
