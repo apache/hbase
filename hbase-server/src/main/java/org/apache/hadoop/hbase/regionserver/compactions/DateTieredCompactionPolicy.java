@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -66,7 +67,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
 
   private static final Logger LOG = LoggerFactory.getLogger(DateTieredCompactionPolicy.class);
 
-  private final RatioBasedCompactionPolicy compactionPolicyPerWindow;
+  protected final RatioBasedCompactionPolicy compactionPolicyPerWindow;
 
   private final CompactionWindowFactory windowFactory;
 
@@ -108,9 +109,8 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     }
   }
 
-  @Override
-  public boolean shouldPerformMajorCompaction(Collection<HStoreFile> filesToCompact)
-    throws IOException {
+  protected boolean isMajorCompactionTime(Collection<HStoreFile> filesToCompact, long now,
+      long lowestModificationTime) throws IOException {
     long mcTime = getNextMajorCompactTime(filesToCompact);
     if (filesToCompact == null || mcTime == 0) {
       if (LOG.isDebugEnabled()) {
@@ -118,69 +118,89 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
       }
       return false;
     }
-
     // TODO: Use better method for determining stamp of last major (HBASE-2990)
-    long lowTimestamp = StoreUtils.getLowestTimestamp(filesToCompact);
-    long now = EnvironmentEdgeManager.currentTime();
-    if (lowTimestamp <= 0L || lowTimestamp >= (now - mcTime)) {
+    if (lowestModificationTime <= 0L || lowestModificationTime >= (now - mcTime)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("lowTimestamp: " + lowTimestamp + " lowTimestamp: " + lowTimestamp + " now: "
-          + now + " mcTime: " + mcTime);
+        LOG.debug("lowTimestamp: " + lowestModificationTime + " lowTimestamp: "
+          + lowestModificationTime + " now: " + now + " mcTime: " + mcTime);
       }
       return false;
     }
+    return true;
+  }
 
-    long cfTTL = this.storeConfigInfo.getStoreFileTtl();
-    HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
-    List<Long> boundaries = getCompactBoundariesForMajor(filesToCompact, now);
-    boolean[] filesInWindow = new boolean[boundaries.size()];
-
-    for (HStoreFile file : filesToCompact) {
-      OptionalLong minTimestamp = file.getMinimumTimestamp();
-      long oldest = minTimestamp.isPresent() ? now - minTimestamp.getAsLong() : Long.MIN_VALUE;
-      if (cfTTL != Long.MAX_VALUE && oldest >= cfTTL) {
-        LOG.debug("Major compaction triggered on store " + this + "; for TTL maintenance");
-        return true;
-      }
-      if (!file.isMajorCompactionResult() || file.isBulkLoadResult()) {
-        LOG.debug("Major compaction triggered on store " + this
-          + ", because there are new files and time since last major compaction "
-          + (now - lowTimestamp) + "ms");
-        return true;
-      }
-
-      int lowerWindowIndex =
-        Collections.binarySearch(boundaries, minTimestamp.orElse(Long.MAX_VALUE));
-      int upperWindowIndex =
-        Collections.binarySearch(boundaries, file.getMaximumTimestamp().orElse(Long.MAX_VALUE));
-      // Handle boundary conditions and negative values of binarySearch
-      lowerWindowIndex = (lowerWindowIndex < 0) ? Math.abs(lowerWindowIndex + 2) : lowerWindowIndex;
-      upperWindowIndex = (upperWindowIndex < 0) ? Math.abs(upperWindowIndex + 2) : upperWindowIndex;
-      if (lowerWindowIndex != upperWindowIndex) {
-        LOG.debug("Major compaction triggered on store " + this + "; because file " + file.getPath()
-          + " has data with timestamps cross window boundaries");
-        return true;
-      } else if (filesInWindow[upperWindowIndex]) {
-        LOG.debug("Major compaction triggered on store " + this
-          + "; because there are more than one file in some windows");
-        return true;
-      } else {
-        filesInWindow[upperWindowIndex] = true;
-      }
-      hdfsBlocksDistribution.add(file.getHDFSBlockDistribution());
+  protected boolean checkForTtl(long ttl, HStoreFile file){
+    OptionalLong minTimestamp = file.getMinimumTimestamp();
+    long oldest = minTimestamp.isPresent() ?
+      EnvironmentEdgeManager.currentTime() - minTimestamp.getAsLong() : Long.MIN_VALUE;
+    if (ttl != Long.MAX_VALUE && oldest >= ttl) {
+      LOG.debug("Major compaction triggered on store " + this + "; for TTL maintenance");
+      return true;
     }
+    return false;
+  }
+  protected boolean isMajorOrBulkloadResult(HStoreFile file, long timeDiff) {
+    if (!file.isMajorCompactionResult() || file.isBulkLoadResult()) {
+      LOG.debug("Major compaction triggered on store " + this + ", because there are new files and time since last major compaction "
+        + timeDiff + "ms");
+      return true;
+    }
+    return false;
+  }
 
-    float blockLocalityIndex = hdfsBlocksDistribution
-      .getBlockLocalityIndex(DNS.getHostname(comConf.conf, DNS.ServerType.REGIONSERVER));
+  protected boolean checkBlockLocality(HDFSBlocksDistribution hdfsBlocksDistribution)
+      throws UnknownHostException {
+    float blockLocalityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(DNS.getHostname(comConf.conf, DNS.ServerType.REGIONSERVER));
     if (blockLocalityIndex < comConf.getMinLocalityToForceCompact()) {
-      LOG.debug("Major compaction triggered on store " + this
-        + "; to make hdfs blocks local, current blockLocalityIndex is " + blockLocalityIndex
+      LOG.debug("Major compaction triggered on store " + this + "; to make hdfs blocks local, current blockLocalityIndex is " + blockLocalityIndex
         + " (min " + comConf.getMinLocalityToForceCompact() + ")");
       return true;
     }
+    return false;
+  }
 
-    LOG.debug(
-      "Skipping major compaction of " + this + ", because the files are already major compacted");
+  @Override
+  public boolean shouldPerformMajorCompaction(Collection<HStoreFile> filesToCompact)
+      throws IOException {
+    long lowTimestamp = StoreUtils.getLowestTimestamp(filesToCompact);
+    long now = EnvironmentEdgeManager.currentTime();
+    if(isMajorCompactionTime(filesToCompact, now, lowTimestamp)) {
+      long cfTTL = this.storeConfigInfo.getStoreFileTtl();
+      HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
+      List<Long> boundaries = getCompactBoundariesForMajor(filesToCompact, now);
+      boolean[] filesInWindow = new boolean[boundaries.size()];
+      for (HStoreFile file : filesToCompact) {
+        OptionalLong minTimestamp = file.getMinimumTimestamp();
+        if(checkForTtl(cfTTL, file)){
+          return true;
+        }
+        if(isMajorOrBulkloadResult(file, now - lowTimestamp)){
+          return true;
+        }
+        int lowerWindowIndex = Collections.binarySearch(boundaries, minTimestamp.orElse(Long.MAX_VALUE));
+        int upperWindowIndex = Collections.binarySearch(boundaries, file.getMaximumTimestamp().orElse(Long.MAX_VALUE));
+        // Handle boundary conditions and negative values of binarySearch
+        lowerWindowIndex =
+          (lowerWindowIndex < 0) ? Math.abs(lowerWindowIndex + 2) : lowerWindowIndex;
+        upperWindowIndex =
+          (upperWindowIndex < 0) ? Math.abs(upperWindowIndex + 2) : upperWindowIndex;
+        if (lowerWindowIndex != upperWindowIndex) {
+          LOG.debug(
+            "Major compaction triggered on store " + this + "; because file " + file.getPath() + " has data with timestamps cross window boundaries");
+          return true;
+        } else if (filesInWindow[upperWindowIndex]) {
+          LOG.debug("Major compaction triggered on store " + this + "; because there are more than one file in some windows");
+          return true;
+        } else {
+          filesInWindow[upperWindowIndex] = true;
+        }
+        hdfsBlocksDistribution.add(file.getHDFSBlockDistribution());
+      }
+      if(checkBlockLocality(hdfsBlocksDistribution)) {
+        return true;
+      }
+      LOG.debug("Skipping major compaction of " + this + ", because the files are already major compacted");
+    }
     return false;
   }
 
