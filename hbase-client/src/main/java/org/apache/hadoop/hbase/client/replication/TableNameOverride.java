@@ -32,4 +32,15 @@ public class TableNameOverride {
   public TableName getSinkTableName() {
     return sinkTableName;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    } else if (!(o instanceof TableNameOverride)) {
+      return false;
+    }
+    TableNameOverride other = (TableNameOverride) o;
+    return other.getSinkTableName().equals(getSinkTableName());
+  }
 }
