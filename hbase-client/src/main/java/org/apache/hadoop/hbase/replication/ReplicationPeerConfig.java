@@ -26,6 +26,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -42,9 +44,9 @@ public class ReplicationPeerConfig {
   private final Map<byte[], byte[]> peerData;
   private final Map<String, String> configuration;
   private Map<TableName, ? extends Collection<String>> tableCFsMap = null;
-  private Map<TableName, TableName> tableNameOverrides = null;
+  private Map<TableName, TableNameOverride> tableNameOverrides = null;
   private Set<String> namespaces = null;
-  private Map<String, String> namespaceOverrides = null;
+  private Map<String, NamespaceOverride> namespaceOverrides = null;
 
   // Default value is true, means replicate all user tables to peer cluster.
   private boolean replicateAllUserTables = true;
@@ -110,7 +112,7 @@ public class ReplicationPeerConfig {
     return (Map<TableName, List<String>>) tableCFsMap;
   }
 
-  public Map<TableName, TableName> getTableNameOverrides() {
+  public Map<TableName, TableNameOverride> getTableNameOverrides() {
     return tableNameOverrides;
   }
 
@@ -118,7 +120,7 @@ public class ReplicationPeerConfig {
     return this.namespaces;
   }
 
-  public Map<String, String> getNamespaceOverrides() {
+  public Map<String, NamespaceOverride> getNamespaceOverrides() {
     return namespaceOverrides;
   }
 
@@ -183,11 +185,11 @@ public class ReplicationPeerConfig {
 
     private Map<TableName, List<String>> tableCFsMap = null;
 
-    private Map<TableName, TableName> tableNameOverrides = null;
+    private Map<TableName, TableNameOverride> tableNameOverrides = null;
 
     private Set<String> namespaces = null;
 
-    private Map<String, String> namespaceOverrides = null;
+    private Map<String, NamespaceOverride> namespaceOverrides = null;
 
     // Default value is true, means replicate all user tables to peer cluster.
     private boolean replicateAllUserTables = true;
@@ -240,7 +242,7 @@ public class ReplicationPeerConfig {
 
     @Override
     public ReplicationPeerConfigBuilder
-      setTableNameOverrides(Map<TableName, TableName> tableNameOverrides) {
+      setTableNameOverrides(Map<TableName, TableNameOverride> tableNameOverrides) {
       this.tableNameOverrides = tableNameOverrides;
       return this;
     }
@@ -253,7 +255,7 @@ public class ReplicationPeerConfig {
 
     @Override
     public ReplicationPeerConfigBuilder
-      setNamespaceOverrides(Map<String, String> namespaceOverrides) {
+      setNamespaceOverrides(Map<String, NamespaceOverride> namespaceOverrides) {
       this.namespaceOverrides = namespaceOverrides;
       return this;
     }

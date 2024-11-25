@@ -34,13 +34,21 @@ message TableCF {
 }
 
 message TableNameOverride {
+  optional TableName sink_table_name = 1;
+}
+
+message TableNameOverrideMapping {
   optional TableName table_name = 1;
-  optional TableName sink_table_name = 2;
+  optional TableNameOverride override = 2;
 }
 
 message NamespaceOverride {
+  optional string sink_namespace = 1;
+}
+
+message NamespaceOverrideMapping {
   optional string namespace = 1;
-  optional string sink_namespace = 2;
+  optional NamespaceOverride override = 2;
 }
 
 /**
@@ -61,8 +69,8 @@ message ReplicationPeer {
   repeated bytes exclude_namespaces = 10;
   optional bool serial = 11;
   optional string remoteWALDir = 12;
-  repeated TableNameOverride table_name_overrides = 13;
-  repeated NamespaceOverride namespace_overrides = 14;
+  repeated TableNameOverrideMapping table_name_overrides = 13;
+  repeated NamespaceOverrideMapping namespace_overrides = 14;
 }
 
 /**

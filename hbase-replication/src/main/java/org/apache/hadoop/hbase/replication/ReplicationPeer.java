@@ -23,6 +23,8 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -91,7 +93,7 @@ public interface ReplicationPeer {
    * Get replicable (sourceTable, sinkTable) overrides map of this peer
    * @return the replicable (sourceTable, sinkTable) map
    */
-  Map<TableName, TableName> getTableNameOverrides();
+  Map<TableName, TableNameOverride> getTableNameOverrides();
 
   /**
    * Get replicable namespace set of this peer
@@ -103,7 +105,7 @@ public interface ReplicationPeer {
    * Get replicable (sourceNamespace, sinkNamespace) overrides map of this peer
    * @return the replicable (sourceNamespace, sinkNamespace) map
    */
-  Map<String, String> getNamespaceOverrides();
+  Map<String, NamespaceOverride> getNamespaceOverrides();
 
   /**
    * Get the per node bandwidth upper limit for this peer

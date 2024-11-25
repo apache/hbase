@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -106,7 +108,8 @@ public interface ReplicationPeerConfigBuilder {
    *                           overrides.
    * @return {@code this}
    */
-  ReplicationPeerConfigBuilder setTableNameOverrides(Map<TableName, TableName> tableNameOverrides);
+  ReplicationPeerConfigBuilder
+    setTableNameOverrides(Map<TableName, TableNameOverride> tableNameOverrides);
 
   /**
    * Sets a unique collection of HBase namespaces that should be replicated to this peer.
@@ -126,7 +129,8 @@ public interface ReplicationPeerConfigBuilder {
    *                           overrides.
    * @return {@code this}
    */
-  ReplicationPeerConfigBuilder setNamespaceOverrides(Map<String, String> namespaceOverrides);
+  ReplicationPeerConfigBuilder
+    setNamespaceOverrides(Map<String, NamespaceOverride> namespaceOverrides);
 
   /**
    * Sets the speed, in bytes per second, for any one RegionServer to replicate data to the peer.

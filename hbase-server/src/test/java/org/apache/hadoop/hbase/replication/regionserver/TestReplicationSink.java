@@ -55,6 +55,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -132,8 +134,8 @@ public class TestReplicationSink {
   protected static String sourceBaseNamespaceDir;
   protected static String sourceHFileArchiveDir;
   protected static String replicationClusterId;
-  protected static Map<String, String> namespaceOverrides;
-  protected static Map<TableName, TableName> tableNameOverrides;
+  protected static Map<String, NamespaceOverride> namespaceOverrides;
+  protected static Map<TableName, TableNameOverride> tableNameOverrides;
 
   /**
    * @throws java.lang.Exception
@@ -160,9 +162,9 @@ public class TestReplicationSink {
       new Path(rootDir, new Path(HConstants.HFILE_ARCHIVE_DIRECTORY)).toString();
     replicationClusterId = "12345";
     namespaceOverrides = new HashMap<>();
-    namespaceOverrides.put(SOURCE_NAMESPACE, SINK_NAMESPACE);
+    namespaceOverrides.put(SOURCE_NAMESPACE, new NamespaceOverride(SINK_NAMESPACE));
     tableNameOverrides = new HashMap<>();
-    tableNameOverrides.put(TABLE_NAME3, TABLE_NAME4);
+    tableNameOverrides.put(TABLE_NAME3, new TableNameOverride(TABLE_NAME4));
   }
 
   /**

@@ -27,6 +27,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -181,15 +183,16 @@ public final class ReplicationUtils {
   }
 
   public static TableName getSinkTableName(TableName sourceTableName,
-    Map<String, String> namespaceOverrides, Map<TableName, TableName> tableNameOverrides) {
+    Map<String, NamespaceOverride> namespaceOverrides,
+    Map<TableName, TableNameOverride> tableNameOverrides) {
     String sourceNamespace = sourceTableName.getNamespaceAsString();
     String sinkNamespace = sourceNamespace;
     String sinkTable = sourceTableName.getQualifierAsString();
     if (namespaceOverrides != null && namespaceOverrides.get(sourceNamespace) != null) {
-      sinkNamespace = namespaceOverrides.get(sourceNamespace);
+      sinkNamespace = namespaceOverrides.get(sourceNamespace).getSinkNamespace();
     }
     if (tableNameOverrides != null && tableNameOverrides.get(sourceTableName) != null) {
-      TableName sinkTableName = tableNameOverrides.get(sourceTableName);
+      TableName sinkTableName = tableNameOverrides.get(sourceTableName).getSinkTableName();
       sinkNamespace = sinkTableName.getNamespaceAsString();
       sinkTable = sinkTableName.getQualifierAsString();
     }

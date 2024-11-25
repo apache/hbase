@@ -2243,9 +2243,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
           request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
           request.getSourceHFileArchiveDirPath(),
           ReplicationPeerConfigUtil.convert2Map(request.getNamespaceOverridesList().toArray(
-            new ReplicationProtos.NamespaceOverride[request.getNamespaceOverridesCount()])),
+            new ReplicationProtos.NamespaceOverrideMapping[request.getNamespaceOverridesCount()])),
           ReplicationPeerConfigUtil.convert2Map(request.getTableNameOverridesList().toArray(
-            new ReplicationProtos.TableNameOverride[request.getTableNameOverridesCount()])));
+            new ReplicationProtos.TableNameOverrideMapping[request.getTableNameOverridesCount()])));
         server.getRegionServerCoprocessorHost().postReplicateLogEntries();
         return ReplicateWALEntryResponse.newBuilder().build();
       } else {

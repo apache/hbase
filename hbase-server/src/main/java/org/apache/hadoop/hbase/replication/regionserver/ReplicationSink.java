@@ -59,6 +59,8 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -197,8 +199,8 @@ public class ReplicationSink {
    */
   public void replicateEntries(List<WALEntry> entries, final ExtendedCellScanner cells,
     String replicationClusterId, String sourceBaseNamespaceDirPath,
-    String sourceHFileArchiveDirPath, Map<String, String> namespaceOverrides,
-    Map<TableName, TableName> tableNameOverrides) throws IOException {
+    String sourceHFileArchiveDirPath, Map<String, NamespaceOverride> namespaceOverrides,
+    Map<TableName, TableNameOverride> tableNameOverrides) throws IOException {
     if (entries.isEmpty()) {
       return;
     }
