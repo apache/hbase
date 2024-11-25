@@ -67,7 +67,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesP
 @InterfaceAudience.Public
 public class FuzzyRowFilter extends FilterBase implements HintingFilter {
   private static final boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
-  private List<Pair<byte[], byte[]>> fuzzyKeysData;
+  private final List<Pair<byte[], byte[]>> fuzzyKeysData;
   // Used to record whether we want to skip the current row.
   // Usually we should use filterRowKey here but in the current scan implementation, if filterRowKey
   // returns true, we will just skip to next row, instead of calling getNextCellHint to determine
@@ -89,7 +89,7 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
   /**
    * Row tracker (keeps all next rows after SEEK_NEXT_USING_HINT was returned)
    */
-  private RowTracker tracker;
+  private final RowTracker tracker;
 
   public FuzzyRowFilter(List<Pair<byte[], byte[]>> fuzzyKeysData) {
     List<Pair<byte[], byte[]>> fuzzyKeyDataCopy = new ArrayList<>(fuzzyKeysData.size());
@@ -200,7 +200,7 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
 
   @Override
   public ReturnCode filterCell(final Cell c) {
-    final int startIndex = lastFoundIndex >= 0 ? lastFoundIndex : 0;
+    final int startIndex = Math.max(lastFoundIndex, 0);
     final int size = fuzzyKeysData.size();
     for (int i = startIndex; i < size + startIndex; i++) {
       final int index = i % size;
@@ -226,7 +226,7 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
   @Override
   public Cell getNextCellHint(Cell currentCell) {
     boolean result = tracker.updateTracker(currentCell);
-    if (result == false) {
+    if (!result) {
       done = true;
       return null;
     }
@@ -574,25 +574,29 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
   }
 
   /**
-   * @return greater byte array than given (row) which satisfies the fuzzy rule if it exists, null
-   *         otherwise
+   * Find out the closes next byte array that satisfies fuzzy rule and is after the given one. In
+   * the reverse case it returns increased byte array to make sure that the proper row is selected
+   * next.
+   * @return byte array which is after the given row and which satisfies the fuzzy rule if it
+   *         exists, null otherwise
    */
   static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, int offset, int length,
     byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
-    // To find out the next "smallest" byte array that satisfies fuzzy rule and "greater" than
-    // the given one we do the following:
+    // To find out the closest next byte array that satisfies fuzzy rule and is after the given one
+    // we do the following:
     // 1. setting values on all "fixed" positions to the values from fuzzyKeyBytes
     // 2. if during the first step given row did not increase, then we increase the value at
     // the first "non-fixed" position (where it is not maximum already)
 
     // It is easier to perform this by using fuzzyKeyBytes copy and setting "non-fixed" position
     // values than otherwise.
-    byte[] result =
-      Arrays.copyOf(fuzzyKeyBytes, length > fuzzyKeyBytes.length ? length : fuzzyKeyBytes.length);
-    if (reverse && length > fuzzyKeyBytes.length) {
-      // we need trailing 0xff's instead of trailing 0x00's
-      for (int i = fuzzyKeyBytes.length; i < result.length; i++) {
-        result[i] = (byte) 0xFF;
+    byte[] result = Arrays.copyOf(fuzzyKeyBytes, Math.max(length, fuzzyKeyBytes.length));
+    if (reverse) {
+      // we need 0xff's instead of 0x00's
+      for (int i = 0; i < result.length; i++) {
+        if (result[i] == 0) {
+          result[i] = (byte) 0xFF;
+        }
       }
     }
     int toInc = -1;
@@ -638,7 +642,14 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
       }
     }
 
-    return reverse ? result : trimTrailingZeroes(result, fuzzyKeyMeta, toInc);
+    byte[] trailingZerosTrimmed = trimTrailingZeroes(result, fuzzyKeyMeta, toInc);
+    if (reverse) {
+      // In the reverse case we increase last non-max byte to make sure that the proper row is
+      // selected next.
+      return PrivateCellUtil.increaseLastNonMaxByte(trailingZerosTrimmed);
+    } else {
+      return trailingZerosTrimmed;
+    }
   }
 
   /**
