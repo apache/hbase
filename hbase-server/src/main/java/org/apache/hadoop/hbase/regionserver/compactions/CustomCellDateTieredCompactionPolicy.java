@@ -19,8 +19,10 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -94,6 +96,55 @@ public class CustomCellDateTieredCompactionPolicy extends DateTieredCompactionPo
       }
     }
     return boundaries;
+  }
+
+  @Override
+  public CompactionRequestImpl selectMinorCompaction(ArrayList<HStoreFile> candidateSelection,
+    boolean mayUseOffPeak, boolean mayBeStuck) throws IOException {
+    ArrayList<HStoreFile> filteredByPolicy = this.compactionPolicyPerWindow.
+      applyCompactionPolicy(candidateSelection, mayUseOffPeak, mayBeStuck);
+    return selectMajorCompaction(filteredByPolicy);
+  }
+
+  @Override
+  public boolean shouldPerformMajorCompaction(Collection<HStoreFile> filesToCompact)
+      throws  IOException{
+    long lowTimestamp = StoreUtils.getLowestTimestamp(filesToCompact);
+    long now = EnvironmentEdgeManager.currentTime();
+    if(isMajorCompactionTime(filesToCompact, now, lowTimestamp)) {
+      long cfTTL = this.storeConfigInfo.getStoreFileTtl();
+      int countLower = 0;
+      int countHigher = 0;
+      HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
+      for(HStoreFile f : filesToCompact) {
+        if(checkForTtl(cfTTL, f)){
+          return true;
+        }
+        if(isMajorOrBulkloadResult(f, now - lowTimestamp)){
+          return true;
+        }
+        byte[] timeRangeBytes = f.getMetadataValue(TIERING_CELL_TIME_RANGE);
+        TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(timeRangeBytes);
+        if(timeRangeTracker.getMin() < cutOffTimestamp) {
+          if (timeRangeTracker.getMax() > cutOffTimestamp) {
+            //Found at least one file crossing the cutOffTimestamp
+            return true;
+          } else {
+            countLower++;
+          }
+        } else {
+          countHigher++;
+        }
+        hdfsBlocksDistribution.add(f.getHDFSBlockDistribution());
+      }
+      //If we haven't found any files crossing the cutOffTimestamp, we have to check
+      //if there are at least more than one file on each tier and if so, perform compaction
+      if( countLower > 1 || countHigher > 1){
+        return true;
+      }
+      return checkBlockLocality(hdfsBlocksDistribution);
+    }
+    return false;
   }
 
 }
