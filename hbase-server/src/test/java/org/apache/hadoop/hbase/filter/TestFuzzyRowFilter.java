@@ -164,14 +164,20 @@ public class TestFuzzyRowFilter {
       new byte[] { 1, 0, 2, 0, 1 }, // current
       new byte[] { 1, 1, 0, 2 }); // expected next
 
-    assertNext(false, new byte[] { 1, 0, 1 }, new byte[] { -1, 0, -1 },
-      new byte[] { 1, (byte) 128, 2, 0, 1 }, new byte[] { 1, (byte) 129, 1 });
+    assertNext(false, new byte[] { 1, 0, 1 }, // fuzzy row
+      new byte[] { -1, 0, -1 }, // mask
+      new byte[] { 1, (byte) 128, 2, 0, 1 }, // current
+      new byte[] { 1, (byte) 129, 1 }); // expected next
 
-    assertNext(false, new byte[] { 0, 1, 0, 1 }, new byte[] { 0, -1, 0, -1 },
-      new byte[] { 5, 1, 0, 1 }, new byte[] { 5, 1, 1, 1 });
+    assertNext(false, new byte[] { 0, 1, 0, 1 }, // fuzzy row
+      new byte[] { 0, -1, 0, -1 }, // mask
+      new byte[] { 5, 1, 0, 1 }, // current
+      new byte[] { 5, 1, 1, 1 }); // expected next
 
-    assertNext(false, new byte[] { 0, 1, 0, 1 }, new byte[] { 0, -1, 0, -1 },
-      new byte[] { 5, 1, 0, 1, 1 }, new byte[] { 5, 1, 0, 1, 2 });
+    assertNext(false, new byte[] { 0, 1, 0, 1 }, // fuzzy row
+      new byte[] { 0, -1, 0, -1 }, // mask
+      new byte[] { 5, 1, 0, 1, 1 }, // current
+      new byte[] { 5, 1, 0, 1, 2 }); // expected next
 
     assertNext(false, new byte[] { 0, 1, 0, 0 }, // fuzzy row
       new byte[] { 0, -1, 0, 0 }, // mask
@@ -188,23 +194,35 @@ public class TestFuzzyRowFilter {
       new byte[] { 5, 1, (byte) 255, 0 }, // current
       new byte[] { 5, 1, (byte) 255, 1 }); // expected next
 
-    assertNext(false, new byte[] { 5, 1, 1, 0 }, new byte[] { -1, -1, 0, 0 },
-      new byte[] { 5, 1, (byte) 255, 1 }, new byte[] { 5, 1, (byte) 255, 2 });
+    assertNext(false, new byte[] { 5, 1, 1, 0 }, // fuzzy row
+      new byte[] { -1, -1, 0, 0 }, // mask
+      new byte[] { 5, 1, (byte) 255, 1 }, // current
+      new byte[] { 5, 1, (byte) 255, 2 }); // expected next
 
-    assertNext(false, new byte[] { 1, 1, 1, 1 }, new byte[] { -1, -1, 0, 0 },
-      new byte[] { 1, 1, 2, 2 }, new byte[] { 1, 1, 2, 3 });
+    assertNext(false, new byte[] { 1, 1, 1, 1 }, // fuzzy row
+      new byte[] { -1, -1, 0, 0 }, // mask
+      new byte[] { 1, 1, 2, 2 }, // current
+      new byte[] { 1, 1, 2, 3 }); // expected next
 
-    assertNext(false, new byte[] { 1, 1, 1, 1 }, new byte[] { -1, -1, 0, 0 },
-      new byte[] { 1, 1, 3, 2 }, new byte[] { 1, 1, 3, 3 });
+    assertNext(false, new byte[] { 1, 1, 1, 1 }, // fuzzy row
+      new byte[] { -1, -1, 0, 0 }, // mask
+      new byte[] { 1, 1, 3, 2 }, // current
+      new byte[] { 1, 1, 3, 3 }); // expected next
 
-    assertNext(false, new byte[] { 1, 1, 1, 1 }, new byte[] { 0, 0, 0, 0 },
-      new byte[] { 1, 1, 2, 3 }, new byte[] { 1, 1, 2, 4 });
+    assertNext(false, new byte[] { 1, 1, 1, 1 }, // fuzzy row
+      new byte[] { 0, 0, 0, 0 }, // mask
+      new byte[] { 1, 1, 2, 3 }, // current
+      new byte[] { 1, 1, 2, 4 }); // expected next
 
-    assertNext(false, new byte[] { 1, 1, 1, 1 }, new byte[] { 0, 0, 0, 0 },
-      new byte[] { 1, 1, 3, 2 }, new byte[] { 1, 1, 3, 3 });
+    assertNext(false, new byte[] { 1, 1, 1, 1 }, // fuzzy row
+      new byte[] { 0, 0, 0, 0 }, // mask
+      new byte[] { 1, 1, 3, 2 }, // current
+      new byte[] { 1, 1, 3, 3 }); // expected next
 
-    assertNext(false, new byte[] { 1, 1, 0, 0 }, new byte[] { -1, -1, 0, 0 },
-      new byte[] { 0, 1, 3, 2 }, new byte[] { 1, 1 });
+    assertNext(false, new byte[] { 1, 1, 0, 0 }, // fuzzy row
+      new byte[] { -1, -1, 0, 0 }, // mask
+      new byte[] { 0, 1, 3, 2 }, // current
+      new byte[] { 1, 1 }); // expected next
 
     // No next for this one
     Assert.assertNull(FuzzyRowFilter.getNextForFuzzyRule(new byte[] { 2, 3, 1, 1, 1 }, // row to
@@ -221,94 +239,100 @@ public class TestFuzzyRowFilter {
 
   @Test
   public void testGetNextForFuzzyRuleReverse() {
+    // In these reverse cases for the next row key the last non-max byte should be increased
+    // to make sure that the proper row is selected next by the scanner.
+    // For example:
+    // fuzzy row: 0,1,2
+    // mask: 0,-1,-1
+    // current: 1,2,1,0,1
+    // next would be: 1,1,2
+    // this has to be increased to 1,1,3 to make sure that the proper row is selected next.
     assertNext(true, new byte[] { 0, 1, 2 }, // fuzzy row
       new byte[] { 0, -1, -1 }, // mask
       new byte[] { 1, 2, 1, 0, 1 }, // current
-      // TODO: should be {1, 1, 3} ?
-      new byte[] { 1, 1, 2, (byte) 0xFF, (byte) 0xFF }); // expected next
+      new byte[] { 1, 1, 3 }); // expected next
 
     assertNext(true, new byte[] { 0, 1, 0, 2, 0 }, // fuzzy row
       new byte[] { 0, -1, 0, -1, 0 }, // mask
       new byte[] { 1, 2, 1, 3, 1 }, // current
-      // TODO: should be {1, 1, 1, 3} ?
-      new byte[] { 1, 1, 0, 2, 0 }); // expected next
+      new byte[] { 1, 1, (byte) 255, 3 }); // expected next
 
-    assertNext(true, new byte[] { 1, 0, 1 }, new byte[] { -1, 0, -1 },
-      new byte[] { 1, (byte) 128, 2, 0, 1 },
-      // TODO: should be {1, (byte) 128, 2} ?
-      new byte[] { 1, (byte) 128, 1, (byte) 0xFF, (byte) 0xFF });
+    assertNext(true, new byte[] { 1, 0, 1 }, // fuzzy row
+      new byte[] { -1, 0, -1 }, // mask
+      new byte[] { 1, (byte) 128, 2, 0, 1 }, // current
+      new byte[] { 1, (byte) 128, 2 }); // expected next
 
-    assertNext(true, new byte[] { 0, 1, 0, 1 }, new byte[] { 0, -1, 0, -1 },
-      new byte[] { 5, 1, 0, 2, 1 },
-      // TODO: should be {5, 1, 0, 2} ?
-      new byte[] { 5, 1, 0, 1, (byte) 0xFF });
+    assertNext(true, new byte[] { 0, 1, 0, 1 }, // fuzzy row
+      new byte[] { 0, -1, 0, -1 }, // mask
+      new byte[] { 5, 1, 0, 2, 1 }, // current
+      new byte[] { 5, 1, 0, 2 }); // expected next
 
     assertNext(true, new byte[] { 0, 1, 0, 0 }, // fuzzy row
       new byte[] { 0, -1, 0, 0 }, // mask
       new byte[] { 5, 1, (byte) 255, 1 }, // current
-      new byte[] { 5, 1, (byte) 255, 0 }); // expected next
+      new byte[] { 5, 1, (byte) 255, 1 }); // expected next
 
     assertNext(true, new byte[] { 0, 1, 0, 1 }, // fuzzy row
       new byte[] { 0, -1, 0, -1 }, // mask
       new byte[] { 5, 1, 0, 1 }, // current
-      new byte[] { 4, 1, (byte) 255, 1 }); // expected next
+      new byte[] { 4, 1, (byte) 255, 2 }); // expected next
 
     assertNext(true, new byte[] { 0, 1, 0, 1 }, // fuzzy row
       new byte[] { 0, -1, 0, -1 }, // mask
       new byte[] { 5, 1, (byte) 255, 0 }, // current
-      new byte[] { 5, 1, (byte) 254, 1 }); // expected next
+      new byte[] { 5, 1, (byte) 254, 2 }); // expected next
 
-    assertNext(true, new byte[] { 1, 1, 0, 0 }, new byte[] { -1, -1, 0, 0 },
-      new byte[] { 2, 1, 3, 2 },
-      // TODO: should be {1, 0} ?
-      new byte[] { 1, 1, 0, 0 });
+    assertNext(true, new byte[] { 1, 1, 0, 0 }, // fuzzy row
+      new byte[] { -1, -1, 0, 0 }, // mask
+      new byte[] { 2, 1, 3, 2 }, // current
+      new byte[] { 1, 2 }); // expected next
 
     assertNext(true, new byte[] { 1, 0, 1 }, // fuzzy row
       new byte[] { -1, 0, -1 }, // mask
       new byte[] { 2, 3, 1, 1, 1 }, // row to check
-      // TODO: should be {1, (byte) 0xFF, 2} ?
-      new byte[] { 1, 0, 1, (byte) 0xFF, (byte) 0xFF });
+      new byte[] { 1, (byte) 255, 2 }); // expected next
 
-    assertNext(true, new byte[] { 1, 1, 0, 3 }, new byte[] { -1, -1, 0, -1 },
-      new byte[] { 1, (byte) 245, 1, 3, 0 },
-      // TODO: should be {1, 1, (byte) 255, 4} ?
-      new byte[] { 1, 1, 0, 3, (byte) 0xFF });
+    assertNext(true, new byte[] { 1, 1, 0, 3 }, // fuzzy row
+      new byte[] { -1, -1, 0, -1 }, // mask
+      new byte[] { 1, (byte) 245, 1, 3, 0 }, // row to check
+      new byte[] { 1, 1, (byte) 255, 4 }); // expected next
 
-    assertNext(true, new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 },
-      new byte[] { 1, 3, 1, 3, 0 },
-      // TODO: should be 1, 2, (byte) 255, 4 ?
-      new byte[] { 1, 2, 0, 3, (byte) 0xFF });
+    assertNext(true, new byte[] { 1, 2, 0, 3 }, // fuzzy row
+      new byte[] { -1, -1, 0, -1 }, // mask
+      new byte[] { 1, 3, 1, 3, 0 }, // row to check
+      new byte[] { 1, 2, (byte) 255, 4 }); // expected next
 
-    assertNext(true, new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 },
-      new byte[] { 2, 1, 1, 1, 0 },
-      // TODO: should be {1, 2, (byte) 255, 4} ?
-      new byte[] { 1, 2, 0, 3, (byte) 0xFF });
+    assertNext(true, new byte[] { 1, 2, 0, 3 }, // fuzzy row
+      new byte[] { -1, -1, 0, -1 }, // mask
+      new byte[] { 2, 1, 1, 1, 0 }, // row to check
+      new byte[] { 1, 2, (byte) 255, 4 }); // expected next
 
-    assertNext(true,
-      // TODO: should be null?
-      new byte[] { 1, 0, 1 }, new byte[] { -1, 0, -1 }, new byte[] { 1, (byte) 128, 2 },
-      new byte[] { 1, (byte) 128, 1 });
+    assertNext(true, new byte[] { 1, 0, 1 }, // fuzzy row
+      new byte[] { -1, 0, -1 }, // mask
+      new byte[] { 1, (byte) 128, 2 }, // row to check
+      new byte[] { 1, (byte) 128, 2 }); // expected next
 
-    assertNext(true,
-      // TODO: should be null?
-      new byte[] { 0, 1, 0, 1 }, new byte[] { 0, -1, 0, -1 }, new byte[] { 5, 1, 0, 2 },
-      new byte[] { 5, 1, 0, 1 });
+    assertNext(true, new byte[] { 0, 1, 0, 1 }, // fuzzy row
+      new byte[] { 0, -1, 0, -1 }, // mask
+      new byte[] { 5, 1, 0, 2 }, // row to check
+      new byte[] { 5, 1, 0, 2 }); // expected next
 
-    assertNext(true,
-      // TODO: should be null?
-      new byte[] { 5, 1, 1, 0 }, new byte[] { -1, -1, 0, 0 }, new byte[] { 5, 1, (byte) 0xFF, 1 },
-      new byte[] { 5, 1, (byte) 0xFF, 0 });
+    assertNext(true, new byte[] { 5, 1, 1, 0 }, // fuzzy row
+      new byte[] { -1, -1, 0, 0 }, // mask
+      new byte[] { 5, 1, (byte) 0xFF, 1 }, // row to check
+      new byte[] { 5, 1, (byte) 0xFF, 1 }); // expected next
 
-    assertNext(true,
-      // TODO: should be null?
-      new byte[] { 1, 1, 1, 1 }, new byte[] { -1, -1, 0, 0 }, new byte[] { 1, 1, 2, 2 },
-      new byte[] { 1, 1, 2, 1 });
+    assertNext(true, new byte[] { 1, 1, 1, 1 }, // fuzzy row
+      new byte[] { -1, -1, 0, 0 }, // mask
+      new byte[] { 1, 1, 2, 2 }, // row to check
+      new byte[] { 1, 1, 2, 2 }); // expected next
 
-    assertNext(true,
-      // TODO: should be null?
-      new byte[] { 1, 1, 1, 1 }, new byte[] { 0, 0, 0, 0 }, new byte[] { 1, 1, 2, 3 },
-      new byte[] { 1, 1, 2, 2 });
+    assertNext(true, new byte[] { 1, 1, 1, 1 }, // fuzzy row
+      new byte[] { 0, 0, 0, 0 }, // mask
+      new byte[] { 1, 1, 2, 3 }, // row to check
+      new byte[] { 1, 1, 2, 3 }); // expected next
 
+    // no before cell than current which satisfies the fuzzy row -> null
     Assert.assertNull(FuzzyRowFilter.getNextForFuzzyRule(true, new byte[] { 1, 1, 1, 3, 0 },
       new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
   }
