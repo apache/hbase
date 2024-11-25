@@ -31,4 +31,15 @@ public class NamespaceOverride {
   public String getSinkNamespace() {
     return sinkNamespace;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    } else if (!(o instanceof NamespaceOverride)) {
+      return false;
+    }
+    NamespaceOverride other = (NamespaceOverride) o;
+    return other.getSinkNamespace().equals(getSinkNamespace());
+  }
 }
