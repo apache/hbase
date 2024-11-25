@@ -1148,7 +1148,7 @@ benefit of NOT provoking GC.
 From HBase 2.0.0 onwards, the notions of L1 and L2 have been deprecated. When BucketCache is turned on, the DATA blocks will always go to BucketCache and INDEX/BLOOM blocks go to on heap LRUBlockCache. `cacheDataInL1` support has been removed.
 ====
 
-[[bc.deloy.modes]]
+[[bc.deploy.modes]]
 ====== BucketCache Deploy Modes
 The BucketCache Block Cache can be deployed _offheap_, _file_ or _mmaped_ file mode.
 
