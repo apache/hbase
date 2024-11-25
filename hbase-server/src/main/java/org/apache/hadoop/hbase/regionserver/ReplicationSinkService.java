@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
@@ -46,6 +48,6 @@ public interface ReplicationSinkService extends ReplicationService {
    */
   void replicateLogEntries(List<WALEntry> entries, ExtendedCellScanner cells,
     String replicationClusterId, String sourceBaseNamespaceDirPath,
-    String sourceHFileArchiveDirPath, Map<String, String> namespaceOverrides,
-    Map<TableName, TableName> tableNameOverrides) throws IOException;
+    String sourceHFileArchiveDirPath, Map<String, NamespaceOverride> namespaceOverrides,
+    Map<TableName, TableNameOverride> tableNameOverrides) throws IOException;
 }

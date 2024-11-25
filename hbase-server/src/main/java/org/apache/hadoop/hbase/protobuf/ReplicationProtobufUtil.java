@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 import org.apache.hadoop.hbase.io.SizedExtendedCellScanner;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.util.Pair;
@@ -63,8 +65,9 @@ public class ReplicationProtobufUtil {
    */
   public static CompletableFuture<ReplicateWALEntryResponse> replicateWALEntry(
     AsyncRegionServerAdmin admin, Entry[] entries, String replicationClusterId,
-    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir, Map<String, String> namespaceOverrides,
-    Map<TableName, TableName> tableNameOverrides, int timeout) {
+    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir,
+    Map<String, NamespaceOverride> namespaceOverrides,
+    Map<TableName, TableNameOverride> tableNameOverrides, int timeout) {
     Pair<ReplicateWALEntryRequest, ExtendedCellScanner> p =
       buildReplicateWALEntryRequest(entries, null, replicationClusterId, sourceBaseNamespaceDir,
         sourceHFileArchiveDir, namespaceOverrides, tableNameOverrides);
@@ -95,8 +98,9 @@ public class ReplicationProtobufUtil {
    */
   public static Pair<ReplicateWALEntryRequest, ExtendedCellScanner> buildReplicateWALEntryRequest(
     final Entry[] entries, byte[] encodedRegionName, String replicationClusterId,
-    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir, Map<String, String> namespaceOverrides,
-    Map<TableName, TableName> tableNameOverrides) {
+    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir,
+    Map<String, NamespaceOverride> namespaceOverrides,
+    Map<TableName, TableNameOverride> tableNameOverrides) {
     // Accumulate all the Cells seen in here.
     List<List<? extends ExtendedCell>> allCells = new ArrayList<>(entries.length);
     int size = 0;
@@ -140,25 +144,36 @@ public class ReplicationProtobufUtil {
       builder.setSourceHFileArchiveDirPath(sourceHFileArchiveDir.toString());
     }
     if (namespaceOverrides != null) {
+      ReplicationProtos.NamespaceOverrideMapping.Builder namespaceOverrideMappingBuilder =
+        ReplicationProtos.NamespaceOverrideMapping.newBuilder();
       ReplicationProtos.NamespaceOverride.Builder namespaceOverrideBuilder =
         ReplicationProtos.NamespaceOverride.newBuilder();
       int i = 0;
-      for (Map.Entry<String, String> entry : namespaceOverrides.entrySet()) {
+      for (Map.Entry<String, NamespaceOverride> entry : namespaceOverrides.entrySet()) {
         namespaceOverrideBuilder.clear();
-        builder.setNamespaceOverrides(i, namespaceOverrideBuilder.setNamespace(entry.getKey())
-          .setSinkNamespace(entry.getValue()).build());
+        namespaceOverrideBuilder.setSinkNamespace(entry.getValue().getSinkNamespace());
+
+        namespaceOverrideMappingBuilder.clear();
+        builder.setNamespaceOverrides(i, namespaceOverrideMappingBuilder
+          .setNamespace(entry.getKey()).setOverride(namespaceOverrideBuilder.build()).build());
         i++;
       }
     }
     if (tableNameOverrides != null) {
+      ReplicationProtos.TableNameOverrideMapping.Builder tableOverrideMappingBuilder =
+        ReplicationProtos.TableNameOverrideMapping.newBuilder();
       ReplicationProtos.TableNameOverride.Builder tableOverrideBuilder =
         ReplicationProtos.TableNameOverride.newBuilder();
       int i = 0;
-      for (Map.Entry<TableName, TableName> entry : tableNameOverrides.entrySet()) {
+      for (Map.Entry<TableName, TableNameOverride> entry : tableNameOverrides.entrySet()) {
         tableOverrideBuilder.clear();
+        tableOverrideBuilder
+          .setSinkTableName(ProtobufUtil.toProtoTableName(entry.getValue().getSinkTableName()));
+
+        tableOverrideMappingBuilder.clear();
         builder.setTableNameOverrides(i,
-          tableOverrideBuilder.setTableName(ProtobufUtil.toProtoTableName(entry.getKey()))
-            .setSinkTableName(ProtobufUtil.toProtoTableName(entry.getValue())).build());
+          tableOverrideMappingBuilder.setTableName(ProtobufUtil.toProtoTableName(entry.getKey()))
+            .setOverride(tableOverrideBuilder.build()).build());
         i++;
       }
     }

@@ -31,6 +31,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Stream;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 
 /**
  * A helper tool for generating random {@link ReplicationPeerConfig} and do assertion.
@@ -60,23 +62,24 @@ public final class ReplicationPeerConfigTestUtil {
     return map;
   }
 
-  private static Map<TableName, TableName> randTableNameOverrides(Random rand) {
+  private static Map<TableName, TableNameOverride> randTableNameOverrides(Random rand) {
     int size = rand.nextInt(5);
-    Map<TableName, TableName> map = new HashMap<>(size);
+    Map<TableName, TableNameOverride> map = new HashMap<>(size);
     for (int i = 0; i < size; i++) {
       TableName source = TableName.valueOf(Long.toHexString(rand.nextLong()));
-      TableName sink = TableName.valueOf(Long.toHexString(rand.nextLong()));
+      TableNameOverride sink =
+        new TableNameOverride(TableName.valueOf(Long.toHexString(rand.nextLong())));
       map.put(source, sink);
     }
     return map;
   }
 
-  private static Map<String, String> randNamespaceOverrides(Random rand) {
+  private static Map<String, NamespaceOverride> randNamespaceOverrides(Random rand) {
     int size = rand.nextInt(5);
-    Map<String, String> map = new HashMap<>(size);
+    Map<String, NamespaceOverride> map = new HashMap<>(size);
     for (int i = 0; i < size; i++) {
       String source = Long.toHexString(rand.nextLong());
-      String sink = Long.toHexString(rand.nextLong());
+      NamespaceOverride sink = new NamespaceOverride(Long.toHexString(rand.nextLong()));
       map.put(source, sink);
     }
     return map;
@@ -125,8 +128,8 @@ public final class ReplicationPeerConfigTestUtil {
     });
   }
 
-  private static void assertNamespaceOverridesMapEquals(Map<String, String> expected,
-    Map<String, String> actual) {
+  private static void assertNamespaceOverridesMapEquals(Map<String, NamespaceOverride> expected,
+    Map<String, NamespaceOverride> actual) {
     if (expected == null || expected.size() == 0) {
       assertTrue(actual == null || actual.size() == 0);
       return;
@@ -134,8 +137,8 @@ public final class ReplicationPeerConfigTestUtil {
     assertEquals(expected, actual);
   }
 
-  private static void assertTableOverridesMapEquals(Map<TableName, TableName> expected,
-    Map<TableName, TableName> actual) {
+  private static void assertTableOverridesMapEquals(Map<TableName, TableNameOverride> expected,
+    Map<TableName, TableNameOverride> actual) {
     if (expected == null || expected.size() == 0) {
       assertTrue(actual == null || actual.size() == 0);
       return;

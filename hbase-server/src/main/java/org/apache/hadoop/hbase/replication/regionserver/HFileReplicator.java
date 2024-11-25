@@ -43,6 +43,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -83,8 +85,8 @@ public class HFileReplicator implements Closeable {
 
   private Configuration sourceClusterConf;
   private String sourceBaseNamespaceDirPath;
-  private Map<String, String> namespaceOverrides;
-  private Map<TableName, TableName> tableNameOverrides;
+  private Map<String, NamespaceOverride> namespaceOverrides;
+  private Map<TableName, TableNameOverride> tableNameOverrides;
   private String sourceHFileArchiveDirPath;
   private Map<String, List<Pair<byte[], List<String>>>> sourceTableToBulkLoadHFileMap;
   private FileSystem sinkFs;
@@ -99,8 +101,8 @@ public class HFileReplicator implements Closeable {
   private List<String> sourceClusterIds;
 
   public HFileReplicator(Configuration sourceClusterConf, String sourceBaseNamespaceDirPath,
-    String sourceHFileArchiveDirPath, Map<String, String> namespaceOverrides,
-    Map<TableName, TableName> tableNameOverrides,
+    String sourceHFileArchiveDirPath, Map<String, NamespaceOverride> namespaceOverrides,
+    Map<TableName, TableNameOverride> tableNameOverrides,
     Map<String, List<Pair<byte[], List<String>>>> sourceTableQueueMap, Configuration conf,
     AsyncClusterConnection connection, List<String> sourceClusterIds) throws IOException {
     this.sourceClusterConf = sourceClusterConf;

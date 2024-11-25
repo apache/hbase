@@ -98,42 +98,55 @@ public final class ReplicationPeerConfigUtil {
     return tableCFList.toArray(new ReplicationProtos.TableCF[tableCFList.size()]);
   }
 
-  public static ReplicationProtos.TableNameOverride[]
-    convertTableOverrides(Map<TableName, TableName> tableNameOverrides) {
+  public static ReplicationProtos.TableNameOverrideMapping[]
+    convertTableOverrides(Map<TableName, TableNameOverride> tableNameOverrides) {
     if (tableNameOverrides == null) {
       return null;
     }
-    List<ReplicationProtos.TableNameOverride> tableNameOverridesList =
+    List<ReplicationProtos.TableNameOverrideMapping> tableNameOverridesList =
       new ArrayList<>(tableNameOverrides.entrySet().size());
+    ReplicationProtos.TableNameOverrideMapping.Builder tableNameOverrideMappingBuilder =
+      ReplicationProtos.TableNameOverrideMapping.newBuilder();
     ReplicationProtos.TableNameOverride.Builder tableNameOverrideBuilder =
       ReplicationProtos.TableNameOverride.newBuilder();
-    for (Map.Entry<TableName, TableName> entry : tableNameOverrides.entrySet()) {
+
+    for (Map.Entry<TableName, TableNameOverride> entry : tableNameOverrides.entrySet()) {
       tableNameOverrideBuilder.clear();
-      tableNameOverrideBuilder.setTableName(ProtobufUtil.toProtoTableName(entry.getKey()));
-      tableNameOverrideBuilder.setSinkTableName(ProtobufUtil.toProtoTableName(entry.getValue()));
-      tableNameOverridesList.add(tableNameOverrideBuilder.build());
+      tableNameOverrideBuilder
+        .setSinkTableName(ProtobufUtil.toProtoTableName(entry.getValue().getSinkTableName()));
+
+      tableNameOverrideMappingBuilder.clear();
+      tableNameOverrideMappingBuilder.setTableName(ProtobufUtil.toProtoTableName(entry.getKey()));
+      tableNameOverrideMappingBuilder.setOverride(tableNameOverrideBuilder.build());
+      tableNameOverridesList.add(tableNameOverrideMappingBuilder.build());
     }
     return tableNameOverridesList
-      .toArray(new ReplicationProtos.TableNameOverride[tableNameOverridesList.size()]);
+      .toArray(new ReplicationProtos.TableNameOverrideMapping[tableNameOverridesList.size()]);
   }
 
-  private static ReplicationProtos.NamespaceOverride[]
-    convertNamespaceOverrides(Map<String, String> namespaceOverrides) {
+  private static ReplicationProtos.NamespaceOverrideMapping[]
+    convertNamespaceOverrides(Map<String, NamespaceOverride> namespaceOverrides) {
     if (namespaceOverrides == null) {
       return null;
     }
-    List<ReplicationProtos.NamespaceOverride> namespaceOverridesList =
+    List<ReplicationProtos.NamespaceOverrideMapping> namespaceOverridesList =
       new ArrayList<>(namespaceOverrides.entrySet().size());
+    ReplicationProtos.NamespaceOverrideMapping.Builder namespaceOverrideMappingBuilder =
+      ReplicationProtos.NamespaceOverrideMapping.newBuilder();
     ReplicationProtos.NamespaceOverride.Builder namespaceOverrideBuilder =
       ReplicationProtos.NamespaceOverride.newBuilder();
-    for (Map.Entry<String, String> entry : namespaceOverrides.entrySet()) {
+
+    for (Map.Entry<String, NamespaceOverride> entry : namespaceOverrides.entrySet()) {
       namespaceOverrideBuilder.clear();
-      namespaceOverrideBuilder.setNamespace(entry.getKey());
-      namespaceOverrideBuilder.setSinkNamespace(entry.getValue());
-      namespaceOverridesList.add(namespaceOverrideBuilder.build());
+      namespaceOverrideBuilder.setSinkNamespace(entry.getValue().getSinkNamespace());
+
+      namespaceOverrideMappingBuilder.clear();
+      namespaceOverrideMappingBuilder.setNamespace(entry.getKey());
+      namespaceOverrideMappingBuilder.setOverride(namespaceOverrideBuilder.build());
+      namespaceOverridesList.add(namespaceOverrideMappingBuilder.build());
     }
     return namespaceOverridesList
-      .toArray(new ReplicationProtos.NamespaceOverride[namespaceOverridesList.size()]);
+      .toArray(new ReplicationProtos.NamespaceOverrideMapping[namespaceOverridesList.size()]);
   }
 
   public static String convertToString(Map<TableName, ? extends Collection<String>> tableCfs) {
@@ -290,16 +303,17 @@ public final class ReplicationPeerConfigUtil {
   /**
    * Convert tableNameOverrides Object to Map.
    */
-  public static Map<TableName, TableName>
-    convert2Map(ReplicationProtos.TableNameOverride[] tableNameOverrides) {
+  public static Map<TableName, TableNameOverride>
+    convert2Map(ReplicationProtos.TableNameOverrideMapping[] tableNameOverrides) {
     if (tableNameOverrides == null || tableNameOverrides.length == 0) {
       return null;
     }
-    Map<TableName, TableName> tableNameOverridesMap = new HashMap<>();
+    Map<TableName, TableNameOverride> tableNameOverridesMap = new HashMap<>();
     for (int i = 0, n = tableNameOverrides.length; i < n; i++) {
-      ReplicationProtos.TableNameOverride override = tableNameOverrides[i];
-      tableNameOverridesMap.put(ProtobufUtil.toTableName(override.getTableName()),
-        ProtobufUtil.toTableName(override.getSinkTableName()));
+      ReplicationProtos.TableNameOverrideMapping tableNameOverrideMapping = tableNameOverrides[i];
+      tableNameOverridesMap.put(ProtobufUtil.toTableName(tableNameOverrideMapping.getTableName()),
+        new TableNameOverride(
+          ProtobufUtil.toTableName(tableNameOverrideMapping.getOverride().getSinkTableName())));
     }
 
     return tableNameOverridesMap;
@@ -308,15 +322,16 @@ public final class ReplicationPeerConfigUtil {
   /**
    * Convert namespaceOverrides Object to Map.
    */
-  public static Map<String, String>
-    convert2Map(ReplicationProtos.NamespaceOverride[] namespaceOverrides) {
+  public static Map<String, NamespaceOverride>
+    convert2Map(ReplicationProtos.NamespaceOverrideMapping[] namespaceOverrides) {
     if (namespaceOverrides == null || namespaceOverrides.length == 0) {
       return null;
     }
-    Map<String, String> namespaceOverridesMap = new HashMap<>();
+    Map<String, NamespaceOverride> namespaceOverridesMap = new HashMap<>();
     for (int i = 0, n = namespaceOverrides.length; i < n; i++) {
-      ReplicationProtos.NamespaceOverride override = namespaceOverrides[i];
-      namespaceOverridesMap.put(override.getNamespace(), override.getSinkNamespace());
+      ReplicationProtos.NamespaceOverrideMapping namespaceOverride = namespaceOverrides[i];
+      namespaceOverridesMap.put(namespaceOverride.getNamespace(),
+        new NamespaceOverride(namespaceOverride.getOverride().getSinkNamespace()));
     }
 
     return namespaceOverridesMap;
@@ -373,8 +388,9 @@ public final class ReplicationPeerConfigUtil {
       builder.setTableCFsMap(tableCFsMap);
     }
 
-    Map<TableName, TableName> tableNameOverrides = convert2Map(peer.getTableNameOverridesList()
-      .toArray(new ReplicationProtos.TableNameOverride[peer.getTableNameOverridesCount()]));
+    Map<TableName, TableNameOverride> tableNameOverrides =
+      convert2Map(peer.getTableNameOverridesList().toArray(
+        new ReplicationProtos.TableNameOverrideMapping[peer.getTableNameOverridesCount()]));
     if (tableNameOverrides != null) {
       builder.setTableNameOverrides(tableNameOverrides);
     }
@@ -385,8 +401,8 @@ public final class ReplicationPeerConfigUtil {
         namespacesList.stream().map(ByteString::toStringUtf8).collect(Collectors.toSet()));
     }
 
-    Map<String, String> namespaceOverrides = convert2Map(peer.getNamespaceOverridesList()
-      .toArray(new ReplicationProtos.NamespaceOverride[peer.getNamespaceOverridesCount()]));
+    Map<String, NamespaceOverride> namespaceOverrides = convert2Map(peer.getNamespaceOverridesList()
+      .toArray(new ReplicationProtos.NamespaceOverrideMapping[peer.getNamespaceOverridesCount()]));
     if (namespaceOverrides != null) {
       builder.setNamespaceOverrides(namespaceOverrides);
     }
@@ -449,7 +465,7 @@ public final class ReplicationPeerConfigUtil {
       }
     }
 
-    ReplicationProtos.TableNameOverride[] tableNameOverrides =
+    ReplicationProtos.TableNameOverrideMapping[] tableNameOverrides =
       convertTableOverrides(peerConfig.getTableNameOverrides());
     if (tableNameOverrides != null) {
       for (int i = 0; i < tableNameOverrides.length; i++) {
@@ -464,7 +480,7 @@ public final class ReplicationPeerConfigUtil {
       }
     }
 
-    ReplicationProtos.NamespaceOverride[] namespaceOverrides =
+    ReplicationProtos.NamespaceOverrideMapping[] namespaceOverrides =
       convertNamespaceOverrides(peerConfig.getNamespaceOverrides());
     if (namespaceOverrides != null) {
       for (int i = 0; i < namespaceOverrides.length; i++) {

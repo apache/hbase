@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -139,7 +141,7 @@ public class ReplicationPeerImpl implements ReplicationPeer, ConfigurationObserv
   }
 
   @Override
-  public Map<TableName, TableName> getTableNameOverrides() {
+  public Map<TableName, TableNameOverride> getTableNameOverrides() {
     return this.peerConfig.getTableNameOverrides();
   }
 
@@ -149,7 +151,7 @@ public class ReplicationPeerImpl implements ReplicationPeer, ConfigurationObserv
   }
 
   @Override
-  public Map<String, String> getNamespaceOverrides() {
+  public Map<String, NamespaceOverride> getNamespaceOverrides() {
     return this.peerConfig.getNamespaceOverrides();
   }
 
