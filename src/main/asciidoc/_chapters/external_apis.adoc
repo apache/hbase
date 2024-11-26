@@ -184,6 +184,13 @@ creation or mutation, and `DELETE` for deletion.
 |Description
 |Example
 
+|/_table_/exists
+|GET
+|Returns if the specified table exists.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/exists"
+
 |/_table_/schema
 |GET
 |Describe the schema of the specified table.
