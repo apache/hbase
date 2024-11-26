@@ -134,7 +134,12 @@ public final class ReplicationPeerConfigTestUtil {
       assertTrue(actual == null || actual.size() == 0);
       return;
     }
-    assertEquals(expected, actual);
+    for (String namespace : expected.keySet()) {
+      assertTrue(actual.containsKey(namespace));
+      assertEquals(expected.get(namespace).getSinkNamespace(),
+        actual.get(namespace).getSinkNamespace());
+    }
+    assertSetEquals(expected.keySet(), actual.keySet());
   }
 
   private static void assertTableOverridesMapEquals(Map<TableName, TableNameOverride> expected,
@@ -143,7 +148,14 @@ public final class ReplicationPeerConfigTestUtil {
       assertTrue(actual == null || actual.size() == 0);
       return;
     }
-    assertEquals(expected, actual);
+    for (TableName tableName : expected.keySet()) {
+      assertTrue(actual.containsKey(tableName));
+      assertEquals(expected.get(tableName).getSinkTableName(),
+        actual.get(tableName).getSinkTableName());
+    }
+    for (TableName tableName : actual.keySet()) {
+      assertTrue(expected.containsKey(tableName));
+    }
   }
 
   public static void assertConfigEquals(ReplicationPeerConfig expected,
