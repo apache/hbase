@@ -276,6 +276,20 @@ curl -vi -X GET \
   -H "Encoding: base64" \
    "http://example.com:8000/users/cm93MQ/Y2Y6YQ/"
 
+|/_table_/_row_prefix_*/_column_
+|GET
+|Get a combination of rows which matches the given row prefix and column family. Returned values are Base-64 encoded.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/row*/cf"
+
+|/_table_/_row_prefix_*/_column:qualifier_
+|GET
+|Get a combination of rows which matches the given row prefix, column family and qualifier. Returned values are Base-64 encoded.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/row*/cf"
+
 |/_table_/multiget?row=_row_&row=_row_/_column:qualifier_&row=...
 |GET
 |Multi-Get a combination of rows/columns. Values are Base-64 encoded.
