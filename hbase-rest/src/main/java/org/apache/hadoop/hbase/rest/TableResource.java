@@ -120,7 +120,6 @@ public class TableResource extends ResourceBase {
     return new RowResource(this, suffixglobbingspec, versions, check, returnResult, keyEncoding);
   }
 
-  // TODO document
   // FIXME handle binary rowkeys (like put and delete does)
   @Path("{scanspec: .*[*]$}")
   public TableScanResource getScanResource(final @PathParam("scanspec") String scanSpec,
