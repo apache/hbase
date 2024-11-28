@@ -70,7 +70,7 @@ class AsyncRegionLocator {
 
   AsyncRegionLocator(AsyncConnectionImpl conn, HashedWheelTimer retryTimer) {
     this.conn = conn;
-    this.metaRegionLocator = new AsyncMetaRegionLocator(conn.registry);
+    this.metaRegionLocator = new AsyncMetaRegionLocator(conn);
     this.nonMetaRegionLocator = new AsyncNonMetaRegionLocator(conn);
     this.retryTimer = retryTimer;
   }

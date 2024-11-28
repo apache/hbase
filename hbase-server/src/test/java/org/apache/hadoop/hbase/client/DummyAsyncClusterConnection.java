@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.FailedServers;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -167,6 +168,11 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
   @Override
   public CompletableFuture<Void> replicate(RegionInfo replica, List<Entry> entries, int numRetries,
     long rpcTimeoutNs, long operationTimeoutNs) {
+    return null;
+  }
+
+  @Override
+  public FailedServers getFailedServers() {
     return null;
   }
 }

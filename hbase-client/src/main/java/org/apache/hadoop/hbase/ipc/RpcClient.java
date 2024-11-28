@@ -98,4 +98,9 @@ public interface RpcClient extends Closeable {
    * cell blocks.
    */
   boolean hasCellBlockSupport();
+
+  /**
+   * Returns {@link FailedServers} which contains the list of recently failed servers
+   */
+  FailedServers getFailedServers();
 }

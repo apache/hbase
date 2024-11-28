@@ -35,8 +35,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
-import java.net.ConnectException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -65,7 +63,6 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -78,7 +75,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
@@ -582,14 +578,16 @@ public class TestAsyncNonMetaRegionLocator {
       // due to timing issue when CatalogReplicaMode is LOAD_BALANCE
       Thread.sleep(100);
 
-      // CallTimeoutException on a single region
+      // One region server is added to FailedServers
       HRegionLocation locOnError =
         locator.getRegionLocationInCache(TABLE_NAME, allRegions1.get(0).getStartKey())
           .getDefaultRegionLocation();
-      locator.updateCachedLocationOnError(locOnError, new CallTimeoutException("test"));
-      ServerName cacheRemovedServer = locOnError.getServerName();
+      ServerName failedServer = locOnError.getServerName();
+      Throwable exception = new CallTimeoutException("test");
+      conn.getFailedServers().addToFailedServers(failedServer.getAddress(), exception);
+      locator.updateCachedLocationOnError(locOnError, exception);
 
-      // But all location cache on the same server should be removed
+      // All location cache on the failed server should be removed
       int cacheRemovedCount = 0;
       int cacheRemainedCount = 0;
       for (Map.Entry<TableName, List<RegionInfo>> entry : tableToRegions.entrySet()) {
@@ -602,7 +600,7 @@ public class TestAsyncNonMetaRegionLocator {
           }
 
           HRegionLocation loc = locs.getDefaultRegionLocation();
-          assertNotEquals(cacheRemovedServer, loc.getServerName());
+          assertNotEquals(failedServer, loc.getServerName());
           cacheRemainedCount++;
         }
       }
@@ -618,22 +616,23 @@ public class TestAsyncNonMetaRegionLocator {
     createSingleRegionTable();
     AsyncNonMetaRegionLocator locator = spy(new AsyncNonMetaRegionLocator(conn));
 
-    // expectations: exception -> expected accumulated call times
-    List<Pair<Exception, Integer>> expectations =
-      new ArrayList<>(ImmutableList.of(Pair.newPair(new CallTimeoutException("test1"), 1),
-        Pair.newPair(new ConnectException("test2"), 2),
-        Pair.newPair(new NotServingRegionException("test3"), 2)));
+    Exception exception = new CallTimeoutException("test");
+    HRegionLocation locOnError;
 
-    for (Pair<Exception, Integer> pair : expectations) {
-      Exception exception = pair.getFirst();
-      Integer expectedCallTimes = pair.getSecond();
+    // If a server is not added to FailedServers, removeServerLocationFromCache should not be called
+    locOnError =
+      locator.getRegionLocations(TABLE_NAME, EMPTY_START_ROW, RegionReplicaUtil.DEFAULT_REPLICA_ID,
+        RegionLocateType.CURRENT, false).get().getDefaultRegionLocation();
+    locator.updateCachedLocationOnError(locOnError, exception);
+    verify(locator, times(0)).removeServerLocationFromCache(any());
 
-      HRegionLocation loc = locator.getRegionLocations(TABLE_NAME, EMPTY_START_ROW,
-        RegionReplicaUtil.DEFAULT_REPLICA_ID, RegionLocateType.CURRENT, false).get()
-        .getDefaultRegionLocation();
-
-      locator.updateCachedLocationOnError(loc, exception);
-      verify(locator, times(expectedCallTimes)).removeServerLocationFromCache(any());
-    }
+    // If a server is added to FailedServers, removeServerLocationFromCache should be called
+    locOnError =
+      locator.getRegionLocations(TABLE_NAME, EMPTY_START_ROW, RegionReplicaUtil.DEFAULT_REPLICA_ID,
+        RegionLocateType.CURRENT, false).get().getDefaultRegionLocation();
+    ServerName failedServer = locOnError.getServerName();
+    conn.getFailedServers().addToFailedServers(failedServer.getAddress(), exception);
+    locator.updateCachedLocationOnError(locOnError, exception);
+    verify(locator, times(1)).removeServerLocationFromCache(any());
   }
 }
