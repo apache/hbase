@@ -121,8 +121,10 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private boolean cacheBlocks = true;
   private int limit = -1;
 
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = IncludeStartRowFilter.class)
   private boolean includeStartRow = true;
 
+  @JsonInclude(value = JsonInclude.Include.NON_DEFAULT)
   private boolean includeStopRow = false;
 
   @XmlAttribute
@@ -141,6 +143,21 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
 
   public void setIncludeStartRow(boolean includeStartRow) {
     this.includeStartRow = includeStartRow;
+  }
+
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value = "EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS",
+      justification = "The supplied value from the JSON Value Filter is of Type Boolean")
+  private static class IncludeStartRowFilter {
+    @Override
+    public boolean equals(Object value) {
+      return Boolean.TRUE.equals(value);
+    }
+
+    @Override
+    public int hashCode() {
+      return 42;
+    }
   }
 
   /**
