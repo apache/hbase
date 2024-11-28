@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.namequeues;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -68,7 +69,7 @@ public class LogHandlerUtils {
       if (tableName != null && slowLogPayload.getRegionName().startsWith(tableName)) {
         totalFilterMatches++;
       }
-      if (slowLogPayload.getClientAddress().equals(clientAddress)) {
+      if (isClientAddressMatched(slowLogPayload, clientAddress)) {
         totalFilterMatches++;
       }
       if (slowLogPayload.getUserName().equals(userName)) {
@@ -90,6 +91,17 @@ public class LogHandlerUtils {
       }
     }
     return filteredSlowLogPayloads;
+  }
+
+  private static boolean isClientAddressMatched(TooSlowLog.SlowLogPayload slowLogPayload,
+    String clientAddress) {
+    String clientAddressInPayload = slowLogPayload.getClientAddress();
+    int portPos = clientAddressInPayload.lastIndexOf(Addressing.HOSTNAME_PORT_SEPARATOR);
+    if (portPos < 1) {
+      return clientAddressInPayload.equals(clientAddress);
+    }
+    return clientAddressInPayload.equals(clientAddress)
+      || clientAddressInPayload.substring(0, portPos).equals(clientAddress);
   }
 
   public static List<TooSlowLog.SlowLogPayload> getFilteredLogs(

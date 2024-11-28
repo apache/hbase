@@ -31,4 +31,6 @@ message Scanner {
   repeated string labels = 10;
   optional bool cacheBlocks = 11; // server side block caching hint
   optional int32 limit = 12;
+  optional bool includeStartRow = 13;
+  optional bool includeStopRow = 14;
 }
