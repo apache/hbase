@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.rest.ScannerResultGenerator;
 import org.apache.hadoop.hbase.testclassification.RestTests;
@@ -62,8 +63,7 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     AS_JSON = "{\"batch\":100,\"caching\":1000,\"cacheBlocks\":false,\"endRow\":\"enp5eng=\","
       + "\"endTime\":1245393318192,\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\","
       + "\"startTime\":1245219839331,\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"],"
-      + "\"labels\":[\"private\",\"public\"]," + "\"limit\":10000,"
-      + "\"includeStartRow\":true,\"includeStopRow\":false}";
+      + "\"labels\":[\"private\",\"public\"]," + "\"limit\":10000}";
 
     AS_PB = "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9vIGQo47qL554kMLDi57mfJDj"
       + "/////B0joB1IHcHJpdmF0ZVIGcHVibGljWABgkE4=";
@@ -150,5 +150,61 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     ScannerModel model = new ScannerModel();
     model.setFilter(FILTER);
     ScannerResultGenerator.buildFilterFromModel(model);
+  }
+
+  @Test()
+  public void testToJsonWithIncludeStartRowAndIncludeStopRow() throws Exception {
+    String jsonStr =
+      "{\"batch\":100,\"caching\":1000,\"cacheBlocks\":false,\"endRow\":\"enp5eng=\","
+        + "\"endTime\":1245393318192,\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\","
+        + "\"startTime\":1245219839331,\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"],"
+        + "\"labels\":[\"private\",\"public\"]," + "\"limit\":10000,"
+        + "\"includeStartRow\":false,\"includeStopRow\":true}";
+
+    ObjectNode expObj = mapper.readValue(jsonStr, ObjectNode.class);
+    ObjectNode actObj = mapper.readValue(
+      toJSON(buildTestModelWithIncludeStartRowAndIncludeStopRow(false, true)), ObjectNode.class);
+    assertEquals(expObj, actObj);
+
+    jsonStr = "{\"batch\":100,\"caching\":1000,\"cacheBlocks\":false,\"endRow\":\"enp5eng=\","
+      + "\"endTime\":1245393318192,\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\","
+      + "\"startTime\":1245219839331,\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"],"
+      + "\"labels\":[\"private\",\"public\"]," + "\"limit\":10000," + "\"includeStopRow\":true}";
+
+    expObj = mapper.readValue(jsonStr, ObjectNode.class);
+    actObj = mapper.readValue(
+      toJSON(buildTestModelWithIncludeStartRowAndIncludeStopRow(true, true)), ObjectNode.class);
+    assertEquals(expObj, actObj);
+
+    jsonStr = "{\"batch\":100,\"caching\":1000,\"cacheBlocks\":false,\"endRow\":\"enp5eng=\","
+      + "\"endTime\":1245393318192,\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\","
+      + "\"startTime\":1245219839331,\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"],"
+      + "\"labels\":[\"private\",\"public\"]," + "\"limit\":10000," + "\"includeStartRow\":false}";
+
+    expObj = mapper.readValue(jsonStr, ObjectNode.class);
+    actObj = mapper.readValue(
+      toJSON(buildTestModelWithIncludeStartRowAndIncludeStopRow(false, false)), ObjectNode.class);
+    assertEquals(expObj, actObj);
+
+  }
+
+  protected ScannerModel buildTestModelWithIncludeStartRowAndIncludeStopRow(boolean includeStartRow,
+    boolean includeStopRow) {
+    ScannerModel model = new ScannerModel();
+    model.setStartRow(START_ROW);
+    model.setEndRow(END_ROW);
+    model.addColumn(COLUMN1);
+    model.addColumn(COLUMN2);
+    model.setStartTime(START_TIME);
+    model.setEndTime(END_TIME);
+    model.setBatch(BATCH);
+    model.setCaching(CACHING);
+    model.addLabel(PRIVATE);
+    model.addLabel(PUBLIC);
+    model.setCacheBlocks(CACHE_BLOCKS);
+    model.setLimit(LIMIT);
+    model.setIncludeStartRow(includeStartRow);
+    model.setIncludeStopRow(includeStopRow);
+    return model;
   }
 }
