@@ -869,9 +869,10 @@ fi
 
 HEAP_SETTINGS="$JAVA_HEAP_MAX $JAVA_OFFHEAP_MAX"
 # by now if we're running a command it means we need logging
+# prepend the logging jars to make sure they are before the ones coming from HADOOP_CLASSPATH
 for f in ${HBASE_HOME}/lib/client-facing-thirdparty/log4j*.jar; do
   if [ -f "${f}" ]; then
-    CLASSPATH="${CLASSPATH}:${f}"
+    CLASSPATH="${f}:${CLASSPATH}"
   fi
 done
 
