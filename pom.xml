@@ -1564,9 +1564,8 @@
       </dependency>
       <dependency>
         <groupId>com.sun.xml.ws</groupId>
-        <artifactId>jaxws-ri</artifactId>
+        <artifactId>jaxws-rt</artifactId>
         <version>2.3.2</version>
-        <type>pom</type>
         <exclusions>
           <exclusion>
             <groupId>javax.activation</groupId>
