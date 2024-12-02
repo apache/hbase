@@ -717,6 +717,32 @@ curl -vi -X PUT \
 
 |===
 
+.Endpoints for `Increment` Operations
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
+
+|/_table_/_row_key_/?check=increment
+|PUT
+|Increments the current value of the cell. The row, column qualifier, and value must each be Base-64 encoded.
+|curl -vi -X PUT \
+-H "Accept: text/xml" \
+-H "Content-Type: text/xml" \
+-d '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><CellSet><Row key="cm93NQo="><Cell column="YTox">MQ==</Cell></Row></CellSet>' \
+"http://localhost:8080/users/row5?check=increment"
+
+curl -vi -X PUT \
+-H "Content-type: application/json" \
+-H "Accept: application/json" \
+-d '{"Row":[{"key":"dGVzdHJvdzE=","Cell":[{"column":"YTox","$":"MQ=="},{"column":"YToy","$":"MQ=="}]}]}' \
+"http://localhost:8080/users/testrow1?check=increment"
+
+|===
+
+
 [[xml_schema]]
 === REST XML Schema
 
