@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -33,6 +35,7 @@ import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -65,22 +68,41 @@ public class RowCounter extends AbstractHBaseTool {
   private final static String OPT_END_TIME = "endtime";
   private final static String OPT_RANGE = "range";
   private final static String OPT_EXPECTED_COUNT = "expectedCount";
+  private final static String OPT_COUNT_DELETE_MARKERS = "countDeleteMarkers";
 
   private String tableName;
   private List<MultiRowRangeFilter.RowRange> rowRangeList;
   private long startTime;
   private long endTime;
   private long expectedCount;
+  private boolean countDeleteMarkers;
   private List<String> columns = new ArrayList<>();
+
+  private Job job;
 
   /**
    * Mapper that runs the count.
    */
   static class RowCounterMapper extends TableMapper<ImmutableBytesWritable, Result> {
 
-    /** Counter enumeration to count the actual rows. */
+    /** Counter enumeration to count the actual rows, cells and delete markers. */
     public static enum Counters {
-      ROWS
+      ROWS,
+      DELETE,
+      DELETE_COLUMN,
+      DELETE_FAMILY,
+      DELETE_FAMILY_VERSION,
+      ROWS_WITH_DELETE_MARKER
+    }
+
+    private boolean countDeleteMarkers;
+
+    @Override
+    protected void
+      setup(Mapper<ImmutableBytesWritable, Result, ImmutableBytesWritable, Result>.Context context)
+        throws IOException, InterruptedException {
+      Configuration conf = context.getConfiguration();
+      countDeleteMarkers = conf.getBoolean(OPT_COUNT_DELETE_MARKERS, false);
     }
 
     /**
@@ -95,6 +117,37 @@ public class RowCounter extends AbstractHBaseTool {
     public void map(ImmutableBytesWritable row, Result values, Context context) throws IOException {
       // Count every row containing data, whether it's in qualifiers or values
       context.getCounter(Counters.ROWS).increment(1);
+
+      if (countDeleteMarkers) {
+        boolean rowContainsDeleteMarker = false;
+        for (Cell cell : values.rawCells()) {
+          Cell.Type type = cell.getType();
+          switch (type) {
+            case Delete:
+              rowContainsDeleteMarker = true;
+              context.getCounter(Counters.DELETE).increment(1);
+              break;
+            case DeleteColumn:
+              rowContainsDeleteMarker = true;
+              context.getCounter(Counters.DELETE_COLUMN).increment(1);
+              break;
+            case DeleteFamily:
+              rowContainsDeleteMarker = true;
+              context.getCounter(Counters.DELETE_FAMILY).increment(1);
+              break;
+            case DeleteFamilyVersion:
+              rowContainsDeleteMarker = true;
+              context.getCounter(Counters.DELETE_FAMILY_VERSION).increment(1);
+              break;
+            default:
+              break;
+          }
+        }
+
+        if (rowContainsDeleteMarker) {
+          context.getCounter(Counters.ROWS_WITH_DELETE_MARKER).increment(1);
+        }
+      }
     }
   }
 
@@ -105,11 +158,14 @@ public class RowCounter extends AbstractHBaseTool {
    * @throws IOException When setting up the job fails.
    */
   public Job createSubmittableJob(Configuration conf) throws IOException {
+    conf.setBoolean(OPT_COUNT_DELETE_MARKERS, this.countDeleteMarkers);
     Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(RowCounter.class);
     Scan scan = new Scan();
+    // raw scan will be needed to account for delete markers when --countDeleteMarkers flag is set
+    scan.setRaw(this.countDeleteMarkers);
     scan.setCacheBlocks(false);
-    setScanFilter(scan, rowRangeList);
+    setScanFilter(scan, rowRangeList, this.countDeleteMarkers);
 
     for (String columnName : this.columns) {
       String family = StringUtils.substringBefore(columnName, ":");
@@ -147,6 +203,7 @@ public class RowCounter extends AbstractHBaseTool {
     List<MultiRowRangeFilter.RowRange> rowRangeList = null;
     long startTime = 0;
     long endTime = 0;
+    boolean countDeleteMarkers = false;
 
     StringBuilder sb = new StringBuilder();
 
@@ -154,6 +211,7 @@ public class RowCounter extends AbstractHBaseTool {
     final String startTimeArgKey = "--starttime=";
     final String endTimeArgKey = "--endtime=";
     final String expectedCountArg = "--expected-count=";
+    final String countDeleteMarkersArg = "--countDeleteMarkers";
 
     // First argument is table name, starting from second
     for (int i = 1; i < args.length; i++) {
@@ -179,10 +237,15 @@ public class RowCounter extends AbstractHBaseTool {
           Long.parseLong(args[i].substring(expectedCountArg.length())));
         continue;
       }
+      if (args[i].startsWith(countDeleteMarkersArg)) {
+        countDeleteMarkers = true;
+        continue;
+      }
       // if no switch, assume column names
       sb.append(args[i]);
       sb.append(" ");
     }
+    conf.setBoolean(OPT_COUNT_DELETE_MARKERS, countDeleteMarkers);
     if (endTime < startTime) {
       printUsage("--endtime=" + endTime + " needs to be greater than --starttime=" + startTime);
       return null;
@@ -192,7 +255,9 @@ public class RowCounter extends AbstractHBaseTool {
     job.setJarByClass(RowCounter.class);
     Scan scan = new Scan();
     scan.setCacheBlocks(false);
-    setScanFilter(scan, rowRangeList);
+    // raw scan will be needed to account for delete markers when --countDeleteMarkers flag is set
+    scan.setRaw(countDeleteMarkers);
+    setScanFilter(scan, rowRangeList, countDeleteMarkers);
     if (sb.length() > 0) {
       for (String columnName : sb.toString().trim().split(" ")) {
         String family = StringUtils.substringBefore(columnName, ":");
@@ -250,9 +315,11 @@ public class RowCounter extends AbstractHBaseTool {
    * Otherwise, method sets filter which is instance of {@link FirstKeyOnlyFilter}. If rowRangeList
    * contains exactly one element, startRow and stopRow are set to the scan.
    */
-  private static void setScanFilter(Scan scan, List<MultiRowRangeFilter.RowRange> rowRangeList) {
+  private static void setScanFilter(Scan scan, List<MultiRowRangeFilter.RowRange> rowRangeList,
+    boolean countDeleteMarkers) {
     final int size = rowRangeList == null ? 0 : rowRangeList.size();
-    if (size <= 1) {
+    // all cells will be needed if --countDeleteMarkers flag is set, hence, skipping filter
+    if (size <= 1 && !countDeleteMarkers) {
       scan.setFilter(new FirstKeyOnlyFilter());
     }
     if (size == 1) {
@@ -295,10 +362,15 @@ public class RowCounter extends AbstractHBaseTool {
       .desc("[startKey],[endKey][;[startKey],[endKey]...]]").longOpt(OPT_RANGE).build();
     Option expectedOption = Option.builder(null).valueSeparator('=').hasArg(true)
       .desc("expected number of rows to be count.").longOpt(OPT_EXPECTED_COUNT).build();
+    Option countDeleteMarkersOption = Option.builder(null).hasArg(false)
+      .desc("counts the number of Delete Markers of all types, i.e. "
+        + "(DELETE, DELETE_COLUMN, DELETE_FAMILY, DELETE_FAMILY_VERSION)")
+      .longOpt(OPT_COUNT_DELETE_MARKERS).build();
     addOption(startTimeOption);
     addOption(endTimeOption);
     addOption(rangeOption);
     addOption(expectedOption);
+    addOption(countDeleteMarkersOption);
   }
 
   @Override
@@ -316,6 +388,7 @@ public class RowCounter extends AbstractHBaseTool {
     this.startTime = cmd.getOptionValue(OPT_START_TIME) == null
       ? 0
       : Long.parseLong(cmd.getOptionValue(OPT_START_TIME));
+    this.countDeleteMarkers = cmd.hasOption(OPT_COUNT_DELETE_MARKERS);
 
     for (int i = 1; i < cmd.getArgList().size(); i++) {
       String argument = cmd.getArgList().get(i);
@@ -347,7 +420,7 @@ public class RowCounter extends AbstractHBaseTool {
 
   @Override
   protected int doWork() throws Exception {
-    Job job = createSubmittableJob(getConf());
+    job = createSubmittableJob(getConf());
     if (job == null) {
       return -1;
     }
@@ -386,6 +459,12 @@ public class RowCounter extends AbstractHBaseTool {
   @Override
   protected CommandLineParser newParser() {
     return new RowCounterCommandLineParser();
+  }
+
+  @RestrictedApi(explanation = "Only visible for testing", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  Job getMapReduceJob() {
+    return job;
   }
 
 }
