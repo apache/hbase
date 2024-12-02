@@ -692,6 +692,31 @@ Detailed Explanation:
 
 *** Basically, the 4 xml-format examples are the same as the 4 corresponding json-format examples, and will not be explained here in detail.
 
+.Endpoints for `Append` Operations
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
+
+|/_table_/_row_key_/?check=append
+|PUT
+|Appends the given new value to the end of the current value of the cell. The row, column qualifier, and value must each be Base-64 encoded.
+|curl -vi -X PUT \
+-H "Accept: text/xml" \
+-H "Content-Type: text/xml" \
+-d '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><CellSet><Row key="cm93NQo="><Cell column="Y2Y6ZQo=">dmFsdWU1Cg==</Cell></Row></CellSet>' \
+"http://example.com:8000/users/row5?check=append"
+
+curl -vi -X PUT \
+-H "Content-type: application/json" \
+-H "Accept: application/json" \
+-d '{"Row":[{"key":"dGVzdHJvdzE=","Cell":[{"column":"YTox","$":"dGVzdHZhbHVlMgo"},{"column":"YToy","$":"dGVzdHZhbHVlMTIK"}]}]}' \
+"http://localhost:8080/users/testrow1?check=append"
+
+|===
+
 [[xml_schema]]
 === REST XML Schema
 
