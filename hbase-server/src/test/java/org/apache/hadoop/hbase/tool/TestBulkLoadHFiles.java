@@ -307,14 +307,6 @@ public class TestBulkLoadHFiles {
   public static int loadHFiles(String testName, TableDescriptor htd, HBaseTestingUtil util,
     byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
     byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles, int initRowCount,
-    int factor) throws Exception {
-    return loadHFiles(testName, htd, util, fam, qual, preCreateTable, tableSplitKeys, hfileRanges,
-      useMap, deleteFile, copyFiles, initRowCount, factor, 2);
-  }
-
-  public static int loadHFiles(String testName, TableDescriptor htd, HBaseTestingUtil util,
-    byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
-    byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles, int initRowCount,
     int factor, int depth) throws Exception {
     Path baseDirectory = util.getDataTestDirOnTestFS(testName);
     FileSystem fs = util.getTestFileSystem();
