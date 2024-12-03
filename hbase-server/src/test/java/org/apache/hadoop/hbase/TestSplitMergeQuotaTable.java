@@ -25,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -34,39 +33,41 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExternalResource;
+import org.junit.rules.RuleChain;
+import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test that we can split and merge select system tables given the presence of various configuration
+ * Test that we can split and merge the quota table given the presence of various configuration
  * settings.
  */
 @Category({ MiscTests.class, LargeTests.class })
 @RunWith(Parameterized.class)
-public class TestSplitMergeSystemTables {
+public class TestSplitMergeQuotaTable {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestSplitMergeSystemTables.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSplitMergeQuotaTable.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitMergeSystemTables.class);
+    HBaseClassTestRule.forClass(TestSplitMergeQuotaTable.class);
 
-  @Parameterized.Parameters(name = "{0}: {1}")
+  @Parameterized.Parameters(name = "{1}")
   public static Object[][] params() {
-    return new Object[][] {
-      // quotas table is only created when the quota system is enabled.
-      { QuotaTableUtil.QUOTA_TABLE_NAME, Map.of(QuotaUtil.QUOTA_CONF_KEY, "true") }, };
+    return new Object[][] { { Map.of(QuotaUtil.QUOTA_CONF_KEY, "false") },
+      { Map.of(QuotaUtil.QUOTA_CONF_KEY, "true") }, };
   }
 
-  private final TableName tableName;
+  private final TableName tableName = QuotaUtil.QUOTA_TABLE_NAME;
+  private final MiniClusterRule miniClusterRule;
 
   @Rule
-  public final MiniClusterRule miniClusterRule;
+  public final RuleChain ruleChain;
 
-  public TestSplitMergeSystemTables(TableName tableName, Map<String, String> configMap) {
-    this.tableName = tableName;
+  public TestSplitMergeQuotaTable(Map<String, String> configMap) {
     this.miniClusterRule = MiniClusterRule.newBuilder().setConfiguration(() -> {
       Configuration conf = HBaseConfiguration.create();
       conf.setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 1000);
@@ -74,11 +75,23 @@ public class TestSplitMergeSystemTables {
       configMap.forEach(conf::set);
       return conf;
     }).build();
-
+    TestRule ensureQuotaTableRule = new ExternalResource() {
+      @Override
+      protected void before() throws Throwable {
+        if (
+          !miniClusterRule.getTestingUtility().getAsyncConnection().getAdmin()
+            .tableExists(QuotaUtil.QUOTA_TABLE_NAME).get(30, TimeUnit.SECONDS)
+        ) {
+          miniClusterRule.getTestingUtility().getHBaseCluster().getMaster()
+            .createSystemTable(QuotaUtil.QUOTA_TABLE_DESC);
+        }
+      }
+    };
+    this.ruleChain = RuleChain.outerRule(miniClusterRule).around(ensureQuotaTableRule);
   }
 
   @Test
-  public void testSplitMergeSystemTable() throws Exception {
+  public void testSplitMerge() throws Exception {
     HBaseTestingUtil util = miniClusterRule.getTestingUtility();
     util.waitTableAvailable(tableName, 30_000);
     AsyncAdmin admin = util.getAsyncConnection().getAdmin();
