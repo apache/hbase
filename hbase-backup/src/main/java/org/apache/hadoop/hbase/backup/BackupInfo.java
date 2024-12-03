@@ -267,7 +267,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
   }
 
   public void setFailedMsg(String failedMsg) {
-    if (failedMsg.length() > MAX_FAILED_MESSAGE_LENGTH) {
+    if (failedMsg != null && failedMsg.length() > MAX_FAILED_MESSAGE_LENGTH) {
       failedMsg = failedMsg.substring(0, MAX_FAILED_MESSAGE_LENGTH);
     }
     this.failedMsg = failedMsg;
