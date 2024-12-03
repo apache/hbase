@@ -12,6 +12,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Processes bulk load files from Write-Ahead Log (WAL) entries for HBase replication.
+ *
+ * <p>This utility class extracts and constructs the file paths of bulk-loaded files
+ * based on WAL entries. It processes bulk load descriptors and their associated
+ * store descriptors to generate the paths for each bulk-loaded file.
+ *
+ * <p>The class is designed for scenarios where replicable bulk load operations
+ * need to be parsed and their file paths need to be determined programmatically.</p>
+ */
 @InterfaceAudience.Private
 public final class BulkLoadProcessor {
   private BulkLoadProcessor() { }

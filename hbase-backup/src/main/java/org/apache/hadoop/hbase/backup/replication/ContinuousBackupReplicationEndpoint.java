@@ -15,6 +15,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * {@code ContinuousBackupReplicationEndpoint} is a custom implementation of {@link BaseReplicationEndpoint}
+ * designed to integrate with a continuous backup system for HBase's Write-Ahead Log (WAL) entries.
+ * <p>
+ * This endpoint enables replication of WAL entries to a backup system for disaster recovery or archival purposes.
+ * It is initialized and managed within the HBase replication framework. The class handles the following tasks:
+ * <ul>
+ *   <li>Initialization of the {@link ContinuousBackupManager} responsible for managing backup operations.</li>
+ *   <li>Processing WAL entries grouped by table and triggering backups via the {@code ContinuousBackupManager}.</li>
+ *   <li>Graceful startup and shutdown of the replication endpoint, ensuring proper resource management.</li>
+ * </ul>
+ * <p>
+ *
+ * <h3>Configuration</h3>
+ * The following configuration property is required for this endpoint:
+ * <ul>
+ *   <li>{@code hbase.backup.wal.replication.peerUUID}: Specifies the UUID of the replication peer for this endpoint.</li>
+ * </ul>
+ *
+ * @see BaseReplicationEndpoint
+ * @see ContinuousBackupManager
+ */
 @InterfaceAudience.Private
 public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint {
   private static final Logger LOG = LoggerFactory.getLogger(ContinuousBackupReplicationEndpoint.class);

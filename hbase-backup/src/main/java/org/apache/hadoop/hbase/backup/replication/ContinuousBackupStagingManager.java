@@ -20,15 +20,20 @@ import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
 import static org.apache.hadoop.hbase.master.cleaner.HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS;
 
+/**
+ * Manages the staging and backup of Write-Ahead Logs (WALs) and bulk-loaded files
+ * as part of the continuous backup process in HBase. This class ensures that WALs
+ * are staged, flushed, and backed up safely to support backup and recovery workflows.
+ */
 @InterfaceAudience.Private
 public class ContinuousBackupStagingManager {
   private static final Logger LOG = LoggerFactory.getLogger(ContinuousBackupStagingManager.class);
 
   public static final String WALS_BACKUP_STAGING_DIR = "wal-backup-staging";
   public static final String CONF_STAGED_WAL_FLUSH_INITIAL_DELAY = "hbase.backup.staged.wal.flush.initial.delay.seconds";
-  public static final int DEFAULT_STAGED_WAL_FLUSH_INITIAL_DELAY_SECONDS = 1 * 60; // 5 minutes
+  public static final int DEFAULT_STAGED_WAL_FLUSH_INITIAL_DELAY_SECONDS = 5 * 60; // 5 minutes
   public static final String CONF_STAGED_WAL_FLUSH_INTERVAL = "hbase.backup.staged.wal.flush.interval.seconds";
-  public static final int DEFAULT_STAGED_WAL_FLUSH_INTERVAL_SECONDS = 1 * 60; // 5 minutes
+  public static final int DEFAULT_STAGED_WAL_FLUSH_INTERVAL_SECONDS = 5 * 60; // 5 minutes
 
   private final Configuration conf;
   private final FileSystem walStagingFs;
@@ -41,6 +46,13 @@ public class ContinuousBackupStagingManager {
   private final ReentrantLock lock = new ReentrantLock();
   private final StagedBulkloadFileRegistry stagedBulkloadFileRegistry;
 
+  /**
+   * Constructs a ContinuousBackupStagingManager with the specified configuration and backup manager.
+   *
+   * @param conf                   the HBase configuration
+   * @param continuousBackupManager the backup manager for continuous backup
+   * @throws IOException if there is an error initializing the WAL staging directory or related resources
+   */
   public ContinuousBackupStagingManager(Configuration conf, ContinuousBackupManager continuousBackupManager)
     throws IOException {
     this.conf = conf;
@@ -140,6 +152,16 @@ public class ContinuousBackupStagingManager {
     backupExecutor = Executors.newFixedThreadPool(1);
   }
 
+  /**
+   * Stages WAL entries and bulk-load files for a specific table.
+   * Ensures that WAL entries are written and bulk-loaded files are registered
+   * to prevent deletion by the HFileCleaner thread.
+   *
+   * @param tableName      the name of the table
+   * @param walEntries     the list of WAL entries to stage
+   * @param bulkLoadFiles  the list of bulk-load files to stage
+   * @throws IOException if there is an error staging the entries or files
+   */
   public void stageEntries(TableName tableName, List<WAL.Entry> walEntries, List<Path> bulkLoadFiles) throws IOException {
     lock.lock();
     try {
@@ -149,9 +171,9 @@ public class ContinuousBackupStagingManager {
       Path walDir = WALUtils.getWalDir(namespace, table);
       ContinuousBackupWalWriter continuousBackupWalWriter = getContinuousBackupWalWriter(walDir);
 
-      continuousBackupWalWriter.writer(walEntries, bulkLoadFiles);
+      continuousBackupWalWriter.write(walEntries, bulkLoadFiles);
 
-      // TODO: prevent bulk-loaded files from deleting HFileCleaner thread
+      // prevent bulk-loaded files from deleting HFileCleaner thread
       stagedBulkloadFileRegistry.addStagedFiles(bulkLoadFiles);
 
       LOG.info("{} {} WAL entries staged for table {}:{}",
@@ -186,11 +208,24 @@ public class ContinuousBackupStagingManager {
     return writer.getLength() >= maxWalSize;
   }
 
+  /**
+   * Returns the staging path for a bulk-load file, given its relative path from the namespace.
+   *
+   * @param relativePathFromNamespace the relative path of the bulk-load file
+   * @return the resolved staging path for the bulk-load file
+   * @throws IOException if there is an error resolving the staging path
+   */
   public Path getBulkloadFileStagingPath(Path relativePathFromNamespace) throws IOException {
     return WALUtils.getBulkloadFileStagingPath(conf, relativePathFromNamespace);
   }
 
-    public Path getWalFileStagingPath(Path relativeWalPath) {
+  /**
+   * Returns the staging path for a WAL file, given its relative path.
+   *
+   * @param relativeWalPath the relative path of the WAL file
+   * @return the resolved staging path for the WAL file
+   */
+  public Path getWalFileStagingPath(Path relativeWalPath) {
     return WALUtils.getWalFileStagingPath(walStagingDir, relativeWalPath);
   }
 
@@ -236,7 +271,7 @@ public class ContinuousBackupStagingManager {
     return false;
   }
 
-  public void backupFileAsync(Path filePath) {
+  private void backupFileAsync(Path filePath) {
     // Mark the file as currently being backed up
     filesCurrentlyBeingBackedUp.add(filePath);
 
@@ -292,7 +327,9 @@ public class ContinuousBackupStagingManager {
     }
   }
 
-  // Shutdown method to properly terminate the executors
+  /**
+   * Closes the manager, ensuring that all executors are properly terminated and resources are cleaned up.
+   */
   public void close() {
     if (flushExecutor != null) {
       flushExecutor.shutdown();

@@ -17,6 +17,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Handles writing of Write-Ahead Log (WAL) entries and tracking bulk-load files for continuous backup.
+ *
+ * <p>This class is responsible for managing the WAL files and their associated context files. It
+ * provides functionality to write WAL entries, persist backup-related metadata, and retrieve bulk-load files
+ * from context files.</p>
+ */
 @InterfaceAudience.Private
 public class ContinuousBackupWalWriter {
   private static final Logger LOG = LoggerFactory.getLogger(ContinuousBackupWalWriter.class);
@@ -30,6 +37,15 @@ public class ContinuousBackupWalWriter {
   private final long initialWalFileSize;
   private final List<Path> bulkLoadFiles = new ArrayList<>();
 
+  /**
+   * Constructs a ContinuousBackupWalWriter for a specific WAL directory.
+   *
+   * @param fs the file system instance to use for file operations
+   * @param rootDir the root directory for WAL files
+   * @param walDir the WAL directory path
+   * @param conf the HBase configuration object
+   * @throws IOException if an error occurs during initialization
+   */
   public ContinuousBackupWalWriter(FileSystem fs, Path rootDir, Path walDir, Configuration conf) throws
     IOException {
     LOG.info("Initializing ContinuousBackupWalWriter for WAL directory: {}", walDir);
@@ -58,7 +74,14 @@ public class ContinuousBackupWalWriter {
     LOG.info("ContinuousBackupWalWriter initialized successfully with WAL file: {}", walPath);
   }
 
-  public void writer(List<WAL.Entry> walEntries, List<Path> bulkLoadFiles) throws IOException {
+  /**
+   * Writes WAL entries to the WAL file and tracks associated bulk-load files.
+   *
+   * @param walEntries the list of WAL entries to write
+   * @param bulkLoadFiles the list of bulk-load files to track
+   * @throws IOException if an error occurs during writing
+   */
+  public void write(List<WAL.Entry> walEntries, List<Path> bulkLoadFiles) throws IOException {
     LOG.debug("Writing {} WAL entries to WAL file: {}", walEntries.size(), walPath);
     for (WAL.Entry entry : walEntries) {
       writer.append(entry);
@@ -69,16 +92,29 @@ public class ContinuousBackupWalWriter {
     persistWalWriterContext();
   }
 
+  /**
+   * Returns the current size of the WAL file.
+   */
   public long getLength() {
     return writer.getLength();
   }
 
+  /**
+   * Closes the WAL writer, ensuring all resources are released.
+   *
+   * @throws IOException if an error occurs during closure
+   */
   public void close() throws IOException {
     if (writer != null) {
       writer.close();
     }
   }
 
+  /**
+   * Checks if the WAL file has any entries written to it.
+   *
+   * @return {@code true} if the WAL file contains entries; {@code false} otherwise
+   */
   public boolean hasAnyEntry() {
     return writer.getLength() > initialWalFileSize;
   }
@@ -106,14 +142,34 @@ public class ContinuousBackupWalWriter {
     }
   }
 
+  /**
+   * Checks if the specified file is the WAL file being written by this writer.
+   *
+   * @param filePath the path of the file to check
+   * @return {@code true} if the specified file is being written by this writer; {@code false} otherwise
+   */
   public boolean isWritingToFile(Path filePath) {
     return filePath.equals(new Path(rootDir, walPath));
   }
 
+  /**
+   * Determines if a file name corresponds to a WAL writer context file.
+   *
+   * @param fileName the name of the file to check
+   * @return {@code true} if the file is a WAL writer context file; {@code false} otherwise
+   */
   public static boolean isWalWriterContextFile(String fileName) {
     return fileName.contains(WAL_WRITER_CONTEXT_FILE_SUFFIX);
   }
 
+  /**
+   * Retrieves bulk-load files from a WAL writer context proto file.
+   *
+   * @param fs the file system instance
+   * @param protoFilePath the path to the proto file
+   * @return a list of paths for the bulk-load files
+   * @throws IOException if an error occurs during retrieval
+   */
   public static List<Path> getBulkloadFilesFromProto(FileSystem fs, Path protoFilePath) throws IOException {
     LOG.debug("Retrieving bulk load files from proto file: {}", protoFilePath);
     List<Path> bulkloadFiles = new ArrayList<>();

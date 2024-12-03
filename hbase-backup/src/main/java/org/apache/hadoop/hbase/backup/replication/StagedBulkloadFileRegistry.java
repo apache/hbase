@@ -24,6 +24,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * A registry for managing staged bulk load files associated with a replication peer in HBase.
+ * This class ensures the required table for storing bulk load file metadata exists and provides methods
+ * to add, remove, and retrieve staged files for a given peer.
+ */
 @InterfaceAudience.Private
 public class StagedBulkloadFileRegistry {
   private static final Logger LOG = LoggerFactory.getLogger(StagedBulkloadFileRegistry.class);
@@ -34,6 +39,14 @@ public class StagedBulkloadFileRegistry {
   private final Connection connection;
   private final String peerId;
 
+  /**
+   * Constructs a registry for managing staged bulk load files.
+   * Ensures the required table exists in the HBase cluster.
+   *
+   * @param connection the HBase connection
+   * @param peerId     the replication peer ID associated with this registry
+   * @throws IOException if an error occurs while ensuring the table exists
+   */
   public StagedBulkloadFileRegistry(Connection connection, String peerId) throws IOException {
     this.connection = connection;
     this.peerId = peerId;
@@ -53,6 +66,12 @@ public class StagedBulkloadFileRegistry {
     admin.close();
   }
 
+  /**
+   * Fetches the list of staged bulk load files for the current replication peer.
+   *
+   * @return a list of file paths as strings
+   * @throws IOException if an error occurs while fetching data from HBase
+   */
   public List<String> getStagedFiles() throws IOException {
     LOG.debug("{} Fetching staged files.", Utils.logPeerId(peerId));
     List<String> stagedFiles = new ArrayList<>();
@@ -73,6 +92,13 @@ public class StagedBulkloadFileRegistry {
     return stagedFiles;
   }
 
+  /**
+   * Adds new staged bulk load files for the current replication peer.
+   * Existing files are preserved, and the new files are appended to the list.
+   *
+   * @param newFiles a list of file paths to add
+   * @throws IOException if an error occurs while updating HBase
+   */
   public void addStagedFiles(List<Path> newFiles) throws IOException {
     LOG.debug("{} Adding {} new staged files.", Utils.logPeerId(peerId), newFiles.size());
     List<String> existingFiles = getStagedFiles();
@@ -86,6 +112,12 @@ public class StagedBulkloadFileRegistry {
     }
   }
 
+  /**
+   * Removes specified bulk load files from the staged files for the current replication peer.
+   *
+   * @param filesToRemove a list of file paths to remove
+   * @throws IOException if an error occurs while updating HBase
+   */
   public void removeStagedFiles(List<Path> filesToRemove) throws IOException {
     LOG.debug("{} Removing {} staged files.", Utils.logPeerId(peerId), filesToRemove.size());
     List<String> existingFiles = getStagedFiles();
@@ -112,6 +144,13 @@ public class StagedBulkloadFileRegistry {
     return new ArrayList<>(proto.getFilesList());
   }
 
+  /**
+   * Lists all staged bulk load files across all peers in the HBase cluster.
+   *
+   * @param connection the HBase connection
+   * @return a set of file paths as strings representing all staged bulk load files
+   * @throws IOException if an error occurs while scanning the table
+   */
   public static Set<String> listAllBulkloadFiles(Connection connection) throws IOException {
     LOG.debug("Listing all staged bulkload files from table '{}'.", TABLE_NAME);
     Set<String> allFiles = new HashSet<>();

@@ -15,6 +15,17 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
 
+/**
+ * A custom HFile cleaner delegate for continuous backup scenarios in HBase.
+ * This cleaner prevents the deletion of HFiles that are staged for bulk loading as part of the
+ * continuous backup process. It interacts with the HBase `StagedBulkloadFileRegistry` to determine
+ * which files should be retained.
+ *
+ * <p>
+ * Implements the {@link BaseHFileCleanerDelegate} for integrating with the HBase cleaner framework
+ * and the {@link Abortable} interface to handle error scenarios gracefully.
+ * </p>
+ */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ContinuousBackupStagedHFileCleaner extends BaseHFileCleanerDelegate implements Abortable {
   private static final Logger LOG = LoggerFactory.getLogger(ContinuousBackupStagedHFileCleaner.class);

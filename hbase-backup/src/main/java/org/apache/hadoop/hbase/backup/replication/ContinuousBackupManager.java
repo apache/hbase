@@ -13,6 +13,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Manages the continuous backup process for HBase WAL entries and bulk load files.
+ *
+ * <p>This class is responsible for initializing backup components, processing WAL entries,
+ * staging them for backup, and committing the backup to the configured storage. It uses
+ * {@link BackupFileSystemManager} for handling file system operations and
+ * {@link ContinuousBackupStagingManager} for managing staging.</p>
+ */
 @InterfaceAudience.Private
 public class ContinuousBackupManager {
   private static final Logger LOG = LoggerFactory.getLogger(ContinuousBackupManager.class);
@@ -24,6 +32,13 @@ public class ContinuousBackupManager {
   private final BackupFileSystemManager backupFileSystemManager;
   private final ContinuousBackupStagingManager stagingManager;
 
+  /**
+   * Constructs a {@code ContinuousBackupManager} instance with the specified peer ID and configuration.
+   *
+   * @param peerId the unique identifier of the replication peer
+   * @param conf the HBase configuration object
+   * @throws BackupConfigurationException if the backup configuration is invalid
+   */
   public ContinuousBackupManager(String peerId, Configuration conf) throws BackupConfigurationException {
     this.peerId = peerId;
     this.conf = conf;
@@ -54,6 +69,15 @@ public class ContinuousBackupManager {
     }
   }
 
+  /**
+   * Backs up the provided WAL entries grouped by table.
+   *
+   * <p>The method processes WAL entries, identifies bulk load files, stages them, and prepares
+   * them for backup.</p>
+   *
+   * @param tableToEntriesMap a map of table names to WAL entries
+   * @throws IOException if an error occurs during the backup process
+   */
   public void backup(Map<TableName, List<WAL.Entry>> tableToEntriesMap) throws IOException {
     LOG.debug("{} Starting backup process for {} table(s)", Utils.logPeerId(peerId), tableToEntriesMap.size());
 
@@ -73,6 +97,17 @@ public class ContinuousBackupManager {
     LOG.debug("{} Backup process completed for all tables.", Utils.logPeerId(peerId));
   }
 
+  /**
+   * Commits the backup for a given WAL file and its associated bulk load files.
+   *
+   * <p>This method copies the WAL file and bulk load files from the staging area to the
+   * configured backup directory.</p>
+   *
+   * @param sourceFs the source file system where the files are currently staged
+   * @param walFile the WAL file to back up
+   * @param bulkLoadFiles a list of bulk load files associated with the WAL file
+   * @throws IOException if an error occurs while committing the backup
+   */
   public void commitBackup(FileSystem sourceFs, Path walFile, List<Path> bulkLoadFiles) throws IOException {
     LOG.debug("{} Starting commit for WAL file: {}", Utils.logPeerId(peerId), walFile);
 
