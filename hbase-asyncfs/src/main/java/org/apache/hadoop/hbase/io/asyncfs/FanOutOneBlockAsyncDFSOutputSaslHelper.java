@@ -464,7 +464,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       safeWrite(ctx, ctx.alloc().buffer(4).writeInt(SASL_TRANSFER_MAGIC_NUMBER));
       byte[] firstMessage = new byte[0];
       if (saslClient.hasInitialResponse()) {
-        firstMessage = saslClient.evaluateChallenge(new byte[0]);
+        firstMessage = saslClient.evaluateChallenge(firstMessage);
       }
       sendSaslMessage(ctx, firstMessage);
       ctx.flush();
