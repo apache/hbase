@@ -19,11 +19,15 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
+import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -57,8 +61,11 @@ public class TestSplitMergeQuotaTable {
 
   @Parameterized.Parameters(name = "{1}")
   public static Object[][] params() {
-    return new Object[][] { { Map.of(QuotaUtil.QUOTA_CONF_KEY, "false") },
-      { Map.of(QuotaUtil.QUOTA_CONF_KEY, "true") }, };
+    Map<String, String> quotasDisabledMap = new HashMap<>();
+    quotasDisabledMap.put(QuotaUtil.QUOTA_CONF_KEY, "false");
+    Map<String, String> quotasEnabledMap = new HashMap<>();
+    quotasEnabledMap.put(QuotaUtil.QUOTA_CONF_KEY, "true");
+    return new Object[][] { { quotasDisabledMap }, { quotasEnabledMap }, };
   }
 
   private final TableName tableName = QuotaUtil.QUOTA_TABLE_NAME;
@@ -78,12 +85,14 @@ public class TestSplitMergeQuotaTable {
     TestRule ensureQuotaTableRule = new ExternalResource() {
       @Override
       protected void before() throws Throwable {
-        if (
-          !miniClusterRule.getTestingUtility().getAsyncConnection().getAdmin()
-            .tableExists(QuotaUtil.QUOTA_TABLE_NAME).get(30, TimeUnit.SECONDS)
-        ) {
-          miniClusterRule.getTestingUtility().getHBaseCluster().getMaster()
-            .createSystemTable(QuotaUtil.QUOTA_TABLE_DESC);
+        try (AsyncConnection conn = ConnectionFactory
+          .createAsyncConnection(miniClusterRule.getTestingUtility().getConfiguration())
+          .get(30, TimeUnit.SECONDS)) {
+          AsyncAdmin admin = conn.getAdmin();
+          if (!admin.tableExists(QuotaUtil.QUOTA_TABLE_NAME).get(30, TimeUnit.SECONDS)) {
+            miniClusterRule.getTestingUtility().getHBaseCluster().getMaster()
+              .createSystemTable(QuotaUtil.QUOTA_TABLE_DESC);
+          }
         }
       }
     };
@@ -92,51 +101,59 @@ public class TestSplitMergeQuotaTable {
 
   @Test
   public void testSplitMerge() throws Exception {
-    HBaseTestingUtil util = miniClusterRule.getTestingUtility();
+    HBaseTestingUtility util = miniClusterRule.getTestingUtility();
     util.waitTableAvailable(tableName, 30_000);
-    AsyncAdmin admin = util.getAsyncConnection().getAdmin();
-    admin.split(tableName, Bytes.toBytes(0x10)).get(30, TimeUnit.SECONDS);
-    util.waitFor(30_000, new Waiter.ExplainingPredicate<Exception>() {
+    try (AsyncConnection conn =
+      ConnectionFactory.createAsyncConnection(util.getConfiguration()).get(30, TimeUnit.SECONDS)) {
+      AsyncAdmin admin = conn.getAdmin();
+      admin.split(tableName, Bytes.toBytes(0x10)).get(30, TimeUnit.SECONDS);
+      util.waitFor(30_000, new Waiter.ExplainingPredicate<Exception>() {
 
-      @Override
-      public boolean evaluate() throws Exception {
-        // can potentially observe the parent and both children via this interface.
-        return admin.getRegions(tableName)
-          .thenApply(val -> val.stream()
-            .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID).toList())
-          .get(30, TimeUnit.SECONDS).size() > 1;
-      }
+        @Override
+        public boolean evaluate() throws Exception {
+          // can potentially observe the parent and both children via this interface.
+          return admin.getRegions(tableName)
+            .thenApply(val -> val.stream()
+              .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)
+              .collect(Collectors.toList()))
+            .get(30, TimeUnit.SECONDS).size() > 1;
+        }
 
-      @Override
-      public String explainFailure() {
-        return "Split has not finished yet";
-      }
-    });
-    util.waitUntilNoRegionsInTransition();
-    List<RegionInfo> regionInfos = admin.getRegions(tableName)
-      .thenApply(val -> val.stream()
-        .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID).toList())
-      .get(30, TimeUnit.SECONDS);
-    assertEquals(2, regionInfos.size());
-    LOG.info("{}", regionInfos);
-    admin.mergeRegions(regionInfos.stream().map(RegionInfo::getRegionName).toList(), false).get(30,
-      TimeUnit.SECONDS);
-    util.waitFor(30000, new Waiter.ExplainingPredicate<Exception>() {
+        @Override
+        public String explainFailure() {
+          return "Split has not finished yet";
+        }
+      });
+      util.waitUntilNoRegionsInTransition();
+      List<RegionInfo> regionInfos = admin.getRegions(tableName)
+        .thenApply(
+          val -> val.stream().filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)
+            .collect(Collectors.toList()))
+        .get(30, TimeUnit.SECONDS);
+      assertEquals(2, regionInfos.size());
+      LOG.info("{}", regionInfos);
+      admin
+        .mergeRegions(
+          regionInfos.stream().map(RegionInfo::getRegionName).collect(Collectors.toList()), false)
+        .get(30, TimeUnit.SECONDS);
+      util.waitFor(30000, new Waiter.ExplainingPredicate<Exception>() {
 
-      @Override
-      public boolean evaluate() throws Exception {
-        // can potentially observe the parent and both children via this interface.
-        return admin.getRegions(tableName)
-          .thenApply(val -> val.stream()
-            .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID).toList())
-          .get(30, TimeUnit.SECONDS).size() == 1;
-      }
+        @Override
+        public boolean evaluate() throws Exception {
+          // can potentially observe the parent and both children via this interface.
+          return admin.getRegions(tableName)
+            .thenApply(val -> val.stream()
+              .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)
+              .collect(Collectors.toList()))
+            .get(30, TimeUnit.SECONDS).size() == 1;
+        }
 
-      @Override
-      public String explainFailure() {
-        return "Merge has not finished yet";
-      }
-    });
-    assertEquals(1, admin.getRegions(tableName).get(30, TimeUnit.SECONDS).size());
+        @Override
+        public String explainFailure() {
+          return "Merge has not finished yet";
+        }
+      });
+      assertEquals(1, admin.getRegions(tableName).get(30, TimeUnit.SECONDS).size());
+    }
   }
 }
