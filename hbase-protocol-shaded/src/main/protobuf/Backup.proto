@@ -119,3 +119,14 @@ message BackupInfo {
     STORE_MANIFEST = 5;
   }
 }
+
+message ContinuousBackupWalWriterContext {
+  required string wal_path = 1;
+  required int64 initial_wal_file_size = 2;
+  repeated string bulk_load_files = 3;
+}
+
+message StagedBulkloadFilesInfo {
+  repeated string files = 1;
+}
+
