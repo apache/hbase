@@ -846,14 +846,21 @@ curl -vi -X PUT \
     <sequence>
       <element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"></element>
     </sequence>
-    <sequence>
-      <element name="filter" type="string" minOccurs="0" maxOccurs="1"></element>
-    </sequence>
     <attribute name="startRow" type="base64Binary"></attribute>
     <attribute name="endRow" type="base64Binary"></attribute>
     <attribute name="batch" type="int"></attribute>
     <attribute name="startTime" type="int"></attribute>
     <attribute name="endTime" type="int"></attribute>
+    <attribute name="filter" type="string"></attribute>
+    <attribute name="caching" type="int"></attribute>
+    <sequence>
+        <element name="labels" type="string" minOccurs="0" maxOccurs="unbounded"></element>
+    </sequence>
+    <attribute name="cacheBlocks" type="boolean"></attribute>
+    <attribute name="maxVersions" type="int"></attribute>
+    <attribute name="limit" type="int"></attribute>
+    <attribute name="includeStartRow" type="boolean"></attribute>
+    <attribute name="includeStopRow" type="boolean"></attribute>
   </complexType>
 
   <element name="StorageClusterVersion" type="tns:StorageClusterVersion" />
@@ -899,7 +906,15 @@ curl -vi -X PUT \
     <attribute name="storefiles" type="int"></attribute>
     <attribute name="storefileSizeMB" type="int"></attribute>
     <attribute name="memstoreSizeMB" type="int"></attribute>
-    <attribute name="storefileIndexSizeMB" type="int"></attribute>
+    <attribute name="storefileIndexSizeKB" type="int"></attribute>
+    <attribute name="readRequestsCount" type="int"></attribute>
+    <attribute name="cpRequestsCount" type="int"></attribute>
+    <attribute name="writeRequestsCount" type="int"></attribute>
+    <attribute name="rootIndexSizeKB" type="int"></attribute>
+    <attribute name="totalStaticIndexSizeKB" type="int"></attribute>
+    <attribute name="totalStaticBloomSizeKB" type="int"></attribute>
+    <attribute name="totalCompactingKVs" type="int"></attribute>
+    <attribute name="currentCompactedKVs" type="int"></attribute>
   </complexType>
 
 </schema>
@@ -926,8 +941,16 @@ message StorageClusterStatus {
     optional int32 stores = 2;
     optional int32 storefiles = 3;
     optional int32 storefileSizeMB = 4;
-    optional int32 memstoreSizeMB = 5;
-    optional int32 storefileIndexSizeMB = 6;
+    optional int32 memStoreSizeMB = 5;
+    optional int64 storefileIndexSizeKB = 6;
+    optional int64 readRequestsCount = 7;
+    optional int64 writeRequestsCount = 8;
+    optional int32 rootIndexSizeKB = 9;
+    optional int32 totalStaticIndexSizeKB = 10;
+    optional int32 totalStaticBloomSizeKB = 11;
+    optional int64 totalCompactingKVs = 12;
+    optional int64 currentCompactedKVs = 13;
+    optional int64 cpRequestsCount = 14;
   }
   message Node {
     required string name = 1;    // name:port
@@ -1010,6 +1033,14 @@ message Scanner {
   optional int32 batch = 4;
   optional int64 startTime = 5;
   optional int64 endTime = 6;
+  optional int32 maxVersions = 7;
+  optional string filter = 8;
+  optional int32 caching = 9;     // specifies REST scanner caching
+  repeated string labels = 10;
+  optional bool cacheBlocks = 11; // server side block caching hint
+  optional int32 limit = 12;
+  optional bool includeStartRow = 13;
+  optional bool includeStopRow = 14;
 }
 ----
 
