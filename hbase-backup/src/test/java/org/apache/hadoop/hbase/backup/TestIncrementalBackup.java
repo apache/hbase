@@ -106,7 +106,10 @@ public class TestIncrementalBackup extends TestBackupBase {
       insertIntoTable(conn, table1, mobName, 3, NB_ROWS_FAM3).close();
       Admin admin = conn.getAdmin();
       BackupAdminImpl client = new BackupAdminImpl(conn);
+      BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
       String backupIdFull = takeFullBackup(tables, client);
+      validateRootPathCanBeOverridden(BACKUP_ROOT_DIR, backupIdFull);
+      assertTrue(checkSucceeded(backupIdFull));
 
       // #2 - insert some data to table
       Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
@@ -148,12 +151,13 @@ public class TestIncrementalBackup extends TestBackupBase {
 
       // #3 - incremental backup for multiple tables
       tables = Lists.newArrayList(table1, table2);
-      BackupRequest request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
+      request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
       String backupIdIncMultiple = client.backupTables(request);
       assertTrue(checkSucceeded(backupIdIncMultiple));
       BackupManifest manifest =
         HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR), backupIdIncMultiple);
       assertEquals(Sets.newHashSet(table1, table2), new HashSet<>(manifest.getTableList()));
+      validateRootPathCanBeOverridden(BACKUP_ROOT_DIR, backupIdIncMultiple);
 
       // add column family f2 to table1
       // drop column family f3
@@ -181,6 +185,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
       String backupIdIncMultiple2 = client.backupTables(request);
       assertTrue(checkSucceeded(backupIdIncMultiple2));
+      validateRootPathCanBeOverridden(BACKUP_ROOT_DIR, backupIdIncMultiple2);
 
       // #5 - restore full backup for all tables
       TableName[] tablesRestoreFull = new TableName[] { table1, table2 };
@@ -246,5 +251,22 @@ public class TestIncrementalBackup extends TestBackupBase {
     String backupId = backupAdmin.backupTables(req);
     checkSucceeded(backupId);
     return backupId;
+  }
+
+  /**
+   * Check that backup manifest can be produced for a different root. Users may want to move
+   * existing backups to a different location.
+   */
+  private void validateRootPathCanBeOverridden(String originalPath, String backupId)
+    throws IOException {
+    String anotherRootDir = "/some/other/root/dir";
+    Path anotherPath = new Path(anotherRootDir, backupId);
+    BackupManifest.BackupImage differentLocationImage = BackupManifest.hydrateRootDir(
+      HBackupFileSystem.getManifest(conf1, new Path(originalPath), backupId).getBackupImage(),
+      anotherPath);
+    assertEquals(differentLocationImage.getRootDir(), anotherRootDir);
+    for (BackupManifest.BackupImage ancestor : differentLocationImage.getAncestors()) {
+      assertEquals(anotherRootDir, ancestor.getRootDir());
+    }
   }
 }
