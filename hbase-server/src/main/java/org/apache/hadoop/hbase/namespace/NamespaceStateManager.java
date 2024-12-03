@@ -127,7 +127,7 @@ class NamespaceStateManager {
         (currentStatus.getRegionCount() - regionCountOfTable + incr)
             > TableNamespaceManager.getMaxRegions(nspdesc)
       ) {
-        throw new QuotaExceededException("The table {}" + name.getNameAsString()
+        throw new QuotaExceededException("The table " + name.getNameAsString()
           + " region count cannot be updated as it would exceed maximum number "
           + "of regions allowed in the namespace.  The total number of regions permitted is "
           + TableNamespaceManager.getMaxRegions(nspdesc));
@@ -197,9 +197,7 @@ class NamespaceStateManager {
   }
 
   private void addTable(TableName tableName, int regionCount) throws IOException {
-    if (tableName.isSystemTable()) {
-      return;
-    }
+    assert !tableName.isSystemTable() : "Tracking of system tables is not supported";
     NamespaceTableAndRegionInfo info = nsStateCache.get(tableName.getNamespaceAsString());
     if (info != null) {
       info.addTable(tableName, regionCount);
