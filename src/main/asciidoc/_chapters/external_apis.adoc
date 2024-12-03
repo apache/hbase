@@ -532,6 +532,8 @@ The following are the scan parameters:
 * `reversed` - When set to `true`, reverse scan will be executed. By default `false`.
 * `filter` - Allows to specify a filter for the scan as an `application/x-www-form-urlencoded` MIME format string.
 * `filter_b64` - Allows to specify a filter for the scan, encoded in https://datatracker.ietf.org/doc/html/rfc4648#section-5[URL-safe base64]. When both `filter` and `filter_b64` are specified, only `filter_b64` is considered.
+* `includeStartRow` - Whether start row should be included in the scan. By default `true`.
+* `includeStopRow` - Whether end row (stop row) should be included  in the scan. By default `false`.
 
 More on start row, end row and limit parameters:
 
