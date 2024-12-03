@@ -112,7 +112,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
   private static final String SERVER_NAME = "0";
   private static final String PROTOCOL = "hdfs";
-  private static final String MECHANISM = org.apache.hadoop.security.SaslRpcServer.AuthMethod.TOKEN.getMechanismName();
+  private static final String MECHANISM =
+    org.apache.hadoop.security.SaslRpcServer.AuthMethod.TOKEN.getMechanismName();
   private static final int SASL_TRANSFER_MAGIC_NUMBER = 0xDEADBEEF;
   private static final String NAME_DELIMITER = " ";
 
@@ -508,7 +509,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       String negotiatedQop = getNegotiatedQop();
       // Treat null negotiated QOP as "auth" for the purpose of verification
       // Code elsewhere does the same implicitly
-      if(negotiatedQop == null) {
+      if (negotiatedQop == null) {
         negotiatedQop = "auth";
       }
       LOG.debug(
