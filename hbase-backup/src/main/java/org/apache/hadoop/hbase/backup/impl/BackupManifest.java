@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -158,12 +159,17 @@ public class BackupManifest {
       return image;
     }
 
+    /**
+     * This method deliberately does not include the backup root dir on the produced proto. This is
+     * because we don't want to persist the root dir on the backup itself, so that backups can still
+     * be used after they have moved locations. A restore's operator will always provide the root
+     * dir.
+     */
     BackupProtos.BackupImage toProto() {
       BackupProtos.BackupImage.Builder builder = BackupProtos.BackupImage.newBuilder();
       builder.setBackupId(backupId);
       builder.setCompleteTs(completeTs);
       builder.setStartTs(startTs);
-      builder.setBackupRootDir(rootDir);
       if (type == BackupType.FULL) {
         builder.setBackupType(BackupProtos.BackupType.FULL);
       } else {
@@ -439,7 +445,7 @@ public class BackupManifest {
           } catch (Exception e) {
             throw new BackupException(e);
           }
-          this.backupImage = BackupImage.fromProto(proto);
+          this.backupImage = hydrateRootDir(BackupImage.fromProto(proto), backupPath);
           LOG.debug("Loaded manifest instance from manifest file: "
             + BackupUtils.getPath(subFile.getPath()));
           return;
@@ -450,6 +456,20 @@ public class BackupManifest {
     } catch (IOException e) {
       throw new BackupException(e.getMessage());
     }
+  }
+
+  /* Visible for testing only */
+  @RestrictedApi(explanation = "Should only be called internally or in tests", link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupManifest.java)")
+  public static BackupImage hydrateRootDir(BackupImage backupImage, Path backupPath)
+    throws IOException {
+    String providedRootDir =
+      HBackupFileSystem.getRootDirFromBackupPath(backupPath, backupImage.backupId).toString();
+    backupImage.setRootDir(providedRootDir);
+    for (BackupImage ancestor : backupImage.getAncestors()) {
+      ancestor.setRootDir(providedRootDir);
+    }
+    return backupImage;
   }
 
   public BackupType getType() {
