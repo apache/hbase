@@ -49,6 +49,20 @@ a {
 .pagination {
   --bs-pagination-active-border-color: #337ab7;
 }
+/* Restore active navbar link background-color */
+.navbar-nav .nav-link.active {
+  background: linear-gradient(to bottom, #dbdbdb 0, #e2e2e2 100%);
+}
+@media (min-width: 768px) {
+  /* With Bootstrap 5 the navbar has 8px vertical padding and the links are smaller vertically.
+   For desktop view only we "grow" the link to the same height as navbar
+   and "position it to reach" navbar. */
+  .navbar-nav .nav-link.active {
+    height: calc(100% + 16px);
+    margin: -8px 0;
+    padding-top: 16px;
+  }
+}
 /* End of Preserve original HBase UI colors */
 
 body { padding-top: 50px; }
