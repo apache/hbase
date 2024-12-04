@@ -85,23 +85,21 @@ final class AsyncRegionLocatorHelper {
       LOG.debug("Try updating {} with the new location {} constructed by {}", loc, newLoc,
         rme.toString());
       addToCache.accept(newLoc);
-    }
-    if (isServerFailure) {
-      // We might not be able to connect to that server for a while due to server failure.
-      // If we don't clear the caches, we might get the same exceptions
-      // as many times as the number of location caches of that server.
-      LOG.debug("Try clearing all region locations of the server {} from cache "
-        + "because of server failure", loc.getServerName());
-      if (metrics != null) {
-        metrics.incrCacheDroppingExceptions(exception);
-      }
-      removeServerFromCache.accept(loc);
     } else {
-      LOG.debug("Try removing {} from cache", loc);
       if (metrics != null) {
         metrics.incrCacheDroppingExceptions(exception);
       }
-      removeFromCache.accept(loc);
+      if (isServerFailure) {
+        // We might not be able to connect to that server for a while due to server failure.
+        // If we don't clear the caches, we might get the same exceptions
+        // as many times as the number of location caches of that server.
+        LOG.debug("Try clearing all region locations of the server {} from cache "
+          + "because of server failure", loc.getServerName());
+        removeServerFromCache.accept(loc);
+      } else {
+        LOG.debug("Try removing {} from cache", loc);
+        removeFromCache.accept(loc);
+      }
     }
   }
 
