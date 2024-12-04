@@ -43,7 +43,7 @@ import org.apache.hbase.thirdparty.javax.ws.rs.QueryParam;
 @InterfaceAudience.Private
 public class TableResource extends ResourceBase {
 
-  String table;
+  private final String table;
   private static final Logger LOG = LoggerFactory.getLogger(TableResource.class);
 
   private static final Decoder base64Urldecoder = java.util.Base64.getUrlDecoder();
