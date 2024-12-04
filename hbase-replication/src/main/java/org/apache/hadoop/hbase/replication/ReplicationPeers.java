@@ -34,7 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This provides an class for maintaining a set of peer clusters. These peers are remote slave
+ * This provides a class for maintaining a set of peer clusters. These peers are remote slave
  * clusters that data is replicated to.
  * <p>
  * We implement {@link ConfigurationObserver} mainly for recreating the
