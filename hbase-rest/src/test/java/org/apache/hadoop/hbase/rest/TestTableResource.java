@@ -71,6 +71,8 @@ public class TestTableResource {
   private static final String COLUMN_FAMILY = "test";
   private static final String COLUMN = COLUMN_FAMILY + ":qualifier";
   private static final int NUM_REGIONS = 4;
+  private static final String DISABLED_TABLE_NAME = "disabled";
+  private static final TableName DISABLED_TABLE = TableName.valueOf(DISABLED_TABLE_NAME);
   private static List<HRegionLocation> regionMap;
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -117,6 +119,10 @@ public class TestTableResource {
     regionMap = m;
     LOG.error("regions: " + regionMap);
     regionLocator.close();
+
+    TEST_UTIL.createTable(DISABLED_TABLE, "cf");
+    TEST_UTIL.getAdmin().disableTable(DISABLED_TABLE);
+    TEST_UTIL.waitTableDisabled(DISABLED_TABLE, 30);
   }
 
   @AfterClass
@@ -262,4 +268,10 @@ public class TestTableResource {
     assertEquals(404, response2.getCode());
   }
 
+  @Test
+  public void testDisabledTableScan() throws IOException {
+    Response response = client.get("/" + DISABLED_TABLE_NAME + "/*", Constants.MIMETYPE_JSON);
+    assertEquals(503, response.getCode());
+    assertTrue(Bytes.toString(response.getBody()).contains("Table disabled."));
+  }
 }
