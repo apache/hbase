@@ -17,6 +17,40 @@
  */
 
 /* General styling */
+
+/* Preserve original HBase UI colors */
+:root,
+[data-bs-theme=light] {
+  --bs-blue: #337ab7;
+  --bs-primary: #337ab7;
+  --bs-link-color: #337ab7;
+  --bs-link-color-rgb: #337ab7;
+  --bs-link-hover-color: #23527c;
+  --bs-link-hover-color-rgb: #23527c;
+}
+.nav-pills {
+  --bs-nav-pills-link-active-bg: #337ab7;
+}
+.btn-primary {
+  --bs-btn-bg: #337ab7;
+  --bs-btn-border-color: #337ab7;
+  --bs-btn-hover-bg: #265a88;
+  --bs-btn-hover-border-color: #204d74;
+  --bs-btn-disabled-bg: #337ab7;
+  --bs-btn-disabled-border-color: #337ab7;
+}
+.form-control:focus {
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075), 0 0 8px rgba(102, 175, 233, .6);
+}
+/* Avoid links with black color. */
+a {
+  color: var(--bs-link-color-rgb);
+}
+.pagination {
+  --bs-pagination-active-border-color: #337ab7;
+}
+/* End of Preserve original HBase UI colors */
+
 body { padding-top: 50px; }
 html .content {
   padding: 0 2.0em;
