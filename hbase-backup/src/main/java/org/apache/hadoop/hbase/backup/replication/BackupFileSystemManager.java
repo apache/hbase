@@ -1,12 +1,29 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.backup.replication;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
 
 @InterfaceAudience.Private
 public class BackupFileSystemManager {
@@ -29,12 +46,14 @@ public class BackupFileSystemManager {
   }
 
   private void initBackupDirectories() throws IOException {
-    LOG.info("{} Initializing backup directories under root: {}", Utils.logPeerId(peerId), backupRootDir);
+    LOG.info("{} Initializing backup directories under root: {}", Utils.logPeerId(peerId),
+      backupRootDir);
     try {
       walsDir = createDirectoryIfNotExists(WALS_DIR);
       bulkLoadFilesDir = createDirectoryIfNotExists(BULKLOAD_FILES_DIR);
     } catch (IOException e) {
-      LOG.error("{} Failed to initialize backup directories: {}", Utils.logPeerId(peerId), e.getMessage(), e);
+      LOG.error("{} Failed to initialize backup directories: {}", Utils.logPeerId(peerId),
+        e.getMessage(), e);
       throw e;
     }
   }

@@ -1,11 +1,30 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.backup.replication;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -13,16 +32,17 @@ import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 
 /**
- * Handles writing of Write-Ahead Log (WAL) entries and tracking bulk-load files for continuous backup.
- *
- * <p>This class is responsible for managing the WAL files and their associated context files. It
- * provides functionality to write WAL entries, persist backup-related metadata, and retrieve bulk-load files
- * from context files.</p>
+ * Handles writing of Write-Ahead Log (WAL) entries and tracking bulk-load files for continuous
+ * backup.
+ * <p>
+ * This class is responsible for managing the WAL files and their associated context files. It
+ * provides functionality to write WAL entries, persist backup-related metadata, and retrieve
+ * bulk-load files from context files.
+ * </p>
  */
 @InterfaceAudience.Private
 public class ContinuousBackupWalWriter {
@@ -39,15 +59,14 @@ public class ContinuousBackupWalWriter {
 
   /**
    * Constructs a ContinuousBackupWalWriter for a specific WAL directory.
-   *
-   * @param fs the file system instance to use for file operations
+   * @param fs      the file system instance to use for file operations
    * @param rootDir the root directory for WAL files
-   * @param walDir the WAL directory path
-   * @param conf the HBase configuration object
+   * @param walDir  the WAL directory path
+   * @param conf    the HBase configuration object
    * @throws IOException if an error occurs during initialization
    */
-  public ContinuousBackupWalWriter(FileSystem fs, Path rootDir, Path walDir, Configuration conf) throws
-    IOException {
+  public ContinuousBackupWalWriter(FileSystem fs, Path rootDir, Path walDir, Configuration conf)
+    throws IOException {
     LOG.info("Initializing ContinuousBackupWalWriter for WAL directory: {}", walDir);
     this.fileSystem = fs;
     this.rootDir = rootDir;
@@ -76,8 +95,7 @@ public class ContinuousBackupWalWriter {
 
   /**
    * Writes WAL entries to the WAL file and tracks associated bulk-load files.
-   *
-   * @param walEntries the list of WAL entries to write
+   * @param walEntries    the list of WAL entries to write
    * @param bulkLoadFiles the list of bulk-load files to track
    * @throws IOException if an error occurs during writing
    */
@@ -101,7 +119,6 @@ public class ContinuousBackupWalWriter {
 
   /**
    * Closes the WAL writer, ensuring all resources are released.
-   *
    * @throws IOException if an error occurs during closure
    */
   public void close() throws IOException {
@@ -112,7 +129,6 @@ public class ContinuousBackupWalWriter {
 
   /**
    * Checks if the WAL file has any entries written to it.
-   *
    * @return {@code true} if the WAL file contains entries; {@code false} otherwise
    */
   public boolean hasAnyEntry() {
@@ -122,9 +138,8 @@ public class ContinuousBackupWalWriter {
   private void persistWalWriterContext() throws IOException {
     LOG.debug("Persisting WAL writer context for file: {}", walWriterContextFilePath);
     BackupProtos.ContinuousBackupWalWriterContext.Builder protoBuilder =
-      BackupProtos.ContinuousBackupWalWriterContext.newBuilder()
-      .setWalPath(walPath.toString())
-      .setInitialWalFileSize(this.initialWalFileSize);
+      BackupProtos.ContinuousBackupWalWriterContext.newBuilder().setWalPath(walPath.toString())
+        .setInitialWalFileSize(this.initialWalFileSize);
 
     for (Path bulkLoadFile : bulkLoadFiles) {
       protoBuilder.addBulkLoadFiles(bulkLoadFile.toString());
@@ -138,15 +153,16 @@ public class ContinuousBackupWalWriter {
       }
       protoBuilder.build().writeTo(outputStream);
       outputStream.flush();
-      LOG.info("Successfully persisted WAL writer context for file: {}", walWriterContextFileFullPath);
+      LOG.info("Successfully persisted WAL writer context for file: {}",
+        walWriterContextFileFullPath);
     }
   }
 
   /**
    * Checks if the specified file is the WAL file being written by this writer.
-   *
    * @param filePath the path of the file to check
-   * @return {@code true} if the specified file is being written by this writer; {@code false} otherwise
+   * @return {@code true} if the specified file is being written by this writer; {@code false}
+   *         otherwise
    */
   public boolean isWritingToFile(Path filePath) {
     return filePath.equals(new Path(rootDir, walPath));
@@ -154,7 +170,6 @@ public class ContinuousBackupWalWriter {
 
   /**
    * Determines if a file name corresponds to a WAL writer context file.
-   *
    * @param fileName the name of the file to check
    * @return {@code true} if the file is a WAL writer context file; {@code false} otherwise
    */
@@ -164,13 +179,13 @@ public class ContinuousBackupWalWriter {
 
   /**
    * Retrieves bulk-load files from a WAL writer context proto file.
-   *
-   * @param fs the file system instance
+   * @param fs            the file system instance
    * @param protoFilePath the path to the proto file
    * @return a list of paths for the bulk-load files
    * @throws IOException if an error occurs during retrieval
    */
-  public static List<Path> getBulkloadFilesFromProto(FileSystem fs, Path protoFilePath) throws IOException {
+  public static List<Path> getBulkloadFilesFromProto(FileSystem fs, Path protoFilePath)
+    throws IOException {
     LOG.debug("Retrieving bulk load files from proto file: {}", protoFilePath);
     List<Path> bulkloadFiles = new ArrayList<>();
     try (FSDataInputStream inputStream = fs.open(protoFilePath)) {
@@ -179,7 +194,8 @@ public class ContinuousBackupWalWriter {
       for (String bulkLoadFile : proto.getBulkLoadFilesList()) {
         bulkloadFiles.add(new Path(bulkLoadFile));
       }
-      LOG.info("Retrieved {} bulk load files from proto file: {}", bulkloadFiles.size(), protoFilePath);
+      LOG.info("Retrieved {} bulk load files from proto file: {}", bulkloadFiles.size(),
+        protoFilePath);
     }
     return bulkloadFiles;
   }

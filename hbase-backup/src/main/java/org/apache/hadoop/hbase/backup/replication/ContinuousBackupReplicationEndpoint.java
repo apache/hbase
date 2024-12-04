@@ -1,5 +1,28 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.backup.replication;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -8,38 +31,36 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 /**
- * {@code ContinuousBackupReplicationEndpoint} is a custom implementation of {@link BaseReplicationEndpoint}
- * designed to integrate with a continuous backup system for HBase's Write-Ahead Log (WAL) entries.
+ * {@code ContinuousBackupReplicationEndpoint} is a custom implementation of
+ * {@link BaseReplicationEndpoint} designed to integrate with a continuous backup system for HBase's
+ * Write-Ahead Log (WAL) entries.
  * <p>
- * This endpoint enables replication of WAL entries to a backup system for disaster recovery or archival purposes.
- * It is initialized and managed within the HBase replication framework. The class handles the following tasks:
+ * This endpoint enables replication of WAL entries to a backup system for disaster recovery or
+ * archival purposes. It is initialized and managed within the HBase replication framework. The
+ * class handles the following tasks:
  * <ul>
- *   <li>Initialization of the {@link ContinuousBackupManager} responsible for managing backup operations.</li>
- *   <li>Processing WAL entries grouped by table and triggering backups via the {@code ContinuousBackupManager}.</li>
- *   <li>Graceful startup and shutdown of the replication endpoint, ensuring proper resource management.</li>
+ * <li>Initialization of the {@link ContinuousBackupManager} responsible for managing backup
+ * operations.</li>
+ * <li>Processing WAL entries grouped by table and triggering backups via the
+ * {@code ContinuousBackupManager}.</li>
+ * <li>Graceful startup and shutdown of the replication endpoint, ensuring proper resource
+ * management.</li>
  * </ul>
  * <p>
- *
- * <h3>Configuration</h3>
- * The following configuration property is required for this endpoint:
+ * <h3>Configuration</h3> The following configuration property is required for this endpoint:
  * <ul>
- *   <li>{@code hbase.backup.wal.replication.peerUUID}: Specifies the UUID of the replication peer for this endpoint.</li>
+ * <li>{@code hbase.backup.wal.replication.peerUUID}: Specifies the UUID of the replication peer for
+ * this endpoint.</li>
  * </ul>
- *
  * @see BaseReplicationEndpoint
  * @see ContinuousBackupManager
  */
 @InterfaceAudience.Private
 public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint {
-  private static final Logger LOG = LoggerFactory.getLogger(ContinuousBackupReplicationEndpoint.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(ContinuousBackupReplicationEndpoint.class);
   public static final String CONF_PEER_UUID = "hbase.backup.wal.replication.peerUUID";
   private ContinuousBackupManager continuousBackupManager;
   private UUID peerUUID;
@@ -47,7 +68,8 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   @Override
   public void init(Context context) throws IOException {
     super.init(context);
-    LOG.info("{} Initializing ContinuousBackupReplicationEndpoint.", Utils.logPeerId(ctx.getPeerId()));
+    LOG.info("{} Initializing ContinuousBackupReplicationEndpoint.",
+      Utils.logPeerId(ctx.getPeerId()));
     Configuration peerConf = this.ctx.getConfiguration();
 
     setPeerUUID(peerConf);
@@ -56,9 +78,11 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
 
     try {
       continuousBackupManager = new ContinuousBackupManager(this.ctx.getPeerId(), conf);
-      LOG.info("{} ContinuousBackupManager initialized successfully.", Utils.logPeerId(ctx.getPeerId()));
+      LOG.info("{} ContinuousBackupManager initialized successfully.",
+        Utils.logPeerId(ctx.getPeerId()));
     } catch (BackupConfigurationException e) {
-      LOG.error("{} Failed to initialize ContinuousBackupManager due to configuration issues.", Utils.logPeerId(ctx.getPeerId()), e);
+      LOG.error("{} Failed to initialize ContinuousBackupManager due to configuration issues.",
+        Utils.logPeerId(ctx.getPeerId()), e);
       throw new IOException("Failed to initialize ContinuousBackupManager", e);
     }
   }
@@ -70,13 +94,15 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
 
   @Override
   public void start() {
-    LOG.info("{} Starting ContinuousBackupReplicationEndpoint...", Utils.logPeerId(ctx.getPeerId()));
+    LOG.info("{} Starting ContinuousBackupReplicationEndpoint...",
+      Utils.logPeerId(ctx.getPeerId()));
     startAsync();
   }
 
   @Override
   protected void doStart() {
-    LOG.info("{} ContinuousBackupReplicationEndpoint started successfully.", Utils.logPeerId(ctx.getPeerId()));
+    LOG.info("{} ContinuousBackupReplicationEndpoint started successfully.",
+      Utils.logPeerId(ctx.getPeerId()));
     notifyStarted();
   }
 
@@ -88,21 +114,26 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
       return true;
     }
 
-    LOG.info("{} Received {} WAL entries for backup.", Utils.logPeerId(ctx.getPeerId()), entries.size());
+    LOG.info("{} Received {} WAL entries for backup.", Utils.logPeerId(ctx.getPeerId()),
+      entries.size());
 
     Map<TableName, List<WAL.Entry>> tableToEntriesMap = new HashMap<>();
     for (WAL.Entry entry : entries) {
       TableName tableName = entry.getKey().getTableName();
       tableToEntriesMap.computeIfAbsent(tableName, key -> new ArrayList<>()).add(entry);
     }
-    LOG.debug("{} WAL entries grouped by table: {}", Utils.logPeerId(ctx.getPeerId()), tableToEntriesMap.keySet());
+    LOG.debug("{} WAL entries grouped by table: {}", Utils.logPeerId(ctx.getPeerId()),
+      tableToEntriesMap.keySet());
 
     try {
-      LOG.debug("{} Starting backup for {} tables.", Utils.logPeerId(ctx.getPeerId()), tableToEntriesMap.size());
+      LOG.debug("{} Starting backup for {} tables.", Utils.logPeerId(ctx.getPeerId()),
+        tableToEntriesMap.size());
       continuousBackupManager.backup(tableToEntriesMap);
-      LOG.info("{} Backup completed successfully for all tables.", Utils.logPeerId(ctx.getPeerId()));
+      LOG.info("{} Backup completed successfully for all tables.",
+        Utils.logPeerId(ctx.getPeerId()));
     } catch (IOException e) {
-      LOG.error("{} Backup failed for tables: {}. Error details: {}", Utils.logPeerId(ctx.getPeerId()), tableToEntriesMap.keySet(), e.getMessage(), e);
+      LOG.error("{} Backup failed for tables: {}. Error details: {}",
+        Utils.logPeerId(ctx.getPeerId()), tableToEntriesMap.keySet(), e.getMessage(), e);
       return false;
     }
 
@@ -111,7 +142,8 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
 
   @Override
   public void stop() {
-    LOG.info("{} Stopping ContinuousBackupReplicationEndpoint...", Utils.logPeerId(ctx.getPeerId()));
+    LOG.info("{} Stopping ContinuousBackupReplicationEndpoint...",
+      Utils.logPeerId(ctx.getPeerId()));
     stopAsync();
   }
 
@@ -121,21 +153,24 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
       LOG.info("{} Closing ContinuousBackupManager.", Utils.logPeerId(ctx.getPeerId()));
       continuousBackupManager.close();
     }
-    LOG.info("{} ContinuousBackupReplicationEndpoint stopped successfully.", Utils.logPeerId(ctx.getPeerId()));
+    LOG.info("{} ContinuousBackupReplicationEndpoint stopped successfully.",
+      Utils.logPeerId(ctx.getPeerId()));
     notifyStopped();
   }
 
   private void setPeerUUID(Configuration conf) throws IOException {
     String peerUUIDStr = conf.get(CONF_PEER_UUID);
     if (peerUUIDStr == null || peerUUIDStr.isEmpty()) {
-      LOG.error("{} Peer UUID is missing. Please specify it with the {} configuration.", Utils.logPeerId(ctx.getPeerId()), CONF_PEER_UUID);
+      LOG.error("{} Peer UUID is missing. Please specify it with the {} configuration.",
+        Utils.logPeerId(ctx.getPeerId()), CONF_PEER_UUID);
       throw new IOException("Peer UUID not specified in configuration");
     }
     try {
       peerUUID = UUID.fromString(peerUUIDStr);
       LOG.info("{} Peer UUID set to {}", Utils.logPeerId(ctx.getPeerId()), peerUUID);
     } catch (IllegalArgumentException e) {
-      LOG.error("{} Invalid Peer UUID format: {}", Utils.logPeerId(ctx.getPeerId()), peerUUIDStr, e);
+      LOG.error("{} Invalid Peer UUID format: {}", Utils.logPeerId(ctx.getPeerId()), peerUUIDStr,
+        e);
       throw new IOException("Invalid Peer UUID format", e);
     }
   }
