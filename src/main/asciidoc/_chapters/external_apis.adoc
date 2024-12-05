@@ -519,6 +519,8 @@ Stateless endpoints for scan operations
 The <<stateful.scanner.endpoints,stateful scanner API>> expects clients to restart scans if there is a REST server failure in the midst.
 The stateless does not store any state related to scan operation and all the parameters are specified as query parameters.
 
+NOTE: The stateless endpoints are optimized for small results, while the <<stateful.scanner.endpoints,stateful scanner API>> can also be used for large results.
+
 The following are the scan parameters:
 
 * `startrow` - The start row for the scan.
