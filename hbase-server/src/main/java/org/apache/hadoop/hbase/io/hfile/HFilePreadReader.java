@@ -46,7 +46,7 @@ public class HFilePreadReader extends HFileReaderImpl {
     });
 
     // Prefetch file blocks upon open if requested
-    if (cacheConf.shouldPrefetchOnOpen() && cacheIfCompactionsOff() && shouldCache.booleanValue()) {
+    if (cacheConf.shouldPrefetchOnOpen() && shouldCache.booleanValue()) {
       PrefetchExecutor.request(path, new Runnable() {
         @Override
         public void run() {
