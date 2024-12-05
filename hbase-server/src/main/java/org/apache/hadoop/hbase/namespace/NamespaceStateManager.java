@@ -41,8 +41,9 @@ import org.slf4j.LoggerFactory;
 class NamespaceStateManager {
 
   private static final Logger LOG = LoggerFactory.getLogger(NamespaceStateManager.class);
-  private ConcurrentMap<String, NamespaceTableAndRegionInfo> nsStateCache;
-  private MasterServices master;
+
+  private final ConcurrentMap<String, NamespaceTableAndRegionInfo> nsStateCache;
+  private final MasterServices master;
   private volatile boolean initialized = false;
 
   public NamespaceStateManager(MasterServices masterServices) {
@@ -76,6 +77,9 @@ class NamespaceStateManager {
    */
   synchronized boolean checkAndUpdateNamespaceRegionCount(TableName name, byte[] regionName,
     int incr) throws IOException {
+    if (name.isSystemTable()) {
+      return true;
+    }
     String namespace = name.getNamespaceAsString();
     NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);
     if (nspdesc != null) {
@@ -84,17 +88,18 @@ class NamespaceStateManager {
       int regionCount = currentStatus.getRegionCount();
       long maxRegionCount = TableNamespaceManager.getMaxRegions(nspdesc);
       if (incr > 0 && regionCount >= maxRegionCount) {
-        LOG.warn("The region " + Bytes.toStringBinary(regionName)
-          + " cannot be created. The region count  will exceed quota on the namespace. "
-          + "This may be transient, please retry later if there are any ongoing split"
-          + " operations in the namespace.");
+        LOG.warn(
+          "The region {} cannot be created. The region count  will exceed quota on the namespace. "
+            + "This may be transient, please retry later if there are any ongoing split"
+            + " operations in the namespace.",
+          Bytes.toStringBinary(regionName));
         return false;
       }
       NamespaceTableAndRegionInfo nsInfo = nsStateCache.get(namespace);
       if (nsInfo != null) {
         nsInfo.incRegionCountForTable(name, incr);
       } else {
-        LOG.warn("Namespace state found null for namespace : " + namespace);
+        LOG.warn("Namespace state found null for namespace : {}", namespace);
       }
     }
     return true;
@@ -110,6 +115,9 @@ class NamespaceStateManager {
    */
   synchronized void checkAndUpdateNamespaceRegionCount(TableName name, int incr)
     throws IOException {
+    if (name.isSystemTable()) {
+      return;
+    }
     String namespace = name.getNamespaceAsString();
     NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);
     if (nspdesc != null) {
@@ -133,13 +141,16 @@ class NamespaceStateManager {
     try {
       return this.master.getClusterSchema().getNamespace(namespaceAsString);
     } catch (IOException e) {
-      LOG.error("Error while fetching namespace descriptor for namespace : " + namespaceAsString);
+      LOG.error("Error while fetching namespace descriptor for namespace : {}", namespaceAsString);
       return null;
     }
   }
 
   synchronized void checkAndUpdateNamespaceTableCount(TableName table, int numRegions)
     throws IOException {
+    if (table.isSystemTable()) {
+      return;
+    }
     String namespace = table.getNamespaceAsString();
     NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);
     if (nspdesc != null) {
@@ -186,6 +197,7 @@ class NamespaceStateManager {
   }
 
   private void addTable(TableName tableName, int regionCount) throws IOException {
+    assert !tableName.isSystemTable() : "Tracking of system tables is not supported";
     NamespaceTableAndRegionInfo info = nsStateCache.get(tableName.getNamespaceAsString());
     if (info != null) {
       info.addTable(tableName, regionCount);
@@ -196,6 +208,9 @@ class NamespaceStateManager {
   }
 
   synchronized void removeTable(TableName tableName) {
+    if (tableName.isSystemTable()) {
+      return;
+    }
     NamespaceTableAndRegionInfo info = nsStateCache.get(tableName.getNamespaceAsString());
     if (info != null) {
       info.removeTable(tableName);
@@ -219,7 +234,7 @@ class NamespaceStateManager {
         addTable(table, regions.size());
       }
     }
-    LOG.info("Finished updating state of " + nsStateCache.size() + " namespaces. ");
+    LOG.info("Finished updating state of {} namespaces.", nsStateCache.size());
     initialized = true;
   }
 
