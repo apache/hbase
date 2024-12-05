@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
@@ -74,6 +75,15 @@ public class ResourceBase implements Constants {
       RetriesExhaustedException retryException = (RetriesExhaustedException) exp;
       processException(retryException.getCause());
     }
+    if (exp instanceof TableNotEnabledException) {
+      throwServiceUnavailableException(exp);
+    }
+
+    throwServiceUnavailableException(exp);
+    return null;
+  }
+
+  private static void throwServiceUnavailableException(Throwable exp) {
     throw new WebApplicationException(
       Response.status(Response.Status.SERVICE_UNAVAILABLE).type(MIMETYPE_TEXT)
         .entity("Unavailable" + CRLF + StringUtils.stringifyException(exp) + CRLF).build());

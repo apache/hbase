@@ -63,36 +63,43 @@ public class TableScanResource extends ResourceBase {
       LOG.trace("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
-    final int rowsToSend = userRequestedLimit;
-    servlet.getMetrics().incrementSucessfulScanRequests(1);
-    final Iterator<Result> itr = results.iterator();
-    return new CellSetModelStream(new ArrayList<RowModel>() {
-      @Override
-      public Iterator<RowModel> iterator() {
-        return new Iterator<RowModel>() {
-          int count = rowsToSend;
+    try {
+      final int rowsToSend = userRequestedLimit;
+      servlet.getMetrics().incrementSucessfulScanRequests(1);
+      final Iterator<Result> itr = results.iterator();
+      return new CellSetModelStream(new ArrayList<RowModel>() {
+        @Override
+        public Iterator<RowModel> iterator() {
+          return new Iterator<RowModel>() {
+            int count = rowsToSend;
 
-          @Override
-          public boolean hasNext() {
-            return count > 0 && itr.hasNext();
-          }
+            @Override
+            public boolean hasNext() {
+              return count > 0 && itr.hasNext();
+            }
 
-          @Override
-          public RowModel next() {
-            Result rs = itr.next();
-            if ((rs == null) || (count <= 0)) {
-              return null;
+            @Override
+            public RowModel next() {
+              Result rs = itr.next();
+              if ((rs == null) || (count <= 0)) {
+                return null;
+              }
+              RowModel rModel = RestUtil.createRowModelFromResult(rs);
+              count--;
+              if (count == 0) {
+                results.close();
+              }
+              return rModel;
             }
-            RowModel rModel = RestUtil.createRowModelFromResult(rs);
-            count--;
-            if (count == 0) {
-              results.close();
-            }
-            return rModel;
-          }
-        };
-      }
-    });
+          };
+        }
+      });
+    } catch (Exception exp) {
+      servlet.getMetrics().incrementFailedScanRequests(1);
+      processException(exp);
+      LOG.warn(exp.toString(), exp);
+      return null;
+    }
   }
 
   @GET

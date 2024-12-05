@@ -139,9 +139,6 @@ public class TableResource extends ResourceBase {
     @DefaultValue("true") @QueryParam(Constants.SCAN_INCLUDE_START_ROW) boolean includeStartRow,
     @DefaultValue("false") @QueryParam(Constants.SCAN_INCLUDE_STOP_ROW) boolean includeStopRow) {
     try {
-      if (servlet.getAdmin().isTableDisabled(TableName.valueOf(this.table))) {
-        throw new ServiceUnavailableException("Table disabled.");
-      }
       Filter prefixFilter = null;
       Scan tableScan = new Scan();
       if (scanSpec.indexOf('*') > 0) {
