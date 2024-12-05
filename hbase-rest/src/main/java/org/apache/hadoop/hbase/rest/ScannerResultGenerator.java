@@ -63,13 +63,20 @@ public class ScannerResultGenerator extends ResultGenerator {
 
   public ScannerResultGenerator(final String tableName, final RowSpec rowspec, final Filter filter,
     final int caching, final boolean cacheBlocks) throws IllegalArgumentException, IOException {
+    this(tableName, rowspec, filter, caching, cacheBlocks, true, false);
+  }
+
+  public ScannerResultGenerator(final String tableName, final RowSpec rowspec, final Filter filter,
+    final int caching, final boolean cacheBlocks, boolean includeStartRow, boolean includeStopRow)
+    throws IOException {
     Table table = RESTServlet.getInstance().getTable(tableName);
     try {
       Scan scan;
       if (rowspec.hasEndRow()) {
-        scan = new Scan(rowspec.getStartRow(), rowspec.getEndRow());
+        scan = new Scan().withStartRow(rowspec.getStartRow(), includeStartRow)
+          .withStopRow(rowspec.getEndRow(), includeStopRow);
       } else {
-        scan = new Scan(rowspec.getStartRow());
+        scan = new Scan().withStartRow(rowspec.getStartRow(), includeStartRow);
       }
       if (rowspec.hasColumns()) {
         byte[][] columns = rowspec.getColumns();
