@@ -574,8 +574,8 @@ class AsyncNonMetaRegionLocator {
 
   void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
     Optional<MetricsConnection> connectionMetrics = conn.getConnectionMetrics();
-    boolean isServerFailure = conn.getFailedServers()
-      .isFailedServer(loc.getServerName().getAddress());
+    boolean isServerFailure =
+      conn.getFailedServers().isFailedServer(loc.getServerName().getAddress());
     AsyncRegionLocatorHelper.updateCachedLocationOnError(loc, exception, this::getCachedLocation,
       this::addLocationToCache, this::removeLocationFromCache, this::removeServerLocationFromCache,
       connectionMetrics.orElse(null), isServerFailure);

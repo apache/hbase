@@ -119,8 +119,8 @@ public class TestAsyncMetaRegionLocator {
       registry = ConnectionRegistryFactory.create(testUtil.getConfiguration(), User.getCurrent());
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(testUtil, registry);
       admin.balancerSwitch(false).get();
-      conn = new AsyncConnectionImpl(testUtil.getConfiguration(),
-        registry, registry.getClusterId().get(), null, User.getCurrent());
+      conn = new AsyncConnectionImpl(testUtil.getConfiguration(), registry,
+        registry.getClusterId().get(), null, User.getCurrent());
       locator = new AsyncMetaRegionLocator(conn);
       initialized = true;
     }
@@ -218,8 +218,7 @@ public class TestAsyncMetaRegionLocator {
       final AsyncConnectionImpl conn = setup.getConnection();
 
       HRegionLocation location =
-        locator.getRegionLocations(RegionReplicaUtil.DEFAULT_REPLICA_ID, false)
-          .join()
+        locator.getRegionLocations(RegionReplicaUtil.DEFAULT_REPLICA_ID, false).join()
           .getDefaultRegionLocation();
 
       // the location is in the meta region cache

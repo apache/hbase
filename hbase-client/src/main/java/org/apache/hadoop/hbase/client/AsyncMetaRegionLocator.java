@@ -58,7 +58,8 @@ class AsyncMetaRegionLocator {
    */
   CompletableFuture<RegionLocations> getRegionLocations(int replicaId, boolean reload) {
     return ConnectionUtils.getOrFetch(metaRegionLocations, metaRelocateFuture, reload,
-      conn.registry::getMetaRegionLocations, locs -> isGood(locs, replicaId), "meta region location");
+      conn.registry::getMetaRegionLocations, locs -> isGood(locs, replicaId),
+      "meta region location");
   }
 
   HRegionLocation getCacheLocation(HRegionLocation loc) {
@@ -112,8 +113,8 @@ class AsyncMetaRegionLocator {
   }
 
   void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
-    boolean isServerFailure = conn.getFailedServers()
-      .isFailedServer(loc.getServerName().getAddress());
+    boolean isServerFailure =
+      conn.getFailedServers().isFailedServer(loc.getServerName().getAddress());
     AsyncRegionLocatorHelper.updateCachedLocationOnError(loc, exception, this::getCacheLocation,
       this::addLocationToCache, this::removeLocationFromCache, this::removeServerLocationFromCache,
       null, isServerFailure);

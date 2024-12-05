@@ -30,12 +30,13 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FutureUtils;
-import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ ClientTests.class, SmallTests.class })
 public class TestAsyncMetaRegionLocatorFailFast {
@@ -64,8 +65,8 @@ public class TestAsyncMetaRegionLocatorFailFast {
   public static void setUp() throws IOException, ExecutionException, InterruptedException {
     FaultyConnectionRegistry registry =
       new FaultyConnectionRegistry(CONF, UserProvider.instantiate(CONF).getCurrent());
-    CONN = new AsyncConnectionImpl(CONF, registry,
-      registry.getClusterId().get(), null, User.getCurrent());
+    CONN = new AsyncConnectionImpl(CONF, registry, registry.getClusterId().get(), null,
+      User.getCurrent());
     LOCATOR = new AsyncMetaRegionLocator(CONN);
   }
 
