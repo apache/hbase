@@ -531,9 +531,16 @@ The following are the scan parameters:
 * `cacheblocks` - Whether to use the <<perf.hbase.client.blockcache,Block Cache>> in the RegionServer. By default `true`.
 * `reversed` - When set to `true`, reverse scan will be executed. By default `false`.
 * `filter` - Allows to specify a filter for the scan as an `application/x-www-form-urlencoded` MIME format string.
-* `filter_b64` - Allows to specify a filter for the scan, encoded in https://datatracker.ietf.org/doc/html/rfc4648#section-5[URL-safe base64]. When both `filter` and `filter_b64` are specified, only `filter_b64` is considered.
+* `filter_b64` - On versions which include the link:https://issues.apache.org/jira/browse/HBASE-28518[HBASE-28518] patch, `filter_b64` allows to specify a https://datatracker.ietf.org/doc/html/rfc4648#section-5[URL-safe base64] encoded filter for the scan. When both `filter` and `filter_b64` are specified, only `filter_b64` is considered.
 * `includeStartRow` - Whether start row should be included in the scan. By default `true`.
 * `includeStopRow` - Whether end row (stop row) should be included  in the scan. By default `false`.
+
+[NOTE]
+====
+`includeStartRow` and `includeStopRow` are only supported on versions that include link:https://issues.apache.org/jira/browse/HBASE-28627[HBASE-28627].
+
+Versions without this patch will either ignore these parameters or will error out if they are set to a non-default value.
+====
 
 More on start row, end row and limit parameters:
 
