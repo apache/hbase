@@ -77,7 +77,6 @@
       <artifactId>hbase-mapreduce</artifactId>
       <type>test-jar</type>
     </dependency>
-    <!-- To dump tools in hbase-procedure into cached_classpath.txt. -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-procedure</artifactId>

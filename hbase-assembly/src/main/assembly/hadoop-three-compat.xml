@@ -54,6 +54,7 @@
     <dependencySet>
       <outputDirectory>lib</outputDirectory>
       <useTransitiveDependencies>true</useTransitiveDependencies>
+      <!-- Exclude artifacts added in the sub-directories to avoid duplication -->
       <excludes>
         <!-- Exclude the shaded jars that go in the lib/shaded-clients directory -->
         <exclude>org.apache.hbase:hbase-shaded-client</exclude>
@@ -61,7 +62,7 @@
         <exclude>org.apache.hbase:hbase-shaded-client-byo-hadoop</exclude>
         <!-- Exclude the Ruby jar that goes in the lib/ruby directory -->
         <exclude>org.jruby:jruby-complete</exclude>
-        <!-- Exclude jars that go into the lib/client-facing-thirdparty directoy -->
+        <!-- Exclude jars that go into the lib/client-facing-thirdparty directory -->
         <exclude>com.github.stephenc.findbugs:findbugs-annotations</exclude>
         <exclude>commons-logging:commons-logging</exclude>
         <exclude>log4j:log4j</exclude>
@@ -75,7 +76,7 @@
         <exclude>io.opentelemetry.javaagent:*</exclude>
         <!-- Exclude jline2 which goes into lib/zk-client. jline3 is a different artifact-->
         <exclude>jline:jline</exclude>
-        <!-- These two exclusions are added here to preserve previous behaviour -->
+        <!-- These two exclusions are added here to preserve previous behaviour, and are not included in sub-directories -->
         <!-- TODO investigate using the provided mechanism for these -->
         <exclude>com.sun.jersey:*</exclude>
         <exclude>com.sun.jersey.contribs:*</exclude>
