@@ -377,7 +377,7 @@ curl -vi -X DELETE \
 |===
 
 [[stateful.scanner.endpoints]]
-.Stateful endpoints for scan operations
+.Stateful endpoints for `Scan` Operations
 [options="header", cols="2m,m,3d,6l"]
 |===
 |Endpoint
@@ -443,7 +443,7 @@ has been exhausted, HTTP status `204` is returned.
 |===
 
 [[stateless.scanner.endpoints]]
-.Stateless endpoints for scan operations
+.Stateless endpoints for `Scan` Operations
 [options="header", cols="2m,m,3d,6l"]
 |===
 |Endpoint
