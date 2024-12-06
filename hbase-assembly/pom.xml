@@ -170,6 +170,13 @@
       <groupId>jline</groupId>
       <artifactId>jline</artifactId>
     </dependency>
+    <!-- FIXME this is only kept to simplify reviewing the assembly refactor.
+    See HBASE-29010 -->
+    <dependency>
+      <groupId>com.sun.xml.ws</groupId>
+      <artifactId>jaxws-ri</artifactId>
+      <type>pom</type>
+    </dependency>
     <!--
       Include the log framework here.
       For other sub modules, we only declare slf4j-api as a compile dependency,
