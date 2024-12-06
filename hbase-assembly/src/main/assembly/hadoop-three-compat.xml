@@ -71,7 +71,7 @@
         <exclude>org.apache.yetus:audience-annotations</exclude>
         <exclude>org.slf4j:*</exclude>
         <exclude>org.apache.logging.log4j:*</exclude>
-        <!-- TODO shouldn't we also exclude duplicate io.opentelemetry.* jars which are added to client-facing-thirdparty ? -->
+        <exclude>io.opentelemetry:*</exclude>
         <!-- Exclude the opentelemetry agent that goes in the lib/trace directory -->
         <exclude>io.opentelemetry.javaagent:*</exclude>
         <!-- Exclude jline2 which goes into lib/zk-client. jline3 is a different artifact-->
