@@ -87,6 +87,8 @@
         <!-- TODO investigate using the provided mechanism for these -->
         <exclude>com.sun.jersey:*</exclude>
         <exclude>com.sun.jersey.contribs:*</exclude>
+        <!-- FIXME remove when jaxws-ri is removed from assembly -->
+        <exclude>com.sun.xml.ws:jaxws-ri:pom</exclude>
       </excludes>
     </dependencySet>
     <!-- Add jruby-complete to hbase_home/lib/ruby.
