@@ -42,6 +42,15 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
   private MetricHistogram queueCallTime;
   private MetricHistogram processCallTime;
   private MetricHistogram totalCallTime;
+  private MetricHistogram queueReadCallTime;
+  private MetricHistogram processReadCallTime;
+  private MetricHistogram totalReadCallTime;
+  private MetricHistogram queueWriteCallTime;
+  private MetricHistogram processWriteCallTime;
+  private MetricHistogram totalWriteCallTime;
+  private MetricHistogram queueScanCallTime;
+  private MetricHistogram processScanCallTime;
+  private MetricHistogram totalScanCallTime;
   private MetricHistogram unwritableTime;
   private MetricHistogram requestSize;
   private MetricHistogram responseSize;
@@ -70,6 +79,24 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
       this.getMetricsRegistry().newTimeHistogram(PROCESS_CALL_TIME_NAME, PROCESS_CALL_TIME_DESC);
     this.totalCallTime =
       this.getMetricsRegistry().newTimeHistogram(TOTAL_CALL_TIME_NAME, TOTAL_CALL_TIME_DESC);
+    this.queueReadCallTime = this.getMetricsRegistry().newTimeHistogram(QUEUE_READ_CALL_TIME_NAME,
+      QUEUE_READ_CALL_TIME_DESC);
+    this.processReadCallTime = this.getMetricsRegistry()
+      .newTimeHistogram(PROCESS_READ_CALL_TIME_NAME, PROCESS_READ_CALL_TIME_DESC);
+    this.totalReadCallTime = this.getMetricsRegistry().newTimeHistogram(TOTAL_READ_CALL_TIME_NAME,
+      TOTAL_READ_CALL_TIME_DESC);
+    this.queueWriteCallTime = this.getMetricsRegistry().newTimeHistogram(QUEUE_WRITE_CALL_TIME_NAME,
+      QUEUE_WRITE_CALL_TIME_DESC);
+    this.processWriteCallTime = this.getMetricsRegistry()
+      .newTimeHistogram(PROCESS_WRITE_CALL_TIME_NAME, PROCESS_WRITE_CALL_TIME_DESC);
+    this.totalWriteCallTime = this.getMetricsRegistry().newTimeHistogram(TOTAL_WRITE_CALL_TIME_NAME,
+      TOTAL_WRITE_CALL_TIME_DESC);
+    this.queueScanCallTime = this.getMetricsRegistry().newTimeHistogram(QUEUE_SCAN_CALL_TIME_NAME,
+      QUEUE_SCAN_CALL_TIME_DESC);
+    this.processScanCallTime = this.getMetricsRegistry()
+      .newTimeHistogram(PROCESS_SCAN_CALL_TIME_NAME, PROCESS_SCAN_CALL_TIME_DESC);
+    this.totalScanCallTime = this.getMetricsRegistry().newTimeHistogram(TOTAL_SCAN_CALL_TIME_NAME,
+      TOTAL_SCAN_CALL_TIME_DESC);
     this.unwritableTime =
       this.getMetricsRegistry().newTimeHistogram(UNWRITABLE_TIME_NAME, UNWRITABLE_TIME_DESC);
     this.maxOutboundBytesExceeded = this.getMetricsRegistry()
@@ -138,6 +165,51 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
   @Override
   public void queuedAndProcessedCall(int totalTime) {
     totalCallTime.add(totalTime);
+  }
+
+  @Override
+  public void dequeuedReadCall(int qTime) {
+    queueReadCallTime.add(qTime);
+  }
+
+  @Override
+  public void processReadCall(int processingTime) {
+    processReadCallTime.add(processingTime);
+  }
+
+  @Override
+  public void queuedAndProcessedReadCall(int totalTime) {
+    totalReadCallTime.add(totalTime);
+  }
+
+  @Override
+  public void dequeuedWriteCall(int qTime) {
+    queueWriteCallTime.add(qTime);
+  }
+
+  @Override
+  public void processWriteCall(int processingTime) {
+    processWriteCallTime.add(processingTime);
+  }
+
+  @Override
+  public void queuedAndProcessedWriteCall(int totalTime) {
+    totalWriteCallTime.add(totalTime);
+  }
+
+  @Override
+  public void dequeuedScanCall(int qTime) {
+    queueScanCallTime.add(qTime);
+  }
+
+  @Override
+  public void processScanCall(int processingTime) {
+    processScanCallTime.add(processingTime);
+  }
+
+  @Override
+  public void queuedAndProcessedScanCall(int totalTime) {
+    totalScanCallTime.add(totalTime);
   }
 
   @Override
