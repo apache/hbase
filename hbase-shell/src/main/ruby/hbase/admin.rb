@@ -114,6 +114,9 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Switch compaction on/off at runtime on a region server
     def compaction_switch(on_or_off, regionserver_names)
+      unless /true|false/i.match(on_or_off.to_s)
+        raise ArgumentError, 'compaction_switch first argument only accepts "true" or "false"'
+      end
       region_servers = regionserver_names.flatten.compact
       servers = java.util.ArrayList.new
       if region_servers.any?
