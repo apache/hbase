@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.normalizer;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +70,7 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
   private long splitPlanCount;
   private long mergePlanCount;
   private final AtomicLong cumulativePlansSizeLimitMb;
+  private final OffPeakHours offPeakHours;
 
   RegionNormalizerWorker(final Configuration configuration, final MasterServices masterServices,
     final RegionNormalizer regionNormalizer, final RegionNormalizerWorkQueue<TableName> workQueue) {
@@ -81,6 +84,7 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
     this.defaultNormalizerTableLevel = extractDefaultNormalizerValue(configuration);
     this.cumulativePlansSizeLimitMb = new AtomicLong(
       configuration.getLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, DEFAULT_CUMULATIVE_SIZE_LIMIT_MB));
+    this.offPeakHours = OffPeakHours.getInstance(configuration);
   }
 
   private boolean extractDefaultNormalizerValue(final Configuration configuration) {
@@ -186,6 +190,10 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
         LOG.debug("interrupt detected. terminating.");
         break;
       }
+      if (!offPeakHours.equals(OffPeakHours.DISABLED) && !offPeakHours.isOffPeakHour()) {
+        sleepToNextHour();
+        continue;
+      }
       final TableName tableName;
       try {
         tableName = workQueue.take();
@@ -196,6 +204,22 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
 
       final List<NormalizationPlan> plans = calculatePlans(tableName);
       submitPlans(plans);
+    }
+  }
+
+  private void sleepToNextHour() {
+    LOG.info("offpeak hours is configured and we'll wait for offpeak hours to continue normalising.");
+    Calendar now = Calendar.getInstance();
+    Calendar nextHour = (Calendar) now.clone();
+    nextHour.add(Calendar.HOUR_OF_DAY, 1);
+    nextHour.set(Calendar.MINUTE, 0);
+    nextHour.set(Calendar.SECOND, 0);
+    nextHour.set(Calendar.MILLISECOND, 0);
+    try {
+      Thread.sleep(nextHour.getTimeInMillis() - now.getTimeInMillis());
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted while waiting to next hour.");
+      e.printStackTrace();
     }
   }
 
