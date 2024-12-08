@@ -94,11 +94,16 @@ public class MemorySizeUtil {
     ) {
       throw new RuntimeException("Current heap configuration for MemStore and BlockCache exceeds "
         + "the threshold required for successful cluster operation. "
-        + "The combined value cannot exceed 0.8. Please check "
-        + "the settings for hbase.regionserver.global.memstore.size and "
-        + "hfile.block.cache.size in your configuration. "
-        + "hbase.regionserver.global.memstore.size is " + globalMemstoreSize
-        + " hfile.block.cache.size is " + blockCacheUpperLimit);
+        + "The combined value cannot exceed 0.8. Please check " + "the settings for "
+        + MEMSTORE_SIZE_KEY + " and either " + HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + " or "
+        + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + " in your configuration. " + MEMSTORE_SIZE_KEY
+        + "=" + globalMemstoreSize + ", " + HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + "="
+        + conf.get(HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY) + ", "
+        + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + "="
+        + conf.get(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY) + ". (Note: If both "
+        + HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + " and "
+        + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + " are set, " + "the system will use "
+        + HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + ")");
     }
   }
 
