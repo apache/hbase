@@ -26,6 +26,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -42,7 +44,10 @@ public class ReplicationPeerConfig {
   private final Map<byte[], byte[]> peerData;
   private final Map<String, String> configuration;
   private Map<TableName, ? extends Collection<String>> tableCFsMap = null;
+  private Map<TableName, TableNameOverride> tableNameOverrides = null;
   private Set<String> namespaces = null;
+  private Map<String, NamespaceOverride> namespaceOverrides = null;
+
   // Default value is true, means replicate all user tables to peer cluster.
   private boolean replicateAllUserTables = true;
   private Map<TableName, ? extends Collection<String>> excludeTableCFsMap = null;
@@ -59,8 +64,14 @@ public class ReplicationPeerConfig {
     this.configuration = Collections.unmodifiableMap(builder.configuration);
     this.tableCFsMap =
       builder.tableCFsMap != null ? unmodifiableTableCFsMap(builder.tableCFsMap) : null;
+    this.tableNameOverrides = builder.tableNameOverrides != null
+      ? Collections.unmodifiableMap(builder.tableNameOverrides)
+      : null;
     this.namespaces =
       builder.namespaces != null ? Collections.unmodifiableSet(builder.namespaces) : null;
+    this.namespaceOverrides = builder.namespaceOverrides != null
+      ? Collections.unmodifiableMap(builder.namespaceOverrides)
+      : null;
     this.replicateAllUserTables = builder.replicateAllUserTables;
     this.excludeTableCFsMap = builder.excludeTableCFsMap != null
       ? unmodifiableTableCFsMap(builder.excludeTableCFsMap)
@@ -101,8 +112,16 @@ public class ReplicationPeerConfig {
     return (Map<TableName, List<String>>) tableCFsMap;
   }
 
+  public Map<TableName, TableNameOverride> getTableNameOverrides() {
+    return tableNameOverrides;
+  }
+
   public Set<String> getNamespaces() {
     return this.namespaces;
+  }
+
+  public Map<String, NamespaceOverride> getNamespaceOverrides() {
+    return namespaceOverrides;
   }
 
   public long getBandwidth() {
@@ -166,7 +185,11 @@ public class ReplicationPeerConfig {
 
     private Map<TableName, List<String>> tableCFsMap = null;
 
+    private Map<TableName, TableNameOverride> tableNameOverrides = null;
+
     private Set<String> namespaces = null;
+
+    private Map<String, NamespaceOverride> namespaceOverrides = null;
 
     // Default value is true, means replicate all user tables to peer cluster.
     private boolean replicateAllUserTables = true;
@@ -218,8 +241,22 @@ public class ReplicationPeerConfig {
     }
 
     @Override
+    public ReplicationPeerConfigBuilder
+      setTableNameOverrides(Map<TableName, TableNameOverride> tableNameOverrides) {
+      this.tableNameOverrides = tableNameOverrides;
+      return this;
+    }
+
+    @Override
     public ReplicationPeerConfigBuilder setNamespaces(Set<String> namespaces) {
       this.namespaces = namespaces;
+      return this;
+    }
+
+    @Override
+    public ReplicationPeerConfigBuilder
+      setNamespaceOverrides(Map<String, NamespaceOverride> namespaceOverrides) {
+      this.namespaceOverrides = namespaceOverrides;
       return this;
     }
 
