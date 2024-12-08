@@ -243,7 +243,10 @@ public class MemorySizeUtil {
     }
 
     final MemoryUsage usage = safeGetHeapMemoryUsage();
-    final long heapMax = usage != null ? usage.getMax() : -1;
+    if (usage == null) {
+      return -1;
+    }
+    final long heapMax = usage.getMax();
     float onHeapCacheFixedSize =
       (float) conf.getLong(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY,
         HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT) / heapMax;
