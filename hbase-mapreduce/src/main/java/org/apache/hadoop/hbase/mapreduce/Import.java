@@ -132,9 +132,7 @@ public class Import extends Configured implements Tool {
 
     @Override
     public void write(DataOutput out) throws IOException {
-      out.writeInt(PrivateCellUtil.estimatedSerializedSizeOfKey(kv));
-      out.writeInt(0);
-      PrivateCellUtil.writeFlatKey(kv, out);
+        KeyValueUtil.write(new KeyValue(kv), out);
     }
 
     @Override
@@ -212,7 +210,7 @@ public class Import extends Configured implements Tool {
               continue;
             }
             Cell ret = convertKv(kv, cfRenameMap);
-            context.write(new CellWritableComparable(ret), ret);
+            context.write(new CellWritableComparable(ret), new MapReduceExtendedCell(ret));
           }
         }
       } catch (InterruptedException e) {
