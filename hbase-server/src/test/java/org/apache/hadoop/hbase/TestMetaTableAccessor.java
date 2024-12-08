@@ -103,13 +103,13 @@ public class TestMetaTableAccessor {
   }
 
   @Test
-  public void testIsMetaWhenAllHealthy() throws InterruptedException {
+  public void testIsMetaWhenAllHealthy() throws IOException {
     HMaster m = UTIL.getMiniHBaseCluster().getMaster();
     assertTrue(m.waitForMetaOnline());
   }
 
   @Test
-  public void testIsMetaWhenMetaGoesOffline() throws InterruptedException {
+  public void testIsMetaWhenMetaGoesOffline() throws IOException {
     HMaster m = UTIL.getMiniHBaseCluster().getMaster();
     int index = UTIL.getMiniHBaseCluster().getServerWithMeta();
     HRegionServer rsWithMeta = UTIL.getMiniHBaseCluster().getRegionServer(index);
