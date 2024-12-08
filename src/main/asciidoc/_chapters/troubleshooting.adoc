@@ -93,10 +93,12 @@ Enabling the RPC-level logging on a RegionServer can often give insight on timin
 Once enabled, the amount of log spewed is voluminous.
 It is not recommended that you leave this logging on for more than short bursts of time.
 To enable RPC-level logging, browse to the RegionServer UI and click on _Log Level_.
-Set the log level to `DEBUG` for the package `org.apache.hadoop.ipc` (That's right, for `hadoop.ipc`, NOT, `hbase.ipc`). Then tail the RegionServers log.
+Set the log level to `TRACE` for the package `org.apache.hadoop.hbase.ipc`, then tail the RegionServers log.
 Analyze.
 
 To disable, set the logging level back to `INFO` level.
+
+The same log settings also work on Master and for the client.
 
 [[trouble.log.gc]]
 === JVM Garbage Collection Logs
