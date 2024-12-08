@@ -184,6 +184,13 @@ creation or mutation, and `DELETE` for deletion.
 |Description
 |Example
 
+|/_table_/exists
+|GET
+|Returns if the specified table exists.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/exists"
+
 |/_table_/schema
 |GET
 |Describe the schema of the specified table.
@@ -269,6 +276,20 @@ curl -vi -X GET \
   -H "Encoding: base64" \
    "http://example.com:8000/users/cm93MQ/Y2Y6YQ/"
 
+|/_table_/_row_prefix_*/_column_
+|GET
+|Get a combination of rows which matches the given row prefix and column family. Returned values are Base-64 encoded.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/row*/cf"
+
+|/_table_/_row_prefix_*/_column:qualifier_
+|GET
+|Get a combination of rows which matches the given row prefix, column family and qualifier. Returned values are Base-64 encoded.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/row*/cf"
+
 |/_table_/multiget?row=_row_&row=_row_/_column:qualifier_&row=...
 |GET
 |Multi-Get a combination of rows/columns. Values are Base-64 encoded.
@@ -282,6 +303,20 @@ curl -vi -X GET \
 |curl -vi -X GET \
   -H "Accept: text/xml" \
   "http://example.com:8000/users/multiget?e=b64&row=cm93MQ&row=cm93Mg%2FY2Y6YQ"
+
+|/_table_/multiget?row=_row_&row=_row_/_column:qualifier_&filter=_url_encoded_filter_
+|GET
+|Multi-Get a combination of rows/columns with a filter. The filter should be specified according to the <<thrift.filter_language,Thrift Filter Language>> and then encoded as `application/x-www-form-urlencoded` MIME format string. This example uses `PrefixFilter('row1')`.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/multiget?row=row1&row=row2/cf:a&filter=PrefixFilter%28%27row1%27%29"
+
+|/_table_/multiget?row=_row_&row=_row_/_column:qualifier_&row=...&filter_b64=_b64_encoded_filter_
+|GET
+|Multi-Get a combination of rows/columns with a filter. The filter should be specified according to the <<thrift.filter_language,Thrift Filter Language>> and then encoded in https://datatracker.ietf.org/doc/html/rfc4648#section-5[URL-safe base64]. This example uses `PrefixFilter('row1')`.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/multiget?row=row1&row=row2/cf:a&filter_b64=UHJlZml4RmlsdGVyKCdyb3cxJyk"
 
 |/_table_/_row_/_column:qualifier_/?v=_number_of_versions_
 |GET
@@ -341,7 +376,8 @@ curl -vi -X DELETE \
 
 |===
 
-.Endpoints for `Scan` Operations
+[[stateful.scanner.endpoints]]
+.Stateful endpoints for `Scan` Operations
 [options="header", cols="2m,m,3d,6l"]
 |===
 |Endpoint
@@ -405,6 +441,116 @@ has been exhausted, HTTP status `204` is returned.
   "http://example.com:8000/users/scanner/145869072824375522207"
 
 |===
+
+[[stateless.scanner.endpoints]]
+.Stateless endpoints for `Scan` Operations
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
+
+|/_table_/*
+|GET
+|Scanning the entire table. The stateless scanner endpoint does not require a followup call to return the results.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/*"
+
+|/_table_/*?limit=_number_of_rows_
+|GET
+|Scanning the first row of the table.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/*?limit=1"
+
+|/_table_/*?column=_column:qualifier_
+|GET
+|Scanning a given column of the table.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/*?column=cf:a"
+
+|/_table_/*?column=_column1:qualifier1_,_column2:qualifier2_
+|GET
+|Scanning more than one column of the table.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/*?column=cf:a,cf:b"
+
+|/_table_/*?startrow=_row_&limit=_number_of_rows_
+|GET
+|Scanning table with start row and limit.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/*?startrow=row1&limit=2"
+
+|/_table_/_row_prefix_*
+|GET
+|Scanning table with row prefix.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/row1*"
+
+|/_table_/*?reversed=true
+|GET
+|Scanning table in reverse.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/*?reversed=true"
+
+|/_table_/*?filter=_url_encoded_filter_
+|GET
+|Scanning with a filter `PrefixFilter('row1')`. The filter should be specified according to the <<thrift.filter_language,Thrift Filter Language>> and then encoded as `application/x-www-form-urlencoded` MIME format string.
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/*?filter=PrefixFilter%28%27row1%27%29"
+
+|/_table_/*?filter_b64=_b64_encoded_filter_
+|GET
+|Scanning with a filter `PrefixFilter('row1')`. The filter should be specified according to the <<thrift.filter_language,Thrift Filter Language>> and then encoded in https://datatracker.ietf.org/doc/html/rfc4648#section-5[URL-safe base64].
+|curl -vi -X GET \
+-H "Accept: text/xml" \
+"http://example.com:8000/users/*?filter_b64=UHJlZml4RmlsdGVyKCdyb3cxJyk"
+
+|===
+
+The <<stateful.scanner.endpoints,stateful scanner API>> expects clients to restart scans if there is a REST server failure in the midst.
+The stateless does not store any state related to scan operation and all the parameters are specified as query parameters.
+
+NOTE: The stateless endpoints are optimized for small results, while the <<stateful.scanner.endpoints,stateful scanner API>> can also be used for large results.
+
+The following are the scan parameters:
+
+* `startrow` - The start row for the scan.
+* `endrow` - The end row for the scan.
+* `column` - The comma separated list of columns to scan.
+* `starttime`, `endtime` - To only retrieve columns within a specific range of version timestamps, both start and end time must be specified.
+* `maxversions` - To limit the number of versions of each column to be returned.
+* `batchsize` - To limit the maximum number of values returned for each call to next().
+* `limit` - The number of rows to return in the scan operation.
+* `cacheblocks` - Whether to use the <<perf.hbase.client.blockcache,Block Cache>> in the RegionServer. By default `true`.
+* `reversed` - When set to `true`, reverse scan will be executed. By default `false`.
+* `filter` - Allows to specify a filter for the scan as an `application/x-www-form-urlencoded` MIME format string.
+* `filter_b64` - On versions which include the link:https://issues.apache.org/jira/browse/HBASE-28518[HBASE-28518] patch, `filter_b64` allows to specify a https://datatracker.ietf.org/doc/html/rfc4648#section-5[URL-safe base64] encoded filter for the scan. When both `filter` and `filter_b64` are specified, only `filter_b64` is considered.
+* `includeStartRow` - Whether start row should be included in the scan. By default `true`.
+* `includeStopRow` - Whether end row (stop row) should be included  in the scan. By default `false`.
+
+[NOTE]
+====
+`includeStartRow` and `includeStopRow` are only supported on versions that include link:https://issues.apache.org/jira/browse/HBASE-28627[HBASE-28627].
+
+Versions without this patch will either ignore these parameters or will error out if they are set to a non-default value.
+====
+
+More on start row, end row and limit parameters:
+
+* If start row, end row and limit not specified, then the whole table will be scanned.
+* If start row and limit (say N) is specified, then the scan operation will return N rows from the start row specified.
+* If only limit parameter is specified, then the scan operation will return N rows from the start of the table.
+* If limit and end row are specified, then the scan operation will return N rows from start of table till the end row. If the end row is reached before N rows ( say M and M < N ), then M rows will be returned to the user.
+* If start row, end row and limit (say N ) are specified and N < number of rows between start row and end row, then N rows from start row will be returned to the user. If N > (number of rows between start row and end row (say M), then M number of rows will be returned to the user.
 
 .Endpoints for `Put` Operations
 [options="header", cols="2m,m,3d,6l"]
@@ -557,6 +703,57 @@ Detailed Explanation:
 
 *** Basically, the 4 xml-format examples are the same as the 4 corresponding json-format examples, and will not be explained here in detail.
 
+.Endpoints for `Append` Operations
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
+
+|/_table_/_row_key_/?check=append
+|PUT
+|Appends the given new value to the end of the current value of the cell. The row, column qualifier, and value must each be Base-64 encoded.
+|curl -vi -X PUT \
+-H "Accept: text/xml" \
+-H "Content-Type: text/xml" \
+-d '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><CellSet><Row key="cm93NQo="><Cell column="Y2Y6ZQo=">dmFsdWU1Cg==</Cell></Row></CellSet>' \
+"http://example.com:8000/users/row5?check=append"
+
+curl -vi -X PUT \
+-H "Content-type: application/json" \
+-H "Accept: application/json" \
+-d '{"Row":[{"key":"dGVzdHJvdzE=","Cell":[{"column":"YTox","$":"dGVzdHZhbHVlMgo"},{"column":"YToy","$":"dGVzdHZhbHVlMTIK"}]}]}' \
+"http://localhost:8080/users/testrow1?check=append"
+
+|===
+
+.Endpoints for `Increment` Operations
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
+
+|/_table_/_row_key_/?check=increment
+|PUT
+|Increments the current value of the cell. The row, column qualifier, and value must each be Base-64 encoded.
+|curl -vi -X PUT \
+-H "Accept: text/xml" \
+-H "Content-Type: text/xml" \
+-d '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><CellSet><Row key="cm93NQo="><Cell column="YTox">MQ==</Cell></Row></CellSet>' \
+"http://localhost:8080/users/row5?check=increment"
+
+curl -vi -X PUT \
+-H "Content-type: application/json" \
+-H "Accept: application/json" \
+-d '{"Row":[{"key":"dGVzdHJvdzE=","Cell":[{"column":"YTox","$":"MQ=="},{"column":"YToy","$":"MQ=="}]}]}' \
+"http://localhost:8080/users/testrow1?check=increment"
+
+|===
+
+
 [[xml_schema]]
 === REST XML Schema
 
@@ -658,14 +855,21 @@ Detailed Explanation:
     <sequence>
       <element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"></element>
     </sequence>
-    <sequence>
-      <element name="filter" type="string" minOccurs="0" maxOccurs="1"></element>
-    </sequence>
     <attribute name="startRow" type="base64Binary"></attribute>
     <attribute name="endRow" type="base64Binary"></attribute>
     <attribute name="batch" type="int"></attribute>
     <attribute name="startTime" type="int"></attribute>
     <attribute name="endTime" type="int"></attribute>
+    <attribute name="filter" type="string"></attribute>
+    <attribute name="caching" type="int"></attribute>
+    <sequence>
+        <element name="labels" type="string" minOccurs="0" maxOccurs="unbounded"></element>
+    </sequence>
+    <attribute name="cacheBlocks" type="boolean"></attribute>
+    <attribute name="maxVersions" type="int"></attribute>
+    <attribute name="limit" type="int"></attribute>
+    <attribute name="includeStartRow" type="boolean"></attribute>
+    <attribute name="includeStopRow" type="boolean"></attribute>
   </complexType>
 
   <element name="StorageClusterVersion" type="tns:StorageClusterVersion" />
@@ -711,7 +915,15 @@ Detailed Explanation:
     <attribute name="storefiles" type="int"></attribute>
     <attribute name="storefileSizeMB" type="int"></attribute>
     <attribute name="memstoreSizeMB" type="int"></attribute>
-    <attribute name="storefileIndexSizeMB" type="int"></attribute>
+    <attribute name="storefileIndexSizeKB" type="int"></attribute>
+    <attribute name="readRequestsCount" type="int"></attribute>
+    <attribute name="cpRequestsCount" type="int"></attribute>
+    <attribute name="writeRequestsCount" type="int"></attribute>
+    <attribute name="rootIndexSizeKB" type="int"></attribute>
+    <attribute name="totalStaticIndexSizeKB" type="int"></attribute>
+    <attribute name="totalStaticBloomSizeKB" type="int"></attribute>
+    <attribute name="totalCompactingKVs" type="int"></attribute>
+    <attribute name="currentCompactedKVs" type="int"></attribute>
   </complexType>
 
 </schema>
@@ -738,8 +950,16 @@ message StorageClusterStatus {
     optional int32 stores = 2;
     optional int32 storefiles = 3;
     optional int32 storefileSizeMB = 4;
-    optional int32 memstoreSizeMB = 5;
-    optional int32 storefileIndexSizeMB = 6;
+    optional int32 memStoreSizeMB = 5;
+    optional int64 storefileIndexSizeKB = 6;
+    optional int64 readRequestsCount = 7;
+    optional int64 writeRequestsCount = 8;
+    optional int32 rootIndexSizeKB = 9;
+    optional int32 totalStaticIndexSizeKB = 10;
+    optional int32 totalStaticBloomSizeKB = 11;
+    optional int64 totalCompactingKVs = 12;
+    optional int64 currentCompactedKVs = 13;
+    optional int64 cpRequestsCount = 14;
   }
   message Node {
     required string name = 1;    // name:port
@@ -822,6 +1042,14 @@ message Scanner {
   optional int32 batch = 4;
   optional int64 startTime = 5;
   optional int64 endTime = 6;
+  optional int32 maxVersions = 7;
+  optional string filter = 8;
+  optional int32 caching = 9;     // specifies REST scanner caching
+  repeated string labels = 10;
+  optional bool cacheBlocks = 11; // server side block caching hint
+  optional int32 limit = 12;
+  optional bool includeStartRow = 13;
+  optional bool includeStopRow = 14;
 }
 ----
 

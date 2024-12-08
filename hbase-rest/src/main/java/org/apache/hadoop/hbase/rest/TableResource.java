@@ -105,7 +105,6 @@ public class TableResource extends ResourceBase {
     return new RowResource(this, rowspec, versions, check, returnResult, keyEncoding);
   }
 
-  // TODO document
   @Path("{suffixglobbingspec: .*\\*/.+}")
   public RowResource getRowResourceWithSuffixGlobbing(
     // We need the @Encoded decorator so Jersey won't urldecode before
@@ -120,7 +119,6 @@ public class TableResource extends ResourceBase {
     return new RowResource(this, suffixglobbingspec, versions, check, returnResult, keyEncoding);
   }
 
-  // TODO document
   // FIXME handle binary rowkeys (like put and delete does)
   @Path("{scanspec: .*[*]$}")
   public TableScanResource getScanResource(final @PathParam("scanspec") String scanSpec,
