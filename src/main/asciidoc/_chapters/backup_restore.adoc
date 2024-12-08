@@ -176,6 +176,10 @@ NOTE: The ",..." is an ellipsis meant to imply that this is a comma-separated li
   <value>org.apache.hadoop.hbase.backup.BackupObserver,...</value>
 </property>
 <property>
+  <name>hbase.coprocessor.master.classes</name>
+  <value>org.apache.hadoop.hbase.backup.BackupObserver,...</value>
+</property>
+<property>
   <name>hbase.master.hfilecleaner.plugins</name>
   <value>org.apache.hadoop.hbase.backup.BackupHFileCleaner,...</value>
 </property>
@@ -654,6 +658,9 @@ _hbase.procedure.regionserver.classes_: A comma-separated list of classes invoke
 Set this value to `org.apache.hadoop.hbase.backup.regionserver.LogRollRegionServerProcedureManager` or append it to the current value.
 
 _hbase.coprocessor.region.classes_: A comma-separated list of RegionObservers deployed on tables. Set this value to
+`org.apache.hadoop.hbase.backup.BackupObserver` or append it to the current value.
+
+_hbase.coprocessor.master.classes_: A comma-separated list of MasterObservers deployed on tables. Set this value to
 `org.apache.hadoop.hbase.backup.BackupObserver` or append it to the current value.
 
 _hbase.master.hfilecleaner.plugins_: A comma-separated list of HFileCleaners deployed on the Master. Set this value
