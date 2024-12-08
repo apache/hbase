@@ -319,7 +319,8 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
         CommonFSUtils.getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME), tableName);
       Path regionDir = new Path(mobTableDir, MobUtils.getMobRegionInfo(tableName).getEncodedName());
       if (fs.exists(regionDir)) {
-        HFileArchiver.archiveRegion(fs, mfs.getRootDir(), mobTableDir, regionDir);
+        HFileArchiver.archiveRegion(env.getMasterConfiguration(), fs, mfs.getRootDir(), mobTableDir,
+          regionDir);
       }
 
       // Delete table directory from FS
