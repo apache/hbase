@@ -160,18 +160,20 @@ public class HeapMemoryManager {
     blockCachePercentMinRange = conf.getFloat(BLOCK_CACHE_SIZE_MIN_RANGE_KEY, blockCachePercent);
     blockCachePercentMaxRange = conf.getFloat(BLOCK_CACHE_SIZE_MAX_RANGE_KEY, blockCachePercent);
     if (blockCachePercent < blockCachePercentMinRange) {
-      LOG.warn("Setting " + BLOCK_CACHE_SIZE_MIN_RANGE_KEY + " to " + blockCachePercent
-        + " (lookup order: " + HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + " -> "
-        + HFILE_BLOCK_CACHE_SIZE_KEY + "),"
-        + " because supplied value greater than initial block cache size.");
+      LOG.warn(
+        "Setting {} to {} (lookup order: {} -> {}), "
+          + "because supplied value greater than initial block cache size.",
+        BLOCK_CACHE_SIZE_MIN_RANGE_KEY, blockCachePercent, HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY,
+        HFILE_BLOCK_CACHE_SIZE_KEY);
       blockCachePercentMinRange = blockCachePercent;
       conf.setFloat(BLOCK_CACHE_SIZE_MIN_RANGE_KEY, blockCachePercentMinRange);
     }
     if (blockCachePercent > blockCachePercentMaxRange) {
-      LOG.warn("Setting " + BLOCK_CACHE_SIZE_MAX_RANGE_KEY + " to " + blockCachePercent
-        + " (lookup order: " + HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + " -> "
-        + HFILE_BLOCK_CACHE_SIZE_KEY + "),"
-        + " because supplied value less than initial block cache size.");
+      LOG.warn(
+        "Setting {} to {} (lookup order: {} -> {}), "
+          + "because supplied value less than initial block cache size.",
+        BLOCK_CACHE_SIZE_MAX_RANGE_KEY, blockCachePercent, HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY,
+        HFILE_BLOCK_CACHE_SIZE_KEY);
       blockCachePercentMaxRange = blockCachePercent;
       conf.setFloat(BLOCK_CACHE_SIZE_MAX_RANGE_KEY, blockCachePercentMaxRange);
     }
