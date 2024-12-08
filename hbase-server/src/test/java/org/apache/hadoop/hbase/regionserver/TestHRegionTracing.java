@@ -117,7 +117,7 @@ public class TestHRegionTracing {
       }
       List<String> regionNames = span.getAttributes().get(HBaseSemanticAttributes.REGION_NAMES_KEY);
       return regionNames != null && regionNames.size() == 1
-        && regionNames.get(0).equals(region.getRegionInfo().getRegionNameAsString());
+        && regionNames.get(0).equals(region.getRegionInfo().getEncodedName());
     }));
   }
 
