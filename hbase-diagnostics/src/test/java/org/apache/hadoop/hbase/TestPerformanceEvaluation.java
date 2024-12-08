@@ -124,7 +124,7 @@ public class TestPerformanceEvaluation {
   public void testSizeCalculation() {
     TestOptions opts = new PerformanceEvaluation.TestOptions();
     opts = PerformanceEvaluation.calculateRowsAndSize(opts);
-    int rows = opts.getPerClientRunRows();
+    long rows = opts.getPerClientRunRows();
     // Default row count
     final int defaultPerClientRunRows = 1024 * 1024;
     assertEquals(defaultPerClientRunRows, rows);
@@ -146,7 +146,7 @@ public class TestPerformanceEvaluation {
   public void testRandomReadCalculation() {
     TestOptions opts = new PerformanceEvaluation.TestOptions();
     opts = PerformanceEvaluation.calculateRowsAndSize(opts);
-    int rows = opts.getPerClientRunRows();
+    long rows = opts.getPerClientRunRows();
     // Default row count
     final int defaultPerClientRunRows = 1024 * 1024;
     assertEquals(defaultPerClientRunRows, rows);
@@ -164,7 +164,7 @@ public class TestPerformanceEvaluation {
     boolean foundValue = false;
     Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 10000000; i++) {
-      int randomRow = PerformanceEvaluation.generateRandomRow(rand, opts.totalRows);
+      long randomRow = PerformanceEvaluation.generateRandomRow(rand, opts.totalRows);
       if (randomRow > 1000) {
         foundValue = true;
         break;
@@ -402,7 +402,7 @@ public class TestPerformanceEvaluation {
     }
 
     @Override
-    boolean testRow(int i, long startTime) throws IOException, InterruptedException {
+    boolean testRow(long i, long startTime) throws IOException, InterruptedException {
       return false;
     }
   }
