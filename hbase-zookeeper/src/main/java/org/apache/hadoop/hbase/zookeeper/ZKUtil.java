@@ -168,6 +168,25 @@ public final class ZKUtil {
     }
   }
 
+  /**
+   * Get the create time if the specified node exists.
+   * @param zkw   zk reference
+   * @param znode path of node to watch
+   * @return A Stat instance
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static Stat getCreateTimeIfNodeExists(ZKWatcher zkw, String znode) {
+    try {
+      return zkw.getRecoverableZooKeeper().exists(znode, false);
+    } catch (KeeperException e) {
+      LOG.warn(zkw.prefix("Unable to get create time on znode (" + znode + ")"), e);
+      return null;
+    } catch (InterruptedException e) {
+      LOG.warn(zkw.prefix("Unable to get create time on znode (" + znode + ")"), e);
+      return null;
+    }
+  }
+
   //
   // Znode listings
   //
