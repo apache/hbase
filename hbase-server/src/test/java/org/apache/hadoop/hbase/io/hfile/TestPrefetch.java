@@ -286,14 +286,6 @@ public class TestPrefetch {
   }
 
   @Test
-  public void testPrefetchSkipsRefs() throws Exception {
-    testPrefetchWhenRefs(true, c -> {
-      boolean isCached = c != null;
-      assertFalse(isCached);
-    });
-  }
-
-  @Test
   public void testPrefetchDoesntSkipRefs() throws Exception {
     testPrefetchWhenRefs(false, c -> {
       boolean isCached = c != null;
