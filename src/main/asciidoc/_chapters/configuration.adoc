@@ -544,7 +544,7 @@ to _false_. For example:
 <configuration>
   <property>
     <name>hbase.rootdir</name>
-    <value>hdfs://namenode.example.org:8020/hbase</value>
+    <value>hdfs://namenode.example.org:9000/hbase</value>
   </property>
   <property>
     <name>hbase.cluster.distributed</name>
@@ -621,7 +621,7 @@ overridden in the _hbase-site.xml_. See "<<config.files,Configuration Files>>" f
 <configuration>
   <property>
     <name>hbase.rootdir</name>
-    <value>hdfs://namenode.example.org:8020/hbase</value>
+    <value>hdfs://namenode.example.org:9000/hbase</value>
   </property>
   <property>
     <name>hbase.cluster.distributed</name>
@@ -945,7 +945,7 @@ _hbase-env.sh_ -- found in the HBase _conf_ directory might look like.
   </property>
   <property>
     <name>hbase.rootdir</name>
-    <value>hdfs://example0:8020/hbase</value>
+    <value>hdfs://example0:9000/hbase</value>
     <description>The directory shared by RegionServers.
     </description>
   </property>
