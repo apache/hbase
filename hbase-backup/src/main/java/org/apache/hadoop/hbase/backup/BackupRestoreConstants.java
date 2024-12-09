@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.backup;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -105,8 +106,9 @@ public interface BackupRestoreConstants {
       + "org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager\n"
       + "hbase.procedure.regionserver.classes=YOUR_CLASSES,"
       + "org.apache.hadoop.hbase.backup.regionserver.LogRollRegionServerProcedureManager\n"
-      + "hbase.coprocessor.region.classes=YOUR_CLASSES,"
-      + "org.apache.hadoop.hbase.backup.BackupObserver\n" + "and restart the cluster\n"
+      + CoprocessorHost.REGION_COPROCESSOR_CONF_KEY + "=YOUR_CLASSES,"
+      + BackupObserver.class.getSimpleName() + "\n" + CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY
+      + "=YOUR_CLASSES," + BackupObserver.class.getSimpleName() + "\nand restart the cluster\n"
       + "For more information please see http://hbase.apache.org/book.html#backuprestore\n";
   String ENABLE_BACKUP = "Backup is not enabled. To enable backup, " + "in hbase-site.xml, set:\n "
     + BACKUP_CONFIG_STRING;

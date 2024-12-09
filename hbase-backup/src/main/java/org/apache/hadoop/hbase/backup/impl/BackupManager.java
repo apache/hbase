@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,13 +146,17 @@ public class BackupManager implements Closeable {
         classes + "," + regionProcedureClass);
     }
     String coproc = conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
-    String regionObserverClass = BackupObserver.class.getName();
+    String observerClass = BackupObserver.class.getName();
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      (coproc == null ? "" : coproc + ",") + regionObserverClass);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Added region procedure manager: {}. Added region observer: {}",
-        regionProcedureClass, regionObserverClass);
-    }
+      (coproc == null ? "" : coproc + ",") + observerClass);
+
+    String masterCoProc = conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      (masterCoProc == null ? "" : masterCoProc + ",") + observerClass);
+
+    LOG.debug(
+      "Added region procedure manager: {}. Added region observer: {}. Added master observer: {}",
+      regionProcedureClass, observerClass, observerClass);
   }
 
   public static boolean isBackupEnabled(Configuration conf) {
@@ -356,8 +359,7 @@ public class BackupManager implements Closeable {
     return systemTable.readRegionServerLastLogRollResult(backupInfo.getBackupRootDir());
   }
 
-  public Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>>
-    readBulkloadRows(List<TableName> tableList) throws IOException {
+  public List<BulkLoad> readBulkloadRows(List<TableName> tableList) throws IOException {
     return systemTable.readBulkloadRows(tableList);
   }
 
