@@ -33,10 +33,11 @@ public enum IndexBlockEncoding {
   /** Disable index block encoding. */
   NONE(0, null),
   // id 1 is reserved for the PREFIX_TREE algorithm to be added later
-  PREFIX_TREE(1, null);
+  PREFIX_TREE(1, "org.apache.hadoop.hbase.io.encoding.PrefixTreeIndexBlockEncoderV2");
 
   private final short id;
   private final byte[] idInBytes;
+  private IndexBlockEncoder encoder;
   private final String encoderCls;
 
   public static final int ID_SIZE = Bytes.SIZEOF_SHORT;
@@ -118,4 +119,24 @@ public enum IndexBlockEncoding {
     return algorithm;
   }
 
+  /**
+   * Return new index block encoder for given algorithm type.
+   * @return index block encoder if algorithm is specified, null if none is selected.
+   */
+  public IndexBlockEncoder getEncoder() {
+    if (encoder == null && id != 0) {
+      // lazily create the encoder
+      encoder = createEncoder(encoderCls);
+    }
+    return encoder;
+  }
+
+  static IndexBlockEncoder createEncoder(String fullyQualifiedClassName) {
+    try {
+      return Class.forName(fullyQualifiedClassName).asSubclass(IndexBlockEncoder.class)
+        .getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
 }
