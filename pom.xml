@@ -856,7 +856,7 @@
     <metrics-core.version>3.2.6</metrics-core.version>
     <!--
       Note that the version of jackson-[annotations,core,databind] must be kept in sync with the
-      version of jackson-jax/rs-json-provider shipped in hbase-thirdparty.
+      version of jackson-jaxrs-json-provider shipped in hbase-thirdparty.
     -->
     <jackson.version>2.17.2</jackson.version>
     <jackson.databind.version>2.17.2</jackson.databind.version>
