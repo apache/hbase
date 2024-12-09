@@ -88,7 +88,7 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
     if (tableAppendSizeCounter == null) {
       // Ideally putIfAbsent is atomic and we don't need a branch check but we still do it to avoid
       // expensive string construction for every append.
-      String metricsKey = String.format("%s.%s", tableName, APPEND_SIZE);
+      String metricsKey = String.format("%s.%s", tableName.getMetricPrefixTableName(), APPEND_SIZE);
       perTableAppendSize.putIfAbsent(tableName,
         getMetricsRegistry().newCounter(metricsKey, APPEND_SIZE_DESC, 0L));
       tableAppendSizeCounter = perTableAppendSize.get(tableName);
@@ -106,7 +106,8 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
     appendCount.incr();
     MutableFastCounter tableAppendCounter = perTableAppendCount.get(tableName);
     if (tableAppendCounter == null) {
-      String metricsKey = String.format("%s.%s", tableName, APPEND_COUNT);
+      String metricsKey =
+        String.format("%s.%s", tableName.getMetricPrefixTableName(), APPEND_COUNT);
       perTableAppendCount.putIfAbsent(tableName,
         getMetricsRegistry().newCounter(metricsKey, APPEND_COUNT_DESC, 0L));
       tableAppendCounter = perTableAppendCount.get(tableName);
