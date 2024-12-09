@@ -271,8 +271,8 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-app</artifactId>
-      <type>test-jar</type>
       <version>${hadoop-three.version}</version>
+      <type>test-jar</type>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -284,8 +284,8 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
-      <type>test-jar</type>
       <version>${hadoop-three.version}</version>
+      <type>test-jar</type>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -297,8 +297,8 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
-      <type>test-jar</type>
       <version>${hadoop-three.version}</version>
+      <type>test-jar</type>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -316,8 +316,8 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <type>test-jar</type>
       <version>${hadoop-three.version}</version>
+      <type>test-jar</type>
       <scope>provided</scope>
     </dependency>
     <dependency>
