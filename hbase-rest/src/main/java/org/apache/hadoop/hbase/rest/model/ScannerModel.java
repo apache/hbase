@@ -121,6 +121,28 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private boolean cacheBlocks = true;
   private int limit = -1;
 
+  private boolean includeStartRow = true;
+
+  private boolean includeStopRow = false;
+
+  @XmlAttribute
+  public boolean isIncludeStopRow() {
+    return includeStopRow;
+  }
+
+  public void setIncludeStopRow(boolean includeStopRow) {
+    this.includeStopRow = includeStopRow;
+  }
+
+  @XmlAttribute
+  public boolean isIncludeStartRow() {
+    return includeStartRow;
+  }
+
+  public void setIncludeStartRow(boolean includeStartRow) {
+    this.includeStartRow = includeStartRow;
+  }
+
   /**
    * Implement lazily-instantiated singleton as per recipe here:
    * http://literatejava.com/jvm/fastest-threadsafe-singleton-jvm/
@@ -730,6 +752,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         model.addLabel(label);
       }
     }
+    model.setIncludeStartRow(scan.includeStartRow());
+    model.setIncludeStopRow(scan.includeStopRow());
     return model;
   }
 
@@ -997,6 +1021,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         builder.addLabels(label);
     }
     builder.setCacheBlocks(cacheBlocks);
+    builder.setIncludeStartRow(includeStartRow);
+    builder.setIncludeStopRow(includeStopRow);
     return builder.build();
   }
 
@@ -1042,6 +1068,12 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     }
     if (builder.hasCacheBlocks()) {
       this.cacheBlocks = builder.getCacheBlocks();
+    }
+    if (builder.hasIncludeStartRow()) {
+      this.includeStartRow = builder.getIncludeStartRow();
+    }
+    if (builder.hasIncludeStopRow()) {
+      this.includeStopRow = builder.getIncludeStopRow();
     }
     return this;
   }

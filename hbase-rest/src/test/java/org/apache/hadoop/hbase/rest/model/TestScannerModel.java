@@ -62,7 +62,8 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     AS_JSON = "{\"batch\":100,\"caching\":1000,\"cacheBlocks\":false,\"endRow\":\"enp5eng=\","
       + "\"endTime\":1245393318192,\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\","
       + "\"startTime\":1245219839331,\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"],"
-      + "\"labels\":[\"private\",\"public\"]," + "\"limit\":10000}";
+      + "\"labels\":[\"private\",\"public\"]," + "\"limit\":10000,"
+      + "\"includeStartRow\":true,\"includeStopRow\":false}";
 
     AS_PB = "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9vIGQo47qL554kMLDi57mfJDj"
       + "/////B0joB1IHcHJpdmF0ZVIGcHVibGljWABgkE4=";

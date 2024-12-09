@@ -292,7 +292,7 @@ In this example, HDFS is running on the localhost at port 8020.
 
 <property>
   <name>hbase.rootdir</name>
-  <value>hdfs://localhost:8020/hbase</value>
+  <value>hdfs://localhost:9000/hbase</value>
 </property>
 ----
 +
