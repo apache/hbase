@@ -37,7 +37,10 @@
   </properties>
   <dependencies>
     <!-- Set every Hadoop dependency as provided. The byo-hadoop assembly relies an external Hadoop installation -->
-    <!-- These MUST come first, otherwise some dependencies not be excluded-->
+    <!-- These MUST come first, otherwise some transitive dependencies are not be excluded -->
+    <!-- When Hadoop and HBase depend on different versions of the same artifact, then even if it is provided,
+    the first version specified is used, so in some cases we need to exclude those transitive dependencies from
+    Hadoop to have an equivalent effective classpath to the assembly with Hadoop. -->
     <!-- The versions may be marked as redundant by some IDEs, but they are not defined elsewhere for the provided scope -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -56,6 +59,16 @@
       <artifactId>hadoop-yarn-common</artifactId>
       <version>${hadoop-three.version}</version>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.module</groupId>
+          <artifactId>jackson-module-jaxb-annotations</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.xml.bind</groupId>
+          <artifactId>jakarta.xml.bind-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -86,6 +99,12 @@
       <artifactId>hadoop-common</artifactId>
       <version>${hadoop-three.version}</version>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.checkerframework</groupId>
+          <artifactId>checker-qual</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -96,18 +115,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
-      <version>${hadoop-three.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-minicluster</artifactId>
-      <version>${hadoop-three.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-minikdc</artifactId>
       <version>${hadoop-three.version}</version>
       <scope>provided</scope>
     </dependency>
