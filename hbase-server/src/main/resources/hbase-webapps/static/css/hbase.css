@@ -63,6 +63,10 @@ a {
     padding-top: 16px;
   }
 }
+/* Make sure background color is visible in tables (Tasks) where alert class is used. */
+tr.alert td {
+  background: none;
+}
 /* End of Preserve original HBase UI colors */
 
 body { padding-top: 50px; }
