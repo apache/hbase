@@ -35,6 +35,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -73,6 +74,7 @@ import org.apache.hadoop.hbase.client.trace.TableOperationSpanBuilder;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -2132,9 +2134,24 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       metaReplicaSelector.onError(oldLocation);
     }
 
+    // Clear all meta caches of the server on which hardware failure related exceptions occurred
+    //
+    // Those exceptions might be caused by a network or hardware issue of that server.
+    // So we might not be able to connect to that server for a while.
+    // If we don't clear the caches, we might get the same exceptions
+    // as many times as the number of location caches of that server.
+    if (cause instanceof CallTimeoutException || cause instanceof ConnectException) {
+      clearCache(source);
+      return;
+    }
+
     // If we're here, it means that can cannot be sure about the location, so we remove it from
     // the cache. Do not send the source because source can be a new server in the same host:port
     metaCache.clearCache(regionInfo);
+  }
+
+  void clearCache(ServerName serverName) {
+    metaCache.clearCache(serverName);
   }
 
   @Override
