@@ -57,7 +57,6 @@
       <!-- Exclude artifacts added in the sub-directories to avoid duplication -->
       <excludes>
         <!-- Exclude the shaded jars that go in the lib/shaded-clients directory -->
-        <exclude>org.apache.hbase:hbase-shaded-client</exclude>
         <exclude>org.apache.hbase:hbase-shaded-mapreduce</exclude>
         <exclude>org.apache.hbase:hbase-shaded-client-byo-hadoop</exclude>
         <!-- Exclude the Ruby jar that goes in the lib/ruby directory -->
@@ -138,7 +137,6 @@
     <dependencySet>
       <outputDirectory>lib/shaded-clients</outputDirectory>
       <includes>
-        <include>org.apache.hbase:hbase-shaded-client</include>
         <include>org.apache.hbase:hbase-shaded-mapreduce</include>
         <include>org.apache.hbase:hbase-shaded-client-byo-hadoop</include>
       </includes>
