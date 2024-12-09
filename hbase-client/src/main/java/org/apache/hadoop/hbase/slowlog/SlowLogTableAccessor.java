@@ -83,6 +83,8 @@ public class SlowLogTableAccessor {
           Bytes.toBytes(Integer.toString(slowLogPayload.getProcessingTime())))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("queue_time"),
           Bytes.toBytes(Integer.toString(slowLogPayload.getQueueTime())))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("fs_read_time"),
+          Bytes.toBytes(Long.toString(slowLogPayload.getFsReadTime())))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("region_name"),
           Bytes.toBytes(slowLogPayload.getRegionName()))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("response_size"),
