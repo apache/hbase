@@ -78,6 +78,12 @@ section {
   margin-bottom: 3em;
 }
 
+/** Avoid double bottom borders with tables in tab contents.  */
+td, tfoot, th, thead, tr {
+  border-style: none;
+  border-top: 1px solid #ddd;
+}
+
 .page-header {
   padding-bottom: 9px;
   margin: 40px 0 20px;
