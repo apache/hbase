@@ -21,13 +21,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 import org.apache.hadoop.hbase.io.SizedExtendedCellScanner;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.util.Pair;
@@ -37,9 +41,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 @InterfaceAudience.Private
@@ -47,18 +53,24 @@ public class ReplicationProtobufUtil {
 
   /**
    * A helper to replicate a list of WAL entries using region server admin
-   * @param admin                  the region server admin
+   * @param admin                  The region server admin
    * @param entries                Array of WAL entries to be replicated
    * @param replicationClusterId   Id which will uniquely identify source cluster FS client
    *                               configurations in the replication configuration directory
    * @param sourceBaseNamespaceDir Path to source cluster base namespace directory
    * @param sourceHFileArchiveDir  Path to the source cluster hfile archive directory
+   * @param namespaceOverrides     Map of source to sink namespace overrides
+   * @param tableNameOverrides     Map of source to sink table overrides
+   * @param timeout                Request timeout
    */
   public static CompletableFuture<ReplicateWALEntryResponse> replicateWALEntry(
     AsyncRegionServerAdmin admin, Entry[] entries, String replicationClusterId,
-    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir, int timeout) {
-    Pair<ReplicateWALEntryRequest, ExtendedCellScanner> p = buildReplicateWALEntryRequest(entries,
-      null, replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir);
+    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir,
+    Map<String, NamespaceOverride> namespaceOverrides,
+    Map<TableName, TableNameOverride> tableNameOverrides, int timeout) {
+    Pair<ReplicateWALEntryRequest, ExtendedCellScanner> p =
+      buildReplicateWALEntryRequest(entries, null, replicationClusterId, sourceBaseNamespaceDir,
+        sourceHFileArchiveDir, namespaceOverrides, tableNameOverrides);
     return admin.replicateWALEntry(p.getFirst(), p.getSecond(), timeout);
   }
 
@@ -69,22 +81,26 @@ public class ReplicationProtobufUtil {
    */
   public static Pair<ReplicateWALEntryRequest, ExtendedCellScanner>
     buildReplicateWALEntryRequest(final Entry[] entries) {
-    return buildReplicateWALEntryRequest(entries, null, null, null, null);
+    return buildReplicateWALEntryRequest(entries, null, null, null, null, null, null);
   }
 
   /**
    * Create a new ReplicateWALEntryRequest from a list of WAL entries
-   * @param entries                the WAL entries to be replicated
-   * @param encodedRegionName      alternative region name to use if not null
+   * @param entries                The WAL entries to be replicated
+   * @param encodedRegionName      Alternative region name to use if not null
    * @param replicationClusterId   Id which will uniquely identify source cluster FS client
    *                               configurations in the replication configuration directory
    * @param sourceBaseNamespaceDir Path to source cluster base namespace directory
    * @param sourceHFileArchiveDir  Path to the source cluster hfile archive directory
+   * @param namespaceOverrides     Map of source to sink namespace overrides
+   * @param tableNameOverrides     Map of source to sink table overrides
    * @return a pair of ReplicateWALEntryRequest and a CellScanner over all the WALEdit values found.
    */
   public static Pair<ReplicateWALEntryRequest, ExtendedCellScanner> buildReplicateWALEntryRequest(
     final Entry[] entries, byte[] encodedRegionName, String replicationClusterId,
-    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir) {
+    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir,
+    Map<String, NamespaceOverride> namespaceOverrides,
+    Map<TableName, TableNameOverride> tableNameOverrides) {
     // Accumulate all the Cells seen in here.
     List<List<? extends ExtendedCell>> allCells = new ArrayList<>(entries.length);
     int size = 0;
@@ -126,6 +142,40 @@ public class ReplicationProtobufUtil {
     }
     if (sourceHFileArchiveDir != null) {
       builder.setSourceHFileArchiveDirPath(sourceHFileArchiveDir.toString());
+    }
+    if (namespaceOverrides != null) {
+      ReplicationProtos.NamespaceOverrideMapping.Builder namespaceOverrideMappingBuilder =
+        ReplicationProtos.NamespaceOverrideMapping.newBuilder();
+      ReplicationProtos.NamespaceOverride.Builder namespaceOverrideBuilder =
+        ReplicationProtos.NamespaceOverride.newBuilder();
+      int i = 0;
+      for (Map.Entry<String, NamespaceOverride> entry : namespaceOverrides.entrySet()) {
+        namespaceOverrideBuilder.clear();
+        namespaceOverrideBuilder.setSinkNamespace(entry.getValue().getSinkNamespace());
+
+        namespaceOverrideMappingBuilder.clear();
+        builder.setNamespaceOverrides(i, namespaceOverrideMappingBuilder
+          .setNamespace(entry.getKey()).setOverride(namespaceOverrideBuilder.build()).build());
+        i++;
+      }
+    }
+    if (tableNameOverrides != null) {
+      ReplicationProtos.TableNameOverrideMapping.Builder tableOverrideMappingBuilder =
+        ReplicationProtos.TableNameOverrideMapping.newBuilder();
+      ReplicationProtos.TableNameOverride.Builder tableOverrideBuilder =
+        ReplicationProtos.TableNameOverride.newBuilder();
+      int i = 0;
+      for (Map.Entry<TableName, TableNameOverride> entry : tableNameOverrides.entrySet()) {
+        tableOverrideBuilder.clear();
+        tableOverrideBuilder
+          .setSinkTableName(ProtobufUtil.toProtoTableName(entry.getValue().getSinkTableName()));
+
+        tableOverrideMappingBuilder.clear();
+        builder.setTableNameOverrides(i,
+          tableOverrideMappingBuilder.setTableName(ProtobufUtil.toProtoTableName(entry.getKey()))
+            .setOverride(tableOverrideBuilder.build()).build());
+        i++;
+      }
     }
 
     return new Pair<>(builder.build(), getCellScanner(allCells, size));
