@@ -778,7 +778,7 @@
     <module>hbase-logging</module>
     <module>hbase-compression</module>
     <module>hbase-extensions</module>
-    <module>hbase-generate-dev-classpath</module>
+    <module>hbase-dev-generate-classpath</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
