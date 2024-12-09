@@ -651,7 +651,8 @@ public class TestHFileArchiving {
 
         try {
           // Try to archive the file
-          HFileArchiver.archiveRegion(fs, rootDir, sourceRegionDir.getParent(), sourceRegionDir);
+          HFileArchiver.archiveRegion(conf, fs, rootDir, sourceRegionDir.getParent(),
+            sourceRegionDir);
 
           // The archiver succeded, the file is no longer in the original location
           // but it's in the archive location.
@@ -683,7 +684,8 @@ public class TestHFileArchiving {
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
     FileSystem fileSystem = UTIL.getTestFileSystem();
     // Try to archive the file but with null regionDir, can't delete sourceFile
-    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, null, null));
+    Configuration conf = UTIL.getMiniHBaseCluster().getMaster().getConfiguration();
+    assertFalse(HFileArchiver.archiveRegion(conf, fileSystem, rootDir, null, null));
   }
 
   @Test
@@ -692,6 +694,7 @@ public class TestHFileArchiving {
       CommonFSUtils.getTableDir(new Path("./"), TableName.valueOf(name.getMethodName())), "xyzabc");
     Path familyDir = new Path(regionDir, "rd");
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
+    Configuration conf = UTIL.getMiniHBaseCluster().getMaster().getConfiguration();
     Path file = new Path(familyDir, "1");
     Path sourceFile = new Path(rootDir, file);
     FileSystem fileSystem = UTIL.getTestFileSystem();
@@ -699,7 +702,7 @@ public class TestHFileArchiving {
     Path sourceRegionDir = new Path(rootDir, regionDir);
     fileSystem.mkdirs(sourceRegionDir);
     // Try to archive the file
-    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, null, sourceRegionDir));
+    assertFalse(HFileArchiver.archiveRegion(conf, fileSystem, rootDir, null, sourceRegionDir));
     assertFalse(fileSystem.exists(sourceRegionDir));
   }
 
@@ -710,6 +713,7 @@ public class TestHFileArchiving {
         "elgn4nf");
     Path familyDir = new Path(regionDir, "rdar");
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
+    Configuration conf = UTIL.getMiniHBaseCluster().getMaster().getConfiguration();
     Path file = new Path(familyDir, "2");
     Path sourceFile = new Path(rootDir, file);
     FileSystem fileSystem = UTIL.getTestFileSystem();
@@ -718,7 +722,7 @@ public class TestHFileArchiving {
     fileSystem.mkdirs(sourceRegionDir);
     // Try to archive the file but with null regionDir, can't delete sourceFile
     assertFalse(
-      HFileArchiver.archiveRegion(fileSystem, rootDir, sourceRegionDir.getParent(), null));
+      HFileArchiver.archiveRegion(conf, fileSystem, rootDir, sourceRegionDir.getParent(), null));
     assertTrue(fileSystem.exists(sourceRegionDir));
     fileSystem.delete(sourceRegionDir, true);
   }
