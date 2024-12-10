@@ -254,6 +254,11 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     return this.codec != null;
   }
 
+  @Override
+  public FailedServers getFailedServers() {
+    return failedServers;
+  }
+
   // for writing tests that want to throw exception when connecting.
   protected boolean isTcpNoDelay() {
     return tcpNoDelay;
