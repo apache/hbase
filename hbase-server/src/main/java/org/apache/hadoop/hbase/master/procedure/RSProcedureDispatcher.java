@@ -318,7 +318,6 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       if (numberOfAttemptsSoFar == 0 && unableToConnectToServer(e)) {
         return false;
       }
-      ExecuteProceduresRequest executeProceduresRequest = request.build();
 
       // Check if the num of attempts have crossed the retry limit, and if the error type can
       // fail-fast.
@@ -348,7 +347,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           + " wait until it is fully dead, try={}", serverName, numberOfAttemptsSoFar);
       } else {
         LOG.warn("request to {} failed due to {}, try={}, retrying... , request params: {}",
-          serverName, e.toString(), numberOfAttemptsSoFar, executeProceduresRequest);
+          serverName, e.toString(), numberOfAttemptsSoFar, request.build());
       }
       numberOfAttemptsSoFar++;
       // Add some backoff here as the attempts rise otherwise if a stuck condition, will fill logs
