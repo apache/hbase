@@ -1907,25 +1907,6 @@ public class HStore
     return this.region.getSmallestReadPoint();
   }
 
-  /**
-   * Adds or replaces the specified KeyValues.
-   * <p>
-   * For each KeyValue specified, if a cell with the same row, family, and qualifier exists in
-   * MemStore, it will be replaced. Otherwise, it will just be inserted to MemStore.
-   * <p>
-   * This operation is atomic on each KeyValue (row/family/qualifier) but not necessarily atomic
-   * across all of them.
-   * @param readpoint readpoint below which we can safely remove duplicate KVs
-   */
-  public void upsert(Iterable<ExtendedCell> cells, long readpoint, MemStoreSizing memstoreSizing) {
-    this.storeEngine.readLock();
-    try {
-      this.memstore.upsert(cells, readpoint, memstoreSizing);
-    } finally {
-      this.storeEngine.readUnlock();
-    }
-  }
-
   public StoreFlushContext createFlushContext(long cacheFlushId, FlushLifeCycleTracker tracker) {
     return new StoreFlusherImpl(cacheFlushId, tracker);
   }
