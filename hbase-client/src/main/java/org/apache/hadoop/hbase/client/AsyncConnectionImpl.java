@@ -27,6 +27,8 @@ import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRI
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.SERVER_NAME_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+import static org.apache.hadoop.hbase.util.JvmPauseMonitor.PAUSE_MONITOR_ENABLE_DEFAULT;
+import static org.apache.hadoop.hbase.util.JvmPauseMonitor.PAUSE_MONITOR_ENABLE_KEY;
 
 import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
@@ -57,6 +59,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
+import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -123,6 +126,8 @@ public class AsyncConnectionImpl implements AsyncConnection {
   private final String metricsScope;
   private final Optional<MetricsConnection> metrics;
 
+  private JvmPauseMonitor pauseMonitor;
+
   private final ClusterStatusListener clusterStatusListener;
 
   private volatile ConnectionOverAsyncConnection conn;
@@ -186,6 +191,10 @@ public class AsyncConnectionImpl implements AsyncConnection {
       }
     }
     this.clusterStatusListener = listener;
+    if (conf.getBoolean(PAUSE_MONITOR_ENABLE_KEY, PAUSE_MONITOR_ENABLE_DEFAULT)) {
+      pauseMonitor = JvmPauseMonitor.getInstance(conf);
+      pauseMonitor.start();
+    }
   }
 
   private void spawnRenewalChore(final UserGroupInformation user) {
@@ -246,6 +255,9 @@ public class AsyncConnectionImpl implements AsyncConnection {
       }
       if (metrics.isPresent()) {
         MetricsConnection.deleteMetricsConnection(metricsScope);
+      }
+      if (pauseMonitor != null) {
+        pauseMonitor.stop();
       }
       ConnectionOverAsyncConnection c = this.conn;
       if (c != null) {

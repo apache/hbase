@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -30,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
@@ -46,8 +46,12 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  * which detects GC pauses(Todd Lipcon)
  */
 @InterfaceAudience.Private
-public class JvmPauseMonitor {
+public final class JvmPauseMonitor {
   private static final Logger LOG = LoggerFactory.getLogger(JvmPauseMonitor.class);
+
+  private static final AtomicInteger REF_CNT = new AtomicInteger();
+
+  private static JvmPauseMonitor INSTANCE;
 
   /** The target sleep time */
   private static final long SLEEP_INTERVAL_MS = 500;
@@ -62,28 +66,47 @@ public class JvmPauseMonitor {
   public static final String INFO_THRESHOLD_KEY = "jvm.pause.info-threshold.ms";
   private static final long INFO_THRESHOLD_DEFAULT = 1000;
 
+  public static final String PAUSE_MONITOR_ENABLE_KEY = "hbase.client.pause.monitor.enable";
+
+  public static final boolean PAUSE_MONITOR_ENABLE_DEFAULT = false;
+
   private Thread monitorThread;
   private volatile boolean shouldRun = true;
-  private JvmPauseMonitorSource metricsSource;
+  private final JvmPauseMonitorSource metricsSource;
 
-  public JvmPauseMonitor(Configuration conf) {
-    this(conf, null);
+  public static synchronized JvmPauseMonitor getInstance(Configuration conf) {
+    return getInstance(conf, null);
   }
 
-  public JvmPauseMonitor(Configuration conf, JvmPauseMonitorSource metricsSource) {
+  public static synchronized JvmPauseMonitor getInstance(Configuration conf,
+    JvmPauseMonitorSource metricsSource) {
+    if (INSTANCE == null) {
+      INSTANCE = new JvmPauseMonitor(conf, metricsSource);
+    }
+    return INSTANCE;
+  }
+
+  private JvmPauseMonitor(Configuration conf, JvmPauseMonitorSource metricsSource) {
     this.warnThresholdMs = conf.getLong(WARN_THRESHOLD_KEY, WARN_THRESHOLD_DEFAULT);
     this.infoThresholdMs = conf.getLong(INFO_THRESHOLD_KEY, INFO_THRESHOLD_DEFAULT);
     this.metricsSource = metricsSource;
   }
 
-  public void start() {
-    Preconditions.checkState(monitorThread == null, "Already started");
+  public synchronized void start() {
+    if (REF_CNT.getAndIncrement() > 0) {
+      // pause monitor already started
+      return;
+    }
     monitorThread = new Thread(new Monitor(), "JvmPauseMonitor");
     monitorThread.setDaemon(true);
     monitorThread.start();
   }
 
-  public void stop() {
+  public synchronized void stop() {
+    if (REF_CNT.decrementAndGet() > 0) {
+      // there are still open connections
+      return;
+    }
     shouldRun = false;
     monitorThread.interrupt();
     try {
@@ -113,7 +136,7 @@ public class JvmPauseMonitor {
     return map;
   }
 
-  private static class GcTimes {
+  private static final class GcTimes {
     private GcTimes(GarbageCollectorMXBean gcBean) {
       gcCount = gcBean.getCollectionCount();
       gcTimeMillis = gcBean.getCollectionTime();
@@ -196,17 +219,13 @@ public class JvmPauseMonitor {
     return metricsSource;
   }
 
-  public void setMetricsSource(JvmPauseMonitorSource metricsSource) {
-    this.metricsSource = metricsSource;
-  }
-
   /**
    * Simple 'main' to facilitate manual testing of the pause monitor. This main function just leaks
    * memory into a list. Running this class with a 1GB heap will very quickly go into "GC hell" and
    * result in log messages about the GC pauses.
    */
   public static void main(String[] args) throws Exception {
-    new JvmPauseMonitor(new Configuration()).start();
+    JvmPauseMonitor.getInstance(new Configuration()).start();
     List<String> list = Lists.newArrayList();
     int i = 0;
     while (true) {
