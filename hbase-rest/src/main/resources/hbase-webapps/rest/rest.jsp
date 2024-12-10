@@ -44,22 +44,24 @@ String listenPort = conf.get("hbase.rest.port", "8080");
 
   <body>
   <nav class="navbar navbar-expand-md navbar-light fixed-top bg-light">
-    <a class="navbar-brand" href="/rest.jsp"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-    <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse">
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link active" href="/rest.jsp">Home</a></li>
-        <li class="nav-item"><a class="nav-link" href="/logs/">Local logs</a></li>
-        <li class="nav-item"><a class="nav-link" href="/logLevel">Log Level</a></li>
-        <li class="nav-item"><a class="nav-link" href="/jmx">Metrics Dump</a></li>
-        <li class="nav-item"><a class="nav-link" href="/prof">Profiler</a></li>
-        <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-          <li class="nav-item"><a class="nav-link" href="/conf">HBase Configuration</a></li>
-        <% } %>
-      </ul>
-    </div><!--/.navbar-collapse -->
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/rest.jsp"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
+      <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link active" href="/rest.jsp">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="/logs/">Local logs</a></li>
+          <li class="nav-item"><a class="nav-link" href="/logLevel">Log Level</a></li>
+          <li class="nav-item"><a class="nav-link" href="/jmx">Metrics Dump</a></li>
+          <li class="nav-item"><a class="nav-link" href="/prof">Profiler</a></li>
+          <% if (HBaseConfiguration.isShowConfInServlet()) { %>
+            <li class="nav-item"><a class="nav-link" href="/conf">HBase Configuration</a></li>
+          <% } %>
+        </ul>
+      </div><!--/.navbar-collapse -->
+    </div><!--/.container-fluid -->
   </nav>
 
 <div class="container-fluid content">
