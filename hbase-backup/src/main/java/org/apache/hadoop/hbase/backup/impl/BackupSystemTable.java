@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -319,68 +321,6 @@ public final class BackupSystemTable implements Closeable {
     }
   }
 
-  /*
-   * Used during restore
-   * @param backupId the backup Id
-   * @param sTableList List of tables
-   * @return array of Map of family to List of Paths
-   */
-  public Map<byte[], List<Path>>[] readBulkLoadedFiles(String backupId, List<TableName> sTableList)
-    throws IOException {
-    Scan scan = BackupSystemTable.createScanForBulkLoadedFiles(backupId);
-    @SuppressWarnings("unchecked")
-    Map<byte[], List<Path>>[] mapForSrc = new Map[sTableList == null ? 1 : sTableList.size()];
-    try (Table table = connection.getTable(bulkLoadTableName);
-      ResultScanner scanner = table.getScanner(scan)) {
-      Result res = null;
-      while ((res = scanner.next()) != null) {
-        res.advance();
-        TableName tbl = null;
-        byte[] fam = null;
-        String path = null;
-        for (Cell cell : res.listCells()) {
-          if (
-            CellUtil.compareQualifiers(cell, BackupSystemTable.TBL_COL, 0,
-              BackupSystemTable.TBL_COL.length) == 0
-          ) {
-            tbl = TableName.valueOf(CellUtil.cloneValue(cell));
-          } else if (
-            CellUtil.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
-              BackupSystemTable.FAM_COL.length) == 0
-          ) {
-            fam = CellUtil.cloneValue(cell);
-          } else if (
-            CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
-              BackupSystemTable.PATH_COL.length) == 0
-          ) {
-            path = Bytes.toString(CellUtil.cloneValue(cell));
-          }
-        }
-        int srcIdx = IncrementalTableBackupClient.getIndex(tbl, sTableList);
-        if (srcIdx == -1) {
-          // the table is not among the query
-          continue;
-        }
-        if (mapForSrc[srcIdx] == null) {
-          mapForSrc[srcIdx] = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-        }
-        List<Path> files;
-        if (!mapForSrc[srcIdx].containsKey(fam)) {
-          files = new ArrayList<Path>();
-          mapForSrc[srcIdx].put(fam, files);
-        } else {
-          files = mapForSrc[srcIdx].get(fam);
-        }
-        files.add(new Path(path));
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("found bulk loaded file : {} {} {}", tbl, Bytes.toString(fam), path);
-        }
-      }
-
-      return mapForSrc;
-    }
-  }
-
   /**
    * Deletes backup status from backup system table table
    * @param backupId backup id
@@ -434,79 +374,63 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
-   * Reads the rows from backup table recording bulk loaded hfiles
-   * @param tableList list of table names
+   * Reads all registered bulk loads.
    */
-  public List<BulkLoad> readBulkloadRows(List<TableName> tableList) throws IOException {
+  public List<BulkLoad> readBulkloadRows() throws IOException {
+    Scan scan = BackupSystemTable.createScanForOrigBulkLoadedFiles(null);
+    return processBulkLoadRowScan(scan);
+  }
+
+  /**
+   * Reads the registered bulk loads for the given tables.
+   */
+  public List<BulkLoad> readBulkloadRows(Collection<TableName> tableList) throws IOException {
     List<BulkLoad> result = new ArrayList<>();
     for (TableName table : tableList) {
       Scan scan = BackupSystemTable.createScanForOrigBulkLoadedFiles(table);
-      try (Table bulkLoadTable = connection.getTable(bulkLoadTableName);
-        ResultScanner scanner = bulkLoadTable.getScanner(scan)) {
-        Result res;
-        while ((res = scanner.next()) != null) {
-          res.advance();
-          String fam = null;
-          String path = null;
-          String region = null;
-          byte[] row = null;
-          for (Cell cell : res.listCells()) {
-            row = CellUtil.cloneRow(cell);
-            String rowStr = Bytes.toString(row);
-            region = BackupSystemTable.getRegionNameFromOrigBulkLoadRow(rowStr);
-            if (
-              CellUtil.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
-                BackupSystemTable.FAM_COL.length) == 0
-            ) {
-              fam = Bytes.toString(CellUtil.cloneValue(cell));
-            } else if (
-              CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
-                BackupSystemTable.PATH_COL.length) == 0
-            ) {
-              path = Bytes.toString(CellUtil.cloneValue(cell));
-            }
-          }
-          result.add(new BulkLoad(table, region, fam, path, row));
-          LOG.debug("found orig " + path + " for " + fam + " of table " + region);
-        }
-      }
+      result.addAll(processBulkLoadRowScan(scan));
     }
     return result;
   }
 
-  /*
-   * @param sTableList List of tables
-   * @param maps array of Map of family to List of Paths
-   * @param backupId the backup Id
-   */
-  public void writeBulkLoadedFiles(List<TableName> sTableList, Map<byte[], List<Path>>[] maps,
-    String backupId) throws IOException {
-    try (BufferedMutator bufferedMutator = connection.getBufferedMutator(bulkLoadTableName)) {
-      long ts = EnvironmentEdgeManager.currentTime();
-      int cnt = 0;
-      List<Put> puts = new ArrayList<>();
-      for (int idx = 0; idx < maps.length; idx++) {
-        Map<byte[], List<Path>> map = maps[idx];
-        TableName tn = sTableList.get(idx);
-
-        if (map == null) {
-          continue;
-        }
-
-        for (Map.Entry<byte[], List<Path>> entry : map.entrySet()) {
-          byte[] fam = entry.getKey();
-          List<Path> paths = entry.getValue();
-          for (Path p : paths) {
-            Put put = BackupSystemTable.createPutForBulkLoadedFile(tn, fam, p.toString(), backupId,
-              ts, cnt++);
-            puts.add(put);
+  private List<BulkLoad> processBulkLoadRowScan(Scan scan) throws IOException {
+    List<BulkLoad> result = new ArrayList<>();
+    try (Table bulkLoadTable = connection.getTable(bulkLoadTableName);
+      ResultScanner scanner = bulkLoadTable.getScanner(scan)) {
+      Result res;
+      while ((res = scanner.next()) != null) {
+        res.advance();
+        TableName table = null;
+        String fam = null;
+        String path = null;
+        String region = null;
+        byte[] row = null;
+        for (Cell cell : res.listCells()) {
+          row = CellUtil.cloneRow(cell);
+          String rowStr = Bytes.toString(row);
+          region = BackupSystemTable.getRegionNameFromOrigBulkLoadRow(rowStr);
+          if (
+            CellUtil.compareQualifiers(cell, BackupSystemTable.TBL_COL, 0,
+              BackupSystemTable.TBL_COL.length) == 0
+          ) {
+            table = TableName.valueOf(CellUtil.cloneValue(cell));
+          } else if (
+            CellUtil.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
+              BackupSystemTable.FAM_COL.length) == 0
+          ) {
+            fam = Bytes.toString(CellUtil.cloneValue(cell));
+          } else if (
+            CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
+              BackupSystemTable.PATH_COL.length) == 0
+          ) {
+            path = Bytes.toString(CellUtil.cloneValue(cell));
           }
         }
-      }
-      if (!puts.isEmpty()) {
-        bufferedMutator.mutate(puts);
+        result.add(new BulkLoad(table, region, fam, path, row));
+        LOG.debug("Found bulk load entry for table {}, family {}: {}", table, fam, path);
       }
     }
+    return result;
   }
 
   /**
@@ -1671,9 +1595,15 @@ public final class BackupSystemTable implements Closeable {
     }
   }
 
-  static Scan createScanForOrigBulkLoadedFiles(TableName table) {
+  /**
+   * Creates a scan to read all registered bulk loads for the given table, or for all tables if
+   * {@code table} is {@code null}.
+   */
+  static Scan createScanForOrigBulkLoadedFiles(@Nullable TableName table) {
     Scan scan = new Scan();
-    byte[] startRow = rowkey(BULK_LOAD_PREFIX, table.toString(), BLK_LD_DELIM);
+    byte[] startRow = table == null
+      ? BULK_LOAD_PREFIX_BYTES
+      : rowkey(BULK_LOAD_PREFIX, table.toString(), BLK_LD_DELIM);
     byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
     stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
     scan.withStartRow(startRow);
@@ -1706,6 +1636,7 @@ public final class BackupSystemTable implements Closeable {
    * Used to query bulk loaded hfiles which have been copied by incremental backup
    * @param backupId the backup Id. It can be null when querying for all tables
    * @return the Scan object
+   * @deprecated This method is broken if a backupId is specified - see HBASE-28715
    */
   static Scan createScanForBulkLoadedFiles(String backupId) {
     Scan scan = new Scan();
@@ -1718,15 +1649,6 @@ public final class BackupSystemTable implements Closeable {
     scan.addFamily(BackupSystemTable.META_FAMILY);
     scan.readVersions(1);
     return scan;
-  }
-
-  static Put createPutForBulkLoadedFile(TableName tn, byte[] fam, String p, String backupId,
-    long ts, int idx) {
-    Put put = new Put(rowkey(BULK_LOAD_PREFIX, backupId + BLK_LD_DELIM + ts + BLK_LD_DELIM + idx));
-    put.addColumn(BackupSystemTable.META_FAMILY, TBL_COL, tn.getName());
-    put.addColumn(BackupSystemTable.META_FAMILY, FAM_COL, fam);
-    put.addColumn(BackupSystemTable.META_FAMILY, PATH_COL, Bytes.toBytes(p));
-    return put;
   }
 
   /**
