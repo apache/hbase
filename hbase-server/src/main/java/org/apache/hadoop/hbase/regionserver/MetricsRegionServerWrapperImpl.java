@@ -1005,10 +1005,14 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
         aggregate = newVal;
 
         List<WALProvider> providers = regionServer.getWalFactory().getAllWALProviders();
+        long numWALFilesTmp = 0;
+        long walFileSizeTmp = 0;
         for (WALProvider provider : providers) {
-          numWALFiles += provider.getNumLogFiles();
-          walFileSize += provider.getLogFileSize();
+          numWALFilesTmp += provider.getNumLogFiles();
+          walFileSizeTmp += provider.getLogFileSize();
         }
+        numWALFiles = numWALFilesTmp;
+        walFileSize = walFileSizeTmp;
 
         mobFileCacheAccessCount = mobFileCache != null ? mobFileCache.getAccessCount() : 0L;
         mobFileCacheMissCount = mobFileCache != null ? mobFileCache.getMissCount() : 0L;
