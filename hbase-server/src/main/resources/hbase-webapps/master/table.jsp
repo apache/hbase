@@ -31,7 +31,16 @@
   import="java.util.concurrent.TimeUnit"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
-         import="org.apache.hadoop.hbase.client.AsyncAdmin"
+  import="org.apache.hadoop.hbase.HConstants"
+  import="org.apache.hadoop.hbase.HRegionLocation"
+  import="org.apache.hadoop.hbase.RegionMetrics"
+  import="org.apache.hadoop.hbase.RegionMetricsBuilder"
+  import="org.apache.hadoop.hbase.ServerMetrics"
+  import="org.apache.hadoop.hbase.ServerName"
+  import="org.apache.hadoop.hbase.Size"
+  import="org.apache.hadoop.hbase.TableName"
+  import="org.apache.hadoop.hbase.TableNotFoundException"
+  import="org.apache.hadoop.hbase.client.AsyncAdmin"
   import="org.apache.hadoop.hbase.client.AsyncConnection"
   import="org.apache.hadoop.hbase.client.CompactionState"
   import="org.apache.hadoop.hbase.client.ConnectionFactory"
@@ -63,7 +72,6 @@
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota" %>
 <%@ page import="java.net.URLEncoder" %>
 <%@ page import="java.util.stream.Collectors" %>
-<%@ page import="org.apache.hadoop.hbase.*" %>
 <%!
   /**
    * @return An empty region load stamped with the passed in <code>regionInfo</code>
