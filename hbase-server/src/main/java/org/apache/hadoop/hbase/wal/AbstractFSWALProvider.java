@@ -488,11 +488,11 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>>
     return p != null && p.endsWith(META_WAL_PROVIDER_ID);
   }
 
-  public static boolean isReplicationFile(Path p) {
-    return isReplicationFile(p.getName());
+  public static boolean isFileInReplicationScope(Path p) {
+    return isFileInReplicationScope(p.getName());
   }
 
-  public static boolean isReplicationFile(String p) {
+  public static boolean isFileInReplicationScope(String p) {
     return p != null && p.endsWith(REPLICATION_WAL_PROVIDER_ID);
   }
 
