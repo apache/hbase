@@ -85,11 +85,6 @@
               <exclude>org.glassfish.ha:ha-api</exclude>
               <exclude>com.sun.xml.messaging.saaj:saaj-impl</exclude>
               <exclude>jakarta.activation:jakarta.activation-api</exclude>
-              <exclude>com.sun.xml.bind:jaxb-xjc</exclude>
-              <exclude>com.sun.xml.bind:jaxb-jxc</exclude>
-              <exclude>jakarta.mail:jakarta.mail-api</exclude>
-              <exclude>jakarta.persistence:jakarta.persistence-api</exclude>
-              <exclude>org.eclipse.persistence:*</exclude>
               <exclude>jakarta.xml.ws:jakarta.xml.ws-api</exclude>
               <exclude>jakarta.xml.bind:jakarta.xml.bind-api</exclude>
               <exclude>jakarta.xml.soap:jakarta.xml.soap-api</exclude>
@@ -229,7 +224,7 @@
       <useTransitiveDependencies>true</useTransitiveDependencies>
       <includes>
         <include>com.sun.activation:javax.activation</include>
-        <!-- The following artifacts are transitive dependencies of com.sun.xml.ws:jaxws-ri:pom
+        <!-- The following artifacts are transitive dependencies of com.sun.xml.ws:jaxws-rt:pom
              They are needed to be included in lib/jdk11 to be added to classpath during
              Java 11 runtime
         -->
@@ -249,11 +244,6 @@
         <include>com.fasterxml.woodstox:woodstox-core</include>
         <include>org.codehaus.woodstox:stax2-api</include>
         <include>jakarta.activation:jakarta.activation-api</include>
-        <include>com.sun.xml.bind:jaxb-xjc</include>
-        <include>com.sun.xml.bind:jaxb-jxc</include>
-        <include>jakarta.mail:jakarta.mail-api</include>
-        <include>jakarta.persistence:jakarta.persistence-api</include>
-        <include>org.eclipse.persistence:*</include>
         <include>jakarta.xml.ws:jakarta.xml.ws-api</include>
         <include>jakarta.xml.bind:jakarta.xml.bind-api</include>
         <include>jakarta.xml.soap:jakarta.xml.soap-api</include>
@@ -261,7 +251,7 @@
       </includes>
       <excludes>
         <!-- Exclude pom file -->
-        <exclude>com.sun.xml.ws:jaxws-ri:pom</exclude>
+        <exclude>com.sun.xml.ws:jaxws-rt:pom</exclude>
       </excludes>
     </dependencySet>
     <dependencySet>
