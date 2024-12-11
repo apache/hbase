@@ -99,7 +99,7 @@
       }
       if (settings.showPN) {
         settings.page == pageTatol ? this.pageList.push('<li class="disabled"> <a class="page-link" href="javascript:void(0)"  data-page="next">' + settings.nextPage + "</a></li>")
-          : this.pageList.push('<li class="page-item"><a data-page="next" href="javascript:void(0)">' + settings.nextPage + '</a></li>');
+          : this.pageList.push('<li class="page-item"><a class="page-link" data-page="next" href="javascript:void(0)">' + settings.nextPage + '</a></li>');
       }
       pageArr.push(this.pageList.join(''));
       pageArr.push('</ul>');
