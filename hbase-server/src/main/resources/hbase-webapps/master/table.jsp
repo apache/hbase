@@ -1205,86 +1205,83 @@
 </table>
 
 <% if (!readOnly) { %>
-<p><hr/></p>
-Actions:
-<p>
-<center>
-<table class="table" style="border: 0;" width="95%" >
-<tr>
-  <form method="get">
-  <input type="hidden" name="action" value="major compact" />
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-  <td class="centered">
-    <input style="font-size: 12pt; width: 10em" type="submit" value="Major Compact" class="btn" />
-  </td>
-  <td style="text-align: center;">
-    <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
-  </td>
-  <td>
-    This action will force a major compaction of all regions of the table, or,
-    if a key is supplied, only the region major containing the
-    given key.
-  </td>
-  </form>
-</tr>
-<tr>
-  <form method="get">
-  <input type="hidden" name="action" value="compact" />
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-  <td class="centered">
-    <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn" />
-  </td>
-  <td style="text-align: center;">
-    <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
-  </td>
-  <td>
-    This action will force a compaction of all regions of the table, or,
-    if a key is supplied, only the region containing the
-    given key.
-  </td>
-  </form>
-</tr>
-<tr>
-  <form method="get">
-  <input type="hidden" name="action" value="split" />
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-  <td class="centered">
-    <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn" />
-  </td>
-  <td style="text-align: center;">
-    <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
-  </td>
-  <td>
-	  This action will force a split of all eligible
-	  regions of the table, or, if a key is supplied, only the region containing the
-	  given key. An eligible region is one that does not contain any references to
-	  other regions. Split requests for noneligible regions will be ignored.
-  </td>
-  </form>
-</tr>
-<tr>
-  <form method="get">
-  <input type="hidden" name="action" value="merge" />
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-  <td class="centered">
-    <input style="font-size: 12pt; width: 10em" type="submit" value="Merge" class="btn" />
-  </td>
-  <td style="text-align: center;">
-    <input type="text" name="left" size="40" required="required" placeholder="Region Key (required)" />
-    <input type="text" name="right" size="40" required="required" placeholder="Region Key (required)" />
-  </td>
-  <td>
-    This action will merge two regions of the table, Merge requests for
-    noneligible regions will be ignored.
-  </td>
-  </form>
-</tr>
+
+<h2>Actions</h2>
+
+<table class="table">
+  <tr>
+    <form method="get">
+      <input type="hidden" name="action" value="major compact" />
+      <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+      <td class="centered">
+        <input type="submit" value="Major Compact" class="btn btn-secondary" />
+      </td>
+      <td style="text-align: center;">
+        <input type="text" class="form-control" name="key" size="40" placeholder="Row Key (optional)" />
+      </td>
+      <td>
+      This action will force a major compaction of all regions of the table, or,
+      if a key is supplied, only the region major containing the
+      given key.
+      </td>
+    </form>
+  </tr>
+  <tr>
+    <form method="get">
+      <input type="hidden" name="action" value="compact" />
+      <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+      <td class="centered">
+        <input type="submit" value="Compact" class="btn btn-secondary" />
+      </td>
+      <td style="text-align: center;">
+        <input type="text" class="form-control" name="key" size="40" placeholder="Row Key (optional)" />
+      </td>
+      <td>
+      This action will force a compaction of all regions of the table, or,
+      if a key is supplied, only the region containing the given key.
+      </td>
+    </form>
+  </tr>
+  <tr>
+    <form method="get">
+      <input type="hidden" name="action" value="split" />
+      <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+      <td class="centered">
+        <input type="submit" value="Split" class="btn btn-secondary" />
+      </td>
+      <td style="text-align: center;">
+        <input type="text" class="form-control" name="key" size="40" placeholder="Row Key (optional)" />
+      </td>
+      <td>
+      This action will force a split of all eligible
+      regions of the table, or, if a key is supplied, only the region containing the
+      given key. An eligible region is one that does not contain any references to
+      other regions. Split requests for noneligible regions will be ignored.
+      </td>
+    </form>
+  </tr>
+  <tr>
+    <form method="get">
+      <input type="hidden" name="action" value="merge" />
+      <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+      <td class="centered">
+        <input type="submit" value="Merge" class="btn btn-secondary" />
+      </td>
+      <td style="text-align: center;">
+        <input type="text" class="form-control mb-2" name="left" size="40" required="required" placeholder="Region Key (required)" />
+        <input type="text" class="form-control" name="right" size="40" required="required" placeholder="Region Key (required)" />
+      </td>
+      <td>
+      This action will merge two regions of the table, Merge requests for
+      noneligible regions will be ignored.
+      </td>
+    </form>
+  </tr>
 </table>
-</center>
-</p>
+
 <% } %>
-</div>
-</div>
+</div><!--/.row -->
+</div> <!--/.container-fluid -->
 
 <jsp:include page="footer.jsp" />
 <script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
