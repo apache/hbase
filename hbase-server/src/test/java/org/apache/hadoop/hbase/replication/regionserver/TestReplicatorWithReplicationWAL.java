@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.apache.hadoop.hbase.HConstants.REPLICATION_WAL_ENABLED;
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.replication.TestReplicationBase;
@@ -36,7 +36,7 @@ public class TestReplicatorWithReplicationWAL extends TestReplicator {
   public static void setUpBeforeClass() throws Exception {
     // Set RPC size limit to 10kb (will be applied to both source and sink clusters)
     CONF1.setInt(RpcServer.MAX_REQUEST_SIZE, 1024 * 10);
-    CONF1.setBoolean(REPLICATION_WAL_ENABLED, true);
+    CONF1.setBoolean(REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED, true);
     TestReplicationBase.setUpBeforeClass();
   }
 
