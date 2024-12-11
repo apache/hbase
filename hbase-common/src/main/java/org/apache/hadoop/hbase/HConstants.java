@@ -1641,6 +1641,9 @@ public final class HConstants {
    */
   public final static boolean REJECT_DECOMMISSIONED_HOSTS_DEFAULT = false;
 
+  public final static String REPLICATION_WAL_ENABLED = "hbase.regionserver.replicataion.wal.enabled";
+  public final static boolean REPLICATION_WAL_ENABLED_DEFAULT = false;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

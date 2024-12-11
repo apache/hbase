@@ -231,6 +231,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>>
   public static final String WAL_FILE_NAME_DELIMITER = ".";
   /** The hbase:meta region's WAL filename extension */
   public static final String META_WAL_PROVIDER_ID = ".meta";
+  public static final String REPLICATION_WAL_PROVIDER_ID = ".replication";
   static final String DEFAULT_PROVIDER_ID = "default";
 
   // Implementation details that currently leak in tests or elsewhere follow
@@ -485,6 +486,14 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>>
   /** Returns True if String ends in {@link #META_WAL_PROVIDER_ID} */
   public static boolean isMetaFile(String p) {
     return p != null && p.endsWith(META_WAL_PROVIDER_ID);
+  }
+
+  public static boolean isReplicationFile(Path p) {
+    return isReplicationFile(p.getName());
+  }
+
+  public static boolean isReplicationFile(String p) {
+    return p != null && p.endsWith(REPLICATION_WAL_PROVIDER_ID);
   }
 
   /**

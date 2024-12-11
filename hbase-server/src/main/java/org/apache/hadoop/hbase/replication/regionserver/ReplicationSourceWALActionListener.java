@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_WAL_ENABLED;
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_WAL_ENABLED_DEFAULT;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -38,14 +41,24 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
 
   private final ReplicationSourceManager manager;
 
+  private final boolean replicationWALIsolated;
+
   public ReplicationSourceWALActionListener(Configuration conf, ReplicationSourceManager manager) {
     this.conf = conf;
     this.manager = manager;
+    this.replicationWALIsolated =
+      conf.getBoolean(REPLICATION_WAL_ENABLED, REPLICATION_WAL_ENABLED_DEFAULT);
   }
 
   @Override
   public void postLogRoll(Path oldPath, Path newPath) throws IOException {
-    manager.postLogRoll(newPath);
+    if (replicationWALIsolated) {
+      if (AbstractFSWALProvider.isReplicationFile(newPath)) {
+        manager.postLogRoll(newPath);
+      }
+    } else {
+      manager.postLogRoll(newPath);
+    }
   }
 
   @Override

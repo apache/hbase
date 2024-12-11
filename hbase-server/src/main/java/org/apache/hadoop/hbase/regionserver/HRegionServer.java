@@ -96,9 +96,11 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
@@ -2165,11 +2167,25 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   @Override
   public WAL getWAL(RegionInfo regionInfo) throws IOException {
-    WAL wal = walFactory.getWAL(regionInfo);
+    WAL wal = regionBelongsToReplicatedTable(regionInfo) ?
+      walFactory.getWALInGlobalScope(regionInfo) : walFactory.getWAL(regionInfo);
     if (this.walRoller != null) {
       this.walRoller.addWAL(wal);
     }
     return wal;
+  }
+
+  private boolean regionBelongsToReplicatedTable(RegionInfo regionInfo) throws IOException {
+    if (regionInfo == null) {
+      return false;
+    }
+    TableDescriptor desc = tableDescriptors.get(regionInfo.getTable());
+    for (ColumnFamilyDescriptor cf : desc.getColumnFamilies()) {
+      if (cf.getScope() == HConstants.REPLICATION_SCOPE_GLOBAL) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public LogRoller getWalRoller() {
