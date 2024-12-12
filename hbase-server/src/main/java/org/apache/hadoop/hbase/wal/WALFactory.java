@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED_DEFAULT;
+
 import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -270,8 +271,10 @@ public class WALFactory {
       provider.addWALActionsListener(new MetricsWAL());
       this.provider = provider;
 
-      if (conf.getBoolean(REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED,
-          REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED_DEFAULT)) {
+      if (
+        conf.getBoolean(REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED,
+          REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED_DEFAULT)
+      ) {
         providerInReplicationScope.init(this, conf,
           AbstractFSWALProvider.REPLICATION_WAL_PROVIDER_ID, this.abortable);
         providerInReplicationScope.addWALActionsListener(new MetricsWAL());

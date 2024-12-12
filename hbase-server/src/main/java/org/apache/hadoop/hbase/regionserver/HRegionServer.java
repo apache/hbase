@@ -2167,8 +2167,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   @Override
   public WAL getWAL(RegionInfo regionInfo) throws IOException {
-    WAL wal = regionBelongsToReplicatedTable(regionInfo) ?
-      walFactory.getWALInGlobalScope(regionInfo) : walFactory.getWAL(regionInfo);
+    WAL wal = regionBelongsToReplicatedTable(regionInfo)
+      ? walFactory.getWALInGlobalScope(regionInfo)
+      : walFactory.getWAL(regionInfo);
     if (this.walRoller != null) {
       this.walRoller.addWAL(wal);
     }

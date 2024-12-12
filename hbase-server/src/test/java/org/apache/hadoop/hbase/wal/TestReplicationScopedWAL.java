@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_GLOBAL;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,7 +45,8 @@ import org.junit.experimental.categories.Category;
 
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestReplicationScopedWAL {
-  @ClassRule public static final HBaseClassTestRule CLASS_RULE =
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestReplicationScopedWAL.class);
 
   static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -54,8 +56,8 @@ public class TestReplicationScopedWAL {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration()
-      .setBoolean(HConstants.REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED, true);
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED,
+      true);
     TEST_UTIL.startMiniCluster();
   }
 

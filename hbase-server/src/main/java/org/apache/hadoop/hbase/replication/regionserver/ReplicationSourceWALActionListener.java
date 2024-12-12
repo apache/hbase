@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED_DEFAULT;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -46,8 +47,8 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
   public ReplicationSourceWALActionListener(Configuration conf, ReplicationSourceManager manager) {
     this.conf = conf;
     this.manager = manager;
-    this.filterWALByReplicationScope =
-      conf.getBoolean(REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED, REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED_DEFAULT);
+    this.filterWALByReplicationScope = conf.getBoolean(REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED,
+      REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED_DEFAULT);
   }
 
   @Override
