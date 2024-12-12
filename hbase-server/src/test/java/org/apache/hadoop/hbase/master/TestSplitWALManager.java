@@ -19,10 +19,13 @@ package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
+import static org.apache.hadoop.hbase.master.MasterWalManager.NON_META_FILTER;
 import static org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface.ServerOperationType.SPLIT_WAL;
+import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.RETRYING_EXT;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.fs.FileStatus;
@@ -42,6 +45,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -92,6 +96,42 @@ public class TestSplitWALManager {
   @After
   public void teardown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testRenameWALForRetry() throws Exception {
+    HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
+    List<Path> logDirs =
+      master.getMasterWalManager().getLogDirs(Collections.singleton(regionServer.getServerName()));
+    List<FileStatus> list =
+      SplitLogManager.getFileList(TEST_UTIL.getConfiguration(), logDirs, NON_META_FILTER);
+    Path testWal = list.get(0).getPath();
+    int workerChangeCount = 0;
+
+    String newWALPath = splitWALManager.renameWALForRetry(testWal.toString(), workerChangeCount);
+    Assert.assertEquals(newWALPath,
+      testWal + RETRYING_EXT + String.format("%03d", workerChangeCount + 1));
+    workerChangeCount = workerChangeCount + 1;
+
+    newWALPath = splitWALManager.renameWALForRetry(newWALPath, workerChangeCount);
+    Assert.assertEquals(newWALPath,
+      testWal + RETRYING_EXT + String.format("%03d", workerChangeCount + 1));
+
+    List<FileStatus> fileStatusesA =
+      SplitLogManager.getFileList(TEST_UTIL.getConfiguration(), logDirs, NON_META_FILTER);
+
+    Path walFromFileSystem = null;
+    for (FileStatus wal : fileStatusesA) {
+      if (
+        wal.getPath().toString()
+          .endsWith(RETRYING_EXT + String.format("%03d", workerChangeCount + 1))
+      ) {
+        walFromFileSystem = wal.getPath();
+        break;
+      }
+    }
+    Assert.assertNotNull(walFromFileSystem);
+    Assert.assertEquals(walFromFileSystem.toString(), newWALPath);
   }
 
   @Test
