@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED;
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED_DEFAULT;
+
 import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -118,6 +121,7 @@ public class WALFactory {
   // This is for avoid hbase:replication itself keeps trigger unnecessary updates to WAL file and
   // generate a lot useless data, see HBASE-27775 for more details.
   private final LazyInitializedWALProvider replicationProvider;
+  private final WALProvider providerInReplicationScope;
 
   /**
    * Configuration-specified WAL Reader used when a custom reader is requested
@@ -151,6 +155,7 @@ public class WALFactory {
 
     // this instance can't create wals, just reader/writers.
     provider = null;
+    providerInReplicationScope = null;
     factoryId = SINGLETON_ID;
     this.abortable = null;
     this.excludeDatanodeManager = new ExcludeDatanodeManager(conf);
@@ -260,14 +265,29 @@ public class WALFactory {
     // end required early initialization
     if (conf.getBoolean(WAL_ENABLED, true)) {
       WALProvider provider = createProvider(getProviderClass(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
+      WALProvider providerInReplicationScope =
+        createProvider(getProviderClass(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
       provider.init(this, conf, null, this.abortable);
       provider.addWALActionsListener(new MetricsWAL());
       this.provider = provider;
+
+      if (
+        conf.getBoolean(REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED,
+          REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED_DEFAULT)
+      ) {
+        providerInReplicationScope.init(this, conf,
+          AbstractFSWALProvider.REPLICATION_WAL_PROVIDER_ID, this.abortable);
+        providerInReplicationScope.addWALActionsListener(new MetricsWAL());
+        this.providerInReplicationScope = providerInReplicationScope;
+      } else {
+        this.providerInReplicationScope = null;
+      }
     } else {
       // special handling of existing configuration behavior.
       LOG.warn("Running with WAL disabled.");
       provider = new DisabledWALProvider();
       provider.init(this, conf, factoryId, null);
+      providerInReplicationScope = provider;
     }
   }
 
@@ -353,7 +373,11 @@ public class WALFactory {
   }
 
   public List<WAL> getWALs() {
-    return provider.getWALs();
+    List<WAL> wals = provider.getWALs();
+    if (providerInReplicationScope != null) {
+      wals.addAll(providerInReplicationScope.getWALs());
+    }
+    return wals;
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
@@ -381,6 +405,14 @@ public class WALFactory {
       }
     }
     return provider.getWAL(region);
+  }
+
+  public WAL getWALInGlobalScope(RegionInfo regionInfo) throws IOException {
+    if (providerInReplicationScope != null) {
+      return providerInReplicationScope.getWAL(regionInfo);
+    } else {
+      throw new IllegalStateException("WAL Provider for replication is not correct initialized.");
+    }
   }
 
   public WALStreamReader createStreamReader(FileSystem fs, Path path) throws IOException {
@@ -577,6 +609,10 @@ public class WALFactory {
     WALProvider replication = replicationProvider.getProviderNoCreate();
     if (replication != null) {
       providers.add(replication);
+    }
+    WALProvider providerInScope = providerInReplicationScope;
+    if (providerInScope != null) {
+      providers.add(providerInScope);
     }
     return providers;
   }
