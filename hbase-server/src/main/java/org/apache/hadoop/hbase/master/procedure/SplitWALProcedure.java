@@ -51,6 +51,7 @@ public class SplitWALProcedure
   private ServerName worker;
   private ServerName crashedServer;
   private RetryCounter retryCounter;
+  private Integer workerChangeCount = 0;
 
   public SplitWALProcedure() {
   }
@@ -89,7 +90,8 @@ public class SplitWALProcedure
           // HBASE-28951 in case of a failure because unresponsive rs, rs might still be processing
           // the split wal
           try {
-            this.walPath = splitWALManager.renameWALForRetry(this.walPath);
+            this.walPath = splitWALManager.renameWALForRetry(this.walPath, workerChangeCount);
+            workerChangeCount++;
           } catch (IOException ioe) {
             LOG.warn("Failed to rename the splitting wal {}", walPath);
             setTimeoutForSuspend(env, ioe.getMessage());
@@ -145,7 +147,8 @@ public class SplitWALProcedure
     super.serializeStateData(serializer);
     MasterProcedureProtos.SplitWALData.Builder builder =
       MasterProcedureProtos.SplitWALData.newBuilder();
-    builder.setWalPath(walPath).setCrashedServer(ProtobufUtil.toServerName(crashedServer));
+    builder.setWalPath(walPath).setCrashedServer(ProtobufUtil.toServerName(crashedServer))
+      .setWorkerChangeCount(workerChangeCount);
     if (worker != null) {
       builder.setWorker(ProtobufUtil.toServerName(worker));
     }
@@ -159,6 +162,7 @@ public class SplitWALProcedure
       serializer.deserialize(MasterProcedureProtos.SplitWALData.class);
     walPath = data.getWalPath();
     crashedServer = ProtobufUtil.toServerName(data.getCrashedServer());
+    workerChangeCount = data.getWorkerChangeCount();
     if (data.hasWorker()) {
       worker = ProtobufUtil.toServerName(data.getWorker());
     }
@@ -177,6 +181,10 @@ public class SplitWALProcedure
 
   public ServerName getWorker() {
     return worker;
+  }
+
+  public Integer getWorkerChangeCount() {
+    return workerChangeCount;
   }
 
   @Override

@@ -186,12 +186,18 @@ public class SplitWALManager {
     splitWorkerAssigner.addUsedWorker(worker);
   }
 
-  public String renameWALForRetry(String walPath) throws IOException {
-    Path walCurrentPath = new Path(rootDir, walPath);
-    Path walNewPath = walPath.endsWith(RETRYING_EXT)
-      ? new Path(rootDir, walPath.substring(0, walPath.length() - RETRYING_EXT.length()))
-      : walCurrentPath.suffix(RETRYING_EXT);
-    fs.rename(walCurrentPath, walNewPath);
-    return walNewPath.toString();
+  public String renameWALForRetry(String walPath, Integer workerChangeCount) throws IOException {
+    String originalWALPath;
+    if (workerChangeCount == 0) {
+      originalWALPath = walPath;
+    } else {
+      originalWALPath = walPath.substring(0, walPath.length() - RETRYING_EXT.length() - 3);
+    }
+    String walNewName =
+      originalWALPath + RETRYING_EXT + String.format("%03d", (workerChangeCount + 1) % 1000);
+    if (!fs.rename(new Path(rootDir, walPath), new Path(rootDir, walNewName))) {
+      throw new IOException("Failed to rename wal " + walPath + " to " + walNewName);
+    }
+    return walNewName;
   }
 }
