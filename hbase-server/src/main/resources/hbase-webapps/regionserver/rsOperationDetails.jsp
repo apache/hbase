@@ -97,6 +97,7 @@
             <th>Start Time</th>
             <th>Processing Time</th>
             <th>Queue Time</th>
+            <th>FsRead Time</th>
             <th>Response Size</th>
             <th>Block Bytes Scanned</th>
             <th>Client Address</th>
@@ -118,8 +119,9 @@
              <td><%=new Date(r.getStartTime() + 1800*1000)%></td>
              <td><%=r.getProcessingTime()%>ms</td>
              <td><%=r.getQueueTime()%>ms</td>
+             <td><%=r.getFsReadTime()%>ms</td>
              <td><%=StringUtils.byteDesc(r.getResponseSize())%></td>
-              <td><%=StringUtils.byteDesc(r.getBlockBytesScanned())%></td>
+             <td><%=StringUtils.byteDesc(r.getBlockBytesScanned())%></td>
              <td><%=r.getClientAddress()%></td>
              <td><%=r.getServerClass()%></td>
              <td><%=r.getMethodName()%></td>
@@ -144,6 +146,7 @@
             <th>Start Time</th>
             <th>Processing Time</th>
             <th>Queue Time</th>
+            <th>FsRead Time</th>
             <th>Response Size</th>
             <th>Block Bytes Scanned</th>
             <th>Client Address</th>
@@ -165,8 +168,9 @@
              <td><%=new Date(r.getStartTime() + 1800*1000)%></td>
              <td><%=r.getProcessingTime()%>ms</td>
              <td><%=r.getQueueTime()%>ms</td>
+             <td><%=r.getFsReadTime()%>ms</td>
              <td><%=StringUtils.byteDesc(r.getResponseSize())%></td>
-              <td><%=StringUtils.byteDesc(r.getBlockBytesScanned())%></td>
+             <td><%=StringUtils.byteDesc(r.getBlockBytesScanned())%></td>
              <td><%=r.getClientAddress()%></td>
              <td><%=r.getServerClass()%></td>
              <td><%=r.getMethodName()%></td>
