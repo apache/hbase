@@ -52,17 +52,20 @@ public class TestReplicationScopedWAL {
   private final byte[] family1 = Bytes.toBytes("f1");
   private final byte[] family2 = Bytes.toBytes("f2");
 
-  @BeforeClass public static void setUpBeforeClass() throws Exception {
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration()
       .setBoolean(HConstants.REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED, true);
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass public static void tearDownAfterClass() throws Exception {
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test public void testReplicationScopedWAL() throws Exception {
+  @Test
+  public void testReplicationScopedWAL() throws Exception {
     TableName tableName1 = TableName.valueOf("testReplicationScopedWAL1");
     TableName tableName2 = TableName.valueOf("testReplicationScopedWAL2");
 
