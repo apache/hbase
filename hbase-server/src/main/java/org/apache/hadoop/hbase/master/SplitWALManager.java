@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPL
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.master.MasterWalManager.META_FILTER;
 import static org.apache.hadoop.hbase.master.MasterWalManager.NON_META_FILTER;
+import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.RETRYING_EXT;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -183,5 +184,14 @@ public class SplitWALManager {
    */
   public void addUsedSplitWALWorker(ServerName worker) {
     splitWorkerAssigner.addUsedWorker(worker);
+  }
+
+  public String renameWALForRetry(String walPath) throws IOException {
+    Path walCurrentPath = new Path(rootDir, walPath);
+    Path walNewPath = walPath.endsWith(RETRYING_EXT)
+      ? new Path(rootDir, walPath.substring(0, walPath.length() - RETRYING_EXT.length()))
+      : walCurrentPath.suffix(RETRYING_EXT);
+    fs.rename(walCurrentPath, walNewPath);
+    return walNewPath.toString();
   }
 }

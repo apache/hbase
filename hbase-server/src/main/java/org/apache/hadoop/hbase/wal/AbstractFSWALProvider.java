@@ -237,6 +237,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>>
   /** File Extension used while splitting an WAL into regions (HBASE-2312) */
   public static final String SPLITTING_EXT = "-splitting";
 
+  public static final String RETRYING_EXT = ".retrying";
+
   /**
    * Pattern used to validate a WAL file name see {@link #validateWALFilename(String)} for
    * description.
