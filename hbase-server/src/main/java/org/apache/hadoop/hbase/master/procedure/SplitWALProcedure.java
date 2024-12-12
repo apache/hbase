@@ -79,20 +79,22 @@ public class SplitWALProcedure
         try {
           finished = splitWALManager.isSplitWALFinished(walPath);
         } catch (IOException ioe) {
-          if (retryCounter == null) {
-            retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
-          }
-          long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
-          LOG.warn("Failed to check whether splitting wal {} success, wait {} seconds to retry",
-            walPath, backoff / 1000, ioe);
-          setTimeout(Math.toIntExact(backoff));
-          setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
-          skipPersistence();
+          LOG.warn("Failed to check whether splitting wal {} success", walPath);
+          setTimeoutForSuspend(env, ioe.getMessage());
           throw new ProcedureSuspendedException();
         }
         splitWALManager.releaseSplitWALWorker(worker, env.getProcedureScheduler());
         if (!finished) {
           LOG.warn("Failed to split wal {} by server {}, retry...", walPath, worker);
+          // HBASE-28951 in case of a failure because unresponsive rs, rs might still be processing
+          // the split wal
+          try {
+            this.walPath = splitWALManager.renameWALForRetry(this.walPath);
+          } catch (IOException ioe) {
+            LOG.warn("Failed to rename the splitting wal {}", walPath);
+            setTimeoutForSuspend(env, ioe.getMessage());
+            throw new ProcedureSuspendedException();
+          }
           setNextState(MasterProcedureProtos.SplitWALState.ACQUIRE_SPLIT_WAL_WORKER);
           return Flow.HAS_MORE_STATE;
         }
@@ -101,6 +103,17 @@ public class SplitWALProcedure
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
     }
+  }
+
+  private void setTimeoutForSuspend(MasterProcedureEnv env, String reason) {
+    if (retryCounter == null) {
+      retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
+    }
+    long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
+    LOG.warn("{} can not run currently because {}, wait {} ms to retry", this, reason, backoff);
+    setTimeout(Math.toIntExact(backoff));
+    setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+    skipPersistence();
   }
 
   @Override
