@@ -2179,7 +2179,12 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     if (regionInfo == null) {
       return false;
     }
+
     TableDescriptor desc = tableDescriptors.get(regionInfo.getTable());
+    if (desc == null) {
+      return false;
+    }
+
     ColumnFamilyDescriptor[] columns = desc.getColumnFamilies();
     if (columns == null || columns.length == 0) {
       return false;
