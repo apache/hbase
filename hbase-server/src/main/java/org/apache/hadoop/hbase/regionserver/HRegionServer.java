@@ -2180,6 +2180,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       return false;
     }
     TableDescriptor desc = tableDescriptors.get(regionInfo.getTable());
+    ColumnFamilyDescriptor[] columns = desc.getColumnFamilies();
+    if (columns == null || columns.length == 0) {
+      return false;
+    }
+
     for (ColumnFamilyDescriptor cf : desc.getColumnFamilies()) {
       if (cf.getScope() == HConstants.REPLICATION_SCOPE_GLOBAL) {
         return true;

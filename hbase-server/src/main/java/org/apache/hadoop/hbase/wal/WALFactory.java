@@ -284,7 +284,7 @@ public class WALFactory {
       LOG.warn("Running with WAL disabled.");
       provider = new DisabledWALProvider();
       provider.init(this, conf, factoryId, null);
-      providerInReplicationScope = null;
+      providerInReplicationScope = provider;
     }
   }
 
@@ -606,6 +606,10 @@ public class WALFactory {
     WALProvider replication = replicationProvider.getProviderNoCreate();
     if (replication != null) {
       providers.add(replication);
+    }
+    WALProvider providerInScope = providerInReplicationScope;
+    if (providerInScope != null) {
+      providers.add(providerInScope);
     }
     return providers;
   }
