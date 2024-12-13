@@ -2177,7 +2177,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   private boolean regionBelongsToReplicatedTable(RegionInfo regionInfo) throws IOException {
-    if (regionInfo == null) {
+    if (regionInfo == null || tableDescriptors == null) {
       return false;
     }
 
