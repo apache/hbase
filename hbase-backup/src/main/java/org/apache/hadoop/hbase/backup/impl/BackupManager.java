@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -355,8 +354,7 @@ public class BackupManager implements Closeable {
     return systemTable.readRegionServerLastLogRollResult(backupInfo.getBackupRootDir());
   }
 
-  public Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>>
-    readBulkloadRows(List<TableName> tableList) throws IOException {
+  public List<BulkLoad> readBulkloadRows(List<TableName> tableList) throws IOException {
     return systemTable.readBulkloadRows(tableList);
   }
 
