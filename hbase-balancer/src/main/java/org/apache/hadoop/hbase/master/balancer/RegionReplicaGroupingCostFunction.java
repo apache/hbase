@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.agrona.collections.Hashing;
 import org.agrona.collections.Int2IntCounterMap;
@@ -73,8 +74,8 @@ abstract class RegionReplicaGroupingCostFunction extends CostFunction {
   }
 
   @Override
-  public final void updateWeight(double[] weights) {
-    weights[StochasticLoadBalancer.GeneratorType.RACK.ordinal()] += cost();
+  public final void updateWeight(Map<Class<? extends CandidateGenerator>, Double> weights) {
+    weights.merge(RegionReplicaRackCandidateGenerator.class, cost(), Double::sum);
   }
 
   /**
