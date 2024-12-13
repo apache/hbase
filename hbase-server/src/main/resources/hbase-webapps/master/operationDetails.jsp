@@ -31,6 +31,7 @@
 %>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
+  pageContext.setAttribute("pageTitle", "HBase Master Operation Details: " + master.getServerName());
   Configuration conf = master.getConfiguration();
 
   List<BalancerRejection> logList = null;
@@ -57,16 +58,16 @@
     </div>
     </div>
 <div class="tabbable">
-  <ul class="nav nav-pills">
-    <li class="active">
-      <a href="#tab_named_queue1" data-toggle="tab"> Balancer Rejection </a>
+  <ul class="nav nav-pills" role="tablist">
+    <li class="nav-item">
+      <a class="nav-link active" href="#tab_named_queue1" data-bs-toggle="tab" role="tab"> Balancer Rejection </a>
     </li>
-    <li class="">
-          <a href="#tab_named_queue2" data-toggle="tab"> Balancer Decision </a>
+    <li class="nav-item">
+      <a class="nav-link" href="#tab_named_queue2" data-bs-toggle="tab" role="tab"> Balancer Decision </a>
     </li>
   </ul>
-    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-      <div class="tab-pane active" id="tab_named_queue1">
+    <div class="tab-content">
+      <div class="tab-pane active" id="tab_named_queue1" role="tabpanel">
       <p>Balancer Rejection explain why balancer is skipping runs and explain all factors considered</p>
         <table class="table table-striped">
           <tr>
@@ -93,7 +94,7 @@
           <% } %>
           </table>
       </div>
-      <div class="tab-pane" id="tab_named_queue2">
+      <div class="tab-pane" id="tab_named_queue2" role="tabpanel">
       <p>Balancer Decision displayed the history of decision(factor details and weights and costs) made by LoadBalancers</p>
           <table class="table table-striped">
             <tr>
