@@ -350,8 +350,7 @@
       <dependencies>
         <dependency>
           <groupId>com.sun.xml.ws</groupId>
-          <artifactId>jaxws-ri</artifactId>
-          <type>pom</type>
+          <artifactId>jaxws-rt</artifactId>
         </dependency>
       </dependencies>
     </profile>
