@@ -103,10 +103,13 @@ public class TestReplicationScopedWAL {
     boolean hasNormal = false;
     for (FileStatus status : statusArray) {
       Path path = status.getPath();
-      if (AbstractFSWALProvider.isFileInReplicationScope(path)) {
-        hasReplicated = true;
-      } else if (!AbstractFSWALProvider.isMetaFile(path)) {
-        hasNormal = true;
+      FileStatus[] subFiles = fs.listStatus(path);
+      for (FileStatus subStatus : subFiles) {
+        if (AbstractFSWALProvider.isFileInReplicationScope(subStatus.getPath())) {
+          hasReplicated = true;
+        } else if (!AbstractFSWALProvider.isMetaFile(subStatus.getPath())) {
+          hasNormal = true;
+        }
       }
     }
     Assert.assertTrue(hasReplicated);
