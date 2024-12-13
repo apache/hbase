@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.backup;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
-import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.backup.impl.BulkLoad;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.TestBulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -127,10 +126,8 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
 
     backupIdFull = client.backupTables(request);
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
-      Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>,
-        List<byte[]>> pair = table.readBulkloadRows(tables);
-      assertTrue("map still has " + pair.getSecond().size() + " entries",
-        pair.getSecond().isEmpty());
+      List<BulkLoad> bulkLoads = table.readBulkloadRows(tables);
+      assertTrue("bulkloads still has " + bulkLoads.size() + " entries", bulkLoads.isEmpty());
     }
     assertTrue(checkSucceeded(backupIdFull));
 
