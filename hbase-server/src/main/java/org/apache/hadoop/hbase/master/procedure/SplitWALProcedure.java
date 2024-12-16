@@ -51,7 +51,7 @@ public class SplitWALProcedure
   private ServerName worker;
   private ServerName crashedServer;
   private RetryCounter retryCounter;
-  private Integer workerChangeCount = 0;
+  private int workerChangeCount = 0;
 
   public SplitWALProcedure() {
   }
@@ -181,10 +181,6 @@ public class SplitWALProcedure
 
   public ServerName getWorker() {
     return worker;
-  }
-
-  public Integer getWorkerChangeCount() {
-    return workerChangeCount;
   }
 
   @Override
