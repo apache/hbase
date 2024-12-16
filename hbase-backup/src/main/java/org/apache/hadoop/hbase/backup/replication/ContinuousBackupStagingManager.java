@@ -54,6 +54,7 @@ public class ContinuousBackupStagingManager {
   public static final String CONF_STAGED_WAL_FLUSH_INTERVAL =
     "hbase.backup.staged.wal.flush.interval.seconds";
   public static final int DEFAULT_STAGED_WAL_FLUSH_INTERVAL_SECONDS = 5 * 60; // 5 minutes
+  public static final int EXECUTOR_TERMINATION_TIMEOUT_SECONDS = 60; // TODO: configurable??
 
   private final Configuration conf;
   private final FileSystem walStagingFs;
@@ -381,31 +382,79 @@ public class ContinuousBackupStagingManager {
    * cleaned up.
    */
   public void close() {
+    // Shutdown the flush executor
     if (flushExecutor != null) {
       flushExecutor.shutdown();
       try {
-        if (!flushExecutor.awaitTermination(60, TimeUnit.SECONDS)) {
+        if (
+          !flushExecutor.awaitTermination(EXECUTOR_TERMINATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        ) {
           flushExecutor.shutdownNow();
         }
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         flushExecutor.shutdownNow();
+        LOG.warn("Flush executor shutdown was interrupted.", e);
       }
       LOG.info("{} WAL flush thread stopped.",
         Utils.logPeerId(continuousBackupManager.getPeerId()));
     }
 
+    // Shutdown the backup executor
     if (backupExecutor != null) {
       backupExecutor.shutdown();
       try {
-        if (!backupExecutor.awaitTermination(60, TimeUnit.SECONDS)) {
+        if (
+          !backupExecutor.awaitTermination(EXECUTOR_TERMINATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        ) {
           backupExecutor.shutdownNow();
         }
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         backupExecutor.shutdownNow();
+        LOG.warn("Backup executor shutdown was interrupted.", e);
       }
       LOG.info("{} Backup executor stopped.", Utils.logPeerId(continuousBackupManager.getPeerId()));
+    }
+
+    // Flush remaining writers safely
+    for (Map.Entry<Path, ContinuousBackupWalWriter> entry : walWriterMap.entrySet()) {
+      Path walDir = entry.getKey();
+      ContinuousBackupWalWriter writer = entry.getValue();
+
+      if (writer.hasAnyEntry()) {
+        LOG.debug("{} Flushing WAL data for {}",
+          Utils.logPeerId(continuousBackupManager.getPeerId()), walDir);
+        closeWriter(writer);
+      } else {
+        LOG.debug("{} No WAL data to flush for {}",
+          Utils.logPeerId(continuousBackupManager.getPeerId()), walDir);
+
+        // Remove the empty writer and delete associated files
+        closeWriter(writer);
+        deleteEmptyWalFile(writer, walDir);
+      }
+    }
+  }
+
+  private void deleteEmptyWalFile(ContinuousBackupWalWriter writer, Path walDir) {
+    Path walFilePath = writer.getWalFullPath();
+    String walFileName = walFilePath.getName();
+    String walWriterContextFileName =
+      walFileName + ContinuousBackupWalWriter.WAL_WRITER_CONTEXT_FILE_SUFFIX;
+    Path walWriterContextFileFullPath =
+      new Path(walStagingDir, new Path(walDir, walWriterContextFileName));
+
+    try {
+      deleteFile(walFilePath);
+    } catch (Exception e) {
+      LOG.warn("Failed to delete WAL file: {}", walFilePath, e);
+    }
+
+    try {
+      deleteFile(walWriterContextFileFullPath);
+    } catch (Exception e) {
+      LOG.warn("Failed to delete WAL writer context file: {}", walWriterContextFileFullPath, e);
     }
   }
 
@@ -439,4 +488,5 @@ public class ContinuousBackupStagingManager {
       return null;
     }
   }
+
 }

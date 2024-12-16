@@ -111,6 +111,13 @@ public class ContinuousBackupWalWriter {
   }
 
   /**
+   * Returns the full path of the WAL file.
+   */
+  public Path getWalFullPath() {
+    return new Path(rootDir, walPath);
+  }
+
+  /**
    * Returns the current size of the WAL file.
    */
   public long getLength() {
