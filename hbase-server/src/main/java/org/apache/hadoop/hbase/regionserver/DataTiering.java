@@ -1,6 +1,5 @@
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 

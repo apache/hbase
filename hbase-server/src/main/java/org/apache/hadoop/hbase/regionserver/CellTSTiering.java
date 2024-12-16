@@ -14,7 +14,7 @@ public class CellTSTiering implements DataTiering {
   public long getTimestamp(HStoreFile hStoreFile) {
     OptionalLong maxTimestamp = hStoreFile.getMaximumTimestamp();
     if (!maxTimestamp.isPresent()) {
-      LOG.info("Maximum timestamp not present for {}", hStoreFile.getPath());
+      LOG.debug("Maximum timestamp not present for {}", hStoreFile.getPath());
       return Long.MAX_VALUE;
     }
     return maxTimestamp.getAsLong();
@@ -23,7 +23,7 @@ public class CellTSTiering implements DataTiering {
     try {
       byte[] hFileTimeRange = hFileInfo.get(TIMERANGE_KEY);
       if (hFileTimeRange == null) {
-        LOG.info("Timestamp information not found for file: {}",
+        LOG.debug("Timestamp information not found for file: {}",
           hFileInfo.getHFileContext().getHFileName());
         return Long.MAX_VALUE;
       }
