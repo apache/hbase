@@ -108,14 +108,13 @@ public class TestSplitWALManager {
     Path testWal = list.get(0).getPath();
     int workerChangeCount = 0;
 
-    String newWALPath = splitWALManager.renameWALForRetry(testWal.toString(), workerChangeCount);
+    String newWALPath = splitWALManager.renameWALForRetry(testWal.toString());
     Assert.assertEquals(newWALPath,
-      testWal + RETRYING_EXT + String.format("%03d", workerChangeCount + 1));
-    workerChangeCount = workerChangeCount + 1;
+      testWal + RETRYING_EXT + String.format("%03d", ++workerChangeCount));
 
-    newWALPath = splitWALManager.renameWALForRetry(newWALPath, workerChangeCount);
+    newWALPath = splitWALManager.renameWALForRetry(newWALPath);
     Assert.assertEquals(newWALPath,
-      testWal + RETRYING_EXT + String.format("%03d", workerChangeCount + 1));
+      testWal + RETRYING_EXT + String.format("%03d", ++workerChangeCount));
 
     List<FileStatus> fileStatusesA =
       SplitLogManager.getFileList(TEST_UTIL.getConfiguration(), logDirs, NON_META_FILTER);
@@ -123,47 +122,7 @@ public class TestSplitWALManager {
     Path walFromFileSystem = null;
     for (FileStatus wal : fileStatusesA) {
       if (
-        wal.getPath().toString()
-          .endsWith(RETRYING_EXT + String.format("%03d", workerChangeCount + 1))
-      ) {
-        walFromFileSystem = wal.getPath();
-        break;
-      }
-    }
-    Assert.assertNotNull(walFromFileSystem);
-    Assert.assertEquals(walFromFileSystem.toString(), newWALPath);
-  }
-
-  @Test
-  public void testRenameWALForFirstRetryWhenWALAlreadyHaveRetryingSuffix() throws Exception {
-    HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
-    List<Path> logDirs =
-      master.getMasterWalManager().getLogDirs(Collections.singleton(regionServer.getServerName()));
-    List<FileStatus> list =
-      SplitLogManager.getFileList(TEST_UTIL.getConfiguration(), logDirs, NON_META_FILTER);
-    Path testWal = list.get(0).getPath();
-    int workerChangeCount = 0;
-
-    String newWALPath = splitWALManager.renameWALForRetry(testWal.toString(), workerChangeCount);
-    Assert.assertEquals(newWALPath,
-      testWal + RETRYING_EXT + String.format("%03d", workerChangeCount + 1));
-    // Let's say that after this step, the SplitWalProcedure and SCP are bypassed. To reach a
-    // consistent state, the recoverUnknown or schedulerRecovery command will create another SCP and
-    // SplitWalProcedure. If that also fails on the first attempt
-
-    int workerChangeCountForNewProcedure = 0;
-    newWALPath = splitWALManager.renameWALForRetry(newWALPath, workerChangeCountForNewProcedure);
-    Assert.assertEquals(newWALPath,
-      testWal + RETRYING_EXT + String.format("%03d", workerChangeCountForNewProcedure + 1));
-
-    List<FileStatus> fileStatusesA =
-      SplitLogManager.getFileList(TEST_UTIL.getConfiguration(), logDirs, NON_META_FILTER);
-
-    Path walFromFileSystem = null;
-    for (FileStatus wal : fileStatusesA) {
-      if (
-        wal.getPath().toString()
-          .endsWith(RETRYING_EXT + String.format("%03d", workerChangeCountForNewProcedure + 1))
+        wal.getPath().toString().endsWith(RETRYING_EXT + String.format("%03d", workerChangeCount))
       ) {
         walFromFileSystem = wal.getPath();
         break;

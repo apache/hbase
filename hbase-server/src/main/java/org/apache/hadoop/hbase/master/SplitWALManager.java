@@ -186,7 +186,7 @@ public class SplitWALManager {
     splitWorkerAssigner.addUsedWorker(worker);
   }
 
-  public String renameWALForRetry(String walPath, Integer workerChangeCount) throws IOException {
+  public String renameWALForRetry(String walPath) throws IOException {
     String originalWALPath;
     // If the WAL split is retried with another worker, ".retrying-xxx" is appended to the walPath.
     // In the case where a SplitWalProcedure is bypassed or rolled back after being retried with
@@ -194,8 +194,10 @@ public class SplitWALManager {
     // SplitWalProcedure (by different SCP) will be created, which will have a workerChangeCount of
     // 0 but will still have ".retrying-xxx" appended to the walPath. This is why we cannot use the
     // condition workerChangeCount != 0.
+    int workerChangeCount = 0;
     if (walPath.substring(walPath.length() - RETRYING_EXT.length() - 3).startsWith(RETRYING_EXT)) {
       originalWALPath = walPath.substring(0, walPath.length() - RETRYING_EXT.length() - 3);
+      workerChangeCount = Integer.parseInt(walPath.substring(walPath.length() - 3));
     } else {
       originalWALPath = walPath;
     }
