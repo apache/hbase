@@ -237,6 +237,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>>
   /** File Extension used while splitting an WAL into regions (HBASE-2312) */
   public static final String SPLITTING_EXT = "-splitting";
 
+  // Extension for the WAL where the split failed on one worker and is being retried on another.
   public static final String RETRYING_EXT = ".retrying";
 
   /**
