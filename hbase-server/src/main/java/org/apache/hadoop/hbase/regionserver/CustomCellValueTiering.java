@@ -1,12 +1,10 @@
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
-import java.util.OptionalLong;
 import static org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.TIERING_CELL_TIME_RANGE;
 
 @InterfaceAudience.Private
@@ -15,7 +13,7 @@ public class CustomCellValueTiering implements DataTiering {
   private long getMaxTSFromTimeRange(byte[] hFileTimeRange, String hFileName) {
     try {
       if (hFileTimeRange == null) {
-        LOG.info("Custom cell-based timestamp information not found for file: {}", hFileName);
+        LOG.debug("Custom cell-based timestamp information not found for file: {}", hFileName);
         return Long.MAX_VALUE;
       }
       return TimeRangeTracker.parseFrom(hFileTimeRange).getMax();

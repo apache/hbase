@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public

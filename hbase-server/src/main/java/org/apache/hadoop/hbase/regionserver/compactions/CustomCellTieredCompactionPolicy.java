@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,20 +46,25 @@ import static org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.
  *
  */
 @InterfaceAudience.Private
-public class CustomCellDateTieredCompactionPolicy extends DateTieredCompactionPolicy {
+public class CustomCellTieredCompactionPolicy extends DateTieredCompactionPolicy {
 
   public static final String AGE_LIMIT_MILLIS =
     "hbase.hstore.compaction.date.tiered.custom.age.limit.millis";
 
+  //Defaults to 10 years
+  public static final long DEFAULT_AGE_LIMIT_MILLIS = (long) (10L*365.25*24L*60L*60L*1000L);
+
   public static final String TIERING_CELL_QUALIFIER = "TIERING_CELL_QUALIFIER";
+
+  private static final Logger LOG = LoggerFactory.getLogger(CustomCellTieredCompactionPolicy.class);
 
   private long cutOffTimestamp;
 
-  public CustomCellDateTieredCompactionPolicy(Configuration conf,
+  public CustomCellTieredCompactionPolicy(Configuration conf,
     StoreConfigInformation storeConfigInfo) throws IOException {
     super(conf, storeConfigInfo);
     cutOffTimestamp = EnvironmentEdgeManager.currentTime() -
-      conf.getLong(AGE_LIMIT_MILLIS, (long) (10L*365.25*24L*60L*60L*1000L));
+      conf.getLong(AGE_LIMIT_MILLIS, DEFAULT_AGE_LIMIT_MILLIS);
 
   }
 
@@ -76,7 +83,7 @@ public class CustomCellDateTieredCompactionPolicy extends DateTieredCompactionPo
           minCurrent = timeRangeTracker.getMin();
           maxCurrent = timeRangeTracker.getMax();
         } catch (IOException e) {
-              //TODO debug this
+          LOG.warn("Got TIERING_CELL_TIME_RANGE info from file, but failed to parse it:", e);
         }
       }
       if(minCurrent < min.getValue()) {
