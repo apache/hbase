@@ -55,6 +55,9 @@ public class ContinuousBackupStagingManager {
     "hbase.backup.staged.wal.flush.interval.seconds";
   public static final int DEFAULT_STAGED_WAL_FLUSH_INTERVAL_SECONDS = 5 * 60; // 5 minutes
   public static final int EXECUTOR_TERMINATION_TIMEOUT_SECONDS = 60; // TODO: configurable??
+  public static final String CONF_STATED_FILES_BACKUP_THREADS =
+    "hbase.backup.staged.files.backup.threads";
+  public static final int DEFAULT_STATED_FILES_BACKUP_THREADS = 3;
 
   private final Configuration conf;
   private final FileSystem walStagingFs;
@@ -182,8 +185,9 @@ public class ContinuousBackupStagingManager {
   }
 
   private void startBackupExecutor() {
-    // TODO: more threads maybe. based on some configuration
-    backupExecutor = Executors.newFixedThreadPool(1);
+    int threads =
+      conf.getInt(CONF_STATED_FILES_BACKUP_THREADS, DEFAULT_STATED_FILES_BACKUP_THREADS);
+    backupExecutor = Executors.newFixedThreadPool(threads);
   }
 
   /**
@@ -469,12 +473,20 @@ public class ContinuousBackupStagingManager {
 
     public static Path getBulkloadFileStagingPath(Configuration conf,
       Path relativePathFromNamespace) throws IOException {
-      Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem rootFs = CommonFSUtils.getRootDirFileSystem(conf);
-      Path baseNamespaceDir = new Path(rootDir, new Path(HConstants.BASE_NAMESPACE_DIR));
+      Path rootDir = CommonFSUtils.getRootDir(conf);
+      Path baseNSDir = new Path(HConstants.BASE_NAMESPACE_DIR);
+      Path baseNamespaceDir = new Path(rootDir, baseNSDir);
       Path hFileArchiveDir =
-        new Path(rootDir, new Path(HConstants.HFILE_ARCHIVE_DIRECTORY, baseNamespaceDir));
-      return findExistingPath(rootFs, baseNamespaceDir, hFileArchiveDir, relativePathFromNamespace);
+        new Path(rootDir, new Path(HConstants.HFILE_ARCHIVE_DIRECTORY, baseNSDir));
+
+      Path result =
+        findExistingPath(rootFs, baseNamespaceDir, hFileArchiveDir, relativePathFromNamespace);
+      if (result == null) {
+        throw new IOException(
+          "No Bulk loaded file found in relative path: " + relativePathFromNamespace);
+      }
+      return result;
     }
 
     private static Path findExistingPath(FileSystem rootFs, Path baseNamespaceDir,

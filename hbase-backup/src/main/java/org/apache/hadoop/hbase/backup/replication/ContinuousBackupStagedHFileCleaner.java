@@ -20,8 +20,10 @@ package org.apache.hadoop.hbase.backup.replication;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
@@ -88,7 +90,13 @@ public class ContinuousBackupStagedHFileCleaner extends BaseHFileCleanerDelegate
       // Fetch staged files from HBase
       Set<String> stagedFiles = StagedBulkloadFileRegistry.listAllBulkloadFiles(connection);
       LOG.debug("Fetched {} staged files from HBase.", stagedFiles.size());
-      return Iterables.filter(files, file -> !stagedFiles.contains(file.getPath().toString()));
+
+      // Extract file names from staged files
+      Set<String> stagedFileNames =
+        stagedFiles.stream().map(path -> new Path(path).getName()).collect(Collectors.toSet());
+
+      // Filter files by checking their file names against staged file names
+      return Iterables.filter(files, file -> !stagedFileNames.contains(file.getPath().getName()));
     } catch (IOException e) {
       LOG.error("Failed to fetch staged bulkload files from HBase. Returning no deletable files.",
         e);
