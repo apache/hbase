@@ -709,7 +709,6 @@ message SplitWALData{
   required string wal_path = 1;
   required ServerName crashed_server=2;
   optional ServerName worker = 3;
-  optional uint32 workerChangeCount =4;
 }
 
 message SplitWALRemoteData{
