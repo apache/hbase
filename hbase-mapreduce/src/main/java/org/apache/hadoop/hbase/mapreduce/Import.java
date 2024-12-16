@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -202,9 +203,12 @@ public class Import extends Configured implements Tool {
 
     @Override
     public void write(DataOutput out) throws IOException {
-      out.writeInt(PrivateCellUtil.estimatedSerializedSizeOfKey(kv));
-      out.writeInt(0);
-      PrivateCellUtil.writeFlatKey(kv, out);
+      int keyLen = CellUtil.estimatedSerializedSizeOfKey(kv);
+      int valueLen = 0; // We avoid writing value here. So just serialize as if an empty value.
+      out.writeInt(keyLen + valueLen + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE);
+      out.writeInt(keyLen);
+      out.writeInt(valueLen);
+      CellUtil.writeFlatKey(kv, (DataOutputStream) out);
     }
 
     @Override
@@ -413,7 +417,7 @@ public class Import extends Configured implements Tool {
             // skip if we filtered it out
             if (kv == null) continue;
             Cell ret = convertKv(kv, cfRenameMap);
-            context.write(new CellWritableComparable(ret), ret);
+            context.write(new CellWritableComparable(ret), new MapReduceExtendedCell(ret));
           }
         }
       } catch (InterruptedException e) {
