@@ -17,16 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.regionserver.HStoreFile.NULL_VALUE;
-import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.OptionalLong;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -179,28 +174,6 @@ public class DataTieringManager {
     // DataTieringType.NONE or other types are considered hot by default
     return true;
   }
-
-  /**
-   * Determines whether the data in the HFile at the given path is considered hot based on the
-   * configured data tiering type and hot data age. If the data tiering type is set to
-   * {@link DataTieringType#TIME_RANGE}, it validates the data against the provided maximum
-   * timestamp.
-   * @param hFilePath    the path to the HFile
-   * @param maxTimestamp the maximum timestamp to validate against
-   * @return {@code true} if the data is hot, {@code false} otherwise
-   * @throws DataTieringException if there is an error retrieving data tiering information
-
-  public boolean isHotData(Path hFilePath, long maxTimestamp) throws DataTieringException {
-    Configuration configuration = getConfiguration(hFilePath);
-    DataTieringType dataTieringType = getDataTieringType(configuration);
-
-    if (!dataTieringType.equals(DataTieringType.NONE)) {
-      return hotDataValidator(maxTimestamp, getDataTieringHotDataAge(configuration));
-    }
-    // DataTieringType.NONE or other types are considered hot by default
-    return true;
-  }
-  */
 
   /**
    * Determines whether the data in the HFile being read is considered hot based on the configured
