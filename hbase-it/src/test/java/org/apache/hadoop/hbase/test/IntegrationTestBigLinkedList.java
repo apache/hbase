@@ -946,8 +946,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         private AtomicInteger rows = new AtomicInteger(0);
 
         @Override
-        public void setup(Mapper<WALKey, WALEdit, ImmutableBytesWritable, Pair<Mutation, List<String>>>.Context context)
-          throws IOException {
+        public void setup(Mapper<WALKey, WALEdit, ImmutableBytesWritable,
+          Pair<Mutation, List<String>>>.Context context) throws IOException {
           super.setup(context);
           try {
             this.keysToFind = readKeysToSearch(context.getConfiguration());

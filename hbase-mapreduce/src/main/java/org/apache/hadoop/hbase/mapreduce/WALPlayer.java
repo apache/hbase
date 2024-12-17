@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2.TableInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -68,6 +67,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 /**
  * A tool to replay WAL files as a M/R job. The WAL can be replayed for a set of tables or all
@@ -199,7 +200,8 @@ public class WALPlayer extends Configured implements Tool {
               Configuration conf = context.getConfiguration();
               Path backupLocation = new Path(conf.get(BULKLOAD_BACKUP_LOCATION));
               FileSystem rootFs = CommonFSUtils.getRootDirFileSystem(conf); // HDFS filesystem
-              Path hbaseStagingDir = new Path(CommonFSUtils.getRootDir(conf), HConstants.BULKLOAD_STAGING_DIR_NAME);
+              Path hbaseStagingDir =
+                new Path(CommonFSUtils.getRootDir(conf), HConstants.BULKLOAD_STAGING_DIR_NAME);
               FileSystem backupFs = FileSystem.get(backupLocation.toUri(), conf);
 
               List<String> stagingPaths = new ArrayList<>();
@@ -211,7 +213,8 @@ public class WALPlayer extends Configured implements Tool {
                   // Staging path on HDFS
                   Path stagingPath = new Path(hbaseStagingDir, file);
 
-                  LOG.info("Copying file from backup location (S3): {} to HDFS staging: {}", fullBackupFilePath, stagingPath);
+                  LOG.info("Copying file from backup location (S3): {} to HDFS staging: {}",
+                    fullBackupFilePath, stagingPath);
                   // Copy the file from S3 to HDFS
                   FileUtil.copy(backupFs, fullBackupFilePath, rootFs, stagingPath, false, conf);
 
@@ -336,9 +339,9 @@ public class WALPlayer extends Configured implements Tool {
     }
 
     @Override
-    protected void
-      cleanup(Mapper<WALKey, WALEdit, ImmutableBytesWritable, Pair<Mutation, List<String>>>.Context context)
-        throws IOException, InterruptedException {
+    protected void cleanup(
+      Mapper<WALKey, WALEdit, ImmutableBytesWritable, Pair<Mutation, List<String>>>.Context context)
+      throws IOException, InterruptedException {
       super.cleanup(context);
     }
 
