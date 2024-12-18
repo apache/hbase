@@ -160,18 +160,22 @@ public class RowStatisticsImpl implements RowStatistics {
     }
   }
 
+  @Override
   public String getTable() {
     return table;
   }
 
+  @Override
   public String getRegion() {
     return region;
   }
 
+  @Override
   public String getColumnFamily() {
     return columnFamily;
   }
 
+  @Override
   public boolean isMajor() {
     return isMajor;
   }
@@ -180,14 +184,17 @@ public class RowStatisticsImpl implements RowStatistics {
     return largestRow;
   }
 
+  @Override
   public String getLargestRowAsString() {
     return Bytes.toStringBinary(getLargestRow());
   }
 
+  @Override
   public long getLargestRowNumBytes() {
     return largestRowNumBytes;
   }
 
+  @Override
   public int getLargestRowCellsCount() {
     return largestRowCellsCount;
   }
@@ -196,46 +203,57 @@ public class RowStatisticsImpl implements RowStatistics {
     return largestCell;
   }
 
+  @Override
   public String getLargestCellAsString() {
     return CellUtil.toString(getLargestCell(), false);
   }
 
+  @Override
   public long getLargestCellNumBytes() {
     return largestCellNumBytes;
   }
 
+  @Override
   public int getCellsLargerThanOneBlockCount() {
     return cellsLargerThanOneBlockCount;
   }
 
+  @Override
   public int getRowsLargerThanOneBlockCount() {
     return rowsLargerThanOneBlockCount;
   }
 
+  @Override
   public int getCellsLargerThanMaxCacheSizeCount() {
     return cellsLargerThanMaxCacheSizeCount;
   }
 
+  @Override
   public int getTotalDeletesCount() {
     return totalDeletesCount;
   }
 
+  @Override
   public int getTotalCellsCount() {
     return totalCellsCount;
   }
 
+  @Override
   public int getTotalRowsCount() {
     return totalRowsCount;
   }
 
+  @Override
   public long getTotalBytes() {
     return totalBytesCount;
   }
 
+  @Override
   public Map<String, Long> getRowSizeBuckets() {
     return rowSizeBuckets.toMap();
   }
 
+  @Override
   public Map<String, Long> getValueSizeBuckets() {
     return valueSizeBuckets.toMap();
   }
