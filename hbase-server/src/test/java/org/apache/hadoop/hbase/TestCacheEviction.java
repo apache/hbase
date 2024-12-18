@@ -141,7 +141,8 @@ public class TestCacheEviction {
     }
   }
 
-  private void createTable(TableName tableName, boolean shouldFlushTable) throws IOException, InterruptedException {
+  private void createTable(TableName tableName, boolean shouldFlushTable)
+    throws IOException, InterruptedException {
     byte[] family = Bytes.toBytes("CF");
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
@@ -199,17 +200,17 @@ public class TestCacheEviction {
 
   private void checkRegionCached(TableName tableName, boolean isCached) throws IOException {
     UTIL.getMiniHBaseCluster().getRegions(tableName).forEach(r -> {
-        try {
-          UTIL.getMiniHBaseCluster().getClusterMetrics().getLiveServerMetrics().forEach((sn, sm) -> {
-            for (Map.Entry<byte[], RegionMetrics> rm : sm.getRegionMetrics().entrySet()) {
-              if (rm.getValue().getNameAsString().equals(r.getRegionInfo().getRegionNameAsString())) {
-                assertTrue(isCached == (rm.getValue().getCurrentRegionCachedRatio() > 0.0f));
-              }
+      try {
+        UTIL.getMiniHBaseCluster().getClusterMetrics().getLiveServerMetrics().forEach((sn, sm) -> {
+          for (Map.Entry<byte[], RegionMetrics> rm : sm.getRegionMetrics().entrySet()) {
+            if (rm.getValue().getNameAsString().equals(r.getRegionInfo().getRegionNameAsString())) {
+              assertTrue(isCached == (rm.getValue().getCurrentRegionCachedRatio() > 0.0f));
             }
-          });
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+          }
+        });
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     });
   }
 }
