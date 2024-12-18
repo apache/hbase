@@ -778,6 +778,7 @@
     <module>hbase-logging</module>
     <module>hbase-compression</module>
     <module>hbase-extensions</module>
+    <module>hbase-dev-generate-classpath</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -937,6 +938,10 @@
         hbase-thirdparty.
     -->
     <hbase-thirdparty.version>4.1.9</hbase-thirdparty.version>
+    <!-- for.exclusion version are NOT for direct dependencies. To use the provided
+    scope to transitively exclude some transitive dependencies, we need to specify
+    some existing version to for maven. -->
+    <tomcat.version.for.exclusion>9.0.93</tomcat.version.for.exclusion>
     <!-- Coverage properties -->
     <jacoco.version>0.8.8</jacoco.version>
     <jacocoArgLine/>
@@ -1821,7 +1826,7 @@
       </dependency>
       <dependency>
         <groupId>com.sun.xml.ws</groupId>
-        <artifactId>jaxws-ri</artifactId>
+        <artifactId>jaxws-rt</artifactId>
         <version>2.3.2</version>
         <type>pom</type>
         <exclusions>
