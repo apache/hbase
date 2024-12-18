@@ -51,7 +51,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 @InterfaceAudience.Private
-public class RowStatisticsTableRecorder implements RowStatisticsRecorder {
+public final class RowStatisticsTableRecorder implements RowStatisticsRecorder {
 
   private static final Logger LOG = LoggerFactory.getLogger(RowStatisticsTableRecorder.class);
   // Must be multiple of 2. Should be greater than num regions/RS
@@ -143,7 +143,7 @@ public class RowStatisticsTableRecorder implements RowStatisticsRecorder {
       bufferedMutator = conn.getBufferedMutator(params);
     } catch (IOException e) {
       LOG.error(
-        "This should NEVER print! ConnectionImplementation#getBufferedMutator(BufferedMutatorParams bmp) does NOT raise IOExceptions",
+        "This should NEVER print! ConnectionImplementation::getBufferedMutator does NOT raise IOExceptions",
         e);
     }
     return bufferedMutator;
@@ -177,7 +177,7 @@ public class RowStatisticsTableRecorder implements RowStatisticsRecorder {
       long failedPuts = mutator.getWriteBufferSize();
       rowStatisticsPutFailures.increment(failedPuts);
       LOG.error(
-        "Periodic flush of buffered mutator failed. Cannot persist {} row statistics stored in buffer",
+        "Periodic flush of buffered mutator failed. Cannot persist {} row stats stored in buffer",
         failedPuts, exception);
     }
   }
