@@ -410,9 +410,9 @@ public class WALFactory {
   public WAL getWALInGlobalScope(RegionInfo regionInfo) throws IOException {
     if (providerInReplicationScope != null) {
       return providerInReplicationScope.getWAL(regionInfo);
-    } else {
-      throw new IllegalStateException("WAL Provider for replication is not correct initialized.");
     }
+    // we have this due to UT.
+    return provider.getWAL(regionInfo);
   }
 
   public WALStreamReader createStreamReader(FileSystem fs, Path path) throws IOException {
