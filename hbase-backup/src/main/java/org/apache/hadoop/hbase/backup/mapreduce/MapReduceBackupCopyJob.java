@@ -24,6 +24,8 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
@@ -328,12 +330,14 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
     private Text getKey(Path path) {
       int level = conf.getInt(NUMBER_OF_LEVELS_TO_PRESERVE_KEY, 1);
       int count = 0;
-      String relPath = "";
+      Deque<String> paths = new LinkedList<>();
+      StringBuilder relPath = new StringBuilder();
       while (count++ < level) {
-        relPath = Path.SEPARATOR + path.getName() + relPath;
+        paths.addFirst(Path.SEPARATOR + path.getName());
         path = path.getParent();
       }
-      return new Text(relPath);
+      paths.forEach(relPath::append);
+      return new Text(relPath.toString());
     }
 
     private List<Path> getSourceFiles() throws NoSuchFieldException, SecurityException,
