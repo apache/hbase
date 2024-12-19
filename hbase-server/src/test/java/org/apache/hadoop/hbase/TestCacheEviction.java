@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -67,6 +68,7 @@ public class TestCacheEviction {
     UTIL.getConfiguration().setBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     UTIL.getConfiguration().set(BUCKET_CACHE_IOENGINE_KEY, "offheap");
     UTIL.getConfiguration().setInt(BUCKET_CACHE_SIZE_KEY, 200);
+    UTIL.getConfiguration().set(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
   }
 
   @Test
@@ -103,7 +105,7 @@ public class TestCacheEviction {
     UTIL.startMiniCluster(1);
     try {
       TableName tableName = TableName.valueOf(table);
-      createAndCacheTable(tableName);
+      createTable(tableName, true);
       Collection<HStoreFile> files =
         UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getStores().get(0).getStorefiles();
       checkCacheForBlocks(tableName, files, predicateBeforeSplit);
@@ -125,7 +127,7 @@ public class TestCacheEviction {
     UTIL.startMiniCluster(1);
     try {
       TableName tableName = TableName.valueOf(table);
-      createAndCacheTable(tableName);
+      createTable(tableName, true);
       Collection<HStoreFile> files =
         UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getStores().get(0).getStorefiles();
       checkCacheForBlocks(tableName, files, predicateBeforeClose);
@@ -139,7 +141,8 @@ public class TestCacheEviction {
     }
   }
 
-  private void createAndCacheTable(TableName tableName) throws IOException, InterruptedException {
+  private void createTable(TableName tableName, boolean shouldFlushTable)
+    throws IOException, InterruptedException {
     byte[] family = Bytes.toBytes("CF");
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
@@ -153,7 +156,10 @@ public class TestCacheEviction {
       puts.add(p);
     }
     tbl.put(puts);
-    UTIL.getAdmin().flush(tableName);
+    if (shouldFlushTable) {
+      UTIL.getAdmin().flush(tableName);
+      Thread.sleep(5000);
+    }
   }
 
   private void checkCacheForBlocks(TableName tableName, Collection<HStoreFile> files,
@@ -165,6 +171,46 @@ public class TestCacheEviction {
         });
         assertTrue(cache.getFullyCachedFiles().isPresent());
       });
+    });
+  }
+
+  @Test
+  public void testNoCacheWithoutFlush() throws Exception {
+    UTIL.startMiniCluster(1);
+    try {
+      TableName tableName = TableName.valueOf("tableNoCache");
+      createTable(tableName, false);
+      checkRegionCached(tableName, false);
+    } finally {
+      UTIL.shutdownMiniCluster();
+    }
+  }
+
+  @Test
+  public void testCacheWithFlush() throws Exception {
+    UTIL.startMiniCluster(1);
+    try {
+      TableName tableName = TableName.valueOf("tableWithFlush");
+      createTable(tableName, true);
+      checkRegionCached(tableName, true);
+    } finally {
+      UTIL.shutdownMiniCluster();
+    }
+  }
+
+  private void checkRegionCached(TableName tableName, boolean isCached) throws IOException {
+    UTIL.getMiniHBaseCluster().getRegions(tableName).forEach(r -> {
+      try {
+        UTIL.getMiniHBaseCluster().getClusterMetrics().getLiveServerMetrics().forEach((sn, sm) -> {
+          for (Map.Entry<byte[], RegionMetrics> rm : sm.getRegionMetrics().entrySet()) {
+            if (rm.getValue().getNameAsString().equals(r.getRegionInfo().getRegionNameAsString())) {
+              assertTrue(isCached == (rm.getValue().getCurrentRegionCachedRatio() > 0.0f));
+            }
+          }
+        });
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     });
   }
 }
