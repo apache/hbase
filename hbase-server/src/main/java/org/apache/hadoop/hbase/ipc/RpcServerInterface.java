@@ -85,4 +85,6 @@ public interface RpcServerInterface {
    */
   void setNamedQueueRecorder(final NamedQueueRecorder namedQueueRecorder);
 
+  /** Return RPC's instance of {@link RpcCoprocessorHost} */
+  RpcCoprocessorHost getRpcCoprocessorHost();
 }

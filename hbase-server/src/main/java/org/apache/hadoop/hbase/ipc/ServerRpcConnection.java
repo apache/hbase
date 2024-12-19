@@ -366,6 +366,7 @@ abstract class ServerRpcConnection implements Closeable {
       processConnectionHeader(buf);
       callCleanupIfNeeded();
       this.connectionHeaderRead = true;
+      this.rpcServer.getRpcCoprocessorHost().preAuthorizeConnection(connectionHeader, addr);
       if (rpcServer.needAuthorization() && !authorizeConnection()) {
         // Throw FatalConnectionException wrapping ACE so client does right thing and closes
         // down the connection instead of trying to read non-existent retun.
@@ -373,6 +374,8 @@ abstract class ServerRpcConnection implements Closeable {
           + connectionHeader.getServiceName() + " is unauthorized for user: " + ugi);
       }
       this.user = this.rpcServer.userProvider.create(this.ugi);
+      this.rpcServer.getRpcCoprocessorHost().postAuthorizeConnection(
+        this.user != null ? this.user.getName() : null, this.clientCertificateChain);
     }
   }
 
