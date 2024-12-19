@@ -246,15 +246,17 @@ public class TestStoreFileListFile {
     StoreFileList storeFileList =
       StoreFileList.newBuilder().setTimestamp(EnvironmentEdgeManager.currentTime()).build();
     Path trackFileDir = new Path(testDir, StoreFileListFile.TRACK_FILE_DIR);
-    StoreFileListFile.write(fs,
-      new Path(trackFileDir, StoreFileListFile.TRACK_FILE_PREFIX), storeFileList);
+    StoreFileListFile.write(fs, new Path(trackFileDir, StoreFileListFile.TRACK_FILE_PREFIX),
+      storeFileList);
 
     FileStatus trackerFileStatus = getOnlyTrackerFile(fs);
-    assertTrue(StoreFileListFile.TRACK_FILE_OLD_PATTERN.matcher(trackerFileStatus.getPath().getName()).matches());
+    assertTrue(StoreFileListFile.TRACK_FILE_OLD_PATTERN
+      .matcher(trackerFileStatus.getPath().getName()).matches());
 
     storeFileListFile.load(true);
 
     trackerFileStatus = getOnlyTrackerFile(fs);
-    assertTrue(StoreFileListFile.TRACK_FILE_PATTERN.matcher(trackerFileStatus.getPath().getName()).matches());
+    assertTrue(StoreFileListFile.TRACK_FILE_PATTERN.matcher(trackerFileStatus.getPath().getName())
+      .matches());
   }
 }

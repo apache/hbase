@@ -177,10 +177,11 @@ class StoreFileListFile {
         continue;
       }
       if (TRACK_FILE_OLD_PATTERN.matcher(file.getName()).matches()) {
-        Path newPath = new Path(trackFileDir, file.getName() + TRACK_FILE_SEPARATOR + System.currentTimeMillis());
-        LOG.info("Found invalid track file {}, Rename track file to {}", file, newPath);
-        fs.rename(file, newPath);
-        file = newPath;
+        Path newFile = new Path(trackFileDir,
+          file.getName() + TRACK_FILE_SEPARATOR + System.currentTimeMillis());
+        LOG.info("Found invalid track file {}, Rename to {}", file, newFile);
+        fs.rename(file, newFile);
+        file = newFile;
       } else if (!TRACK_FILE_PATTERN.matcher(file.getName()).matches()) {
         LOG.warn("Found invalid track file {}, skip", file);
         continue;
