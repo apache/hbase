@@ -24,6 +24,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class RowStatisticsUtil {
 
+  private RowStatisticsUtil() {
+  }
+
   public static Cell cloneWithoutValue(RawCellBuilder cellBuilder, Cell cell) {
     return cellBuilder.clear().setRow(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())
       .setFamily(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength())
