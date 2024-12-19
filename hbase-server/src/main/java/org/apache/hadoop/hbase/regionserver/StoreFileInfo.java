@@ -413,6 +413,11 @@ public class StoreFileInfo {
     return initialPath;
   }
 
+  /** @return The name of the file */
+  public String getPathName() {
+    return initialPath.getName();
+  }
+
   /** @return The {@link FileStatus} of the file */
   public FileStatus getFileStatus() throws IOException {
     return getReferencedFileStatus(fs);

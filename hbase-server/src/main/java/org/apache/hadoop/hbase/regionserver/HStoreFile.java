@@ -243,6 +243,11 @@ public class HStoreFile implements StoreFile {
   }
 
   @Override
+  public String getPathName() {
+    return this.fileInfo.getPath().getName();
+  }
+
+  @Override
   public Path getEncodedPath() {
     try {
       return new Path(URLEncoder.encode(fileInfo.getPath().toString(), HConstants.UTF8_ENCODING));

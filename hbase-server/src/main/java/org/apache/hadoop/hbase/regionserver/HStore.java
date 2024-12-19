@@ -1858,7 +1858,20 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     }
     // Before we do compaction, try to get rid of unneeded files to simplify things.
     removeUnneededFiles();
-
+    Optional<CompactionContext> compaction = getRequestCompaction(priority, tracker, user, filesCompacting);
+    if (compaction.isPresent() && compaction.get() != null && compaction.get().getRequest() != null && compaction.get().getRequest().isMajor()) {
+      List<HStoreFile> extraFiles = getExtraFiles();
+      if (extraFiles.size() != 0){
+        addToStoreFiles(extraFiles);
+        filesCompacting.clear();
+        this.triggerMajorCompaction();
+        compaction = getRequestCompaction(priority, tracker, user, filesCompacting);
+      }
+    }
+    return compaction;
+  }
+  public Optional<CompactionContext> getRequestCompaction(int priority,
+      CompactionLifeCycleTracker tracker, User user, List<HStoreFile> filesCompacting) throws IOException {
     final CompactionContext compaction = storeEngine.createCompaction();
     CompactionRequestImpl request = null;
     this.lock.readLock().lock();
@@ -1943,6 +1956,58 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     }
     this.region.reportCompactionRequestStart(request.isMajor());
     return Optional.of(compaction);
+  }
+
+  private List<HStoreFile> addToStoreFiles(List<HStoreFile> storeFiles) throws IOException {
+    // Load dirty data files before performing compaction
+    if (storeFiles != null && storeFiles.size() != 0) {
+      LOG.info("add new " + storeFiles + " to storeFiles");
+      this.lock.writeLock().lock();
+      try {
+        this.storeEngine.getStoreFileManager().insertNewFiles(storeFiles);
+      } finally {
+        this.lock.writeLock().unlock();
+      }
+      notifyChangedReadersObservers(storeFiles);
+    }
+    return storeFiles;
+  }
+
+  private List<HStoreFile> getExtraFiles() throws IOException {
+    List<HStoreFile> extraFiles = new ArrayList<>();
+    //step.1 Get the compacted files
+    Collection<HStoreFile> compactedFiles =
+        this.getStoreEngine().getStoreFileManager().getCompactedfiles();
+    //step.2 Get all files under the data path
+    Collection<StoreFileInfo> storeFileInfos = fs.getStoreFiles(getColumnFamilyName());
+    if (storeFileInfos == null || storeFileInfos.size() != 0) {
+      return extraFiles;
+    }
+    List<String> compactedPathNames = new ArrayList<>();
+    if (compactedFiles != null && compactedFiles.size() != 0){
+      compactedPathNames = compactedFiles.stream().map(HStoreFile ::getPathName).collect(
+          Collectors.toList());
+    }
+    //step.3 Get the files referenced in memory
+    Collection<HStoreFile> memoryStoreFiles = this.getStorefiles();
+    List<String> memoryPathNames = memoryStoreFiles.stream().map(HStoreFile ::getPathName).collect(
+        Collectors.toList());
+    //step.4 Filter out files that have been compacted and in memory
+    Iterator<StoreFileInfo> iterator = storeFileInfos.iterator();
+    while (iterator.hasNext()) {
+      StoreFileInfo storeFileInfo = iterator.next();
+      if (memoryPathNames.contains(storeFileInfo.getPathName()) || compactedPathNames.contains(storeFileInfo.getPathName())) {
+        iterator.remove();
+      }
+    }
+    if (storeFileInfos.size() != 0) {
+      for (final StoreFileInfo storeFileInfo : storeFileInfos) {
+        // open each store file in parallel
+        HStoreFile storeFile = createStoreFileAndReader(storeFileInfo);
+        extraFiles.add(storeFile);
+      }
+    }
+    return extraFiles;
   }
 
   /** Adds the files to compacting files. filesCompacting must be locked. */
