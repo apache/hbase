@@ -22,7 +22,7 @@ import org.apache.hadoop.hbase.RawCellBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class RowStatisticsUtil {
+public final class RowStatisticsUtil {
 
   private RowStatisticsUtil() {
   }

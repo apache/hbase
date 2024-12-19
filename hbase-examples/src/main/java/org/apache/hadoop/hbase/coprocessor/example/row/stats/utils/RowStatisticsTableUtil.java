@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class RowStatisticsTableUtil {
+public final class RowStatisticsTableUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(RowStatisticsTableUtil.class);
   public static final String NAMESPACE = "stats";
