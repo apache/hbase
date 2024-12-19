@@ -94,8 +94,9 @@ public class AsyncRegionReplicationRetryingCaller extends AsyncRpcRetryingCaller
         err -> conn.getLocator().updateCachedLocationOnError(loc, err));
       return;
     }
-    Pair<ReplicateWALEntryRequest, ExtendedCellScanner> pair = ReplicationProtobufUtil
-      .buildReplicateWALEntryRequest(entries, replica.getEncodedNameAsBytes(), null, null, null);
+    Pair<ReplicateWALEntryRequest, ExtendedCellScanner> pair =
+      ReplicationProtobufUtil.buildReplicateWALEntryRequest(entries,
+        replica.getEncodedNameAsBytes(), null, null, null, null, null);
     resetCallTimeout();
     controller.setCellScanner(pair.getSecond());
     if (useReplay) {

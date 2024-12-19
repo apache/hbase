@@ -378,17 +378,18 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    * <li>{@link #bulkLoadPhase(AsyncClusterConnection, TableName, Deque, Multimap, boolean, Map)}
    * </li>
    * </ol>
-   * @param conn      Connection to use
-   * @param tableName Table to which these hfiles should be loaded to
-   * @param queue     {@code LoadQueueItem} has hfiles yet to be loaded
+   * @param conn          Connection to use
+   * @param sinkTableName Sink table where these hfiles should be loaded to
+   * @param queue         {@code LoadQueueItem} has hfiles yet to be loaded
    */
-  public void loadHFileQueue(AsyncClusterConnection conn, TableName tableName,
+  public void loadHFileQueue(AsyncClusterConnection conn, TableName sinkTableName,
     Deque<LoadQueueItem> queue, boolean copyFiles) throws IOException {
     ExecutorService pool = createExecutorService();
     try {
-      Multimap<ByteBuffer, LoadQueueItem> regionGroups = groupOrSplitPhase(conn, tableName, pool,
-        queue, FutureUtils.get(conn.getRegionLocator(tableName).getStartEndKeys())).getFirst();
-      bulkLoadPhase(conn, tableName, queue, regionGroups, copyFiles, null);
+      Multimap<ByteBuffer, LoadQueueItem> regionGroups =
+        groupOrSplitPhase(conn, sinkTableName, pool, queue,
+          FutureUtils.get(conn.getRegionLocator(sinkTableName).getStartEndKeys())).getFirst();
+      bulkLoadPhase(conn, sinkTableName, queue, regionGroups, copyFiles, null);
     } finally {
       pool.shutdown();
     }

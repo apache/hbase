@@ -1171,6 +1171,21 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
+   * Create a namespace.
+   */
+  public void createNamespace(String namespace) throws IOException {
+    NamespaceDescriptor namespaceDescriptor = NamespaceDescriptor.create(namespace).build();
+    createNamespace(namespaceDescriptor);
+  }
+
+  /**
+   * Create a namespace.
+   */
+  public void createNamespace(NamespaceDescriptor namespaceDescriptor) throws IOException {
+    getAdmin().createNamespace(namespaceDescriptor);
+  }
+
+  /**
    * Create a table.
    * @return A Table instance for the created table.
    */
