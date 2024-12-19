@@ -44,15 +44,19 @@
   import="org.apache.hadoop.hbase.Size"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.TableNotFoundException"
+  import="org.apache.hadoop.hbase.client.Admin"
   import="org.apache.hadoop.hbase.client.AsyncAdmin"
   import="org.apache.hadoop.hbase.client.AsyncConnection"
   import="org.apache.hadoop.hbase.client.ColumnFamilyDescriptor"
   import="org.apache.hadoop.hbase.client.CompactionState"
+  import="org.apache.hadoop.hbase.client.Connection"
   import="org.apache.hadoop.hbase.client.RegionInfo"
   import="org.apache.hadoop.hbase.client.RegionInfoBuilder"
   import="org.apache.hadoop.hbase.client.RegionLocator"
   import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
   import="org.apache.hadoop.hbase.client.Table"
+  import="org.apache.hadoop.hbase.client.TableDescriptor"
+  import="org.apache.hadoop.hbase.client.TableDescriptorBuilder"
   import="org.apache.hadoop.hbase.client.TableState"
   import="org.apache.hadoop.hbase.client.ColumnFamilyDescriptor"
   import="org.apache.hadoop.hbase.http.InfoServer"
@@ -77,6 +81,7 @@
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota" %>
 <%@ page import="java.util.stream.Collectors" %>
+<%@ page import="org.apache.hadoop.hbase.rsgroup.RSGroupAdminClient" %>
 <%!
   /**
    * @return An empty region load stamped with the passed in <code>regionInfo</code>
@@ -236,7 +241,7 @@
 <%  return;
   } %>
 
-<% // table split/major compact/compact/merge actions
+<% // table split/major compact/compact/merge/move actions
   if ( !readOnly && action != null ) { %>
     <div class="container-fluid content">
       <div class="row inner_header">
@@ -285,7 +290,19 @@
         admin.mergeRegions(Bytes.toBytesBinary(left), Bytes.toBytesBinary(right), false);
       }
 %>    Merge request accepted. <%
-    } %>
+    } else if (action.equals("move")) {
+        Connection connect = master.getConnection();
+        Admin newAdmin = connect.getAdmin();
+        TableName tableName = TableName.valueOf(fqtn);
+        TableDescriptor td = TableDescriptorBuilder.newBuilder(newAdmin.getDescriptor(tableName))
+              .setRegionServerGroup(key).build();
+            newAdmin.modifyTable(td);
+        RSGroupAdminClient rsGroupAdminClient = new RSGroupAdminClient(connect);
+        Set<TableName> tableNameSet = new HashSet<>();
+        tableNameSet.add(tableName);
+        rsGroupAdminClient.moveTables(tableNameSet,key);
+        %> Move Table group accepted. <%
+    }%>
     <jsp:include page="redirect.jsp" />
     </div>
 <%  return;
@@ -1257,6 +1274,19 @@ Actions:
     This action will merge two regions of the table, Merge requests for
     noneligible regions will be ignored.
   </td>
+  </form>
+</tr>
+<tr>
+  <form method="get">
+    <input type="hidden" name="action" value="move">
+    <input type="hidden" name="name" value="<%= fqtn %>">
+    <td class="centered">
+      <input style="font-size: 12pt; width: 10em" type="submit" value="Move" class="btn">
+    </td>
+    <td style="text-align: center;">
+    <input type="text" name="key" size="40" placeholder="Target Group (required)">
+    </td>
+    <td>Move table to Target Group</td>
   </form>
 </tr>
 </table>
