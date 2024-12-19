@@ -413,6 +413,7 @@ public class StoreFileInfo {
     return initialPath;
   }
 
+  /** @return The name of the file */
   public String getPathName() {
     return initialPath.getName();
   }
