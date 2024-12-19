@@ -109,6 +109,7 @@ class BalancerClusterState {
 
   int numMovedRegions = 0; // num moved regions from the initial configuration
   Map<ServerName, List<RegionInfo>> clusterState;
+  Map<ServerName, List<RegionInfo>> allTablesClusterState;
 
   private final RackManager rackManager;
   // Maps region -> rackIndex -> locality of region on rack
