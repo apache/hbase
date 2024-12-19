@@ -69,6 +69,12 @@ class ShellCommandsErrorTest < Test::Unit::TestCase
     output = capture_stdout { @shell.command(name) }
     assert_match(/For usage try 'help "#{name}"'/, output)
   end
+
+  define_test 'Erroneous first argument for compaction_switch should indicate correct usage' do
+    name = :compaction_switch
+    output = capture_stdout { @shell.command(name, 'test') }
+    assert_match(/compaction_switch first argument only accepts "true" or "false"/, output)
+  end
 end
 
 ##
