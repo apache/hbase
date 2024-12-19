@@ -710,6 +710,18 @@ public class TestWALFactory {
     assertEquals(IOTestProvider.class, replicationWALProvider.getClass());
   }
 
+  @Test
+  public void testProviderInReplicationScope() throws IOException {
+    final Configuration config = new Configuration();
+    config.setBoolean(HConstants.REPLICATION_WAL_FILTER_BY_SCOPE_ENABLED, true);
+    final WALFactory walFactory = new WALFactory(config, this.currentServername.toString());
+    List<WALProvider> providers = walFactory.getAllWALProviders();
+    // As the meta & replication providers are lazy initialized, we should have two here.
+    // And these two provider have the same type.
+    assertEquals(2, providers.size());
+    assertEquals(providers.get(0).getClass(), providers.get(1).getClass());
+  }
+
   /**
    * Confirm that we will use different WALs for hbase:meta and hbase:replication
    */
