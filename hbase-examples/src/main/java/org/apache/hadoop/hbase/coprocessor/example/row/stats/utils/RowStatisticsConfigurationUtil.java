@@ -21,7 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class RowStatisticsConfigurationUtil {
+public final class RowStatisticsConfigurationUtil {
 
   private RowStatisticsConfigurationUtil() {
   }
