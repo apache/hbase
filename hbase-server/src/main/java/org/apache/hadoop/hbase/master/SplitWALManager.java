@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPL
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.master.MasterWalManager.META_FILTER;
 import static org.apache.hadoop.hbase.master.MasterWalManager.NON_META_FILTER;
+import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.RETRYING_EXT;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -183,5 +184,28 @@ public class SplitWALManager {
    */
   public void addUsedSplitWALWorker(ServerName worker) {
     splitWorkerAssigner.addUsedWorker(worker);
+  }
+
+  public String renameWALForRetry(String walPath) throws IOException {
+    String originalWALPath;
+    // If the WAL split is retried with another worker, ".retrying-xxx" is appended to the walPath.
+    // In the case where a SplitWalProcedure is bypassed or rolled back after being retried with
+    // another worker, the walPath will still have ".retrying-xxx" appended. During recovery, a new
+    // SplitWalProcedure (by different SCP) will be created, which will have a workerChangeCount of
+    // 0 but will still have ".retrying-xxx" appended to the walPath. This is why we cannot use the
+    // condition workerChangeCount != 0.
+    int workerChangeCount = 0;
+    if (walPath.substring(walPath.length() - RETRYING_EXT.length() - 3).startsWith(RETRYING_EXT)) {
+      originalWALPath = walPath.substring(0, walPath.length() - RETRYING_EXT.length() - 3);
+      workerChangeCount = Integer.parseInt(walPath.substring(walPath.length() - 3));
+    } else {
+      originalWALPath = walPath;
+    }
+    String walNewName =
+      originalWALPath + RETRYING_EXT + String.format("%03d", (workerChangeCount + 1) % 1000);
+    if (!fs.rename(new Path(rootDir, walPath), new Path(rootDir, walNewName))) {
+      throw new IOException("Failed to rename wal " + walPath + " to " + walNewName);
+    }
+    return walNewName;
   }
 }
