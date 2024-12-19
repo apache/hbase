@@ -23,6 +23,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class RowStatisticsConfigurationUtil {
 
+  private RowStatisticsConfigurationUtil() {
+  }
+
   private static final String ROW_STATISTICS_PREFIX =
     "org.apache.hbase.coprocessor.row.statistics.";
 

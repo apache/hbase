@@ -35,6 +35,9 @@ public class RowStatisticsTableUtil {
   public static final byte[] CF = Bytes.toBytes("0");
   public static final String TABLE_RECORDER_KEY = "tableRecorder";
 
+  private RowStatisticsTableUtil() {
+  }
+
   public static Put buildPutForRegion(byte[] regionRowKey, RowStatistics rowStatistics,
     boolean isMajor) {
     Put put = new Put(regionRowKey);

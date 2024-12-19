@@ -142,9 +142,7 @@ public final class RowStatisticsTableRecorder implements RowStatisticsRecorder {
     try {
       bufferedMutator = conn.getBufferedMutator(params);
     } catch (IOException e) {
-      LOG.error(
-        "This should NEVER print! ConnectionImplementation::getBufferedMutator does NOT raise IOExceptions",
-        e);
+      LOG.error("This should NEVER print!", e);
     }
     return bufferedMutator;
   }
