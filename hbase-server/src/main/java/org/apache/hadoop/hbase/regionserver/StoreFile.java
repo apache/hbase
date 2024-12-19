@@ -65,6 +65,8 @@ public interface StoreFile {
    */
   Path getPath();
 
+  String getPathName();
+
   /**
    * @return Encoded Path if this StoreFile was made with a Stream.
    */
