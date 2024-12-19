@@ -86,6 +86,8 @@ class StoreFileListFile {
 
   static final Pattern TRACK_FILE_PATTERN = Pattern.compile("^f(1|2)\\.\\d+$");
 
+  static final Pattern TRACK_FILE_OLD_PATTERN = Pattern.compile("^f(1|2)$");
+
   // 16 MB, which is big enough for a tracker file
   private static final int MAX_FILE_SIZE = 16 * 1024 * 1024;
 
@@ -174,7 +176,12 @@ class StoreFileListFile {
         LOG.warn("Found invalid track file {}, which is not a file", file);
         continue;
       }
-      if (!TRACK_FILE_PATTERN.matcher(file.getName()).matches()) {
+      if (TRACK_FILE_OLD_PATTERN.matcher(file.getName()).matches()) {
+        Path newPath = new Path(trackFileDir, file.getName() + TRACK_FILE_SEPARATOR + System.currentTimeMillis());
+        LOG.info("Found invalid track file {}, Rename track file to {}", file, newPath);
+        fs.rename(file, newPath);
+        file = newPath;
+      } else if (!TRACK_FILE_PATTERN.matcher(file.getName()).matches()) {
         LOG.warn("Found invalid track file {}, skip", file);
         continue;
       }
