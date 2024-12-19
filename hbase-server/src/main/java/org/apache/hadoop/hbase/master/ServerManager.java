@@ -237,6 +237,14 @@ public class ServerManager implements ConfigurationObserver {
   }
 
   /**
+   * Removes all of the ServerListeners of this collection that satisfy the given predicate.
+   * @param filter a predicate which returns true for ServerListener to be removed
+   */
+  public boolean unregisterListenerIf(final Predicate<ServerListener> filter) {
+    return this.listeners.removeIf(filter);
+  }
+
+  /**
    * Let the server manager know a new regionserver has come online
    * @param request       the startup request
    * @param versionNumber the version number of the new regionserver
