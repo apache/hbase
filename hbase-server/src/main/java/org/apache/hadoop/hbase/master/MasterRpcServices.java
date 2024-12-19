@@ -2106,7 +2106,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   public RemoveReplicationPeerResponse removeReplicationPeer(RpcController controller,
     RemoveReplicationPeerRequest request) throws ServiceException {
     try {
-      long procId = f.removeReplicationPeer(request.getPeerId());
+      long procId = server.removeReplicationPeer(request.getPeerId());
       return RemoveReplicationPeerResponse.newBuilder().setProcId(procId).build();
     } catch (ReplicationException | IOException e) {
       throw new ServiceException(e);
