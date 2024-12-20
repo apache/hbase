@@ -113,4 +113,12 @@ abstract class CostFunction {
 
     return Math.max(0d, Math.min(1d, (value - min) / (max - min)));
   }
+
+  /**
+   * Called once per LB invocation to give the cost function to carry out any
+   * state clean up.
+   */
+  void complete(BalancerClusterState cluster) {
+    this.cluster = cluster;
+  }
 }
