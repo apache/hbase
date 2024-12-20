@@ -33,11 +33,14 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RackManager;
+import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
  * An efficient array based implementation similar to ClusterState for keeping the status of the
@@ -705,7 +708,7 @@ class BalancerClusterState {
     RACK
   }
 
-  public void doAction(BalanceAction action) {
+  public List<RegionPlan> doAction(BalanceAction action) {
     switch (action.getType()) {
       case NULL:
         break;
@@ -715,17 +718,20 @@ class BalancerClusterState {
         AssignRegionAction ar = (AssignRegionAction) action;
         regionsPerServer[ar.getServer()] =
           addRegion(regionsPerServer[ar.getServer()], ar.getRegion());
-        regionMoved(ar.getRegion(), -1, ar.getServer());
-        break;
+        return ImmutableList.of(regionMoved(ar.getRegion(), -1, ar.getServer()));
       case MOVE_REGION:
         assert action instanceof MoveRegionAction : action.getClass();
         MoveRegionAction mra = (MoveRegionAction) action;
-        regionsPerServer[mra.getFromServer()] =
-          removeRegion(regionsPerServer[mra.getFromServer()], mra.getRegion());
-        regionsPerServer[mra.getToServer()] =
-          addRegion(regionsPerServer[mra.getToServer()], mra.getRegion());
-        regionMoved(mra.getRegion(), mra.getFromServer(), mra.getToServer());
-        break;
+        try {
+          regionsPerServer[mra.getFromServer()] =
+            removeRegion(regionsPerServer[mra.getFromServer()], mra.getRegion());
+          regionsPerServer[mra.getToServer()] =
+            addRegion(regionsPerServer[mra.getToServer()], mra.getRegion());
+          return ImmutableList
+            .of(regionMoved(mra.getRegion(), mra.getFromServer(), mra.getToServer()));
+        } catch (Exception e) {
+          throw e;
+        }
       case SWAP_REGIONS:
         assert action instanceof SwapRegionsAction : action.getClass();
         SwapRegionsAction a = (SwapRegionsAction) action;
@@ -733,12 +739,12 @@ class BalancerClusterState {
           replaceRegion(regionsPerServer[a.getFromServer()], a.getFromRegion(), a.getToRegion());
         regionsPerServer[a.getToServer()] =
           replaceRegion(regionsPerServer[a.getToServer()], a.getToRegion(), a.getFromRegion());
-        regionMoved(a.getFromRegion(), a.getFromServer(), a.getToServer());
-        regionMoved(a.getToRegion(), a.getToServer(), a.getFromServer());
-        break;
+        return ImmutableList.of(regionMoved(a.getFromRegion(), a.getFromServer(), a.getToServer()),
+          regionMoved(a.getToRegion(), a.getToServer(), a.getFromServer()));
       default:
-        throw new RuntimeException("Uknown action:" + action.getType());
+        throw new RuntimeException("Unknown action:" + action.getType());
     }
+    return Collections.emptyList();
   }
 
   /**
@@ -822,7 +828,7 @@ class BalancerClusterState {
     doAction(new AssignRegionAction(region, server));
   }
 
-  void regionMoved(int region, int oldServer, int newServer) {
+  RegionPlan regionMoved(int region, int oldServer, int newServer) {
     regionIndexToServerIndex[region] = newServer;
     if (initialRegionIndexToServerIndex[region] == newServer) {
       numMovedRegions--; // region moved back to original location
@@ -853,6 +859,11 @@ class BalancerClusterState {
       updateForLocation(serverIndexToRackIndex, regionsPerRack, colocatedReplicaCountsPerRack,
         oldServer, newServer, primary, region);
     }
+
+    // old server name can be null
+    ServerName oldServerName = oldServer == -1 ? null : servers[oldServer];
+
+    return new RegionPlan(regions[region], oldServerName, servers[newServer]);
   }
 
   /**
