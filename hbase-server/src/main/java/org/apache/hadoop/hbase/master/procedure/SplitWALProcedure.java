@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.RETRYING_EXT;
+
 import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
@@ -86,23 +88,62 @@ public class SplitWALProcedure
         splitWALManager.releaseSplitWALWorker(worker, env.getProcedureScheduler());
         if (!finished) {
           LOG.warn("Failed to split wal {} by server {}, retry...", walPath, worker);
-          // HBASE-28951 in case of a failure because unresponsive rs, rs might still be processing
-          // the split wal
-          try {
-            this.walPath = splitWALManager.renameWALForRetry(this.walPath);
-          } catch (IOException ioe) {
-            LOG.warn("Failed to rename the splitting wal {}", walPath);
-            setTimeoutForSuspend(env, ioe.getMessage());
-            throw new ProcedureSuspendedException();
-          }
-          setNextState(MasterProcedureProtos.SplitWALState.ACQUIRE_SPLIT_WAL_WORKER);
+          setNextState(MasterProcedureProtos.SplitWALState.RETRY_ON_DIFFERENT_WORKER);
           return Flow.HAS_MORE_STATE;
         }
         ServerCrashProcedure.updateProgress(env, getParentProcId());
         return Flow.NO_MORE_STATE;
+      case RETRY_ON_DIFFERENT_WORKER:
+        // HBASE-28951: In some cases, a RegionServer (RS) becomes unresponsive, which leads the
+        // master to mistakenly assume the RS has crashed and mark the SplitWALRemoteProcedure as
+        // failed. As a result, the WAL splitting task is reassigned to another worker. However, if
+        // the original worker starts responding again, both RegionServers may attempt to process
+        // the same WAL at the same time, causing both operations to fail. To prevent this conflict,
+        // we can "fence" the WAL by renaming it.
+        try {
+          String postRenameWalPath = getPostRenameWalPath();
+          if (splitWALManager.ifExistRenameWALForRetry(this.walPath, postRenameWalPath)) {
+            this.walPath = postRenameWalPath;
+            setNextState(MasterProcedureProtos.SplitWALState.ACQUIRE_SPLIT_WAL_WORKER);
+            return Flow.HAS_MORE_STATE;
+          } else {
+            // The method ifExistRenameWALForRetry will return false if the WAL file at walPath does
+            // not exist and has not been renamed to postRenameWalPath. This can only happen if the
+            // WALSplit was already completed before the flow reached this point..
+            ServerCrashProcedure.updateProgress(env, getParentProcId());
+            return Flow.NO_MORE_STATE;
+          }
+        } catch (IOException ioe) {
+          LOG.warn("Failed to rename the splitting wal {}", walPath);
+          setTimeoutForSuspend(env, ioe.getMessage());
+          throw new ProcedureSuspendedException();
+        }
+
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
     }
+  }
+
+  private String getPostRenameWalPath() {
+    // If the WAL split is retried with a different worker, ".retrying-xxx" is appended to the
+    // walPath. We cannot maintain a workerChangeCount in the SplitWALProcedure class due to the
+    // following scenario:
+    // If a SplitWALProcedure is bypassed or rolled back after being retried with another worker,
+    // the walPath will still have the ".retrying-xxx" suffix. During recovery, a new
+    // SplitWALProcedure (potentially by a different SCP) will be created. This new procedure will
+    // have its workerChangeCount initialized to 0, but the walPath will retain the ".retrying-xxx"
+    // suffix from the previous retry. To handle all these scenarios, we need to move to the next
+    // count(retrying-xxy) in order to properly fence the last worker.
+    String originalWALPath, postRenameWalPath;
+    int workerChangeCount = 0;
+    if (walPath.substring(walPath.length() - RETRYING_EXT.length() - 3).startsWith(RETRYING_EXT)) {
+      originalWALPath = walPath.substring(0, walPath.length() - RETRYING_EXT.length() - 3);
+      workerChangeCount = Integer.parseInt(walPath.substring(walPath.length() - 3));
+    } else {
+      originalWALPath = walPath;
+    }
+    return originalWALPath + RETRYING_EXT + String.format("%03d", (workerChangeCount + 1) % 1000);
+
   }
 
   private void setTimeoutForSuspend(MasterProcedureEnv env, String reason) {

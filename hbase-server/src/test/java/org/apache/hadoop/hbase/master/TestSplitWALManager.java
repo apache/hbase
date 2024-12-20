@@ -106,30 +106,27 @@ public class TestSplitWALManager {
     List<FileStatus> list =
       SplitLogManager.getFileList(TEST_UTIL.getConfiguration(), logDirs, NON_META_FILTER);
     Path testWal = list.get(0).getPath();
-    int workerChangeCount = 0;
 
-    String newWALPath = splitWALManager.renameWALForRetry(testWal.toString());
-    Assert.assertEquals(newWALPath,
-      testWal + RETRYING_EXT + String.format("%03d", ++workerChangeCount));
-
-    newWALPath = splitWALManager.renameWALForRetry(newWALPath);
-    Assert.assertEquals(newWALPath,
-      testWal + RETRYING_EXT + String.format("%03d", ++workerChangeCount));
+    String newWALPath = testWal + RETRYING_EXT + "001";
+    boolean result = splitWALManager.ifExistRenameWALForRetry(testWal.toString(), newWALPath);
+    Assert.assertTrue(result);
 
     List<FileStatus> fileStatusesA =
       SplitLogManager.getFileList(TEST_UTIL.getConfiguration(), logDirs, NON_META_FILTER);
-
     Path walFromFileSystem = null;
     for (FileStatus wal : fileStatusesA) {
-      if (
-        wal.getPath().toString().endsWith(RETRYING_EXT + String.format("%03d", workerChangeCount))
-      ) {
+      if (wal.getPath().toString().endsWith(RETRYING_EXT + "001")) {
         walFromFileSystem = wal.getPath();
         break;
       }
     }
     Assert.assertNotNull(walFromFileSystem);
     Assert.assertEquals(walFromFileSystem.toString(), newWALPath);
+
+    // if file is already renamed it should return true
+    boolean resultAfterRename =
+      splitWALManager.ifExistRenameWALForRetry(testWal.toString(), newWALPath);
+    Assert.assertTrue(resultAfterRename);
   }
 
   @Test
@@ -204,7 +201,7 @@ public class TestSplitWALManager {
     Assert.assertFalse(TEST_UTIL.getTestFileSystem().exists(wals[0].getPath()));
 
     // Test splitting wal
-    wals = TEST_UTIL.getTestFileSystem().listStatus(metaWALDir, MasterWalManager.NON_META_FILTER);
+    wals = TEST_UTIL.getTestFileSystem().listStatus(metaWALDir, NON_META_FILTER);
     Assert.assertEquals(1, wals.length);
     testProcedures =
       splitWALManager.createSplitWALProcedures(Lists.newArrayList(wals[0]), metaServer);

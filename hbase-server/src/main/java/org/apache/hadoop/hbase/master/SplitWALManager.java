@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPL
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.master.MasterWalManager.META_FILTER;
 import static org.apache.hadoop.hbase.master.MasterWalManager.NON_META_FILTER;
-import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.RETRYING_EXT;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -186,26 +185,27 @@ public class SplitWALManager {
     splitWorkerAssigner.addUsedWorker(worker);
   }
 
-  public String renameWALForRetry(String walPath) throws IOException {
-    String originalWALPath;
-    // If the WAL split is retried with another worker, ".retrying-xxx" is appended to the walPath.
-    // In the case where a SplitWalProcedure is bypassed or rolled back after being retried with
-    // another worker, the walPath will still have ".retrying-xxx" appended. During recovery, a new
-    // SplitWalProcedure (by different SCP) will be created, which will have a workerChangeCount of
-    // 0 but will still have ".retrying-xxx" appended to the walPath. This is why we cannot use the
-    // condition workerChangeCount != 0.
-    int workerChangeCount = 0;
-    if (walPath.substring(walPath.length() - RETRYING_EXT.length() - 3).startsWith(RETRYING_EXT)) {
-      originalWALPath = walPath.substring(0, walPath.length() - RETRYING_EXT.length() - 3);
-      workerChangeCount = Integer.parseInt(walPath.substring(walPath.length() - 3));
+  /**
+   * Rename the WAL file at the specified walPath to retry with another worker. Returns true if the
+   * file is successfully renamed, or if it has already been renamed in previous try. Returns false
+   * if neither of the files exists. It throws an IOException if got any error while renaming.
+   */
+  public boolean ifExistRenameWALForRetry(String walPath, String postRenameWalPath)
+    throws IOException {
+    if (fs.exists(new Path(rootDir, walPath))) {
+      if (!fs.rename(new Path(rootDir, walPath), new Path(rootDir, postRenameWalPath))) {
+        throw new IOException("Failed to rename wal " + walPath + " to " + postRenameWalPath);
+      }
+      return true;
     } else {
-      originalWALPath = walPath;
+      if (fs.exists(new Path(rootDir, postRenameWalPath))) {
+        LOG.info(
+          "{} was already renamed in last retry to {}, will continue to acquire new worker to split wal",
+          walPath, postRenameWalPath);
+        return true;
+      } else {
+        return false;
+      }
     }
-    String walNewName =
-      originalWALPath + RETRYING_EXT + String.format("%03d", (workerChangeCount + 1) % 1000);
-    if (!fs.rename(new Path(rootDir, walPath), new Path(rootDir, walNewName))) {
-      throw new IOException("Failed to rename wal " + walPath + " to " + walNewName);
-    }
-    return walNewName;
   }
 }

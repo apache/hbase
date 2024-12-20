@@ -723,6 +723,7 @@ enum SplitWALState{
   ACQUIRE_SPLIT_WAL_WORKER = 1;
   DISPATCH_WAL_TO_WORKER = 2;
   RELEASE_SPLIT_WORKER = 3;
+  RETRY_ON_DIFFERENT_WORKER = 4;
 }
 
 message ClaimReplicationQueuesStateData {
