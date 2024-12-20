@@ -57,8 +57,8 @@
         <div class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
             <li><a href="/master-status">Home</a></li>
-            <li><a href="/tablesDetailed.jsp">Table Details</a></li>
             <% if (master.isActiveMaster()){ %>
+              <li><a href="/tablesDetailed.jsp">Table Details</a></li>
               <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
               <li><a href="/hbck.jsp">HBCK Report</a></li>
               <li><a href="/operationDetails.jsp">Operation Details</a></li>
