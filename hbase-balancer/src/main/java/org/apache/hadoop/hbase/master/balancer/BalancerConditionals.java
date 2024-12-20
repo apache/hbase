@@ -18,10 +18,11 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.lang.reflect.Constructor;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -65,15 +66,6 @@ public final class BalancerConditionals {
   public static final String ADDITIONAL_CONDITIONALS_KEY =
     "hbase.master.balancer.stochastic.additionalConditionals";
 
-  // When this count is low, we'll be more likely to trigger a subsequent balancer run.
-  // This is helpful because conditionals are only evaluated for any given region plan;
-  // there is no mechanism for telling whether any conditional violations exist across
-  // the whole cluster — because this would be prohibitively expensive.
-  // So this is a middle ground: a reasonable, cheap heuristic that will trigger balancer
-  // runs based on an educated guess.
-  private static final AtomicInteger BALANCE_COUNT_WITHOUT_IMPROVEMENTS = new AtomicInteger(0);
-  private static final int BALANCE_COUNT_WITHOUT_IMPROVEMENTS_CEILING = 10;
-
   private Set<Class<? extends RegionPlanConditional>> conditionalClasses = Collections.emptySet();
   private Set<RegionPlanConditional> conditionals = Collections.emptySet();
   private Configuration conf;
@@ -81,35 +73,26 @@ public final class BalancerConditionals {
   private BalancerConditionals() {
   }
 
-  boolean isTableIsolationEnabled() {
-    return conditionalClasses.contains(SystemTableIsolationConditional.class)
-      || conditionalClasses.contains(MetaTableIsolationConditional.class);
-  }
-
-  boolean shouldRunBalancer() {
-    return isConditionalBalancingEnabled()
-      && BALANCE_COUNT_WITHOUT_IMPROVEMENTS.get() < BALANCE_COUNT_WITHOUT_IMPROVEMENTS_CEILING;
-  }
-
-  int getConsecutiveBalancesWithoutImprovement() {
-    return BALANCE_COUNT_WITHOUT_IMPROVEMENTS.get();
-  }
-
-  void incConsecutiveBalancesWithoutImprovement() {
-    if (BALANCE_COUNT_WITHOUT_IMPROVEMENTS.get() == Integer.MAX_VALUE) {
-      return;
-    }
-    BALANCE_COUNT_WITHOUT_IMPROVEMENTS.getAndIncrement();
-    LOG.trace("Set balanceCountWithoutImprovements={}", BALANCE_COUNT_WITHOUT_IMPROVEMENTS.get());
-  }
-
-  void resetConsecutiveBalancesWithoutImprovement() {
-    BALANCE_COUNT_WITHOUT_IMPROVEMENTS.set(0);
-    LOG.trace("Set balanceCountWithoutImprovements=0");
+  boolean shouldRunBalancer(BalancerClusterState cluster) {
+    return isConditionalBalancingEnabled() && conditionals.stream()
+      .map(RegionPlanConditional::getCandidateGenerator).flatMap(Optional::stream)
+      .map(generator -> generator.getWeight(cluster)).anyMatch(weight -> weight > 0);
   }
 
   Set<Class<? extends RegionPlanConditional>> getConditionalClasses() {
     return Set.copyOf(conditionalClasses);
+  }
+
+  Collection<RegionPlanConditional> getConditionals() {
+    return conditionals;
+  }
+
+  boolean isMetaTableIsolationEnabled() {
+    return conditionalClasses.contains(MetaTableIsolationConditional.class);
+  }
+
+  boolean isSystemTableIsolationEnabled() {
+    return conditionalClasses.contains(SystemTableIsolationConditional.class);
   }
 
   boolean shouldSkipSloppyServerEvaluation() {
@@ -149,6 +132,7 @@ public final class BalancerConditionals {
       conditionalClasses.add(clazz.asSubclass(RegionPlanConditional.class));
     }
     this.conditionalClasses = conditionalClasses.build();
+    loadClusterState(null);
   }
 
   void loadClusterState(BalancerClusterState cluster) {
@@ -158,7 +142,6 @@ public final class BalancerConditionals {
 
   int getConditionalViolationChange(List<RegionPlan> regionPlans) {
     if (conditionals.isEmpty()) {
-      incConsecutiveBalancesWithoutImprovement();
       return 0;
     }
     int conditionalViolationChange = 0;
@@ -197,6 +180,12 @@ public final class BalancerConditionals {
 
   private RegionPlanConditional createConditional(Class<? extends RegionPlanConditional> clazz,
     Configuration conf, BalancerClusterState cluster) {
+    if (conf == null) {
+      conf = new Configuration();
+    }
+    if (cluster == null) {
+      cluster = new BalancerClusterState(Collections.emptyMap(), null, null, null, null);
+    }
     try {
       Constructor<? extends RegionPlanConditional> ctor =
         clazz.getDeclaredConstructor(Configuration.class, BalancerClusterState.class);

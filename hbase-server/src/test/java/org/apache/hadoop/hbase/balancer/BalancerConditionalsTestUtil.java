@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
-public class BalancerConditionalsTestUtil {
+public final class BalancerConditionalsTestUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(BalancerConditionalsTestUtil.class);
 

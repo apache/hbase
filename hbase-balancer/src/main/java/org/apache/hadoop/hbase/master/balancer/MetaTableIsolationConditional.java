@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
@@ -59,6 +60,11 @@ class MetaTableIsolationConditional extends RegionPlanConditional {
         emptyServers.add(server);
       }
     }
+  }
+
+  @Override
+  Optional<RegionPlanConditionalCandidateGenerator> getCandidateGenerator() {
+    return Optional.of(new MetaTableIsolationCandidateGenerator());
   }
 
   @Override

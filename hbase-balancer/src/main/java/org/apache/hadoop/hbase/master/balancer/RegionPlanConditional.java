@@ -17,16 +17,19 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class RegionPlanConditional {
   public RegionPlanConditional(Configuration conf, BalancerClusterState cluster) {
   }
+
+  abstract Optional<RegionPlanConditionalCandidateGenerator> getCandidateGenerator();
 
   abstract boolean isViolating(RegionPlan regionPlan);
 }

@@ -23,9 +23,19 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class SystemTableIsolationCandidateGenerator extends TableIsolationCandidateGenerator {
 
+  private final boolean isolateMeta;
+
+  public SystemTableIsolationCandidateGenerator(boolean isolateMeta) {
+    this.isolateMeta = isolateMeta;
+  }
+
   @Override
   boolean shouldBeIsolated(RegionInfo regionInfo) {
-    return regionInfo.getTable().isSystemTable();
+    if (isolateMeta) {
+      return regionInfo.getTable().isSystemTable() && !regionInfo.isMetaRegion();
+    } else {
+      return regionInfo.getTable().isSystemTable();
+    }
   }
 
 }

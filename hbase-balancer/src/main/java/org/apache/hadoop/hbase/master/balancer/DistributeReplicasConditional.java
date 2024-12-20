@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -50,6 +51,11 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
     super(conf, cluster);
     this.cluster = cluster;
     this.isTestModeEnabled = conf.getBoolean(TEST_MODE_ENABLED_KEY, false);
+  }
+
+  @Override
+  Optional<RegionPlanConditionalCandidateGenerator> getCandidateGenerator() {
+    return Optional.empty();
   }
 
   @Override
