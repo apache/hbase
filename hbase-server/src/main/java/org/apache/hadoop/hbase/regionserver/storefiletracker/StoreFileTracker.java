@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
@@ -117,6 +118,32 @@ public interface StoreFileTracker {
     final boolean primaryReplica) throws IOException;
 
   StoreFileInfo getStoreFileInfo(final Path initialPath, final boolean primaryReplica)
+    throws IOException;
+
+  /**
+   * Create a new HFileLink
+   * <p>
+   * It also adds a back-reference to the hfile back-reference directory to simplify the
+   * reference-count and the cleaning process.
+   * @param hfileLinkName - HFileLink name (it contains hfile-region-table)
+   * @param createBackRef - Whether back reference should be created. Defaults to true.
+   * @return the file link name.
+   * @throws IOException on file or parent directory creation failure.
+   */
+  String createHFileLink(final TableName linkedTable, final String linkedRegion,
+    final String hfileName, final boolean createBackRef) throws IOException;
+
+  /**
+   * Create a new HFileLink starting from a hfileLink name
+   * <p>
+   * It also adds a back-reference to the hfile back-reference directory to simplify the
+   * reference-count and the cleaning process.
+   * @param hfileLinkName - HFileLink name (it contains hfile-region-table)
+   * @param createBackRef - Whether back reference should be created. Defaults to true.
+   * @return the file link name.
+   * @throws IOException on file or parent directory creation failure.
+   */
+  String createFromHFileLink(final String hfileName, final boolean createBackRef)
     throws IOException;
 
 }
