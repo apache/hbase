@@ -25,6 +25,7 @@ import java.util.concurrent.locks.Lock;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
+import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
@@ -46,6 +47,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferExce
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ReplaySyncReplicationWALParameter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
 /**
  * This callable executed at RS side to replay sync replication wal.
@@ -112,7 +114,11 @@ public class ReplaySyncReplicationWALCallable extends BaseRSProcedureCallable {
         ReplicateWALEntryRequest request = pair.getFirst();
         rs.getReplicationSinkService().replicateLogEntries(request.getEntryList(), pair.getSecond(),
           request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
-          request.getSourceHFileArchiveDirPath());
+          request.getSourceHFileArchiveDirPath(),
+          ReplicationPeerConfigUtil.convert2Map(request.getNamespaceOverridesList().toArray(
+            new ReplicationProtos.NamespaceOverrideMapping[request.getNamespaceOverridesCount()])),
+          ReplicationPeerConfigUtil.convert2Map(request.getTableNameOverridesList().toArray(
+            new ReplicationProtos.TableNameOverrideMapping[request.getTableNameOverridesCount()])));
         // Read next entries.
         entries = readWALEntries(reader, wal);
       }

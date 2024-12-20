@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
  * Gateway to Replication. Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
  * <p>
  * Implement {@link PropagatingConfigurationObserver} mainly for registering
- * {@link ReplicationPeers}, so we can recreating the replication peer storage.
+ * {@link ReplicationPeers}, so we can recreate the replication peer storage.
  */
 @InterfaceAudience.Private
 public class Replication implements ReplicationSourceService, PropagatingConfigurationObserver {

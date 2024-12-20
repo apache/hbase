@@ -31,6 +31,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Stream;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.replication.NamespaceOverride;
+import org.apache.hadoop.hbase.client.replication.TableNameOverride;
 
 /**
  * A helper tool for generating random {@link ReplicationPeerConfig} and do assertion.
@@ -60,6 +62,29 @@ public final class ReplicationPeerConfigTestUtil {
     return map;
   }
 
+  private static Map<TableName, TableNameOverride> randTableNameOverrides(Random rand) {
+    int size = rand.nextInt(5);
+    Map<TableName, TableNameOverride> map = new HashMap<>(size);
+    for (int i = 0; i < size; i++) {
+      TableName source = TableName.valueOf(Long.toHexString(rand.nextLong()));
+      TableNameOverride sink =
+        new TableNameOverride(TableName.valueOf(Long.toHexString(rand.nextLong())));
+      map.put(source, sink);
+    }
+    return map;
+  }
+
+  private static Map<String, NamespaceOverride> randNamespaceOverrides(Random rand) {
+    int size = rand.nextInt(5);
+    Map<String, NamespaceOverride> map = new HashMap<>(size);
+    for (int i = 0; i < size; i++) {
+      String source = Long.toHexString(rand.nextLong());
+      NamespaceOverride sink = new NamespaceOverride(Long.toHexString(rand.nextLong()));
+      map.put(source, sink);
+    }
+    return map;
+  }
+
   public static ReplicationPeerConfig getConfig(int seed) {
     RNG.setSeed(seed);
     return ReplicationPeerConfig.newBuilder().setClusterKey(Long.toHexString(RNG.nextLong()))
@@ -67,7 +92,8 @@ public final class ReplicationPeerConfigTestUtil {
       .setRemoteWALDir(Long.toHexString(RNG.nextLong())).setNamespaces(randNamespaces(RNG))
       .setExcludeNamespaces(randNamespaces(RNG)).setTableCFsMap(randTableCFs(RNG))
       .setExcludeTableCFsMap(randTableCFs(RNG)).setReplicateAllUserTables(RNG.nextBoolean())
-      .setBandwidth(RNG.nextInt(1000)).build();
+      .setNamespaceOverrides(randNamespaceOverrides(RNG))
+      .setTableNameOverrides(randTableNameOverrides(RNG)).setBandwidth(RNG.nextInt(1000)).build();
   }
 
   private static void assertSetEquals(Set<String> expected, Set<String> actual) {
@@ -79,7 +105,7 @@ public final class ReplicationPeerConfigTestUtil {
     expected.forEach(s -> assertTrue(actual.contains(s)));
   }
 
-  private static void assertMapEquals(Map<TableName, List<String>> expected,
+  private static void assertTableCFsMapEquals(Map<TableName, List<String>> expected,
     Map<TableName, List<String>> actual) {
     if (expected == null || expected.size() == 0) {
       assertTrue(actual == null || actual.size() == 0);
@@ -102,15 +128,48 @@ public final class ReplicationPeerConfigTestUtil {
     });
   }
 
+  private static void assertNamespaceOverridesMapEquals(Map<String, NamespaceOverride> expected,
+    Map<String, NamespaceOverride> actual) {
+    if (expected == null || expected.size() == 0) {
+      assertTrue(actual == null || actual.size() == 0);
+      return;
+    }
+    for (String namespace : expected.keySet()) {
+      assertTrue(actual.containsKey(namespace));
+      assertEquals(expected.get(namespace).getSinkNamespace(),
+        actual.get(namespace).getSinkNamespace());
+    }
+    assertSetEquals(expected.keySet(), actual.keySet());
+  }
+
+  private static void assertTableOverridesMapEquals(Map<TableName, TableNameOverride> expected,
+    Map<TableName, TableNameOverride> actual) {
+    if (expected == null || expected.size() == 0) {
+      assertTrue(actual == null || actual.size() == 0);
+      return;
+    }
+    for (TableName tableName : expected.keySet()) {
+      assertTrue(actual.containsKey(tableName));
+      assertEquals(expected.get(tableName).getSinkTableName(),
+        actual.get(tableName).getSinkTableName());
+    }
+    for (TableName tableName : actual.keySet()) {
+      assertTrue(expected.containsKey(tableName));
+    }
+  }
+
   public static void assertConfigEquals(ReplicationPeerConfig expected,
     ReplicationPeerConfig actual) {
     assertEquals(expected.getClusterKey(), actual.getClusterKey());
     assertEquals(expected.getReplicationEndpointImpl(), actual.getReplicationEndpointImpl());
     assertSetEquals(expected.getNamespaces(), actual.getNamespaces());
     assertSetEquals(expected.getExcludeNamespaces(), actual.getExcludeNamespaces());
-    assertMapEquals(expected.getTableCFsMap(), actual.getTableCFsMap());
-    assertMapEquals(expected.getExcludeTableCFsMap(), actual.getExcludeTableCFsMap());
+    assertTableCFsMapEquals(expected.getTableCFsMap(), actual.getTableCFsMap());
+    assertTableCFsMapEquals(expected.getExcludeTableCFsMap(), actual.getExcludeTableCFsMap());
     assertEquals(expected.replicateAllUserTables(), actual.replicateAllUserTables());
+    assertNamespaceOverridesMapEquals(expected.getNamespaceOverrides(),
+      actual.getNamespaceOverrides());
+    assertTableOverridesMapEquals(expected.getTableNameOverrides(), actual.getTableNameOverrides());
     assertEquals(expected.getBandwidth(), actual.getBandwidth());
   }
 }
