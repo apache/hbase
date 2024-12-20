@@ -411,25 +411,24 @@ public final class BackupSystemTable implements Closeable {
     try (BufferedMutator bufferedMutator = connection.getBufferedMutator(bulkLoadTableName)) {
       List<Put> puts = BackupSystemTable.createPutForBulkLoad(tableName, region, cfToHfilePath);
       bufferedMutator.mutate(puts);
-      LOG.debug("Written {} rows for bulk load of {}", puts.size(), tableName);
+      LOG.debug("Written {} rows for bulk load of table {}", puts.size(), tableName);
     }
   }
 
-  /*
-   * Removes rows recording bulk loaded hfiles from backup table
-   * @param lst list of table names
-   * @param rows the rows to be deleted
+  /**
+   * Removes entries from the table that tracks all bulk loaded hfiles.
+   * @param rows the row keys of the entries to be deleted
    */
   public void deleteBulkLoadedRows(List<byte[]> rows) throws IOException {
     try (BufferedMutator bufferedMutator = connection.getBufferedMutator(bulkLoadTableName)) {
-      List<Delete> lstDels = new ArrayList<>();
+      List<Delete> deletes = new ArrayList<>();
       for (byte[] row : rows) {
         Delete del = new Delete(row);
-        lstDels.add(del);
-        LOG.debug("orig deleting the row: " + Bytes.toString(row));
+        deletes.add(del);
+        LOG.debug("Deleting bulk load entry with key: {}", Bytes.toString(row));
       }
-      bufferedMutator.mutate(lstDels);
-      LOG.debug("deleted " + rows.size() + " original bulkload rows");
+      bufferedMutator.mutate(deletes);
+      LOG.debug("Deleted {} bulk load entries.", rows.size());
     }
   }
 
@@ -1520,16 +1519,6 @@ public final class BackupSystemTable implements Closeable {
         LOG.error("Snapshot " + snapshotName + " does not exists");
       }
     }
-  }
-
-  public static List<Delete> createDeleteForOrigBulkLoad(List<TableName> lst) {
-    List<Delete> lstDels = new ArrayList<>(lst.size());
-    for (TableName table : lst) {
-      Delete del = new Delete(rowkey(BULK_LOAD_PREFIX, table.toString(), BLK_LD_DELIM));
-      del.addFamily(BackupSystemTable.META_FAMILY);
-      lstDels.add(del);
-    }
-    return lstDels;
   }
 
   private Put createPutForDeleteOperation(String[] backupIdList) {
