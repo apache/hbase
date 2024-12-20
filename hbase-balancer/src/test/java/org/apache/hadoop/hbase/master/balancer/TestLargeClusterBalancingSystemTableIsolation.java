@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.isTableIsolated;
 import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.runBalancerToExhaustion;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,13 +34,13 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TestMetaTableIsolationCandidateGenerator {
+public class TestLargeClusterBalancingSystemTableIsolation {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestMetaTableIsolationCandidateGenerator.class);
+    LoggerFactory.getLogger(TestLargeClusterBalancingSystemTableIsolation.class);
 
-  private static final TableName META_TABLE_NAME = TableName.valueOf("hbase:meta");
-  private static final TableName NON_META_TABLE_NAME = TableName.valueOf("userTable");
+  private static final TableName SYSTEM_TABLE_NAME = TableName.valueOf("hbase:system");
+  private static final TableName NON_SYSTEM_TABLE_NAME = TableName.valueOf("userTable");
 
   private static final int NUM_SERVERS = 100;
   private static final int NUM_REGIONS = 10_000;
@@ -58,7 +58,7 @@ public class TestMetaTableIsolationCandidateGenerator {
     // Create regions
     List<RegionInfo> allRegions = new ArrayList<>();
     for (int i = 0; i < NUM_REGIONS; i++) {
-      TableName tableName = i < 3 ? META_TABLE_NAME : NON_META_TABLE_NAME;
+      TableName tableName = i < 10 ? SYSTEM_TABLE_NAME : NON_SYSTEM_TABLE_NAME;
       byte[] startKey = new byte[1];
       startKey[0] = (byte) i;
       byte[] endKey = new byte[1];
@@ -77,46 +77,17 @@ public class TestMetaTableIsolationCandidateGenerator {
   }
 
   @Test
-  public void testMetaTableIsolation() {
+  public void testSystemTableIsolation() {
     Configuration conf = new Configuration(false);
-    conf.setBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, true);
-    runBalancerToExhaustion(conf, serverToRegions, Set.of(this::isMetaTableIsolated));
+    conf.setBoolean(BalancerConditionals.ISOLATE_SYSTEM_TABLES_KEY, true);
+    runBalancerToExhaustion(conf, serverToRegions, Set.of(this::isSystemTableIsolated));
   }
 
   /**
-   * Validates whether all meta table regions are isolated, meaning they are not on the same server
-   * as any non-meta table regions.
-   * @param cluster The cluster state to validate
-   * @return true if all meta table regions are isolated, false otherwise
+   * Validates whether all system table regions are isolated.
    */
-  private boolean isMetaTableIsolated(BalancerClusterState cluster) {
-    for (int i = 0; i < cluster.numServers; i++) {
-      int[] regionsOnServer = cluster.regionsPerServer[i];
-      if (regionsOnServer == null || regionsOnServer.length == 0) {
-        continue; // Skip empty servers
-      }
-
-      boolean hasMetaTableRegion = false;
-      boolean hasNonMetaTableRegion = false;
-
-      for (int regionIndex : regionsOnServer) {
-        RegionInfo regionInfo = cluster.regions[regionIndex];
-        if (regionInfo.getTable().equals(META_TABLE_NAME)) {
-          hasMetaTableRegion = true;
-        } else if (regionInfo.getTable().equals(NON_META_TABLE_NAME)) {
-          hasNonMetaTableRegion = true;
-        }
-
-        // If both meta and non-meta table regions exist on this server, isolation is violated
-        if (hasMetaTableRegion && hasNonMetaTableRegion) {
-          LOG.warn("Server {} has both meta and non-meta table regions, violating isolation.",
-            cluster.servers[i].getServerName());
-          return false;
-        }
-      }
-    }
-    LOG.info("Meta table isolation validation passed.");
-    return true;
+  private boolean isSystemTableIsolated(BalancerClusterState cluster) {
+    return isTableIsolated(cluster, SYSTEM_TABLE_NAME, "System");
   }
 
 }

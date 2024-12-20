@@ -41,9 +41,6 @@ public class TestBalancerConditionals extends BalancerTestBase {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestBalancerConditionals.class);
 
-  private static final ServerName SERVER_1 = ServerName.valueOf("server1", 12345, 1);
-  private static final ServerName SERVER_2 = ServerName.valueOf("server2", 12345, 1);
-
   private BalancerConditionals balancerConditionals;
   private BalancerClusterState mockCluster;
 
@@ -110,20 +107,6 @@ public class TestBalancerConditionals extends BalancerTestBase {
 
     assertEquals("Invalid classes should not be loaded as conditionals", 0,
       balancerConditionals.getConditionalClasses().size());
-  }
-
-  @Test
-  public void testNoViolationsWithoutConditionals() {
-    Configuration conf = new Configuration();
-    balancerConditionals.loadConf(conf);
-    balancerConditionals.loadClusterState(mockCluster);
-
-    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TableName.valueOf("test")).build();
-    RegionPlan regionPlan = new RegionPlan(regionInfo, SERVER_1, SERVER_2);
-
-    int violations = balancerConditionals.getConditionalViolationChange(List.of(regionPlan));
-
-    assertEquals("No conditionals should result in zero violations", 0, violations);
   }
 
   @Test

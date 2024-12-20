@@ -29,7 +29,17 @@ public abstract class RegionPlanConditional {
   public RegionPlanConditional(Configuration conf, BalancerClusterState cluster) {
   }
 
+  /**
+   * Get the candidate generator for this conditional.
+   * This can be useful to provide the balancer with hints that will appease your conditional.
+   * @return the candidate generator for this conditional
+   */
   abstract Optional<RegionPlanConditionalCandidateGenerator> getCandidateGenerator();
 
+  /**
+   * Check if the conditional is violated by the given region plan.
+   * @param regionPlan the region plan to check
+   * @return true if the conditional is violated
+   */
   abstract boolean isViolating(RegionPlan regionPlan);
 }

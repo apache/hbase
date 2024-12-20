@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.List;
-import org.apache.hadoop.hbase.master.RegionPlan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,11 +39,8 @@ public abstract class RegionPlanConditionalCandidateGenerator extends CandidateG
   }
 
   boolean willBeAccepted(BalancerClusterState cluster, BalanceAction action) {
-    List<RegionPlan> regionPlans = cluster.doAction(action);
-    boolean improvesConditionals =
-      BalancerConditionals.INSTANCE.getConditionalViolationChange(regionPlans) < 0;
-    cluster.doAction(action.undoAction()); // undo
-    return improvesConditionals;
+    int conditionalChange = BalancerConditionals.INSTANCE.getConditionalViolationChange(cluster, action);
+    return conditionalChange < 0;
   }
 
   double getWeight(BalancerClusterState cluster) {

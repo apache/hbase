@@ -21,6 +21,7 @@ import java.lang.reflect.Constructor;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -32,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+import javax.swing.plaf.synth.Region;
 
 /**
  * Balancer conditionals supplement cost functions in the {@link StochasticLoadBalancer}. Cost
@@ -136,35 +138,50 @@ public final class BalancerConditionals {
   }
 
   void loadClusterState(BalancerClusterState cluster) {
-    conditionals = conditionalClasses.stream().map(clazz -> createConditional(clazz, conf, cluster))
+    conditionals = conditionalClasses.stream()
+      .map(clazz -> createConditional(clazz, conf, cluster))
+      .filter(Objects::nonNull)
       .collect(Collectors.toSet());
   }
 
-  int getConditionalViolationChange(List<RegionPlan> regionPlans) {
+  int getConditionalViolationChange(BalancerClusterState cluster, BalanceAction action) {
     if (conditionals.isEmpty()) {
       return 0;
     }
-    int conditionalViolationChange = 0;
-    for (RegionPlan regionPlan : regionPlans) {
-      conditionalViolationChange += getConditionalViolationChange(conditionals, regionPlan);
+
+    loadClusterState(cluster); // ensure that we're up to date. this shouldn't be necessary todo rmattingly fix
+    List<RegionPlan> regionPlans = doActionAndRefreshConditionals(cluster, action);
+
+    // Now we're in the proposed finished state
+    // We can get the original violation count by running inverse plans
+    List<RegionPlan> inversePlans = getInversePlans(regionPlans);
+    int originalViolationCount = 0;
+    for (RegionPlan inversePlan : inversePlans) {
+      originalViolationCount += getConditionalViolationCount(conditionals, inversePlan);
     }
-    return conditionalViolationChange;
+
+    // Now go back to the original state, and measure
+    // the proposed violation count
+    doActionAndRefreshConditionals(cluster, action.undoAction());
+    int proposedViolationCount = 0;
+    for (RegionPlan regionPlan : regionPlans) {
+      proposedViolationCount += getConditionalViolationCount(conditionals, regionPlan);
+    }
+
+    return proposedViolationCount - originalViolationCount;
   }
 
-  private static int getConditionalViolationChange(Set<RegionPlanConditional> conditionals,
-    RegionPlan regionPlan) {
-    RegionPlan inverseRegionPlan = new RegionPlan(regionPlan.getRegionInfo(),
-      regionPlan.getDestination(), regionPlan.getSource());
-    int currentConditionalViolationCount =
-      getConditionalViolationCount(conditionals, inverseRegionPlan);
-    int newConditionalViolationCount = getConditionalViolationCount(conditionals, regionPlan);
-    int violationChange = newConditionalViolationCount - currentConditionalViolationCount;
-    if (violationChange < 0) {
-      LOG.trace("Should move region {}_{} from {} to {}", regionPlan.getRegionName(),
-        regionPlan.getRegionInfo().getReplicaId(), regionPlan.getSource().getServerName(),
-        regionPlan.getDestination().getServerName());
-    }
-    return violationChange;
+  private List<RegionPlan> doActionAndRefreshConditionals(BalancerClusterState cluster, BalanceAction action) {
+    List<RegionPlan> regionPlans = cluster.doAction(action);
+    loadClusterState(cluster);
+    return regionPlans;
+  }
+
+  private static List<RegionPlan> getInversePlans(List<RegionPlan> regionPlans) {
+    return regionPlans.stream()
+      .map(regionPlan -> new RegionPlan(regionPlan.getRegionInfo(),
+        regionPlan.getDestination(), regionPlan.getSource()))
+      .toList();
   }
 
   private static int getConditionalViolationCount(Set<RegionPlanConditional> conditionals,

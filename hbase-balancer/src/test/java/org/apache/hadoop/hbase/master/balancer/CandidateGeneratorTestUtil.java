@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.MIN
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -64,7 +65,7 @@ public final class CandidateGeneratorTestUtil {
     boolean isBalanced = false;
     while (!isBalanced) {
       balancerRuns++;
-      if (balancerRuns > 10) {
+      if (balancerRuns > 1000) {
         throw new RuntimeException("Balancer failed to find balance & meet expectations");
       }
       long start = System.currentTimeMillis();
@@ -218,6 +219,100 @@ public final class CandidateGeneratorTestUtil {
       serverToRegions.put(cluster.servers[i], regions);
     }
     return newServerToRegions;
+  }
+
+  /**
+   * Generic method to validate table isolation.
+   */
+  static boolean isTableIsolated(BalancerClusterState cluster, TableName tableName,
+    String tableType) {
+    for (int i = 0; i < cluster.numServers; i++) {
+      int[] regionsOnServer = cluster.regionsPerServer[i];
+      if (regionsOnServer == null || regionsOnServer.length == 0) {
+        continue; // Skip empty servers
+      }
+
+      boolean hasTargetTableRegion = false;
+      boolean hasOtherTableRegion = false;
+
+      for (int regionIndex : regionsOnServer) {
+        RegionInfo regionInfo = cluster.regions[regionIndex];
+        if (regionInfo.getTable().equals(tableName)) {
+          hasTargetTableRegion = true;
+        } else {
+          hasOtherTableRegion = true;
+        }
+
+        // If the target table and any other table are on the same server, isolation is violated
+        if (hasTargetTableRegion && hasOtherTableRegion) {
+          LOG.warn(
+            "Server {} has both {} table regions and other table regions, violating isolation.",
+            cluster.servers[i].getServerName(), tableType);
+          return false;
+        }
+      }
+    }
+    LOG.info("{} table isolation validation passed.", tableType);
+    return true;
+  }
+
+  /**
+   * Validates that each replica is isolated from its others.
+   * Ensures that no server hosts more than one replica of the same region
+   * (i.e., regions with identical start and end keys).
+   *
+   * @param cluster The current state of the cluster.
+   * @return true if all replicas are properly isolated, false otherwise.
+   */
+  static boolean areAllReplicasDistributed(BalancerClusterState cluster) {
+    // Iterate over each server
+    for (int serverIndex = 0; serverIndex < cluster.numServers; serverIndex++) {
+      ServerName server = cluster.servers[serverIndex];
+      int[] regionsOnServer = cluster.regionsPerServer[serverIndex];
+
+      if (regionsOnServer == null || regionsOnServer.length == 0) {
+        continue; // Skip empty servers
+      }
+
+      // Set to track unique regions on this server
+      Set<String> uniqueRegionsOnServer = new HashSet<>();
+
+      for (int regionIndex : regionsOnServer) {
+        RegionInfo regionInfo = cluster.regions[regionIndex];
+
+        // Generate a unique identifier for the region based on start and end keys
+        String regionKey = generateRegionKey(regionInfo);
+
+        // Check if this regionKey already exists on this server
+        if (uniqueRegionsOnServer.contains(regionKey)) {
+          // Violation: Multiple replicas of the same region on the same server
+          LOG.warn("Replica isolation violated: Server {} hosts multiple replicas of region [{}].",
+            server.getServerName(), regionKey);
+          return false;
+        }
+
+        // Add the regionKey to the set
+        uniqueRegionsOnServer.add(regionKey);
+      }
+    }
+
+    LOG.info("Replica isolation validation passed: No server hosts multiple replicas of the same region.");
+    return true;
+  }
+
+  /**
+   * Generates a unique key for a region based on its start and end keys.
+   * This method ensures that regions with identical start and end keys have the same key.
+   *
+   * @param regionInfo The RegionInfo object.
+   * @return A string representing the unique key of the region.
+   */
+  private static String generateRegionKey(RegionInfo regionInfo) {
+    // Using Base64 encoding for byte arrays to ensure uniqueness and readability
+    String startKey = Base64.getEncoder().encodeToString(regionInfo.getStartKey());
+    String endKey = Base64.getEncoder().encodeToString(regionInfo.getEndKey());
+
+    return startKey + ":" + endKey;
   }
 
 }

@@ -446,7 +446,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     for (Class<? extends CandidateGenerator> clazz : candidateGenerators.keySet()) {
-      weightsOfGenerators.put(clazz, weightsOfGenerators.get(clazz) / sum);
+      weightsOfGenerators.put(clazz, Math.min(CandidateGenerator.MAX_WEIGHT, weightsOfGenerators.get(clazz) / sum));
     }
 
     double rand = ThreadLocalRandom.current().nextDouble();
@@ -541,9 +541,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
     }
 
-    // Update conditionals to reflect current balancer state
-    balancerConditionals.loadClusterState(cluster);
-
     LOG.info(
       "Start StochasticLoadBalancer.balancer, initial weighted average imbalance={}, "
         + "functionCost={} computedMaxSteps={}",
@@ -567,12 +564,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
           && action.getType() != BalanceAction.Type.MOVE_REGION
       ) {
         // Anything but moves are a pain to deal with in the table isolation case
+        // todo rmattingly remove this
         continue;
       }
 
-      List<RegionPlan> regionPlans = cluster.doAction(action);
+      // Evaluate conditionals
       int conditionalViolationsChange =
-        balancerConditionals.getConditionalViolationChange(regionPlans);
+        balancerConditionals.getConditionalViolationChange(cluster, action);
+
+      // Change state and evaluate costs
+      cluster.doAction(action);
       updateCostsAndWeightsWithAction(cluster, action);
       newCost = computeCost(cluster, currentCost);
 
@@ -587,6 +588,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       // change, regardless of cost change
       if (conditionalsImproved || conditionalsSimilarCostsImproved) {
         currentCost = newCost;
+
+        // keep conditionals up to date with changes
         balancerConditionals.loadClusterState(cluster);
 
         // save for JMX

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.isTableIsolated;
 import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.runBalancerToExhaustion;
 
 import java.util.ArrayList;
@@ -34,14 +35,13 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TestMultiTableIsolationCandidateGeneration {
+public class TestLargeClusterBalancingMetaTableIsolation {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestMultiTableIsolationCandidateGeneration.class);
+    LoggerFactory.getLogger(TestLargeClusterBalancingMetaTableIsolation.class);
 
   private static final TableName META_TABLE_NAME = TableName.valueOf("hbase:meta");
-  private static final TableName SYSTEM_TABLE_NAME = TableName.valueOf("hbase:system");
-  private static final TableName NON_ISOLATED_TABLE_NAME = TableName.valueOf("userTable");
+  private static final TableName NON_META_TABLE_NAME = TableName.valueOf("userTable");
 
   private static final int NUM_SERVERS = 100;
   private static final int NUM_REGIONS = 10_000;
@@ -59,14 +59,7 @@ public class TestMultiTableIsolationCandidateGeneration {
     // Create regions
     List<RegionInfo> allRegions = new ArrayList<>();
     for (int i = 0; i < NUM_REGIONS; i++) {
-      TableName tableName;
-      if (i < 3) {
-        tableName = META_TABLE_NAME;
-      } else if (i < 30) {
-        tableName = SYSTEM_TABLE_NAME;
-      } else {
-        tableName = NON_ISOLATED_TABLE_NAME;
-      }
+      TableName tableName = i < 3 ? META_TABLE_NAME : NON_META_TABLE_NAME;
       byte[] startKey = new byte[1];
       startKey[0] = (byte) i;
       byte[] endKey = new byte[1];
@@ -85,61 +78,14 @@ public class TestMultiTableIsolationCandidateGeneration {
   }
 
   @Test
-  public void testMultiTableIsolation() {
+  public void testMetaTableIsolation() {
     Configuration conf = new Configuration(false);
     conf.setBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, true);
-    conf.setBoolean(BalancerConditionals.ISOLATE_SYSTEM_TABLES_KEY, true);
-    runBalancerToExhaustion(conf, serverToRegions,
-      Set.of(this::isMetaTableIsolated, this::isSystemTableIsolated));
-    LOG.info("Meta table and system table regions are successfully isolated.");
+    runBalancerToExhaustion(conf, serverToRegions, Set.of(this::isMetaTableIsolated));
   }
 
-  /**
-   * Validates whether all meta table regions are isolated.
-   */
   private boolean isMetaTableIsolated(BalancerClusterState cluster) {
     return isTableIsolated(cluster, META_TABLE_NAME, "Meta");
   }
 
-  /**
-   * Validates whether all system table regions are isolated.
-   */
-  private boolean isSystemTableIsolated(BalancerClusterState cluster) {
-    return isTableIsolated(cluster, SYSTEM_TABLE_NAME, "System");
-  }
-
-  /**
-   * Generic method to validate table isolation.
-   */
-  private boolean isTableIsolated(BalancerClusterState cluster, TableName tableName,
-    String tableType) {
-    for (int i = 0; i < cluster.numServers; i++) {
-      int[] regionsOnServer = cluster.regionsPerServer[i];
-      if (regionsOnServer == null || regionsOnServer.length == 0) {
-        continue; // Skip empty servers
-      }
-
-      boolean hasTargetTableRegion = false;
-      boolean hasOtherTableRegion = false;
-
-      for (int regionIndex : regionsOnServer) {
-        RegionInfo regionInfo = cluster.regions[regionIndex];
-        if (regionInfo.getTable().equals(tableName)) {
-          hasTargetTableRegion = true;
-        } else {
-          hasOtherTableRegion = true;
-        }
-
-        // If the target table and any other table are on the same server, isolation is violated
-        if (hasTargetTableRegion && hasOtherTableRegion) {
-          LOG.warn(
-            "Server {} has both {} table regions and other table regions, violating isolation.",
-            cluster.servers[i].getServerName(), tableType);
-          return false;
-        }
-      }
-    }
-    LOG.info("{} table isolation validation passed.", tableType);
-    return true;
-  }
 }
