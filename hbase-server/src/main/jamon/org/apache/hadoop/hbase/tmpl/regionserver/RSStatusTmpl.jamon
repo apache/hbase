@@ -299,7 +299,12 @@ $(document).ready(function()
             type: "numeric"
         });
 
-        $("#baseStatsTable").tablesorter();
+        $("#baseStatsTable").tablesorter({
+            headers: {
+                1: {empty: 'emptyMin'},
+                2: {empty: 'emptyMax'}
+            }
+        });
         $("#requestStatsTable").tablesorter({
             headers: {
                 1: {sorter: 'separator'},
