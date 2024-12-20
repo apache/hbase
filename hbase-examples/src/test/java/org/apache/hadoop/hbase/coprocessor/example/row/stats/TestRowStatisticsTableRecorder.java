@@ -28,8 +28,8 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -50,7 +50,7 @@ public class TestRowStatisticsTableRecorder {
   private static final NamespaceDescriptor NAMESPACE_DESCRIPTOR =
     NamespaceDescriptor.create(RowStatisticsTableUtil.NAMESPACE).build();
   private static final byte[] FULL_REGION_NAME = Bytes.toBytes("fullRegionName");
-  private static SingleProcessHBaseCluster cluster;
+  private static MiniHBaseCluster cluster;
   private static Connection connection;
   private RowStatisticsImpl rowStatistics;
   private Counter counter;

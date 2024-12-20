@@ -28,7 +28,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -47,7 +47,7 @@ public class TestRowStatisticsCompactionObserver {
   public static final TestableRowStatisticsRecorder RECORDER = new TestableRowStatisticsRecorder();
   private static final TableName TABLE_NAME = TableName.valueOf("test-table");
   private static final byte[] FAMILY = Bytes.toBytes("0");
-  private static SingleProcessHBaseCluster cluster;
+  private static MiniHBaseCluster cluster;
   private static Connection connection;
   private static Table table;
 

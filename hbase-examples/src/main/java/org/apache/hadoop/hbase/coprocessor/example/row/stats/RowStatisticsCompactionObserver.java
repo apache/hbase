@@ -168,9 +168,8 @@ public class RowStatisticsCompactionObserver
         LOG.info("Table {} already exists. Skipping table creation process.",
           NAMESPACED_TABLE_NAME);
       } else {
-        boolean shouldCreateNamespace =
-          Arrays.stream(admin.listNamespaces()).filter(namespace -> namespace.equals(NAMESPACE))
-            .collect(Collectors.toUnmodifiableSet()).isEmpty();
+        boolean shouldCreateNamespace = Arrays.stream(admin.listNamespaces())
+          .filter(namespace -> namespace.equals(NAMESPACE)).collect(Collectors.toSet()).isEmpty();
         if (shouldCreateNamespace) {
           NamespaceDescriptor nd = NamespaceDescriptor.create(NAMESPACE).build();
           try {
@@ -180,7 +179,7 @@ public class RowStatisticsCompactionObserver
           }
         }
         ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(CF).setMaxVersions(25)
-          .setTimeToLive((int) Duration.ofDays(7).toSeconds()).build();
+          .setTimeToLive((int) Duration.ofDays(7).getSeconds()).build();
         TableDescriptor td =
           TableDescriptorBuilder.newBuilder(NAMESPACED_TABLE_NAME).setColumnFamily(cfd).build();
         LOG.info("Creating table {}", NAMESPACED_TABLE_NAME);
@@ -197,7 +196,7 @@ public class RowStatisticsCompactionObserver
   }
 
   @Override
-  public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> context,
+  public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> context,
     Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
     CompactionRequest request) {
     if (store.getTableName().isSystemTable()) {
@@ -242,15 +241,14 @@ public class RowStatisticsCompactionObserver
     }
 
     @Override
-    public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
-      throws IOException {
+    public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
       boolean ret = scanner.next(result, scannerContext);
       consumeCells(result);
       return ret;
     }
 
     @Override
-    public boolean next(List<? super ExtendedCell> result) throws IOException {
+    public boolean next(List<Cell> result) throws IOException {
       boolean ret = scanner.next(result);
       consumeCells(result);
       return ret;
