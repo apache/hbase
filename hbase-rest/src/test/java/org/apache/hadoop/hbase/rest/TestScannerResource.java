@@ -149,7 +149,7 @@ public class TestScannerResource {
       if (response.getCode() == 200) {
         assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
         CellSetModel cellSet = new CellSetModel();
-        cellSet.getObjectFromMessage(response.getBody());
+        cellSet.getObjectFromMessage(response.getStream());
         Iterator<RowModel> rows = cellSet.getRows().iterator();
         while (rows.hasNext()) {
           RowModel row = rows.next();
@@ -283,7 +283,7 @@ public class TestScannerResource {
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     CellSetModel cellSet = new CellSetModel();
-    cellSet.getObjectFromMessage(response.getBody());
+    cellSet.getObjectFromMessage(response.getStream());
     // confirm batch size conformance
     assertEquals(BATCH_SIZE, countCellSet(cellSet));
 
