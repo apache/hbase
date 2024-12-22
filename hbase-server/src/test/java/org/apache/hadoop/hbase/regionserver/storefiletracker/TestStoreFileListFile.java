@@ -244,19 +244,16 @@ public class TestStoreFileListFile {
   public void testLoadOldPatternTrackFiles() throws IOException {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     StoreFileList storeFileList =
-      StoreFileList.newBuilder().setTimestamp(EnvironmentEdgeManager.currentTime()).build();
+      StoreFileList.newBuilder().setTimestamp(EnvironmentEdgeManager.currentTime())
+        .addStoreFile(StoreFileEntry.newBuilder().setName("hehe").setSize(10).build()).build();
     Path trackFileDir = new Path(testDir, StoreFileListFile.TRACK_FILE_DIR);
     StoreFileListFile.write(fs, new Path(trackFileDir, StoreFileListFile.TRACK_FILE_PREFIX),
       storeFileList);
 
     FileStatus trackerFileStatus = getOnlyTrackerFile(fs);
-    assertTrue(StoreFileListFile.TRACK_FILE_OLD_PATTERN
-      .matcher(trackerFileStatus.getPath().getName()).matches());
+    assertEquals(StoreFileListFile.TRACK_FILE_PREFIX, trackerFileStatus.getPath().getName());
 
-    storeFileListFile.load(true);
-
-    trackerFileStatus = getOnlyTrackerFile(fs);
-    assertTrue(StoreFileListFile.TRACK_FILE_PATTERN.matcher(trackerFileStatus.getPath().getName())
-      .matches());
+    StoreFileList list = storeFileListFile.load(true);
+    assertEquals(1, list.getStoreFileCount());
   }
 }
