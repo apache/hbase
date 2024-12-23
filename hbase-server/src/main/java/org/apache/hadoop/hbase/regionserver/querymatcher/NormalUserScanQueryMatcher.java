@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -40,12 +41,15 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
   /** whether time range queries can see rows "behind" a delete */
   protected final boolean seePastDeleteMarkers;
 
+  private final int scanMaxVersions;
+
   protected NormalUserScanQueryMatcher(Scan scan, ScanInfo scanInfo, ColumnTracker columns,
     boolean hasNullColumn, DeleteTracker deletes, long oldestUnexpiredTS, long now) {
     super(scan, scanInfo, columns, hasNullColumn, oldestUnexpiredTS, now);
     this.deletes = deletes;
     this.get = scan.isGetScan();
     this.seePastDeleteMarkers = scanInfo.getKeepDeletedCells() != KeepDeletedCells.FALSE;
+    this.scanMaxVersions = Math.max(scan.getMaxVersions(), scanInfo.getMaxVersions());
   }
 
   @Override
@@ -56,11 +60,16 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
 
   @Override
   public MatchCode match(ExtendedCell cell) throws IOException {
+    return match(cell, null);
+  }
+
+  @Override
+  public MatchCode match(ExtendedCell cell, ExtendedCell prevCell) throws IOException {
     if (filter != null && filter.filterAllRemaining()) {
       return MatchCode.DONE_SCAN;
     }
-    MatchCode returnCode = preCheck(cell);
-    if (returnCode != null) {
+    MatchCode returnCode;
+    if ((returnCode = preCheck(cell)) != null) {
       return returnCode;
     }
     long timestamp = cell.getTimestamp();
@@ -71,13 +80,52 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
       if (includeDeleteMarker) {
         this.deletes.add(cell);
       }
+      // optimization for delete markers
+      if ((returnCode = checkCanSeekNextCol(cell, prevCell)) != null) {
+        return returnCode;
+      }
       return MatchCode.SKIP;
     }
-    returnCode = checkDeleted(deletes, cell);
-    if (returnCode != null) {
+    // optimization when prevCell is Delete or DeleteFamilyVersion
+    if ((returnCode = checkDeletedEffectively(cell, prevCell)) != null) {
+      return returnCode;
+    }
+    if ((returnCode = checkDeleted(deletes, cell)) != null) {
       return returnCode;
     }
     return matchColumn(cell, timestamp, typeByte);
+  }
+
+  private MatchCode checkCanSeekNextCol(ExtendedCell cell, ExtendedCell prevCell) {
+    // optimization for DeleteFamily and DeleteColumn(only for empty qualifier)
+    if (
+      canOptimizeReadDeleteMarkers() && (PrivateCellUtil.isDeleteFamily(cell)
+        || PrivateCellUtil.isDeleteColumns(cell) && cell.getQualifierLength() > 0)
+    ) {
+      return MatchCode.SEEK_NEXT_COL;
+    }
+    // optimization for duplicate Delete and DeleteFamilyVersion
+    return checkDeletedEffectively(cell, prevCell);
+  }
+
+  // If prevCell is a delete marker and cell is a Put or delete marker,
+  // it means the cell is deleted effectively.
+  // And we can do SEEK_NEXT_COL.
+  private MatchCode checkDeletedEffectively(ExtendedCell cell, ExtendedCell prevCell) {
+    if (
+      prevCell != null && canOptimizeReadDeleteMarkers()
+        && CellUtil.matchingRowColumn(prevCell, cell) && CellUtil.matchingTimestamp(prevCell, cell)
+        && (PrivateCellUtil.isDeleteType(prevCell) && cell.getQualifierLength() > 0
+          || PrivateCellUtil.isDeleteFamilyVersion(prevCell))
+    ) {
+      return MatchCode.SEEK_NEXT_COL;
+    }
+    return null;
+  }
+
+  private boolean canOptimizeReadDeleteMarkers() {
+    // for simplicity, optimization works only for these cases
+    return !seePastDeleteMarkers && scanMaxVersions == 1;
   }
 
   @Override
