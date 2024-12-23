@@ -1205,7 +1205,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.opts = options;
       this.status = status;
       this.testName = this.getClass().getSimpleName();
-      everyN = (int) (opts.totalRows / (opts.totalRows * opts.sampleRate));
+      everyN = (int) (1 / opts.sampleRate);
       if (options.isValueZipf()) {
         this.zipf = new RandomDistribution.Zipf(this.rand, 1, options.getValueSize(), 1.2);
       }
