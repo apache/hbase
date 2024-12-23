@@ -84,7 +84,7 @@ class StoreFileListFile {
 
   static final char TRACK_FILE_SEPARATOR = '.';
 
-  static final Pattern TRACK_FILE_PATTERN = Pattern.compile("^f(1|2)\\.\\d+$");
+  static final Pattern TRACK_FILE_PATTERN = Pattern.compile("^f(1|2)(\\.\\d+)?$");
 
   // 16 MB, which is big enough for a tracker file
   private static final int MAX_FILE_SIZE = 16 * 1024 * 1024;
@@ -179,7 +179,9 @@ class StoreFileListFile {
         continue;
       }
       List<String> parts = Splitter.on(TRACK_FILE_SEPARATOR).splitToList(file.getName());
-      map.computeIfAbsent(Long.parseLong(parts.get(1)), k -> new ArrayList<>()).add(file);
+      // For compatibility, set the timestamp to 0 if it is missing in the file name.
+      long timestamp = parts.size() > 1 ? Long.parseLong(parts.get(1)) : 0L;
+      map.computeIfAbsent(timestamp, k -> new ArrayList<>()).add(file);
     }
     return map;
   }
