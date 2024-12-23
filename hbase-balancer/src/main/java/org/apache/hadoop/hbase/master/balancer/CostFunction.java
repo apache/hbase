@@ -74,8 +74,13 @@ abstract class CostFunction {
         regionMoved(a.getFromRegion(), a.getFromServer(), a.getToServer());
         regionMoved(a.getToRegion(), a.getToServer(), a.getFromServer());
         break;
+      case ISOLATE_TABLE:
+        IsolateTablesAction ita = (IsolateTablesAction) action;
+        ita.getMoveActions()
+          .forEach(m -> regionMoved(m.getRegion(), m.getFromServer(), m.getToServer()));
+        break;
       default:
-        throw new RuntimeException("Uknown action:" + action.getType());
+        throw new RuntimeException("Unknown action:" + action.getType());
     }
   }
 

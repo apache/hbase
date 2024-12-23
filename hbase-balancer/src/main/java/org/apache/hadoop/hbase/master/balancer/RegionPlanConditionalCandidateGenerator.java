@@ -39,7 +39,7 @@ public abstract class RegionPlanConditionalCandidateGenerator extends CandidateG
   }
 
   boolean willBeAccepted(BalancerClusterState cluster, BalanceAction action) {
-    int conditionalChange = BalancerConditionals.INSTANCE.getConditionalViolationChange(cluster, action);
+    int conditionalChange = BalancerConditionals.INSTANCE.isViolating(cluster, action);
     return conditionalChange < 0;
   }
 

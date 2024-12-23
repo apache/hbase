@@ -33,7 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
-import javax.swing.plaf.synth.Region;
 
 /**
  * Balancer conditionals supplement cost functions in the {@link StochasticLoadBalancer}. Cost
@@ -138,18 +137,23 @@ public final class BalancerConditionals {
   }
 
   void loadClusterState(BalancerClusterState cluster) {
-    conditionals = conditionalClasses.stream()
-      .map(clazz -> createConditional(clazz, conf, cluster))
-      .filter(Objects::nonNull)
-      .collect(Collectors.toSet());
+    conditionals = conditionalClasses.stream().map(clazz -> createConditional(clazz, conf, cluster))
+      .filter(Objects::nonNull).collect(Collectors.toSet());
   }
 
-  int getConditionalViolationChange(BalancerClusterState cluster, BalanceAction action) {
+  /**
+   * Check if the proposed action violates conditionals.
+   * @param cluster The cluster state
+   * @param action  The proposed action
+   * @return -1 if the action is an improvement, 0 if it's neutral, and 1 if it is in violation
+   */
+  int isViolating(BalancerClusterState cluster, BalanceAction action) {
     if (conditionals.isEmpty()) {
       return 0;
     }
 
-    loadClusterState(cluster); // ensure that we're up to date. this shouldn't be necessary todo rmattingly fix
+    loadClusterState(cluster); // ensure that we're up to date. this shouldn't be necessary todo
+                               // rmattingly fix
     List<RegionPlan> regionPlans = doActionAndRefreshConditionals(cluster, action);
 
     // Now we're in the proposed finished state
@@ -168,20 +172,25 @@ public final class BalancerConditionals {
       proposedViolationCount += getConditionalViolationCount(conditionals, regionPlan);
     }
 
-    return proposedViolationCount - originalViolationCount;
+    if (proposedViolationCount - originalViolationCount < 0 && proposedViolationCount == 0) {
+      // Only take a random improvement if it eliminates violations
+      // Otherwise we are probably just fighting our conditional generators
+      return -1;
+    } else {
+      return proposedViolationCount;
+    }
   }
 
-  private List<RegionPlan> doActionAndRefreshConditionals(BalancerClusterState cluster, BalanceAction action) {
+  private List<RegionPlan> doActionAndRefreshConditionals(BalancerClusterState cluster,
+    BalanceAction action) {
     List<RegionPlan> regionPlans = cluster.doAction(action);
     loadClusterState(cluster);
     return regionPlans;
   }
 
   private static List<RegionPlan> getInversePlans(List<RegionPlan> regionPlans) {
-    return regionPlans.stream()
-      .map(regionPlan -> new RegionPlan(regionPlan.getRegionInfo(),
-        regionPlan.getDestination(), regionPlan.getSource()))
-      .toList();
+    return regionPlans.stream().map(regionPlan -> new RegionPlan(regionPlan.getRegionInfo(),
+      regionPlan.getDestination(), regionPlan.getSource())).toList();
   }
 
   private static int getConditionalViolationCount(Set<RegionPlanConditional> conditionals,

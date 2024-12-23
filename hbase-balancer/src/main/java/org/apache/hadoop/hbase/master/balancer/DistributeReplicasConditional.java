@@ -18,9 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -82,14 +80,16 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
 
     if (
       checkViolation(cluster.regions, regionPlan.getRegionInfo(), destinationServerIndex,
-        cluster.serversPerHost, cluster.serverIndexToHostIndex, cluster.regionsPerServer, "host", isTestModeEnabled)
+        cluster.serversPerHost, cluster.serverIndexToHostIndex, cluster.regionsPerServer, "host",
+        isTestModeEnabled)
     ) {
       return true;
     }
 
     if (
       checkViolation(cluster.regions, regionPlan.getRegionInfo(), destinationServerIndex,
-        cluster.serversPerRack, cluster.serverIndexToRackIndex, cluster.regionsPerServer, "rack", isTestModeEnabled)
+        cluster.serversPerRack, cluster.serverIndexToRackIndex, cluster.regionsPerServer, "rack",
+        isTestModeEnabled)
     ) {
       return true;
     }
@@ -99,7 +99,6 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
 
   /**
    * Checks if placing a region replica on a location (host/rack) violates distribution rules.
-   *
    * @param destinationServerIndex Index of the destination server.
    * @param serversPerLocation     Array mapping locations (hosts/racks) to servers.
    * @param serverToLocationIndex  Array mapping servers to their location index.
@@ -109,8 +108,7 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
    */
   static boolean checkViolation(RegionInfo[] regions, RegionInfo regionToBeMoved,
     int destinationServerIndex, int[][] serversPerLocation, int[] serverToLocationIndex,
-    int[][] regionsPerServer, String locationType,
-    boolean isTestModeEnabled) {
+    int[][] regionsPerServer, String locationType, boolean isTestModeEnabled) {
     if (isTestModeEnabled && serversPerLocation.length == 1) {
       // Take the flat serversPerLocation, like {0: [0, 1, 2, 3, 4]}
       // and pretend it is multi-location, like {0: [1], 1: [2] ...}
@@ -156,8 +154,8 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
         }
         RegionInfo targetRegion = regions[hostedRegion];
         if (new ReplicaKey(targetRegion).equals(replicaKeyToBeMoved)) {
-          LOG.trace("Violation detected: {} {} {} is hosting a replica of {}",
-            locationType, serverIndex, destinationServerIndex, regionToBeMoved);
+          LOG.trace("Violation detected: {} {} {} is hosting a replica of {}", locationType,
+            serverIndex, destinationServerIndex, regionToBeMoved);
           return true;
         }
       }
@@ -174,7 +172,8 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
     private final Pair<ByteArrayWrapper, ByteArrayWrapper> startAndStopKeys;
 
     ReplicaKey(RegionInfo regionInfo) {
-      this.startAndStopKeys = new Pair<>(new ByteArrayWrapper(regionInfo.getStartKey()), new ByteArrayWrapper(regionInfo.getEndKey()));
+      this.startAndStopKeys = new Pair<>(new ByteArrayWrapper(regionInfo.getStartKey()),
+        new ByteArrayWrapper(regionInfo.getEndKey()));
     }
 
     @Override

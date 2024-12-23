@@ -28,6 +28,7 @@ abstract class BalanceAction {
     ASSIGN_REGION,
     MOVE_REGION,
     SWAP_REGIONS,
+    ISOLATE_TABLE,
     NULL,
   }
 

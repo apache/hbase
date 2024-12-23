@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.runBalancerToExhaustion;
+
+import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -27,8 +30,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.*;
-import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.runBalancerToExhaustion;
 
 public class TestLargeClusterBalancingReplicaDistribution {
 
@@ -61,11 +62,8 @@ public class TestLargeClusterBalancingReplicaDistribution {
 
       // Create 3 replicas for each primary region
       for (int replicaId = 0; replicaId < NUM_REPLICAS; replicaId++) {
-        RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TABLE_NAME)
-          .setStartKey(startKey)
-          .setEndKey(endKey)
-          .setReplicaId(replicaId)
-          .build();
+        RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TABLE_NAME).setStartKey(startKey)
+          .setEndKey(endKey).setReplicaId(replicaId).build();
         allRegions.add(regionInfo);
       }
     }

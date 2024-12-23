@@ -741,6 +741,19 @@ class BalancerClusterState {
           replaceRegion(regionsPerServer[a.getToServer()], a.getToRegion(), a.getFromRegion());
         return ImmutableList.of(regionMoved(a.getFromRegion(), a.getFromServer(), a.getToServer()),
           regionMoved(a.getToRegion(), a.getToServer(), a.getFromServer()));
+      case ISOLATE_TABLE:
+        assert action instanceof IsolateTablesAction : action.getClass();
+        IsolateTablesAction ia = (IsolateTablesAction) action;
+        List<RegionPlan> regionPlans = new ArrayList<>();
+        for (MoveRegionAction moveRegionAction : ia.getMoveActions()) {
+          regionsPerServer[moveRegionAction.getFromServer()] = removeRegion(
+            regionsPerServer[moveRegionAction.getFromServer()], moveRegionAction.getRegion());
+          regionsPerServer[moveRegionAction.getToServer()] = addRegion(
+            regionsPerServer[moveRegionAction.getToServer()], moveRegionAction.getRegion());
+          regionPlans.add(regionMoved(moveRegionAction.getRegion(),
+            moveRegionAction.getFromServer(), moveRegionAction.getToServer()));
+        }
+        return regionPlans;
       default:
         throw new RuntimeException("Unknown action:" + action.getType());
     }

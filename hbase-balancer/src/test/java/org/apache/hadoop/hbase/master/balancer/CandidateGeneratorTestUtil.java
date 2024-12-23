@@ -257,10 +257,8 @@ public final class CandidateGeneratorTestUtil {
   }
 
   /**
-   * Validates that each replica is isolated from its others.
-   * Ensures that no server hosts more than one replica of the same region
-   * (i.e., regions with identical start and end keys).
-   *
+   * Validates that each replica is isolated from its others. Ensures that no server hosts more than
+   * one replica of the same region (i.e., regions with identical start and end keys).
    * @param cluster The current state of the cluster.
    * @return true if all replicas are properly isolated, false otherwise.
    */
@@ -296,14 +294,14 @@ public final class CandidateGeneratorTestUtil {
       }
     }
 
-    LOG.info("Replica isolation validation passed: No server hosts multiple replicas of the same region.");
+    LOG.info(
+      "Replica isolation validation passed: No server hosts multiple replicas of the same region.");
     return true;
   }
 
   /**
-   * Generates a unique key for a region based on its start and end keys.
-   * This method ensures that regions with identical start and end keys have the same key.
-   *
+   * Generates a unique key for a region based on its start and end keys. This method ensures that
+   * regions with identical start and end keys have the same key.
    * @param regionInfo The RegionInfo object.
    * @return A string representing the unique key of the region.
    */

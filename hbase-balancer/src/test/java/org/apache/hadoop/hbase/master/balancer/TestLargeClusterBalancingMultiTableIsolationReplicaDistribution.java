@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.isTableIsolated;
+import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.runBalancerToExhaustion;
+
+import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -26,9 +30,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.*;
-import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.isTableIsolated;
-import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.runBalancerToExhaustion;
 
 public class TestLargeClusterBalancingMultiTableIsolationReplicaDistribution {
 
@@ -74,26 +75,15 @@ public class TestLargeClusterBalancingMultiTableIsolationReplicaDistribution {
 
       // Create 3 replicas for each primary region
       for (int replicaId = 0; replicaId < NUM_REPLICAS; replicaId++) {
-        RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName)
-          .setStartKey(startKey)
-          .setEndKey(endKey)
-          .setReplicaId(replicaId)
-          .build();
+        RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey)
+          .setEndKey(endKey).setReplicaId(replicaId).build();
         allRegions.add(regionInfo);
       }
     }
 
-    // Assign replicas to servers in a round-robin fashion to ensure even distribution
+    // Assign all regions to one server
     for (RegionInfo regionInfo : allRegions) {
-      int regionNumber = regionInfo.getStartKey()[0] & 0xFF; // Convert byte to unsigned int
-      int replicaId = regionInfo.getReplicaId();
-
-      // Calculate server index ensuring replicas are on different servers
-      int serverIndex = (regionNumber + replicaId) % NUM_SERVERS;
-      ServerName targetServer = servers[serverIndex];
-
-      // Assign the region to the target server
-      serverToRegions.get(targetServer).add(regionInfo);
+      serverToRegions.get(servers[0]).add(regionInfo);
     }
   }
 
@@ -105,8 +95,8 @@ public class TestLargeClusterBalancingMultiTableIsolationReplicaDistribution {
     conf.setBoolean(BalancerConditionals.DISTRIBUTE_REPLICAS_CONDITIONALS_KEY, true);
     conf.setBoolean(DistributeReplicasConditional.TEST_MODE_ENABLED_KEY, true);
 
-    runBalancerToExhaustion(conf, serverToRegions,
-      Set.of(this::isMetaTableIsolated, this::isSystemTableIsolated, CandidateGeneratorTestUtil::areAllReplicasDistributed));
+    runBalancerToExhaustion(conf, serverToRegions, Set.of(this::isMetaTableIsolated,
+      this::isSystemTableIsolated, CandidateGeneratorTestUtil::areAllReplicasDistributed));
     LOG.info("Meta table and system table regions are successfully isolated.");
   }
 

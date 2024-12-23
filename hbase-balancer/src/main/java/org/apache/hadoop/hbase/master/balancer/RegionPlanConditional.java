@@ -30,8 +30,8 @@ public abstract class RegionPlanConditional {
   }
 
   /**
-   * Get the candidate generator for this conditional.
-   * This can be useful to provide the balancer with hints that will appease your conditional.
+   * Get the candidate generator for this conditional. This can be useful to provide the balancer
+   * with hints that will appease your conditional.
    * @return the candidate generator for this conditional
    */
   abstract Optional<RegionPlanConditionalCandidateGenerator> getCandidateGenerator();

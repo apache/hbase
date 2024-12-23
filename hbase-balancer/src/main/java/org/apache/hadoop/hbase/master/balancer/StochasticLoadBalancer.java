@@ -427,8 +427,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
       allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
-  BalanceAction nextAction(BalancerClusterState cluster) {
-    return getRandomGenerator().generate(cluster);
+  Pair<CandidateGenerator, BalanceAction> nextAction(BalancerClusterState cluster) {
+    CandidateGenerator generator = getRandomGenerator();
+    return Pair.newPair(generator, generator.generate(cluster));
   }
 
   /**
@@ -446,7 +447,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     for (Class<? extends CandidateGenerator> clazz : candidateGenerators.keySet()) {
-      weightsOfGenerators.put(clazz, Math.min(CandidateGenerator.MAX_WEIGHT, weightsOfGenerators.get(clazz) / sum));
+      weightsOfGenerators.put(clazz,
+        Math.min(CandidateGenerator.MAX_WEIGHT, weightsOfGenerators.get(clazz) / sum));
     }
 
     double rand = ThreadLocalRandom.current().nextDouble();
@@ -551,26 +553,26 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     long step;
 
     boolean improvedConditionals = false;
+    Map<CandidateGenerator, Long> generatorToStepCount = new HashMap<>();
     for (step = 0; step < computedMaxSteps; step++) {
-      BalanceAction action = nextAction(cluster);
+      Pair<CandidateGenerator, BalanceAction> nextAction = nextAction(cluster);
+      CandidateGenerator generator = nextAction.getFirst();
+      BalanceAction action = nextAction.getSecond();
 
       if (action.getType() == BalanceAction.Type.NULL) {
         continue;
       }
 
-      if (
-        (balancerConditionals.isSystemTableIsolationEnabled()
-          || balancerConditionals.isMetaTableIsolationEnabled())
-          && action.getType() != BalanceAction.Type.MOVE_REGION
-      ) {
-        // Anything but moves are a pain to deal with in the table isolation case
-        // todo rmattingly remove this
-        continue;
+      // Always accept a conditional generator output. Sometimes conditional generators
+      // may need to make controversial moves in order to break what would otherwise
+      // be a deadlocked situation.
+      // Otherwise, for normal moves, evaluate the action.
+      int conditionalViolationsChange;
+      if (RegionPlanConditionalCandidateGenerator.class.isAssignableFrom(generator.getClass())) {
+        conditionalViolationsChange = -1;
+      } else {
+        conditionalViolationsChange = balancerConditionals.isViolating(cluster, action);
       }
-
-      // Evaluate conditionals
-      int conditionalViolationsChange =
-        balancerConditionals.getConditionalViolationChange(cluster, action);
 
       // Change state and evaluate costs
       cluster.doAction(action);
@@ -587,9 +589,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       // Our second priority is to reduce balancer cost
       // change, regardless of cost change
       if (conditionalsImproved || conditionalsSimilarCostsImproved) {
+        generatorToStepCount.merge(generator, 1L, Long::sum);
         currentCost = newCost;
 
-        // keep conditionals up to date with changes
+        // keep conditionals up to date with changes todo rmattingly unnecessary?
         balancerConditionals.loadClusterState(cluster);
 
         // save for JMX
@@ -608,6 +611,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
     }
     long endTime = EnvironmentEdgeManager.currentTime();
+
+    // Build the log message
+    StringBuilder logMessage = new StringBuilder("CandidateGenerator activity summary:\n");
+    generatorToStepCount.forEach((generator, count) -> {
+      logMessage
+        .append(String.format(" - %s: %d steps\n", generator.getClass().getSimpleName(), count));
+    });
+    // Log the message
+    LOG.info(logMessage.toString());
 
     metricsBalancer.balanceCluster(endTime - startTime);
 

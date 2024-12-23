@@ -20,7 +20,10 @@ package org.apache.hadoop.hbase.master.balancer;
 import static java.util.Collections.shuffle;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -49,6 +52,27 @@ public abstract class TableIsolationCandidateGenerator
         && !BalancerConditionals.INSTANCE.isMetaTableIsolationEnabled()
     ) {
       return BalanceAction.NULL_ACTION;
+    }
+
+    for (int serverIdx = 0; serverIdx < cluster.numServers; serverIdx++) {
+      Set<TableName> tablesToIsolate = new HashSet<>();
+      boolean hasRegionsToIsolate = false;
+      boolean hasRegionsToMove = false;
+      for (int regionIdx : cluster.regionsPerServer[serverIdx]) {
+        RegionInfo regionInfo = cluster.regions[regionIdx];
+        if (shouldBeIsolated(regionInfo)) {
+          hasRegionsToIsolate = true;
+          tablesToIsolate.add(regionInfo.getTable());
+        } else {
+          hasRegionsToMove = true;
+        }
+        if (hasRegionsToMove && hasRegionsToIsolate) {
+          break;
+        }
+      }
+      if (hasRegionsToMove && hasRegionsToIsolate) {
+        return new IsolateTablesAction(cluster, serverIdx, tablesToIsolate);
+      }
     }
 
     boolean metaIsolationEnabled = BalancerConditionals.INSTANCE.isMetaTableIsolationEnabled();

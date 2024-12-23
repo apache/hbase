@@ -21,6 +21,10 @@ import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
@@ -32,10 +36,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @Category(SmallTests.class)
 public class TestDistributeReplicasConditional {
@@ -57,8 +57,7 @@ public class TestDistributeReplicasConditional {
 
     assertTrue("No violation when only one location exists",
       DistributeReplicasConditional.checkViolation(regions, replicaRegion, destinationServerIndex,
-        serversPerLocation, serverToLocationIndex, regionsPerServer, "Host",
-        false));
+        serversPerLocation, serverToLocationIndex, regionsPerServer, "Host", false));
   }
 
   @Test
@@ -75,8 +74,7 @@ public class TestDistributeReplicasConditional {
 
     assertTrue("Host violation detected when replica is placed on the same host as its primary",
       DistributeReplicasConditional.checkViolation(regions, replicaRegion, destinationServerIndex,
-        serversPerLocation, serverToLocationIndex, regionsPerServer, "Host",
-        false));
+        serversPerLocation, serverToLocationIndex, regionsPerServer, "Host", false));
   }
 
   @Test
@@ -92,8 +90,7 @@ public class TestDistributeReplicasConditional {
 
     assertTrue("Violation detected when the primary is placed on the same host as its replica",
       DistributeReplicasConditional.checkViolation(regions, primaryRegion, destinationServerIndex,
-        serversPerLocation, serverToLocationIndex, regionsPerServer, "Host",
-        false));
+        serversPerLocation, serverToLocationIndex, regionsPerServer, "Host", false));
   }
 
   @Test
@@ -109,8 +106,7 @@ public class TestDistributeReplicasConditional {
 
     assertTrue("Rack violation detected when replica is placed on the same rack as its primary",
       DistributeReplicasConditional.checkViolation(regions, replicaRegion, destinationServerIndex,
-        serversPerLocation, serverToLocationIndex, regionsPerServer, "Rack",
-        false));
+        serversPerLocation, serverToLocationIndex, regionsPerServer, "Rack", false));
   }
 
   @Test
@@ -133,8 +129,7 @@ public class TestDistributeReplicasConditional {
 
     assertFalse("No violation when replica is placed on a different host and rack",
       DistributeReplicasConditional.checkViolation(regions, replicaRegion, destinationServerIndex,
-        serversPerLocation, serverToLocationIndex, regionsPerServer, "Host",
-        false));
+        serversPerLocation, serverToLocationIndex, regionsPerServer, "Host", false));
   }
 
   @Test
@@ -145,14 +140,16 @@ public class TestDistributeReplicasConditional {
     regionsList.add(primaryRegion);
     regionsList.add(replicaRegion);
 
-    DistributeReplicasCandidateGenerator candidateGenerator = new DistributeReplicasCandidateGenerator();
+    DistributeReplicasCandidateGenerator candidateGenerator =
+      new DistributeReplicasCandidateGenerator();
     Map<ServerName, List<RegionInfo>> serverToRegions = new HashMap<>();
     serverToRegions.put(ServerName.valueOf("0", 0, 0L), regionsList);
     serverToRegions.put(ServerName.valueOf("1", 0, 0L), new ArrayList<>());
 
     BalancerClusterState cluster = createMockBalancerClusterState(serverToRegions);
     BalanceAction action = candidateGenerator.generateCandidate(cluster, false);
-    DistributeReplicasConditional conditional = new DistributeReplicasConditional(new Configuration(), cluster);
+    DistributeReplicasConditional conditional =
+      new DistributeReplicasConditional(new Configuration(), cluster);
     List<RegionPlan> regionPlan = cluster.doAction(action);
     List<RegionPlan> inversePlan = cluster.doAction(action.undoAction());
 
