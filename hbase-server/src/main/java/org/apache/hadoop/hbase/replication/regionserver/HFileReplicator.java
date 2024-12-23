@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -150,6 +149,7 @@ public class HFileReplicator implements Closeable {
 
       // Prepare collection of queue of hfiles to be loaded(replicated)
       Deque<LoadQueueItem> queue = new LinkedList<>();
+      // TODO eboland: RegionServerCoprocessorHost::preReplicationSinkPrepareHFileQueue
       BulkLoadHFilesTool.prepareHFileQueue(conf, connection, sinkTableName, sinkStagingDir, queue,
         false, false);
 

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.util.ReservoirSample;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
@@ -86,9 +87,9 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   private List<ServerName> sinkServers = new ArrayList<>(0);
 
   /**
-   * Some implementations of HBaseInterClusterReplicationEndpoint may require us to instantiate different
-   * Connection implementations, or initialize it in a different way, so defining createConnection
-   * as protected for possible overrides.
+   * Some implementations of HBaseInterClusterReplicationEndpoint may require us to instantiate
+   * different Connection implementations, or initialize it in a different way, so defining
+   * createConnection as protected for possible overrides.
    */
   protected AsyncClusterConnection createConnection(URI clusterURI, Configuration conf)
     throws IOException {

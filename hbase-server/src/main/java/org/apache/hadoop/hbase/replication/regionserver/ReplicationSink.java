@@ -25,7 +25,6 @@ import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerT
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.RS_COLUMN;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.TIMESTAMP_COLUMN;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.WAL_NAME_COLUMN;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -71,9 +70,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
@@ -201,6 +198,7 @@ public class ReplicationSink {
     String replicationClusterId, String sourceBaseNamespaceDirPath,
     String sourceHFileArchiveDirPath, Map<String, NamespaceOverride> namespaceOverrides,
     Map<TableName, TableNameOverride> tableNameOverrides) throws IOException {
+    // TODO eboland: RegionServerCoprocessorHost::preReplicationSinkReplicateEntries (need to handle bulk loads more carefully)
     if (entries.isEmpty()) {
       return;
     }
@@ -234,6 +232,7 @@ public class ReplicationSink {
         ExtendedCell previousCell = null;
         Mutation mutation = null;
         int count = entry.getAssociatedCellCount();
+        // TODO eboland: maybe create RegionServerCoprocessorHost::preReplicationSinkWALReplication
         for (int i = 0; i < count; i++) {
           // Throw index out of bounds if our cell count is off
           if (!cells.advance()) {
@@ -305,6 +304,7 @@ public class ReplicationSink {
           .entrySet()) {
           TableName sinkTable = ReplicationUtils.getSinkTableName(entry.getKey(),
             namespaceOverrides, tableNameOverrides);
+          // TODO eboland: coprocessor hook to transform WAL edits (RegionServerCoprocessorH
           batch(sinkTable, entry.getValue().values(), rowSizeWarnThreshold);
         }
         LOG.debug("Finished replicating mutations.");

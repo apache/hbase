@@ -53,7 +53,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Provides functionality to write ({@link BlockIndexWriter}) and read BlockIndexReader single-level
+ * Provides functionality to write ({@link BlockIndexWriter}) and read ({@link BlockIndexReader}) single-level
  * and multi-level block indexes. Examples of how to use the block index writer can be found in
  * {@link org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterWriter} and {@link HFileWriterImpl}.
  * Examples of how to use the reader can be found in {@link HFileReaderImpl} and
