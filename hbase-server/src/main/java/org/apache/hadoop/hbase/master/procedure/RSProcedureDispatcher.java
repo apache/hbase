@@ -331,6 +331,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
         // result in the regionserver abort.
         // This will also remove "serverName" from the ServerManager's onlineServers map.
         master.getServerManager().expireServer(serverName);
+        return false;
       }
       // Always retry for other exception types if the region server is not dead yet.
       if (!master.getServerManager().isServerOnline(serverName)) {
