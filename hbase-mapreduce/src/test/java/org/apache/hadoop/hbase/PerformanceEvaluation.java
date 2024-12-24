@@ -1792,10 +1792,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     boolean testRow(final long i, final long startTime) throws IOException {
-      Scan scan =
-        new Scan().withStartRow(getRandomRow(opts.totalRows)).setCaching(opts.caching)
-          .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
-          .setReadType(opts.scanReadType).setScanMetricsEnabled(true);
+      Scan scan = new Scan().withStartRow(getRandomRow(opts.totalRows)).setCaching(opts.caching)
+        .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
+        .setReadType(opts.scanReadType).setScanMetricsEnabled(true);
       FilterList list = new FilterList();
       for (int family = 0; family < opts.families; family++) {
         byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
@@ -2038,8 +2037,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (opts.randomSleep > 0) {
         Thread.sleep(rd.nextInt(opts.randomSleep));
       }
-      HRegionLocation hRegionLocation =
-        regionLocator.getRegionLocation(getSplitKey(ThreadLocalRandom.current().nextLong(opts.perClientRunRows)), true);
+      HRegionLocation hRegionLocation = regionLocator.getRegionLocation(
+        getSplitKey(ThreadLocalRandom.current().nextLong(opts.perClientRunRows)), true);
       LOG.debug("get location for region: " + hRegionLocation);
       return true;
     }

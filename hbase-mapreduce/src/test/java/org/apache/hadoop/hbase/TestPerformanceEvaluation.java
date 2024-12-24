@@ -39,8 +39,6 @@ import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.Queue;
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
