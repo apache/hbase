@@ -196,7 +196,6 @@
     <dependency>
       <groupId>com.sun.xml.ws</groupId>
       <artifactId>jaxws-rt</artifactId>
-      <type>pom</type>
     </dependency>
     <!--
       Include the log framework here.
