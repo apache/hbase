@@ -1537,7 +1537,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (opts.randomSleep > 0) {
         Thread.sleep(ThreadLocalRandom.current().nextInt(opts.randomSleep));
       }
-      Get get = new Get(getRandomRow(this.rand, opts.totalRows));
+      Get get = new Get(getRandomRow(opts.totalRows));
       for (int family = 0; family < opts.families; family++) {
         byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
         if (opts.addColumns) {
@@ -1613,7 +1613,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     protected byte[] generateRow(final long i) {
-      return getRandomRow(this.rand, opts.totalRows);
+      return getRandomRow(opts.totalRows);
     }
   }
 
@@ -1793,7 +1793,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     boolean testRow(final long i, final long startTime) throws IOException {
       Scan scan =
-        new Scan().withStartRow(getRandomRow(this.rand, opts.totalRows)).setCaching(opts.caching)
+        new Scan().withStartRow(getRandomRow(opts.totalRows)).setCaching(opts.caching)
           .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
           .setReadType(opts.scanReadType).setScanMetricsEnabled(true);
       FilterList list = new FilterList();
@@ -1882,7 +1882,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected abstract Pair<byte[], byte[]> getStartAndStopRow();
 
     protected Pair<byte[], byte[]> generateStartAndStopRows(long maxRange) {
-      long start = this.rand.nextLong(Long.MAX_VALUE) % opts.totalRows;
+      long start = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE) % opts.totalRows;
       long stop = start + maxRange;
       return new Pair<>(format(start), format(stop));
     }
@@ -1956,7 +1956,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (opts.randomSleep > 0) {
         Thread.sleep(ThreadLocalRandom.current().nextInt(opts.randomSleep));
       }
-      Get get = new Get(getRandomRow(this.rand, opts.totalRows));
+      Get get = new Get(getRandomRow(opts.totalRows));
       for (int family = 0; family < opts.families; family++) {
         byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
         if (opts.addColumns) {
@@ -2039,7 +2039,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         Thread.sleep(rd.nextInt(opts.randomSleep));
       }
       HRegionLocation hRegionLocation =
-        regionLocator.getRegionLocation(getSplitKey(rd.nextLong(opts.perClientRunRows)), true);
+        regionLocator.getRegionLocation(getSplitKey(ThreadLocalRandom.current().nextLong(opts.perClientRunRows)), true);
       LOG.debug("get location for region: " + hRegionLocation);
       return true;
     }
@@ -2063,7 +2063,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     protected byte[] generateRow(final long i) {
-      return getRandomRow(this.rand, opts.totalRows);
+      return getRandomRow(opts.totalRows);
     }
 
   }
@@ -2075,7 +2075,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     protected byte[] generateRow(final long i) {
-      return getRandomRow(this.rand, opts.totalRows);
+      return getRandomRow(opts.totalRows);
     }
 
   }
@@ -2579,12 +2579,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
     return b;
   }
 
-  static byte[] getRandomRow(final Random random, final long totalRows) {
-    return format(generateRandomRow(random, totalRows));
+  static byte[] getRandomRow(final long totalRows) {
+    return format(generateRandomRow(totalRows));
   }
 
-  static long generateRandomRow(final Random random, final long totalRows) {
-    return random.nextLong(Long.MAX_VALUE) % totalRows;
+  static long generateRandomRow(final long totalRows) {
+    return ThreadLocalRandom.current().nextLong(Long.MAX_VALUE) % totalRows;
   }
 
   static RunResult runOneClient(final Class<? extends TestBase> cmd, Configuration conf,

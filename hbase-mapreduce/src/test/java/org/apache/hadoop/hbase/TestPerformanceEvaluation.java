@@ -160,9 +160,8 @@ public class TestPerformanceEvaluation {
     assertEquals(1000, opts.getPerClientRunRows());
     // assuming we will get one before this loop expires
     boolean foundValue = false;
-    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 10000000; i++) {
-      long randomRow = PerformanceEvaluation.generateRandomRow(rand, opts.totalRows);
+      long randomRow = PerformanceEvaluation.generateRandomRow(opts.totalRows);
       if (randomRow > 1000) {
         foundValue = true;
         break;
