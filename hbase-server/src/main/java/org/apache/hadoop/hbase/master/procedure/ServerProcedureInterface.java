@@ -55,7 +55,12 @@ public interface ServerProcedureInterface {
     /**
      * send verify snapshot request to region server and handle the response
      */
-    VERIFY_SNAPSHOT
+    VERIFY_SNAPSHOT,
+
+    /**
+     * send roll log request to region server and handle the response
+     */
+    LOG_ROLL
   }
 
   /** Returns Name of this server instance. */
