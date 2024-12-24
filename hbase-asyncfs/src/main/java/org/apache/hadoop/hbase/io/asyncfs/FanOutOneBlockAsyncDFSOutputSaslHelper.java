@@ -112,7 +112,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
   private static final String SERVER_NAME = "0";
   private static final String PROTOCOL = "hdfs";
-  private static final String MECHANISM = "DIGEST-MD5";
+  private static final String MECHANISM =
+    org.apache.hadoop.security.SaslRpcServer.AuthMethod.TOKEN.getMechanismName();
   private static final int SASL_TRANSFER_MAGIC_NUMBER = 0xDEADBEEF;
   private static final String NAME_DELIMITER = " ";
 
@@ -461,7 +462,11 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
       safeWrite(ctx, ctx.alloc().buffer(4).writeInt(SASL_TRANSFER_MAGIC_NUMBER));
-      sendSaslMessage(ctx, new byte[0]);
+      byte[] firstMessage = new byte[0];
+      if (saslClient.hasInitialResponse()) {
+        firstMessage = saslClient.evaluateChallenge(firstMessage);
+      }
+      sendSaslMessage(ctx, firstMessage);
       ctx.flush();
       step++;
     }
@@ -502,12 +507,17 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       Set<String> requestedQop =
         ImmutableSet.copyOf(Arrays.asList(saslProps.get(Sasl.QOP).split(",")));
       String negotiatedQop = getNegotiatedQop();
+      // Treat null negotiated QOP as "auth" for the purpose of verification
+      // Code elsewhere does the same implicitly
+      if (negotiatedQop == null) {
+        negotiatedQop = "auth";
+      }
       LOG.debug(
         "Verifying QOP, requested QOP = " + requestedQop + ", negotiated QOP = " + negotiatedQop);
       if (!requestedQop.contains(negotiatedQop)) {
         throw new IOException(String.format("SASL handshake completed, but "
           + "channel does not have acceptable quality of protection, "
-          + "requested = %s, negotiated = %s", requestedQop, negotiatedQop));
+          + "requested = %s, negotiated(effective) = %s", requestedQop, negotiatedQop));
       }
     }
 
