@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_K
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.ROW_LOCK_READ_LOCK_KEY;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
-
 import com.google.errorprone.annotations.RestrictedApi;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.opentelemetry.api.trace.Span;
@@ -160,6 +159,7 @@ import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControl
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALSyncTimeoutIOException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
@@ -194,7 +194,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -209,7 +208,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -7405,25 +7403,25 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         byte[] familyName = entry.getKey();
         for (Pair<Path, Path> p : entry.getValue()) {
           String path = p.getFirst().toString();
-          Path commitedStoreFile = p.getSecond();
+          Path committedStoreFile = p.getSecond();
           HStore store = getStore(familyName);
           try {
-            store.bulkLoadHFile(familyName, path, commitedStoreFile);
+            store.bulkLoadHFile(familyName, path, committedStoreFile);
             // Note the size of the store file
             try {
-              FileSystem fs = commitedStoreFile.getFileSystem(baseConf);
-              storeFilesSizes.put(commitedStoreFile.getName(),
-                fs.getFileStatus(commitedStoreFile).getLen());
+              FileSystem fs = committedStoreFile.getFileSystem(baseConf);
+              storeFilesSizes.put(committedStoreFile.getName(),
+                fs.getFileStatus(committedStoreFile).getLen());
             } catch (IOException e) {
-              LOG.warn("Failed to find the size of hfile " + commitedStoreFile, e);
-              storeFilesSizes.put(commitedStoreFile.getName(), 0L);
+              LOG.warn("Failed to find the size of hfile " + committedStoreFile, e);
+              storeFilesSizes.put(committedStoreFile.getName(), 0L);
             }
 
             if (storeFiles.containsKey(familyName)) {
-              storeFiles.get(familyName).add(commitedStoreFile);
+              storeFiles.get(familyName).add(committedStoreFile);
             } else {
               List<Path> storeFileNames = new ArrayList<>();
-              storeFileNames.add(commitedStoreFile);
+              storeFileNames.add(committedStoreFile);
               storeFiles.put(familyName, storeFileNames);
             }
             if (bulkLoadListener != null) {

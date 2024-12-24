@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.tool;
 
 import static java.lang.String.format;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -104,7 +103,6 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
@@ -354,7 +352,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
 
   /**
    * Prepare a collection of {@code LoadQueueItem} from list of source hfiles contained in the
-   * passed directory and validates whether the prepared queue has all the valid table column
+   * provided directory. Validates whether the prepared queue has all the valid table column
    * families in it.
    * @param hfilesDir     directory containing list of hfiles to be loaded into the table
    * @param queue         queue which needs to be loaded into the table
@@ -378,17 +376,18 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    * <li>{@link #bulkLoadPhase(AsyncClusterConnection, TableName, Deque, Multimap, boolean, Map)}
    * </li>
    * </ol>
-   * @param conn      Connection to use
-   * @param tableName Table to which these hfiles should be loaded to
-   * @param queue     {@code LoadQueueItem} has hfiles yet to be loaded
+   * @param conn          Connection to use
+   * @param sinkTableName Sink table where these hfiles should be loaded to
+   * @param queue         {@code LoadQueueItem} has hfiles yet to be loaded
    */
-  public void loadHFileQueue(AsyncClusterConnection conn, TableName tableName,
+  public void loadHFileQueue(AsyncClusterConnection conn, TableName sinkTableName,
     Deque<LoadQueueItem> queue, boolean copyFiles) throws IOException {
     ExecutorService pool = createExecutorService();
     try {
-      Multimap<ByteBuffer, LoadQueueItem> regionGroups = groupOrSplitPhase(conn, tableName, pool,
-        queue, FutureUtils.get(conn.getRegionLocator(tableName).getStartEndKeys())).getFirst();
-      bulkLoadPhase(conn, tableName, queue, regionGroups, copyFiles, null);
+      Multimap<ByteBuffer, LoadQueueItem> regionGroups =
+        groupOrSplitPhase(conn, sinkTableName, pool, queue,
+          FutureUtils.get(conn.getRegionLocator(sinkTableName).getStartEndKeys())).getFirst();
+      bulkLoadPhase(conn, sinkTableName, queue, regionGroups, copyFiles, null);
     } finally {
       pool.shutdown();
     }

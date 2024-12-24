@@ -30,6 +30,7 @@ import "server/Quota.proto";
 import "server/ClusterStatus.proto";
 import "server/region/WAL.proto";
 import "server/region/TooSlowLog.proto";
+import "server/master/Replication.proto";
 
 message GetRegionInfoRequest {
   required RegionSpecifier region = 1;
@@ -207,6 +208,8 @@ message ReplicateWALEntryRequest {
   optional string replicationClusterId = 2;
   optional string sourceBaseNamespaceDirPath = 3;
   optional string sourceHFileArchiveDirPath = 4;
+  repeated NamespaceOverrideMapping namespaceOverrides = 5;
+  repeated TableNameOverrideMapping tableNameOverrides = 6;
 }
 
 message ReplicateWALEntryResponse {

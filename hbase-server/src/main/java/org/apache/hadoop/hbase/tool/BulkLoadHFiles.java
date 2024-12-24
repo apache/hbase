@@ -44,7 +44,7 @@ public interface BulkLoadHFiles {
   static final String ALWAYS_COPY_FILES = "always.copy.files";
 
   /**
-   * Represents an HFile waiting to be loaded. An queue is used in this class in order to support
+   * Represents an HFile waiting to be loaded. A queue is used in this class in order to support
    * the case where a region has split during the process of the load. When this happens, the HFile
    * is split into two physical parts across the new region boundary, and each part is added back
    * into the queue. The import process finishes when the queue is empty.

@@ -87,9 +87,9 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   private List<ServerName> sinkServers = new ArrayList<>(0);
 
   /**
-   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
-   * Connection implementations, or initialize it in a different way, so defining createConnection
-   * as protected for possible overridings.
+   * Some implementations of HBaseInterClusterReplicationEndpoint may require us to instantiate
+   * different Connection implementations, or initialize it in a different way, so defining
+   * createConnection as protected for possible overrides.
    */
   protected AsyncClusterConnection createConnection(URI clusterURI, Configuration conf)
     throws IOException {
@@ -159,7 +159,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   // do not call this method in doStart method, only initialize the connection to remote cluster
-  // when you actually wants to make use of it. The problem here is that, starting the replication
+  // when you actually want to make use of it. The problem here is that, starting the replication
   // endpoint is part of the region server initialization work, so if the peer cluster is fully
   // down and we can not connect to it, we will cause the initialization to fail and crash the
   // region server, as we need the cluster id while setting up the AsyncClusterConnection, which

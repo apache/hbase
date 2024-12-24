@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 
 /**
@@ -75,7 +74,7 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * Defined as default here to avoid breaking callers who rely on the bulkLoad version that does
    * not expect additional clusterIds param.
    * @param tableName    the target table
-   * @param familyPaths  hdfs path for the the table family dirs containg files to be loaded.
+   * @param familyPaths  hdfs path for the table family dirs containing files to be loaded.
    * @param row          row key.
    * @param assignSeqNum seq num for the event on WAL.
    * @param userToken    user token.

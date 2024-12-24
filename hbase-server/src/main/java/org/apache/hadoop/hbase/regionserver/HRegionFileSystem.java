@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.io.HFileLink.LINK_NAME_PATTERN;
-
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -64,7 +63,6 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -486,9 +484,9 @@ public class HRegionFileSystem {
   }
 
   /**
-   * Bulk load: Add a specified store file to the specified family. If the source file is on the
-   * same different file-system is moved from the source location to the destination location,
-   * otherwise is copied over.
+   * Bulk load: Add a specified store file to the specified family. If the source file is on a
+   * different file-system, it is moved from the source location to the destination location.
+   * Otherwise, it is copied over.
    * @param familyName Family that will gain the file
    * @param srcPath    {@link Path} to the file to import
    * @param seqNum     Bulk Load sequence number
