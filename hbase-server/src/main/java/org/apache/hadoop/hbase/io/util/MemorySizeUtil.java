@@ -22,6 +22,8 @@ import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.StorageSize;
+import org.apache.hadoop.hbase.StorageUnit;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -93,11 +95,16 @@ public class MemorySizeUtil {
     ) {
       throw new RuntimeException("Current heap configuration for MemStore and BlockCache exceeds "
         + "the threshold required for successful cluster operation. "
-        + "The combined value cannot exceed 0.8. Please check "
-        + "the settings for hbase.regionserver.global.memstore.size and "
-        + "hfile.block.cache.size in your configuration. "
-        + "hbase.regionserver.global.memstore.size is " + globalMemstoreSize
-        + " hfile.block.cache.size is " + blockCacheUpperLimit);
+        + "The combined value cannot exceed 0.8. Please check " + "the settings for "
+        + MEMSTORE_SIZE_KEY + " and either " + HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + " or "
+        + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + " in your configuration. " + MEMSTORE_SIZE_KEY
+        + "=" + globalMemstoreSize + ", " + HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + "="
+        + conf.get(HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY) + ", "
+        + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + "="
+        + conf.get(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY) + ". (Note: If both "
+        + HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + " and "
+        + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + " are set, " + "the system will use "
+        + HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + ")");
     }
   }
 
@@ -195,10 +202,30 @@ public class MemorySizeUtil {
    * Retrieve configured size for on heap block cache as percentage of total heap.
    */
   public static float getBlockCacheHeapPercent(final Configuration conf) {
-    // L1 block cache is always on heap
-    float l1CachePercent = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
+    // Check if an explicit block cache size is configured.
+    long l1CacheSizeInBytes = getBlockCacheSizeInBytes(conf);
+    if (l1CacheSizeInBytes > 0) {
+      final MemoryUsage usage = safeGetHeapMemoryUsage();
+      return usage == null ? 0 : (float) l1CacheSizeInBytes / usage.getMax();
+    }
+
+    return conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
       HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
-    return l1CachePercent;
+  }
+
+  /**
+   * Retrieve an explicit block cache size in bytes in the configuration.
+   * @param conf used to read cache configs
+   * @return the number of bytes to use for LRU, negative if disabled.
+   * @throws IllegalArgumentException if HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY format is invalid
+   */
+  public static long getBlockCacheSizeInBytes(Configuration conf) {
+    final String key = HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY;
+    try {
+      return Long.parseLong(conf.get(key));
+    } catch (NumberFormatException e) {
+      return (long) StorageSize.getStorageSize(conf.get(key), -1, StorageUnit.BYTES);
+    }
   }
 
   /**
@@ -207,8 +234,7 @@ public class MemorySizeUtil {
    * @throws IllegalArgumentException if HFILE_BLOCK_CACHE_SIZE_KEY is > 1.0
    */
   public static long getOnHeapCacheSize(final Configuration conf) {
-    float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
-      HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
+    final float cachePercentage = getBlockCacheHeapPercent(conf);
     if (cachePercentage <= 0.0001f) {
       return -1;
     }
@@ -216,18 +242,22 @@ public class MemorySizeUtil {
       throw new IllegalArgumentException(
         HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + " must be between 0.0 and 1.0, and not > 1.0");
     }
-    long max = -1L;
+
     final MemoryUsage usage = safeGetHeapMemoryUsage();
-    if (usage != null) {
-      max = usage.getMax();
+    if (usage == null) {
+      return -1;
     }
+    final long heapMax = usage.getMax();
     float onHeapCacheFixedSize =
       (float) conf.getLong(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY,
-        HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT) / max;
+        HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT) / heapMax;
     // Calculate the amount of heap to give the heap.
-    return (onHeapCacheFixedSize > 0 && onHeapCacheFixedSize < cachePercentage)
-      ? (long) (max * onHeapCacheFixedSize)
-      : (long) (max * cachePercentage);
+    if (onHeapCacheFixedSize > 0 && onHeapCacheFixedSize < cachePercentage) {
+      return (long) (heapMax * onHeapCacheFixedSize);
+    } else {
+      final long cacheSizeInBytes = getBlockCacheSizeInBytes(conf);
+      return cacheSizeInBytes > 0 ? cacheSizeInBytes : (long) (heapMax * cachePercentage);
+    }
   }
 
   /**
@@ -243,5 +273,4 @@ public class MemorySizeUtil {
     }
     return (long) (bucketCacheSize * 1024 * 1024);
   }
-
 }
