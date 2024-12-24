@@ -133,58 +133,58 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
     <link href="/static/css/hbase.css" rel="stylesheet">
+    <link rel="shortcut icon" href="/static/favicon.ico">
   </head>
 
   <body>
 
-    <div class="navbar  navbar-fixed-top navbar-default">
-        <div class="container-fluid">
-            <div class="navbar-header">
-                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                </button>
-                <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-            </div>
-            <div class="collapse navbar-collapse">
-                <ul class="nav navbar-nav">
-                <li class="active"><a href="/master-status">Home</a></li>
-                <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-                <%if master.isActiveMaster() %>
-                    <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
-                    <li><a href="/hbck.jsp">HBCK Report</a></li>
-                    <li><a href="/operationDetails.jsp">Operation Details</a></li>
-                    <%if master.getConfiguration().getBoolean(QuotaUtil.QUOTA_CONF_KEY, false) %>
-                        <li><a href="/quotas.jsp">Quotas</a></li>
-                    </%if>
+    <nav class="navbar navbar-expand-md navbar-light fixed-top bg-light">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
+        <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link active" href="/master-status">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/tablesDetailed.jsp">Table Details</a>
+            </li>
+            <%if master.isActiveMaster() %>
+                <li class="nav-item"><a class="nav-link" href="/procedures.jsp">Procedures &amp; Locks</a></li>
+                <li class="nav-item"><a class="nav-link" href="/hbck.jsp">HBCK Report</a></li>
+                <li class="nav-item"><a class="nav-link" href="/operationDetails.jsp">Operation Details</a></li>
+                <%if master.getConfiguration().getBoolean(QuotaUtil.QUOTA_CONF_KEY, false) %>
+                    <li class="nav-item"><a class="nav-link" href="/quotas.jsp">Quotas</a></li>
                 </%if>
-                <li><a href="/processMaster.jsp">Process Metrics</a></li>
-                <li><a href="/logs/">Local Logs</a></li>
-                <li><a href="/logLevel">Log Level</a></li>
-                <li><a href="/dump">Debug Dump</a></li>
-                <li class="nav-item dropdown">
-                  <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    Metrics <span class="caret"></span>
-                  </a>
-                  <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                    <li><a target="_blank" href="/jmx">JMX</a></li>
-                    <li><a target="_blank" href="/jmx?description=true">JMX with description</a></li>
-                    <li><a target="_blank" href="/prometheus">Prometheus</a></li>
-                    <li><a target="_blank" href="/prometheus?description=true">Prometheus with description</a></li>
-                  </ul>
-                </li>
-                <li><a href="/prof">Profiler</a></li>
-                <%if HBaseConfiguration.isShowConfInServlet()%>
-                <li><a href="/conf">HBase Configuration</a></li>
-                </%if>
-                <li><a href="/startupProgress.jsp">Startup Progress</a></li>
-               </ul>
-            </div><!--/.nav-collapse -->
-        </div>
-    </div>
+            </%if>
+            <li class="nav-item"><a class="nav-link" href="/processMaster.jsp">Process Metrics</a></li>
+            <li class="nav-item"><a class="nav-link" href="/logs/">Local Logs</a></li>
+            <li class="nav-item"><a class="nav-link" href="/logLevel">Log Level</a></li>
+            <li class="nav-item"><a class="nav-link" href="/dump">Debug Dump</a></li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Metrics <span class="caret"></span>
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                <a class="dropdown-item" target="_blank" href="/jmx">JMX</a>
+                <a class="dropdown-item" target="_blank" href="/jmx?description=true">JMX with description</a>
+                <a class="dropdown-item" target="_blank" href="/prometheus">Prometheus</a>
+                <a class="dropdown-item" target="_blank" href="/prometheus?description=true">Prometheus with description</a>
+              </div>
+            </li>
+            <li class="nav-item"><a class="nav-link" href="/prof">Profiler</a></li>
+            <%if HBaseConfiguration.isShowConfInServlet()%>
+              <li class="nav-item"><a class="nav-link" href="/conf">HBase Configuration</a></li>
+            </%if>
+            <li class="nav-item"><a class="nav-link" href="/startupProgress.jsp">Startup Progress</a></li>
+           </ul>
+        </div><!--/.navbar-collapse -->
+      </div><!--/.container-fluid -->
+    </nav>
 
     <div class="container-fluid content">
 	<%if master.isActiveMaster() %>
@@ -197,7 +197,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <div class="row">
         <!-- Various warnings that cluster admins should be aware of -->
         <%if JvmVersion.isBadJvmVersion() %>
-          <div class="alert alert-error">
+          <div class="alert alert-danger" role="alert">
           Your current JVM version <% System.getProperty("java.version") %> is known to be
           unstable with HBase. Please see the
           <a href="http://hbase.apache.org/book.html#trouble.log.gc">HBase Reference Guide</a>
@@ -205,33 +205,33 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
           </div>
         </%if>
         <%if master.isInitialized() && !catalogJanitorEnabled %>
-          <div class="alert alert-error">
+          <div class="alert alert-danger" role="alert">
           Please note that your cluster is running with the CatalogJanitor disabled. It can be
           re-enabled from the hbase shell by running the command 'catalogjanitor_switch true'
           </div>
         </%if>
         <%if master.isInMaintenanceMode() %>
-          <div class="alert alert-warning">
+          <div class="alert alert-warning" role="alert">
           Your Master is in maintenance mode. This is because hbase.master.maintenance_mode is
           set to true. Under the maintenance mode, no quota or no Master coprocessor is loaded.
           </div>
         </%if>
         <%if !master.isBalancerOn() %>
-          <div class="alert alert-warning">
+          <div class="alert alert-warning" role="alert">
             The Load Balancer is not enabled which will eventually cause performance degradation
             in HBase as Regions will not be distributed across all RegionServers. The balancer
             is only expected to be disabled during rolling upgrade scenarios.
           </div>
         </%if>
         <%if !master.isSplitOrMergeEnabled(MasterSwitchType.SPLIT) %>
-          <div class="alert alert-warning">
+          <div class="alert alert-warning" role="alert">
             Region splits are disabled. This may be the result of HBCK aborting while
             running in repair mode. Manually enable splits from the HBase shell,
             or re-run HBCK in repair mode.
           </div>
         </%if>
         <%if !master.isSplitOrMergeEnabled(MasterSwitchType.MERGE) %>
-          <div class="alert alert-warning">
+          <div class="alert alert-warning" role="alert">
             Region merges are disabled. This may be the result of HBCK aborting while
             running in repair mode. Manually enable merges from the HBase shell,
             or re-run HBCK in repair mode.
@@ -249,55 +249,66 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             </section>
           </%if>
         </%if>
+      </div>
+      <div class="row">
         <section>
             <h2><a name="regionservers">Region Servers</a></h2>
             <& RegionServerListTmpl; master= master; servers = servers &>
 
-            <%if (deadServers != null) %>
-                <& deadRegionServers &>
-            </%if>
-        </section>
-        <section>
-            <& BackupMasterStatusTmpl; master = master &>
-        </section>
-        <section>
-            <h2><a name="tables">Tables</a></h2>
-            <div class="tabbable">
-                <ul class="nav nav-pills">
-                    <li class="active">
-                        <a href="#tab_userTables" data-toggle="tab">User Tables</a>
-                    </li>
-                    <li class="">
-                        <a href="#tab_catalogTables" data-toggle="tab">System Tables</a>
-                    </li>
-                    <li class="">
-                        <a href="#tab_userSnapshots" data-toggle="tab">Snapshots</a>
-                    </li>
-                </ul>
-                <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-                    <div class="tab-pane active" id="tab_userTables">
-                        <%if (metaLocation != null) %>
-                            <& userTables &>
-                        </%if>
-                    </div>
-                    <div class="tab-pane" id="tab_catalogTables">
-                        <%if (metaLocation != null) %>
-                            <& catalogTables &>
-                        </%if>
-                    </div>
-                    <div class="tab-pane" id="tab_userSnapshots">
-                    </div>
-                </div>
-            </div>
-        </section>
-        <section>
-            <h2><a name="region_visualizer"></a>Region Visualizer</h2>
-            <& RegionVisualizerTmpl &>
-        </section>
-        <section>
-            <h2><a name="peers">Peers</a></h2>
-            <& peerConfigs &>
-        </section>
+              <%if (deadServers != null) %>
+                  <& deadRegionServers &>
+              </%if>
+          </section>
+        </div>
+        <div class="row">
+          <section>
+              <& BackupMasterStatusTmpl; master = master &>
+          </section>
+        </div>
+        <div class="row">
+          <section>
+              <h2><a name="tables">Tables</a></h2>
+              <div class="tabbable">
+                  <ul class="nav nav-pills" role="tablist">
+                      <li class="nav-item">
+                          <a class="nav-link active" href="#tab_userTables" data-bs-toggle="tab" role="tab">User Tables</a>
+                      </li>
+                      <li class="nav-item">
+                          <a class="nav-link" href="#tab_catalogTables" data-bs-toggle="tab" role="tab">System Tables</a>
+                      </li>
+                      <li class="nav-item">
+                          <a class="nav-link" href="#tab_userSnapshots" data-bs-toggle="tab" role="tab">Snapshots</a>
+                      </li>
+                  </ul>
+                  <div class="tab-content">
+                      <div class="tab-pane active" id="tab_userTables" role="tabpanel">
+                          <%if (metaLocation != null) %>
+                              <& userTables &>
+                          </%if>
+                      </div>
+                      <div class="tab-pane" id="tab_catalogTables" role="tabpanel">
+                          <%if (metaLocation != null) %>
+                              <& catalogTables &>
+                          </%if>
+                      </div>
+                      <div class="tab-pane" id="tab_userSnapshots" role="tabpanel">
+                      </div>
+                  </div>
+              </div>
+          </section>
+        </div>
+        <div class="row">
+          <section>
+              <h2><a name="region_visualizer"></a>Region Visualizer</h2>
+              <& RegionVisualizerTmpl &>
+          </section>
+        </div>
+        <div class="row">
+          <section>
+              <h2><a name="peers">Peers</a></h2>
+              <& peerConfigs &>
+          </section>
+        </div>
 	<%else>
         <section>
             <& BackupMasterStatusTmpl; master = master &>
