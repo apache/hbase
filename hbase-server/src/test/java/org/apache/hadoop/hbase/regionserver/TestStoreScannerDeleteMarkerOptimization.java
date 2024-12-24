@@ -19,6 +19,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.KeyValueTestUtil.create;
 import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
+import static org.apache.logging.log4j.Level.*;
+import static org.apache.logging.log4j.LogManager.*;
+import static org.apache.logging.log4j.core.config.Configurator.*;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -38,8 +41,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -80,7 +82,8 @@ public class TestStoreScannerDeleteMarkerOptimization {
 
   @BeforeClass
   public static void setUpBeforeClass() {
-    LogManager.getLogger("org.apache.hadoop.hbase.regionserver.StoreScanner").setLevel(Level.TRACE);
+    Logger log = getLogger(StoreScanner.class);
+    setLevel(log.getName(), TRACE);
   }
 
   @Before
