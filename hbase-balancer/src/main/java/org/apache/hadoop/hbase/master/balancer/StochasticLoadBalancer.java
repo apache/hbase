@@ -343,6 +343,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   private boolean areSomeRegionReplicasColocated(BalancerClusterState c) {
+    if (balancerConditionals.isReplicaDistributionEnabled()) {
+      // This check is unnecessary with conditional replica distribution
+      // The balancer will auto-run if the replica distribution candidates are available
+      return false;
+    }
     regionReplicaHostCostFunction.prepare(c);
     return (Math.abs(regionReplicaHostCostFunction.cost()) > CostFunction.COST_EPSILON);
   }
@@ -503,6 +508,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     long startTime = EnvironmentEdgeManager.currentTime();
 
     initCosts(cluster);
+    balancerConditionals.loadClusterState(cluster);
 
     sumMultiplier = 0;
     for (CostFunction c : costFunctions) {
@@ -554,6 +560,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     boolean improvedConditionals = false;
     Map<CandidateGenerator, Long> generatorToStepCount = new HashMap<>();
+    Map<CandidateGenerator, Long> generatorToApprovedActionCount = new HashMap<>();
     for (step = 0; step < computedMaxSteps; step++) {
       Pair<CandidateGenerator, BalanceAction> nextAction = nextAction(cluster);
       CandidateGenerator generator = nextAction.getFirst();
@@ -562,6 +569,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       if (action.getType() == BalanceAction.Type.NULL) {
         continue;
       }
+      generatorToStepCount.merge(generator, action.getStepCount(), Long::sum);
+      step += action.getStepCount() - 1;
 
       // Always accept a conditional generator output. Sometimes conditional generators
       // may need to make controversial moves in order to break what would otherwise
@@ -576,7 +585,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       // Change state and evaluate costs
       cluster.doAction(action);
-      updateCostsAndWeightsWithAction(cluster, action);
       newCost = computeCost(cluster, currentCost);
 
       boolean conditionalsImproved = conditionalViolationsChange < 0;
@@ -589,11 +597,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       // Our second priority is to reduce balancer cost
       // change, regardless of cost change
       if (conditionalsImproved || conditionalsSimilarCostsImproved) {
-        generatorToStepCount.merge(generator, 1L, Long::sum);
         currentCost = newCost;
-
-        // keep conditionals up to date with changes todo rmattingly unnecessary?
+        generatorToApprovedActionCount.merge(generator, action.getStepCount(), Long::sum);
         balancerConditionals.loadClusterState(cluster);
+        updateCostsAndWeightsWithAction(cluster, action);
 
         // save for JMX
         curOverallCost = currentCost;
@@ -615,8 +622,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // Build the log message
     StringBuilder logMessage = new StringBuilder("CandidateGenerator activity summary:\n");
     generatorToStepCount.forEach((generator, count) -> {
-      logMessage
-        .append(String.format(" - %s: %d steps\n", generator.getClass().getSimpleName(), count));
+      long approvals = generatorToApprovedActionCount.getOrDefault(generator, 0L);
+      logMessage.append(String.format(" - %s: %d steps, %d approvals\n",
+        generator.getClass().getSimpleName(), count, approvals));
     });
     // Log the message
     LOG.info(logMessage.toString());

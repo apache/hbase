@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.util.Sets;
 
 /**
  * If enabled, this class will help the balancer ensure that system tables live on their own
@@ -33,14 +34,16 @@ import org.apache.hadoop.hbase.master.RegionPlan;
  */
 class SystemTableIsolationConditional extends RegionPlanConditional {
 
+  private final BalancerClusterState cluster;
   private final Set<ServerName> serversHostingSystemTables = new HashSet<>();
   private final Set<ServerName> metaOnlyServers = new HashSet<>();
   private final Set<ServerName> metaAndSystemServers = new HashSet<>();
+  private final boolean isolateMeta;
 
   public SystemTableIsolationConditional(Configuration conf, BalancerClusterState cluster) {
     super(conf, cluster);
-
-    boolean isolatingMeta = conf.getBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, false);
+    this.cluster = cluster;
+    isolateMeta = conf.getBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, false);
 
     // Track what each server holds
     Set<ServerName> metaServers = new HashSet<>();
@@ -50,7 +53,7 @@ class SystemTableIsolationConditional extends RegionPlanConditional {
       RegionInfo regionInfo = cluster.regions[i];
       ServerName server = cluster.servers[cluster.regionIndexToServerIndex[i]];
       if (regionInfo.isMetaRegion()) {
-        if (isolatingMeta) {
+        if (isolateMeta) {
           metaOnlyServers.add(server);
         }
         metaServers.add(server);
@@ -68,10 +71,17 @@ class SystemTableIsolationConditional extends RegionPlanConditional {
     }
   }
 
+  public Set<Integer> getServersHostingSystemTables() {
+    Set<Integer> serverIndices = new HashSet<>();
+    for (ServerName server : Sets.union(serversHostingSystemTables, metaAndSystemServers)) {
+      serverIndices.add(cluster.serversToIndex.get(server.getAddress()));
+    }
+    return serverIndices;
+  }
+
   @Override
   Optional<RegionPlanConditionalCandidateGenerator> getCandidateGenerator() {
-    return Optional.of(new SystemTableIsolationCandidateGenerator(
-      BalancerConditionals.INSTANCE.isMetaTableIsolationEnabled()));
+    return Optional.of(new SystemTableIsolationCandidateGenerator(isolateMeta));
   }
 
   @Override

@@ -33,6 +33,7 @@ class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidat
 
   private static final Logger LOG =
     LoggerFactory.getLogger(DistributeReplicasCandidateGenerator.class);
+  private static final int BATCH_SIZE = 1000;
 
   /**
    * Generates a balancing action to distribute colocated replicas. Moves one replica of a colocated
@@ -49,6 +50,7 @@ class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidat
   BalanceAction generateCandidate(BalancerClusterState cluster, boolean isWeighing,
     boolean isForced) {
     // Shuffle server indices to add some randomness to the moves
+    // todo rmattingly share cache of shuffled servers in BalancerConditionals or something
     List<Integer> shuffledServerIndices = new ArrayList<>(cluster.numServers);
     for (int i = 0; i < cluster.servers.length; i++) {
       shuffledServerIndices.add(i);
@@ -57,6 +59,7 @@ class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidat
 
     // Iterate through each server to find colocated replicas
     boolean foundColocatedReplicas = false;
+    List<MoveRegionAction> moveRegionActions = new ArrayList<>();
     for (int sourceIndex : shuffledServerIndices) {
       int[] serverRegions = cluster.regionsPerServer[sourceIndex];
       Set<DistributeReplicasConditional.ReplicaKey> replicaKeys =
@@ -76,10 +79,13 @@ class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidat
               if (destinationIndex == sourceIndex) {
                 continue;
               }
-              BalanceAction possibleAction =
-                getAction(sourceIndex, regionIndex, destinationIndex, -1);
-              if (isForced || willBeAccepted(cluster, possibleAction)) {
+              MoveRegionAction possibleAction =
+                new MoveRegionAction(regionIndex, sourceIndex, destinationIndex);
+              if (isForced) {
                 return possibleAction;
+              } else if (willBeAccepted(cluster, possibleAction)) {
+                moveRegionActions.add(possibleAction);
+                break;
               } else if (LOG.isTraceEnabled()) {
                 // Find regions on the destination server that block movement because they share a
                 // replica with the regionIndex
@@ -110,9 +116,18 @@ class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidat
         } else {
           replicaKeys.add(replicaKey);
         }
+        if (moveRegionActions.size() >= BATCH_SIZE) {
+          break;
+        }
+      }
+      if (moveRegionActions.size() >= BATCH_SIZE) {
+        break;
       }
     }
 
+    if (!moveRegionActions.isEmpty()) {
+      return new MoveBatchAction(moveRegionActions);
+    }
     // If no colocated replicas are found, return NULL_ACTION
     if (foundColocatedReplicas) {
       LOG.warn("Could not find a place to put a colocated replica! We will force a move.");

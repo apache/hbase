@@ -39,7 +39,7 @@ public class TestLargeClusterBalancingReplicaDistribution {
   private static final TableName TABLE_NAME = TableName.valueOf("userTable");
 
   private static final int NUM_SERVERS = 100;
-  private static final int NUM_REGIONS = 100;
+  private static final int NUM_REGIONS = 10_000;
   private static final int NUM_REPLICAS = 3;
 
   private static final ServerName[] servers = new ServerName[NUM_SERVERS];
@@ -68,17 +68,9 @@ public class TestLargeClusterBalancingReplicaDistribution {
       }
     }
 
-    // Assign replicas to servers in a round-robin fashion to ensure even distribution
+    // Assign all regions to one server
     for (RegionInfo regionInfo : allRegions) {
-      int regionNumber = regionInfo.getStartKey()[0] & 0xFF; // Convert byte to unsigned int
-      int replicaId = regionInfo.getReplicaId();
-
-      // Calculate server index ensuring replicas are on different servers
-      int serverIndex = (regionNumber + replicaId) % NUM_SERVERS;
-      ServerName targetServer = servers[serverIndex];
-
-      // Assign the region to the target server
-      serverToRegions.get(targetServer).add(regionInfo);
+      serverToRegions.get(servers[0]).add(regionInfo);
     }
   }
 

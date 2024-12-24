@@ -26,6 +26,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.agrona.collections.Hashing;
 import org.agrona.collections.Int2IntCounterMap;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -744,16 +745,33 @@ class BalancerClusterState {
       case ISOLATE_TABLE:
         assert action instanceof IsolateTablesAction : action.getClass();
         IsolateTablesAction ia = (IsolateTablesAction) action;
-        List<RegionPlan> regionPlans = new ArrayList<>();
+        List<RegionPlan> iaRegionPlans = new ArrayList<>();
         for (MoveRegionAction moveRegionAction : ia.getMoveActions()) {
           regionsPerServer[moveRegionAction.getFromServer()] = removeRegion(
             regionsPerServer[moveRegionAction.getFromServer()], moveRegionAction.getRegion());
           regionsPerServer[moveRegionAction.getToServer()] = addRegion(
             regionsPerServer[moveRegionAction.getToServer()], moveRegionAction.getRegion());
-          regionPlans.add(regionMoved(moveRegionAction.getRegion(),
+          iaRegionPlans.add(regionMoved(moveRegionAction.getRegion(),
             moveRegionAction.getFromServer(), moveRegionAction.getToServer()));
         }
-        return regionPlans;
+        return iaRegionPlans;
+      case MOVE_BATCH:
+        assert action instanceof MoveBatchAction : action.getClass();
+        MoveBatchAction mba = (MoveBatchAction) action;
+        List<RegionPlan> mbRegionPlans = new ArrayList<>();
+        for (int serverIndex : mba.getServerToRegionsToRemove().keySet()) {
+          Set<Integer> regionsToRemove = mba.getServerToRegionsToRemove().get(serverIndex);
+          removeRegions(regionsPerServer[serverIndex], regionsToRemove);
+        }
+        for (int serverIndex : mba.getServerToRegionsToAdd().keySet()) {
+          Set<Integer> regionsToAdd = mba.getServerToRegionsToRemove().get(serverIndex);
+          addRegions(regionsPerServer[serverIndex], regionsToAdd);
+        }
+        for (MoveRegionAction moveRegionAction : mba.getMoveActions()) {
+          mbRegionPlans.add(regionMoved(moveRegionAction.getRegion(),
+            moveRegionAction.getFromServer(), moveRegionAction.getToServer()));
+        }
+        return mbRegionPlans;
       default:
         throw new RuntimeException("Unknown action:" + action.getType());
     }
@@ -920,6 +938,48 @@ class BalancerClusterState {
     int[] newRegions = new int[regions.length + 1];
     System.arraycopy(regions, 0, newRegions, 0, regions.length);
     newRegions[newRegions.length - 1] = regionIndex;
+    return newRegions;
+  }
+
+  int[] removeRegions(int[] regions, Set<Integer> regionIndicesToRemove) {
+    // Calculate the size of the new regions array
+    int newSize = regions.length - regionIndicesToRemove.size();
+    if (newSize < 0) {
+      throw new IllegalStateException(
+        "Region indices mismatch: more regions to remove than in the regions array");
+    }
+
+    int[] newRegions = new int[newSize];
+    int newIndex = 0;
+
+    // Copy only the regions not in the removal set
+    for (int region : regions) {
+      if (!regionIndicesToRemove.contains(region)) {
+        newRegions[newIndex++] = region;
+      }
+    }
+
+    // If the newIndex is smaller than newSize, some regions were missing from the input array
+    if (newIndex != newSize) {
+      throw new IllegalStateException(
+        "Region indices mismatch: some regions in the removal set were not found in the regions array");
+    }
+
+    return newRegions;
+  }
+
+  int[] addRegions(int[] regions, Set<Integer> regionIndicesToAdd) {
+    int[] newRegions = new int[regions.length + regionIndicesToAdd.size()];
+
+    // Copy the existing regions to the new array
+    System.arraycopy(regions, 0, newRegions, 0, regions.length);
+
+    // Add the new regions at the end of the array
+    int newIndex = regions.length;
+    for (int regionIndex : regionIndicesToAdd) {
+      newRegions[newIndex++] = regionIndex;
+    }
+
     return newRegions;
   }
 

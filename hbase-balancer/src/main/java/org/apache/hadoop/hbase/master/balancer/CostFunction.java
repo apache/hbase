@@ -79,6 +79,13 @@ abstract class CostFunction {
         ita.getMoveActions()
           .forEach(m -> regionMoved(m.getRegion(), m.getFromServer(), m.getToServer()));
         break;
+      case MOVE_BATCH:
+        MoveBatchAction mba = (MoveBatchAction) action;
+        for (MoveRegionAction moveRegionAction : mba.getMoveActions()) {
+          regionMoved(moveRegionAction.getRegion(), moveRegionAction.getFromServer(),
+            moveRegionAction.getToServer());
+        }
+        break;
       default:
         throw new RuntimeException("Unknown action:" + action.getType());
     }

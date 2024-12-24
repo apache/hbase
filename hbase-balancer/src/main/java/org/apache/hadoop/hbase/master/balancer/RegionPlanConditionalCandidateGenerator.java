@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,15 +26,17 @@ public abstract class RegionPlanConditionalCandidateGenerator extends CandidateG
   private static final Logger LOG =
     LoggerFactory.getLogger(RegionPlanConditionalCandidateGenerator.class);
 
+  private static final Duration WEIGHT_CACHE_TTL = Duration.ofSeconds(10);
+  private long lastWeighedAt = -1;
+
   abstract BalanceAction generateCandidate(BalancerClusterState cluster, boolean isWeighing);
 
   @Override
   BalanceAction generate(BalancerClusterState cluster) {
     BalanceAction balanceAction = generateCandidate(cluster, false);
     if (!willBeAccepted(cluster, balanceAction)) {
-      LOG.warn(
-        "Generated action is not widely accepted by all conditionals. This may cause a locked balancer. balanceAction={}",
-        balanceAction);
+      LOG.debug("Generated action is not widely accepted by all conditionals. "
+        + "Likely we are finding our way out of a deadlock. balanceAction={}", balanceAction);
     }
     return balanceAction;
   }
@@ -44,7 +47,18 @@ public abstract class RegionPlanConditionalCandidateGenerator extends CandidateG
   }
 
   double getWeight(BalancerClusterState cluster) {
-    if (generateCandidate(cluster, true) != BalanceAction.NULL_ACTION) {
+    boolean hasCandidate = false;
+
+    // Candidate generation is expensive, so for re-weighing generators we will cache
+    // the value for a bit
+    if (System.currentTimeMillis() - lastWeighedAt < WEIGHT_CACHE_TTL.toMillis()) {
+      hasCandidate = true;
+    } else {
+      hasCandidate = generateCandidate(cluster, true) != BalanceAction.NULL_ACTION;
+      lastWeighedAt = System.currentTimeMillis();
+    }
+
+    if (hasCandidate) {
       // If this generator has something to do, then it's important
       return CandidateGenerator.MAX_WEIGHT;
     } else {

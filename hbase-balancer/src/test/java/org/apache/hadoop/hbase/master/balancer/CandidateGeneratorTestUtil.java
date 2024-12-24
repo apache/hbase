@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.MAX_RUNNING_TIME_KEY;
 import static org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.MIN_COST_NEED_BALANCE_KEY;
 
 import java.time.Duration;
@@ -47,11 +48,12 @@ public final class CandidateGeneratorTestUtil {
     Set<Function<BalancerClusterState, Boolean>> expectations) {
     // Do the full plan. We're testing with a lot of regions
     conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
+    conf.setLong(MAX_RUNNING_TIME_KEY, 30_000);
 
-    // Somewhat less strict than the default.
+    // Less strict than the default.
     // This is acknowledging that we will be skewing loads to some degree
     // in order to maintain isolation.
-    conf.setFloat(MIN_COST_NEED_BALANCE_KEY, 0.1f);
+    conf.setFloat(MIN_COST_NEED_BALANCE_KEY, 1.0f);
 
     Set<TableName> userTablesToBalance =
       serverToRegions.entrySet().stream().map(Map.Entry::getValue).flatMap(Collection::stream)

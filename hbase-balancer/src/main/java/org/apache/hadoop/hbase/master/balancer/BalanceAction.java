@@ -29,6 +29,7 @@ abstract class BalanceAction {
     MOVE_REGION,
     SWAP_REGIONS,
     ISOLATE_TABLE,
+    MOVE_BATCH,
     NULL,
   }
 
@@ -50,6 +51,10 @@ abstract class BalanceAction {
 
   Type getType() {
     return type;
+  }
+
+  long getStepCount() {
+    return 1;
   }
 
   @Override

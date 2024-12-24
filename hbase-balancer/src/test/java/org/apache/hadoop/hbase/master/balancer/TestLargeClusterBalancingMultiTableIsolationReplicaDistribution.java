@@ -41,7 +41,7 @@ public class TestLargeClusterBalancingMultiTableIsolationReplicaDistribution {
   private static final TableName NON_ISOLATED_TABLE_NAME = TableName.valueOf("userTable");
 
   private static final int NUM_SERVERS = 100;
-  private static final int NUM_REGIONS = 3_300;
+  private static final int NUM_REGIONS = 4_000;
   private static final int NUM_REPLICAS = 3;
 
   private static final ServerName[] servers = new ServerName[NUM_SERVERS];

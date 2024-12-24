@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.balancer;
 import java.lang.reflect.Constructor;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -96,10 +97,32 @@ public final class BalancerConditionals {
     return conditionalClasses.contains(SystemTableIsolationConditional.class);
   }
 
+  boolean isReplicaDistributionEnabled() {
+    return conditionalClasses.contains(DistributeReplicasConditional.class);
+  }
+
   boolean shouldSkipSloppyServerEvaluation() {
-    return conditionals.stream()
-      .anyMatch(conditional -> conditional instanceof SystemTableIsolationConditional
-        || conditional instanceof MetaTableIsolationConditional);
+    return isConditionalBalancingEnabled();
+  }
+
+  Set<Integer> getServersWithTablesToIsolate() {
+    Optional<MetaTableIsolationConditional> metaTableIsolationConditional =
+      conditionals.stream().filter(MetaTableIsolationConditional.class::isInstance)
+        .map(MetaTableIsolationConditional.class::cast).findAny();
+    Set<Integer> serversWithTablesToIsolate = new HashSet<>();
+    if (metaTableIsolationConditional.isPresent()) {
+      serversWithTablesToIsolate
+        .addAll(metaTableIsolationConditional.get().getServersHostingMeta());
+    }
+
+    Optional<SystemTableIsolationConditional> systemTableIsolationConditional =
+      conditionals.stream().filter(SystemTableIsolationConditional.class::isInstance)
+        .map(SystemTableIsolationConditional.class::cast).findAny();
+    if (systemTableIsolationConditional.isPresent()) {
+      serversWithTablesToIsolate
+        .addAll(systemTableIsolationConditional.get().getServersHostingSystemTables());
+    }
+    return serversWithTablesToIsolate;
   }
 
   void loadConf(Configuration conf) {
@@ -142,18 +165,17 @@ public final class BalancerConditionals {
   }
 
   /**
-   * Check if the proposed action violates conditionals.
+   * Check if the proposed action violates conditionals. Must be called before applying the action.
    * @param cluster The cluster state
    * @param action  The proposed action
-   * @return -1 if the action is an improvement, 0 if it's neutral, and 1 if it is in violation
+   * @return -1 if the action is an improvement, 0 if it's neutral, and >=1 if it is in violation
    */
   int isViolating(BalancerClusterState cluster, BalanceAction action) {
     if (conditionals.isEmpty()) {
       return 0;
     }
 
-    loadClusterState(cluster); // ensure that we're up to date. this shouldn't be necessary todo
-                               // rmattingly fix
+    // loadClusterState(cluster); todo rmattingly don't think this is necessary
     List<RegionPlan> regionPlans = doActionAndRefreshConditionals(cluster, action);
 
     // Now we're in the proposed finished state
@@ -173,7 +195,7 @@ public final class BalancerConditionals {
     }
 
     if (proposedViolationCount - originalViolationCount < 0 && proposedViolationCount == 0) {
-      // Only take a random improvement if it eliminates violations
+      // Only take a random improvement if it eliminates violations, or exists in a neutral state
       // Otherwise we are probably just fighting our conditional generators
       return -1;
     } else {
@@ -184,7 +206,7 @@ public final class BalancerConditionals {
   private List<RegionPlan> doActionAndRefreshConditionals(BalancerClusterState cluster,
     BalanceAction action) {
     List<RegionPlan> regionPlans = cluster.doAction(action);
-    loadClusterState(cluster);
+    // loadClusterState(cluster); todo rmattingly don't think this is necessary
     return regionPlans;
   }
 

@@ -47,9 +47,28 @@ class IsolateTablesAction extends BalanceAction {
       }
 
       // Select a deterministic target server
-      int randomOtherServer = pickRandomServer(cluster, server);
-      moveActions.add(new MoveRegionAction(regionIndex, server, randomOtherServer));
+      Set<Integer> badTargets = BalancerConditionals.INSTANCE.getServersWithTablesToIsolate();
+      boolean hasGoodTargets = cluster.numServers > badTargets.size();
+      if (hasGoodTargets) {
+        // Pick good target
+        while (true) {
+          int randomOtherServer = pickRandomServer(cluster, server);
+          if (!badTargets.contains(randomOtherServer)) {
+            moveActions.add(new MoveRegionAction(regionIndex, server, randomOtherServer));
+            break;
+          }
+        }
+      } else {
+        // Pick any valid target
+        moveActions
+          .add(new MoveRegionAction(regionIndex, server, pickRandomServer(cluster, server)));
+      }
     }
+  }
+
+  @Override
+  long getStepCount() {
+    return moveActions.size();
   }
 
   public IsolateTablesAction(int server, Set<TableName> tablesToIsolate,
@@ -72,16 +91,8 @@ class IsolateTablesAction extends BalanceAction {
     return server;
   }
 
-  public Set<TableName> getTablesToIsolate() {
-    return tables;
-  }
-
   public List<MoveRegionAction> getMoveActions() {
     return moveActions;
-  }
-
-  public void addMoveAction(MoveRegionAction action) {
-    moveActions.add(action);
   }
 
   @Override

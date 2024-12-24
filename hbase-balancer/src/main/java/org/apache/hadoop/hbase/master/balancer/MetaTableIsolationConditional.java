@@ -34,12 +34,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class MetaTableIsolationConditional extends RegionPlanConditional {
 
+  private final BalancerClusterState cluster;
   private final Set<ServerName> emptyServers = new HashSet<>();
   private final Set<ServerName> serversHostingMeta = new HashSet<>();
 
   public MetaTableIsolationConditional(Configuration conf, BalancerClusterState cluster) {
     super(conf, cluster);
-
+    this.cluster = cluster;
     for (int i = 0; i < cluster.servers.length; i++) {
       ServerName server = cluster.servers[i];
       boolean hasMeta = false;
@@ -60,6 +61,14 @@ class MetaTableIsolationConditional extends RegionPlanConditional {
         emptyServers.add(server);
       }
     }
+  }
+
+  public Set<Integer> getServersHostingMeta() {
+    Set<Integer> serverIndices = new HashSet<>();
+    for (ServerName server : serversHostingMeta) {
+      serverIndices.add(cluster.serversToIndex.get(server.getAddress()));
+    }
+    return serverIndices;
   }
 
   @Override
