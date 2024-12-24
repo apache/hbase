@@ -99,7 +99,7 @@ public class MetricsSource implements BaseSource {
     for (Pair<Entry, Long> walEntryWithSize : walEntries) {
       Entry entry = walEntryWithSize.getFirst();
       long entrySize = walEntryWithSize.getSecond();
-      String tableName = entry.getKey().getTableName().getNameAsString();
+      String tableName = entry.getKey().getTableName().getMetricPrefixTableName();
       long writeTime = entry.getKey().getWriteTime();
       long age = EnvironmentEdgeManager.currentTime() - writeTime;
 
