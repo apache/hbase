@@ -184,4 +184,28 @@ public class SplitWALManager {
   public void addUsedSplitWALWorker(ServerName worker) {
     splitWorkerAssigner.addUsedWorker(worker);
   }
+
+  /**
+   * Rename the WAL file at the specified walPath to retry with another worker. Returns true if the
+   * file is successfully renamed, or if it has already been renamed in previous try. Returns false
+   * if neither of the files exists. It throws an IOException if got any error while renaming.
+   */
+  public boolean ifExistRenameWALForRetry(String walPath, String postRenameWalPath)
+    throws IOException {
+    if (fs.exists(new Path(rootDir, walPath))) {
+      if (!fs.rename(new Path(rootDir, walPath), new Path(rootDir, postRenameWalPath))) {
+        throw new IOException("Failed to rename wal " + walPath + " to " + postRenameWalPath);
+      }
+      return true;
+    } else {
+      if (fs.exists(new Path(rootDir, postRenameWalPath))) {
+        LOG.info(
+          "{} was already renamed in last retry to {}, will continue to acquire new worker to split wal",
+          walPath, postRenameWalPath);
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
 }
