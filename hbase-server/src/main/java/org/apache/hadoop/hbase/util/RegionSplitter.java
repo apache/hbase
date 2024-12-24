@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -680,7 +682,9 @@ public class RegionSplitter {
             // Check every Column Family for that region -- check does not have references.
             boolean refFound = false;
             for (ColumnFamilyDescriptor c : htd.getColumnFamilies()) {
-              if ((refFound = regionFs.hasReferences(c.getNameAsString()))) {
+              StoreFileTracker sft = StoreFileTrackerFactory
+                .create(regionFs.getFileSystem().getConf(), htd, c, regionFs);
+              if ((refFound = sft.hasReferences())) {
                 break;
               }
             }
