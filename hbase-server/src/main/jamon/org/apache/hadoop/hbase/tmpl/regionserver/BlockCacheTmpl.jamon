@@ -45,27 +45,27 @@ org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.Bucket;
 org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 </%import>
 <div class="tabbable">
-    <ul class="nav nav-pills">
-        <li class="active"><a href="#tab_bc_baseInfo" data-toggle="tab">Base Info</a></li>
-        <li class=""><a href="#tab_bc_config" data-toggle="tab">Config</a></li>
-        <li class=""><a href="#tab_bc_stats" data-toggle="tab">Stats</a></li>
-        <li class=""><a href="#tab_bc_l1" data-toggle="tab">L1</a></li>
-        <li class=""><a href="#tab_bc_l2" data-toggle="tab">L2</a></li>
+    <ul class="nav nav-pills" role="tablist">
+        <li class="nav-item"><a class="nav-link active" href="#tab_bc_baseInfo" data-bs-toggle="tab" role="tab">Base Info</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_bc_config" data-bs-toggle="tab" role="tab">Config</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_bc_stats" data-bs-toggle="tab" role="tab">Stats</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_bc_l1" data-bs-toggle="tab" role="tab">L1</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_bc_l2" data-bs-toggle="tab" role="tab">L2</a></li>
     </ul>
-    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-        <div class="tab-pane active" id="tab_bc_baseInfo">
+    <div class="tab-content">
+        <div class="tab-pane active" id="tab_bc_baseInfo" role="tabpanel">
             <& bc_baseInfo; bc = bc; bcUrl = bcUrl; bcName = bcName;  &>
         </div>
-        <div class="tab-pane" id="tab_bc_config">
+        <div class="tab-pane" id="tab_bc_config" role="tabpanel">
             <& bc_config; cacheConfig = cacheConfig &>
         </div>
-        <div class="tab-pane" id="tab_bc_stats">
+        <div class="tab-pane" id="tab_bc_stats" role="tabpanel">
             <& bc_stats; bc = bc &>
         </div>
-        <div class="tab-pane" id="tab_bc_l1">
+        <div class="tab-pane" id="tab_bc_l1" role="tabpanel">
             <& bc_l; bc = bcs == null? bc: bcs[0]; name = "L1"; evictions = evictions; &>
         </div>
-        <div class="tab-pane" id="tab_bc_l2">
+        <div class="tab-pane" id="tab_bc_l2" role="tabpanel">
             <& bc_l; bc = bcs == null? null: bcs.length <= 1? null: bcs[1]; name = "L2"; evictions = evictions; &>
         </div>
     </div>

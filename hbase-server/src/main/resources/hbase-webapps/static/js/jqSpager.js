@@ -45,8 +45,8 @@
       this.viewHtml();
     },
     creatHtml: function (i) {
-      i == this.settings.page ? this.pageList.push('<li class="active"><a  href="javascript:void(0)" data-page=' + i + ">" + i + "</a></li>")
-        : this.pageList.push("<li><a href='javascript:void(0)'  data-page=" + i + ">" + i + "</a></li>");
+      i == this.settings.page ? this.pageList.push('<li class="page-item active"><a class="page-link" href="javascript:void(0)" data-page=' + i + ">" + i + "</a></li>")
+        : this.pageList.push('<li class="page-item"><a class="page-link" href="javascript:void(0)"  data-page=" + i + ">' + i + "</a></li>");
     },
     viewHtml: function () {
       var settings = this.settings;
@@ -68,8 +68,8 @@
       pageArr.push('<ul class="pagination">');
       this.pageList = [];
       if (settings.showPN) {
-        settings.page == 1 ? this.pageList.push('<li class="disabled" ><a href="javascript:void(0)" data-page="prev">' + settings.prevPage + '</a></li>')
-          : this.pageList.push('<li><a href="javascript:void(0)" data-page="prev">' + settings.prevPage + '</a></li>');
+        settings.page == 1 ? this.pageList.push('<li class="page-item disabled" > <a class="page-link" href="javascript:void(0)" data-page="prev">' + settings.prevPage + '</a></li>')
+          : this.pageList.push('<li class="page-item"> <a class="page-link" href="javascript:void(0)" data-page="prev">' + settings.prevPage + '</a></li>');
 
       }
       if (pageTatol <= 6) {
@@ -82,24 +82,24 @@
             this.creatHtml(i);
           }
 
-          this.pageList.push('<li><a href="javascript:void(0)" data-page="after" class="spage-after">...</a></li><li><a href="javascript:void(0)" data-page=' + pageTatol + ">" + pageTatol + '</a></li>');
+          this.pageList.push('<li class="page-item"> <a class="page-link" href="javascript:void(0)" data-page="after" class="spage-after">...</a></li><li class="page-item"> <a class="page-link" href="javascript:void(0)" data-page=' + pageTatol + ">" + pageTatol + '</a></li>');
 
         } else if (settings.page > pageTatol - 4) {
-          this.pageList.push('<li><a href="javascript:void(0)" data-page="1">1</a></li><li><a href="javascript:void(0)" data-page="before" class="spage-before">...</a></li>');
+          this.pageList.push('<li class="page-item"> <a class="page-link" href="javascript:void(0)" data-page="1">1</a></li><li class="page-item"> <a href="javascript:void(0)" data-page="before" class="page-link spage-before">...</a></li>');
           for (var i = pageTatol - 4; i <= pageTatol; i++) {
             this.creatHtml(i);
           }
         } else {
-          this.pageList.push('<li><a href="javascript:void(0)" data-page="1">1</a></li><li><a  href="javascript:void(0)" data-page="before" class="spage-before">...</a></li>');
+          this.pageList.push('<li class="page-item"> <a class="page-link" href="javascript:void(0)" data-page="1">1</a></li><li class="page-item"><a href="javascript:void(0)" data-page="before" class="page-link spage-before">...</a></li>');
           for (var i = settings.page - 2; i <= Number(settings.page) + 2; i++) {
             this.creatHtml(i);
           }
-          this.pageList.push('<li><a href="javascript:void(0)" data-page="after" class="spage-after">...</a></li><li><a href="javascript:void(0)" data-page=' + pageTatol + '">' + pageTatol + '</a></li>');
+          this.pageList.push('<li class="page-item"> <a class="page-link" href="javascript:void(0)" data-page="after" class="spage-after">...</a></li><li class="page-item"><a class="page-link" href="javascript:void(0)" data-page=' + pageTatol + '">' + pageTatol + '</a></li>');
         }
       }
       if (settings.showPN) {
-        settings.page == pageTatol ? this.pageList.push('<li class="disabled"><a href="javascript:void(0)"  data-page="next">' + settings.nextPage + "</a></li>")
-          : this.pageList.push('<li><a data-page="next" href="javascript:void(0)">' + settings.nextPage + '</a></li>');
+        settings.page == pageTatol ? this.pageList.push('<li class="disabled"> <a class="page-link" href="javascript:void(0)"  data-page="next">' + settings.nextPage + "</a></li>")
+          : this.pageList.push('<li class="page-item"><a class="page-link" data-page="next" href="javascript:void(0)">' + settings.nextPage + '</a></li>');
       }
       pageArr.push(this.pageList.join(''));
       pageArr.push('</ul>');

@@ -23,19 +23,11 @@ relicensed so we could use it as Creative Commons Attribution 3.0.
 The license is bundled with the download available here:
 http://www.vectorportal.com/subcategory/205/KILLER-WHALE-FREE-VECTOR.eps/ifile/9136/detailtest.asp
 --
-This product includes portions of the Bootstrap project v3.0.0
+This product includes portions of the Bootstrap project v5.3.3
 
-Copyright 2013 Twitter, Inc.
+Copyright 2011-2024 The Bootstrap Authors
 
-Licensed under the Apache License v2.0
-
-This product uses the Glyphicons Halflings icon set.
-
-http://glyphicons.com/
-
-Copyright Jan Kovařík
-
-Licensed under the Apache License v2.0 as a part of the Bootstrap project.
+Licensed under the MIT license
 
 --
 This product includes portions of the Guava project v14 and v21, specifically

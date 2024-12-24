@@ -34,41 +34,41 @@ String parent = "";
   <h2><a name="tasks">Tasks</a></h2>
 
   <div class="tabbable">
-      <ul class="nav nav-pills">
-        <li class="">
-            <a href="#tab_alltasks" data-toggle="tab">Show All Monitored Tasks</a>
+      <ul class="nav nav-pills" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link" href="#tab_alltasks" data-bs-toggle="tab" role="tab">Show All Monitored Tasks</a>
         </li>
-        <li class="active">
-            <a href="#tab_generaltasks" data-toggle="tab">Show non-RPC Tasks</a>
+        <li class="nav-item">
+            <a class="nav-link active" href="#tab_generaltasks" data-bs-toggle="tab" role="tab">Show non-RPC Tasks</a>
         </li>
-        <li class="">
-            <a href="#tab_handlertasks" data-toggle="tab">Show All RPC Handler Tasks</a>
+        <li class="nav-item">
+            <a class="nav-link" href="#tab_handlertasks" data-bs-toggle="tab" role="tab">Show All RPC Handler Tasks</a>
         </li>
-        <li class="">
-            <a href="#tab_rpctasks" data-toggle="tab">Show Active RPC Calls</a>
+        <li class="nav-item">
+            <a class="nav-link" href="#tab_rpctasks" data-bs-toggle="tab" role="tab">Show Active RPC Calls</a>
         </li>
-        <li>
-            <a href="#tab_operationtasks" data-toggle="tab">Show Client Operations</a>
+        <li class="nav-item">
+            <a class="nav-link" href="#tab_operationtasks" data-bs-toggle="tab" role="tab">Show Client Operations</a>
         </li>
       </ul>
-      <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-        <div class="tab-pane" id="tab_alltasks">
+      <div class="tab-content">
+        <div class="tab-pane" id="tab_alltasks" role="tabpanel">
             <& jsonView; filter="all" &>
             <& renderTasks; filter="all" &>
         </div>
-        <div class="tab-pane active" id="tab_generaltasks">
+        <div class="tab-pane active" id="tab_generaltasks" role="tabpanel">
             <& jsonView; filter="general" &>
             <& renderTasks; filter="general" &>
         </div>
-        <div class="tab-pane" id="tab_handlertasks">
+        <div class="tab-pane" id="tab_handlertasks" role="tabpanel">
             <& jsonView; filter="handler" &>
             <& renderTasks; filter="handler" &>
         </div>
-        <div class="tab-pane" id="tab_rpctasks">
+        <div class="tab-pane" id="tab_rpctasks" role="tabpanel">
             <& jsonView; filter="rpc" &>
             <& renderTasks; filter="rpc" &>
         </div>
-        <div class="tab-pane" id="tab_operationtasks">
+        <div class="tab-pane" id="tab_operationtasks" role="tabpanel">
             <& jsonView; filter="operation" &>
             <& renderTasks; filter="operation" &>
         </div>
@@ -136,5 +136,5 @@ String parent = "";
         MonitoredTask.State state;
         </%args>
 <%java>       if (state == MonitoredTask.State.COMPLETE) { </%java>alert alert-success<%java> } </%java>
-<%java>  else if (state == MonitoredTask.State.ABORTED)  { </%java>alert alert-error<%java>   } </%java>
+<%java>  else if (state == MonitoredTask.State.ABORTED)  { </%java>alert alert-danger<%java>   } </%java>
 </%def>
