@@ -69,9 +69,10 @@ public class BulkLoad {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof BulkLoad that)) {
+    if (!(o instanceof BulkLoad)) {
       return false;
     }
+    BulkLoad that = (BulkLoad) o;
     return new EqualsBuilder().append(tableName, that.tableName).append(region, that.region)
       .append(columnFamily, that.columnFamily).append(hfilePath, that.hfilePath)
       .append(rowKey, that.rowKey).isEquals();
