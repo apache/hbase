@@ -636,10 +636,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           scannerContext.incrementBlockProgress(blockSize);
         });
 
-        prevCell = cell;
         scannerContext.setLastPeekedCell(cell);
         topChanged = false;
-        ScanQueryMatcher.MatchCode qcode = matcher.match(cell);
+        ScanQueryMatcher.MatchCode qcode = matcher.match(cell, prevCell);
+        LOG.trace("next - cell={}, prevCell={}, qCode={}", cell, prevCell, qcode);
+        prevCell = cell;
         switch (qcode) {
           case INCLUDE:
           case INCLUDE_AND_SEEK_NEXT_ROW:
@@ -756,6 +757,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             NextState stateAfterSeekNextColumn = needToReturn(outResult);
             if (stateAfterSeekNextColumn != null) {
               return scannerContext.setScannerState(stateAfterSeekNextColumn).hasMoreValues();
+            }
+            // for skipping delete markers
+            if (
+              CellUtil.isDelete(cell) && this.heap.peek() != null && this.heap.peek().equals(cell)
+            ) {
+              this.heap.next();
             }
             break;
 
