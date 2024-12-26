@@ -1143,7 +1143,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
   static abstract class TestBase {
     private final long everyN;
 
-    protected final Random rand = ThreadLocalRandom.current();
     protected final Configuration conf;
     protected final TestOptions opts;
 
@@ -1174,14 +1173,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.testName = this.getClass().getSimpleName();
       everyN = (long) (opts.totalRows / (opts.totalRows * opts.sampleRate));
       if (options.isValueZipf()) {
-        this.zipf = new RandomDistribution.Zipf(this.rand, 1, options.getValueSize(), 1.2);
+        this.zipf =
+          new RandomDistribution.Zipf(ThreadLocalRandom.current(), 1, options.getValueSize(), 1.2);
       }
       LOG.info("Sampling 1 every " + everyN + " out of " + opts.perClientRunRows + " total rows.");
     }
 
-    int getValueLength(final Random r) {
+    int getValueLength() {
       if (this.opts.isValueRandom()) {
-        return r.nextInt(opts.valueSize);
+        return ThreadLocalRandom.current().nextInt(opts.valueSize);
       } else if (this.opts.isValueZipf()) {
         return Math.abs(this.zipf.nextInt());
       } else {
@@ -1715,9 +1715,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
         byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
         for (int column = 0; column < opts.columns; column++) {
           byte[] qualifier = column == 0 ? COLUMN_ZERO : Bytes.toBytes("" + column);
-          byte[] value = generateData(this.rand, getValueLength(this.rand));
+          byte[] value = generateData(getValueLength());
           if (opts.useTags) {
-            byte[] tag = generateData(this.rand, TAG_LENGTH);
+            byte[] tag = generateData(TAG_LENGTH);
             Tag[] tags = new Tag[opts.noOfTags];
             for (int n = 0; n < opts.noOfTags; n++) {
               Tag t = new ArrayBackedTag((byte) n, tag);
@@ -2368,9 +2368,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
         byte familyName[] = Bytes.toBytes(FAMILY_NAME_BASE + family);
         for (int column = 0; column < opts.columns; column++) {
           byte[] qualifier = column == 0 ? COLUMN_ZERO : Bytes.toBytes("" + column);
-          byte[] value = generateData(this.rand, getValueLength(this.rand));
+          byte[] value = generateData(getValueLength());
           if (opts.useTags) {
-            byte[] tag = generateData(this.rand, TAG_LENGTH);
+            byte[] tag = generateData(TAG_LENGTH);
             Tag[] tags = new Tag[opts.noOfTags];
             for (int n = 0; n < opts.noOfTags; n++) {
               Tag t = new ArrayBackedTag((byte) n, tag);
@@ -2453,7 +2453,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
       // write the serverName columns
       MetaTableAccessor.updateRegionLocation(connection, regionInfo,
-        ServerName.valueOf("localhost", 60010, rand.nextLong()), i,
+        ServerName.valueOf("localhost", 60010, ThreadLocalRandom.current().nextLong()), i,
         EnvironmentEdgeManager.currentTime());
       return true;
     }
@@ -2472,7 +2472,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     boolean testRow(long i, final long startTime) throws IOException {
-      byte[] value = generateData(this.rand, getValueLength(this.rand));
+      byte[] value = generateData(getValueLength());
       Scan scan = constructScan(value);
       ResultScanner scanner = null;
       try {
@@ -2548,10 +2548,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * test, generation of the key and value consumes about 30% of CPU time.
    * @return Generated random value to insert into a table cell.
    */
-  public static byte[] generateData(final Random r, int length) {
+  public static byte[] generateData(int length) {
     byte[] b = new byte[length];
     int i;
 
+    Random r = ThreadLocalRandom.current();
     for (i = 0; i < (length - 8); i += 8) {
       b[i] = (byte) (65 + r.nextInt(26));
       b[i + 1] = b[i];

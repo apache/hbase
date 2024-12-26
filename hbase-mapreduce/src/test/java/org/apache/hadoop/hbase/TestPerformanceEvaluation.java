@@ -181,7 +181,7 @@ public class TestPerformanceEvaluation {
     ctor.setAccessible(true);
     Histogram histogram = (Histogram) ctor.newInstance(new UniformReservoir(1024 * 500));
     for (int i = 0; i < 100; i++) {
-      histogram.update(rrt.getValueLength(null));
+      histogram.update(rrt.getValueLength());
     }
     Snapshot snapshot = histogram.getSnapshot();
     double stddev = snapshot.getStdDev();
