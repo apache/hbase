@@ -129,7 +129,8 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
 
   private boolean canOptimizeReadDeleteMarkers(boolean visibilityLabelEnabled) {
     // for simplicity, optimization works only for these cases
-    return !seePastDeleteMarkers && scanMaxVersions == 1 && !visibilityLabelEnabled;
+    return !seePastDeleteMarkers && scanMaxVersions == 1 && !visibilityLabelEnabled
+      && getFilter() == null;
   }
 
   @Override

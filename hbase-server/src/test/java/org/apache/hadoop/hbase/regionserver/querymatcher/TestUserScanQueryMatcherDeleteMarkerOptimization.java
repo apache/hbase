@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
@@ -267,5 +268,13 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
     pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamily), MatchCode.SKIP));
     pairs.add(new Pair<>(createKV(col1, 1, Type.Put), MatchCode.SEEK_NEXT_COL));
     verify(pairs, 1, VisibilityUtils.isVisibilityLabelEnabled(conf));
+  }
+
+  @Test
+  public void testScanWithFilter() throws IOException {
+    scan.setFilter(new FilterList());
+    pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamily), MatchCode.SKIP));
+    pairs.add(new Pair<>(createKV(col1, 1, Type.Put), MatchCode.SEEK_NEXT_COL));
+    verify(pairs);
   }
 }
