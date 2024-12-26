@@ -17,20 +17,24 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
+import static org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil.enableVisiblityLabels;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -50,10 +54,11 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
   private List<Pair<KeyValue, MatchCode>> pairs;
 
   private void verify(List<Pair<KeyValue, MatchCode>> pairs) throws IOException {
-    verify(pairs, 1);
+    verify(pairs, 1, false);
   }
 
-  private void verify(List<Pair<KeyValue, MatchCode>> pairs, int maxVersions) throws IOException {
+  private void verify(List<Pair<KeyValue, MatchCode>> pairs, int maxVersions,
+    boolean visibilityEnabled) throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
     scan.readVersions(maxVersions);
     UserScanQueryMatcher qm = UserScanQueryMatcher.create(scan,
@@ -72,7 +77,7 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
     ExtendedCell prevCell = null;
 
     for (KeyValue kv : storedKVs) {
-      MatchCode matchCode = qm.match(kv, prevCell);
+      MatchCode matchCode = qm.match(kv, prevCell, visibilityEnabled);
       prevCell = kv;
       scannedKVs.add(matchCode);
     }
@@ -113,7 +118,7 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
     pairs.add(new Pair<>(createKV(col1, 2, Type.Delete), MatchCode.SKIP));
     pairs.add(new Pair<>(createKV(col1, 2, Type.Put), MatchCode.SKIP));
     pairs.add(new Pair<>(createKV(col1, 1, Type.Put), MatchCode.INCLUDE));
-    verify(pairs, 2);
+    verify(pairs, 2, false);
   }
 
   @Test
@@ -253,5 +258,14 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
     pairs.add(new Pair<>(createKV(col1, 2, Type.Put), MatchCode.INCLUDE));
     pairs.add(new Pair<>(createKV(col1, 1, Type.Put), MatchCode.SEEK_NEXT_COL));
     verify(pairs);
+  }
+
+  @Test
+  public void testDeleteFamilyWithVisibilityLabelEnabled() throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    enableVisiblityLabels(conf);
+    pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamily), MatchCode.SKIP));
+    pairs.add(new Pair<>(createKV(col1, 1, Type.Put), MatchCode.SEEK_NEXT_COL));
+    verify(pairs, 1, VisibilityUtils.isVisibilityLabelEnabled(conf));
   }
 }

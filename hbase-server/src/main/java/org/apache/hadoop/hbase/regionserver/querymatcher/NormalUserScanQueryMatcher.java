@@ -60,11 +60,13 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
 
   @Override
   public MatchCode match(ExtendedCell cell) throws IOException {
-    return match(cell, null);
+    // set visibilityLabelEnabled to true pessimistically if it cannot be determined
+    return match(cell, null, true);
   }
 
   @Override
-  public MatchCode match(ExtendedCell cell, ExtendedCell prevCell) throws IOException {
+  public MatchCode match(ExtendedCell cell, ExtendedCell prevCell, boolean visibilityLabelEnabled)
+    throws IOException {
     if (filter != null && filter.filterAllRemaining()) {
       return MatchCode.DONE_SCAN;
     }
@@ -81,13 +83,13 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
         this.deletes.add(cell);
       }
       // optimization for delete markers
-      if ((returnCode = checkCanSeekNextCol(cell, prevCell)) != null) {
+      if ((returnCode = checkCanSeekNextCol(cell, prevCell, visibilityLabelEnabled)) != null) {
         return returnCode;
       }
       return MatchCode.SKIP;
     }
     // optimization when prevCell is Delete or DeleteFamilyVersion
-    if ((returnCode = checkDeletedEffectively(cell, prevCell)) != null) {
+    if ((returnCode = checkDeletedEffectively(cell, prevCell, visibilityLabelEnabled)) != null) {
       return returnCode;
     }
     if ((returnCode = checkDeleted(deletes, cell)) != null) {
@@ -96,24 +98,26 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
     return matchColumn(cell, timestamp, typeByte);
   }
 
-  private MatchCode checkCanSeekNextCol(ExtendedCell cell, ExtendedCell prevCell) {
+  private MatchCode checkCanSeekNextCol(ExtendedCell cell, ExtendedCell prevCell,
+    boolean visibilityLabelEnabled) {
     // optimization for DeleteFamily and DeleteColumn(only for empty qualifier)
     if (
-      canOptimizeReadDeleteMarkers() && (PrivateCellUtil.isDeleteFamily(cell)
+      canOptimizeReadDeleteMarkers(visibilityLabelEnabled) && (PrivateCellUtil.isDeleteFamily(cell)
         || PrivateCellUtil.isDeleteColumns(cell) && cell.getQualifierLength() > 0)
     ) {
       return MatchCode.SEEK_NEXT_COL;
     }
     // optimization for duplicate Delete and DeleteFamilyVersion
-    return checkDeletedEffectively(cell, prevCell);
+    return checkDeletedEffectively(cell, prevCell, visibilityLabelEnabled);
   }
 
   // If prevCell is a delete marker and cell is a Put or delete marker,
   // it means the cell is deleted effectively.
   // And we can do SEEK_NEXT_COL.
-  private MatchCode checkDeletedEffectively(ExtendedCell cell, ExtendedCell prevCell) {
+  private MatchCode checkDeletedEffectively(ExtendedCell cell, ExtendedCell prevCell,
+    boolean visibilityLabelEnabled) {
     if (
-      prevCell != null && canOptimizeReadDeleteMarkers()
+      prevCell != null && canOptimizeReadDeleteMarkers(visibilityLabelEnabled)
         && CellUtil.matchingRowColumn(prevCell, cell) && CellUtil.matchingTimestamp(prevCell, cell)
         && (PrivateCellUtil.isDeleteType(prevCell) && cell.getQualifierLength() > 0
           || PrivateCellUtil.isDeleteFamilyVersion(prevCell))
@@ -123,9 +127,9 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
     return null;
   }
 
-  private boolean canOptimizeReadDeleteMarkers() {
+  private boolean canOptimizeReadDeleteMarkers(boolean visibilityLabelEnabled) {
     // for simplicity, optimization works only for these cases
-    return !seePastDeleteMarkers && scanMaxVersions == 1;
+    return !seePastDeleteMarkers && scanMaxVersions == 1 && !visibilityLabelEnabled;
   }
 
   @Override
