@@ -1141,17 +1141,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * A test. Subclass to particularize what happens per row.
    */
   static abstract class TestBase {
-    // Below is make it so when Tests are all running in the one
-    // jvm, that they each have a differently seeded Random.
-    private static final Random randomSeed = new Random(EnvironmentEdgeManager.currentTime());
-
-    private static long nextRandomSeed() {
-      return randomSeed.nextLong();
-    }
-
     private final long everyN;
 
-    protected final Random rand = new Random(nextRandomSeed());
+    protected final Random rand = ThreadLocalRandom.current();
     protected final Configuration conf;
     protected final TestOptions opts;
 
