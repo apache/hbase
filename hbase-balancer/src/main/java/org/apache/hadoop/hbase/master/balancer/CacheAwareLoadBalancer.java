@@ -72,7 +72,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     createCandidateGenerators() {
     Map<Class<? extends CandidateGenerator>, CandidateGenerator> candidateGenerators =
       new HashMap<>(2);
-    candidateGenerators.put(CacheAwareCandidateGenerator.class,
+    candidateGenerators.put(CacheAwareSkewnessCandidateGenerator.class,
       new CacheAwareSkewnessCandidateGenerator());
     candidateGenerators.put(CacheAwareCandidateGenerator.class, new CacheAwareCandidateGenerator());
     return candidateGenerators;

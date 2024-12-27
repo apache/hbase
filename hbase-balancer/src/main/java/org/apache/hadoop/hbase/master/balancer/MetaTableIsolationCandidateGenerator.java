@@ -21,7 +21,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class MetaTableIsolationCandidateGenerator extends TableIsolationCandidateGenerator {
+public final class MetaTableIsolationCandidateGenerator extends TableIsolationCandidateGenerator {
 
   static MetaTableIsolationCandidateGenerator INSTANCE = new MetaTableIsolationCandidateGenerator();
 

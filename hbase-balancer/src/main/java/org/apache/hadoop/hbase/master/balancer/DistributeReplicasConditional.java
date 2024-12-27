@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -85,21 +86,28 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
 
   @Override
   boolean isViolatingServer(RegionPlan regionPlan, Set<RegionInfo> serverRegions) {
-    return checkViolation(getReplicaKey(regionPlan.getRegionInfo()), serverRegions);
+    return checkViolation(regionPlan.getRegionInfo(), getReplicaKey(regionPlan.getRegionInfo()),
+      serverRegions);
   }
 
   @Override
   boolean isViolatingHost(RegionPlan regionPlan, Set<RegionInfo> hostRegions) {
-    return checkViolation(getReplicaKey(regionPlan.getRegionInfo()), hostRegions);
+    return checkViolation(regionPlan.getRegionInfo(), getReplicaKey(regionPlan.getRegionInfo()),
+      hostRegions);
   }
 
   @Override
   boolean isViolatingRack(RegionPlan regionPlan, Set<RegionInfo> rackRegions) {
-    return checkViolation(getReplicaKey(regionPlan.getRegionInfo()), rackRegions);
+    return checkViolation(regionPlan.getRegionInfo(), getReplicaKey(regionPlan.getRegionInfo()),
+      rackRegions);
   }
 
-  private boolean checkViolation(ReplicaKey movingReplicaKey, Set<RegionInfo> destinationRegions) {
+  private boolean checkViolation(RegionInfo movingRegion, ReplicaKey movingReplicaKey,
+    Set<RegionInfo> destinationRegions) {
     for (RegionInfo regionInfo : destinationRegions) {
+      if (regionInfo.equals(movingRegion)) {
+        continue;
+      }
       if (getReplicaKey(regionInfo).equals(movingReplicaKey)) {
         return true;
       }
@@ -109,8 +117,8 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
 
   /**
    * This is necessary because it would be too expensive to use
-   * {@link org.apache.hadoop.hbase.client.RegionReplicaUtil#isReplicasForSameRegion(RegionInfo, RegionInfo)}
-   * for every combo of regions.
+   * {@link RegionReplicaUtil#isReplicasForSameRegion(RegionInfo, RegionInfo)} for every combo of
+   * regions.
    */
   static class ReplicaKey {
     private final Pair<ByteArrayWrapper, ByteArrayWrapper> startAndStopKeys;
@@ -122,8 +130,12 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
 
     @Override
     public boolean equals(Object o) {
-      if (this == o) return true;
-      if (!(o instanceof ReplicaKey)) return false;
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof ReplicaKey)) {
+        return false;
+      }
       ReplicaKey other = (ReplicaKey) o;
       return this.startAndStopKeys.equals(other.startAndStopKeys);
     }
@@ -143,8 +155,12 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
 
     @Override
     public boolean equals(Object o) {
-      if (this == o) return true;
-      if (!(o instanceof ByteArrayWrapper)) return false;
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof ByteArrayWrapper)) {
+        return false;
+      }
       ByteArrayWrapper other = (ByteArrayWrapper) o;
       return Arrays.equals(this.bytes, other.bytes);
     }

@@ -66,7 +66,7 @@ class SystemTableIsolationConditional extends RegionPlanConditional {
 
   private boolean isRegionToIsolate(RegionInfo regionInfo) {
     boolean isRegionToIsolate = false;
-    if (regionInfo.isMetaRegion() && regionInfo.isMetaRegion()) {
+    if (BalancerConditionals.INSTANCE.isMetaTableIsolationEnabled() && regionInfo.isMetaRegion()) {
       isRegionToIsolate = true;
     } else if (regionInfo.getTable().isSystemTable()) {
       isRegionToIsolate = true;

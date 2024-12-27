@@ -73,6 +73,7 @@ public abstract class TableIsolationCandidateGenerator
               if (isWeighing) {
                 return possibleMove;
               }
+              cluster.doAction(possibleMove); // Update cluster state to reflect move
               moves.add(possibleMove);
               break;
             }
@@ -86,7 +87,9 @@ public abstract class TableIsolationCandidateGenerator
     if (moves.isEmpty()) {
       return BalanceAction.NULL_ACTION;
     } else {
-      return new MoveBatchAction(moves);
+      MoveBatchAction batchAction = new MoveBatchAction(moves);
+      undoBatchAction(cluster, batchAction); // Reset cluster state to before batch action
+      return batchAction;
     }
   }
 }

@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -47,7 +48,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
  * make it easy to define that system tables will ideally be isolated on their own RegionServer.
  */
 @InterfaceAudience.Private
-public final class BalancerConditionals {
+final class BalancerConditionals implements Configurable {
 
   private static final Logger LOG = LoggerFactory.getLogger(BalancerConditionals.class);
 
@@ -109,40 +110,6 @@ public final class BalancerConditionals {
       .flatMap(Optional::stream).forEach(RegionPlanConditionalCandidateGenerator::clearWeightCache);
   }
 
-  void loadConf(Configuration conf) {
-    this.conf = conf;
-    ImmutableSet.Builder<Class<? extends RegionPlanConditional>> conditionalClasses =
-      ImmutableSet.builder();
-
-    boolean isolateSystemTables =
-      conf.getBoolean(ISOLATE_SYSTEM_TABLES_KEY, ISOLATE_SYSTEM_TABLES_DEFAULT);
-    if (isolateSystemTables) {
-      conditionalClasses.add(SystemTableIsolationConditional.class);
-    }
-
-    boolean isolateMetaTable = conf.getBoolean(ISOLATE_META_TABLE_KEY, ISOLATE_META_TABLE_DEFAULT);
-    if (isolateMetaTable) {
-      conditionalClasses.add(MetaTableIsolationConditional.class);
-    }
-
-    boolean distributeReplicas = conf.getBoolean(DISTRIBUTE_REPLICAS_CONDITIONALS_KEY,
-      DISTRIBUTE_REPLICAS_CONDITIONALS_DEFAULT);
-    if (distributeReplicas) {
-      conditionalClasses.add(DistributeReplicasConditional.class);
-    }
-
-    Class<?>[] classes = conf.getClasses(ADDITIONAL_CONDITIONALS_KEY);
-    for (Class<?> clazz : classes) {
-      if (!RegionPlanConditional.class.isAssignableFrom(clazz)) {
-        LOG.warn("Class {} is not a RegionPlanConditional", clazz.getName());
-        continue;
-      }
-      conditionalClasses.add(clazz.asSubclass(RegionPlanConditional.class));
-    }
-    this.conditionalClasses = conditionalClasses.build();
-    loadClusterState(null);
-  }
-
   void loadClusterState(BalancerClusterState cluster) {
     conditionals = conditionalClasses.stream().map(clazz -> createConditional(clazz, conf, cluster))
       .filter(Objects::nonNull).collect(Collectors.toSet());
@@ -185,7 +152,7 @@ public final class BalancerConditionals {
     return false;
   }
 
-  boolean isViolating(RegionPlan regionPlan) {
+  private boolean isViolating(RegionPlan regionPlan) {
     for (RegionPlanConditional conditional : conditionals) {
       if (conditional.isViolating(regionPlan)) {
         return true;
@@ -215,5 +182,45 @@ public final class BalancerConditionals {
 
   private boolean isConditionalBalancingEnabled() {
     return !conditionalClasses.isEmpty();
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+    ImmutableSet.Builder<Class<? extends RegionPlanConditional>> conditionalClasses =
+      ImmutableSet.builder();
+
+    boolean isolateSystemTables =
+      conf.getBoolean(ISOLATE_SYSTEM_TABLES_KEY, ISOLATE_SYSTEM_TABLES_DEFAULT);
+    if (isolateSystemTables) {
+      conditionalClasses.add(SystemTableIsolationConditional.class);
+    }
+
+    boolean isolateMetaTable = conf.getBoolean(ISOLATE_META_TABLE_KEY, ISOLATE_META_TABLE_DEFAULT);
+    if (isolateMetaTable) {
+      conditionalClasses.add(MetaTableIsolationConditional.class);
+    }
+
+    boolean distributeReplicas = conf.getBoolean(DISTRIBUTE_REPLICAS_CONDITIONALS_KEY,
+      DISTRIBUTE_REPLICAS_CONDITIONALS_DEFAULT);
+    if (distributeReplicas) {
+      conditionalClasses.add(DistributeReplicasConditional.class);
+    }
+
+    Class<?>[] classes = conf.getClasses(ADDITIONAL_CONDITIONALS_KEY);
+    for (Class<?> clazz : classes) {
+      if (!RegionPlanConditional.class.isAssignableFrom(clazz)) {
+        LOG.warn("Class {} is not a RegionPlanConditional", clazz.getName());
+        continue;
+      }
+      conditionalClasses.add(clazz.asSubclass(RegionPlanConditional.class));
+    }
+    this.conditionalClasses = conditionalClasses.build();
+    loadClusterState(null);
+  }
+
+  @Override
+  public Configuration getConf() {
+    return conf;
   }
 }

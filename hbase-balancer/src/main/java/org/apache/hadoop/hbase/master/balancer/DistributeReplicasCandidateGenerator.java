@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * CandidateGenerator to distribute colocated replicas across different servers.
  */
 @InterfaceAudience.Private
-class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidateGenerator {
+final class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidateGenerator {
 
   static DistributeReplicasCandidateGenerator INSTANCE = new DistributeReplicasCandidateGenerator();
 
@@ -94,6 +94,7 @@ class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidat
               if (isForced) {
                 return possibleAction;
               } else if (willBeAccepted(cluster, possibleAction)) {
+                cluster.doAction(possibleAction); // Update cluster state to reflect move
                 moveRegionActions.add(possibleAction);
                 break;
               }
@@ -112,7 +113,9 @@ class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidat
     }
 
     if (!moveRegionActions.isEmpty()) {
-      return new MoveBatchAction(moveRegionActions);
+      MoveBatchAction batchAction = new MoveBatchAction(moveRegionActions);
+      undoBatchAction(cluster, batchAction); // Reset cluster state to before batch
+      return batchAction;
     }
     // If no colocated replicas are found, return NULL_ACTION
     if (foundColocatedReplicas) {

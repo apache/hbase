@@ -43,6 +43,9 @@ public final class CandidateGeneratorTestUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(CandidateGeneratorTestUtil.class);
 
+  private CandidateGeneratorTestUtil() {
+  }
+
   static void runBalancerToExhaustion(Configuration conf,
     Map<ServerName, List<RegionInfo>> serverToRegions,
     Set<Function<BalancerClusterState, Boolean>> expectations) {
@@ -144,9 +147,8 @@ public final class CandidateGeneratorTestUtil {
   }
 
   /**
-   * Partitions the given serverToRegions map by table, returning a structure of Map<TableName,
-   * Map<ServerName, List<RegionInfo>>>. The tables are derived from the RegionInfo objects found in
-   * serverToRegions.
+   * Partitions the given serverToRegions map by table The tables are derived from the RegionInfo
+   * objects found in serverToRegions.
    * @param serverToRegions The map of servers to their assigned regions.
    * @return A map of tables to their server-to-region assignments.
    */
@@ -191,7 +193,8 @@ public final class CandidateGeneratorTestUtil {
 
   static StochasticLoadBalancer buildStochasticLoadBalancer(BalancerClusterState cluster,
     Configuration conf) {
-    StochasticLoadBalancer stochasticLoadBalancer = new StochasticLoadBalancer();
+    StochasticLoadBalancer stochasticLoadBalancer =
+      new StochasticLoadBalancer(new DummyMetricsStochasticBalancer());
     stochasticLoadBalancer.setClusterInfoProvider(new DummyClusterInfoProvider(conf));
     stochasticLoadBalancer.loadConf(conf);
     stochasticLoadBalancer.initCosts(cluster);

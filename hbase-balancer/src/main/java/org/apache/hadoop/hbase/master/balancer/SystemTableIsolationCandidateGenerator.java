@@ -21,7 +21,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class SystemTableIsolationCandidateGenerator extends TableIsolationCandidateGenerator {
+public final class SystemTableIsolationCandidateGenerator extends TableIsolationCandidateGenerator {
 
   static SystemTableIsolationCandidateGenerator INSTANCE =
     new SystemTableIsolationCandidateGenerator();

@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.List;
-import org.apache.curator.shaded.com.google.common.collect.HashMultimap;
-import org.apache.curator.shaded.com.google.common.collect.Multimaps;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimaps;
 
 @InterfaceAudience.Private
 public class MoveBatchAction extends BalanceAction {

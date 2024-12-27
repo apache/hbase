@@ -47,7 +47,7 @@ public class TestBalancerConditionals extends BalancerTestBase {
   @Test
   public void testDefaultConfiguration() {
     Configuration conf = new Configuration();
-    balancerConditionals.loadConf(conf);
+    balancerConditionals.setConf(conf);
     balancerConditionals.loadClusterState(mockCluster);
 
     assertEquals("No conditionals should be loaded by default", 0,
@@ -59,7 +59,7 @@ public class TestBalancerConditionals extends BalancerTestBase {
     Configuration conf = new Configuration();
     conf.setBoolean(BalancerConditionals.ISOLATE_SYSTEM_TABLES_KEY, true);
 
-    balancerConditionals.loadConf(conf);
+    balancerConditionals.setConf(conf);
     balancerConditionals.loadClusterState(mockCluster);
 
     assertTrue("SystemTableIsolationConditional should be active",
@@ -71,7 +71,7 @@ public class TestBalancerConditionals extends BalancerTestBase {
     Configuration conf = new Configuration();
     conf.setBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, true);
 
-    balancerConditionals.loadConf(conf);
+    balancerConditionals.setConf(conf);
     balancerConditionals.loadClusterState(mockCluster);
 
     assertTrue("MetaTableIsolationConditional should be active",
@@ -84,7 +84,7 @@ public class TestBalancerConditionals extends BalancerTestBase {
     conf.set(BalancerConditionals.ADDITIONAL_CONDITIONALS_KEY,
       MetaTableIsolationConditional.class.getName());
 
-    balancerConditionals.loadConf(conf);
+    balancerConditionals.setConf(conf);
     balancerConditionals.loadClusterState(mockCluster);
 
     assertTrue("Custom conditionals should be loaded",
@@ -96,7 +96,7 @@ public class TestBalancerConditionals extends BalancerTestBase {
     Configuration conf = new Configuration();
     conf.set(BalancerConditionals.ADDITIONAL_CONDITIONALS_KEY, "java.lang.String");
 
-    balancerConditionals.loadConf(conf);
+    balancerConditionals.setConf(conf);
     balancerConditionals.loadClusterState(mockCluster);
 
     assertEquals("Invalid classes should not be loaded as conditionals", 0,
@@ -109,7 +109,7 @@ public class TestBalancerConditionals extends BalancerTestBase {
     conf.setBoolean(BalancerConditionals.ISOLATE_SYSTEM_TABLES_KEY, true);
     conf.setBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, true);
 
-    balancerConditionals.loadConf(conf);
+    balancerConditionals.setConf(conf);
     balancerConditionals.loadClusterState(mockCluster);
 
     assertTrue("Sloppy server evaluation should be skipped with relevant conditionals",

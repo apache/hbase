@@ -778,11 +778,12 @@ class BalancerClusterState {
         List<RegionPlan> mbRegionPlans = new ArrayList<>();
         for (int serverIndex : mba.getServerToRegionsToRemove().keySet()) {
           Set<Integer> regionsToRemove = mba.getServerToRegionsToRemove().get(serverIndex);
-          removeRegions(regionsPerServer[serverIndex], regionsToRemove);
+          regionsPerServer[serverIndex] =
+            removeRegions(regionsPerServer[serverIndex], regionsToRemove);
         }
         for (int serverIndex : mba.getServerToRegionsToAdd().keySet()) {
           Set<Integer> regionsToAdd = mba.getServerToRegionsToRemove().get(serverIndex);
-          addRegions(regionsPerServer[serverIndex], regionsToAdd);
+          regionsPerServer[serverIndex] = addRegions(regionsPerServer[serverIndex], regionsToAdd);
         }
         for (MoveRegionAction moveRegionAction : mba.getMoveActions()) {
           mbRegionPlans.add(regionMoved(moveRegionAction.getRegion(),
@@ -978,8 +979,8 @@ class BalancerClusterState {
 
     // If the newIndex is smaller than newSize, some regions were missing from the input array
     if (newIndex != newSize) {
-      throw new IllegalStateException(
-        "Region indices mismatch: some regions in the removal set were not found in the regions array");
+      throw new IllegalStateException("Region indices mismatch: some regions in the removal "
+        + "set were not found in the regions array");
     }
 
     return newRegions;

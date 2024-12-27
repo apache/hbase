@@ -160,15 +160,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   protected Map<Class<? extends CandidateGenerator>, CandidateGenerator> candidateGenerators;
   private Map<Class<? extends CandidateGenerator>, Double> weightsOfGenerators;
 
-  public enum GeneratorType {
-    RANDOM,
-    LOAD,
-    LOCALITY,
-    RACK,
-    SYSTEM_TABLE_ISOLATION,
-    META_TABLE_ISOLATION,
-  }
-
   private final BalancerConditionals balancerConditionals = BalancerConditionals.INSTANCE;
 
   /**
@@ -270,7 +261,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     rackLocalityCost = new RackLocalityCostFunction(conf);
 
     // Order is important here. We need to construct conditionals to load candidate generators
-    balancerConditionals.loadConf(conf);
+    balancerConditionals.setConf(conf);
     this.candidateGenerators = createCandidateGenerators();
 
     regionReplicaHostCostFunction = new RegionReplicaHostCostFunction(conf);
@@ -466,20 +457,25 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     double rand = ThreadLocalRandom.current().nextDouble();
-    Class<? extends CandidateGenerator> greatestWeightClazz = null;
+    CandidateGenerator greatestWeightGenerator = null;
     double greatestWeight = 0;
-    for (Class<? extends CandidateGenerator> clazz : candidateGenerators.keySet()) {
+    for (Map.Entry<Class<? extends CandidateGenerator>,
+      CandidateGenerator> entry : candidateGenerators.entrySet()) {
+      Class<? extends CandidateGenerator> clazz = entry.getKey();
       double generatorWeight = weightsOfGenerators.get(clazz);
       if (generatorWeight > greatestWeight) {
         greatestWeight = generatorWeight;
-        greatestWeightClazz = clazz;
+        greatestWeightGenerator = entry.getValue();
       }
       if (rand <= generatorWeight) {
-        return candidateGenerators.get(clazz);
+        return entry.getValue();
       }
     }
 
-    return candidateGenerators.getOrDefault(greatestWeightClazz, new RandomCandidateGenerator());
+    if (greatestWeightGenerator != null) {
+      return greatestWeightGenerator;
+    }
+    return candidateGenerators.values().stream().findAny().orElseThrow();
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
@@ -497,6 +493,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * approach the optimal state given enough steps.
    */
   @Override
+  @SuppressWarnings("checkstyle:MethodLength")
   protected List<RegionPlan> balanceTable(TableName tableName,
     Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     // On clusters with lots of HFileLinks or lots of reference files,
@@ -636,7 +633,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     StringBuilder logMessage = new StringBuilder("CandidateGenerator activity summary:\n");
     generatorToStepCount.forEach((generator, count) -> {
       long approvals = generatorToApprovedActionCount.getOrDefault(generator, 0L);
-      logMessage.append(String.format(" - %s: %d steps, %d approvals\n", generator.getSimpleName(),
+      logMessage.append(String.format(" - %s: %d steps, %d approvals%n", generator.getSimpleName(),
         count, approvals));
     });
     // Log the message

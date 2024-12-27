@@ -18,9 +18,13 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.time.Duration;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public abstract class RegionPlanConditionalCandidateGenerator extends CandidateGenerator {
 
   private static final Logger LOG =
@@ -44,6 +48,13 @@ public abstract class RegionPlanConditionalCandidateGenerator extends CandidateG
 
   boolean willBeAccepted(BalancerClusterState cluster, BalanceAction action) {
     return !BalancerConditionals.INSTANCE.isViolating(cluster, action);
+  }
+
+  void undoBatchAction(BalancerClusterState cluster, MoveBatchAction batchAction) {
+    for (int i = batchAction.getMoveActions().size() - 1; i >= 0; i--) {
+      MoveRegionAction action = batchAction.getMoveActions().get(i);
+      cluster.doAction(action.undoAction());
+    }
   }
 
   void clearWeightCache() {

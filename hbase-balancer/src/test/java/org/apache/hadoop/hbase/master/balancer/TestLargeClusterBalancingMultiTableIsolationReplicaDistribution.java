@@ -20,7 +20,11 @@ package org.apache.hadoop.hbase.master.balancer;
 import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.isTableIsolated;
 import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.runBalancerToExhaustion;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
@@ -98,7 +102,6 @@ public class TestLargeClusterBalancingMultiTableIsolationReplicaDistribution {
 
   @Test
   public void testMultiTableIsolationReplicaDistribution() {
-
     Configuration conf = new Configuration(false);
     conf.setBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, true);
     conf.setBoolean(BalancerConditionals.ISOLATE_SYSTEM_TABLES_KEY, true);

@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public abstract class RegionPlanConditional { // todo rename to BalancerConditional
+public abstract class RegionPlanConditional {
   private static final Logger LOG = LoggerFactory.getLogger(RegionPlanConditional.class);
   private BalancerClusterState cluster;
 
