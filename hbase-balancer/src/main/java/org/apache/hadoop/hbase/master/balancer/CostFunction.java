@@ -74,11 +74,6 @@ abstract class CostFunction {
         regionMoved(a.getFromRegion(), a.getFromServer(), a.getToServer());
         regionMoved(a.getToRegion(), a.getToServer(), a.getFromServer());
         break;
-      case ISOLATE_TABLE:
-        IsolateTablesAction ita = (IsolateTablesAction) action;
-        ita.getMoveActions()
-          .forEach(m -> regionMoved(m.getRegion(), m.getFromServer(), m.getToServer()));
-        break;
       case MOVE_BATCH:
         MoveBatchAction mba = (MoveBatchAction) action;
         for (MoveRegionAction moveRegionAction : mba.getMoveActions()) {

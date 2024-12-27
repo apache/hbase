@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -46,24 +47,46 @@ public abstract class TableIsolationCandidateGenerator
       return BalanceAction.NULL_ACTION;
     }
 
+    List<MoveRegionAction> moves = new ArrayList<>();
     for (int serverIdx = 0; serverIdx < cluster.numServers; serverIdx++) {
-      Set<TableName> tablesToIsolate = new HashSet<>();
       boolean hasRegionsToIsolate = false;
-      boolean hasRegionsToMove = false;
+      Set<Integer> regionsToMove = new HashSet<>();
+
+      // Check all regions on the server
       for (int regionIdx : cluster.regionsPerServer[serverIdx]) {
         RegionInfo regionInfo = cluster.regions[regionIdx];
         if (shouldBeIsolated(regionInfo)) {
           hasRegionsToIsolate = true;
-          tablesToIsolate.add(regionInfo.getTable());
         } else {
-          hasRegionsToMove = true;
+          regionsToMove.add(regionIdx);
         }
       }
-      if (hasRegionsToMove && hasRegionsToIsolate) {
-        return new IsolateTablesAction(cluster, serverIdx, tablesToIsolate);
-      }
-    } // todo rmattingly can we use move batch to make this smarter?
 
-    return BalanceAction.NULL_ACTION;
+      // Generate non-system regions to move, if applicable
+      if (hasRegionsToIsolate && !regionsToMove.isEmpty()) {
+        for (int regionToMove : regionsToMove) {
+          for (int i = 0; i < cluster.numServers; i++) {
+            int targetServer = pickOtherRandomServer(cluster, serverIdx);
+            MoveRegionAction possibleMove =
+              new MoveRegionAction(regionToMove, serverIdx, targetServer);
+            if (!BalancerConditionals.INSTANCE.isViolating(cluster, possibleMove)) {
+              if (isWeighing) {
+                return possibleMove;
+              }
+              moves.add(possibleMove);
+              break;
+            }
+          }
+        }
+      }
+
+      // todo should there be logic to consolidate isolated regions on as few servers as
+      // conditionals allow? This gets complicated with replicas, etc
+    }
+    if (moves.isEmpty()) {
+      return BalanceAction.NULL_ACTION;
+    } else {
+      return new MoveBatchAction(moves);
+    }
   }
 }

@@ -90,7 +90,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer
 
   /** Returns any candidate generator in random */
   @Override
-  protected CandidateGenerator getRandomGenerator() {
+  protected CandidateGenerator getRandomGenerator(BalancerClusterState cluster) {
     return candidateGenerators.get(ThreadLocalRandom.current().nextInt(candidateGenerators.size()));
   }
 

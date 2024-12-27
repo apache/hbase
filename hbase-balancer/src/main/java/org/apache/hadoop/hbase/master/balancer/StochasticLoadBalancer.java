@@ -26,6 +26,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
@@ -433,7 +434,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
       allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   Pair<CandidateGenerator, BalanceAction> nextAction(BalancerClusterState cluster) {
-    CandidateGenerator generator = getRandomGenerator();
+    CandidateGenerator generator = getRandomGenerator(cluster);
     return Pair.newPair(generator, generator.generate(cluster));
   }
 
@@ -442,7 +443,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * selecting a candidate generator is propotional to the share of cost of all cost functions among
    * all cost functions that benefit from it.
    */
-  protected CandidateGenerator getRandomGenerator() {
+  protected CandidateGenerator getRandomGenerator(BalancerClusterState cluster) {
     double sum = 0;
     for (Class<? extends CandidateGenerator> clazz : candidateGenerators.keySet()) {
       sum += weightsOfGenerators.getOrDefault(clazz, 0.0);
@@ -454,6 +455,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     for (Class<? extends CandidateGenerator> clazz : candidateGenerators.keySet()) {
       weightsOfGenerators.put(clazz,
         Math.min(CandidateGenerator.MAX_WEIGHT, weightsOfGenerators.get(clazz) / sum));
+    }
+
+    for (RegionPlanConditional conditional : balancerConditionals.getConditionals()) {
+      Optional<RegionPlanConditionalCandidateGenerator> generator =
+        conditional.getCandidateGenerator();
+      if (generator.isPresent() && generator.get().getWeight(cluster) > 0) {
+        return generator.get();
+      }
     }
 
     double rand = ThreadLocalRandom.current().nextDouble();
@@ -470,7 +479,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
     }
 
-    return candidateGenerators.get(greatestWeightClazz);
+    return candidateGenerators.getOrDefault(greatestWeightClazz, new RandomCandidateGenerator());
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
@@ -509,6 +518,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     initCosts(cluster);
     balancerConditionals.loadClusterState(cluster);
+    balancerConditionals.clearConditionalWeightCaches();
 
     sumMultiplier = 0;
     for (CostFunction c : costFunctions) {
@@ -559,8 +569,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     long step;
 
     boolean improvedConditionals = false;
-    Map<CandidateGenerator, Long> generatorToStepCount = new HashMap<>();
-    Map<CandidateGenerator, Long> generatorToApprovedActionCount = new HashMap<>();
+    Map<Class<? extends CandidateGenerator>, Long> generatorToStepCount = new HashMap<>();
+    Map<Class<? extends CandidateGenerator>, Long> generatorToApprovedActionCount = new HashMap<>();
     for (step = 0; step < computedMaxSteps; step++) {
       Pair<CandidateGenerator, BalanceAction> nextAction = nextAction(cluster);
       CandidateGenerator generator = nextAction.getFirst();
@@ -569,7 +579,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       if (action.getType() == BalanceAction.Type.NULL) {
         continue;
       }
-      generatorToStepCount.merge(generator, action.getStepCount(), Long::sum);
+      generatorToStepCount.merge(generator.getClass(), action.getStepCount(), Long::sum);
       step += action.getStepCount() - 1;
 
       // Always accept a conditional generator output. Sometimes conditional generators
@@ -577,10 +587,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       // be a deadlocked situation.
       // Otherwise, for normal moves, evaluate the action.
       int conditionalViolationsChange;
+      boolean isViolating = false;
       if (RegionPlanConditionalCandidateGenerator.class.isAssignableFrom(generator.getClass())) {
         conditionalViolationsChange = -1;
       } else {
-        conditionalViolationsChange = balancerConditionals.isViolating(cluster, action);
+        conditionalViolationsChange = balancerConditionals.getViolationCountChange(cluster, action);
+        isViolating = balancerConditionals.isViolating(cluster, action);
       }
 
       // Change state and evaluate costs
@@ -592,13 +604,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         improvedConditionals = true;
       }
       boolean conditionalsSimilarCostsImproved =
-        (newCost < currentCost && conditionalViolationsChange == 0);
+        (newCost < currentCost && conditionalViolationsChange == 0 && !isViolating);
       // Our first priority is to reduce conditional violations
       // Our second priority is to reduce balancer cost
       // change, regardless of cost change
       if (conditionalsImproved || conditionalsSimilarCostsImproved) {
         currentCost = newCost;
-        generatorToApprovedActionCount.merge(generator, action.getStepCount(), Long::sum);
+        generatorToApprovedActionCount.merge(generator.getClass(), action.getStepCount(),
+          Long::sum);
         balancerConditionals.loadClusterState(cluster);
         updateCostsAndWeightsWithAction(cluster, action);
 
@@ -623,8 +636,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     StringBuilder logMessage = new StringBuilder("CandidateGenerator activity summary:\n");
     generatorToStepCount.forEach((generator, count) -> {
       long approvals = generatorToApprovedActionCount.getOrDefault(generator, 0L);
-      logMessage.append(String.format(" - %s: %d steps, %d approvals\n",
-        generator.getClass().getSimpleName(), count, approvals));
+      logMessage.append(String.format(" - %s: %d steps, %d approvals\n", generator.getSimpleName(),
+        count, approvals));
     });
     // Log the message
     LOG.info(logMessage.toString());
@@ -831,7 +844,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       c.prepare(cluster);
       c.updateWeight(weightsOfGenerators);
     }
-    updateConditionalGeneratorWeights(cluster);
   }
 
   /**
@@ -849,14 +861,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         c.postAction(action);
         c.updateWeight(weightsOfGenerators);
       }
-    }
-    updateConditionalGeneratorWeights(cluster);
-  }
-
-  private void updateConditionalGeneratorWeights(BalancerClusterState cluster) {
-    for (RegionPlanConditional conditional : balancerConditionals.getConditionals()) {
-      conditional.getCandidateGenerator().ifPresent(generator -> weightsOfGenerators
-        .merge(generator.getClass(), generator.getWeight(cluster), Double::sum));
     }
   }
 

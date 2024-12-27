@@ -22,16 +22,25 @@ import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil
 
 import java.util.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Category(MediumTests.class)
 public class TestLargeClusterBalancingMultiTableIsolationReplicaDistribution {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestLargeClusterBalancingSystemTableIsolation.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestLargeClusterBalancingMultiTableIsolationReplicaDistribution.class);
@@ -89,6 +98,7 @@ public class TestLargeClusterBalancingMultiTableIsolationReplicaDistribution {
 
   @Test
   public void testMultiTableIsolationReplicaDistribution() {
+
     Configuration conf = new Configuration(false);
     conf.setBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, true);
     conf.setBoolean(BalancerConditionals.ISOLATE_SYSTEM_TABLES_KEY, true);

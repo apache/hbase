@@ -709,6 +709,40 @@ class BalancerClusterState {
     RACK
   }
 
+  public List<RegionPlan> convertActionToPlans(BalanceAction action) {
+    switch (action.getType()) {
+      case NULL:
+        break;
+      case ASSIGN_REGION:
+        // FindBugs: Having the assert quietens FB BC_UNCONFIRMED_CAST warnings
+        assert action instanceof AssignRegionAction : action.getClass();
+        AssignRegionAction ar = (AssignRegionAction) action;
+        return ImmutableList.of(regionMoved(ar.getRegion(), -1, ar.getServer()));
+      case MOVE_REGION:
+        assert action instanceof MoveRegionAction : action.getClass();
+        MoveRegionAction mra = (MoveRegionAction) action;
+        return ImmutableList
+          .of(regionMoved(mra.getRegion(), mra.getFromServer(), mra.getToServer()));
+      case SWAP_REGIONS:
+        assert action instanceof SwapRegionsAction : action.getClass();
+        SwapRegionsAction a = (SwapRegionsAction) action;
+        return ImmutableList.of(regionMoved(a.getFromRegion(), a.getFromServer(), a.getToServer()),
+          regionMoved(a.getToRegion(), a.getToServer(), a.getFromServer()));
+      case MOVE_BATCH:
+        assert action instanceof MoveBatchAction : action.getClass();
+        MoveBatchAction mba = (MoveBatchAction) action;
+        List<RegionPlan> mbRegionPlans = new ArrayList<>();
+        for (MoveRegionAction moveRegionAction : mba.getMoveActions()) {
+          mbRegionPlans.add(regionMoved(moveRegionAction.getRegion(),
+            moveRegionAction.getFromServer(), moveRegionAction.getToServer()));
+        }
+        return mbRegionPlans;
+      default:
+        throw new RuntimeException("Unknown action:" + action.getType());
+    }
+    return Collections.emptyList();
+  }
+
   public List<RegionPlan> doAction(BalanceAction action) {
     switch (action.getType()) {
       case NULL:
@@ -723,16 +757,12 @@ class BalancerClusterState {
       case MOVE_REGION:
         assert action instanceof MoveRegionAction : action.getClass();
         MoveRegionAction mra = (MoveRegionAction) action;
-        try {
-          regionsPerServer[mra.getFromServer()] =
-            removeRegion(regionsPerServer[mra.getFromServer()], mra.getRegion());
-          regionsPerServer[mra.getToServer()] =
-            addRegion(regionsPerServer[mra.getToServer()], mra.getRegion());
-          return ImmutableList
-            .of(regionMoved(mra.getRegion(), mra.getFromServer(), mra.getToServer()));
-        } catch (Exception e) {
-          throw e;
-        }
+        regionsPerServer[mra.getFromServer()] =
+          removeRegion(regionsPerServer[mra.getFromServer()], mra.getRegion());
+        regionsPerServer[mra.getToServer()] =
+          addRegion(regionsPerServer[mra.getToServer()], mra.getRegion());
+        return ImmutableList
+          .of(regionMoved(mra.getRegion(), mra.getFromServer(), mra.getToServer()));
       case SWAP_REGIONS:
         assert action instanceof SwapRegionsAction : action.getClass();
         SwapRegionsAction a = (SwapRegionsAction) action;
@@ -742,19 +772,6 @@ class BalancerClusterState {
           replaceRegion(regionsPerServer[a.getToServer()], a.getToRegion(), a.getFromRegion());
         return ImmutableList.of(regionMoved(a.getFromRegion(), a.getFromServer(), a.getToServer()),
           regionMoved(a.getToRegion(), a.getToServer(), a.getFromServer()));
-      case ISOLATE_TABLE:
-        assert action instanceof IsolateTablesAction : action.getClass();
-        IsolateTablesAction ia = (IsolateTablesAction) action;
-        List<RegionPlan> iaRegionPlans = new ArrayList<>();
-        for (MoveRegionAction moveRegionAction : ia.getMoveActions()) {
-          regionsPerServer[moveRegionAction.getFromServer()] = removeRegion(
-            regionsPerServer[moveRegionAction.getFromServer()], moveRegionAction.getRegion());
-          regionsPerServer[moveRegionAction.getToServer()] = addRegion(
-            regionsPerServer[moveRegionAction.getToServer()], moveRegionAction.getRegion());
-          iaRegionPlans.add(regionMoved(moveRegionAction.getRegion(),
-            moveRegionAction.getFromServer(), moveRegionAction.getToServer()));
-        }
-        return iaRegionPlans;
       case MOVE_BATCH:
         assert action instanceof MoveBatchAction : action.getClass();
         MoveBatchAction mba = (MoveBatchAction) action;

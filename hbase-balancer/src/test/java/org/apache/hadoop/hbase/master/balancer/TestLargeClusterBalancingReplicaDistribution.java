@@ -21,17 +21,26 @@ import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil
 
 import java.util.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Category(MediumTests.class)
 public class TestLargeClusterBalancingReplicaDistribution {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestLargeClusterBalancingSystemTableIsolation.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestLargeClusterBalancingReplicaDistribution.class);

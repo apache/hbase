@@ -48,7 +48,7 @@ public final class CandidateGeneratorTestUtil {
     Set<Function<BalancerClusterState, Boolean>> expectations) {
     // Do the full plan. We're testing with a lot of regions
     conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
-    conf.setLong(MAX_RUNNING_TIME_KEY, 30_000);
+    conf.setLong(MAX_RUNNING_TIME_KEY, 15000);
 
     // Less strict than the default.
     // This is acknowledging that we will be skewing loads to some degree

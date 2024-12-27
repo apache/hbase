@@ -17,12 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -34,70 +31,36 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class MetaTableIsolationConditional extends RegionPlanConditional {
 
-  private final BalancerClusterState cluster;
-  private final Set<ServerName> emptyServers = new HashSet<>();
-  private final Set<ServerName> serversHostingMeta = new HashSet<>();
-
   public MetaTableIsolationConditional(Configuration conf, BalancerClusterState cluster) {
     super(conf, cluster);
-    this.cluster = cluster;
-    for (int i = 0; i < cluster.servers.length; i++) {
-      ServerName server = cluster.servers[i];
-      boolean hasMeta = false;
-      boolean hasOtherRegions = false;
-
-      for (int region : cluster.regionsPerServer[i]) {
-        RegionInfo regionInfo = cluster.regions[region];
-        if (regionInfo.getTable().equals(TableName.META_TABLE_NAME)) {
-          hasMeta = true;
-        } else {
-          hasOtherRegions = true;
-        }
-      }
-
-      if (hasMeta) {
-        serversHostingMeta.add(server);
-      } else if (!hasOtherRegions) {
-        emptyServers.add(server);
-      }
-    }
-  }
-
-  public Set<Integer> getServersHostingMeta() {
-    Set<Integer> serverIndices = new HashSet<>();
-    for (ServerName server : serversHostingMeta) {
-      serverIndices.add(cluster.serversToIndex.get(server.getAddress()));
-    }
-    return serverIndices;
   }
 
   @Override
   Optional<RegionPlanConditionalCandidateGenerator> getCandidateGenerator() {
-    return Optional.of(new MetaTableIsolationCandidateGenerator());
+    return Optional.of(MetaTableIsolationCandidateGenerator.INSTANCE);
   }
 
   @Override
-  public boolean isViolating(RegionPlan regionPlan) {
-    return checkViolation(regionPlan, serversHostingMeta, emptyServers);
+  public boolean isViolatingServer(RegionPlan regionPlan, Set<RegionInfo> serverRegions) {
+    RegionInfo regionBeingMoved = regionPlan.getRegionInfo();
+    boolean shouldIsolateMovingRegion = isRegionToIsolate(regionBeingMoved);
+    for (RegionInfo destinationRegion : serverRegions) {
+      if (destinationRegion.getEncodedName().equals(regionBeingMoved.getEncodedName())) {
+        // Skip the region being moved
+        continue;
+      }
+      if (shouldIsolateMovingRegion && !isRegionToIsolate(destinationRegion)) {
+        // Ensure every destination region is also a region to isolate
+        return true;
+      } else if (!shouldIsolateMovingRegion && isRegionToIsolate(destinationRegion)) {
+        // Ensure no destination region is a region to isolate
+        return true;
+      }
+    }
+    return false;
   }
 
-  /**
-   * Checks if the placement of `hbase:meta` adheres to isolation rules.
-   * @param regionPlan         The region plan being evaluated.
-   * @param serversHostingMeta Servers currently hosting `hbase:meta`.
-   * @param emptyServers       Servers with no regions.
-   * @return True if the placement violates isolation, false otherwise.
-   */
-  protected static boolean checkViolation(RegionPlan regionPlan, Set<ServerName> serversHostingMeta,
-    Set<ServerName> emptyServers) {
-    boolean isMeta = regionPlan.getRegionInfo().getTable().equals(TableName.META_TABLE_NAME);
-    ServerName destination = regionPlan.getDestination();
-    if (isMeta) {
-      // meta must go to an empty server or a server already hosting meta
-      return !(serversHostingMeta.contains(destination) || emptyServers.contains(destination));
-    } else {
-      // Non-meta regions must not go to servers hosting meta
-      return serversHostingMeta.contains(destination);
-    }
+  private boolean isRegionToIsolate(RegionInfo regionInfo) {
+    return regionInfo.isMetaRegion();
   }
 }

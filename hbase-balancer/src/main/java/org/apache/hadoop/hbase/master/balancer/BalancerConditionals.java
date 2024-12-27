@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.balancer;
 import java.lang.reflect.Constructor;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -105,24 +104,9 @@ public final class BalancerConditionals {
     return isConditionalBalancingEnabled();
   }
 
-  Set<Integer> getServersWithTablesToIsolate() {
-    Optional<MetaTableIsolationConditional> metaTableIsolationConditional =
-      conditionals.stream().filter(MetaTableIsolationConditional.class::isInstance)
-        .map(MetaTableIsolationConditional.class::cast).findAny();
-    Set<Integer> serversWithTablesToIsolate = new HashSet<>();
-    if (metaTableIsolationConditional.isPresent()) {
-      serversWithTablesToIsolate
-        .addAll(metaTableIsolationConditional.get().getServersHostingMeta());
-    }
-
-    Optional<SystemTableIsolationConditional> systemTableIsolationConditional =
-      conditionals.stream().filter(SystemTableIsolationConditional.class::isInstance)
-        .map(SystemTableIsolationConditional.class::cast).findAny();
-    if (systemTableIsolationConditional.isPresent()) {
-      serversWithTablesToIsolate
-        .addAll(systemTableIsolationConditional.get().getServersHostingSystemTables());
-    }
-    return serversWithTablesToIsolate;
+  void clearConditionalWeightCaches() {
+    conditionals.stream().map(RegionPlanConditional::getCandidateGenerator)
+      .flatMap(Optional::stream).forEach(RegionPlanConditionalCandidateGenerator::clearWeightCache);
   }
 
   void loadConf(Configuration conf) {
@@ -165,65 +149,49 @@ public final class BalancerConditionals {
   }
 
   /**
-   * Check if the proposed action violates conditionals. Must be called before applying the action.
+   * Indicates whether the action is good for our conditional compliance.
    * @param cluster The cluster state
    * @param action  The proposed action
-   * @return -1 if the action is an improvement, 0 if it's neutral, and >=1 if it is in violation
+   * @return -1 if conditionals improve, 0 if neutral, 1 if conditionals degrade
    */
-  int isViolating(BalancerClusterState cluster, BalanceAction action) {
-    if (conditionals.isEmpty()) {
+  int getViolationCountChange(BalancerClusterState cluster, BalanceAction action) {
+    boolean isViolatingPre = isViolating(cluster, action.undoAction());
+    boolean isViolatingPost = isViolating(cluster, action);
+    if (isViolatingPre && isViolatingPost) {
       return 0;
-    }
-
-    // loadClusterState(cluster); todo rmattingly don't think this is necessary
-    List<RegionPlan> regionPlans = doActionAndRefreshConditionals(cluster, action);
-
-    // Now we're in the proposed finished state
-    // We can get the original violation count by running inverse plans
-    List<RegionPlan> inversePlans = getInversePlans(regionPlans);
-    int originalViolationCount = 0;
-    for (RegionPlan inversePlan : inversePlans) {
-      originalViolationCount += getConditionalViolationCount(conditionals, inversePlan);
-    }
-
-    // Now go back to the original state, and measure
-    // the proposed violation count
-    doActionAndRefreshConditionals(cluster, action.undoAction());
-    int proposedViolationCount = 0;
-    for (RegionPlan regionPlan : regionPlans) {
-      proposedViolationCount += getConditionalViolationCount(conditionals, regionPlan);
-    }
-
-    if (proposedViolationCount - originalViolationCount < 0 && proposedViolationCount == 0) {
-      // Only take a random improvement if it eliminates violations, or exists in a neutral state
-      // Otherwise we are probably just fighting our conditional generators
-      return -1;
+    } else if (!isViolatingPre && isViolatingPost) {
+      return 1;
     } else {
-      return proposedViolationCount;
+      return -1;
     }
   }
 
-  private List<RegionPlan> doActionAndRefreshConditionals(BalancerClusterState cluster,
-    BalanceAction action) {
-    List<RegionPlan> regionPlans = cluster.doAction(action);
-    // loadClusterState(cluster); todo rmattingly don't think this is necessary
-    return regionPlans;
-  }
-
-  private static List<RegionPlan> getInversePlans(List<RegionPlan> regionPlans) {
-    return regionPlans.stream().map(regionPlan -> new RegionPlan(regionPlan.getRegionInfo(),
-      regionPlan.getDestination(), regionPlan.getSource())).toList();
-  }
-
-  private static int getConditionalViolationCount(Set<RegionPlanConditional> conditionals,
-    RegionPlan regionPlan) {
-    int regionPlanConditionalViolationCount = 0;
-    for (RegionPlanConditional regionPlanConditional : conditionals) {
-      if (regionPlanConditional.isViolating(regionPlan)) {
-        regionPlanConditionalViolationCount++;
+  /**
+   * Check if the proposed action violates conditionals
+   * @param cluster The cluster state
+   * @param action  The proposed action
+   */
+  boolean isViolating(BalancerClusterState cluster, BalanceAction action) {
+    conditionals.forEach(conditional -> conditional.refreshClusterState(cluster));
+    if (conditionals.isEmpty()) {
+      return false;
+    }
+    List<RegionPlan> regionPlans = cluster.convertActionToPlans(action);
+    for (RegionPlan regionPlan : regionPlans) {
+      if (isViolating(regionPlan)) {
+        return true;
       }
     }
-    return regionPlanConditionalViolationCount;
+    return false;
+  }
+
+  boolean isViolating(RegionPlan regionPlan) {
+    for (RegionPlanConditional conditional : conditionals) {
+      if (conditional.isViolating(regionPlan)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private RegionPlanConditional createConditional(Class<? extends RegionPlanConditional> clazz,

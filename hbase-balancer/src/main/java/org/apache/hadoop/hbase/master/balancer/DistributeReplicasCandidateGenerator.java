@@ -18,22 +18,30 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import static java.util.Collections.shuffle;
+import static org.apache.hadoop.hbase.master.balancer.DistributeReplicasConditional.getReplicaKey;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * CandidateGenerator to distribute colocated replicas across different servers.
  */
+@InterfaceAudience.Private
 class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidateGenerator {
+
+  static DistributeReplicasCandidateGenerator INSTANCE = new DistributeReplicasCandidateGenerator();
 
   private static final Logger LOG =
     LoggerFactory.getLogger(DistributeReplicasCandidateGenerator.class);
-  private static final int BATCH_SIZE = 1000;
+  private static final int BATCH_SIZE = 100_000;
+
+  private DistributeReplicasCandidateGenerator() {
+  }
 
   /**
    * Generates a balancing action to distribute colocated replicas. Moves one replica of a colocated
@@ -50,7 +58,7 @@ class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidat
   BalanceAction generateCandidate(BalancerClusterState cluster, boolean isWeighing,
     boolean isForced) {
     // Shuffle server indices to add some randomness to the moves
-    // todo rmattingly share cache of shuffled servers in BalancerConditionals or something
+    // Should we cache these shuffled servers? Doesn't seem necessary at the moment
     List<Integer> shuffledServerIndices = new ArrayList<>(cluster.numServers);
     for (int i = 0; i < cluster.servers.length; i++) {
       shuffledServerIndices.add(i);
@@ -66,16 +74,18 @@ class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidat
         new HashSet<>(serverRegions.length);
       for (int regionIndex : serverRegions) {
         DistributeReplicasConditional.ReplicaKey replicaKey =
-          new DistributeReplicasConditional.ReplicaKey(cluster.regions[regionIndex]);
+          getReplicaKey(cluster.regions[regionIndex]);
         if (replicaKeys.contains(replicaKey)) {
           foundColocatedReplicas = true;
           if (isWeighing) {
-            // if weighing, fast exit with an actionable move
+            // If weighing, fast exit with an actionable move
             return getAction(sourceIndex, regionIndex, pickOtherRandomServer(cluster, sourceIndex),
               -1);
           } else {
-            // if not weighing, pick a good move
-            for (int destinationIndex : shuffledServerIndices) {
+            // If not weighing, pick a good move
+            for (int i = 0; i < cluster.numServers; i++) {
+              // Randomize destination ordering so we aren't overloading one destination
+              int destinationIndex = pickOtherRandomServer(cluster, sourceIndex);
               if (destinationIndex == sourceIndex) {
                 continue;
               }
@@ -86,30 +96,6 @@ class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidat
               } else if (willBeAccepted(cluster, possibleAction)) {
                 moveRegionActions.add(possibleAction);
                 break;
-              } else if (LOG.isTraceEnabled()) {
-                // Find regions on the destination server that block movement because they share a
-                // replica with the regionIndex
-                Set<Integer> blockingRegionIndices = new HashSet<>();
-                int[] destinationServerRegions = cluster.regionsPerServer[destinationIndex];
-                for (int destinationRegionIndex : destinationServerRegions) {
-                  DistributeReplicasConditional.ReplicaKey destinationReplicaKey =
-                    new DistributeReplicasConditional.ReplicaKey(
-                      cluster.regions[destinationRegionIndex]);
-                  if (destinationReplicaKey.equals(replicaKey)) {
-                    blockingRegionIndices.add(destinationRegionIndex);
-                  }
-                }
-                if (blockingRegionIndices.isEmpty()) {
-                  LOG.trace(
-                    "Can't move region {} from server {} to server {} because OTHER conditionals reject it",
-                    regionIndex, cluster.servers[sourceIndex].getServerName(),
-                    cluster.servers[destinationIndex].getServerName());
-                } else {
-                  LOG.trace(
-                    "Can't move region {} from server {} to server {} because this destination has regions that share this replica: {}",
-                    regionIndex, cluster.servers[sourceIndex].getServerName(),
-                    cluster.servers[destinationIndex].getServerName(), blockingRegionIndices);
-                }
               }
             }
           }

@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -26,6 +28,10 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 
 /**
  * If enabled, this class will help the balancer ensure that replicas aren't placed on the same
@@ -44,120 +50,58 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
     "hbase.replica.distribution.conditional.testModeEnabled";
 
   private static final Logger LOG = LoggerFactory.getLogger(DistributeReplicasConditional.class);
+  private static final LoadingCache<RegionInfo, ReplicaKey> REPLICA_KEY_CACHE =
+    CacheBuilder.newBuilder().maximumSize(100_000).expireAfterAccess(Duration.ofMinutes(5))
+      .build(new CacheLoader<RegionInfo, ReplicaKey>() {
+        @Override
+        public ReplicaKey load(RegionInfo region) {
+          return new ReplicaKey(region);
+        }
+      });
 
-  private final BalancerClusterState cluster;
   private final boolean isTestModeEnabled;
 
   public DistributeReplicasConditional(Configuration conf, BalancerClusterState cluster) {
     super(conf, cluster);
-    this.cluster = cluster;
     this.isTestModeEnabled = conf.getBoolean(TEST_MODE_ENABLED_KEY, false);
+  }
+
+  static ReplicaKey getReplicaKey(RegionInfo regionInfo) {
+    return REPLICA_KEY_CACHE.getUnchecked(regionInfo);
+  }
+
+  @Override
+  public ValidationLevel getValidationLevel() {
+    if (isTestModeEnabled) {
+      return ValidationLevel.SERVER;
+    }
+    return ValidationLevel.RACK;
   }
 
   @Override
   Optional<RegionPlanConditionalCandidateGenerator> getCandidateGenerator() {
-    return Optional.of(new DistributeReplicasCandidateGenerator());
+    return Optional.of(DistributeReplicasCandidateGenerator.INSTANCE);
   }
 
   @Override
-  boolean isViolating(RegionPlan regionPlan) {
-    if (!cluster.hasRegionReplicas) {
-      return false;
-    }
-
-    Integer destinationServerIndex =
-      cluster.serversToIndex.get(regionPlan.getDestination().getAddress());
-    if (destinationServerIndex == null) {
-      LOG.warn("Could not find server index for {}", regionPlan.getDestination().getHostname());
-      return false;
-    }
-
-    int regionIndex = cluster.regionsToIndex.get(regionPlan.getRegionInfo());
-    if (regionIndex == -1) {
-      LOG.warn("Region {} not found in the cluster state", regionPlan.getRegionInfo());
-      return false;
-    }
-
-    if (
-      checkViolation(cluster.regions, regionPlan.getRegionInfo(), destinationServerIndex,
-        cluster.serversPerHost, cluster.serverIndexToHostIndex, cluster.regionsPerServer, "host",
-        isTestModeEnabled)
-    ) {
-      return true;
-    }
-
-    if (
-      checkViolation(cluster.regions, regionPlan.getRegionInfo(), destinationServerIndex,
-        cluster.serversPerRack, cluster.serverIndexToRackIndex, cluster.regionsPerServer, "rack",
-        isTestModeEnabled)
-    ) {
-      return true;
-    }
-
-    return false;
+  boolean isViolatingServer(RegionPlan regionPlan, Set<RegionInfo> serverRegions) {
+    return checkViolation(getReplicaKey(regionPlan.getRegionInfo()), serverRegions);
   }
 
-  /**
-   * Checks if placing a region replica on a location (host/rack) violates distribution rules.
-   * @param destinationServerIndex Index of the destination server.
-   * @param serversPerLocation     Array mapping locations (hosts/racks) to servers.
-   * @param serverToLocationIndex  Array mapping servers to their location index.
-   * @param regionsPerServer       Array mapping servers to their assigned regions.
-   * @param locationType           Type of location being checked ("Host" or "Rack").
-   * @return True if a violation is found, false otherwise.
-   */
-  static boolean checkViolation(RegionInfo[] regions, RegionInfo regionToBeMoved,
-    int destinationServerIndex, int[][] serversPerLocation, int[] serverToLocationIndex,
-    int[][] regionsPerServer, String locationType, boolean isTestModeEnabled) {
-    if (isTestModeEnabled && serversPerLocation.length == 1) {
-      // Take the flat serversPerLocation, like {0: [0, 1, 2, 3, 4]}
-      // and pretend it is multi-location, like {0: [1], 1: [2] ...}
-      int numServers = serversPerLocation[0].length;
-      // Create a new serversPerLocation array where each server gets its own "location"
-      int[][] simulatedServersPerLocation = new int[numServers][];
-      for (int i = 0; i < numServers; i++) {
-        simulatedServersPerLocation[i] = new int[] { serversPerLocation[0][i] };
-      }
-      // Adjust serverToLocationIndex to map each server to its simulated location
-      int[] simulatedServerToLocationIndex = new int[numServers];
-      for (int i = 0; i < numServers; i++) {
-        simulatedServerToLocationIndex[serversPerLocation[0][i]] = i;
-      }
-      LOG.trace("Test mode enabled: Simulated {} locations for servers.", numServers);
-      // Use the simulated arrays for test mode
-      serversPerLocation = simulatedServersPerLocation;
-      serverToLocationIndex = simulatedServerToLocationIndex;
-    }
+  @Override
+  boolean isViolatingHost(RegionPlan regionPlan, Set<RegionInfo> hostRegions) {
+    return checkViolation(getReplicaKey(regionPlan.getRegionInfo()), hostRegions);
+  }
 
-    if (serversPerLocation == null) {
-      LOG.trace("{} violation check skipped: serversPerLocation is null", locationType);
-      return false;
-    }
+  @Override
+  boolean isViolatingRack(RegionPlan regionPlan, Set<RegionInfo> rackRegions) {
+    return checkViolation(getReplicaKey(regionPlan.getRegionInfo()), rackRegions);
+  }
 
-    if (serversPerLocation.length == 1) {
-      LOG.warn("{} violation inevitable: serversPerLocation has only 1 entry. "
-        + "You probably should not be using read replicas.", locationType);
-      return true;
-    }
-
-    int destinationLocationIndex = serverToLocationIndex[destinationServerIndex];
-    LOG.trace("Checking {} violations for destination server index {} at location index {}",
-      locationType, destinationServerIndex, destinationLocationIndex);
-
-    // For every RegionServer on host/rack
-    ReplicaKey replicaKeyToBeMoved = new ReplicaKey(regionToBeMoved);
-    for (int serverIndex : serversPerLocation[destinationLocationIndex]) {
-      // For every Region on RegionServer
-      for (int hostedRegion : regionsPerServer[serverIndex]) {
-        if (regions[hostedRegion].equals(regionToBeMoved)) {
-          continue;
-        }
-        RegionInfo targetRegion = regions[hostedRegion];
-        if (new ReplicaKey(targetRegion).equals(replicaKeyToBeMoved)) {
-          LOG.trace("Violation detected: {} {} {} is hosting a replica of {}", locationType,
-            serverIndex, destinationServerIndex, regionToBeMoved);
-          return true;
-        }
+  private boolean checkViolation(ReplicaKey movingReplicaKey, Set<RegionInfo> destinationRegions) {
+    for (RegionInfo regionInfo : destinationRegions) {
+      if (getReplicaKey(regionInfo).equals(movingReplicaKey)) {
+        return true;
       }
     }
     return false;

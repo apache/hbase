@@ -23,9 +23,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class SystemTableIsolationCandidateGenerator extends TableIsolationCandidateGenerator {
 
-  private final boolean isolateMeta;
+  static SystemTableIsolationCandidateGenerator INSTANCE =
+    new SystemTableIsolationCandidateGenerator();
 
-  public SystemTableIsolationCandidateGenerator(boolean isolateMeta) {
+  private boolean isolateMeta = false;
+
+  private SystemTableIsolationCandidateGenerator() {
+  }
+
+  void setIsolateMeta(boolean isolateMeta) {
     this.isolateMeta = isolateMeta;
   }
 

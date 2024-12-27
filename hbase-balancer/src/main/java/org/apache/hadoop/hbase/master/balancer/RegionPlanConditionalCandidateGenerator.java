@@ -26,8 +26,9 @@ public abstract class RegionPlanConditionalCandidateGenerator extends CandidateG
   private static final Logger LOG =
     LoggerFactory.getLogger(RegionPlanConditionalCandidateGenerator.class);
 
-  private static final Duration WEIGHT_CACHE_TTL = Duration.ofSeconds(10);
+  private static final Duration WEIGHT_CACHE_TTL = Duration.ofMinutes(1);
   private long lastWeighedAt = -1;
+  private double lastWeight = 0.0;
 
   abstract BalanceAction generateCandidate(BalancerClusterState cluster, boolean isWeighing);
 
@@ -42,8 +43,11 @@ public abstract class RegionPlanConditionalCandidateGenerator extends CandidateG
   }
 
   boolean willBeAccepted(BalancerClusterState cluster, BalanceAction action) {
-    int conditionalChange = BalancerConditionals.INSTANCE.isViolating(cluster, action);
-    return conditionalChange < 0;
+    return !BalancerConditionals.INSTANCE.isViolating(cluster, action);
+  }
+
+  void clearWeightCache() {
+    lastWeighedAt = -1;
   }
 
   double getWeight(BalancerClusterState cluster) {
@@ -52,7 +56,7 @@ public abstract class RegionPlanConditionalCandidateGenerator extends CandidateG
     // Candidate generation is expensive, so for re-weighing generators we will cache
     // the value for a bit
     if (System.currentTimeMillis() - lastWeighedAt < WEIGHT_CACHE_TTL.toMillis()) {
-      hasCandidate = true;
+      return lastWeight;
     } else {
       hasCandidate = generateCandidate(cluster, true) != BalanceAction.NULL_ACTION;
       lastWeighedAt = System.currentTimeMillis();
@@ -60,9 +64,10 @@ public abstract class RegionPlanConditionalCandidateGenerator extends CandidateG
 
     if (hasCandidate) {
       // If this generator has something to do, then it's important
-      return CandidateGenerator.MAX_WEIGHT;
+      lastWeight = CandidateGenerator.MAX_WEIGHT;
     } else {
-      return 0;
+      lastWeight = 0;
     }
+    return lastWeight;
   }
 }

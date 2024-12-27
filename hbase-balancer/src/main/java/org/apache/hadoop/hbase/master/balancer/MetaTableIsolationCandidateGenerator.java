@@ -23,6 +23,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MetaTableIsolationCandidateGenerator extends TableIsolationCandidateGenerator {
 
+  static MetaTableIsolationCandidateGenerator INSTANCE = new MetaTableIsolationCandidateGenerator();
+
+  private MetaTableIsolationCandidateGenerator() {
+  }
+
   @Override
   boolean shouldBeIsolated(RegionInfo regionInfo) {
     return regionInfo.isMetaRegion();

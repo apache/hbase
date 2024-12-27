@@ -193,7 +193,7 @@ public final class BalancerConditionalsTestUtil {
 
   static void validateAssertionsWithRetries(HBaseTestingUtil testUtil, boolean runBalancerOnFailure,
     Set<AssertionRunnable> assertions) {
-    int maxAttempts = 10;
+    int maxAttempts = 50;
     for (int i = 0; i < maxAttempts; i++) {
       try {
         for (AssertionRunnable assertion : assertions) {

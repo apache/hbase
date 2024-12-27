@@ -17,14 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.util.Sets;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * If enabled, this class will help the balancer ensure that system tables live on their own
@@ -32,106 +30,48 @@ import org.apache.hadoop.util.Sets;
  * with {@link MetaTableIsolationConditional} to add a second RegionServer specifically for meta
  * table hosting. Configure this via {@link BalancerConditionals#ISOLATE_SYSTEM_TABLES_KEY}
  */
+@InterfaceAudience.Private
 class SystemTableIsolationConditional extends RegionPlanConditional {
-
-  private final BalancerClusterState cluster;
-  private final Set<ServerName> serversHostingSystemTables = new HashSet<>();
-  private final Set<ServerName> metaOnlyServers = new HashSet<>();
-  private final Set<ServerName> metaAndSystemServers = new HashSet<>();
-  private final boolean isolateMeta;
 
   public SystemTableIsolationConditional(Configuration conf, BalancerClusterState cluster) {
     super(conf, cluster);
-    this.cluster = cluster;
-    isolateMeta = conf.getBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, false);
-
-    // Track what each server holds
-    Set<ServerName> metaServers = new HashSet<>();
-    Set<ServerName> systemServers = new HashSet<>();
-
-    for (int i = 0; i < cluster.regions.length; i++) {
-      RegionInfo regionInfo = cluster.regions[i];
-      ServerName server = cluster.servers[cluster.regionIndexToServerIndex[i]];
-      if (regionInfo.isMetaRegion()) {
-        if (isolateMeta) {
-          metaOnlyServers.add(server);
-        }
-        metaServers.add(server);
-      } else if (regionInfo.getTable().isSystemTable()) {
-        serversHostingSystemTables.add(server);
-        systemServers.add(server);
-      }
-    }
-
-    // Identify servers that have both meta and system
-    for (ServerName s : metaServers) {
-      if (systemServers.contains(s)) {
-        metaAndSystemServers.add(s);
-      }
-    }
-  }
-
-  public Set<Integer> getServersHostingSystemTables() {
-    Set<Integer> serverIndices = new HashSet<>();
-    for (ServerName server : Sets.union(serversHostingSystemTables, metaAndSystemServers)) {
-      serverIndices.add(cluster.serversToIndex.get(server.getAddress()));
-    }
-    return serverIndices;
+    boolean isolateMeta = conf.getBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, false);
+    SystemTableIsolationCandidateGenerator.INSTANCE.setIsolateMeta(isolateMeta);
   }
 
   @Override
   Optional<RegionPlanConditionalCandidateGenerator> getCandidateGenerator() {
-    return Optional.of(new SystemTableIsolationCandidateGenerator(isolateMeta));
+    return Optional.of(SystemTableIsolationCandidateGenerator.INSTANCE);
   }
 
   @Override
-  public boolean isViolating(RegionPlan regionPlan) {
-    return checkViolation(regionPlan, serversHostingSystemTables, metaOnlyServers,
-      metaAndSystemServers);
+  public boolean isViolatingServer(RegionPlan regionPlan, Set<RegionInfo> serverRegions) {
+    RegionInfo regionBeingMoved = regionPlan.getRegionInfo();
+    boolean shouldIsolateMovingRegion = isRegionToIsolate(regionBeingMoved);
+    for (RegionInfo destinationRegion : serverRegions) {
+      if (destinationRegion.getEncodedName().equals(regionBeingMoved.getEncodedName())) {
+        // Skip the region being moved
+        continue;
+      }
+      if (shouldIsolateMovingRegion && !isRegionToIsolate(destinationRegion)) {
+        // Ensure every destination region is also a region to isolate
+        return true;
+      } else if (!shouldIsolateMovingRegion && isRegionToIsolate(destinationRegion)) {
+        // Ensure no destination region is a region to isolate
+        return true;
+      }
+    }
+    return false;
   }
 
-  protected static boolean checkViolation(RegionPlan regionPlan,
-    Set<ServerName> serversHostingSystemTables, Set<ServerName> metaOnlyServers,
-    Set<ServerName> metaAndSystemServers) {
-
-    // If we're moving from a server that has both meta and system, allow any move
-    // for system tables to escape that server.
-    boolean isSystemTable = regionPlan.getRegionInfo().getTable().isSystemTable();
-    if (isSystemTable && metaAndSystemServers.contains(regionPlan.getSource())) {
-      // Relax all constraints. This move is an improvement because it separates meta and system.
-      return false;
+  private boolean isRegionToIsolate(RegionInfo regionInfo) {
+    boolean isRegionToIsolate = false;
+    if (regionInfo.isMetaRegion() && regionInfo.isMetaRegion()) {
+      isRegionToIsolate = true;
+    } else if (regionInfo.getTable().isSystemTable()) {
+      isRegionToIsolate = true;
     }
-
-    // If meta isolation is enabled and we're dealing with a meta region
-    if (!metaOnlyServers.isEmpty() && regionPlan.getRegionInfo().isMetaRegion()) {
-      return metaOnlyServers.contains(regionPlan.getDestination());
-    }
-
-    if (isSystemTable) {
-      // If metaOnlyServers contain the source, and destination isn't metaOnly, allow the move.
-      if (
-        metaOnlyServers.contains(regionPlan.getSource())
-          && !metaOnlyServers.contains(regionPlan.getDestination())
-      ) {
-        return false;
-      }
-
-      // If there's already a server that exclusively hosts system tables,
-      // disallow placing system tables on a server that doesn't currently host them.
-      if (
-        !serversHostingSystemTables.isEmpty()
-          && !serversHostingSystemTables.contains(regionPlan.getDestination())
-      ) {
-        return true; // violation
-      }
-
-      // Otherwise no violation
-      return false;
-
-    } else {
-      // For non-system tables, ensure the destination server does not host system tables.
-      return serversHostingSystemTables.contains(regionPlan.getDestination());
-    }
+    return isRegionToIsolate;
   }
 
 }
