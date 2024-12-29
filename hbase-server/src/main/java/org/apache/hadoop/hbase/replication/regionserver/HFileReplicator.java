@@ -94,11 +94,12 @@ public class HFileReplicator implements Closeable {
   private int maxCopyThreads;
   private int copiesPerThread;
   private List<String> sourceClusterIds;
+  private ReplicationSinkTranslator translator;
 
   public HFileReplicator(Configuration sourceClusterConf, String sourceBaseNamespaceDirPath,
     String sourceHFileArchiveDirPath, Map<String, List<Pair<byte[], List<String>>>> tableQueueMap,
-    Configuration conf, AsyncClusterConnection connection, List<String> sourceClusterIds)
-    throws IOException {
+    Configuration conf, AsyncClusterConnection connection, List<String> sourceClusterIds,
+    ReplicationSinkTranslator translator) throws IOException {
     this.sourceClusterConf = sourceClusterConf;
     this.sourceBaseNamespaceDirPath = sourceBaseNamespaceDirPath;
     this.sourceHFileArchiveDirPath = sourceHFileArchiveDirPath;
@@ -106,6 +107,7 @@ public class HFileReplicator implements Closeable {
     this.conf = conf;
     this.connection = connection;
     this.sourceClusterIds = sourceClusterIds;
+    this.translator = translator;
 
     userProvider = UserProvider.instantiate(conf);
     fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
@@ -131,29 +133,30 @@ public class HFileReplicator implements Closeable {
 
   public Void replicate() throws IOException {
     // Copy all the hfiles to the local file system
-    Map<String, Path> tableStagingDirsMap = copyHFilesToStagingDir();
+    Map<String, Path> tableToSinkStagingDir = copySourceHFilesToSinkStagingDir();
 
     int maxRetries = conf.getInt(HConstants.BULKLOAD_MAX_RETRIES_NUMBER, 10);
 
-    for (Entry<String, Path> tableStagingDir : tableStagingDirsMap.entrySet()) {
-      String tableNameString = tableStagingDir.getKey();
-      Path stagingDir = tableStagingDir.getValue();
-      TableName tableName = TableName.valueOf(tableNameString);
+    for (Entry<String, Path> tableStagingDir : tableToSinkStagingDir.entrySet()) {
+      String tableNameStr = tableStagingDir.getKey();
+      TableName tableName = TableName.valueOf(tableNameStr);
+      TableName sinkTableName = translator.getSinkTableName(tableName);
+      Path sinkStagingDir = tableStagingDir.getValue();
 
       // Prepare collection of queue of hfiles to be loaded(replicated)
       Deque<LoadQueueItem> queue = new LinkedList<>();
-      BulkLoadHFilesTool.prepareHFileQueue(conf, connection, tableName, stagingDir, queue, false,
-        false);
+      BulkLoadHFilesTool.prepareHFileQueue(conf, connection, sinkTableName, sinkStagingDir, queue,
+        false, false);
 
       if (queue.isEmpty()) {
-        LOG.warn("Did not find any files to replicate in directory {}", stagingDir.toUri());
+        LOG.warn("Did not find any files to replicate in directory {}", sinkStagingDir.toUri());
         return null;
       }
       fsDelegationToken.acquireDelegationToken(sinkFs);
       try {
-        doBulkLoad(conf, tableName, stagingDir, queue, maxRetries);
+        doBulkLoad(conf, sinkTableName, sinkStagingDir, queue, maxRetries);
       } finally {
-        cleanup(stagingDir);
+        cleanup(sinkStagingDir);
       }
     }
     return null;
@@ -194,12 +197,12 @@ public class HFileReplicator implements Closeable {
     // Do not close the file system
   }
 
-  private Map<String, Path> copyHFilesToStagingDir() throws IOException {
+  private Map<String, Path> copySourceHFilesToSinkStagingDir() throws IOException {
     Map<String, Path> mapOfCopiedHFiles = new HashMap<>();
     Pair<byte[], List<String>> familyHFilePathsPair;
     List<String> hfilePaths;
     byte[] family;
-    Path familyStagingDir;
+    Path sinkFamilyStagingDir;
     int familyHFilePathsPairsListSize;
     int totalNoOfHFiles;
     List<Pair<byte[], List<String>>> familyHFilePathsPairsList;
@@ -224,32 +227,33 @@ public class HFileReplicator implements Closeable {
       // For each table name in the map
       for (Entry<String, List<Pair<byte[], List<String>>>> tableEntry : bulkLoadHFileMap
         .entrySet()) {
-        String tableName = tableEntry.getKey();
+        String tableNameStr = tableEntry.getKey();
+        TableName tableName = TableName.valueOf(tableNameStr);
 
         // Create staging directory for each table
-        Path stagingDir = createStagingDir(hbaseStagingDir, user, TableName.valueOf(tableName));
+        Path sinkStagingDir = createSinkStagingDir(hbaseStagingDir, user, tableName);
 
         familyHFilePathsPairsList = tableEntry.getValue();
         familyHFilePathsPairsListSize = familyHFilePathsPairsList.size();
 
-        // For each list of family hfile paths pair in the table
+        // For each (family, hfile paths) pair in the table
         for (int i = 0; i < familyHFilePathsPairsListSize; i++) {
           familyHFilePathsPair = familyHFilePathsPairsList.get(i);
 
           family = familyHFilePathsPair.getFirst();
           hfilePaths = familyHFilePathsPair.getSecond();
 
-          familyStagingDir = new Path(stagingDir, Bytes.toString(family));
+          sinkFamilyStagingDir = getSinkFamilyStagingDir(sinkStagingDir, tableName, family);
           totalNoOfHFiles = hfilePaths.size();
 
-          // For each list of hfile paths for the family
+          // For each hfile path in the family
           List<Future<Void>> futures = new ArrayList<>();
           Callable<Void> c;
           Future<Void> future;
           int currentCopied = 0;
-          // Copy the hfiles parallely
+          // Copy the hfiles in parallel
           while (totalNoOfHFiles > currentCopied + this.copiesPerThread) {
-            c = new Copier(sourceFs, familyStagingDir,
+            c = new Copier(sourceFs, sinkFamilyStagingDir,
               hfilePaths.subList(currentCopied, currentCopied + this.copiesPerThread));
             future = exec.submit(c);
             futures.add(future);
@@ -258,7 +262,7 @@ public class HFileReplicator implements Closeable {
 
           int remaining = totalNoOfHFiles - currentCopied;
           if (remaining > 0) {
-            c = new Copier(sourceFs, familyStagingDir,
+            c = new Copier(sourceFs, sinkFamilyStagingDir,
               hfilePaths.subList(currentCopied, currentCopied + remaining));
             future = exec.submit(c);
             futures.add(future);
@@ -281,7 +285,7 @@ public class HFileReplicator implements Closeable {
         }
         // Add the staging directory to this table. Staging directory contains all the hfiles
         // belonging to this table
-        mapOfCopiedHFiles.put(tableName, stagingDir);
+        mapOfCopiedHFiles.put(tableNameStr, sinkStagingDir);
       }
       return mapOfCopiedHFiles;
     } finally {
@@ -294,12 +298,14 @@ public class HFileReplicator implements Closeable {
     }
   }
 
-  private Path createStagingDir(Path baseDir, User user, TableName tableName) throws IOException {
-    String tblName = tableName.getNameAsString().replace(":", UNDERSCORE);
+  private Path createSinkStagingDir(Path baseDir, User user, TableName tableName)
+    throws IOException {
+    TableName sinkTableName = translator.getSinkTableName(tableName);
+    String sinkTableNameStr = sinkTableName.getNameAsString().replace(":", UNDERSCORE);
     int RANDOM_WIDTH = 320;
     int RANDOM_RADIX = 32;
     String doubleUnderScore = UNDERSCORE + UNDERSCORE;
-    String randomDir = user.getShortName() + doubleUnderScore + tblName + doubleUnderScore
+    String randomDir = user.getShortName() + doubleUnderScore + sinkTableNameStr + doubleUnderScore
       + (new BigInteger(RANDOM_WIDTH, ThreadLocalRandom.current()).toString(RANDOM_RADIX));
     return createStagingDir(baseDir, user, randomDir);
   }
@@ -311,50 +317,55 @@ public class HFileReplicator implements Closeable {
     return p;
   }
 
+  private Path getSinkFamilyStagingDir(Path baseDir, TableName tableName, byte[] family) {
+    byte[] sinkFamily = translator.getSinkFamily(tableName, family);
+    return new Path(baseDir, Bytes.toString(sinkFamily));
+  }
+
   /**
    * This class will copy the given hfiles from the given source file system to the given local file
    * system staging directory.
    */
   private class Copier implements Callable<Void> {
     private FileSystem sourceFs;
-    private Path stagingDir;
-    private List<String> hfiles;
+    private Path sinkStagingDir;
+    private List<String> hfilePaths;
 
-    public Copier(FileSystem sourceFs, final Path stagingDir, final List<String> hfiles)
+    public Copier(FileSystem sourceFs, final Path sinkStagingDir, final List<String> hfilePaths)
       throws IOException {
       this.sourceFs = sourceFs;
-      this.stagingDir = stagingDir;
-      this.hfiles = hfiles;
+      this.sinkStagingDir = sinkStagingDir;
+      this.hfilePaths = hfilePaths;
     }
 
     @Override
     public Void call() throws IOException {
       Path sourceHFilePath;
-      Path localHFilePath;
-      int totalHFiles = hfiles.size();
+      Path sinkHFilePath;
+      int totalHFiles = hfilePaths.size();
       for (int i = 0; i < totalHFiles; i++) {
-        sourceHFilePath = new Path(sourceBaseNamespaceDirPath, hfiles.get(i));
-        localHFilePath = new Path(stagingDir, sourceHFilePath.getName());
+        sourceHFilePath = new Path(sourceBaseNamespaceDirPath, hfilePaths.get(i));
+        sinkHFilePath = new Path(sinkStagingDir, sourceHFilePath.getName());
         try {
-          FileUtil.copy(sourceFs, sourceHFilePath, sinkFs, localHFilePath, false, conf);
+          FileUtil.copy(sourceFs, sourceHFilePath, sinkFs, sinkHFilePath, false, conf);
           // If any other exception other than FNFE then we will fail the replication requests and
           // source will retry to replicate these data.
         } catch (FileNotFoundException e) {
-          LOG.info("Failed to copy hfile from " + sourceHFilePath + " to " + localHFilePath
+          LOG.info("Failed to copy hfile from " + sourceHFilePath + " to " + sinkHFilePath
             + ". Trying to copy from hfile archive directory.", e);
-          sourceHFilePath = new Path(sourceHFileArchiveDirPath, hfiles.get(i));
+          sourceHFilePath = new Path(sourceHFileArchiveDirPath, hfilePaths.get(i));
 
           try {
-            FileUtil.copy(sourceFs, sourceHFilePath, sinkFs, localHFilePath, false, conf);
+            FileUtil.copy(sourceFs, sourceHFilePath, sinkFs, sinkHFilePath, false, conf);
           } catch (FileNotFoundException e1) {
             // This will mean that the hfile does not exists any where in source cluster FS. So we
             // cannot do anything here just log and continue.
-            LOG.debug("Failed to copy hfile from " + sourceHFilePath + " to " + localHFilePath
+            LOG.debug("Failed to copy hfile from " + sourceHFilePath + " to " + sinkHFilePath
               + ". Hence ignoring this hfile from replication..", e1);
             continue;
           }
         }
-        sinkFs.setPermission(localHFilePath, PERM_ALL_ACCESS);
+        sinkFs.setPermission(sinkHFilePath, PERM_ALL_ACCESS);
       }
       return null;
     }
