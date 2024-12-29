@@ -506,23 +506,19 @@ public class TestCellBasedHFileOutputFormat2 {
   }
 
   private byte[][] generateRandomStartKeys(int numKeys) {
-    Random random = new Random();
     byte[][] ret = new byte[numKeys][];
     // first region start key is always empty
     ret[0] = HConstants.EMPTY_BYTE_ARRAY;
     for (int i = 1; i < numKeys; i++) {
-      ret[i] =
-        PerformanceEvaluation.generateData(random, PerformanceEvaluation.DEFAULT_VALUE_LENGTH);
+      ret[i] = PerformanceEvaluation.generateData(PerformanceEvaluation.DEFAULT_VALUE_LENGTH);
     }
     return ret;
   }
 
   private byte[][] generateRandomSplitKeys(int numKeys) {
-    Random random = new Random();
     byte[][] ret = new byte[numKeys][];
     for (int i = 0; i < numKeys; i++) {
-      ret[i] =
-        PerformanceEvaluation.generateData(random, PerformanceEvaluation.DEFAULT_VALUE_LENGTH);
+      ret[i] = PerformanceEvaluation.generateData(PerformanceEvaluation.DEFAULT_VALUE_LENGTH);
     }
     return ret;
   }

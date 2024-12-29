@@ -34,14 +34,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
@@ -543,23 +541,19 @@ public class TestHFileOutputFormat2 {
   }
 
   private byte[][] generateRandomStartKeys(int numKeys) {
-    Random random = ThreadLocalRandom.current();
     byte[][] ret = new byte[numKeys][];
     // first region start key is always empty
     ret[0] = HConstants.EMPTY_BYTE_ARRAY;
     for (int i = 1; i < numKeys; i++) {
-      ret[i] =
-        PerformanceEvaluation.generateData(random, PerformanceEvaluation.DEFAULT_VALUE_LENGTH);
+      ret[i] = PerformanceEvaluation.generateData(PerformanceEvaluation.DEFAULT_VALUE_LENGTH);
     }
     return ret;
   }
 
   private byte[][] generateRandomSplitKeys(int numKeys) {
-    Random random = ThreadLocalRandom.current();
     byte[][] ret = new byte[numKeys][];
     for (int i = 0; i < numKeys; i++) {
-      ret[i] =
-        PerformanceEvaluation.generateData(random, PerformanceEvaluation.DEFAULT_VALUE_LENGTH);
+      ret[i] = PerformanceEvaluation.generateData(PerformanceEvaluation.DEFAULT_VALUE_LENGTH);
     }
     return ret;
   }
