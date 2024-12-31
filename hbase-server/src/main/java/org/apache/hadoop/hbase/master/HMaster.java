@@ -455,7 +455,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
 
   /**
-   * Use RSProcedureDispatcher instance to initiate master -> rs remote procedure execution. Use
+   * Use RSProcedureDispatcher instance to initiate master to rs remote procedure execution. Use
    * this config to extend RSProcedureDispatcher (mainly for testing purpose).
    */
   public static final String HBASE_MASTER_RSPROC_DISPATCHER_CLASS =

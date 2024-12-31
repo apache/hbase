@@ -125,7 +125,9 @@ public class TestProcDispatcher {
     Assert.assertEquals(0, hbckReport.getOrphanRegionsOnFS().size());
     Assert.assertEquals(0, hbckReport.getOrphanRegionsOnRS().size());
 
-    HRegion region0 = hRegionServer0.getRegions().get(0);
+    HRegion region0 = !hRegionServer0.getRegions().isEmpty()
+      ? hRegionServer0.getRegions().get(0)
+      : hRegionServer1.getRegions().get(0);
     // move all regions from server1 to server0
     for (HRegion region : hRegionServer1.getRegions()) {
       TEST_UTIL.getAdmin().move(region.getRegionInfo().getEncodedNameAsBytes(), rs0);
