@@ -28,8 +28,9 @@ import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 /**
  * Test implementation of RSProcedureDispatcher that throws desired errors for testing purpose.
