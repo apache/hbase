@@ -188,7 +188,9 @@ public class SplitWALManager {
   /**
    * Rename the WAL file at the specified walPath to retry with another worker. Returns true if the
    * file is successfully renamed, or if it has already been renamed in previous try. Returns false
-   * if neither of the files exists. It throws an IOException if got any error while renaming.
+   * if neither of the files exists. It throws an IOException if got any error while renaming. This
+   * method is only called in case of failure on one worker so in case of no failure flow is same as
+   * old one.
    */
   public boolean ifExistRenameWALForRetry(String walPath, String postRenameWalPath)
     throws IOException {

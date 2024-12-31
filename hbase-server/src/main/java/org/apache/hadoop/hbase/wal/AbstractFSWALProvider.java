@@ -234,10 +234,14 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>>
   static final String DEFAULT_PROVIDER_ID = "default";
 
   // Implementation details that currently leak in tests or elsewhere follow
-  /** File Extension used while splitting an WAL into regions (HBASE-2312) */
+  /**
+   * File Extension used while splitting an WAL into regions (HBASE-2312) This is used with the
+   * directory name/path
+   */
   public static final String SPLITTING_EXT = "-splitting";
 
   // Extension for the WAL where the split failed on one worker and is being retried on another.
+  // this is used with the WAL file itself
   public static final String RETRYING_EXT = ".retrying";
 
   /**
