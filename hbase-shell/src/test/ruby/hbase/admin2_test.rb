@@ -30,14 +30,25 @@ module Hbase
     include HBaseConstants
 
     def setup
+      @peer_id1 = '1'
+      @peer_id2 = '2'
+      @dummy_endpoint = 'org.apache.hadoop.hbase.replication.DummyReplicationEndpoint'
+
       setup_hbase
       # Create test table if it does not exist
       @test_name = 'hbase_shell_admin2_test_table'
       drop_test_table(@test_name)
       create_test_table(@test_name)
+
+      cluster_key = "zk1,zk2,zk3:2182:/hbase-prod"
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
+      command(:add_peer, @peer_id1, args)
+      command(:add_peer, @peer_id2, args)
     end
 
     def teardown
+      command(:remove_peer, @peer_id1)
+      command(:remove_peer, @peer_id2)
       shutdown
     end
 
