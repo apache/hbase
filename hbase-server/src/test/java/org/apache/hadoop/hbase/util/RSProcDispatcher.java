@@ -83,7 +83,7 @@ public class RSProcDispatcher extends RSProcedureDispatcher {
       // throw ConnectionClosedException until retry limit is exhausted and master
       // schedules recoveries for the server.
       // We will have ABNORMALLY_CLOSED regions, and they are expected to recover on their own.
-      if (j >= 8 && j <= 13 || j >= 18 && j <= 23) {
+      if (j >= 10 && j <= 15 || j >= 18 && j <= 23) {
         throw new ConnectionClosedException("test connection closed error...");
       }
       try {
