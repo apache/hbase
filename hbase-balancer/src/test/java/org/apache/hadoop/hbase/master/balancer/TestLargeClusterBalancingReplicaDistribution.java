@@ -44,7 +44,7 @@ public class TestLargeClusterBalancingReplicaDistribution {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLargeClusterBalancingSystemTableIsolation.class);
+    HBaseClassTestRule.forClass(TestLargeClusterBalancingReplicaDistribution.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestLargeClusterBalancingReplicaDistribution.class);

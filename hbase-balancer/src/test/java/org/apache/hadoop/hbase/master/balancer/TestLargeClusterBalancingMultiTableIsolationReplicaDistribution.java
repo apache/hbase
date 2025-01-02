@@ -43,8 +43,8 @@ import org.slf4j.LoggerFactory;
 public class TestLargeClusterBalancingMultiTableIsolationReplicaDistribution {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLargeClusterBalancingSystemTableIsolation.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
+    .forClass(TestLargeClusterBalancingMultiTableIsolationReplicaDistribution.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestLargeClusterBalancingMultiTableIsolationReplicaDistribution.class);

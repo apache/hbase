@@ -22,12 +22,14 @@ import java.lang.reflect.Constructor;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -48,6 +50,8 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Suppliers;
 
 /**
  * <p>
@@ -159,6 +163,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   protected Map<Class<? extends CandidateGenerator>, CandidateGenerator> candidateGenerators;
   private Map<Class<? extends CandidateGenerator>, Double> weightsOfGenerators;
+  private final Supplier<List<Class<? extends CandidateGenerator>>> shuffledGeneratorClasses =
+    Suppliers.memoizeWithExpiration(() -> {
+      List<Class<? extends CandidateGenerator>> shuffled =
+        new ArrayList<>(candidateGenerators.keySet());
+      Collections.shuffle(shuffled);
+      return shuffled;
+    }, 5, TimeUnit.SECONDS);
 
   private final BalancerConditionals balancerConditionals = BalancerConditionals.INSTANCE;
 
@@ -435,47 +446,50 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * all cost functions that benefit from it.
    */
   protected CandidateGenerator getRandomGenerator(BalancerClusterState cluster) {
-    double sum = 0;
-    for (Class<? extends CandidateGenerator> clazz : candidateGenerators.keySet()) {
-      sum += weightsOfGenerators.getOrDefault(clazz, 0.0);
-    }
-    if (sum == 0) {
-      return candidateGenerators.values().stream().findAny().orElseThrow();
-    }
-
-    for (Class<? extends CandidateGenerator> clazz : candidateGenerators.keySet()) {
-      weightsOfGenerators.put(clazz,
-        Math.min(CandidateGenerator.MAX_WEIGHT, weightsOfGenerators.get(clazz) / sum));
-    }
-
-    for (RegionPlanConditional conditional : balancerConditionals.getConditionals()) {
-      Optional<RegionPlanConditionalCandidateGenerator> generator =
-        conditional.getCandidateGenerator();
-      if (generator.isPresent() && generator.get().getWeight(cluster) > 0) {
-        return generator.get();
+    // Prefer conditional generators if they have moves to make
+    if (balancerConditionals.isConditionalBalancingEnabled()) {
+      for (RegionPlanConditional conditional : balancerConditionals.getConditionals()) {
+        Optional<RegionPlanConditionalCandidateGenerator> generator =
+          conditional.getCandidateGenerator();
+        if (generator.isPresent() && generator.get().getWeight(cluster) > 0) {
+          return generator.get();
+        }
       }
     }
 
+    List<Class<? extends CandidateGenerator>> generatorClasses = shuffledGeneratorClasses.get();
+    List<Double> partialSums = new ArrayList<>(generatorClasses.size());
+    double sum = 0.0;
+    for (Class<? extends CandidateGenerator> clazz : generatorClasses) {
+      double weight = weightsOfGenerators.getOrDefault(clazz, 0.0);
+      sum += weight;
+      partialSums.add(sum);
+    }
+
+    // If the sum of all weights is zero, fall back to a default (e.g., first in the list)
+    if (sum == 0.0) {
+      // If no generators at all, fail fast or throw
+      if (generatorClasses.isEmpty()) {
+        throw new IllegalStateException("No candidate generators available");
+      }
+      return candidateGenerators.get(generatorClasses.get(0));
+    }
+
+    // Normalize partial sums so that the last one should be exactly 1.0
+    for (int i = 0; i < partialSums.size(); i++) {
+      partialSums.set(i, partialSums.get(i) / sum);
+    }
+
+    // Generate a random number and pick the first generator whose partial sum is >= rand
     double rand = ThreadLocalRandom.current().nextDouble();
-    CandidateGenerator greatestWeightGenerator = null;
-    double greatestWeight = 0;
-    for (Map.Entry<Class<? extends CandidateGenerator>,
-      CandidateGenerator> entry : candidateGenerators.entrySet()) {
-      Class<? extends CandidateGenerator> clazz = entry.getKey();
-      double generatorWeight = weightsOfGenerators.get(clazz);
-      if (generatorWeight > greatestWeight) {
-        greatestWeight = generatorWeight;
-        greatestWeightGenerator = entry.getValue();
-      }
-      if (rand <= generatorWeight) {
-        return entry.getValue();
+    for (int i = 0; i < partialSums.size(); i++) {
+      if (rand <= partialSums.get(i)) {
+        return candidateGenerators.get(generatorClasses.get(i));
       }
     }
 
-    if (greatestWeightGenerator != null) {
-      return greatestWeightGenerator;
-    }
-    return candidateGenerators.values().stream().findAny().orElseThrow();
+    // Fallback: if for some reason we didn't return above, return the last generator
+    return candidateGenerators.get(generatorClasses.get(generatorClasses.size() - 1));
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
@@ -565,7 +579,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // Perform a stochastic walk to see if we can get a good fit.
     long step;
 
-    boolean improvedConditionals = false;
+    boolean planImprovedConditionals = false;
     Map<Class<? extends CandidateGenerator>, Long> generatorToStepCount = new HashMap<>();
     Map<Class<? extends CandidateGenerator>, Long> generatorToApprovedActionCount = new HashMap<>();
     for (step = 0; step < computedMaxSteps; step++) {
@@ -576,41 +590,50 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       if (action.getType() == BalanceAction.Type.NULL) {
         continue;
       }
-      generatorToStepCount.merge(generator.getClass(), action.getStepCount(), Long::sum);
-      step += action.getStepCount() - 1;
 
-      // Always accept a conditional generator output. Sometimes conditional generators
-      // may need to make controversial moves in order to break what would otherwise
-      // be a deadlocked situation.
-      // Otherwise, for normal moves, evaluate the action.
-      int conditionalViolationsChange;
-      boolean isViolating = false;
-      if (RegionPlanConditionalCandidateGenerator.class.isAssignableFrom(generator.getClass())) {
-        conditionalViolationsChange = -1;
-      } else {
-        conditionalViolationsChange = balancerConditionals.getViolationCountChange(cluster, action);
-        isViolating = balancerConditionals.isViolating(cluster, action);
+      generatorToStepCount.merge(generator.getClass(), action.getStepCount(), Long::sum);
+      long additionalSteps = action.getStepCount() - 1;
+      if (additionalSteps > 0) {
+        step += additionalSteps;
+      }
+
+      int conditionalViolationsChange = 0;
+      boolean isViolatingConditionals = false;
+      boolean moveImprovedConditionals = false;
+      // Only check conditionals if they are enabled
+      if (balancerConditionals.isConditionalBalancingEnabled()) {
+        // Always accept a conditional generator output. Sometimes conditional generators
+        // may need to make controversial moves in order to break what would otherwise
+        // be a deadlocked situation.
+        // Otherwise, for normal moves, evaluate the action.
+        if (RegionPlanConditionalCandidateGenerator.class.isAssignableFrom(generator.getClass())) {
+          conditionalViolationsChange = -1;
+        } else {
+          conditionalViolationsChange =
+            balancerConditionals.getViolationCountChange(cluster, action);
+          isViolatingConditionals = balancerConditionals.isViolating(cluster, action);
+        }
+        moveImprovedConditionals = conditionalViolationsChange < 0;
+        if (moveImprovedConditionals) {
+          planImprovedConditionals = true;
+        }
       }
 
       // Change state and evaluate costs
       cluster.doAction(action);
+      updateCostsAndWeightsWithAction(cluster, action);
       newCost = computeCost(cluster, currentCost);
 
-      boolean conditionalsImproved = conditionalViolationsChange < 0;
-      if (conditionalsImproved) {
-        improvedConditionals = true;
-      }
       boolean conditionalsSimilarCostsImproved =
-        (newCost < currentCost && conditionalViolationsChange == 0 && !isViolating);
+        (newCost < currentCost && conditionalViolationsChange == 0 && !isViolatingConditionals);
       // Our first priority is to reduce conditional violations
       // Our second priority is to reduce balancer cost
       // change, regardless of cost change
-      if (conditionalsImproved || conditionalsSimilarCostsImproved) {
+      if (moveImprovedConditionals || conditionalsSimilarCostsImproved) {
         currentCost = newCost;
         generatorToApprovedActionCount.merge(generator.getClass(), action.getStepCount(),
           Long::sum);
         balancerConditionals.loadClusterState(cluster);
-        updateCostsAndWeightsWithAction(cluster, action);
 
         // save for JMX
         curOverallCost = currentCost;
@@ -641,7 +664,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     metricsBalancer.balanceCluster(endTime - startTime);
 
-    if (improvedConditionals || initCost > currentCost) {
+    if (planImprovedConditionals || initCost > currentCost) {
       updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
       List<RegionPlan> plans = createRegionPlans(cluster);
       LOG.info(

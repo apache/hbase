@@ -306,6 +306,10 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
     private FairRandomCandidateGenerator fairRandomCandidateGenerator =
       new FairRandomCandidateGenerator();
 
+    StochasticLoadTestBalancer() {
+      super(new DummyMetricsStochasticBalancer());
+    }
+
     @Override
     protected CandidateGenerator getRandomGenerator(BalancerClusterState cluster) {
       return fairRandomCandidateGenerator;

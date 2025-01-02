@@ -105,6 +105,10 @@ final class BalancerConditionals implements Configurable {
     return isConditionalBalancingEnabled();
   }
 
+  boolean isConditionalBalancingEnabled() {
+    return !conditionalClasses.isEmpty();
+  }
+
   void clearConditionalWeightCaches() {
     conditionals.stream().map(RegionPlanConditional::getCandidateGenerator)
       .flatMap(Optional::stream).forEach(RegionPlanConditionalCandidateGenerator::clearWeightCache);
@@ -178,10 +182,6 @@ final class BalancerConditionals implements Configurable {
         + "BalancerClusterState parameters for class '{}': {}", clazz.getName(), e.getMessage());
     }
     return null;
-  }
-
-  private boolean isConditionalBalancingEnabled() {
-    return !conditionalClasses.isEmpty();
   }
 
   @Override
