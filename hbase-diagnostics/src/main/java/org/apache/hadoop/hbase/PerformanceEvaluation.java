@@ -1196,7 +1196,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.opts = options;
       this.status = status;
       this.testName = this.getClass().getSimpleName();
-      everyN = (long) (opts.totalRows / (opts.totalRows * opts.sampleRate));
+      everyN = (long) (1 / opts.sampleRate);
       if (options.isValueZipf()) {
         this.zipf =
           new RandomDistribution.Zipf(ThreadLocalRandom.current(), 1, options.getValueSize(), 1.2);
@@ -2699,8 +2699,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       + "Default: depend on oneCon parameter. if oneCon set to true, then connCount=1, "
       + "if not, connCount=thread number");
 
-    System.err.println(" sampleRate      Execute test on a sample of total "
-      + "rows. Only supported by randomRead. Default: 1.0");
+    System.err.println(" sampleRate      Execute test on a sample of total rows. Default: 1.0");
     System.err.println(" period          Report every 'period' rows: "
       + "Default: opts.perClientRunRows / 10 = " + DEFAULT_OPTS.getPerClientRunRows() / 10);
     System.err.println(" cycles          How many times to cycle the test. Defaults: 1.");
