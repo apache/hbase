@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.agrona.collections.Hashing;
 import org.agrona.collections.Int2IntCounterMap;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -41,6 +42,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Supplier;
+import org.apache.hbase.thirdparty.com.google.common.base.Suppliers;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
@@ -125,6 +128,14 @@ class BalancerClusterState {
   private int[] regionServerIndexWithBestRegionCachedRatio;
   // Maps regionName -> oldServerName -> cache ratio of the region on the old server
   Map<String, Pair<ServerName, Float>> regionCacheRatioOnOldServerMap;
+
+  private Supplier<List<Integer>> shuffledServerIndicesSupplier =
+    Suppliers.memoizeWithExpiration(() -> {
+      Collection<Integer> serverIndices = serversToIndex.values();
+      List<Integer> shuffledServerIndices = new ArrayList<>(serverIndices);
+      Collections.shuffle(shuffledServerIndices);
+      return shuffledServerIndices;
+    }, 5, TimeUnit.SECONDS);
 
   static class DefaultRackManager extends RackManager {
     @Override
@@ -782,7 +793,7 @@ class BalancerClusterState {
             removeRegions(regionsPerServer[serverIndex], regionsToRemove);
         }
         for (int serverIndex : mba.getServerToRegionsToAdd().keySet()) {
-          Set<Integer> regionsToAdd = mba.getServerToRegionsToRemove().get(serverIndex);
+          Set<Integer> regionsToAdd = mba.getServerToRegionsToAdd().get(serverIndex);
           regionsPerServer[serverIndex] = addRegions(regionsPerServer[serverIndex], regionsToAdd);
         }
         for (MoveRegionAction moveRegionAction : mba.getMoveActions()) {
@@ -1098,6 +1109,10 @@ class BalancerClusterState {
 
   void setNumMovedRegions(int numMovedRegions) {
     this.numMovedRegions = numMovedRegions;
+  }
+
+  List<Integer> getShuffledServerIndices() {
+    return shuffledServerIndicesSupplier.get();
   }
 
   @Override

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static java.util.Collections.shuffle;
 import static org.apache.hadoop.hbase.master.balancer.DistributeReplicasConditional.getReplicaKey;
 
 import java.util.ArrayList;
@@ -57,18 +56,10 @@ final class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCa
 
   BalanceAction generateCandidate(BalancerClusterState cluster, boolean isWeighing,
     boolean isForced) {
-    // Shuffle server indices to add some randomness to the moves
-    // Should we cache these shuffled servers? Doesn't seem necessary at the moment
-    List<Integer> shuffledServerIndices = new ArrayList<>(cluster.numServers);
-    for (int i = 0; i < cluster.servers.length; i++) {
-      shuffledServerIndices.add(i);
-    }
-    shuffle(shuffledServerIndices);
-
-    // Iterate through each server to find colocated replicas
+    // Iterate through shuffled servers to find colocated replicas
     boolean foundColocatedReplicas = false;
     List<MoveRegionAction> moveRegionActions = new ArrayList<>();
-    for (int sourceIndex : shuffledServerIndices) {
+    for (int sourceIndex : cluster.getShuffledServerIndices()) {
       int[] serverRegions = cluster.regionsPerServer[sourceIndex];
       Set<DistributeReplicasConditional.ReplicaKey> replicaKeys =
         new HashSet<>(serverRegions.length);

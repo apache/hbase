@@ -48,7 +48,7 @@ public abstract class TableIsolationCandidateGenerator
     }
 
     List<MoveRegionAction> moves = new ArrayList<>();
-    for (int serverIdx = 0; serverIdx < cluster.numServers; serverIdx++) {
+    for (int serverIdx : cluster.getShuffledServerIndices()) {
       boolean hasRegionsToIsolate = false;
       Set<Integer> regionsToMove = new HashSet<>();
 

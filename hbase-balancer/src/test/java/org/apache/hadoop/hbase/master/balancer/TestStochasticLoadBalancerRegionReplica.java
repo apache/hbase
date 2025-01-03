@@ -203,7 +203,10 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     int replication = 3; // 3 replicas per region
     int numRegionsPerServer = 80; // all regions are mostly balanced
     int numTables = 10;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 10_000);
+    loadBalancer.onConfigurationChange(conf);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
   }
 
   private static class ForTestRackManagerOne extends RackManager {

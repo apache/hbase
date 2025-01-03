@@ -354,15 +354,25 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     // Check host
     regionReplicaHostCostFunction.prepare(c);
-    boolean colocatedAtHost =
-      (Math.abs(regionReplicaHostCostFunction.cost()) > CostFunction.COST_EPSILON);
+    double hostCost = Math.abs(regionReplicaHostCostFunction.cost());
+    boolean colocatedAtHost = hostCost > CostFunction.COST_EPSILON;
     if (colocatedAtHost) {
       return true;
     }
+    LOG.trace("No host colocation detected with host cost={}", hostCost);
 
     // Check rack
     regionReplicaRackCostFunction.prepare(c);
-    return (Math.abs(regionReplicaRackCostFunction.cost()) > CostFunction.COST_EPSILON);
+    double rackCost = Math.abs(regionReplicaRackCostFunction.cost());
+    boolean colocatedAtRack =
+      (Math.abs(regionReplicaRackCostFunction.cost()) > CostFunction.COST_EPSILON);
+    if (colocatedAtRack) {
+      return true;
+    }
+    LOG.trace("No rack colocation detected with rack cost={}", rackCost);
+
+    return DistributeReplicasCandidateGenerator.INSTANCE.generateCandidate(c, true)
+        != BalanceAction.NULL_ACTION;
   }
 
   private String getBalanceReason(double total, double sumMultiplier) {
@@ -467,13 +477,21 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
     }
 
+    double rand = ThreadLocalRandom.current().nextDouble();
     if (
-      areSomeRegionReplicasColocated(cluster)
-        && candidateGenerators.containsKey(RegionReplicaCandidateGenerator.class)
+      !balancerConditionals.isReplicaDistributionEnabled()
+        && areSomeRegionReplicasColocated(cluster)
     ) {
-      // If we aren't use conditional replica distribution, then we should prioritize the
-      // region replica cost functions' candidate generator
-      return candidateGenerators.get(RegionReplicaCandidateGenerator.class);
+      // If we aren't use conditional replica distribution, then we should ensure that
+      // the region replica cost functions' candidate generators are used often
+      if (rand < 0.25 && candidateGenerators.containsKey(RegionReplicaCandidateGenerator.class)) {
+        return candidateGenerators.get(RegionReplicaCandidateGenerator.class);
+      }
+      if (
+        rand < 0.5 && candidateGenerators.containsKey(RegionReplicaRackCandidateGenerator.class)
+      ) {
+        return candidateGenerators.get(RegionReplicaRackCandidateGenerator.class);
+      }
     }
 
     List<Class<? extends CandidateGenerator>> generatorClasses = shuffledGeneratorClasses.get();
@@ -500,7 +518,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     // Generate a random number and pick the first generator whose partial sum is >= rand
-    double rand = ThreadLocalRandom.current().nextDouble();
     for (int i = 0; i < partialSums.size(); i++) {
       if (rand <= partialSums.get(i)) {
         return candidateGenerators.get(generatorClasses.get(i));
@@ -639,7 +656,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
 
       // Change state and evaluate costs
-      cluster.doAction(action);
+      try {
+        cluster.doAction(action);
+      } catch (IllegalStateException | ArrayIndexOutOfBoundsException e) {
+        LOG.warn(
+          "Generator {} produced invalid action! "
+            + "Debug your candidate generator as this is likely a bug, "
+            + "and may cause a balancer deadlock. {}",
+          generator.getClass().getSimpleName(), action, e);
+        continue;
+      }
       updateCostsAndWeightsWithAction(cluster, action);
       newCost = computeCost(cluster, currentCost);
 
