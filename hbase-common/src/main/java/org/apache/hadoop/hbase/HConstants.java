@@ -968,6 +968,9 @@ public final class HConstants {
   public static final String REPLICATION_SINK_SERVICE_CLASSNAME_DEFAULT =
     "org.apache.hadoop.hbase.replication.ReplicationSinkServiceImpl";
   public static final String REPLICATION_BULKLOAD_ENABLE_KEY = "hbase.replication.bulkload.enabled";
+  public static final String REPLICATION_SINK_TRANSLATOR = "hbase.replication.sink.translator";
+  public static final String REPLICATION_SINK_TRANSLATOR_DEFAULT =
+    "org.apache.hadoop.hbase.replication.regionserver.DefaultReplicationSinkTranslator";
   public static final boolean REPLICATION_BULKLOAD_ENABLE_DEFAULT = false;
   /** Replication cluster id of source cluster which uniquely identifies itself with peer cluster */
   public static final String REPLICATION_CLUSTER_ID = "hbase.replication.cluster.id";
