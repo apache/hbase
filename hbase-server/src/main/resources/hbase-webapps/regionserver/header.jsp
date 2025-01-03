@@ -31,37 +31,32 @@
     <meta name="author" content="">
 
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
     <link href="/static/css/hbase.css" rel="stylesheet">
+    <link rel="shortcut icon" href="/static/favicon.ico">
   </head>
   <body>
-    <div class="navbar  navbar-fixed-top navbar-default">
-      <div class="container-fluid">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle" data-toggle="collapse"
-                  data-target=".navbar-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="/rs-status">
-            <img src="/static/hbase_logo_small.png" alt="HBase Logo"/>
-          </a>
-        </div>
+  <nav class="navbar navbar-expand-md navbar-light fixed-top bg-light">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/rs-status">
+        <img src="/static/hbase_logo_small.png" alt="HBase Logo"/>
+      </a>
+      <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
+        <span class="navbar-toggler-icon"></span>
+      </button>
         <div class="collapse navbar-collapse">
-          <ul class="nav navbar-nav">
-            <li><a href="/rs-status">Home</a></li>
-            <li><a href="/processRS.jsp">Process Metrics</a></li>
-            <li><a href="/logs/">Local Logs</a></li>
-            <li><a href="/rsOperationDetails.jsp">Operation Details</a></li>
-            <li><a href="/logLevel">Log Level</a></li>
-            <li><a href="/dump">Debug Dump</a></li>
-            <li><a href="/jmx">Metrics Dump</a></li>
-            <li><a href="/prof">Profiler</a></li>
+          <ul class="navbar-nav">
+            <li class="nav-item"><a class="nav-link" href="/rs-status">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="/processRS.jsp">Process Metrics</a></li>
+            <li class="nav-item"><a class="nav-link" href="/logs/">Local Logs</a></li>
+            <li class="nav-item"><a class="nav-link" href="/rsOperationDetails.jsp">Operation Details</a></li>
+            <li class="nav-item"><a class="nav-link" href="/logLevel">Log Level</a></li>
+            <li class="nav-item"><a class="nav-link" href="/dump">Debug Dump</a></li>
+            <li class="nav-item"><a class="nav-link" href="/jmx">Metrics Dump</a></li>
+            <li class="nav-item"><a class="nav-link" href="/prof">Profiler</a></li>
             <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-            <li><a href="/conf">HBase Configuration</a></li>
+              <li class="nav-item"><a class="nav-link" href="/conf">HBase Configuration</a></li>
             <% } %>
           </ul>
-        </div><!--/.nav-collapse -->
-      </div>
-    </div>
+        </div><!--/.navbar-collapse -->
+      </div><!--/.container-fluid -->
+    </nav>

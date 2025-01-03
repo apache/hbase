@@ -36,46 +36,39 @@
     <meta name="author" content="">
 
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
     <link href="/static/css/hbase.css" rel="stylesheet">
+    <link rel="shortcut icon" href="/static/favicon.ico">
   </head>
   <body>
-    <div class="navbar  navbar-fixed-top navbar-default">
-      <div class="container-fluid">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle" data-toggle="collapse"
-                  data-target=".navbar-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="/master-status">
-            <img src="/static/hbase_logo_small.png" alt="HBase Logo"/>
-          </a>
-        </div>
-        <div class="collapse navbar-collapse">
-          <ul class="nav navbar-nav">
-            <li><a href="/master-status">Home</a></li>
-            <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-            <% if (master.isActiveMaster()){ %>
-              <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
-              <li><a href="/hbck.jsp">HBCK Report</a></li>
-              <li><a href="/operationDetails.jsp">Operation Details</a></li>
-              <% if (master.getConfiguration().getBoolean(QuotaUtil.QUOTA_CONF_KEY, false)) { %>
-                <li><a href="/quotas.jsp">Quotas</a></li>
-              <% }%>
+  <nav class="navbar navbar-expand-md navbar-light fixed-top bg-light">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
+      <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link" href="/master-status">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="/tablesDetailed.jsp">Table Details</a></li>
+          <% if (master.isActiveMaster()){ %>
+          <li class="nav-item"><a class="nav-link" href="/procedures.jsp">Procedures &amp; Locks</a></li>
+          <li class="nav-item"><a class="nav-link" href="/hbck.jsp">HBCK Report</a></li>
+          <li class="nav-item"><a class="nav-link" href="/operationDetails.jsp">Operation Details</a></li>
+            <% if (master.getConfiguration().getBoolean(QuotaUtil.QUOTA_CONF_KEY, false)) { %>
+              <li class="nav-item"><a class="nav-link" href="/quotas.jsp">Quotas</a></li>
             <% }%>
-            <li><a href="/processMaster.jsp">Process Metrics</a></li>
-            <li><a href="/logs/">Local Logs</a></li>
-            <li><a href="/logLevel">Log Level</a></li>
-            <li><a href="/dump">Debug Dump</a></li>
-            <li><a href="/jmx">Metrics Dump</a></li>
-            <li><a href="/prof">Profiler</a></li>
-            <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-            <li><a href="/conf">HBase Configuration</a></li>
-            <% } %>
-            <li><a href="/startupProgress.jsp">Startup Progress</a></li>
-          </ul>
-        </div><!--/.nav-collapse -->
-      </div>
-    </div>
+          <% }%>
+          <li class="nav-item"><a class="nav-link" href="/processMaster.jsp">Process Metrics</a></li>
+          <li class="nav-item"><a class="nav-link" href="/logs/">Local Logs</a></li>
+          <li class="nav-item"><a class="nav-link" href="/logLevel">Log Level</a></li>
+          <li class="nav-item"><a class="nav-link" href="/dump">Debug Dump</a></li>
+          <li class="nav-item"><a class="nav-link" href="/jmx">Metrics Dump</a></li>
+          <li class="nav-item"><a class="nav-link" href="/prof">Profiler</a></li>
+          <% if (HBaseConfiguration.isShowConfInServlet()) { %>
+            <li class="nav-item"><a class="nav-link" href="/conf">HBase Configuration</a></li>
+          <% } %>
+          <li class="nav-item"><a class="nav-link" href="/startupProgress.jsp">Startup Progress</a></li>
+        </ul>
+      </div><!--/.navbar-collapse -->
+    </div><!--/.container-fluid -->
+    </nav>
