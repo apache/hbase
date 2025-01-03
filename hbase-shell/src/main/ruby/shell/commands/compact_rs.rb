@@ -25,10 +25,12 @@ module Shell
           Compact all regions on passed regionserver.
           Examples:
           Compact all regions on a regionserver:
-          hbase> compact_rs 'host187.example.com,60020'
+          hbase> compact_rs 'host187.example.com:60020'
           or
           hbase> compact_rs 'host187.example.com,60020,1289493121758'
           Major compact all regions on a regionserver:
+          hbase> compact_rs 'host187.example.com:60020', true
+          or
           hbase> compact_rs 'host187.example.com,60020,1289493121758', true
         EOF
       end
