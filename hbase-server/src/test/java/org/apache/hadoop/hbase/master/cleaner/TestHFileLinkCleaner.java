@@ -30,9 +30,14 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -121,7 +126,14 @@ public class TestHFileLinkCleaner {
     hfilePath = new Path(familyPath, hfileName);
     fs.createNewFile(hfilePath);
 
-    createLink(true);
+    HRegionFileSystem regionFS = HRegionFileSystem.create(conf, fs,
+      CommonFSUtils.getTableDir(rootDir, tableLinkName), hriLink);
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, true,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(regionFS.getRegionDir(), familyName))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(familyName))
+        .withRegionFileSystem(regionFS).build());
+    createLink(sft, true);
 
     // Initialize cleaner
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, TTL);
@@ -129,11 +141,12 @@ public class TestHFileLinkCleaner {
     cleaner = new HFileCleaner(1000, server, conf, fs, archiveDir, POOL);
   }
 
-  private void createLink(boolean createBackReference) throws IOException {
+  private void createLink(StoreFileTracker sft, boolean createBackReference) throws IOException {
     // Create link to hfile
     familyLinkPath = getFamilyDirPath(rootDir, tableLinkName, hriLink.getEncodedName(), familyName);
     fs.mkdirs(familyLinkPath);
-    hfileLinkName = HFileLink.create(conf, fs, familyLinkPath, hri, hfileName, createBackReference);
+    hfileLinkName =
+      sft.createHFileLink(hri.getTable(), hri.getEncodedName(), hfileName, createBackReference);
     linkBackRefDir = HFileLink.getBackReferencesDir(archiveStoreDir, hfileName);
     assertTrue(fs.exists(linkBackRefDir));
     backRefs = fs.listStatus(linkBackRefDir);
@@ -162,6 +175,7 @@ public class TestHFileLinkCleaner {
   public void testHFileLinkCleaning() throws Exception {
     // Link backref cannot be removed
     cleaner.chore();
+    // CommonFSUtils.
     assertTrue(fs.exists(linkBackRef));
     assertTrue(fs.exists(hfilePath));
 
