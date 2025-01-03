@@ -346,13 +346,23 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   private boolean areSomeRegionReplicasColocated(BalancerClusterState c) {
-    if (balancerConditionals.isReplicaDistributionEnabled()) {
-      // This check is unnecessary with conditional replica distribution
-      // The balancer will auto-run if the replica distribution candidates are available
+    if (!c.hasRegionReplicas || balancerConditionals.isReplicaDistributionEnabled()) {
+      // This check is unnecessary without replicas, or with conditional replica distribution
+      // The balancer will auto-run if conditional replica distribution candidates are available
       return false;
     }
+
+    // Check host
     regionReplicaHostCostFunction.prepare(c);
-    return (Math.abs(regionReplicaHostCostFunction.cost()) > CostFunction.COST_EPSILON);
+    boolean colocatedAtHost =
+      (Math.abs(regionReplicaHostCostFunction.cost()) > CostFunction.COST_EPSILON);
+    if (colocatedAtHost) {
+      return true;
+    }
+
+    // Check rack
+    regionReplicaRackCostFunction.prepare(c);
+    return (Math.abs(regionReplicaRackCostFunction.cost()) > CostFunction.COST_EPSILON);
   }
 
   private String getBalanceReason(double total, double sumMultiplier) {
@@ -455,6 +465,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
           return generator.get();
         }
       }
+    }
+
+    if (
+      areSomeRegionReplicasColocated(cluster)
+        && candidateGenerators.containsKey(RegionReplicaCandidateGenerator.class)
+    ) {
+      // If we aren't use conditional replica distribution, then we should prioritize the
+      // region replica cost functions' candidate generator
+      return candidateGenerators.get(RegionReplicaCandidateGenerator.class);
     }
 
     List<Class<? extends CandidateGenerator>> generatorClasses = shuffledGeneratorClasses.get();
