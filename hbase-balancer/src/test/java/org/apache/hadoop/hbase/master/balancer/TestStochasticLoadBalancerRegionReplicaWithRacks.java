@@ -61,7 +61,7 @@ public class TestStochasticLoadBalancerRegionReplicaWithRacks extends Stochastic
   public void testRegionReplicationOnMidClusterWithRacks() {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 100000000L);
     conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 10_000); // 10 sec
     loadBalancer.onConfigurationChange(conf);
     int numNodes = 5;
     int numRegions = numNodes * 1;
@@ -79,7 +79,7 @@ public class TestStochasticLoadBalancerRegionReplicaWithRacks extends Stochastic
   public void testRegionReplicationOnLargeClusterWithRacks() {
     conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 100000000L);
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 10 sec
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 10 * 1000); // 10 sec
     loadBalancer.onConfigurationChange(conf);
     int numNodes = 100;
     int numRegions = numNodes * 30;

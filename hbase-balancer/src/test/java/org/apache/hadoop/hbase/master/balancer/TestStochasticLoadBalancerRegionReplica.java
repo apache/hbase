@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -137,29 +138,60 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
 
   @Test
   public void testNeedsBalanceForColocatedReplicas() {
-    // check for the case where there are two hosts and with one rack, and where
-    // both the replicas are hosted on the same server
+    // 1) Same-server scenario: two replicas on the same server => needsBalance == true
     List<RegionInfo> regions = randomRegions(1);
     ServerName s1 = ServerName.valueOf("host1", 1000, 11111);
     ServerName s2 = ServerName.valueOf("host11", 1000, 11111);
     Map<ServerName, List<RegionInfo>> map = new HashMap<>();
+
+    // Place the first region on s1
     map.put(s1, regions);
+    // Add a replica for that region, also on s1 => same server
     regions.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(0), 1));
-    // until the step above s1 holds two replicas of a region
+    // Put another (unrelated) region on s2
     regions = randomRegions(1);
     map.put(s2, regions);
+
+    // Since two replicas of the same region are on s1, we expect balance needed
     assertTrue(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
       new BalancerClusterState(map, null, null, null)));
-    // check for the case where there are two hosts on the same rack and there are two racks
-    // and both the replicas are on the same rack
+
+    // 2) Same-rack scenario: two replicas on different servers but the same rack => needsBalance ==
+    // true
     map.clear();
     regions = randomRegions(1);
-    List<RegionInfo> regionsOnS2 = new ArrayList<>(1);
-    regionsOnS2.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(0), 1));
+    // Place the region on s1
     map.put(s1, regions);
+    // Place its replica on s2 (which ForTestRackManagerOne() puts on the same rack as s1)
+    List<RegionInfo> regionsOnS2 = new ArrayList<>();
+    RegionInfo replicaR1 = RegionReplicaUtil.getRegionInfoForReplica(regions.get(0), 1);
+    regionsOnS2.add(replicaR1);
     map.put(s2, regionsOnS2);
-    // add another server so that the cluster has some host on another rack
-    map.put(ServerName.valueOf("host2", 1000, 11111), randomRegions(1));
+
+    // Add a third server on a different rack
+    ServerName s3 = ServerName.valueOf("host2", 1000, 11111);
+    map.put(s3, randomRegions(1));
+
+    // Now that needsBalance checks for same-rack co-location, we expect true
+    assertTrue(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
+      new BalancerClusterState(map, null, null, new ForTestRackManagerOne())));
+
+    // 3) No co-location scenario: ensure needsBalance == false
+    // Clear the map and place each region/replica on a different rack/server
+    map.clear();
+    // Make a new region
+    List<RegionInfo> distinctRegions = randomRegions(1);
+    RegionInfo replicaR2 = RegionReplicaUtil.getRegionInfoForReplica(distinctRegions.get(0), 1);
+
+    // Put the original region on s1
+    map.put(s1, new ArrayList<>(Collections.singletonList(distinctRegions.get(0))));
+    // Put the replica on s3 (which is on a different rack than s1 and s2)
+    map.put(s3, new ArrayList<>(Collections.singletonList(replicaR2)));
+    // Put some random region on s2, just to fill out the cluster
+    map.put(s2, randomRegions(1));
+
+    // Because each replica is now on a distinct server *and* a distinct rack,
+    // we expect that the balancer does NOT see co-location => false
     assertFalse(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
       new BalancerClusterState(map, null, null, new ForTestRackManagerOne())));
   }
@@ -171,7 +203,10 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     int replication = 3; // 3 replicas per region
     int numRegionsPerServer = 80; // all regions are mostly balanced
     int numTables = 10;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 10_000);
+    loadBalancer.onConfigurationChange(conf);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
   }
 
   private static class ForTestRackManagerOne extends RackManager {

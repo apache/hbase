@@ -285,6 +285,9 @@ public class BalancerTestBase {
   }
 
   protected String printMock(List<ServerAndLoad> balancedCluster) {
+    if (balancedCluster == null) {
+      return "null";
+    }
     NavigableSet<ServerAndLoad> sorted = new TreeSet<>(balancedCluster);
     ServerAndLoad[] arr = sorted.toArray(new ServerAndLoad[sorted.size()]);
     StringBuilder sb = new StringBuilder(sorted.size() * 4 + 4);

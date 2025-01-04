@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.Map;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -73,8 +74,15 @@ abstract class CostFunction {
         regionMoved(a.getFromRegion(), a.getFromServer(), a.getToServer());
         regionMoved(a.getToRegion(), a.getToServer(), a.getFromServer());
         break;
+      case MOVE_BATCH:
+        MoveBatchAction mba = (MoveBatchAction) action;
+        for (MoveRegionAction moveRegionAction : mba.getMoveActions()) {
+          regionMoved(moveRegionAction.getRegion(), moveRegionAction.getFromServer(),
+            moveRegionAction.getToServer());
+        }
+        break;
       default:
-        throw new RuntimeException("Uknown action:" + action.getType());
+        throw new RuntimeException("Unknown action:" + action.getType());
     }
   }
 
@@ -89,8 +97,8 @@ abstract class CostFunction {
    * Called once per init or after postAction.
    * @param weights the weights for every generator.
    */
-  public void updateWeight(double[] weights) {
-    weights[StochasticLoadBalancer.GeneratorType.RANDOM.ordinal()] += cost();
+  public void updateWeight(Map<Class<? extends CandidateGenerator>, Double> weights) {
+    weights.merge(RandomCandidateGenerator.class, cost(), Double::sum);
   }
 
   /**

@@ -38,7 +38,10 @@ public class TestStochasticLoadBalancerMidCluster extends StochasticBalancerTest
     int numRegionsPerServer = 60; // all servers except one
     int replication = 1;
     int numTables = 40;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 10_000);
+    loadBalancer.onConfigurationChange(conf);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
   }
 
   @Test
@@ -50,7 +53,9 @@ public class TestStochasticLoadBalancerMidCluster extends StochasticBalancerTest
     int numTables = 400;
     // num large num regions means may not always get to best balance with one run
     boolean assertFullyBalanced = false;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 10_000);
+    loadBalancer.onConfigurationChange(conf);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
       assertFullyBalanced, false);
   }
 
@@ -61,7 +66,10 @@ public class TestStochasticLoadBalancerMidCluster extends StochasticBalancerTest
     int numRegionsPerServer = 9; // all servers except one
     int replication = 1;
     int numTables = 110;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 10_000);
+    loadBalancer.onConfigurationChange(conf);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
     // TODO(eclark): Make sure that the tables are well distributed.
   }
 }
