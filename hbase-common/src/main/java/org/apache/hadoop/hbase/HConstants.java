@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase;
 
 import static org.apache.hadoop.hbase.io.hfile.BlockType.MAGIC_LENGTH;
-
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -970,7 +969,7 @@ public final class HConstants {
   public static final String REPLICATION_BULKLOAD_ENABLE_KEY = "hbase.replication.bulkload.enabled";
   public static final String REPLICATION_SINK_TRANSLATOR = "hbase.replication.sink.translator";
   public static final String REPLICATION_SINK_TRANSLATOR_DEFAULT =
-    "org.apache.hadoop.hbase.replication.regionserver.DefaultReplicationSinkTranslator";
+    "org.apache.hadoop.hbase.replication.regionserver.IdentityReplicationSinkTranslator";
   public static final boolean REPLICATION_BULKLOAD_ENABLE_DEFAULT = false;
   /** Replication cluster id of source cluster which uniquely identifies itself with peer cluster */
   public static final String REPLICATION_CLUSTER_ID = "hbase.replication.cluster.id";
