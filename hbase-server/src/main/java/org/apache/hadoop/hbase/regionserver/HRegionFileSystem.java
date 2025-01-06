@@ -1003,7 +1003,7 @@ public class HRegionFileSystem {
 
     // Archive region
     Path rootDir = CommonFSUtils.getRootDir(conf);
-    HFileArchiver.archiveRegion(conf, fs, rootDir, tableDir, regionDir);
+    HFileArchiver.archiveRegion(fs, rootDir, tableDir, regionDir);
 
     // Delete empty region dir
     if (!fs.delete(regionDir, true)) {
