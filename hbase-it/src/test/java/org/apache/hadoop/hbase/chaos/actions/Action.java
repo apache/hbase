@@ -196,7 +196,7 @@ public abstract class Action {
   protected void suspendRs(ServerName server) throws IOException {
     getLogger().info("Suspending regionserver {}", server);
     cluster.suspendRegionServer(server);
-    if (!(cluster instanceof SingleProcessHBaseCluster)) {
+    if (!(cluster instanceof MiniHBaseCluster)) {
       cluster.waitForRegionServerToStop(server, killRsTimeout);
     }
     getLogger().info("Suspending regionserver {}. Reported num of rs:{}", server,
@@ -206,7 +206,7 @@ public abstract class Action {
   protected void resumeRs(ServerName server) throws IOException {
     getLogger().info("Resuming regionserver {}", server);
     cluster.resumeRegionServer(server);
-    if (!(cluster instanceof SingleProcessHBaseCluster)) {
+    if (!(cluster instanceof MiniHBaseCluster)) {
       cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
     }
     getLogger().info("Resuming regionserver {}. Reported num of rs:{}", server,
