@@ -25,7 +25,6 @@ import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerT
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.RS_COLUMN;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.TIMESTAMP_COLUMN;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.WAL_NAME_COLUMN;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -69,9 +68,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -140,6 +137,8 @@ public class ReplicationSink {
       Class<? extends SourceFSConfigurationProvider> c =
         Class.forName(className).asSubclass(SourceFSConfigurationProvider.class);
       this.provider = c.getDeclaredConstructor().newInstance();
+    } catch (RuntimeException e) {
+      throw e;
     } catch (Exception e) {
       throw new IllegalArgumentException(
         "Configured source fs configuration provider class " + className + " throws error.", e);
@@ -151,9 +150,11 @@ public class ReplicationSink {
       this.conf.getClass(WALEntrySinkFilter.WAL_ENTRY_FILTER_KEY, null);
     WALEntrySinkFilter filter = null;
     try {
-      filter = walEntryFilterClass == null
-        ? null
-        : (WALEntrySinkFilter) walEntryFilterClass.getDeclaredConstructor().newInstance();
+      filter = walEntryFilterClass == null ?
+        null :
+        (WALEntrySinkFilter) walEntryFilterClass.getDeclaredConstructor().newInstance();
+    } catch (RuntimeException e) {
+      throw e;
     } catch (Exception e) {
       LOG.warn("Failed to instantiate " + walEntryFilterClass);
     }
@@ -183,12 +184,14 @@ public class ReplicationSink {
   }
 
   private ReplicationSinkTranslator getReplicationSinkTranslator() throws IOException {
-    Class<?> translatorClass = this.conf.getClass(HConstants.REPLICATION_SINK_TRANSLATOR, null);
+    Class<?> translatorClass = this.conf.getClass(HConstants.REPLICATION_SINK_TRANSLATOR, IdentityReplicationSinkTranslator.class);
     ReplicationSinkTranslator translator = null;
     try {
-      translator = translatorClass == null
-        ? new IdentityReplicationSinkTranslator()
-        : (ReplicationSinkTranslator) translatorClass.getDeclaredConstructor().newInstance();
+      translator = translatorClass == null ?
+        null :
+        (ReplicationSinkTranslator) translatorClass.getDeclaredConstructor().newInstance();
+    } catch (RuntimeException e) {
+      throw e;
     } catch (Exception e) {
       LOG.warn("Failed to instantiate " + translatorClass);
     }
