@@ -39,8 +39,6 @@ import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.Queue;
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -162,9 +160,8 @@ public class TestPerformanceEvaluation {
     assertEquals(1000, opts.getPerClientRunRows());
     // assuming we will get one before this loop expires
     boolean foundValue = false;
-    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 10000000; i++) {
-      long randomRow = PerformanceEvaluation.generateRandomRow(rand, opts.totalRows);
+      long randomRow = PerformanceEvaluation.generateRandomRow(opts.totalRows);
       if (randomRow > 1000) {
         foundValue = true;
         break;
@@ -186,7 +183,7 @@ public class TestPerformanceEvaluation {
     ctor.setAccessible(true);
     Histogram histogram = (Histogram) ctor.newInstance(new UniformReservoir(1024 * 500));
     for (int i = 0; i < 100; i++) {
-      histogram.update(rrt.getValueLength(null));
+      histogram.update(rrt.getValueLength());
     }
     Snapshot snapshot = histogram.getSnapshot();
     double stddev = snapshot.getStdDev();
