@@ -165,14 +165,14 @@ public abstract class HBaseClusterInterface implements Closeable, Configurable {
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForRegionServerToSuspend(ServerName serverName, long timeout)
-          throws IOException;
+    throws IOException;
 
   /**
    * Wait for the specified region server to resume the thread / process.
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForRegionServerToResume(ServerName serverName, long timeout)
-          throws IOException;
+    throws IOException;
 
   /**
    * Starts a new zookeeper node on the given hostname or if this is a mini/local cluster, silently
