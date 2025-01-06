@@ -169,8 +169,6 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                   <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
                     <li><a target="_blank" href="/jmx">JMX</a></li>
                     <li><a target="_blank" href="/jmx?description=true">JMX with description</a></li>
-                    <li><a target="_blank" href="/prometheus">Prometheus</a></li>
-                    <li><a target="_blank" href="/prometheus?description=true">Prometheus with description</a></li>
                   </ul>
                 </li>
                 <li><a href="/prof">Profiler</a></li>
