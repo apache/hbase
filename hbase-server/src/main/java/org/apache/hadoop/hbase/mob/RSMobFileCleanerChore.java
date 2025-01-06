@@ -108,10 +108,6 @@ public class RSMobFileCleanerChore extends ScheduledChore {
         // Now clean obsolete files for a table
         LOG.info("Cleaning obsolete MOB files from table={}", htd.getTableName());
         List<ColumnFamilyDescriptor> list = MobUtils.getMobColumnFamilies(htd);
-        if (list.isEmpty()) {
-          // The table is not MOB table, just skip it
-          continue;
-        }
         List<HRegion> regions = rs.getRegions(htd.getTableName());
         for (HRegion region : regions) {
           for (ColumnFamilyDescriptor hcd : list) {
@@ -120,27 +116,14 @@ public class RSMobFileCleanerChore extends ScheduledChore {
             Set<String> regionMobs = new HashSet<String>();
             Path currentPath = null;
             try {
-              // collecting referenced MOBs
+              // collectinng referenced MOBs
               for (HStoreFile sf : sfs) {
                 currentPath = sf.getPath();
-                byte[] mobRefData = null;
-                byte[] bulkloadMarkerData = null;
-                if (sf.getReader() == null) {
-                  synchronized (sf) {
-                    boolean needCreateReader = sf.getReader() == null;
-                    sf.initReader();
-                    mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
-                    bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
-                    if (needCreateReader) {
-                      // close store file to avoid memory leaks
-                      sf.closeStoreFile(true);
-                    }
-                  }
-                } else {
-                  mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
-                  bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
-                }
-
+                sf.initReader();
+                byte[] mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
+                byte[] bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
+                // close store file to avoid memory leaks
+                sf.closeStoreFile(true);
                 if (mobRefData == null) {
                   if (bulkloadMarkerData == null) {
                     LOG.warn(
