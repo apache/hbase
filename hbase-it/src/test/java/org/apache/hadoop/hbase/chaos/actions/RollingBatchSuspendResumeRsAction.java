@@ -65,7 +65,7 @@ public class RollingBatchSuspendResumeRsAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    getLogger().info("Performing action: Rolling batch restarting {}% of region servers",
+    getLogger().info("Performing action: Rolling batch suspending {}% of region servers",
       (int) (ratio * 100));
     List<ServerName> selectedServers = selectServers();
     Queue<ServerName> serversToBeSuspended = new ArrayDeque<>(selectedServers);
