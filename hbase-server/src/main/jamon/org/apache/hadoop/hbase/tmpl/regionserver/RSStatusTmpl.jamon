@@ -114,7 +114,15 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
                 <li><a href="/rsOperationDetails.jsp">Operation Details</a></li>
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/dump">Debug Dump</a></li>
-                <li><a href="/jmx">Metrics Dump</a></li>
+                <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Metrics <span class="caret"></span>
+                  </a>
+                  <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                    <li><a target="_blank" href="/jmx">JMX</a></li>
+                    <li><a target="_blank" href="/jmx?description=true">JMX with description</a></li>
+                  </ul>
+                </li>
                 <li><a href="/prof">Profiler</a></li>
                 <%if HBaseConfiguration.isShowConfInServlet()%>
                 <li><a href="/conf">HBase Configuration</a></li>
@@ -289,7 +297,12 @@ $(document).ready(function()
             type: "numeric"
         });
 
-        $("#baseStatsTable").tablesorter();
+        $("#baseStatsTable").tablesorter({
+            headers: {
+                1: {empty: 'emptyMin'},
+                2: {empty: 'emptyMax'}
+            }
+        });
         $("#requestStatsTable").tablesorter({
             headers: {
                 1: {sorter: 'separator'},
