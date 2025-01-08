@@ -679,8 +679,6 @@ public class TestReplicationSink {
         tableName.equals(TABLE_NAME3) && Bytes.equals(cell.getFamilyArray(), cell.getFamilyOffset(),
           cell.getFamilyLength(), FAM_NAME1, 0, FAM_NAME1.length)
       ) {
-        int tagsLen = cell.getTagsLength();
-        LOG.info("tagsLen: {}", tagsLen);
         return EXTENDED_CELL_BUILDER.clear()
           .setRow(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()).setFamily(FAM_NAME2)
           .setQualifier(cell.getQualifierArray(), cell.getQualifierOffset(),
