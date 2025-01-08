@@ -18,7 +18,7 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-         import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
+         import="static org.apache.commons.text.StringEscapeUtils.escapeXml10"
          import="java.util.Collections"
          import="java.util.Comparator"
          import="java.util.ArrayList"
@@ -107,7 +107,7 @@
                     <td></td>
                 <% } else { %>
                     <td><%= procedure.getProcId() %></td>
-                    <td><%= escapeXml(procedure.getState().toString() + (procedure.isBypass() ? "(Bypassed)" : "")) %></td>
+                    <td><%= escapeXml10(procedure.getState().toString() + (procedure.isBypass() ? "(Bypassed)" : "")) %></td>
                 <% } %>
 
                 <% RegionState rs = regionStateNode.toRegionState(); %>

@@ -18,7 +18,7 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-  import="org.apache.commons.lang3.StringEscapeUtils"
+  import="org.apache.commons.text.StringEscapeUtils"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.zookeeper.ZKDump"
   import="org.apache.hadoop.hbase.zookeeper.ZKWatcher"
