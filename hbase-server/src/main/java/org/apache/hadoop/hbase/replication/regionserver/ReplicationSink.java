@@ -188,18 +188,15 @@ public class ReplicationSink {
 
   private ReplicationSinkTranslator getReplicationSinkTranslator() throws IOException {
     Class<?> translatorClass = this.conf.getClass(HConstants.REPLICATION_SINK_TRANSLATOR,
-      IdentityReplicationSinkTranslator.class);
-    ReplicationSinkTranslator translator = null;
+      IdentityReplicationSinkTranslator.class, ReplicationSinkTranslator.class);
     try {
-      translator = translatorClass == null
-        ? null
-        : (ReplicationSinkTranslator) translatorClass.getDeclaredConstructor().newInstance();
+      return (ReplicationSinkTranslator) translatorClass.getDeclaredConstructor().newInstance();
     } catch (RuntimeException e) {
       throw e;
     } catch (Exception e) {
       LOG.warn("Failed to instantiate " + translatorClass);
+      return new IdentityReplicationSinkTranslator();
     }
-    return translator;
   }
 
   /**
