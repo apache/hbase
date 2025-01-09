@@ -906,7 +906,7 @@ pipeline {
         stage ('packaging and integration') {
           agent {
             node {
-              label 'hbase-large'
+              label 'hbase'
             }
           }
           environment {
