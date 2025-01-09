@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -76,7 +77,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.UUID;
@@ -107,7 +110,8 @@ public class TestReplicationSink {
   protected static final byte[] FAM_NAME1 = Bytes.toBytes("info1");
   protected static final byte[] FAM_NAME2 = Bytes.toBytes("info2");
 
-  protected static final TestReplicationSinkTranslator TRANSLATOR = new TestReplicationSinkTranslator();
+  protected static final TestReplicationSinkTranslator TRANSLATOR =
+    new TestReplicationSinkTranslator();
 
   protected static Stoppable STOPPABLE = new Stoppable() {
     final AtomicBoolean stop = new AtomicBoolean(false);
@@ -215,7 +219,8 @@ public class TestReplicationSink {
   /**
    * Insert a mix of puts and deletes
    */
-  public void testMixedPutDelete(TableName tableName, byte[] family, Table sinkTable) throws Exception {
+  public void testMixedPutDelete(TableName tableName, byte[] family, Table sinkTable)
+    throws Exception {
     List<WALEntry> entries = new ArrayList<>(BATCH_SIZE / 2);
     List<ExtendedCell> cells = new ArrayList<>();
     Set<Integer> rows = new HashSet<>();
@@ -235,7 +240,8 @@ public class TestReplicationSink {
         entries.add(createEntry(tableName, row, family, family, row, KeyValue.Type.Put, cells));
         rows.add(i);
       } else {
-        entries.add(createEntry(tableName, row, family, family, null, KeyValue.Type.DeleteColumn, cells));
+        entries.add(
+          createEntry(tableName, row, family, family, null, KeyValue.Type.DeleteColumn, cells));
         rows.remove(i);
       }
     }
@@ -258,7 +264,8 @@ public class TestReplicationSink {
     testMixedPutDelete(TABLE_NAME3, FAM_NAME1, table4);
   }
 
-  public void testLargeEditsPutDelete(TableName tableName, byte[] family, Table sinkTable) throws Exception {
+  public void testLargeEditsPutDelete(TableName tableName, byte[] family, Table sinkTable)
+    throws Exception {
     List<WALEntry> entries = new ArrayList<>();
     List<ExtendedCell> cells = new ArrayList<>();
     Set<Integer> rows = new HashSet<>();
@@ -285,7 +292,8 @@ public class TestReplicationSink {
         entries.add(createEntry(tableName, row, family, family, row, KeyValue.Type.Put, cells));
         rows.add(i);
       } else {
-        entries.add(createEntry(tableName, row, family, family, null, KeyValue.Type.DeleteColumn, cells));
+        entries.add(
+          createEntry(tableName, row, family, family, null, KeyValue.Type.DeleteColumn, cells));
         rows.remove(i);
       }
     }
@@ -313,8 +321,8 @@ public class TestReplicationSink {
   /**
    * Insert to 2 different tables
    */
-  public void testMixedPutTables(TableName tableName1, byte[] family1, Table sinkTable1, TableName tableName2, byte[] family2,
-    Table sinkTable2) throws Exception {
+  public void testMixedPutTables(TableName tableName1, byte[] family1, Table sinkTable1,
+    TableName tableName2, byte[] family2, Table sinkTable2) throws Exception {
     List<WALEntry> entries = new ArrayList<>(BATCH_SIZE / 2);
     List<ExtendedCell> cells = new ArrayList<>();
     Set<Integer> rows1 = new HashSet<>();
@@ -356,7 +364,8 @@ public class TestReplicationSink {
   /**
    * Insert then do different types of deletes
    */
-  public void testMixedDeletes(TableName tableName, byte[] family, Table sinkTable) throws Exception {
+  public void testMixedDeletes(TableName tableName, byte[] family, Table sinkTable)
+    throws Exception {
     List<WALEntry> entries = new ArrayList<>(3);
     List<ExtendedCell> cells = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
@@ -367,9 +376,12 @@ public class TestReplicationSink {
       replicationClusterId, baseNamespaceDir, hfileArchiveDir);
     entries = new ArrayList<>(3);
     cells = new ArrayList<>();
-    entries.add(createEntry(tableName, Bytes.toBytes(0), family, family, null, KeyValue.Type.DeleteColumn, cells));
-    entries.add(createEntry(tableName, Bytes.toBytes(1), family, null, null, KeyValue.Type.DeleteFamily, cells));
-    entries.add(createEntry(tableName, Bytes.toBytes(2), family, family, null, KeyValue.Type.DeleteColumn, cells));
+    entries.add(createEntry(tableName, Bytes.toBytes(0), family, family, null,
+      KeyValue.Type.DeleteColumn, cells));
+    entries.add(createEntry(tableName, Bytes.toBytes(1), family, null, null,
+      KeyValue.Type.DeleteFamily, cells));
+    entries.add(createEntry(tableName, Bytes.toBytes(2), family, family, null,
+      KeyValue.Type.DeleteColumn, cells));
 
     SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
       replicationClusterId, baseNamespaceDir, hfileArchiveDir);
@@ -393,7 +405,8 @@ public class TestReplicationSink {
    * Puts are buffered, but this tests when a delete (not-buffered) is applied before the actual Put
    * that creates it.
    */
-  public void testApplyDeleteBeforePut(TableName tableName, byte[] family, Table sinkTable) throws Exception {
+  public void testApplyDeleteBeforePut(TableName tableName, byte[] family, Table sinkTable)
+    throws Exception {
     List<WALEntry> entries = new ArrayList<>(5);
     List<ExtendedCell> cells = new ArrayList<>();
     Set<Integer> rows = new HashSet<>();
@@ -403,7 +416,8 @@ public class TestReplicationSink {
       rows.add(i);
     }
     int deleteRow = 1;
-    entries.add(createEntry(tableName, Bytes.toBytes(1), family, null, null, KeyValue.Type.DeleteFamily, cells));
+    entries.add(createEntry(tableName, Bytes.toBytes(1), family, null, null,
+      KeyValue.Type.DeleteFamily, cells));
     rows.remove(deleteRow);
     for (int i = 3; i < 5; i++) {
       byte[] row = Bytes.toBytes(i);
@@ -428,15 +442,16 @@ public class TestReplicationSink {
     testApplyDeleteBeforePut(TABLE_NAME3, FAM_NAME1, table4);
   }
 
-  public void testRethrowRetriesExhaustedException(TableName tableName, byte[] family, TableName sinkTableName)
-    throws Exception {
+  public void testRethrowRetriesExhaustedException(TableName tableName, byte[] family,
+    TableName sinkTableName) throws Exception {
     TableName notExistTable = TableName.valueOf("notExistTable");
     byte[] notExistFamily = Bytes.toBytes("notExistFamily");
     List<WALEntry> entries = new ArrayList<>();
     List<ExtendedCell> cells = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       byte[] row = Bytes.toBytes(i);
-      entries.add(createEntry(notExistTable, row, notExistFamily, notExistFamily, row, KeyValue.Type.Put, cells));
+      entries.add(createEntry(notExistTable, row, notExistFamily, notExistFamily, row,
+        KeyValue.Type.Put, cells));
     }
     try {
       SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
@@ -570,8 +585,8 @@ public class TestReplicationSink {
   /**
    * Test failure metrics produced for failed replication edits
    */
-  public void testFailedReplicationSinkMetrics(TableName tableName, byte[] family, TableName sinkTableName)
-    throws IOException {
+  public void testFailedReplicationSinkMetrics(TableName tableName, byte[] family,
+    TableName sinkTableName) throws IOException {
     long initialFailedBatches = SINK.getSinkMetrics().getFailedBatches();
     long errorCount = 0L;
     List<WALEntry> entries = new ArrayList<>(BATCH_SIZE);
@@ -598,7 +613,8 @@ public class TestReplicationSink {
     byte[] notExistFamily = Bytes.toBytes("notExistFamily");
     for (int i = 0; i < BATCH_SIZE; i++) {
       byte[] row = Bytes.toBytes(i);
-      entries.add(createEntry(notExistTable, row, notExistFamily, notExistFamily, row, KeyValue.Type.Put, cells));
+      entries.add(createEntry(notExistTable, row, notExistFamily, notExistFamily, row,
+        KeyValue.Type.Put, cells));
     }
     try {
       SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
@@ -645,14 +661,14 @@ public class TestReplicationSink {
   }
 
   private void validatePuts(TableName tableName, Set<Integer> rows, byte[] family, byte[] qualifier,
-    Table sinkTable)
-    throws IOException {
+    Table sinkTable) throws IOException {
     for (int row : rows) {
       byte[] rowBytes = Bytes.toBytes(row);
       Get get = new Get(TRANSLATOR.getSinkRowKey(tableName, rowBytes));
       Result res = sinkTable.get(get);
       assertTrue(!res.isEmpty());
-      assertArrayEquals(res.getValue(TRANSLATOR.getSinkFamily(tableName, family), TRANSLATOR.getSinkQualifier(tableName, family, qualifier)), rowBytes);
+      assertArrayEquals(res.getValue(TRANSLATOR.getSinkFamily(tableName, family),
+        TRANSLATOR.getSinkQualifier(tableName, family, qualifier)), rowBytes);
     }
   }
 
