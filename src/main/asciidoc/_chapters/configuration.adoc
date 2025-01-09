@@ -475,7 +475,7 @@ The Hadoop 2 artifacts do not have any version suffix, the Hadoop 3 artifacts ad
 i.e. `hbase-2.5.2-bin.tar.gz.asc` is the Binary release built with Hadoop2, and `hbase-2.5.2-hadoop3-bin.tar.gz` is the
 release built with Hadoop 3.
 
-[[binary_version_policy]]
+[[default_hadoop_version_policy]]
 ==== Hadoop 3 version policy ====
 
 Each HBase release has a default Hadoop 3 version. This is used when the Hadoop 3 version is not specified during build,
