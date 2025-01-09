@@ -23,7 +23,7 @@ pipeline {
     }
   }
   triggers {
-    cron('@hourly') // See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax
+    cron('H H/4 * * *') // See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax
   }
   options {
     // this should roughly match how long we tell the flaky dashboard to look at
