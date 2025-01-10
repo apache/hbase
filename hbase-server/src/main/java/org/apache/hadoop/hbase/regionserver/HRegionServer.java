@@ -2442,9 +2442,11 @@ public class HRegionServer extends Thread
       this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT, HConstants.DEFAULT_REGIONSERVER_INFOPORT);
     String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");
 
+    boolean isMaster = false;
     if (this instanceof HMaster) {
       port = conf.getInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT);
       addr = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+      isMaster = true;
     }
     // -1 is for disabling info server
     if (port < 0) {
@@ -2454,7 +2456,7 @@ public class HRegionServer extends Thread
     if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
       String msg = "Failed to start http info server. Address " + addr
         + " does not belong to this host. Correct configuration parameter: "
-        + "hbase.regionserver.info.bindAddress";
+        + (isMaster ? "hbase.master.info.bindAddress" : "hbase.regionserver.info.bindAddress");
       LOG.error(msg);
       throw new IOException(msg);
     }
