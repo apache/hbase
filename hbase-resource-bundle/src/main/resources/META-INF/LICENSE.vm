@@ -1492,14 +1492,14 @@ ${dep.scm.url}
 #if(${dep.licenses[0].name.equals("Common Public License Version 1.0")})
 #set($aggregated = $cpl.add($dep))
 #end
-#if( ${dep.licenses[0].name.contains("Eclipse Public License")} )
+#if( ${dep.licenses[0].name.contains("Eclipse Public License")} || ${dep.licenses[0].name.contains("EPL")} )
 #if( ${dep.licenses[0].name.contains("1.0")} )
 #set($aggregated = $epl_1_0.add($dep))
 #elseif( ${dep.licenses[0].name.contains("2.0")} )
 #set($aggregated = $epl_2_0.add($dep))
 #end
 #end
-#if( ${dep.licenses[0].name.contains("Eclipse Distribution License")} )
+#if( ${dep.licenses[0].name.contains("Eclipse Distribution License")} || ${dep.licenses[0].name.contains("EDL")} )
 #if( ${dep.licenses[0].name.contains("1.0")} )
 #set($aggregated = $edl_1_0.add($dep))
 #end
