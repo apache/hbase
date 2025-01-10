@@ -314,10 +314,16 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
     "Size of data that has been sent by clients with the write ahead logging turned off.";
   String PERCENT_FILES_LOCAL = "percentFilesLocal";
   String PERCENT_FILES_LOCAL_DESC =
-    "The percent of HFiles that are stored on the local hdfs data node.";
+    "The percent of HFiles that are stored on the local hdfs data node. If not using "
+      + "region replicas, this should equal percentFilesLocalPrimaryRegions";
+  String PERCENT_FILES_LOCAL_PRIMARY_REGIONS = "percentFilesLocalPrimaryRegions";
+  String PERCENT_FILES_LOCAL_PRIMARY_REGIONS_DESC =
+    "The percent of HFiles used by primary regions that are stored on the local hdfs data node. "
+      + "This is the category of locality that you want to reach 100% when using region replicas";
   String PERCENT_FILES_LOCAL_SECONDARY_REGIONS = "percentFilesLocalSecondaryRegions";
   String PERCENT_FILES_LOCAL_SECONDARY_REGIONS_DESC =
-    "The percent of HFiles used by secondary regions that are stored on the local hdfs data node.";
+    "The percent of HFiles used by secondary regions that are stored on the local hdfs data node. "
+      + "This is not likely to reach 100%";
   String SPLIT_QUEUE_LENGTH = "splitQueueLength";
   String SPLIT_QUEUE_LENGTH_DESC = "Length of the queue for splits.";
   String COMPACTION_QUEUE_LENGTH = "compactionQueueLength";
