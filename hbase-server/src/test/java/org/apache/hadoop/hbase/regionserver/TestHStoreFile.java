@@ -163,8 +163,13 @@ public class TestHStoreFile {
     writeStoreFile(writer);
 
     Path sfPath = regionFs.commitStoreFile(TEST_FAMILY, writer.getPath());
-    HStoreFile sf = new HStoreFile(this.fs, sfPath, conf, cacheConf, BloomType.NONE, true);
-    checkHalfHFile(regionFs, sf);
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(regionFs.getRegionDir(), TEST_FAMILY))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
+        .withRegionFileSystem(regionFs).build());
+    HStoreFile sf = new HStoreFile(this.fs, sfPath, conf, cacheConf, BloomType.NONE, true, sft);
+    checkHalfHFile(regionFs, sf, sft);
   }
 
   private void writeStoreFile(final StoreFileWriter writer) throws IOException {
@@ -320,13 +325,23 @@ public class TestHStoreFile {
     writeStoreFile(writer);
 
     Path storeFilePath = regionFs.commitStoreFile(TEST_FAMILY, writer.getPath());
-    Path dstPath = new Path(regionFs.getTableDir(), new Path("test-region", TEST_FAMILY));
-    HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
+    Path dstPath =
+      new Path(regionFs.getTableDir(), new Path(dstHri.getRegionNameAsString(), TEST_FAMILY));
     Path linkFilePath =
       new Path(dstPath, HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
 
     // Try to open store file from link
-    StoreFileInfo storeFileInfo = new StoreFileInfo(testConf, this.fs, linkFilePath, true);
+
+    // this should be the SFT for the destination link file path, though it is not
+    // being used right now, for the next patch file link creation logic also would
+    // move to SFT interface.
+    StoreFileTracker sft = StoreFileTrackerFactory.create(testConf, false,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(dstHri.getRegionNameAsString(), TEST_FAMILY))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
+        .withRegionFileSystem(dstRegionFs).build());
+    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), storeFilePath.getName(), true);
+    StoreFileInfo storeFileInfo = sft.getStoreFileInfo(linkFilePath, true);
     HStoreFile hsf = new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf);
     assertTrue(storeFileInfo.isLink());
     hsf.initReader();
@@ -368,16 +383,42 @@ public class TestHStoreFile {
     HRegionFileSystem cloneRegionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
       CommonFSUtils.getTableDir(testDir, hri.getTable()), hriClone);
     Path dstPath = cloneRegionFs.getStoreDir(TEST_FAMILY);
-    HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
     Path linkFilePath =
       new Path(dstPath, HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
 
     // create splits of the link.
     // <root>/clone/splitA/<cf>/<reftohfilelink>,
     // <root>/clone/splitB/<cf>/<reftohfilelink>
+<<<<<<< HEAD
     HRegionInfo splitHriA = new HRegionInfo(hri.getTable(), null, SPLITKEY);
     HRegionInfo splitHriB = new HRegionInfo(hri.getTable(), SPLITKEY, null);
     HStoreFile f = new HStoreFile(fs, linkFilePath, testConf, cacheConf, BloomType.NONE, true);
+=======
+    RegionInfo splitHriA = RegionInfoBuilder.newBuilder(hri.getTable()).setEndKey(SPLITKEY).build();
+    RegionInfo splitHriB =
+      RegionInfoBuilder.newBuilder(hri.getTable()).setStartKey(SPLITKEY).build();
+
+    StoreFileTracker sft = StoreFileTrackerFactory.create(testConf, true,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(hriClone.getRegionNameAsString(), TEST_FAMILY))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
+        .withRegionFileSystem(cloneRegionFs).build());
+    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), storeFilePath.getName(), true);
+
+    HRegionFileSystem splitRegionAFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
+      CommonFSUtils.getTableDir(testDir, splitHriA.getTable()), splitHriA);
+    StoreFileTracker sftA = StoreFileTrackerFactory.create(testConf, true,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(splitHriA.getRegionNameAsString(), TEST_FAMILY))
+        .withRegionFileSystem(splitRegionAFs).build());
+    HRegionFileSystem splitRegionBFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
+      CommonFSUtils.getTableDir(testDir, splitHriB.getTable()), splitHriB);
+    StoreFileTracker sftB = StoreFileTrackerFactory.create(testConf, true,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(splitHriB.getRegionNameAsString(), TEST_FAMILY))
+        .withRegionFileSystem(splitRegionBFs).build());
+    HStoreFile f = new HStoreFile(fs, linkFilePath, testConf, cacheConf, BloomType.NONE, true, sft);
+>>>>>>> a680795f71 (HBASE-28969 Move HFileLink file creations to SFT (#6459))
     f.initReader();
     Path pathA = splitStoreFile(cloneRegionFs, splitHriA, TEST_FAMILY, f, SPLITKEY, true); // top
     Path pathB = splitStoreFile(cloneRegionFs, splitHriB, TEST_FAMILY, f, SPLITKEY, false);// bottom
