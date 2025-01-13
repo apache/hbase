@@ -683,8 +683,7 @@ public class HRegionFileSystem {
           hfileName = m.group(4);
         }
         // must create back reference here
-        HFileLink.create(conf, fs, splitDir, familyName, hri.getTable().getNameAsString(),
-          hri.getEncodedName(), linkedTable, linkedRegion, hfileName, true);
+        tracker.createHFileLink(linkedTable, linkedRegion, hfileName, true);
         Path path =
           new Path(splitDir, HFileLink.createHFileLinkName(linkedTable, linkedRegion, hfileName));
         LOG.info("Created linkFile:" + path.toString() + " for child: " + hri.getEncodedName()

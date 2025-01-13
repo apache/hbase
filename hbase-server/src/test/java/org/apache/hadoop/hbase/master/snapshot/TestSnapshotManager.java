@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -41,6 +42,10 @@ import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -223,9 +228,14 @@ public class TestSnapshotManager {
     Path hfilePath = new Path(familyPath, hfileName);
     fs.createNewFile(hfilePath);
     // Create link to hfile
-    Path familyLinkPath =
-      getFamilyDirPath(rootDir, tableLinkName, hriLink.getEncodedName(), familyName);
-    HFileLink.create(conf, fs, familyLinkPath, hri, hfileName);
+    HRegionFileSystem regionFS = HRegionFileSystem.create(conf, fs,
+      CommonFSUtils.getTableDir(rootDir, tableLinkName), hriLink);
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, true,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(regionFS.getRegionDir(), familyName))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(familyName))
+        .withRegionFileSystem(regionFS).build());
+    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), hfileName, true);
     Path linkBackRefDir = HFileLink.getBackReferencesDir(archiveStoreDir, hfileName);
     assertTrue(fs.exists(linkBackRefDir));
     FileStatus[] backRefs = fs.listStatus(linkBackRefDir);
