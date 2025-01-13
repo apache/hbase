@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.metrics.TableMetrics;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -286,6 +287,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   private final int rpcTimeout;
   private final AsyncProcess asyncProcess;
   private final Map<String, byte[]> requestAttributes;
+  private final TableMetrics tableMetrics;
 
   /**
    * For {@link AsyncRequestFutureImpl#manageError(int, Row, Retry, Throwable, ServerName)}. Only
@@ -401,6 +403,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       tracker = new RetryingTimeTracker().start();
     }
     this.requestAttributes = task.getRequestAttributes();
+    this.tableMetrics = task.getTableMetrics();
   }
 
   protected Set<CancellableRegionServerCallable> getCallsInProgress() {
@@ -595,10 +598,11 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
           (--actionsRemaining == 0) && reuseThread
             && numAttempt % HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER != 0
         ) {
-          runnable.run();
+          DelegateTableRunnableWithMetrics.wrapInDelegateTableRunnableWithMetrics(runnable, tableMetrics).run();
         } else {
           try {
-            pool.execute(runnable);
+            pool.execute(
+              DelegateTableRunnableWithMetrics.wrapInDelegateTableRunnableWithMetrics(runnable, tableMetrics));
           } catch (Throwable t) {
             if (t instanceof RejectedExecutionException) {
               // This should never happen. But as the pool is provided by the end user,
@@ -701,12 +705,14 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       new ReplicaCallIssuingRunnable(actionsForReplicaThread, startTime);
     if (asyncProcess.primaryCallTimeoutMicroseconds == 0) {
       // Start replica calls immediately.
-      replicaRunnable.run();
+      DelegateTableRunnableWithMetrics.wrapInDelegateTableRunnableWithMetrics(replicaRunnable,
+        tableMetrics).run();
     } else {
       // Start the thread that may kick off replica gets.
       // TODO: we could do it on the same thread, but it's a user thread, might be a bad idea.
       try {
-        pool.execute(replicaRunnable);
+        pool.execute(DelegateTableRunnableWithMetrics.wrapInDelegateTableRunnableWithMetrics(
+          replicaRunnable, tableMetrics));
       } catch (RejectedExecutionException ree) {
         LOG.warn("id=" + asyncProcess.id + " replica task rejected by pool; no replica calls", ree);
       }

@@ -1728,6 +1728,10 @@ public final class HConstants {
    */
   public final static boolean REJECT_DECOMMISSIONED_HOSTS_DEFAULT = false;
 
+  public static final String HBASE_CLIENT_TABLE_METRICS_ENABLE = "hbase.client.table.metrics.enable";
+
+  public static final boolean DEFAULT_HBASE_CLIENT_TABLE_METRICS_ENABLE = false;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

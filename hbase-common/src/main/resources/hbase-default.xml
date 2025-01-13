@@ -2067,4 +2067,12 @@ possible configurations would overwhelm and obscure the important.
       hitting the namenode, if the DFSInputStream's block list is incomplete.
     </description>
   </property>
+  <property>
+    <name>hbase.client.table.metrics.enable</name>
+    <value>false</value>
+    <description>
+      If true, collect Table level metrics in HBase Client. Currently, metrics from only
+      HTable#batch() API is collected.
+    </description>
+  </property>
 </configuration>
