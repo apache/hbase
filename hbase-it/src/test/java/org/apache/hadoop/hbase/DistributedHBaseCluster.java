@@ -143,6 +143,16 @@ public class DistributedHBaseCluster extends HBaseCluster {
   }
 
   @Override
+  public void waitForRegionServerToSuspend(ServerName serverName, long timeout) throws IOException {
+    waitForServiceToSuspend(ServiceType.HBASE_REGIONSERVER, serverName, timeout);
+  }
+
+  @Override
+  public void waitForRegionServerToResume(ServerName serverName, long timeout) throws IOException {
+    waitForServiceToResume(ServiceType.HBASE_REGIONSERVER, serverName, timeout);
+  }
+
+  @Override
   public void suspendRegionServer(ServerName serverName) throws IOException {
     LOG.info("Suspend RS: {}", serverName.getServerName());
     clusterManager.suspend(ServiceType.HBASE_REGIONSERVER, serverName.getHostname(),
@@ -305,6 +315,34 @@ public class DistributedHBaseCluster extends HBaseCluster {
       Threads.sleep(100);
     }
     throw new IOException("Timed-out waiting for service to start: " + serverName);
+  }
+
+  private void waitForServiceToSuspend(ServiceType service, ServerName serverName, long timeout)
+    throws IOException {
+    LOG.info("Waiting for service: {} to suspend: {}", service, serverName.getServerName());
+    long start = System.currentTimeMillis();
+
+    while ((System.currentTimeMillis() - start) < timeout) {
+      if (clusterManager.isSuspended(service, serverName.getHostname(), serverName.getPort())) {
+        return;
+      }
+      Threads.sleep(100);
+    }
+    throw new IOException("Timed-out waiting for service to suspend: " + serverName);
+  }
+
+  private void waitForServiceToResume(ServiceType service, ServerName serverName, long timeout)
+    throws IOException {
+    LOG.info("Waiting for service: {} to resume: {}", service, serverName.getServerName());
+    long start = System.currentTimeMillis();
+
+    while ((System.currentTimeMillis() - start) < timeout) {
+      if (clusterManager.isResumed(service, serverName.getHostname(), serverName.getPort())) {
+        return;
+      }
+      Threads.sleep(100);
+    }
+    throw new IOException("Timed-out waiting for service to resume: " + serverName);
   }
 
   @Override
