@@ -17,47 +17,31 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * An action to move or swap a region
- */
 @InterfaceAudience.Private
-abstract class BalanceAction {
-  enum Type {
-    ASSIGN_REGION,
-    MOVE_REGION,
-    SWAP_REGIONS,
-    MOVE_BATCH,
-    NULL,
+public final class SystemTableIsolationCandidateGenerator extends TableIsolationCandidateGenerator {
+
+  static SystemTableIsolationCandidateGenerator INSTANCE =
+    new SystemTableIsolationCandidateGenerator();
+
+  private boolean isolateMeta = false;
+
+  private SystemTableIsolationCandidateGenerator() {
   }
 
-  static final BalanceAction NULL_ACTION = new BalanceAction(Type.NULL) {
-  };
-
-  private final Type type;
-
-  BalanceAction(Type type) {
-    this.type = type;
-  }
-
-  /**
-   * Returns an Action which would undo this action
-   */
-  BalanceAction undoAction() {
-    return this;
-  }
-
-  Type getType() {
-    return type;
-  }
-
-  long getStepCount() {
-    return 1;
+  void setIsolateMeta(boolean isolateMeta) {
+    this.isolateMeta = isolateMeta;
   }
 
   @Override
-  public String toString() {
-    return type + ":";
+  boolean shouldBeIsolated(RegionInfo regionInfo) {
+    if (isolateMeta) {
+      return regionInfo.getTable().isSystemTable() && !regionInfo.isMetaRegion();
+    } else {
+      return regionInfo.getTable().isSystemTable();
+    }
   }
+
 }

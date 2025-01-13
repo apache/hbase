@@ -39,12 +39,16 @@ public class TestStochasticLoadBalancerRegionReplicaLargeCluster
     // ignore these two cost functions to allow us to make any move that helps other functions.
     conf.setFloat("hbase.master.balancer.stochastic.moveCost", 0f);
     conf.setFloat("hbase.master.balancer.stochastic.tableSkewCost", 0f);
+    conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
+    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 100000000L);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 30_000);
     loadBalancer.onConfigurationChange(conf);
     int numNodes = 1000;
     int numRegions = 20 * numNodes; // 20 * replication regions per RS
     int numRegionsPerServer = 19; // all servers except one
     int numTables = 100;
     int replication = 3;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
   }
 }

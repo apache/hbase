@@ -33,11 +33,16 @@ public class TestStochasticLoadBalancerRegionReplicaMidCluster extends Stochasti
 
   @Test
   public void testRegionReplicasOnMidCluster() {
+    conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
+    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 100000000L);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 10_000);
+    loadBalancer.onConfigurationChange(conf);
     int numNodes = 200;
     int numRegions = 40 * 200;
     int replication = 3; // 3 replicas per region
     int numRegionsPerServer = 30; // all regions are mostly balanced
     int numTables = 10;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
   }
 }

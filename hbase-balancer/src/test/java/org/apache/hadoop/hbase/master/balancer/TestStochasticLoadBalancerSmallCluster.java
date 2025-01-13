@@ -38,6 +38,8 @@ public class TestStochasticLoadBalancerSmallCluster extends StochasticBalancerTe
     int numRegionsPerServer = 40; // all servers except one
     int replication = 1;
     int numTables = 10;
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 10_000);
+    loadBalancer.onConfigurationChange(conf);
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }
 
@@ -48,6 +50,8 @@ public class TestStochasticLoadBalancerSmallCluster extends StochasticBalancerTe
     int numRegionsPerServer = 40; // all servers except one
     int replication = 1;
     int numTables = 10;
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 10_000);
+    loadBalancer.onConfigurationChange(conf);
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }
 
@@ -58,6 +62,8 @@ public class TestStochasticLoadBalancerSmallCluster extends StochasticBalancerTe
     int numRegionsPerServer = 1; // all servers except one
     int replication = 1;
     int numTables = 10;
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 10_000);
+    loadBalancer.onConfigurationChange(conf);
     // fails because of max moves
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, false,
       false);
