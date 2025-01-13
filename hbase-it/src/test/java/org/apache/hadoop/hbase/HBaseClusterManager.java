@@ -216,6 +216,10 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
         service);
     }
 
+    protected String getStateCommand(ServiceType service) {
+      return String.format("%s | xargs ps -o state= -p ", findPidCommand(service));
+    }
+
     public String signalCommand(ServiceType service, String signal) {
       return String.format("%s | xargs kill -s %s", findPidCommand(service), signal);
     }
@@ -464,5 +468,19 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
   @Override
   public void resume(ServiceType service, String hostname, int port) throws IOException {
     signal(service, Signal.SIGCONT, hostname);
+  }
+
+  public boolean isSuspended(ServiceType service, String hostname, int port) throws IOException {
+    String ret =
+      execWithRetries(hostname, service, getCommandProvider(service).getStateCommand(service))
+        .getSecond();
+    return ret != null && ret.trim().equals("T");
+  }
+
+  public boolean isResumed(ServiceType service, String hostname, int port) throws IOException {
+    String ret =
+      execWithRetries(hostname, service, getCommandProvider(service).getStateCommand(service))
+        .getSecond();
+    return ret != null && !ret.trim().equals("T");
   }
 }
