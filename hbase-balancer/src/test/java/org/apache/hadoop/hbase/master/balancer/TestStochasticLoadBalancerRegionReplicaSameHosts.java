@@ -40,7 +40,6 @@ public class TestStochasticLoadBalancerRegionReplicaSameHosts extends Stochastic
   @Test
   public void testRegionReplicationOnMidClusterSameHosts() {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
     loadBalancer.onConfigurationChange(conf);
     int numHosts = 30;
     int numRegions = 30 * 30;
@@ -62,6 +61,6 @@ public class TestStochasticLoadBalancerRegionReplicaSameHosts extends Stochastic
       }
     }
 
-    testWithCluster(newServerMap, null, true, true);
+    testWithClusterWithIteration(newServerMap, null, true, true);
   }
 }
