@@ -38,6 +38,8 @@ public class TestStochasticLoadBalancerRegionReplicaMidCluster extends BalancerT
     int replication = 3; // 3 replicas per region
     int numRegionsPerServer = 30; // all regions are mostly balanced
     int numTables = 10;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    conf.setLong(StochasticLoadBalancer.MAX_RUNNING_TIME_KEY, 10_000);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
   }
 }
