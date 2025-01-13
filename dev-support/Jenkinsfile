@@ -25,7 +25,7 @@ pipeline {
       pollSCM('H H 1-31/3 * *')
     } else if (env.BRANCH_NAME == 'branch-3') {
       pollSCM('H H 1-31/3 * *')
-    else if (env.BRANCH_NAME == 'branch-2') {
+    } else if (env.BRANCH_NAME == 'branch-2') {
       pollSCM('H H 2-31/3 * *')
     } else {
       pollSCM('H H 3-31/3 * *')
