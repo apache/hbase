@@ -93,6 +93,18 @@ interface ClusterManager extends Configurable {
    */
   boolean isRunning(ServiceType service, String hostname, int port) throws IOException;
 
+  /**
+   * Returns whether the service is suspended on the remote host. This only checks whether the
+   * service status is suspended.
+   */
+  boolean isSuspended(ServiceType service, String hostname, int port) throws IOException;
+
+  /**
+   * Returns whether the service is resumed on the remote host. This only checks whether the service
+   * status is resumed.
+   */
+  boolean isResumed(ServiceType service, String hostname, int port) throws IOException;
+
   /*
    * TODO: further API ideas: //return services running on host: ServiceType[]
    * getRunningServicesOnHost(String hostname); //return which services can be run on host (for

@@ -303,6 +303,16 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   @Override
+  public void waitForRegionServerToSuspend(ServerName serverName, long timeout) throws IOException {
+    LOG.warn("Waiting for regionserver to suspend on mini cluster is not supported");
+  }
+
+  @Override
+  public void waitForRegionServerToResume(ServerName serverName, long timeout) throws IOException {
+    LOG.warn("Waiting for regionserver to resume on mini cluster is not supported");
+  }
+
+  @Override
   public void startZkNode(String hostname, int port) throws IOException {
     LOG.warn("Starting zookeeper nodes on mini cluster is not supported");
   }
