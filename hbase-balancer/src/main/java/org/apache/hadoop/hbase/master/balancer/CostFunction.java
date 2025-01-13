@@ -25,7 +25,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 abstract class CostFunction {
 
-  public static final double COST_EPSILON = 0.0001;
+  public static double getCostEpsilon(double cost) {
+    return Math.ulp(cost);
+  }
 
   private float multiplier = 0;
 
@@ -101,13 +103,14 @@ abstract class CostFunction {
    * @return The scaled value.
    */
   protected static double scale(double min, double max, double value) {
+    double costEpsilon = getCostEpsilon(max);
     if (
-      max <= min || value <= min || Math.abs(max - min) <= COST_EPSILON
-        || Math.abs(value - min) <= COST_EPSILON
+      max <= min || value <= min || Math.abs(max - min) <= costEpsilon
+        || Math.abs(value - min) <= costEpsilon
     ) {
       return 0;
     }
-    if (max <= min || Math.abs(max - min) <= COST_EPSILON) {
+    if (max <= min || Math.abs(max - min) <= costEpsilon) {
       return 0;
     }
 
