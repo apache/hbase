@@ -42,12 +42,14 @@ public class HBaseSaslRpcServer {
   private final AttemptingUserProvidingSaslServer serverWithProvider;
   private final SaslServer saslServer;
   private CryptoAES cryptoAES;
+  private final Map<String, String> saslProps;
 
   public HBaseSaslRpcServer(SaslServerAuthenticationProvider provider,
     Map<String, String> saslProps, SecretManager<TokenIdentifier> secretManager)
     throws IOException {
     serverWithProvider = provider.createServer(secretManager, saslProps);
     saslServer = serverWithProvider.getServer();
+    this.saslProps = saslProps;
   }
 
   public boolean isComplete() {
@@ -89,6 +91,11 @@ public class HBaseSaslRpcServer {
 
   public String getNegotiatedQop() {
     return (String) saslServer.getNegotiatedProperty(Sasl.QOP);
+  }
+
+  public String getRequestedQop() {
+    return (String) saslProps.get(Sasl.QOP);
+
   }
 
   public String getAuthorizationID() {
