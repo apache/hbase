@@ -576,7 +576,8 @@ public final class MobUtils {
     boolean isCompaction) throws IOException {
     return createWriter(conf, fs, family, new Path(basePath, mobFileName.getFileName()),
       maxKeyCount, compression, cacheConfig, cryptoContext, StoreUtils.getChecksumType(conf),
-      StoreUtils.getBytesPerChecksum(conf), family.getBlocksize(), BloomType.NONE, isCompaction);
+      StoreUtils.getBytesPerChecksum(conf), StoreUtils.getBlockSize(conf, family.getBlocksize()),
+      BloomType.NONE, isCompaction);
   }
 
   /**

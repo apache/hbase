@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.compactions.CloseChecker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
@@ -351,8 +352,9 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       .build();
     throughputController.start(compactionName);
     KeyValueScanner kvs = (scanner instanceof KeyValueScanner) ? (KeyValueScanner) scanner : null;
-    long shippedCallSizeLimit =
-      (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
+    int blockSize = StoreUtils.getBlockSize(store.getReadOnlyConfiguration(),
+      store.getColumnFamilyDescriptor().getBlocksize());
+    long shippedCallSizeLimit = (long) request.getFiles().size() * blockSize;
 
     ExtendedCell mobCell = null;
     List<String> committedMobWriterFileNames = new ArrayList<>();
