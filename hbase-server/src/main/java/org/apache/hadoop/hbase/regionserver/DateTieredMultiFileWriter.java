@@ -23,9 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-import org.apache.hadoop.hbase.ExtendedCell;
 import java.util.function.Function;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**

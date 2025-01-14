@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.regionserver.compactions.CustomCellTieredUtils;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerValidationUtils;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -50,8 +51,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyTableState;
-
-import org.apache.hadoop.hbase.regionserver.compactions.CustomCellTieredUtils;
 
 @InterfaceAudience.Private
 public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<ModifyTableState> {

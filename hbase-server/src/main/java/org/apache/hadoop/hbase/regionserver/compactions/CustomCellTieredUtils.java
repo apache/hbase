@@ -17,25 +17,27 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import static org.apache.hadoop.hbase.regionserver.StoreEngine.STORE_ENGINE_CLASS_KEY;
+import static org.apache.hadoop.hbase.regionserver.compactions.CustomCellTieringValueProvider.TIERING_CELL_QUALIFIER;
+
+import java.io.IOException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
-import java.io.IOException;
-import static org.apache.hadoop.hbase.regionserver.StoreEngine.STORE_ENGINE_CLASS_KEY;
-import static org.apache.hadoop.hbase.regionserver.compactions.CustomCellTieredCompactionPolicy.TIERING_CELL_QUALIFIER;
 
 @InterfaceAudience.Private
 public class CustomCellTieredUtils {
 
   public static void checkForModifyTable(TableDescriptor newTable) throws IOException {
-    for(ColumnFamilyDescriptor descriptor : newTable.getColumnFamilies()) {
+    for (ColumnFamilyDescriptor descriptor : newTable.getColumnFamilies()) {
       String storeEngineClassName = descriptor.getConfigurationValue(STORE_ENGINE_CLASS_KEY);
-      if (storeEngineClassName != null  && storeEngineClassName.
-          contains("CustomCellTieredStoreEngine")) {
-        if( descriptor.getConfigurationValue(TIERING_CELL_QUALIFIER) == null ) {
-          throw new DoNotRetryIOException("StoreEngine " + storeEngineClassName +
-            " is missing required " + TIERING_CELL_QUALIFIER + " parameter.");
+      if (
+        storeEngineClassName != null && storeEngineClassName.contains("CustomCellTieredStoreEngine")
+      ) {
+        if (descriptor.getConfigurationValue(TIERING_CELL_QUALIFIER) == null) {
+          throw new DoNotRetryIOException("StoreEngine " + storeEngineClassName
+            + " is missing required " + TIERING_CELL_QUALIFIER + " parameter.");
         }
       }
     }

@@ -24,7 +24,6 @@ import java.util.OptionalLong;
 import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.regionserver.DateTieredMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -69,7 +68,8 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
 
         @Override
         public DateTieredMultiFileWriter createWriter(InternalScanner scanner, FileDetails fd,
-          boolean shouldDropBehind, boolean major, Consumer<Path> writerCreationTracker) throws IOException {
+          boolean shouldDropBehind, boolean major, Consumer<Path> writerCreationTracker)
+          throws IOException {
           DateTieredMultiFileWriter writer =
             createMultiWriter(request, lowerBoundaries, lowerBoundariesPolicies);
           initMultiWriter(writer, scanner, fd, shouldDropBehind, major, writerCreationTracker);
@@ -80,8 +80,8 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
 
   protected DateTieredMultiFileWriter createMultiWriter(final CompactionRequestImpl request,
     final List<Long> lowerBoundaries, final Map<Long, String> lowerBoundariesPolicies) {
-    return new DateTieredMultiFileWriter(lowerBoundaries,
-      lowerBoundariesPolicies, needEmptyFile(request), c -> c.getTimestamp());
+    return new DateTieredMultiFileWriter(lowerBoundaries, lowerBoundariesPolicies,
+      needEmptyFile(request), c -> c.getTimestamp());
   }
 
   @Override

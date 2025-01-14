@@ -23,10 +23,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 public enum DataTieringType {
   NONE(null),
   TIME_RANGE(new CellTSTiering()),
-  CUSTOM_CELL_VALUE(new CustomCellValueTiering());
+  CUSTOM(new CustomTiering());
 
-  final DataTiering instance;
+  private final DataTiering instance;
+
   DataTieringType(DataTiering instance) {
     this.instance = instance;
+  }
+
+  public DataTiering getInstance() {
+    return instance;
   }
 }

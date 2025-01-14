@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.MAX_BLOCK_SIZE_UNCOMPRESSED;
-import static org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.TIERING_CELL_TIME_RANGE;
+import static org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.CUSTOM_TIERING_TIME_RANGE;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
 
@@ -30,7 +30,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -195,7 +194,7 @@ public class HFileWriterImpl implements HFile.Writer {
     this.path = path;
     this.name = path != null ? path.getName() : outputStream.toString();
     this.hFileContext = fileContext;
-    //TODO: Move this back to upper layer
+    // TODO: Move this back to upper layer
     this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
     this.timeRangeToTrack = () -> this.timeRangeTracker;
     DataBlockEncoding encoding = hFileContext.getDataBlockEncoding();
@@ -914,7 +913,7 @@ public class HFileWriterImpl implements HFile.Writer {
     throws IOException {
     // TODO: The StoreFileReader always converts the byte[] to TimeRange
     // via TimeRangeTracker, so we should write the serialization data of TimeRange directly.
-    appendFileInfo(TIERING_CELL_TIME_RANGE, TimeRangeTracker.toByteArray(timeRangeTracker));
+    appendFileInfo(CUSTOM_TIERING_TIME_RANGE, TimeRangeTracker.toByteArray(timeRangeTracker));
   }
 
   /**

@@ -110,7 +110,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
   }
 
   protected boolean isMajorCompactionTime(Collection<HStoreFile> filesToCompact, long now,
-      long lowestModificationTime) throws IOException {
+    long lowestModificationTime) throws IOException {
     long mcTime = getNextMajorCompactTime(filesToCompact);
     if (filesToCompact == null || mcTime == 0) {
       if (LOG.isDebugEnabled()) {
@@ -129,30 +129,34 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     return true;
   }
 
-  protected boolean checkForTtl(long ttl, HStoreFile file){
+  protected boolean checkForTtl(long ttl, HStoreFile file) {
     OptionalLong minTimestamp = file.getMinimumTimestamp();
-    long oldest = minTimestamp.isPresent() ?
-      EnvironmentEdgeManager.currentTime() - minTimestamp.getAsLong() : Long.MIN_VALUE;
+    long oldest = minTimestamp.isPresent()
+      ? EnvironmentEdgeManager.currentTime() - minTimestamp.getAsLong()
+      : Long.MIN_VALUE;
     if (ttl != Long.MAX_VALUE && oldest >= ttl) {
       LOG.debug("Major compaction triggered on store " + this + "; for TTL maintenance");
       return true;
     }
     return false;
   }
+
   protected boolean isMajorOrBulkloadResult(HStoreFile file, long timeDiff) {
     if (!file.isMajorCompactionResult() || file.isBulkLoadResult()) {
-      LOG.debug("Major compaction triggered on store " + this + ", because there are new files and time since last major compaction "
-        + timeDiff + "ms");
+      LOG.debug("Major compaction triggered on store " + this
+        + ", because there are new files and time since last major compaction " + timeDiff + "ms");
       return true;
     }
     return false;
   }
 
   protected boolean checkBlockLocality(HDFSBlocksDistribution hdfsBlocksDistribution)
-      throws UnknownHostException {
-    float blockLocalityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(DNS.getHostname(comConf.conf, DNS.ServerType.REGIONSERVER));
+    throws UnknownHostException {
+    float blockLocalityIndex = hdfsBlocksDistribution
+      .getBlockLocalityIndex(DNS.getHostname(comConf.conf, DNS.ServerType.REGIONSERVER));
     if (blockLocalityIndex < comConf.getMinLocalityToForceCompact()) {
-      LOG.debug("Major compaction triggered on store " + this + "; to make hdfs blocks local, current blockLocalityIndex is " + blockLocalityIndex
+      LOG.debug("Major compaction triggered on store " + this
+        + "; to make hdfs blocks local, current blockLocalityIndex is " + blockLocalityIndex
         + " (min " + comConf.getMinLocalityToForceCompact() + ")");
       return true;
     }
@@ -161,45 +165,49 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
 
   @Override
   public boolean shouldPerformMajorCompaction(Collection<HStoreFile> filesToCompact)
-      throws IOException {
+    throws IOException {
     long lowTimestamp = StoreUtils.getLowestTimestamp(filesToCompact);
     long now = EnvironmentEdgeManager.currentTime();
-    if(isMajorCompactionTime(filesToCompact, now, lowTimestamp)) {
+    if (isMajorCompactionTime(filesToCompact, now, lowTimestamp)) {
       long cfTTL = this.storeConfigInfo.getStoreFileTtl();
       HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
       List<Long> boundaries = getCompactBoundariesForMajor(filesToCompact, now);
       boolean[] filesInWindow = new boolean[boundaries.size()];
       for (HStoreFile file : filesToCompact) {
         OptionalLong minTimestamp = file.getMinimumTimestamp();
-        if(checkForTtl(cfTTL, file)){
+        if (checkForTtl(cfTTL, file)) {
           return true;
         }
-        if(isMajorOrBulkloadResult(file, now - lowTimestamp)){
+        if (isMajorOrBulkloadResult(file, now - lowTimestamp)) {
           return true;
         }
-        int lowerWindowIndex = Collections.binarySearch(boundaries, minTimestamp.orElse(Long.MAX_VALUE));
-        int upperWindowIndex = Collections.binarySearch(boundaries, file.getMaximumTimestamp().orElse(Long.MAX_VALUE));
+        int lowerWindowIndex =
+          Collections.binarySearch(boundaries, minTimestamp.orElse(Long.MAX_VALUE));
+        int upperWindowIndex =
+          Collections.binarySearch(boundaries, file.getMaximumTimestamp().orElse(Long.MAX_VALUE));
         // Handle boundary conditions and negative values of binarySearch
         lowerWindowIndex =
           (lowerWindowIndex < 0) ? Math.abs(lowerWindowIndex + 2) : lowerWindowIndex;
         upperWindowIndex =
           (upperWindowIndex < 0) ? Math.abs(upperWindowIndex + 2) : upperWindowIndex;
         if (lowerWindowIndex != upperWindowIndex) {
-          LOG.debug(
-            "Major compaction triggered on store " + this + "; because file " + file.getPath() + " has data with timestamps cross window boundaries");
+          LOG.debug("Major compaction triggered on store " + this + "; because file "
+            + file.getPath() + " has data with timestamps cross window boundaries");
           return true;
         } else if (filesInWindow[upperWindowIndex]) {
-          LOG.debug("Major compaction triggered on store " + this + "; because there are more than one file in some windows");
+          LOG.debug("Major compaction triggered on store " + this
+            + "; because there are more than one file in some windows");
           return true;
         } else {
           filesInWindow[upperWindowIndex] = true;
         }
         hdfsBlocksDistribution.add(file.getHDFSBlockDistribution());
       }
-      if(checkBlockLocality(hdfsBlocksDistribution)) {
+      if (checkBlockLocality(hdfsBlocksDistribution)) {
         return true;
       }
-      LOG.debug("Skipping major compaction of " + this + ", because the files are already major compacted");
+      LOG.debug(
+        "Skipping major compaction of " + this + ", because the files are already major compacted");
     }
     return false;
   }
@@ -316,7 +324,8 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
   /**
    * Return a list of boundaries for multiple compaction output in ascending order.
    */
-  protected List<Long> getCompactBoundariesForMajor(Collection<HStoreFile> filesToCompact, long now) {
+  protected List<Long> getCompactBoundariesForMajor(Collection<HStoreFile> filesToCompact,
+    long now) {
     long minTimestamp = filesToCompact.stream()
       .mapToLong(f -> f.getMinimumTimestamp().orElse(Long.MAX_VALUE)).min().orElse(Long.MAX_VALUE);
 
