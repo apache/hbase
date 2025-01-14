@@ -404,7 +404,7 @@ public abstract class Compactor<T extends CellSink> {
   protected abstract void abortWriter(T writer) throws IOException;
 
   protected List<ExtendedCell> decorateCells(List<ExtendedCell> cells) {
-    //no op
+    // no op
     return cells;
   }
 

@@ -17,41 +17,42 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
+import static org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.CUSTOM_TIERING_TIME_RANGE;
 
 import java.io.IOException;
-import java.util.OptionalLong;
+import java.util.Date;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class CellTSTiering implements DataTiering {
-  private static final Logger LOG = LoggerFactory.getLogger(CellTSTiering.class);
+public class CustomTiering implements DataTiering {
+  private static final Logger LOG = LoggerFactory.getLogger(CustomTiering.class);
 
-  public long getTimestamp(HStoreFile hStoreFile) {
-    OptionalLong maxTimestamp = hStoreFile.getMaximumTimestamp();
-    if (!maxTimestamp.isPresent()) {
-      LOG.debug("Maximum timestamp not present for {}", hStoreFile.getPath());
+  private long getMaxTSFromTimeRange(byte[] hFileTimeRange, String hFileName) {
+    try {
+      if (hFileTimeRange == null) {
+        LOG.debug("Custom cell-based timestamp information not found for file: {}", hFileName);
+        return Long.MAX_VALUE;
+      }
+      long parsedValue = TimeRangeTracker.parseFrom(hFileTimeRange).getMax();
+      LOG.debug("Max TS for file {} is {}", hFileName, new Date(parsedValue));
+      return parsedValue;
+    } catch (IOException e) {
+      LOG.error("Error occurred while reading the Custom cell-based timestamp metadata of file: {}",
+        hFileName, e);
       return Long.MAX_VALUE;
     }
-    return maxTimestamp.getAsLong();
+  }
+
+  public long getTimestamp(HStoreFile hStoreFile) {
+    return getMaxTSFromTimeRange(hStoreFile.getMetadataValue(CUSTOM_TIERING_TIME_RANGE),
+      hStoreFile.getPath().getName());
   }
 
   public long getTimestamp(HFileInfo hFileInfo) {
-    try {
-      byte[] hFileTimeRange = hFileInfo.get(TIMERANGE_KEY);
-      if (hFileTimeRange == null) {
-        LOG.debug("Timestamp information not found for file: {}",
-          hFileInfo.getHFileContext().getHFileName());
-        return Long.MAX_VALUE;
-      }
-      return TimeRangeTracker.parseFrom(hFileTimeRange).getMax();
-    } catch (IOException e) {
-      LOG.error("Error occurred while reading the timestamp metadata of file: {}",
-        hFileInfo.getHFileContext().getHFileName(), e);
-      return Long.MAX_VALUE;
-    }
+    return getMaxTSFromTimeRange(hFileInfo.get(CUSTOM_TIERING_TIME_RANGE),
+      hFileInfo.getHFileContext().getHFileName());
   }
 }

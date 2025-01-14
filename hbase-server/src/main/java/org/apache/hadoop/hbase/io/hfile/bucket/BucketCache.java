@@ -1194,8 +1194,9 @@ public class BucketCache implements BlockCache, HeapSize {
           }
         }
 
-        if (bytesFreed < bytesToFreeWithExtra &&
-          coldFiles != null && coldFiles.containsKey(bucketEntryWithKey.getKey().getHfileName())
+        if (
+          bytesFreed < bytesToFreeWithExtra && coldFiles != null
+            && coldFiles.containsKey(bucketEntryWithKey.getKey().getHfileName())
         ) {
           int freedBlockSize = bucketEntryWithKey.getValue().getLength();
           if (evictBlockIfNoRpcReferenced(bucketEntryWithKey.getKey())) {

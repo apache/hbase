@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -133,8 +134,8 @@ public class DataTieringManager {
    * the data tiering type is set to {@link DataTieringType#TIME_RANGE}, it uses the maximum
    * timestamp from the time range tracker to determine if the data is hot. Otherwise, it considers
    * the data as hot by default.
-   * @param maxTimestamp     the maximum timestamp associated with the data.
-   * @param conf             The configuration object to use for determining hot data criteria.
+   * @param maxTimestamp the maximum timestamp associated with the data.
+   * @param conf         The configuration object to use for determining hot data criteria.
    * @return {@code true} if the data is hot, {@code false} otherwise
    */
   public boolean isHotData(long maxTimestamp, Configuration conf) {
@@ -166,9 +167,10 @@ public class DataTieringManager {
     if (!dataTieringType.equals(DataTieringType.NONE)) {
       HStoreFile hStoreFile = getHStoreFile(hFilePath);
       if (hStoreFile == null) {
-        throw new DataTieringException("Store file corresponding to " + hFilePath + " doesn't exist");
+        throw new DataTieringException(
+          "Store file corresponding to " + hFilePath + " doesn't exist");
       }
-      return hotDataValidator(dataTieringType.instance.getTimestamp(getHStoreFile(hFilePath)),
+      return hotDataValidator(dataTieringType.getInstance().getTimestamp(getHStoreFile(hFilePath)),
         getDataTieringHotDataAge(configuration));
     }
     // DataTieringType.NONE or other types are considered hot by default
@@ -187,7 +189,7 @@ public class DataTieringManager {
   public boolean isHotData(HFileInfo hFileInfo, Configuration configuration) {
     DataTieringType dataTieringType = getDataTieringType(configuration);
     if (hFileInfo != null && !dataTieringType.equals(DataTieringType.NONE)) {
-      return hotDataValidator(dataTieringType.instance.getTimestamp(hFileInfo),
+      return hotDataValidator(dataTieringType.getInstance().getTimestamp(hFileInfo),
         getDataTieringHotDataAge(configuration));
     }
     // DataTieringType.NONE or other types are considered hot by default
@@ -293,7 +295,8 @@ public class DataTieringManager {
         for (HStoreFile hStoreFile : hStore.getStorefiles()) {
           String hFileName =
             hStoreFile.getFileInfo().getHFileInfo().getHFileContext().getHFileName();
-          long maxTimeStamp = dataTieringType.instance.getTimestamp(hStoreFile);
+          long maxTimeStamp = dataTieringType.getInstance().getTimestamp(hStoreFile);
+          LOG.debug("Max TS for file {} is {}", hFileName, new Date(maxTimeStamp));
           long currentTimestamp = EnvironmentEdgeManager.getDelegate().currentTime();
           long fileAge = currentTimestamp - maxTimeStamp;
           if (fileAge > hotDataAge) {
