@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler;
 import org.apache.hadoop.hbase.regionserver.querymatcher.CompactionScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.UserScanQueryMatcher;
+import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -163,6 +164,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   protected final long readPt;
   private boolean topChanged = false;
+  private final boolean visibilityLabelEnabled;
 
   /** An internal constructor. */
   private StoreScanner(HStore store, Scan scan, ScanInfo scanInfo, int numColumns, long readPt,
@@ -177,6 +179,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this.now = EnvironmentEdgeManager.currentTime();
     this.oldestUnexpiredTS = scan.isRaw() ? 0L : now - scanInfo.getTtl();
     this.minVersions = scanInfo.getMinVersions();
+    visibilityLabelEnabled = store != null && VisibilityUtils.isVisibilityLabelEnabled(store.conf);
 
     // We look up row-column Bloom filters for multi-column queries as part of
     // the seek operation. However, we also look the row-column Bloom filter
@@ -636,10 +639,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           scannerContext.incrementBlockProgress(blockSize);
         });
 
-        prevCell = cell;
         scannerContext.setLastPeekedCell(cell);
         topChanged = false;
-        ScanQueryMatcher.MatchCode qcode = matcher.match(cell);
+        ScanQueryMatcher.MatchCode qcode = matcher.match(cell, prevCell, visibilityLabelEnabled);
+        LOG.trace("next - cell={}, prevCell={}, qCode={}", cell, prevCell, qcode);
+        prevCell = cell;
         switch (qcode) {
           case INCLUDE:
           case INCLUDE_AND_SEEK_NEXT_ROW:
@@ -756,6 +760,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             NextState stateAfterSeekNextColumn = needToReturn(outResult);
             if (stateAfterSeekNextColumn != null) {
               return scannerContext.setScannerState(stateAfterSeekNextColumn).hasMoreValues();
+            }
+            // for skipping delete markers
+            if (
+              CellUtil.isDelete(cell) && this.heap.peek() != null && this.heap.peek().equals(cell)
+            ) {
+              this.heap.next();
             }
             break;
 
