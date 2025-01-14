@@ -394,6 +394,14 @@ public class TestCacheConfig {
     long onHeapCacheSize = MemorySizeUtil.getOnHeapCacheSize(copyConf);
     assertEquals(null, copyConf.get(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY));
     assertTrue(onHeapCacheSize > 0 && onHeapCacheSize != fixedSize);
+    // when HBASE_BLOCK_CACHE_MEMORY_SIZE is set in number
+    copyConf.setLong(HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY, 3 * 1024 * 1024);
+    onHeapCacheSize = MemorySizeUtil.getOnHeapCacheSize(copyConf);
+    assertEquals(3 * 1024 * 1024, onHeapCacheSize);
+    // when HBASE_BLOCK_CACHE_MEMORY_SIZE is set in human-readable format
+    copyConf.set(HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY, "2m");
+    onHeapCacheSize = MemorySizeUtil.getOnHeapCacheSize(copyConf);
+    assertEquals(2 * 1024 * 1024, onHeapCacheSize);
     // when HBASE_BLOCK_CACHE_FIXED_SIZE_KEY is set, it will be a fixed size
     copyConf.setLong(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY, fixedSize);
     onHeapCacheSize = MemorySizeUtil.getOnHeapCacheSize(copyConf);
