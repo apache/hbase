@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY;
+
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -31,7 +33,6 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY;
 
 /**
  * HBASE-15400 This store engine allows us to store data in date tiered layout with exponential
@@ -47,8 +48,8 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
   public static final String DATE_TIERED_STORE_ENGINE = DateTieredStoreEngine.class.getName();
 
   protected void createCompactionPolicy(Configuration conf, HStore store) throws IOException {
-    String className = conf.get(
-      DEFAULT_COMPACTION_POLICY_CLASS_KEY, DateTieredCompactionPolicy.class.getName());
+    String className =
+      conf.get(DEFAULT_COMPACTION_POLICY_CLASS_KEY, DateTieredCompactionPolicy.class.getName());
     try {
       compactionPolicy = ReflectionUtils.instantiateWithCustomCtor(className,
         new Class[] { Configuration.class, StoreConfigInformation.class },
@@ -57,7 +58,6 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
       throw new IOException("Unable to load configured compaction policy '" + className + "'", e);
     }
   }
-
 
   @Override
   public boolean needsCompaction(List<HStoreFile> filesCompacting) {

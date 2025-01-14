@@ -672,11 +672,11 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     }
 
     public void appendCustomCellTimestampsToMetadata(TimeRangeTracker timeRangeTracker)
-        throws IOException {
+      throws IOException {
       writer.appendCustomCellTimestampsToMetadata(timeRangeTracker);
     }
 
-  private void appendGeneralBloomfilter(final ExtendedCell cell) throws IOException {
+    private void appendGeneralBloomfilter(final ExtendedCell cell) throws IOException {
       if (this.generalBloomFilterWriter != null) {
         /*
          * http://2.bp.blogspot.com/_Cib_A77V54U/StZMrzaKufI/AAAAAAAAADo/ZhK7bGoJdMQ/s400/KeyValue.

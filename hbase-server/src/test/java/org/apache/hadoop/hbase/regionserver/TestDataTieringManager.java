@@ -61,7 +61,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
@@ -811,7 +810,7 @@ public class TestDataTieringManager {
   }
 
   static HStoreFile createHStoreFile(Path storeDir, Configuration conf, long timestamp,
-      HRegionFileSystem regionFs)  throws IOException {
+    HRegionFileSystem regionFs) throws IOException {
     String columnFamily = storeDir.getName();
 
     StoreFileWriter storeFileWriter = new StoreFileWriter.Builder(conf, cacheConf, fs)
@@ -819,11 +818,11 @@ public class TestDataTieringManager {
 
     writeStoreFileRandomData(storeFileWriter, Bytes.toBytes(columnFamily), timestamp);
 
-    StoreContext storeContext =
-      StoreContext.getBuilder().withRegionFileSystem(regionFs).build();
+    StoreContext storeContext = StoreContext.getBuilder().withRegionFileSystem(regionFs).build();
 
     StoreFileTracker sft = StoreFileTrackerFactory.create(conf, true, storeContext);
-    return new HStoreFile(fs, storeFileWriter.getPath(), conf, cacheConf, BloomType.NONE, true, sft);
+    return new HStoreFile(fs, storeFileWriter.getPath(), conf, cacheConf, BloomType.NONE, true,
+      sft);
   }
 
   /**

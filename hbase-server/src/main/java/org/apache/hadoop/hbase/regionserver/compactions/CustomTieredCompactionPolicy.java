@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import static org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.CUSTOM_TIERING_TIME_RANGE;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -28,55 +34,47 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import static org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.TIERING_CELL_TIME_RANGE;
 
 /**
  * Custom implementation of DateTieredCompactionPolicy that calculates compaction boundaries based
  * on the <b>hbase.hstore.compaction.date.tiered.custom.age.limit.millis</b> configuration property
- * and the TIERING_CELL_MIN/TIERING_CELL_MAX stored on metadata of each store file.
- *
- * This policy would produce either one or two tiers:
- *  - One tier if either all files data age are older than the configured age limit or all files
- *  data age are younger than the configured age limit.
- *  - Two tiers if files have both younger and older data than the configured age limit.
- *
+ * and the TIERING_CELL_MIN/TIERING_CELL_MAX stored on metadata of each store file. This policy
+ * would produce either one or two tiers: - One tier if either all files data age are older than the
+ * configured age limit or all files data age are younger than the configured age limit. - Two tiers
+ * if files have both younger and older data than the configured age limit.
  */
 @InterfaceAudience.Private
-public class CustomCellTieredCompactionPolicy extends DateTieredCompactionPolicy {
+public class CustomTieredCompactionPolicy extends DateTieredCompactionPolicy {
 
   public static final String AGE_LIMIT_MILLIS =
     "hbase.hstore.compaction.date.tiered.custom.age.limit.millis";
 
-  //Defaults to 10 years
-  public static final long DEFAULT_AGE_LIMIT_MILLIS = (long) (10L*365.25*24L*60L*60L*1000L);
+  // Defaults to 10 years
+  public static final long DEFAULT_AGE_LIMIT_MILLIS =
+    (long) (10L * 365.25 * 24L * 60L * 60L * 1000L);
 
-  public static final String TIERING_CELL_QUALIFIER = "TIERING_CELL_QUALIFIER";
-
-  private static final Logger LOG = LoggerFactory.getLogger(CustomCellTieredCompactionPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CustomTieredCompactionPolicy.class);
 
   private long cutOffTimestamp;
 
-  public CustomCellTieredCompactionPolicy(Configuration conf,
-    StoreConfigInformation storeConfigInfo) throws IOException {
+  public CustomTieredCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo)
+    throws IOException {
     super(conf, storeConfigInfo);
-    cutOffTimestamp = EnvironmentEdgeManager.currentTime() -
-      conf.getLong(AGE_LIMIT_MILLIS, DEFAULT_AGE_LIMIT_MILLIS);
+    cutOffTimestamp = EnvironmentEdgeManager.currentTime()
+      - conf.getLong(AGE_LIMIT_MILLIS, DEFAULT_AGE_LIMIT_MILLIS);
 
   }
 
   @Override
-  protected List<Long> getCompactBoundariesForMajor(Collection<HStoreFile> filesToCompact, long now) {
+  protected List<Long> getCompactBoundariesForMajor(Collection<HStoreFile> filesToCompact,
+    long now) {
     MutableLong min = new MutableLong(Long.MAX_VALUE);
     MutableLong max = new MutableLong(0);
     filesToCompact.forEach(f -> {
-      byte[] timeRangeBytes = f.getMetadataValue(TIERING_CELL_TIME_RANGE);
+      byte[] timeRangeBytes = f.getMetadataValue(CUSTOM_TIERING_TIME_RANGE);
       long minCurrent = Long.MAX_VALUE;
       long maxCurrent = 0;
-      if(timeRangeBytes!=null) {
+      if (timeRangeBytes != null) {
         try {
           TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(timeRangeBytes);
           timeRangeTracker.getMin();
@@ -86,10 +84,10 @@ public class CustomCellTieredCompactionPolicy extends DateTieredCompactionPolicy
           LOG.warn("Got TIERING_CELL_TIME_RANGE info from file, but failed to parse it:", e);
         }
       }
-      if(minCurrent < min.getValue()) {
+      if (minCurrent < min.getValue()) {
         min.setValue(minCurrent);
       }
-      if(maxCurrent > max.getValue()) {
+      if (maxCurrent > max.getValue()) {
         max.setValue(maxCurrent);
       }
     });
@@ -108,33 +106,33 @@ public class CustomCellTieredCompactionPolicy extends DateTieredCompactionPolicy
   @Override
   public CompactionRequestImpl selectMinorCompaction(ArrayList<HStoreFile> candidateSelection,
     boolean mayUseOffPeak, boolean mayBeStuck) throws IOException {
-    ArrayList<HStoreFile> filteredByPolicy = this.compactionPolicyPerWindow.
-      applyCompactionPolicy(candidateSelection, mayUseOffPeak, mayBeStuck);
+    ArrayList<HStoreFile> filteredByPolicy = this.compactionPolicyPerWindow
+      .applyCompactionPolicy(candidateSelection, mayUseOffPeak, mayBeStuck);
     return selectMajorCompaction(filteredByPolicy);
   }
 
   @Override
   public boolean shouldPerformMajorCompaction(Collection<HStoreFile> filesToCompact)
-      throws  IOException{
+    throws IOException {
     long lowTimestamp = StoreUtils.getLowestTimestamp(filesToCompact);
     long now = EnvironmentEdgeManager.currentTime();
-    if(isMajorCompactionTime(filesToCompact, now, lowTimestamp)) {
+    if (isMajorCompactionTime(filesToCompact, now, lowTimestamp)) {
       long cfTTL = this.storeConfigInfo.getStoreFileTtl();
       int countLower = 0;
       int countHigher = 0;
       HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
-      for(HStoreFile f : filesToCompact) {
-        if(checkForTtl(cfTTL, f)){
+      for (HStoreFile f : filesToCompact) {
+        if (checkForTtl(cfTTL, f)) {
           return true;
         }
-        if(isMajorOrBulkloadResult(f, now - lowTimestamp)){
+        if (isMajorOrBulkloadResult(f, now - lowTimestamp)) {
           return true;
         }
-        byte[] timeRangeBytes = f.getMetadataValue(TIERING_CELL_TIME_RANGE);
+        byte[] timeRangeBytes = f.getMetadataValue(CUSTOM_TIERING_TIME_RANGE);
         TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(timeRangeBytes);
-        if(timeRangeTracker.getMin() < cutOffTimestamp) {
+        if (timeRangeTracker.getMin() < cutOffTimestamp) {
           if (timeRangeTracker.getMax() > cutOffTimestamp) {
-            //Found at least one file crossing the cutOffTimestamp
+            // Found at least one file crossing the cutOffTimestamp
             return true;
           } else {
             countLower++;
@@ -144,9 +142,9 @@ public class CustomCellTieredCompactionPolicy extends DateTieredCompactionPolicy
         }
         hdfsBlocksDistribution.add(f.getHDFSBlockDistribution());
       }
-      //If we haven't found any files crossing the cutOffTimestamp, we have to check
-      //if there are at least more than one file on each tier and if so, perform compaction
-      if( countLower > 1 || countHigher > 1){
+      // If we haven't found any files crossing the cutOffTimestamp, we have to check
+      // if there are at least more than one file on each tier and if so, perform compaction
+      if (countLower > 1 || countHigher > 1) {
         return true;
       }
       return checkBlockLocality(hdfsBlocksDistribution);
