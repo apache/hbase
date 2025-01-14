@@ -230,6 +230,11 @@ public interface MetricsRegionServerWrapper {
   double getPercentFileLocal();
 
   /**
+   * Get the percent of HFiles' that are local for primary region replicas.
+   */
+  double getPercentFileLocalPrimaryRegions();
+
+  /**
    * Get the percent of HFiles' that are local for secondary region replicas.
    */
   double getPercentFileLocalSecondaryRegions();
