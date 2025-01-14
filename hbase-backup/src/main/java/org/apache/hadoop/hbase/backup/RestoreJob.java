@@ -30,6 +30,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public interface RestoreJob extends Configurable {
+
+  String KEEP_ORIGINAL_SPLITS_KEY = "hbase.backup.restorejob.keep.original.splits";
+  boolean KEEP_ORIGINAL_SPLITS_DEFAULT = false;
+
   /**
    * Run restore operation
    * @param dirPaths          path array of WAL log directories
