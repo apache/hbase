@@ -354,6 +354,7 @@ link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in new
 |Hadoop-3.3.[0-1] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
 |Hadoop-3.3.[2-4] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
 |Hadoop-3.3.5+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.4.0+ | icon:check-circle[role="green"] (2.5.11+) | icon:check-circle[role="green"] (2.6.2+)
 |===
 
 .Hadoop version support matrix for EOM 2.3+ release lines
@@ -463,6 +464,33 @@ cluster to avoid version mismatch issues. Make sure you replace the jars under H
 whole cluster. Hadoop version mismatch issues have various manifestations. Check for mismatch if
 HBase appears hung.
 ====
+
+[[binary_release_hadoop_version]]
+==== Hadoop 3 Support for the HBase Binary Releases and Maven Artifacts ====
+
+For HBase 2.5.1 and earlier, the official HBase binary releases and Maven artifacts were built with Hadoop 2.x.
+
+Starting with HBase 2.5.2, HBase provides binary releases and Maven artifacts built with both Hadoop 2.x and Hadoop 3.x.
+The Hadoop 2 artifacts do not have any version suffix, the Hadoop 3 artifacts add the `-hadoop-3` suffix to the version.
+i.e. `hbase-2.5.2-bin.tar.gz.asc` is the Binary release built with Hadoop2, and `hbase-2.5.2-hadoop3-bin.tar.gz` is the
+release built with Hadoop 3.
+
+[[default_hadoop_version_policy]]
+==== Hadoop 3 version policy ====
+
+Each HBase release has a default Hadoop 3 version. This is used when the Hadoop 3 version is not specified during build,
+and for building the official binary releases and artifacts. Generally when a new minor version is released
+(i.e. 2.5.0) the default version is set to the latest supported Hadoop 3 version at the start of the release
+process.
+
+Up to HBase 2.5.10 and 2.6.1 even if HBase added support for newer Hadoop 3 releases in a patch release,
+the default Hadoop 3 version (and the one used in the official binary releases) was not updated.
+This simplified upgrading, but meant that HBase releases often included old unfixed CVEs both from Hadoop and Hadoop's
+dependencies, even when newer Hadoop releases with fixes were available.
+
+Starting with HBase 2.5.11 and 2.6.2, the default Hadoop 3 version is always set to the latest supported Hadoop 3 version,
+and is also used for the `-hadoop3` binary releases and artifacts. This will drastically reduce the number of known CVEs
+shipped in the HBase binary releases, and make sure that all fixes and improvements in Hadoop are included.
 
 [[dfs.datanode.max.transfer.threads]]
 ==== `dfs.datanode.max.transfer.threads` (((dfs.datanode.max.transfer.threads)))
