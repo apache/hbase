@@ -146,13 +146,17 @@ public class BackupManager implements Closeable {
         classes + "," + regionProcedureClass);
     }
     String coproc = conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
-    String regionObserverClass = BackupObserver.class.getName();
+    String observerClass = BackupObserver.class.getName();
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      (coproc == null ? "" : coproc + ",") + regionObserverClass);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Added region procedure manager: {}. Added region observer: {}",
-        regionProcedureClass, regionObserverClass);
-    }
+      (coproc == null ? "" : coproc + ",") + observerClass);
+
+    String masterCoProc = conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      (masterCoProc == null ? "" : masterCoProc + ",") + observerClass);
+
+    LOG.debug(
+      "Added region procedure manager: {}. Added region observer: {}. Added master observer: {}",
+      regionProcedureClass, observerClass, observerClass);
   }
 
   public static boolean isBackupEnabled(Configuration conf) {
