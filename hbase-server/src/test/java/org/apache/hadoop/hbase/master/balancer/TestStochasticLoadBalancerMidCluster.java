@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.time.Duration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -38,7 +39,9 @@ public class TestStochasticLoadBalancerMidCluster extends BalancerTestBase {
     int numRegionsPerServer = 60; // all servers except one
     int replication = 1;
     int numTables = 40;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    setMaxRunTime(Duration.ofMillis(10_000));
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
   }
 
   @Test
@@ -50,7 +53,8 @@ public class TestStochasticLoadBalancerMidCluster extends BalancerTestBase {
     int numTables = 400;
     // num large num regions means may not always get to best balance with one run
     boolean assertFullyBalanced = false;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+    setMaxRunTime(Duration.ofMillis(10_000));
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
       assertFullyBalanced, false);
   }
 
@@ -61,7 +65,9 @@ public class TestStochasticLoadBalancerMidCluster extends BalancerTestBase {
     int numRegionsPerServer = 9; // all servers except one
     int replication = 1;
     int numTables = 110;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    setMaxRunTime(Duration.ofMillis(10_000));
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
     // TODO(eclark): Make sure that the tables are well distributed.
   }
 }
