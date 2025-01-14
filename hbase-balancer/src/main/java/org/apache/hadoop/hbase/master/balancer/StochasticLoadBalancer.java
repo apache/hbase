@@ -331,10 +331,33 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
-  private boolean areSomeRegionReplicasColocated(BalancerClusterState c) {
-    regionReplicaHostCostFunction.prepare(c);
-    double cost = Math.abs(regionReplicaHostCostFunction.cost());
-    return cost > CostFunction.getCostEpsilon(cost);
+  private boolean areSomeRegionReplicasColocatedOnHost(BalancerClusterState c) {
+    if (c.numHosts >= c.maxReplicas) {
+      regionReplicaHostCostFunction.prepare(c);
+      double hostCost = Math.abs(regionReplicaHostCostFunction.cost());
+      boolean colocatedAtHost = hostCost > CostFunction.getCostEpsilon(hostCost);
+      if (colocatedAtHost) {
+        return true;
+      }
+      LOG.trace("No host colocation detected with host cost={}", hostCost);
+    }
+    return false;
+  }
+
+  private boolean areSomeRegionReplicasColocatedOnRack(BalancerClusterState c) {
+    if (c.numRacks >= c.maxReplicas) {
+      regionReplicaRackCostFunction.prepare(c);
+      double rackCost = Math.abs(regionReplicaRackCostFunction.cost());
+      boolean colocatedAtRack = rackCost > CostFunction.getCostEpsilon(rackCost);
+      if (colocatedAtRack) {
+        return true;
+      }
+      LOG.trace("No rack colocation detected with rack cost={}", rackCost);
+    } else {
+      LOG.trace("Rack colocation is inevitable with fewer racks than replicas, "
+        + "so we won't bother checking");
+    }
+    return false;
   }
 
   private String getBalanceReason(double total, double sumMultiplier) {
@@ -361,8 +384,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         + " < MIN_SERVER_BALANCE(" + MIN_SERVER_BALANCE + ")", null);
       return false;
     }
-    if (areSomeRegionReplicasColocated(cluster)) {
+
+    if (areSomeRegionReplicasColocatedOnHost(cluster)) {
       LOG.info("Running balancer because at least one server hosts replicas of the same region."
+        + " function cost={}", functionCost());
+      return true;
+    }
+
+    if (areSomeRegionReplicasColocatedOnRack(cluster)) {
+      LOG.info("Running balancer because at least one rack hosts replicas of the same region."
         + " function cost={}", functionCost());
       return true;
     }
