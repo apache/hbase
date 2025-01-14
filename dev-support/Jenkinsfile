@@ -21,15 +21,7 @@ pipeline {
     }
   }
   triggers {
-    if (env.BRANCH_NAME == 'master') {
-      pollSCM('H H 1-31/3 * *')
-    } else if (env.BRANCH_NAME == 'branch-3') {
-      pollSCM('H H 1-31/3 * *')
-    } else if (env.BRANCH_NAME == 'branch-2') {
-      pollSCM('H H 2-31/3 * *')
-    } else {
-      pollSCM('H H 3-31/3 * *')
-    }
+    pollSCM(getCronParams(env.BRANCH_NAME))
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '20'))
@@ -1241,5 +1233,17 @@ String getJavaHomeForYetusGeneralCheck(String branchName) {
     return "/usr/lib/jvm/java-11";
   } else {
     return "/usr/lib/jvm/java-17"
+  }
+}
+@NonCPS
+String getCronParams(String branchName) {
+  if (branchName == 'master') {
+    return 'H H 1-31/3 * *'
+  } else if (branchName == 'branch-3') {
+    return 'H H 1-31/3 * *'
+  } else if (branchName == 'branch-2') {
+    return 'H H 2-31/3 * *'
+  } else {
+    return 'H H 3-31/3 * *'
   }
 }
