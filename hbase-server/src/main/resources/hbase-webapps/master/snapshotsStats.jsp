@@ -32,6 +32,18 @@
   import="org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription"
 %>
 <%@ page import="org.apache.hadoop.hbase.util.PrettyPrinter" %>
+<%!
+  /**
+   * Note: This method was taken from org.apache.hadoop.util.StringUtils.humanReadableInt(long).
+   * Given an integer, return a string that is in an approximate, but human
+   * readable format.
+   * @param number the number to format
+   * @return a human readable form of the integer
+   */
+  private static String humanReadableInt(long number) {
+    return StringUtils.TraditionalBinaryPrefix.long2String(number, "", 1);
+  }
+%>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
@@ -99,18 +111,18 @@
       <td>
         <%= SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDesc.getTtl(), snapshotDesc.getCreationTime(), System.currentTimeMillis()) ? "Yes" : "No" %>
       </td>
-      <td><%= StringUtils.humanReadableInt(stats.getSharedStoreFilesSize()) %></td>
-      <td><%= StringUtils.humanReadableInt(stats.getMobStoreFilesSize())  %></td>
-      <td><%= StringUtils.humanReadableInt(stats.getArchivedStoreFileSize()) %>
-        (<%= StringUtils.humanReadableInt(stats.getNonSharedArchivedStoreFilesSize()) %>)</td>
+      <td><%= humanReadableInt(stats.getSharedStoreFilesSize()) %></td>
+      <td><%= humanReadableInt(stats.getMobStoreFilesSize())  %></td>
+      <td><%= humanReadableInt(stats.getArchivedStoreFileSize()) %>
+        (<%= humanReadableInt(stats.getNonSharedArchivedStoreFilesSize()) %>)</td>
     </tr>
     <% } %>
     <p><%= snapshots.size() %> snapshot(s) in set.</p>
-    <p>Total Storefile Size: <%= StringUtils.humanReadableInt(totalSize) %></p>
-    <p>Total Shared Storefile Size: <%= StringUtils.humanReadableInt(totalSharedSize.get()) %>,
-       Total Mob Storefile Size: <%= StringUtils.humanReadableInt(totalMobSize.get()) %>,
-       Total Archived Storefile Size: <%= StringUtils.humanReadableInt(totalArchivedSize.get()) %>
-       (<%= StringUtils.humanReadableInt(totalUnsharedArchivedSize) %>)</p>
+    <p>Total Storefile Size: <%= humanReadableInt(totalSize) %></p>
+    <p>Total Shared Storefile Size: <%= humanReadableInt(totalSharedSize.get()) %>,
+       Total Mob Storefile Size: <%= humanReadableInt(totalMobSize.get()) %>,
+       Total Archived Storefile Size: <%= humanReadableInt(totalArchivedSize.get()) %>
+       (<%= humanReadableInt(totalUnsharedArchivedSize) %>)</p>
     <p>Shared Storefile Size is the Storefile size shared between snapshots and active tables.
        Mob Storefile Size is the Mob Storefile size shared between snapshots and active tables.
        Archived Storefile Size is the Storefile size in Archive.

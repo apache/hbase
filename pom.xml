@@ -849,6 +849,7 @@
     <commons-validator.version>1.7</commons-validator.version>
     <commons-io.version>2.14.0</commons-io.version>
     <commons-lang3.version>3.9</commons-lang3.version>
+    <commons-text.version>1.10.0</commons-text.version>
     <commons-math.version>3.6.1</commons-math.version>
     <commons-cli.version>1.5.0</commons-cli.version>
     <disruptor.version>3.4.4</disruptor.version>
@@ -1474,6 +1475,11 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
         <version>${commons-lang3.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-text</artifactId>
+        <version>${commons-text.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>

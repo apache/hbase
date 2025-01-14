@@ -25,7 +25,6 @@
   import="org.apache.hadoop.fs.FileSystem"
   import="org.apache.hadoop.fs.FileStatus"
   import="org.apache.hadoop.fs.Path"
-  import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.client.RegionInfo"
   import="org.apache.hadoop.hbase.client.RegionInfoDisplay"
   import="org.apache.hadoop.hbase.mob.MobUtils"
@@ -35,6 +34,7 @@
   import="org.apache.hadoop.hbase.regionserver.HRegion"
   import="org.apache.hadoop.hbase.regionserver.HStore"
 %>
+<%@ page import="java.nio.charset.StandardCharsets" %>
 <%
   String regionName = request.getParameter("name");
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
@@ -95,7 +95,7 @@
             count ++; %>
          <tr>
            <td><a href="storeFile.jsp?name=<%= sf.getEncodedPath() %>"><%= sf.getPath() %></a></td>
-           <td><%= (int) (fs.getLength(sf.getPath()) / 1024 / 1024) %></td>
+           <td><%= (int) (fs.getFileStatus(sf.getPath()).getLen() / 1024 / 1024) %></td>
            <td><%= new Date(sf.getModificationTimestamp()) %></td>
            <td><%= String.format("%,1d", sf.getFileInfo().getHFileInfo().getLenOfBiggestCell()) %></td>
            <td><%= sf.getFileInfo().getHFileInfo().getKeyOfBiggestCell() %></td>
@@ -130,7 +130,7 @@
                mobCnt ++;
                FileStatus status = rs.getFileSystem().getFileStatus(mobPath);
                String mobPathStr = mobPath.toString();
-               String encodedStr = URLEncoder.encode(mobPathStr, HConstants.UTF8_ENCODING); %>
+               String encodedStr = URLEncoder.encode(mobPathStr, StandardCharsets.UTF_8); %>
 
                <tr>
                  <td><a href="storeFile.jsp?name=<%= encodedStr%>"><%= mobPathStr%></a></td>

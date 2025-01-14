@@ -18,11 +18,9 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-         import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
-         import="java.io.IOException"
+         import="static org.apache.commons.text.StringEscapeUtils.escapeXml10"
          import="java.util.ArrayList"
          import="java.util.List"
-         import="java.util.Map"
 %>
 <%@ page import="org.apache.hadoop.hbase.client.TableDescriptor" %>
 <%@ page import="org.apache.hadoop.hbase.master.HMaster" %>
@@ -56,7 +54,7 @@
     <% for (TableDescriptor htDesc : tables) { %>
     <tr>
       <td>
-        <a href="/table.jsp?name=<%= escapeXml(htDesc.getTableName().getNameAsString()) %>"><%= escapeXml(
+        <a href="/table.jsp?name=<%= escapeXml10(htDesc.getTableName().getNameAsString()) %>"><%= escapeXml10(
             htDesc.getTableName().getNameAsString()) %>
         </a></td>
       <td><%= htDesc.toString() %>

@@ -29,6 +29,18 @@
   import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.hbase.TableName"
 %>
+<%!
+  /**
+   * Note: This method was taken from org.apache.hadoop.util.StringUtils.humanReadableInt(long).
+   * Given an integer, return a string that is in an approximate, but human
+   * readable format.
+   * @param number the number to format
+   * @return a human readable form of the integer
+   */
+  private static String humanReadableInt(long number) {
+    return StringUtils.TraditionalBinaryPrefix.long2String(number, "", 1);
+  }
+%>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
@@ -134,14 +146,14 @@
   <div class="row">
     <div class="span12">
     <%= stats.getStoreFilesCount() %> HFiles (<%= stats.getArchivedStoreFilesCount() %> in archive),
-    total size <%= StringUtils.humanReadableInt(stats.getStoreFilesSize()) %>
+    total size <%= humanReadableInt(stats.getStoreFilesSize()) %>
     (<%= stats.getSharedStoreFilePercentage() %>&#37;
-    <%= StringUtils.humanReadableInt(stats.getSharedStoreFilesSize()) %> shared with the source
+    <%= humanReadableInt(stats.getSharedStoreFilesSize()) %> shared with the source
     table)
     </div>
     <div class="span12">
     <%= stats.getLogsCount() %> Logs, total size
-    <%= StringUtils.humanReadableInt(stats.getLogsSize()) %>
+    <%= humanReadableInt(stats.getLogsSize()) %>
     </div>
   </div>
   <% if (stats.isSnapshotCorrupted()) { %>
