@@ -68,12 +68,13 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   }
 
   @Override
-  protected List<CandidateGenerator> createCandidateGenerators() {
-    List<CandidateGenerator> candidateGenerators = new ArrayList<>(2);
-    candidateGenerators.add(GeneratorFunctionType.LOAD.ordinal(),
+  protected Map<Class<? extends CandidateGenerator>, CandidateGenerator>
+    createCandidateGenerators() {
+    Map<Class<? extends CandidateGenerator>, CandidateGenerator> candidateGenerators =
+      new HashMap<>(2);
+    candidateGenerators.put(CacheAwareSkewnessCandidateGenerator.class,
       new CacheAwareSkewnessCandidateGenerator());
-    candidateGenerators.add(GeneratorFunctionType.CACHE_RATIO.ordinal(),
-      new CacheAwareCandidateGenerator());
+    candidateGenerators.put(CacheAwareCandidateGenerator.class, new CacheAwareCandidateGenerator());
     return candidateGenerators;
   }
 
@@ -409,8 +410,9 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
       });
     }
 
-    public final void updateWeight(double[] weights) {
-      weights[GeneratorFunctionType.LOAD.ordinal()] += cost();
+    @Override
+    public final void updateWeight(Map<Class<? extends CandidateGenerator>, Double> weights) {
+      weights.merge(LoadCandidateGenerator.class, cost(), Double::sum);
     }
   }
 
@@ -478,8 +480,8 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     }
 
     @Override
-    public final void updateWeight(double[] weights) {
-      weights[GeneratorFunctionType.CACHE_RATIO.ordinal()] += cost();
+    public void updateWeight(Map<Class<? extends CandidateGenerator>, Double> weights) {
+      weights.merge(LoadCandidateGenerator.class, cost(), Double::sum);
     }
   }
 }

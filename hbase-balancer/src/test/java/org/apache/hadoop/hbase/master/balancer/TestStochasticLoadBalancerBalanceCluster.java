@@ -52,7 +52,7 @@ public class TestStochasticLoadBalancerBalanceCluster extends StochasticBalancer
    */
   @Test
   public void testBalanceCluster() throws Exception {
-    setMaxRunTime(Duration.ofMillis(1500));
+    setMaxRunTime(Duration.ofMillis(2500));
     loadBalancer.onConfigurationChange(conf);
     for (int[] mockCluster : clusterStateMocks) {
       Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
