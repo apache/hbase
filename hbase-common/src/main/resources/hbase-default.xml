@@ -2072,7 +2072,7 @@ possible configurations would overwhelm and obscure the important.
     <value>false</value>
     <description>
       If true, collect Table level metrics in HBase Client. Currently, metrics from only
-      HTable#batch() API is collected.
+      HTable#batch() API are collected.
     </description>
   </property>
 </configuration>

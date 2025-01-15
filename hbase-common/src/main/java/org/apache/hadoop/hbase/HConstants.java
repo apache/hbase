@@ -1728,8 +1728,15 @@ public final class HConstants {
    */
   public final static boolean REJECT_DECOMMISSIONED_HOSTS_DEFAULT = false;
 
+  /**
+   * The config to enable tracking table level metrics. Currently, metrics from only
+   * HTable#batch() API are collected.
+   */
   public static final String HBASE_CLIENT_TABLE_METRICS_ENABLE = "hbase.client.table.metrics.enable";
 
+  /**
+   * Default value of {@link #DEFAULT_HBASE_CLIENT_TABLE_METRICS_ENABLE}
+   */
   public static final boolean DEFAULT_HBASE_CLIENT_TABLE_METRICS_ENABLE = false;
 
   private HConstants() {
