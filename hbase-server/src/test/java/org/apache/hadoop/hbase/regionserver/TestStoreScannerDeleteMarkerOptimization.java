@@ -224,13 +224,13 @@ public class TestStoreScannerDeleteMarkerOptimization {
     kvs.add(create("r", CF, "q", 1, Type.Put, "v"));
     kvs.add(create("r", CF, "q1", 1, Type.Put, "v"));
 
-    // optimization works only for KeepDeletedCells.FALSE
+    // optimization does not work. optimization works only for KeepDeletedCells.FALSE
     result = scanAll(KeepDeletedCells.TRUE, 1);
     assertEquals(1, result.getFirst().size());
     assertEquals(kvs.get(4), result.getFirst().get(0));
     assertEquals(kvs.size(), result.getSecond().longValue());
 
-    // optimization works only for KeepDeletedCells.FALSE
+    // optimization does not work. optimization works only for KeepDeletedCells.FALSE
     result = scanAll(KeepDeletedCells.TTL, 1);
     assertEquals(1, result.getFirst().size());
     assertEquals(kvs.get(4), result.getFirst().get(0));
@@ -239,16 +239,16 @@ public class TestStoreScannerDeleteMarkerOptimization {
 
   @Test
   public void testScanMaxVersions() throws IOException {
-    kvs.add(create("r", CF, "q", 4, Type.DeleteColumn, ""));
-    kvs.add(create("r", CF, "q", 3, Type.DeleteColumn, ""));
-    kvs.add(create("r", CF, "q", 2, Type.DeleteColumn, ""));
+    kvs.add(create("r", CF, "q", 2, Type.Delete, ""));
+    kvs.add(create("r", CF, "q", 2, Type.Put, "v"));
+    kvs.add(create("r", CF, "q", 1, Type.Delete, ""));
     kvs.add(create("r", CF, "q", 1, Type.Put, "v"));
 
     // optimization works only for maxVersions = 1
     result = scanAll(KeepDeletedCells.FALSE, 1);
     assertEquals(0, result.getFirst().size());
-    // kvs0
-    assertEquals(1, result.getSecond().longValue());
+    // kvs0, kvs1
+    assertEquals(2, result.getSecond().longValue());
 
     // optimization does not work
     result = scanAll(KeepDeletedCells.FALSE, 2);

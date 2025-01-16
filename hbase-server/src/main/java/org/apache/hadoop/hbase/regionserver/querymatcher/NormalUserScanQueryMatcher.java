@@ -82,11 +82,6 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
       if (includeDeleteMarker) {
         this.deletes.add(cell);
       }
-      // optimization for delete markers
-      if ((returnCode = checkCanSeekNextCol(cell, prevCell, visibilityLabelEnabled)) != null) {
-        return returnCode;
-      }
-      return MatchCode.SKIP;
     }
     // optimization when prevCell is Delete or DeleteFamilyVersion
     if ((returnCode = checkDeletedEffectively(cell, prevCell, visibilityLabelEnabled)) != null) {
@@ -98,20 +93,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
     return matchColumn(cell, timestamp, typeByte);
   }
 
-  private MatchCode checkCanSeekNextCol(ExtendedCell cell, ExtendedCell prevCell,
-    boolean visibilityLabelEnabled) {
-    // optimization for DeleteFamily and DeleteColumn(only for empty qualifier)
-    if (
-      canOptimizeReadDeleteMarkers(visibilityLabelEnabled) && (PrivateCellUtil.isDeleteFamily(cell)
-        || PrivateCellUtil.isDeleteColumns(cell) && cell.getQualifierLength() > 0)
-    ) {
-      return MatchCode.SEEK_NEXT_COL;
-    }
-    // optimization for duplicate Delete and DeleteFamilyVersion
-    return checkDeletedEffectively(cell, prevCell, visibilityLabelEnabled);
-  }
-
-  // If prevCell is a delete marker and cell is a Put or delete marker,
+  // If prevCell is a delete marker and cell is a delete marked Put or delete marker,
   // it means the cell is deleted effectively.
   // And we can do SEEK_NEXT_COL.
   private MatchCode checkDeletedEffectively(ExtendedCell cell, ExtendedCell prevCell,
@@ -119,7 +101,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
     if (
       prevCell != null && canOptimizeReadDeleteMarkers(visibilityLabelEnabled)
         && CellUtil.matchingRowColumn(prevCell, cell) && CellUtil.matchingTimestamp(prevCell, cell)
-        && (PrivateCellUtil.isDeleteType(prevCell) && cell.getQualifierLength() > 0
+        && (PrivateCellUtil.isDeleteType(prevCell)
           || PrivateCellUtil.isDeleteFamilyVersion(prevCell))
     ) {
       return MatchCode.SEEK_NEXT_COL;

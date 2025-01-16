@@ -108,6 +108,8 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
 
   @Test
   public void testEffectiveDelete() throws IOException {
+    pairs.add(new Pair<>(createKV(null, 2, Type.Delete), MatchCode.SKIP));
+    pairs.add(new Pair<>(createKV(null, 2, Type.Put), MatchCode.SEEK_NEXT_COL));
     pairs.add(new Pair<>(createKV(col1, 2, Type.Delete), MatchCode.SKIP));
     pairs.add(new Pair<>(createKV(col1, 2, Type.Put), MatchCode.SEEK_NEXT_COL));
     verify(pairs);
@@ -214,20 +216,6 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
   }
 
   @Test
-  public void testEmptyQualifierDeleteShouldNotSeekNextColumn() throws IOException {
-    // The empty qualifier is used for DeleteFamily and DeleteFamilyVersion markers only.
-    // So we should not seek to next column for any other type.
-    pairs.add(new Pair<>(createKV(null, 4, Type.Delete), MatchCode.SKIP));
-    pairs.add(new Pair<>(createKV(null, 4, Type.Delete), MatchCode.SKIP));
-    pairs.add(new Pair<>(createKV(null, 3, Type.DeleteColumn), MatchCode.SKIP));
-    pairs.add(new Pair<>(createKV(null, 3, Type.DeleteColumn), MatchCode.SKIP));
-    pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamilyVersion), MatchCode.SKIP));
-    pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamilyVersion), MatchCode.SEEK_NEXT_COL));
-    pairs.add(new Pair<>(createKV(null, 1, Type.DeleteFamily), MatchCode.SEEK_NEXT_COL));
-    verify(pairs);
-  }
-
-  @Test
   public void testKeyForNextColumnForDeleteFamily() throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
     UserScanQueryMatcher qm = UserScanQueryMatcher.create(
@@ -262,10 +250,12 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
   }
 
   @Test
-  public void testDeleteFamilyWithVisibilityLabelEnabled() throws IOException {
+  public void testVisibilityLabelEnabled() throws IOException {
     Configuration conf = HBaseConfiguration.create();
     enableVisiblityLabels(conf);
-    pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamily), MatchCode.SKIP));
+    pairs.add(new Pair<>(createKV(col1, 3, Type.Delete), MatchCode.SKIP));
+    pairs.add(new Pair<>(createKV(col1, 3, Type.Put), MatchCode.SKIP));
+    pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamily), MatchCode.SEEK_NEXT_COL));
     pairs.add(new Pair<>(createKV(col1, 1, Type.Put), MatchCode.SEEK_NEXT_COL));
     verify(pairs, 1, VisibilityUtils.isVisibilityLabelEnabled(conf));
   }
@@ -273,7 +263,9 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
   @Test
   public void testScanWithFilter() throws IOException {
     scan.setFilter(new FilterList());
-    pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamily), MatchCode.SKIP));
+    pairs.add(new Pair<>(createKV(col1, 3, Type.Delete), MatchCode.SKIP));
+    pairs.add(new Pair<>(createKV(col1, 3, Type.Put), MatchCode.SKIP));
+    pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamily), MatchCode.SEEK_NEXT_COL));
     pairs.add(new Pair<>(createKV(col1, 1, Type.Put), MatchCode.SEEK_NEXT_COL));
     verify(pairs);
   }
