@@ -761,12 +761,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             if (stateAfterSeekNextColumn != null) {
               return scannerContext.setScannerState(stateAfterSeekNextColumn).hasMoreValues();
             }
-            // for skipping delete markers
-            if (
-              CellUtil.isDelete(cell) && this.heap.peek() != null && this.heap.peek().equals(cell)
-            ) {
-              this.heap.next();
-            }
             break;
 
           case SKIP:
