@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -155,7 +156,7 @@ public class ReplicationSourceShipper extends Thread {
     List<Entry> entries = entryBatch.getWalEntries();
     int sleepMultiplier = 0;
     if (entries.isEmpty()) {
-      updateLogPosition(entryBatch);
+      updateLogPosition(entryBatch, ReplicationResult.COMMITTED);
       return;
     }
     int currentSize = (int) entryBatch.getHeapSize();
@@ -182,21 +183,23 @@ public class ReplicationSourceShipper extends Thread {
 
         long startTimeNs = System.nanoTime();
         // send the edits to the endpoint. Will block until the edits are shipped and acknowledged
-        boolean replicated = source.getReplicationEndpoint().replicate(replicateContext);
+        ReplicationResult replicated = source.getReplicationEndpoint().replicate(replicateContext);
         long endTimeNs = System.nanoTime();
 
-        if (!replicated) {
+        if (replicated == ReplicationResult.FAILED) {
           continue;
         } else {
           sleepMultiplier = Math.max(sleepMultiplier - 1, 0);
         }
-        // Clean up hfile references
-        for (Entry entry : entries) {
-          cleanUpHFileRefs(entry.getEdit());
-          LOG.trace("shipped entry {}: ", entry);
+        if (replicated == ReplicationResult.COMMITTED) {
+          // Clean up hfile references
+          for (Entry entry : entries) {
+            cleanUpHFileRefs(entry.getEdit());
+            LOG.trace("shipped entry {}: ", entry);
+          }
         }
         // Log and clean up WAL logs
-        updateLogPosition(entryBatch);
+        updateLogPosition(entryBatch, replicated);
 
         // offsets totalBufferUsed by deducting shipped batchSize (excludes bulk load size)
         // this sizeExcludeBulkLoad has to use same calculation that when calling
@@ -253,18 +256,18 @@ public class ReplicationSourceShipper extends Thread {
     }
   }
 
-  private boolean updateLogPosition(WALEntryBatch batch) {
+  private boolean updateLogPosition(WALEntryBatch batch, ReplicationResult replicated) {
     boolean updated = false;
     // if end of file is true, then the logPositionAndCleanOldLogs method will remove the file
     // record on zk, so let's call it. The last wal position maybe zero if end of file is true and
     // there is no entry in the batch. It is OK because that the queue storage will ignore the zero
     // position and the file will be removed soon in cleanOldLogs.
-    if (
-      batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath)
-        || batch.getLastWalPosition() != currentPosition
-    ) {
-      source.logPositionAndCleanOldLogs(batch);
-      updated = true;
+    if (replicated == ReplicationResult.COMMITTED) {
+      if (batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath)
+        || batch.getLastWalPosition() != currentPosition) {
+        source.logPositionAndCleanOldLogs(batch);
+        updated = true;
+      }
     }
     // if end of file is true, then we can just skip to the next file in queue.
     // the only exception is for recovered queue, if we reach the end of the queue, then there will

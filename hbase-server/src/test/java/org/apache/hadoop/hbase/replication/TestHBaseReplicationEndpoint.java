@@ -199,8 +199,8 @@ public class TestHBaseReplicationEndpoint {
     }
 
     @Override
-    public boolean replicate(ReplicateContext replicateContext) {
-      return false;
+    public ReplicationResult replicate(ReplicateContext replicateContext) {
+      return ReplicationResult.FAILED;
     }
 
     @Override
