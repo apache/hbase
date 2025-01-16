@@ -349,10 +349,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   private boolean areSomeRegionReplicasColocated(BalancerClusterState c) {
     regionReplicaHostCostFunction.prepare(c);
-    if (Math.abs(regionReplicaHostCostFunction.cost()) > CostFunction.COST_EPSILON) {
-      return true;
-    }
-    return (Math.abs(regionReplicaHostCostFunction.cost()) > CostFunction.COST_EPSILON);
+    double cost = Math.abs(regionReplicaHostCostFunction.cost());
+    return cost > CostFunction.getCostEpsilon(cost);
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
