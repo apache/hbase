@@ -38,7 +38,8 @@ public class TestStochasticLoadBalancerSmallCluster extends BalancerTestBase {
     int numRegionsPerServer = 40; // all servers except one
     int replication = 1;
     int numTables = 10;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
   }
 
   @Test
@@ -48,7 +49,8 @@ public class TestStochasticLoadBalancerSmallCluster extends BalancerTestBase {
     int numRegionsPerServer = 40; // all servers except one
     int replication = 1;
     int numTables = 10;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
   }
 
   @Test
@@ -58,8 +60,8 @@ public class TestStochasticLoadBalancerSmallCluster extends BalancerTestBase {
     int numRegionsPerServer = 1; // all servers except one
     int replication = 1;
     int numTables = 10;
-    /* fails because of max moves */
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, false,
-      false);
+    // fails because of max moves
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      false, false);
   }
 }

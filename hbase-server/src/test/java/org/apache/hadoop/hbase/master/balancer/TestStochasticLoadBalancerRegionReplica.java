@@ -171,7 +171,8 @@ public class TestStochasticLoadBalancerRegionReplica extends BalancerTestBase {
     int replication = 3; // 3 replicas per region
     int numRegionsPerServer = 80; // all regions are mostly balanced
     int numTables = 10;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
   }
 
   private static class ForTestRackManagerOne extends RackManager {
