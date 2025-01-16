@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfigBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
@@ -94,13 +95,13 @@ public class TestReplicationSourceManager {
     private String clusterKey;
 
     @Override
-    public boolean replicate(ReplicateContext replicateContext) {
+    public ReplicationResult replicate(ReplicateContext replicateContext) {
       // if you want to block the replication, for example, do not want the recovered source to be
       // removed
       if (clusterKey.endsWith("error")) {
         throw new RuntimeException("Inject error");
       }
-      return true;
+      return ReplicationResult.COMMITTED;
     }
 
     @Override
