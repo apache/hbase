@@ -613,6 +613,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public double getPercentFileLocalPrimaryRegions() {
+    return aggregate.percentFileLocalPrimaryRegions;
+  }
+
+  @Override
   public double getPercentFileLocalSecondaryRegions() {
     return aggregate.percentFileLocalSecondaryRegions;
   }
@@ -762,6 +767,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     private long numMutationsWithoutWAL = 0;
     private long dataInMemoryWithoutWAL = 0;
     private double percentFileLocal = 0;
+    private double percentFileLocalPrimaryRegions = 0;
     private double percentFileLocalSecondaryRegions = 0;
     private long flushedCellsCount = 0;
     private long compactedCellsCount = 0;
@@ -794,6 +800,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     private void aggregate(HRegionServer regionServer,
       Map<String, ArrayList<Long>> requestsCountCache) {
       HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
+      HDFSBlocksDistribution hdfsBlocksDistributionPrimaryRegions = new HDFSBlocksDistribution();
       HDFSBlocksDistribution hdfsBlocksDistributionSecondaryRegions = new HDFSBlocksDistribution();
 
       long avgAgeNumerator = 0;
@@ -821,6 +828,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
         HDFSBlocksDistribution distro = r.getHDFSBlocksDistribution();
         hdfsBlocksDistribution.add(distro);
+        if (r.getRegionInfo().getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
+          hdfsBlocksDistributionPrimaryRegions.add(distro);
+        }
         if (r.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
           hdfsBlocksDistributionSecondaryRegions.add(distro);
         }
@@ -831,6 +841,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
       float localityIndex =
         hdfsBlocksDistribution.getBlockLocalityIndex(regionServer.getServerName().getHostname());
       percentFileLocal = Double.isNaN(localityIndex) ? 0 : (localityIndex * 100);
+
+      float localityIndexPrimaryRegions = hdfsBlocksDistributionPrimaryRegions
+        .getBlockLocalityIndex(regionServer.getServerName().getHostname());
+      percentFileLocalPrimaryRegions =
+        Double.isNaN(localityIndexPrimaryRegions) ? 0 : (localityIndexPrimaryRegions * 100);
 
       float localityIndexSecondaryRegions = hdfsBlocksDistributionSecondaryRegions
         .getBlockLocalityIndex(regionServer.getServerName().getHostname());
