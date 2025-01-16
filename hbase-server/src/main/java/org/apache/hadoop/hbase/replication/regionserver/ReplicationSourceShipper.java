@@ -263,8 +263,10 @@ public class ReplicationSourceShipper extends Thread {
     // there is no entry in the batch. It is OK because that the queue storage will ignore the zero
     // position and the file will be removed soon in cleanOldLogs.
     if (replicated == ReplicationResult.COMMITTED) {
-      if (batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath)
-        || batch.getLastWalPosition() != currentPosition) {
+      if (
+        batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath)
+          || batch.getLastWalPosition() != currentPosition
+      ) {
         source.logPositionAndCleanOldLogs(batch);
         updated = true;
       }
