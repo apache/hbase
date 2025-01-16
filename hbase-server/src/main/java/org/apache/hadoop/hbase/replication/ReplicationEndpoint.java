@@ -208,7 +208,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
    * the context are assumed to be persisted in the target cluster.
    * @param replicateContext a context where WAL entries and other parameters can be obtained.
    */
-  boolean replicate(ReplicateContext replicateContext);
+  ReplicationResult replicate(ReplicateContext replicateContext);
 
   // The below methods are inspired by Guava Service. See
   // https://github.com/google/guava/wiki/ServiceExplained for overview of Guava Service.
