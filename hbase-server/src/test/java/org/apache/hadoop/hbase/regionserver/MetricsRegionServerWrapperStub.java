@@ -253,6 +253,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public double getPercentFileLocalPrimaryRegions() {
+    return 99;
+  }
+
+  @Override
   public double getPercentFileLocalSecondaryRegions() {
     return 99;
   }

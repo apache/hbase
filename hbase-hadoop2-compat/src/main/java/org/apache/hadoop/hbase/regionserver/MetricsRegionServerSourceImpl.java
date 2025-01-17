@@ -553,6 +553,9 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
         rsWrap.getDataInMemoryWithoutWAL())
       .addGauge(Interns.info(PERCENT_FILES_LOCAL, PERCENT_FILES_LOCAL_DESC),
         rsWrap.getPercentFileLocal())
+      .addGauge(
+        Interns.info(PERCENT_FILES_LOCAL_PRIMARY_REGIONS, PERCENT_FILES_LOCAL_PRIMARY_REGIONS_DESC),
+        rsWrap.getPercentFileLocalPrimaryRegions())
       .addGauge(Interns.info(PERCENT_FILES_LOCAL_SECONDARY_REGIONS,
         PERCENT_FILES_LOCAL_SECONDARY_REGIONS_DESC), rsWrap.getPercentFileLocalSecondaryRegions())
       .addGauge(Interns.info(TOTAL_BYTES_READ, TOTAL_BYTES_READ_DESC), rsWrap.getTotalBytesRead())
