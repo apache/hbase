@@ -1193,6 +1193,11 @@ public final class HConstants {
   /** Temporary directory used for table creation and deletion */
   public static final String HBASE_TEMP_DIRECTORY = ".tmp";
   /**
+   * Directory used for storing master keys for the cluster
+   */
+  public static final String CLUSTER_KEYS_DIRECTORY = ".cluster_keys";
+  public static final String CLUSTER_KEY_FILE_PREFIX = "cluster_key.";
+  /**
    * The period (in milliseconds) between computing region server point in time metrics
    */
   public static final String REGIONSERVER_METRICS_PERIOD = "hbase.regionserver.metrics.period";
@@ -1283,6 +1288,13 @@ public final class HConstants {
 
   /** Configuration key for the name of the master key for the cluster, a string */
   public static final String CRYPTO_MASTERKEY_NAME_CONF_KEY = "hbase.crypto.master.key.name";
+
+  public static final String CRYPTO_PBE_MASTERKEY_NAME_CONF_KEY =
+    "hbase.crypto.pbe.master.key.name";
+
+  public static final String CRYPTO_PBE_ENABLED_CONF_KEY = "hbase.crypto.pbe.enabled";
+
+  public static final String CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX = "hbase.crypto.pbe.prefix.";
 
   /** Configuration key for the name of the alternate master key for the cluster, a string */
   public static final String CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY =

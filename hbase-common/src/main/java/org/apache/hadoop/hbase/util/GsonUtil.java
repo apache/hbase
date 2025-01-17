@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.LongAdder;
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.gson.GsonBuilder;
@@ -32,6 +33,8 @@ import org.apache.hbase.thirdparty.com.google.gson.stream.JsonWriter;
  */
 @InterfaceAudience.Private
 public final class GsonUtil {
+
+  private static Gson INSTANCE;
 
   private GsonUtil() {
   }
@@ -61,5 +64,13 @@ public final class GsonUtil {
 
   public static GsonBuilder createGsonWithDisableHtmlEscaping() {
     return createGson().disableHtmlEscaping();
+  }
+
+  public static Gson getDefaultInstance() {
+    if (INSTANCE == null) {
+      INSTANCE = createGson().create();
+
+    }
+    return INSTANCE;
   }
 }

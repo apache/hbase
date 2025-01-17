@@ -561,6 +561,9 @@ public final class Encryption {
       provider = (KeyProvider) ReflectionUtils
         .newInstance(getClassLoaderForClass(KeyProvider.class).loadClass(providerClassName), conf);
       provider.init(providerParameters);
+      if (provider instanceof PBEKeyProvider) {
+        ((PBEKeyProvider) provider).initConfig(conf);
+      }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Installed " + providerClassName + " into key provider cache");
       }
