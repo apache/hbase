@@ -55,16 +55,16 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
   private List<Pair<KeyValue, MatchCode>> pairs;
 
   private void verify(List<Pair<KeyValue, MatchCode>> pairs) throws IOException {
-    verify(pairs, 1, false);
+    verify(pairs, 1, false, false);
   }
 
   private void verify(List<Pair<KeyValue, MatchCode>> pairs, int maxVersions,
-    boolean visibilityEnabled) throws IOException {
+    boolean visibilityEnabled, boolean newVersionBehavior) throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
     scan.readVersions(maxVersions);
     UserScanQueryMatcher qm = UserScanQueryMatcher.create(scan,
       new ScanInfo(this.conf, fam1, 0, maxVersions, ttl, KeepDeletedCells.FALSE,
-        HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false),
+        HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, newVersionBehavior),
       get.getFamilyMap().get(fam1), now - ttl, now, null);
 
     List<KeyValue> storedKVs = new ArrayList<>();
@@ -121,7 +121,7 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
     pairs.add(new Pair<>(createKV(col1, 2, Type.Delete), MatchCode.SKIP));
     pairs.add(new Pair<>(createKV(col1, 2, Type.Put), MatchCode.SKIP));
     pairs.add(new Pair<>(createKV(col1, 1, Type.Put), MatchCode.INCLUDE));
-    verify(pairs, 2, false);
+    verify(pairs, 2, false, false);
   }
 
   @Test
@@ -255,9 +255,9 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
     enableVisiblityLabels(conf);
     pairs.add(new Pair<>(createKV(col1, 3, Type.Delete), MatchCode.SKIP));
     pairs.add(new Pair<>(createKV(col1, 3, Type.Put), MatchCode.SKIP));
-    pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamily), MatchCode.SEEK_NEXT_COL));
+    pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamily), MatchCode.SKIP));
     pairs.add(new Pair<>(createKV(col1, 1, Type.Put), MatchCode.SEEK_NEXT_COL));
-    verify(pairs, 1, VisibilityUtils.isVisibilityLabelEnabled(conf));
+    verify(pairs, 1, VisibilityUtils.isVisibilityLabelEnabled(conf), false);
   }
 
   @Test
@@ -265,8 +265,17 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
     scan.setFilter(new FilterList());
     pairs.add(new Pair<>(createKV(col1, 3, Type.Delete), MatchCode.SKIP));
     pairs.add(new Pair<>(createKV(col1, 3, Type.Put), MatchCode.SKIP));
-    pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamily), MatchCode.SEEK_NEXT_COL));
+    pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamily), MatchCode.SKIP));
     pairs.add(new Pair<>(createKV(col1, 1, Type.Put), MatchCode.SEEK_NEXT_COL));
     verify(pairs);
+  }
+
+  @Test
+  public void testNewVersionBehavior() throws IOException {
+    pairs.add(new Pair<>(createKV(col1, 3, Type.Delete), MatchCode.SKIP));
+    pairs.add(new Pair<>(createKV(col1, 3, Type.Put), MatchCode.SKIP));
+    pairs.add(new Pair<>(createKV(null, 2, Type.DeleteFamily), MatchCode.SKIP));
+    pairs.add(new Pair<>(createKV(col1, 1, Type.Put), MatchCode.SKIP));
+    verify(pairs, 2, false, true);
   }
 }

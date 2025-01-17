@@ -82,6 +82,10 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
       if (includeDeleteMarker) {
         this.deletes.add(cell);
       }
+      // In some cases, optimization can not be done
+      if (!canOptimizeReadDeleteMarkers(visibilityLabelEnabled)) {
+        return MatchCode.SKIP;
+      }
     }
     // optimization when prevCell is Delete or DeleteFamilyVersion
     if ((returnCode = checkDeletedEffectively(cell, prevCell, visibilityLabelEnabled)) != null) {
@@ -112,7 +116,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
   private boolean canOptimizeReadDeleteMarkers(boolean visibilityLabelEnabled) {
     // for simplicity, optimization works only for these cases
     return !seePastDeleteMarkers && scanMaxVersions == 1 && !visibilityLabelEnabled
-      && getFilter() == null;
+      && getFilter() == null && !(deletes instanceof NewVersionBehaviorTracker);
   }
 
   @Override
