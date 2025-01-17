@@ -287,7 +287,8 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
 
   public static UserScanQueryMatcher create(Scan scan, ScanInfo scanInfo,
     NavigableSet<byte[]> columns, long oldestUnexpiredTS, long now,
-    RegionCoprocessorHost regionCoprocessorHost) throws IOException {
+    RegionCoprocessorHost regionCoprocessorHost, boolean visibilityLabelEnabled)
+    throws IOException {
     boolean hasNullColumn =
       !(columns != null && columns.size() != 0 && columns.first().length != 0);
     Pair<DeleteTracker, ColumnTracker> trackers =
@@ -299,7 +300,7 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
         oldestUnexpiredTS, now);
     } else {
       return NormalUserScanQueryMatcher.create(scan, scanInfo, columnTracker, deleteTracker,
-        hasNullColumn, oldestUnexpiredTS, now);
+        hasNullColumn, oldestUnexpiredTS, now, visibilityLabelEnabled);
     }
   }
 }

@@ -249,7 +249,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       throw new DoNotRetryIOException("Cannot specify any column for a raw scan");
     }
     matcher = UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now,
-      store.getCoprocessorHost());
+      store.getCoprocessorHost(), visibilityLabelEnabled);
 
     store.addChangedReaderObserver(this);
 
@@ -363,8 +363,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L, scan.getCacheBlocks(),
       scanType);
     if (scanType == ScanType.USER_SCAN) {
-      this.matcher =
-        UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
+      this.matcher = UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now,
+        null, visibilityLabelEnabled);
     } else {
       this.matcher = CompactionScanQueryMatcher.create(scanInfo, scanType, Long.MAX_VALUE,
         PrivateConstants.OLDEST_TIMESTAMP, oldestUnexpiredTS, now, null, null, null);
@@ -378,8 +378,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // 0 is passed as readpoint because the test bypasses Store
     this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L, scan.getCacheBlocks(),
       ScanType.USER_SCAN);
-    this.matcher =
-      UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
+    this.matcher = UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now,
+      null, visibilityLabelEnabled);
     seekAllScanner(scanInfo, scanners);
   }
 
@@ -641,7 +641,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
         scannerContext.setLastPeekedCell(cell);
         topChanged = false;
-        ScanQueryMatcher.MatchCode qcode = matcher.match(cell, prevCell, visibilityLabelEnabled);
+        ScanQueryMatcher.MatchCode qcode = matcher.match(cell, prevCell);
         LOG.trace("next - cell={}, prevCell={}, qCode={}", cell, prevCell, qcode);
         prevCell = cell;
         switch (qcode) {

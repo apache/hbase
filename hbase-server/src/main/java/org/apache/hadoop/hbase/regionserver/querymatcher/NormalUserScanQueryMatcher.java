@@ -43,13 +43,17 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
 
   private final int scanMaxVersions;
 
+  private final boolean visibilityLabelEnabled;
+
   protected NormalUserScanQueryMatcher(Scan scan, ScanInfo scanInfo, ColumnTracker columns,
-    boolean hasNullColumn, DeleteTracker deletes, long oldestUnexpiredTS, long now) {
+    boolean hasNullColumn, DeleteTracker deletes, long oldestUnexpiredTS, long now,
+    boolean visibilityLabelEnabled) {
     super(scan, scanInfo, columns, hasNullColumn, oldestUnexpiredTS, now);
     this.deletes = deletes;
     this.get = scan.isGetScan();
     this.seePastDeleteMarkers = scanInfo.getKeepDeletedCells() != KeepDeletedCells.FALSE;
     this.scanMaxVersions = Math.max(scan.getMaxVersions(), scanInfo.getMaxVersions());
+    this.visibilityLabelEnabled = visibilityLabelEnabled;
   }
 
   @Override
@@ -60,13 +64,11 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
 
   @Override
   public MatchCode match(ExtendedCell cell) throws IOException {
-    // set visibilityLabelEnabled to true pessimistically if it cannot be determined
-    return match(cell, null, true);
+    return match(cell, null);
   }
 
   @Override
-  public MatchCode match(ExtendedCell cell, ExtendedCell prevCell, boolean visibilityLabelEnabled)
-    throws IOException {
+  public MatchCode match(ExtendedCell cell, ExtendedCell prevCell) throws IOException {
     if (filter != null && filter.filterAllRemaining()) {
       return MatchCode.DONE_SCAN;
     }
@@ -83,12 +85,12 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
         this.deletes.add(cell);
       }
       // In some cases, optimization can not be done
-      if (!canOptimizeReadDeleteMarkers(visibilityLabelEnabled)) {
+      if (!canOptimizeReadDeleteMarkers()) {
         return MatchCode.SKIP;
       }
     }
     // optimization when prevCell is Delete or DeleteFamilyVersion
-    if ((returnCode = checkDeletedEffectively(cell, prevCell, visibilityLabelEnabled)) != null) {
+    if ((returnCode = checkDeletedEffectively(cell, prevCell)) != null) {
       return returnCode;
     }
     if ((returnCode = checkDeleted(deletes, cell)) != null) {
@@ -100,10 +102,9 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
   // If prevCell is a delete marker and cell is a delete marked Put or delete marker,
   // it means the cell is deleted effectively.
   // And we can do SEEK_NEXT_COL.
-  private MatchCode checkDeletedEffectively(ExtendedCell cell, ExtendedCell prevCell,
-    boolean visibilityLabelEnabled) {
+  private MatchCode checkDeletedEffectively(ExtendedCell cell, ExtendedCell prevCell) {
     if (
-      prevCell != null && canOptimizeReadDeleteMarkers(visibilityLabelEnabled)
+      prevCell != null && canOptimizeReadDeleteMarkers()
         && CellUtil.matchingRowColumn(prevCell, cell) && CellUtil.matchingTimestamp(prevCell, cell)
         && (PrivateCellUtil.isDeleteType(prevCell)
           || PrivateCellUtil.isDeleteFamilyVersion(prevCell))
@@ -113,7 +114,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
     return null;
   }
 
-  private boolean canOptimizeReadDeleteMarkers(boolean visibilityLabelEnabled) {
+  private boolean canOptimizeReadDeleteMarkers() {
     // for simplicity, optimization works only for these cases
     return !seePastDeleteMarkers && scanMaxVersions == 1 && !visibilityLabelEnabled
       && getFilter() == null && !(deletes instanceof NewVersionBehaviorTracker);
@@ -131,11 +132,11 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
 
   public static NormalUserScanQueryMatcher create(Scan scan, ScanInfo scanInfo,
     ColumnTracker columns, DeleteTracker deletes, boolean hasNullColumn, long oldestUnexpiredTS,
-    long now) throws IOException {
+    long now, boolean visibilityLabelEnabled) throws IOException {
     if (scan.isReversed()) {
       if (scan.includeStopRow()) {
         return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
-          oldestUnexpiredTS, now) {
+          oldestUnexpiredTS, now, visibilityLabelEnabled) {
 
           @Override
           protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
@@ -144,7 +145,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
         };
       } else {
         return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
-          oldestUnexpiredTS, now) {
+          oldestUnexpiredTS, now, visibilityLabelEnabled) {
 
           @Override
           protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
@@ -155,7 +156,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
     } else {
       if (scan.includeStopRow()) {
         return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
-          oldestUnexpiredTS, now) {
+          oldestUnexpiredTS, now, visibilityLabelEnabled) {
 
           @Override
           protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
@@ -164,7 +165,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
         };
       } else {
         return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
-          oldestUnexpiredTS, now) {
+          oldestUnexpiredTS, now, visibilityLabelEnabled) {
 
           @Override
           protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {

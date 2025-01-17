@@ -247,15 +247,13 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    * <li>ignore the current KeyValue (MatchCode.SKIP)</li>
    * <li>got to the next row (MatchCode.DONE)</li>
    * </ul>
-   * @param cell                   KeyValue to check
-   * @param prevCell               KeyValue checked previously
-   * @param visibilityLabelEnabled Whether visibility labels are enabled
+   * @param cell     KeyValue to check
+   * @param prevCell KeyValue checked previously
    * @return The match code instance.
    * @throws IOException in case there is an internal consistency problem caused by a data
    *                     corruption.
    */
-  public MatchCode match(ExtendedCell cell, ExtendedCell prevCell, boolean visibilityLabelEnabled)
-    throws IOException {
+  public MatchCode match(ExtendedCell cell, ExtendedCell prevCell) throws IOException {
     return match(cell);
   }
 

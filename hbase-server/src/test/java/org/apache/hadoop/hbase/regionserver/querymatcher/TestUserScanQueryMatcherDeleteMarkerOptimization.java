@@ -65,7 +65,7 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
     UserScanQueryMatcher qm = UserScanQueryMatcher.create(scan,
       new ScanInfo(this.conf, fam1, 0, maxVersions, ttl, KeepDeletedCells.FALSE,
         HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, newVersionBehavior),
-      get.getFamilyMap().get(fam1), now - ttl, now, null);
+      get.getFamilyMap().get(fam1), now - ttl, now, null, visibilityEnabled);
 
     List<KeyValue> storedKVs = new ArrayList<>();
     for (Pair<KeyValue, MatchCode> Pair : pairs) {
@@ -78,7 +78,7 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
     ExtendedCell prevCell = null;
 
     for (KeyValue kv : storedKVs) {
-      MatchCode matchCode = qm.match(kv, prevCell, visibilityEnabled);
+      MatchCode matchCode = qm.match(kv, prevCell);
       prevCell = kv;
       scannedKVs.add(matchCode);
     }
@@ -221,7 +221,7 @@ public class TestUserScanQueryMatcherDeleteMarkerOptimization extends AbstractTe
     UserScanQueryMatcher qm = UserScanQueryMatcher.create(
       scan, new ScanInfo(this.conf, fam1, 0, 1, ttl, KeepDeletedCells.FALSE,
         HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false),
-      get.getFamilyMap().get(fam1), now - ttl, now, null);
+      get.getFamilyMap().get(fam1), now - ttl, now, null, false);
 
     KeyValue kv;
     ExtendedCell nextColumnKey;
