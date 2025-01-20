@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,10 +31,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableSet;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
@@ -286,6 +287,11 @@ public class BalancerTestBase {
     }
   }
 
+  protected void setMaxRunTime(Duration maxRunTime) {
+    conf.setLong(StochasticLoadBalancer.MAX_RUNNING_TIME_KEY, maxRunTime.toMillis());
+    loadBalancer.loadConf(conf);
+  }
+
   protected String printStats(List<ServerAndLoad> servers) {
     int numServers = servers.size();
     int totalRegions = 0;
@@ -308,7 +314,10 @@ public class BalancerTestBase {
   }
 
   protected String printMock(List<ServerAndLoad> balancedCluster) {
-    SortedSet<ServerAndLoad> sorted = new TreeSet<>(balancedCluster);
+    if (balancedCluster == null) {
+      return "null";
+    }
+    NavigableSet<ServerAndLoad> sorted = new TreeSet<>(balancedCluster);
     ServerAndLoad[] arr = sorted.toArray(new ServerAndLoad[sorted.size()]);
     StringBuilder sb = new StringBuilder(sorted.size() * 4 + 4);
     sb.append("{ ");
