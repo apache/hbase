@@ -58,7 +58,7 @@ public class TestMobFileType {
   private static Admin admin;
 
   @Before
-  public void setUp() throws Exception {
+  public void setup() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     admin = TEST_UTIL.getAdmin();
     TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tableName);
