@@ -95,7 +95,6 @@ public class HBaseSaslRpcServer {
 
   public String getRequestedQop() {
     return (String) saslProps.get(Sasl.QOP);
-
   }
 
   public String getAuthorizationID() {

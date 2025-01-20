@@ -18,14 +18,15 @@
 package org.apache.hadoop.hbase.security;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
-import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -135,24 +136,22 @@ public class SaslUtil {
     }
   }
 
-  public static void verifyNegotiatedQop(String requestedQop, String negotiatedQop)
+  public static void verifyNegotiatedQop(String requestedQopString, String negotiatedQop)
     throws IOException {
     // We use the SASL QOP names here, not the HBase names
-    if (
-      requestedQop == null
-        || QualityOfProtection.AUTHENTICATION.getSaslQop().equalsIgnoreCase(requestedQop)
-    ) {
-      // NO QOP ("auth" is no QOP) was requested
+    if (requestedQopString == null || requestedQopString.isEmpty()) {
+      // None requested, nothing to check
       return;
     }
+    List<String> requestedQops = Arrays.asList(requestedQopString.toLowerCase().split(","));
     if (negotiatedQop == null) {
-      // Null QOP is equivalent to "auth" (for mechanisms without QOP support)
+      // Null negotiated QOP is equivalent to "auth" (for mechanisms without QOP support)
       negotiatedQop = QualityOfProtection.AUTHENTICATION.getSaslQop();
     }
-    if (requestedQop.toLowerCase().contains(negotiatedQop.toLowerCase())) {
+    if (requestedQops.contains(negotiatedQop.toLowerCase())) {
       return;
     }
-    throw new IOException("Could not negotiate requested SASL QOP. Requested:" + requestedQop
+    throw new IOException("Could not negotiate requested SASL QOP. Requested:" + requestedQopString
       + " , negotiated:" + negotiatedQop);
   }
 }
