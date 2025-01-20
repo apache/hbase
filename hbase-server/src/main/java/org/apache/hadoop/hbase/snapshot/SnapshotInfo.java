@@ -253,12 +253,16 @@ public final class SnapshotInfo extends AbstractHBaseTool {
 
     /** Returns the percentage of the shared store files */
     public float getSharedStoreFilePercentage() {
-      return ((float) hfilesSize.get() / (getStoreFilesSize())) * 100;
+      return getStoreFilesSize() == 0
+        ? 0
+        : ((float) hfilesSize.get() / (getStoreFilesSize())) * 100;
     }
 
     /** Returns the percentage of the mob store files */
     public float getMobStoreFilePercentage() {
-      return ((float) hfilesMobSize.get() / (getStoreFilesSize())) * 100;
+      return getStoreFilesSize() == 0
+        ? 0
+        : ((float) hfilesMobSize.get() / (getStoreFilesSize())) * 100;
     }
 
     /** Returns the total log size */
