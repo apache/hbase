@@ -18,38 +18,19 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
-/**
- * Represents a result of a CheckAndMutate operation
- */
 @InterfaceAudience.Public
-public class CheckAndMutateResult {
-  private final boolean success;
-  private final Result result;
+@InterfaceStability.Evolving
+public class QueryMetrics {
+  private final long blockBytesScanned;
 
-  private QueryMetrics metrics = null;
-
-  public CheckAndMutateResult(boolean success, Result result) {
-    this.success = success;
-    this.result = result;
+  public QueryMetrics(long blockBytesScanned) {
+    this.blockBytesScanned = blockBytesScanned;
   }
 
-  /** Returns Whether the CheckAndMutate operation is successful or not */
-  public boolean isSuccess() {
-    return success;
-  }
-
-  /** Returns It is used only for CheckAndMutate operations with Increment/Append. Otherwise null */
-  public Result getResult() {
-    return result;
-  }
-
-  public CheckAndMutateResult setMetrics(QueryMetrics metrics) {
-    this.metrics = metrics;
-    return this;
-  }
-
-  public QueryMetrics getMetrics() {
-    return metrics;
+  @InterfaceStability.Evolving
+  public long getBlockBytesScanned() {
+    return blockBytesScanned;
   }
 }

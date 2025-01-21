@@ -114,6 +114,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.QueryMetrics;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -5129,7 +5130,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // we'll get the latest on this row.
         boolean matches = false;
         long cellTs = 0;
-        try (RegionScanner scanner = getScanner(new Scan(get))) {
+        QueryMetrics metrics = null;
+        try (RegionScannerImpl scanner = getScanner(new Scan(get))) {
           // NOTE: Please don't use HRegion.get() instead,
           // because it will copy cells to heap. See HBASE-26036
           List<ExtendedCell> result = new ArrayList<>(1);
@@ -5153,6 +5155,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               int compareResult = PrivateCellUtil.compareValue(kv, comparator);
               matches = matches(op, compareResult);
             }
+          }
+          if (checkAndMutate.isQueryMetricsEnabled()) {
+            metrics = new QueryMetrics(scanner.getContext().getBlockSizeProgress());
           }
         }
 
@@ -5190,10 +5195,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             r = mutateRow(rowMutations, nonceGroup, nonce);
           }
           this.checkAndMutateChecksPassed.increment();
-          return new CheckAndMutateResult(true, r);
+          return new CheckAndMutateResult(true, r).setMetrics(metrics);
         }
         this.checkAndMutateChecksFailed.increment();
-        return new CheckAndMutateResult(false, null);
+        return new CheckAndMutateResult(false, null).setMetrics(metrics);
       } finally {
         rowLock.release();
       }
