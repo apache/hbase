@@ -62,7 +62,7 @@ _hbase-site.xml_::
   You can also view the entire effective configuration for your cluster (defaults and overrides) in
   the [label]#HBase Configuration# tab of the HBase Web UI.
 
-_log4j2.xml_::
+_log4j2.properties_::
   Configuration file for HBase logging via `log4j2`.
 
 _regionservers_::
@@ -786,9 +786,9 @@ read by HBase daemons on startup.
 Changes here will require a cluster restart for HBase to notice the change.
 
 [[log4j]]
-=== _log4j2.xml_
+=== _log4j2.properties_
 
-Since version 3.0.0, HBase has upgraded to Log4j2, so the configuration file name and format has changed. Read more in link:https://logging.apache.org/log4j/2.x/index.html[Apache Log4j2].
+Since version 2.5.0, HBase has upgraded to Log4j2, so the configuration file name and format has changed. Read more in link:https://logging.apache.org/log4j/2.x/index.html[Apache Log4j2].
 
 Edit this file to change rate at which HBase files are rolled and to change the level at which
 HBase logs messages.
