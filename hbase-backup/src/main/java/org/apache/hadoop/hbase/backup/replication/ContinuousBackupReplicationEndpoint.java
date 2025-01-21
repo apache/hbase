@@ -19,13 +19,20 @@ package org.apache.hadoop.hbase.backup.replication;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
+import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationResult;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -36,29 +43,50 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   private static final Logger LOG =
     LoggerFactory.getLogger(ContinuousBackupReplicationEndpoint.class);
   public static final String CONF_PEER_UUID = "hbase.backup.wal.replication.peerUUID";
-  private ContinuousBackupManager continuousBackupManager;
+  public static final String WAL_FILE_PREFIX = "wal_file.";
+  public static final String CONF_BACKUP_ROOT_DIR = "hbase.backup.root.dir";
+  public static final String CONF_BACKUP_MAX_WAL_SIZE = "hbase.backup.max.wal.size";
+  public static final long DEFAULT_MAX_WAL_SIZE = 128 * 1024 * 1024;
+
+  private Configuration conf;
+  private BackupFileSystemManager backupFileSystemManager;
+  private FSHLogProvider.Writer walWriter;
   private UUID peerUUID;
+  private String peerId;
 
   @Override
   public void init(Context context) throws IOException {
     super.init(context);
     LOG.info("{} Initializing ContinuousBackupReplicationEndpoint.",
       Utils.logPeerId(ctx.getPeerId()));
+
+    this.peerId = this.ctx.getPeerId();
+
     Configuration peerConf = this.ctx.getConfiguration();
 
     setPeerUUID(peerConf);
 
-    Configuration conf = HBaseConfiguration.create(peerConf);
+    this.conf = HBaseConfiguration.create(peerConf);
+
+    String backupRootDirStr = conf.get(CONF_BACKUP_ROOT_DIR);
+    if (backupRootDirStr == null || backupRootDirStr.isEmpty()) {
+      String errorMsg = Utils.logPeerId(peerId)
+        + " Backup root directory not specified. Set it using " + CONF_BACKUP_ROOT_DIR;
+      LOG.error(errorMsg);
+      throw new IOException(errorMsg);
+    }
+    LOG.debug("{} Backup root directory: {}", Utils.logPeerId(peerId), backupRootDirStr);
 
     try {
-      continuousBackupManager = new ContinuousBackupManager(this.ctx.getPeerId(), conf);
-      LOG.info("{} ContinuousBackupManager initialized successfully.",
-        Utils.logPeerId(ctx.getPeerId()));
-    } catch (ContinuousBackupConfigurationException e) {
-      LOG.error("{} Failed to initialize ContinuousBackupManager due to configuration issues.",
-        Utils.logPeerId(ctx.getPeerId()), e);
-      throw new IOException("Failed to initialize ContinuousBackupManager", e);
+      this.backupFileSystemManager = new BackupFileSystemManager(peerId, conf, backupRootDirStr);
+      LOG.info("{} BackupFileSystemManager initialized successfully.", Utils.logPeerId(peerId));
+    } catch (IOException e) {
+      String errorMsg = Utils.logPeerId(peerId) + " Failed to initialize BackupFileSystemManager";
+      LOG.error(errorMsg, e);
+      throw new IOException(errorMsg, e);
     }
+
+    walWriter = null;
   }
 
   @Override
@@ -81,35 +109,74 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   @Override
-  public boolean replicate(ReplicateContext replicateContext) {
+  public ReplicationResult replicate(ReplicateContext replicateContext) {
     final List<WAL.Entry> entries = replicateContext.getEntries();
     if (entries.isEmpty()) {
       LOG.debug("{} No WAL entries to backup.", Utils.logPeerId(ctx.getPeerId()));
-      return true;
+      return ReplicationResult.SUBMITTED;
     }
-
-    LOG.info("{} Received {} WAL entries for backup.", Utils.logPeerId(ctx.getPeerId()),
-      entries.size());
-
-    Map<TableName, List<WAL.Entry>> tableToEntriesMap =
-      entries.stream().collect(Collectors.groupingBy(entry -> entry.getKey().getTableName()));
-
-    LOG.debug("{} WAL entries grouped by table: {}", Utils.logPeerId(ctx.getPeerId()),
-      tableToEntriesMap.keySet());
 
     try {
-      LOG.debug("{} Starting backup for {} tables.", Utils.logPeerId(ctx.getPeerId()),
-        tableToEntriesMap.size());
-      continuousBackupManager.backup(tableToEntriesMap);
-      LOG.info("{} Backup completed successfully for all tables.",
-        Utils.logPeerId(ctx.getPeerId()));
+      List<Path> bulkLoadFiles = BulkLoadProcessor.processBulkLoadFiles(entries);
+      return backupEntries(entries, bulkLoadFiles);
     } catch (IOException e) {
-      LOG.error("{} Backup failed for tables: {}. Error details: {}",
-        Utils.logPeerId(ctx.getPeerId()), tableToEntriesMap.keySet(), e.getMessage(), e);
-      return false;
+      LOG.error("{} Backup failed. Error details: {}", Utils.logPeerId(peerId), e.getMessage(), e);
+      return ReplicationResult.FAILED;
+    }
+  }
+
+  private ReplicationResult backupEntries(List<WAL.Entry> walEntries, List<Path> bulkLoadFiles)
+    throws IOException {
+    if (walWriter == null) {
+      walWriter = createWalWriter();
     }
 
-    return true;
+    for (WAL.Entry entry : walEntries) {
+      walWriter.append(entry);
+    }
+    walWriter.sync(true);
+    uploadBulkLoadFiles(bulkLoadFiles);
+
+    if (isWriterFull(walWriter)) {
+      walWriter.close();
+      walWriter = null;
+      return ReplicationResult.COMMITTED;
+    }
+
+    return ReplicationResult.SUBMITTED;
+  }
+
+  private boolean isWriterFull(FSHLogProvider.Writer writer) {
+    long maxWalSize = conf.getLong(CONF_BACKUP_MAX_WAL_SIZE, DEFAULT_MAX_WAL_SIZE);
+    return writer.getLength() >= maxWalSize;
+  }
+
+  private FSHLogProvider.Writer createWalWriter() throws IOException {
+    FileSystem fs = backupFileSystemManager.getBackupFs();
+    Path walsDir = backupFileSystemManager.getWalsDir();
+    String walFileName = WAL_FILE_PREFIX + EnvironmentEdgeManager.getDelegate().currentTime();
+    Path walFilePath = new Path(walsDir, walFileName);
+
+    try {
+      FSHLogProvider.Writer writer =
+        ObjectStoreProtobufWalWriter.class.getDeclaredConstructor().newInstance();
+      writer.init(fs, walFilePath, conf, true, WALUtil.getWALBlockSize(conf, fs, walFilePath),
+        StreamSlowMonitor.create(conf, walFileName));
+      return writer;
+    } catch (Exception e) {
+      throw new IOException("Cannot initialize WAL Writer", e);
+    }
+  }
+
+  public void close() {
+    if (walWriter != null) {
+      try {
+        walWriter.close();
+        LOG.info("{} Closed WAL writer", Utils.logPeerId(peerId));
+      } catch (IOException e) {
+        LOG.error("{} Failed to close WAL writer", Utils.logPeerId(peerId), e);
+      }
+    }
   }
 
   @Override
@@ -121,10 +188,6 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
 
   @Override
   protected void doStop() {
-    if (continuousBackupManager != null) {
-      LOG.info("{} Closing ContinuousBackupManager.", Utils.logPeerId(ctx.getPeerId()));
-      continuousBackupManager.close();
-    }
     LOG.info("{} ContinuousBackupReplicationEndpoint stopped successfully.",
       Utils.logPeerId(ctx.getPeerId()));
     notifyStopped();
@@ -145,5 +208,42 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
         e);
       throw new IOException("Invalid Peer UUID format", e);
     }
+  }
+
+  private void uploadBulkLoadFiles(List<Path> bulkLoadFiles) throws IOException {
+    for (Path file : bulkLoadFiles) {
+      Path sourcePath = getBulkloadFileStagingPath(file);
+      Path destPath = new Path(backupFileSystemManager.getBulkLoadFilesDir(), file);
+
+      try {
+        FileUtil.copy(CommonFSUtils.getRootDirFileSystem(conf), sourcePath,
+          backupFileSystemManager.getBackupFs(), destPath, false, conf);
+        LOG.info("{} Bulk load file {} successfully backed up to {}", Utils.logPeerId(peerId), file,
+          destPath);
+      } catch (IOException e) {
+        LOG.error("{} Failed to back up bulk load file: {}", Utils.logPeerId(peerId), file, e);
+        throw e;
+      }
+    }
+  }
+
+  private Path getBulkloadFileStagingPath(Path file) throws IOException {
+    Path rootDir = CommonFSUtils.getRootDir(conf);
+    FileSystem rootFs = CommonFSUtils.getRootDirFileSystem(conf);
+    Path baseNamespaceDir = new Path(rootDir, new Path(HConstants.BASE_NAMESPACE_DIR));
+    Path hFileArchiveDir =
+      new Path(rootDir, new Path(HConstants.HFILE_ARCHIVE_DIRECTORY, baseNamespaceDir));
+    return findExistingPath(rootFs, baseNamespaceDir, hFileArchiveDir, file);
+  }
+
+  private static Path findExistingPath(FileSystem rootFs, Path baseNamespaceDir,
+    Path hFileArchiveDir, Path filePath) throws IOException {
+    for (Path candidate : new Path[] { new Path(baseNamespaceDir, filePath),
+      new Path(hFileArchiveDir, filePath) }) {
+      if (rootFs.exists(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
   }
 }

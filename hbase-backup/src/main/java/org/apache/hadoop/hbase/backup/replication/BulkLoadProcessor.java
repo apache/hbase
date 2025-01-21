@@ -46,16 +46,16 @@ public final class BulkLoadProcessor {
   private BulkLoadProcessor() {
   }
 
-  public static List<Path> processBulkLoadFiles(TableName tableName, List<WAL.Entry> walEntries)
-    throws IOException {
+  public static List<Path> processBulkLoadFiles(List<WAL.Entry> walEntries) throws IOException {
     List<Path> bulkLoadFilePaths = new ArrayList<>();
-    String namespace = tableName.getNamespaceAsString();
-    String table = tableName.getQualifierAsString();
 
     for (WAL.Entry entry : walEntries) {
       WALEdit edit = entry.getEdit();
       for (Cell cell : edit.getCells()) {
         if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
+          TableName tableName = entry.getKey().getTableName();
+          String namespace = tableName.getNamespaceAsString();
+          String table = tableName.getQualifierAsString();
           bulkLoadFilePaths.addAll(processBulkLoadDescriptor(cell, namespace, table));
         }
       }

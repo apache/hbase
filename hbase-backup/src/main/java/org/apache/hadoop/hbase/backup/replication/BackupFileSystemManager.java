@@ -34,38 +34,22 @@ public class BackupFileSystemManager {
   private final String peerId;
   private final FileSystem backupFs;
   private final Path backupRootDir;
-  private Path walsDir;
-  private Path bulkLoadFilesDir;
+  private final Path walsDir;
+  private final Path bulkLoadFilesDir;
 
   public BackupFileSystemManager(String peerId, Configuration conf, String backupRootDirStr)
     throws IOException {
     this.peerId = peerId;
     this.backupRootDir = new Path(backupRootDirStr);
     this.backupFs = FileSystem.get(backupRootDir.toUri(), conf);
-    initBackupDirectories();
+    this.walsDir = createDirectory(WALS_DIR);
+    this.bulkLoadFilesDir = createDirectory(BULKLOAD_FILES_DIR);
   }
 
-  private void initBackupDirectories() throws IOException {
-    LOG.info("{} Initializing backup directories under root: {}", Utils.logPeerId(peerId),
-      backupRootDir);
-    try {
-      walsDir = createDirectoryIfNotExists(WALS_DIR);
-      bulkLoadFilesDir = createDirectoryIfNotExists(BULKLOAD_FILES_DIR);
-    } catch (IOException e) {
-      LOG.error("{} Failed to initialize backup directories: {}", Utils.logPeerId(peerId),
-        e.getMessage(), e);
-      throw e;
-    }
-  }
-
-  private Path createDirectoryIfNotExists(String dirName) throws IOException {
+  private Path createDirectory(String dirName) throws IOException {
     Path dirPath = new Path(backupRootDir, dirName);
-    if (backupFs.exists(dirPath)) {
-      LOG.info("{} Directory already exists: {}", Utils.logPeerId(peerId), dirPath);
-    } else {
-      backupFs.mkdirs(dirPath);
-      LOG.info("{} Successfully created directory: {}", Utils.logPeerId(peerId), dirPath);
-    }
+    backupFs.mkdirs(dirPath);
+    LOG.info("{} Initialized directory: {}", Utils.logPeerId(peerId), dirPath);
     return dirPath;
   }
 
