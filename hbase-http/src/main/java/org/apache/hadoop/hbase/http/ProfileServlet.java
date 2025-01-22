@@ -19,6 +19,9 @@ package org.apache.hadoop.hbase.http;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -67,7 +70,8 @@ public class ProfileServlet extends HttpServlet {
   private static final String CONTENT_TYPE_TEXT = "text/plain; charset=utf-8";
   private static final String ASYNC_PROFILER_HOME_ENV = "ASYNC_PROFILER_HOME";
   private static final String ASYNC_PROFILER_HOME_SYSTEM_PROPERTY = "async.profiler.home";
-  private static final String PROFILER_SCRIPT = "/profiler.sh";
+  private static final String OLD_PROFILER_SCRIPT = "profiler.sh";
+  private static final String PROFILER_SCRIPT = "asprof";
   private static final int DEFAULT_DURATION_SECONDS = 10;
   private static final AtomicInteger ID_GEN = new AtomicInteger(0);
   static final String OUTPUT_DIR = System.getProperty("java.io.tmpdir") + "/prof-output-hbase";
@@ -195,7 +199,12 @@ public class ProfileServlet extends HttpServlet {
               new File(OUTPUT_DIR, "async-prof-pid-" + pid + "-" + event.name().toLowerCase() + "-"
                 + ID_GEN.incrementAndGet() + "." + output.name().toLowerCase());
             List<String> cmd = new ArrayList<>();
-            cmd.add(asyncProfilerHome + PROFILER_SCRIPT);
+            Path profilerScriptPath = Paths.get(asyncProfilerHome, "bin", PROFILER_SCRIPT);
+            if (!Files.exists(profilerScriptPath)) {
+              LOG.info("{} not exist, will use old script path.", PROFILER_SCRIPT);
+              profilerScriptPath = Paths.get(asyncProfilerHome, OLD_PROFILER_SCRIPT);
+            }
+            cmd.add(profilerScriptPath.toString());
             cmd.add("-e");
             cmd.add(event.getInternalName());
             cmd.add("-d");
