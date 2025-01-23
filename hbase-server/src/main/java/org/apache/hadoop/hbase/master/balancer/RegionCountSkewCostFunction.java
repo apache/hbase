@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -62,7 +63,7 @@ class RegionCountSkewCostFunction extends CostFunction {
   }
 
   @Override
-  public final void updateWeight(double[] weights) {
-    weights[StochasticLoadBalancer.GeneratorType.LOAD.ordinal()] += cost();
+  public final void updateWeight(Map<Class<? extends CandidateGenerator>, Double> weights) {
+    weights.merge(LoadCandidateGenerator.class, cost(), Double::sum);
   }
 }
