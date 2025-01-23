@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -146,7 +145,6 @@ public class TestMajorCompactionRequest {
     HRegionFileSystem mockSystem = mock(HRegionFileSystem.class);
     doReturn(info).when(mockSystem).getRegionInfo();
     doReturn(regionStoreDir).when(mockSystem).getStoreDir(FAMILY);
-    doReturn(hasReferenceFiles).when(mockSystem).hasReferences(anyString());
     doReturn(fileSystem).when(mockSystem).getFileSystem();
     return mockSystem;
   }
