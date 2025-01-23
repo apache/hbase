@@ -27,10 +27,14 @@ $(document).ready(
         $(this).tab('show');
     });
 
-  $.ajax({url:"/userSnapshots.jsp", success:function(result){
-    $("#tab_userSnapshots").html(result);
-  }});
-            
+    const $userSnapshotsTab = $("#tab_userSnapshots");
+    const isUserSnapshotsTabExists = $userSnapshotsTab.length;
+    if (isUserSnapshotsTabExists) {
+      $.ajax({url:"/userSnapshots.jsp", success:function(result){
+        $userSnapshotsTab.html(result);
+      }});
+    }
+
     if (location.hash !== '') {
       var tabItem = $('a[href="' + location.hash.replace("#", "#"+prefix) + '"]');
       tabItem.tab('show');
