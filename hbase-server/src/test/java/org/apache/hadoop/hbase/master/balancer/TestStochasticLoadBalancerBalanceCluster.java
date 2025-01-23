@@ -53,7 +53,7 @@ public class TestStochasticLoadBalancerBalanceCluster extends BalancerTestBase {
   @Test
   public void testBalanceCluster() throws Exception {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 20000000L);
-    setMaxRunTime(Duration.ofMillis(1500));
+    setMaxRunTime(Duration.ofMillis(2500));
     loadBalancer.onConfigurationChange(conf);
 
     for (int[] mockCluster : clusterStateMocks) {

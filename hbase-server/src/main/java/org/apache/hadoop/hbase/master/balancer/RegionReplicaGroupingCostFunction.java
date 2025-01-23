@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.agrona.collections.Hashing;
 import org.agrona.collections.Int2IntCounterMap;
@@ -72,6 +73,11 @@ abstract class RegionReplicaGroupingCostFunction extends CostFunction {
     return scale(0, maxCost, totalCost);
   }
 
+  @Override
+  public final void updateWeight(Map<Class<? extends CandidateGenerator>, Double> weights) {
+    weights.merge(RegionReplicaRackCandidateGenerator.class, cost(), Double::sum);
+  }
+
   /**
    * For each primary region, it computes the total number of replicas in the array (numReplicas)
    * and returns a sum of numReplicas-1 squared. For example, if the server hosts regions a, b, c,
@@ -90,10 +96,5 @@ abstract class RegionReplicaGroupingCostFunction extends CostFunction {
       }
     });
     return cost.longValue();
-  }
-
-  @Override
-  public final void updateWeight(double[] weights) {
-    weights[StochasticLoadBalancer.GeneratorType.RACK.ordinal()] += cost();
   }
 }
