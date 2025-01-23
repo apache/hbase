@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupCopyJob;
 import org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupMergeJob;
 import org.apache.hadoop.hbase.backup.mapreduce.MapReduceRestoreJob;
+import org.apache.hadoop.hbase.backup.mapreduce.MapReduceRestoreToOriginalSplitsJob;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -43,8 +44,13 @@ public final class BackupRestoreFactory {
    * @return backup restore job instance
    */
   public static RestoreJob getRestoreJob(Configuration conf) {
+    Class<? extends RestoreJob> defaultCls =
+      conf.getBoolean(RestoreJob.KEEP_ORIGINAL_SPLITS_KEY, RestoreJob.KEEP_ORIGINAL_SPLITS_DEFAULT)
+        ? MapReduceRestoreToOriginalSplitsJob.class
+        : MapReduceRestoreJob.class;
+
     Class<? extends RestoreJob> cls =
-      conf.getClass(HBASE_INCR_RESTORE_IMPL_CLASS, MapReduceRestoreJob.class, RestoreJob.class);
+      conf.getClass(HBASE_INCR_RESTORE_IMPL_CLASS, defaultCls, RestoreJob.class);
     RestoreJob service = ReflectionUtils.newInstance(cls, conf);
     service.setConf(conf);
     return service;
