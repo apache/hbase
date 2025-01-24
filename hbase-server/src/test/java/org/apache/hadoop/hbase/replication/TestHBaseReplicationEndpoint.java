@@ -59,8 +59,8 @@ public class TestHBaseReplicationEndpoint {
     when(replicationPeer.getPeerConfig()).thenReturn(peerConfig);
     when(peerConfig.getClusterKey()).thenReturn("hbase+zk://server1:2181/hbase");
     ReplicationEndpoint.Context context =
-      new ReplicationEndpoint.Context(null, UTIL.getConfiguration(), UTIL.getConfiguration(), null,
-        null, null, replicationPeer, null, null, null);
+      new ReplicationEndpoint.Context(null, null, UTIL.getConfiguration(), UTIL.getConfiguration(),
+        null, null, null, replicationPeer, null, null, null);
     endpoint = new DummyHBaseReplicationEndpoint();
     endpoint.init(context);
   }

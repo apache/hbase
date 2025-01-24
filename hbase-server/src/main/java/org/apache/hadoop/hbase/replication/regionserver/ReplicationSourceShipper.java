@@ -262,14 +262,12 @@ public class ReplicationSourceShipper extends Thread {
     // record on zk, so let's call it. The last wal position maybe zero if end of file is true and
     // there is no entry in the batch. It is OK because that the queue storage will ignore the zero
     // position and the file will be removed soon in cleanOldLogs.
-    if (replicated == ReplicationResult.COMMITTED) {
-      if (
-        batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath)
-          || batch.getLastWalPosition() != currentPosition
-      ) {
-        source.logPositionAndCleanOldLogs(batch);
-        updated = true;
-      }
+    if (
+      batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath)
+        || batch.getLastWalPosition() != currentPosition
+    ) {
+      source.logPositionAndCleanOldLogs(batch, replicated);
+      updated = true;
     }
     // if end of file is true, then we can just skip to the next file in queue.
     // the only exception is for recovered queue, if we reach the end of the queue, then there will
