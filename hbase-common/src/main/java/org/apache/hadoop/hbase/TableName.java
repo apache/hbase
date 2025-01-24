@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
+import org.apache.hadoop.conf.Configuration;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
@@ -27,6 +28,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Immutable POJO class for representing a table name. Which is of the form: &lt;table
@@ -44,6 +47,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Public
 public final class TableName implements Comparable<TableName> {
+  private static final Logger LOG = LoggerFactory.getLogger(TableName.class);
+
 
   /** See {@link #createTableNameIfNecessary(ByteBuffer, ByteBuffer)} */
   private static final Set<TableName> tableCache = new CopyOnWriteArraySet<>();
@@ -65,9 +70,26 @@ public final class TableName implements Comparable<TableName> {
   public static final String VALID_USER_TABLE_REGEX = "(?:(?:(?:" + VALID_NAMESPACE_REGEX + "\\"
     + NAMESPACE_DELIM + ")?)" + "(?:" + VALID_TABLE_QUALIFIER_REGEX + "))";
 
-  /** The hbase:meta table's name. */
-  public static final TableName META_TABLE_NAME =
-    valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
+  /** The name of hbase meta table could either be hbase:meta_xxx or 'hbase:meta' otherwise.
+   * Config hbase.meta.table.suffix will govern the decision of adding suffix to the habase:meta */
+  public static final TableName META_TABLE_NAME;
+  static {
+    Configuration conf = HBaseConfiguration.create();
+    META_TABLE_NAME = initializeHbaseMetaTableName(conf);
+  }
+
+  static TableName initializeHbaseMetaTableName(Configuration conf) {
+    String suffix_val = String.valueOf(conf.getStrings(
+      HConstants.HBASE_META_TABLE_SUFFIX, HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE));
+
+    if (suffix_val == null||suffix_val.isEmpty()) {
+      LOG.debug("Default value for Hbase meta table is being chosen.");
+      return TableName.META_TABLE_NAME;
+    }
+    LOG.debug("Suffix value for Hbase meta table is being chosen.");
+    return valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta_"
+      + suffix_val);
+  }
 
   /**
    * The Namespace table's name.
