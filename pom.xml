@@ -669,7 +669,7 @@
         databind] must be kept in sync with the version of jackson-jaxrs-json-provider shipped in
         hbase-thirdparty.
     -->
-    <hbase-thirdparty.version>4.1.9</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.10</hbase-thirdparty.version>
     <!-- Coverage properties -->
     <jacoco.version>0.8.8</jacoco.version>
     <jacocoArgLine/>
