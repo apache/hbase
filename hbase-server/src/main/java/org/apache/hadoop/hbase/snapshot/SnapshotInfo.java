@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.WALLink;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -521,7 +521,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
   }
 
   private String fileSizeToString(long size) {
-    return printSizeInBytes ? Long.toString(size) : StringUtils.humanReadableInt(size);
+    return printSizeInBytes ? Long.toString(size) : Strings.humanReadableInt(size);
   }
 
   @Override
