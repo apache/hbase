@@ -26,19 +26,112 @@
     <version>${revision}</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
-  <artifactId>hbase-assembly</artifactId>
+  <artifactId>hbase-assembly-byo-hadoop</artifactId>
   <packaging>pom</packaging>
-  <name>Apache HBase - Assembly</name>
-  <description>Module that does project assembly and that is all that it does.</description>
+  <name>Apache HBase - Assembly without Hadoop and its transitive dependencies</name>
+  <description>Module that does project assembly without Hadoop and its transitive dependencies and that is all that it does.</description>
   <properties>
     <license.bundles.dependencies>true</license.bundles.dependencies>
+    <!-- So that we don't have to add redundant exclusions to provided scope dependencies -->
+    <enforcer.skip>true</enforcer.skip>
   </properties>
   <dependencies>
-    <!-- client artifacts for downstream use -->
+    <!-- Set every Hadoop dependency as provided. The byo-hadoop assembly relies an external Hadoop installation -->
+    <!-- These MUST come first, otherwise some transitive dependencies are not be excluded -->
+    <!-- When Hadoop and HBase depend on different versions of the same artifact, then even if it is provided,
+    the first version specified is used, so in some cases we need to exclude those transitive dependencies from
+    Hadoop to have an equivalent effective classpath to the assembly with Hadoop. -->
+    <!-- The versions may be marked as redundant by some IDEs, but they are not defined elsewhere for the provided scope -->
     <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-shaded-client</artifactId>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-api</artifactId>
+      <version>${hadoop-three.version}</version>
+      <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-client</artifactId>
+      <version>${hadoop-three.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-common</artifactId>
+      <version>${hadoop-three.version}</version>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.module</groupId>
+          <artifactId>jackson-module-jaxb-annotations</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.xml.bind</groupId>
+          <artifactId>jakarta.xml.bind-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-core</artifactId>
+      <version>${hadoop-three.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+      <version>${hadoop-three.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <version>${hadoop-three.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-auth</artifactId>
+      <version>${hadoop-three.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${hadoop-three.version}</version>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.checkerframework</groupId>
+          <artifactId>checker-qual</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client</artifactId>
+      <version>${hadoop-three.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-annotations</artifactId>
+      <version>${hadoop-three.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-distcp</artifactId>
+      <version>${hadoop-three.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs-client</artifactId>
+      <version>${hadoop-three.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- client artifacts for downstream use -->
+    <!-- skip hbase-shaded-client. We don't want any Hadoop code in the assembly-->
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
@@ -142,6 +235,13 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-hbtop</artifactId>
+      <exclusions>
+        <!-- hbase-top will pick up hbase-shaded-client-byo-hadoop from the classpath -->
+        <exclusion>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-shaded-client</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -276,13 +376,12 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
           <!--Else will use hbase-assembly as final name.-->
-          <finalName>hbase-${project.version}</finalName>
+          <finalName>hbase-byo-hadoop-${project.version}</finalName>
           <skipAssembly>false</skipAssembly>
           <appendAssemblyId>true</appendAssemblyId>
           <tarLongFileMode>posix</tarLongFileMode>
           <descriptors>
             <descriptor>${assembly.file}</descriptor>
-            <descriptor>src/main/assembly/client.xml</descriptor>
           </descriptors>
         </configuration>
       </plugin>
