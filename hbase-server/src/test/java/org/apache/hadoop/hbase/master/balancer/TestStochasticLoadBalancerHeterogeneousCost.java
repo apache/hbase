@@ -78,7 +78,8 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     when(services.getConfiguration()).thenReturn(conf);
     BalancerTestBase.loadBalancer.setMasterServices(services);
     loadBalancer.initialize();
-    loadBalancer.getCandidateGenerators().add(new FairRandomCandidateGenerator());
+    loadBalancer.getCandidateGenerators().put(FairRandomCandidateGenerator.class,
+      new FairRandomCandidateGenerator());
   }
 
   @Test

@@ -75,18 +75,25 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer
   private static final Logger LOG = LoggerFactory.getLogger(FavoredStochasticBalancer.class);
   private FavoredNodesManager fnm;
 
+  public void setFavoredNodesManager(FavoredNodesManager fnm) {
+    this.fnm = fnm;
+  }
+
   @Override
-  protected List<CandidateGenerator> createCandidateGenerators() {
-    List<CandidateGenerator> fnPickers = new ArrayList<>(2);
-    fnPickers.add(new FavoredNodeLoadPicker());
-    fnPickers.add(new FavoredNodeLocalityPicker());
+  protected Map<Class<? extends CandidateGenerator>, CandidateGenerator>
+    createCandidateGenerators() {
+    Map<Class<? extends CandidateGenerator>, CandidateGenerator> fnPickers = new HashMap<>(2);
+    fnPickers.put(FavoredNodeLoadPicker.class, new FavoredNodeLoadPicker());
+    fnPickers.put(FavoredNodeLocalityPicker.class, new FavoredNodeLocalityPicker());
     return fnPickers;
   }
 
   /** Returns any candidate generator in random */
   @Override
   protected CandidateGenerator getRandomGenerator() {
-    return candidateGenerators.get(ThreadLocalRandom.current().nextInt(candidateGenerators.size()));
+    Class<? extends CandidateGenerator> clazz = shuffledGeneratorClasses.get()
+      .get(ThreadLocalRandom.current().nextInt(candidateGenerators.size()));
+    return candidateGenerators.get(clazz);
   }
 
   @Override
