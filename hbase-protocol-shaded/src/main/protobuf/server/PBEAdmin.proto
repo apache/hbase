@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,16 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.io.crypto;
+syntax = "proto2";
+package hbase.pb;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-import java.io.IOException;
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "PBEAdminProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
 
-@InterfaceAudience.Public
-public interface PBEKeyProvider extends KeyProvider {
-  void initConfig(Configuration conf);
-  PBEKeyData getClusterKey(byte[] clusterId);
-  PBEKeyData getPBEKey(byte[] pbe_prefix) throws IOException;
-  PBEKeyData unwrapKey(String keyMetaData) throws IOException;
+message PBEAdminRequest {
+  required string pbe_prefix = 1;
+}
+
+enum PBEKeyStatus {
+  ACTIVE = 1;
+  INACTIVE = 2;
+  FAILED = 3;
+  DISABLED = 4;
+}
+
+message PBEAdminResponse {
+  required string pbe_prefix = 1;
+  required PBEKeyStatus pbe_status = 2;
+}
+
+service PBEAdminService {
+  rpc EnablePBE(PBEAdminRequest)
+    returns (PBEAdminResponse);
 }

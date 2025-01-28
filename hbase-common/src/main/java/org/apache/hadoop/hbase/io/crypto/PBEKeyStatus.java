@@ -18,11 +18,37 @@
 package org.apache.hadoop.hbase.io.crypto;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import java.util.HashMap;
+import java.util.Map;
 
 @InterfaceAudience.Public
 public enum PBEKeyStatus {
-  ACTIVE,
-  INACTIVE,
-  FAILED,
-  DISABLED,
+  ACTIVE((byte) 1),
+  INACTIVE((byte) 2),
+  FAILED((byte) 3),
+  DISABLED((byte) 4),
+  ;
+
+  private static Map<Byte, PBEKeyStatus> lookupByVal;
+
+  private final byte val;
+
+  PBEKeyStatus(byte val) {
+    this.val = val;
+  }
+
+  public byte getVal() {
+    return val;
+  }
+
+  public static PBEKeyStatus forValue(byte val) {
+    if (lookupByVal == null) {
+      Map<Byte, PBEKeyStatus> tbl = new HashMap<>();
+      for (PBEKeyStatus e: PBEKeyStatus.values()) {
+        tbl.put(e.getVal(), e);
+      }
+      lookupByVal = tbl;
+    }
+    return lookupByVal.get(val);
+  }
 }

@@ -4,6 +4,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+import java.io.IOException;
 import java.security.Key;
 import java.util.Base64;
 import java.util.HashMap;
@@ -36,33 +37,38 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
     return new PBEKeyData(clusterId, key, PBEKeyStatus.ACTIVE, keyMetadata);
   }
 
-  @Override public PBEKeyData getPBEKey(byte[] pbe_prefix) {
+  @Override public PBEKeyData getPBEKey(byte[] pbe_prefix) throws IOException {
     checkConfig();
     String encodedPrefix = Base64.getEncoder().encodeToString(pbe_prefix);
     String aliasConfKey = HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encodedPrefix + "." +
       "alias";
-    String keyAlias = conf.get(aliasConfKey, null);
-    if (keyAlias != null) {
-      String keyMetadata = generateKeyMetadata(keyAlias, encodedPrefix);
-      return unwrapKey(keyMetadata);
-    }
-    return null;
+    String keyMetadata = generateKeyMetadata(conf.get(aliasConfKey, null), encodedPrefix);
+    return unwrapKey(keyMetadata);
   }
 
-  @Override public PBEKeyData unwrapKey(String keyMetadataStr) {
+  @Override public PBEKeyData unwrapKey(String keyMetadataStr) throws IOException {
     Map<String, String> keyMetadata = GsonUtil.getDefaultInstance().fromJson(keyMetadataStr,
       HashMap.class);
+    String encodedPrefix = keyMetadata.get(KEY_METADATA_PREFIX);
+    String activeStatusConfKey = HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encodedPrefix +
+      ".active";
+    boolean isActive = conf.getBoolean(activeStatusConfKey, true);
+    byte[] pbe_prefix;
+    try {
+      pbe_prefix = Base64.getDecoder().decode(encodedPrefix);
+    }
+    catch (IllegalArgumentException e) {
+      throw new IOException("Failed to decode specified prefix as Base64 string: " +
+        encodedPrefix, e);
+    }
     String alias = keyMetadata.get(KEY_METADATA_ALIAS);
-    Key key = getKey(alias);
+    Key key = alias != null ? getKey(alias) : null;
     if (key != null) {
-      String encodedPrefix = keyMetadata.get(KEY_METADATA_PREFIX);
-      String activeStatusConfKey = HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encodedPrefix +
-        ".active";
-      boolean isActive = conf.getBoolean(activeStatusConfKey, true);
-      return new PBEKeyData(Base64.getDecoder().decode(encodedPrefix), key,
+      return new PBEKeyData(pbe_prefix, key,
         isActive ? PBEKeyStatus.ACTIVE : PBEKeyStatus.INACTIVE, keyMetadataStr);
     }
-    return null;
+    return new PBEKeyData(pbe_prefix, null,
+      isActive ? PBEKeyStatus.FAILED : PBEKeyStatus.DISABLED, keyMetadataStr);
   }
 
   private String generateKeyMetadata(String aliasName, String encodedPrefix) {

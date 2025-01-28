@@ -105,6 +105,10 @@ module Shell
         @shell.hbase_rsgroup_admin
       end
 
+      def pbe_admin
+        @shell.hbase_pbe_admin
+      end
+
       #----------------------------------------------------------------------
       # Creates formatter instance first time and then reuses it.
       def formatter

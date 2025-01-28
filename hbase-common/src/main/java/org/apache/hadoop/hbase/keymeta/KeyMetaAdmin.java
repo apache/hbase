@@ -15,16 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.io.crypto;
+package org.apache.hadoop.hbase.keymeta;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 
 @InterfaceAudience.Public
-public interface PBEKeyProvider extends KeyProvider {
-  void initConfig(Configuration conf);
-  PBEKeyData getClusterKey(byte[] clusterId);
-  PBEKeyData getPBEKey(byte[] pbe_prefix) throws IOException;
-  PBEKeyData unwrapKey(String keyMetaData) throws IOException;
+public interface KeyMetaAdmin {
+  PBEKeyStatus enablePBE(String pbePrefix) throws IOException;
 }

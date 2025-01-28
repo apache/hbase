@@ -129,7 +129,7 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
   }
 
   private void assertPBEKeyData(PBEKeyData keyData, PBEKeyStatus expKeyStatus, byte[] key,
-      byte[] prefixBytes, String alias) {
+      byte[] prefixBytes, String alias) throws Exception {
     assertNotNull(keyData);
     assertEquals(expKeyStatus, keyData.getKeyStatus());
     byte[] keyBytes = keyData.getTheKey().getEncoded();

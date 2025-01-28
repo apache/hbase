@@ -297,6 +297,10 @@ public final class CommonFSUtils {
     c.set(HConstants.HBASE_DIR, root.toString());
   }
 
+  public static Path getClusterKeyDir(final Configuration c) throws IOException {
+    return new Path(getRootDir(c), HConstants.CLUSTER_KEYS_DIRECTORY);
+  }
+
   public static void setFsDefault(final Configuration c, final Path root) {
     c.set("fs.defaultFS", root.toString()); // for hadoop 0.21+
   }

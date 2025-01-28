@@ -97,7 +97,7 @@ public class MasterFileSystem {
     // default localfs. Presumption is that rootdir is fully-qualified before
     // we get to here with appropriate fs scheme.
     this.rootdir = CommonFSUtils.getRootDir(conf);
-    this.clusterKeyDir = new Path(this.rootdir, HConstants.CLUSTER_KEYS_DIRECTORY);
+    this.clusterKeyDir = CommonFSUtils.getClusterKeyDir(conf);
     this.tempdir = new Path(this.rootdir, HConstants.HBASE_TEMP_DIRECTORY);
     // Cover both bases, the old way of setting default fs and the new.
     // We're supposed to run on 0.20 and 0.21 anyways.
@@ -198,10 +198,6 @@ public class MasterFileSystem {
   /** Returns HBase root log dir. */
   public Path getWALRootDir() {
     return this.walRootDir;
-  }
-
-  public Path getClusterKeyDir() {
-    return clusterKeyDir;
   }
 
   /** Returns the directory for a give {@code region}. */

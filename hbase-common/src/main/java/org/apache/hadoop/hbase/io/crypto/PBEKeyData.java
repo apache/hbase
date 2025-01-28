@@ -19,8 +19,11 @@ package org.apache.hadoop.hbase.io.crypto;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.security.Key;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 @InterfaceAudience.Public
 public class PBEKeyData {
@@ -28,6 +31,8 @@ public class PBEKeyData {
   private Key theKey;
   private PBEKeyStatus keyStatus;
   private String keyMetadata;
+  private volatile long keyChecksum = 0;
+  private byte[] keyMetadataHash;
 
   public PBEKeyData(byte[] pbe_prefix, Key theKey, PBEKeyStatus keyStatus, String keyMetadata) {
     this.pbe_prefix = pbe_prefix;
@@ -66,5 +71,28 @@ public class PBEKeyData {
   @Override public int hashCode() {
     return new HashCodeBuilder(17, 37).append(pbe_prefix).append(
       theKey).append(keyStatus).append(keyMetadata).toHashCode();
+  }
+
+  public long getKeyChecksum() {
+    if (keyChecksum == 0) {
+      DataChecksum dataChecksum = DataChecksum.newDataChecksum(DataChecksum.Type.CRC32C, 16);
+      byte[] data = theKey.getEncoded();
+      dataChecksum.update(data, 0, data.length);
+      keyChecksum = dataChecksum.getValue();
+    }
+    return keyChecksum;
+  }
+
+  public byte[] getKeyMetadataHash() {
+    if (keyMetadataHash == null) {
+      MessageDigest md5;
+      try {
+        md5 = MessageDigest.getInstance("MD5");
+      } catch (NoSuchAlgorithmException e) {
+        throw new RuntimeException(e);
+      }
+      keyMetadataHash = md5.digest(keyMetadata.getBytes());
+    }
+    return keyMetadataHash;
   }
 }

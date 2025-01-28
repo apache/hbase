@@ -150,6 +150,10 @@ module Shell
       @rsgroup_admin ||= hbase.rsgroup_admin
     end
 
+    def hbase_pbe_admin
+      @pbe_admin ||= hbase.pbe_admin
+    end
+
     ##
     # Create singleton methods on the target receiver object for all the loaded commands
     #
@@ -612,6 +616,16 @@ Shell.load_command_group(
     get_auths
     clear_auths
     set_visibility
+  ]
+)
+
+Shell.load_command_group(
+  'pbe',
+  full_name: 'PBE',
+  comment: "NOTE: The PBE KeyMeta Coprocessor Endpoint must be enabled on the Master else commands fail with:
+  UnknownProtocolException: No registered Master Coprocessor Endpoint found for PBEAdminService",
+  commands: %w[
+    pbe_enable
   ]
 )
 
