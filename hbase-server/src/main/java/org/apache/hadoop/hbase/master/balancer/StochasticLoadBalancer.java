@@ -442,14 +442,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     double total = 0.0;
+    float localSumMultiplier = 0; // in case this.sumMultiplier is not initialized
     for (CostFunction c : costFunctions) {
       if (!c.isNeeded()) {
         LOG.trace("{} not needed", c.getClass().getSimpleName());
         continue;
       }
       total += c.cost() * c.getMultiplier();
+      localSumMultiplier += c.getMultiplier();
     }
-
+    sumMultiplier = localSumMultiplier;
     boolean balanced = (total / sumMultiplier < minCostNeedBalance);
     if (balanced) {
       if (isBalancerRejectionRecording) {
@@ -583,12 +585,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     long startTime = EnvironmentEdgeManager.currentTime();
 
     initCosts(cluster);
-    sumMultiplier = 0;
+    float localSumMultiplier = 0;
     for (CostFunction c : costFunctions) {
       if (c.isNeeded()) {
-        sumMultiplier += c.getMultiplier();
+        localSumMultiplier += c.getMultiplier();
       }
     }
+    sumMultiplier = localSumMultiplier;
     if (sumMultiplier <= 0) {
       LOG.error("At least one cost function needs a multiplier > 0. For example, set "
         + "hbase.master.balancer.stochastic.regionCountCost to a positive value or default");
