@@ -63,7 +63,10 @@ public class StoreFileScanner implements KeyValueScanner {
   // if have encountered the next row. Only used for reversed scan
   private boolean stopSkippingKVsIfNextRow = false;
   // A Cell that represents the row before the most previously seeked to row in seekToPreviousRow
-  private Cell previousRow = null;
+  // Note: Oftentimes this will contain an instance of a KeyOnly implementation of the Cell as it's
+  // not returned to callers and only used as a hint for seeking (so we can save on
+  // memory/allocations)
+  private ExtendedCell previousRow = null;
   // Whether the underlying HFile is using a data block encoding that has lower cost for seeking to
   // a row from the beginning of a block (i.e. RIV1). If the data block encoding has a high cost for
   // seeks, then we can use a modified reverse scanning algorithm to reduce seeks from the beginning
@@ -519,13 +522,14 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   /**
-   * This variant of the {@link StoreFileScanner#seekToPreviousRow(Cell)} method requires one seek
-   * and one reseek. This method maintains state in {@link StoreFileScanner#previousRow} which only
-   * makes sense in the context of a sequential row-by-row reverse scan.
+   * This variant of the {@link StoreFileScanner#seekToPreviousRow(ExtendedCell)} method requires
+   * one seek and one reseek. This method maintains state in {@link StoreFileScanner#previousRow}
+   * which only makes sense in the context of a sequential row-by-row reverse scan.
    * {@link StoreFileScanner#previousRow} should be reset if that is not the case. The reasoning for
-   * why this method is faster than {@link StoreFileScanner#seekToPreviousRowStateless(Cell)} is
-   * that seeks are slower as they need to start from the beginning of the file, while reseeks go
-   * forward from the current position.
+   * why this method is faster than
+   * {@link StoreFileScanner#seekToPreviousRowStateless(ExtendedCell)} is that seeks are slower as
+   * they need to start from the beginning of the file, while reseeks go forward from the current
+   * position.
    */
   private boolean seekToPreviousRowWithHint() throws IOException {
     do {
@@ -555,10 +559,10 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   /**
-   * This variant of the {@link StoreFileScanner#seekToPreviousRow(Cell)} method requires two seeks
-   * and one reseek. The extra expense/seek is with the intent of speeding up subsequent calls by
-   * using the {@link StoreFileScanner#seekToPreviousRowWithHint} which this method seeds the state
-   * for by setting {@link StoreFileScanner#previousRow}
+   * This variant of the {@link StoreFileScanner#seekToPreviousRow(ExtendedCell)} method requires
+   * two seeks and one reseek. The extra expense/seek is with the intent of speeding up subsequent
+   * calls by using the {@link StoreFileScanner#seekToPreviousRowWithHint} which this method seeds
+   * the state for by setting {@link StoreFileScanner#previousRow}
    */
   private boolean seekToPreviousRowWithoutHint(Cell originalKey) throws IOException {
     // Rewind to the cell before the beginning of this row
@@ -568,7 +572,7 @@ public class StoreFileScanner implements KeyValueScanner {
     }
 
     // Rewind before this row and save what we find as a seek hint
-    ExtendedCell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getCell());
+    ExtendedCell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getKey());
     seekBeforeAndSaveKeyToPreviousRow(firstKeyOfPreviousRow);
 
     // Seek back to the start of the previous row
@@ -596,9 +600,9 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   /**
-   * This variant of the {@link StoreFileScanner#seekToPreviousRow(Cell)} method requires two seeks.
-   * It should be used if the cost for seeking is lower i.e. when using a fast seeking data block
-   * encoding like RIV1.
+   * This variant of the {@link StoreFileScanner#seekToPreviousRow(ExtendedCell)} method requires
+   * two seeks. It should be used if the cost for seeking is lower i.e. when using a fast seeking
+   * data block encoding like RIV1.
    */
   private boolean seekToPreviousRowStateless(ExtendedCell originalKey) throws IOException {
     ExtendedCell key = originalKey;
@@ -608,7 +612,7 @@ public class StoreFileScanner implements KeyValueScanner {
         return false;
       }
 
-      ExtendedCell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getCell());
+      ExtendedCell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getKey());
       if (!seekAtOrAfter(firstKeyOfPreviousRow)) {
         return false;
       }
@@ -651,7 +655,7 @@ public class StoreFileScanner implements KeyValueScanner {
       hfs.seekTo();
       this.previousRow = null;
     } else {
-      this.previousRow = hfs.getCell();
+      this.previousRow = hfs.getKey();
     }
   }
 
