@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
 import org.apache.hadoop.hbase.security.SaslStatus;
+import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -252,13 +253,14 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
         doRawSaslReply(SaslStatus.SUCCESS, new BytesWritable(replyToken), null, null);
       }
       if (saslServer.isComplete()) {
-        String qop = saslServer.getNegotiatedQop();
-        useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
+        String negotiatedQop = saslServer.getNegotiatedQop();
+        SaslUtil.verifyNegotiatedQop(saslServer.getRequestedQop(), negotiatedQop);
+        useWrap = negotiatedQop != null && !"auth".equalsIgnoreCase(negotiatedQop);
         ugi =
           provider.getAuthorizedUgi(saslServer.getAuthorizationID(), this.rpcServer.secretManager);
         RpcServer.LOG.debug(
           "SASL server context established. Authenticated client: {}. Negotiated QoP is {}", ugi,
-          qop);
+          negotiatedQop);
         this.rpcServer.metrics.authenticationSuccess();
         RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);
         saslContextEstablished = true;
