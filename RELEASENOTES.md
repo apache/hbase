@@ -16,6 +16,75 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.5.11 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-29049](https://issues.apache.org/jira/browse/HBASE-29049) | *Major* | **Increase the interval for running flaky tests**
+
+Increased the interval for flaky tests to 12 hours to save build resources.
+
+
+---
+
+* [HBASE-29067](https://issues.apache.org/jira/browse/HBASE-29067) | *Major* | **Stagger the nightly tests on jenkins**
+
+Run all nightly jobs every 3 days, master and branch-3 on first day, branch-2 on second day, and other branches on third day
+
+
+---
+
+* [HBASE-28980](https://issues.apache.org/jira/browse/HBASE-28980) | *Major* | **Change the default Hadoop 3 version to 3.4.1 on branch-2.5 and branch-2.6**
+
+Hbase now defaults to using Hadoop 3.4.1 when being built for Hadoop 3.
+
+The -hadoop3 HBase maven artifacts, and the official -hbase3 binaries are now built with Hadoop 3.4.1
+
+
+---
+
+* [HBASE-29009](https://issues.apache.org/jira/browse/HBASE-29009) | *Major* | **Depend on jaxws-rt instead jaxws-ri**
+
+Phoenix now depends on jaxws-rt instead of jaxwrs-ri.
+The phoenix assemblies on branch-2.x now depend on jaxws-rt instead of jaxws-ri.
+
+
+---
+
+* [HBASE-28328](https://issues.apache.org/jira/browse/HBASE-28328) | *Minor* | **Add an option to count different types of Delete Markers in RowCounter**
+
+The JIRA adds a feature in RowCounter tool to count the various types of delete markers (DELETE\_COLUMN, DELETE\_FAMILY, DELETE\_FAMILY\_VERSION) and the number of rows containing at least one delete marker. The feature can be enabled by passing the flag --countDeleteMarkers as a CLI option. When the feature is enabled, raw scan is performed without FirstKeyOnlyFilter.
+
+
+---
+
+* [HBASE-27638](https://issues.apache.org/jira/browse/HBASE-27638) | *Major* | **Get slow/large log response that matched the ‘CLIENT\_IP' without client port**
+
+Retrieve latest LargeLog or slowlog Responses based on client IP also.
+
+
+---
+
+* [HBASE-28070](https://issues.apache.org/jira/browse/HBASE-28070) | *Major* | ** Replace javax.servlet.jsp dependency with tomcat-jasper**
+
+The main driving force behind this change is the need to remove the org.glassfish:javax.el:jar:3.0.1-b08 dependency from our project. Not only has org.glassfish:javax.el reached EOL'ed, but has indirect vulnerabilities (CVE-2020-15250).
+
+Before this change, it was required by the javax.servlet.jsp dependency.
+
+Hence, to eliminate the org.glassfish:javax.el dependency, as part of this change we have replaced the javax.servlet.jsp dependency with tomcat-jasper, which will now be used for JspC Ant task.
+
+
+---
+
+* [HBASE-28921](https://issues.apache.org/jira/browse/HBASE-28921) | *Major* | **Avoid bundling hbase-webapps folder in default jars**
+
+With this change, we no longer bundle hbase-webapps in default jars.
+
+
+
 # HBASE  2.5.10 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.

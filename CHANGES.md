@@ -18,6 +18,115 @@
 -->
 # HBASE Changelog
 
+## Release 2.5.11 - 2025-02-10
+
+
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-28645](https://issues.apache.org/jira/browse/HBASE-28645) | Add build information to the REST server version endpoint |  Minor | REST |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29004](https://issues.apache.org/jira/browse/HBASE-29004) | Optimize unnecessary type castings in Scan and Get setter methods |  Major | Performance |
+| [HBASE-28600](https://issues.apache.org/jira/browse/HBASE-28600) | Enable setting blockcache on-heap sizes in bytes |  Major | regionserver |
+| [HBASE-29040](https://issues.apache.org/jira/browse/HBASE-29040) | Fix incorrect description of "sampleRate" option of PerformanceEvaluation |  Trivial | . |
+| [HBASE-29008](https://issues.apache.org/jira/browse/HBASE-29008) | Upgrade JAX-WS to to 2.3.7 |  Major | REST |
+| [HBASE-29013](https://issues.apache.org/jira/browse/HBASE-29013) | Make PerformanceEvaluation support larger data sets |  Minor | PE |
+| [HBASE-29009](https://issues.apache.org/jira/browse/HBASE-29009) | Depend on jaxws-rt instead jaxws-ri |  Major | REST |
+| [HBASE-28525](https://issues.apache.org/jira/browse/HBASE-28525) | Extend REST Documentation: Stateless Scanner, table exists, multiget with filter |  Major | documentation, REST |
+| [HBASE-28328](https://issues.apache.org/jira/browse/HBASE-28328) | Add an option to count different types of Delete Markers in RowCounter |  Minor | mapreduce |
+| [HBASE-28965](https://issues.apache.org/jira/browse/HBASE-28965) | Make the approach in HBASE-28955 can work together with hadoop 2.x |  Major | Filesystem Integration, hadoop2, io |
+| [HBASE-28268](https://issues.apache.org/jira/browse/HBASE-28268) | Provide option to skip wal while using TableOutputFormat |  Minor | mapreduce |
+| [HBASE-27638](https://issues.apache.org/jira/browse/HBASE-27638) | Get slow/large log response that matched the ‘CLIENT\_IP' without client port |  Major | . |
+| [HBASE-28972](https://issues.apache.org/jira/browse/HBASE-28972) | Limit the number of retries in FanOutOneBlockAsyncDFSOutputHelper.completeFile |  Major | Filesystem Integration, io, wal |
+| [HBASE-28947](https://issues.apache.org/jira/browse/HBASE-28947) | Backport "HBASE-27598 Upgrade mockito to 4.x" to branch-2.5 |  Major | dependencies, test |
+| [HBASE-28070](https://issues.apache.org/jira/browse/HBASE-28070) |  Replace javax.servlet.jsp dependency with tomcat-jasper |  Major | security, UI |
+| [HBASE-28921](https://issues.apache.org/jira/browse/HBASE-28921) | Avoid bundling hbase-webapps folder in default jars |  Major | security, UI |
+| [HBASE-28621](https://issues.apache.org/jira/browse/HBASE-28621) | PrefixFilter should use SEEK\_NEXT\_USING\_HINT |  Major | Filters |
+| [HBASE-28940](https://issues.apache.org/jira/browse/HBASE-28940) | Do not run the backwards compatibility tests with the default Hadoop3 version |  Major | integration tests, test |
+| [HBASE-28816](https://issues.apache.org/jira/browse/HBASE-28816) | The description of "hbase.superuser" is confusing |  Major | documentation |
+| [HBASE-27118](https://issues.apache.org/jira/browse/HBASE-27118) | Add security headers to Thrift/HTTP server |  Major | Thrift |
+| [HBASE-28850](https://issues.apache.org/jira/browse/HBASE-28850) | Only return from ReplicationSink.replicationEntries while all background tasks are finished |  Major | Replication, rpc |
+| [HBASE-28775](https://issues.apache.org/jira/browse/HBASE-28775) | Change the output of DatanodeInfo in the log to the hostname of the datanode |  Minor | wal |
+| [HBASE-28725](https://issues.apache.org/jira/browse/HBASE-28725) | Use thirdparty protobuf for REST interface in HBase 2.x |  Major | REST |
+| [HBASE-28732](https://issues.apache.org/jira/browse/HBASE-28732) | Fix typo in Jenkinsfile\_Github for jdk8 hadoop2 check |  Major | jenkins |
+| [HBASE-28522](https://issues.apache.org/jira/browse/HBASE-28522) | UNASSIGN proc indefinitely stuck on dead rs |  Critical | proc-v2, Region Assignment |
+| [HBASE-28734](https://issues.apache.org/jira/browse/HBASE-28734) | Improve HBase shell snapshot command Doc with TTL option |  Minor | shell |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29070](https://issues.apache.org/jira/browse/HBASE-29070) | Balancer cost function epsilon is imprecise |  Major | . |
+| [HBASE-28023](https://issues.apache.org/jira/browse/HBASE-28023) | ITBLL's RollingBatchSuspendResumeRsAction runs the "suspendRs" method to perform the action, but it inadvertently uses the "waitForRegionServerToStop" method to check if it was executed successfully. |  Major | . |
+| [HBASE-29046](https://issues.apache.org/jira/browse/HBASE-29046) | Log message is not correct when the Master bind address configured wrongly |  Major | . |
+| [HBASE-28970](https://issues.apache.org/jira/browse/HBASE-28970) | Get asyncfs working with custom SASL mechanisms |  Major | Filesystem Integration, hadoop3 |
+| [HBASE-28956](https://issues.apache.org/jira/browse/HBASE-28956) | RSMobFileCleanerChore may close the StoreFileReader object which is being used by Compaction thread |  Major | Compaction, mob |
+| [HBASE-29005](https://issues.apache.org/jira/browse/HBASE-29005) | Cannot split hbase:quota table when quota enforcement is enabled |  Major | master, Quotas |
+| [HBASE-29000](https://issues.apache.org/jira/browse/HBASE-29000) | SLF4j logging backend incorrectly picked up from Hadoop when external Hadoop is specified |  Major | logging, scripts |
+| [HBASE-28634](https://issues.apache.org/jira/browse/HBASE-28634) | There is a possibility that data cannot be obtained during reverse fuzzy query. |  Major | Filters |
+| [HBASE-28946](https://issues.apache.org/jira/browse/HBASE-28946) | Update nightlies to run with HADOOP2\_VERSION = 2.10.2 |  Major | hadoop2 |
+| [HBASE-28954](https://issues.apache.org/jira/browse/HBASE-28954) | Apply workaround for HADOOP-19164 for Hadoop 3.4.1 |  Major | jenkins, test |
+| [HBASE-28948](https://issues.apache.org/jira/browse/HBASE-28948) |  RegionMover tool fails when table is deleted |  Major | . |
+| [HBASE-28928](https://issues.apache.org/jira/browse/HBASE-28928) | Handle NPE in Split/Merge table when getMasterQuotaManager returns null |  Major | proc-v2 |
+| [HBASE-28876](https://issues.apache.org/jira/browse/HBASE-28876) | Should call ProcedureSchduler.completionCleanup for non-root procedure too |  Major | proc-v2 |
+| [HBASE-28865](https://issues.apache.org/jira/browse/HBASE-28865) | Implement proper string builder for MoveRegionRequest in ProtobufUtil.getShortTextFormat |  Major | logging |
+| [HBASE-28721](https://issues.apache.org/jira/browse/HBASE-28721) | AsyncFSWAL is broken when running against hadoop 3.4.0 |  Major | hadoop3, wal |
+| [HBASE-28890](https://issues.apache.org/jira/browse/HBASE-28890) | RefCnt Leak error when caching index blocks at write time |  Major | . |
+| [HBASE-28884](https://issues.apache.org/jira/browse/HBASE-28884) | SFT's BrokenStoreFileCleaner may cause data loss |  Major | SFT |
+| [HBASE-28867](https://issues.apache.org/jira/browse/HBASE-28867) | Backport "HBASE-20653 Add missing observer hooks for region server group to MasterObserver" to branch-2 |  Major | rsgroup |
+| [HBASE-28778](https://issues.apache.org/jira/browse/HBASE-28778) | NPE may occur when opening master-status or table.jsp or procedure.jsp while Master is initializing |  Major | UI |
+| [HBASE-28669](https://issues.apache.org/jira/browse/HBASE-28669) | After one RegionServer restarts, another RegionServer leaks a connection to ZooKeeper |  Minor | Replication |
+| [HBASE-28792](https://issues.apache.org/jira/browse/HBASE-28792) | AsyncTableImpl should call coprocessor callbacks in a defined order |  Major | Client |
+| [HBASE-28690](https://issues.apache.org/jira/browse/HBASE-28690) | Aborting Active HMaster is not rejecting reportRegionStateTransition if procedure is initialised by next Active master |  Major | proc-v2 |
+| [HBASE-28760](https://issues.apache.org/jira/browse/HBASE-28760) | Exclude pom file of jaxws-ri in output tarball |  Major | jenkins, scripts |
+| [HBASE-28753](https://issues.apache.org/jira/browse/HBASE-28753) | FNFE may occur when accessing the region.jsp of the replica region |  Major | Replication, UI |
+| [HBASE-28722](https://issues.apache.org/jira/browse/HBASE-28722) | Should wipe out all the output directories before unstash in nightly job |  Major | jenkins, scripts |
+| [HBASE-28742](https://issues.apache.org/jira/browse/HBASE-28742) | CompactionTool fails with NPE when mslab is enabled |  Major | Compaction |
+| [HBASE-28756](https://issues.apache.org/jira/browse/HBASE-28756) | RegionSizeCalculator ignored the size of memstore, which leads Spark miss data |  Major | mapreduce |
+| [HBASE-28655](https://issues.apache.org/jira/browse/HBASE-28655) | TestHFileCompressionZstd fails with IllegalArgumentException: Illegal bufferSize |  Major | HFile, Operability |
+| [HBASE-28716](https://issues.apache.org/jira/browse/HBASE-28716) | Users of QuotaRetriever should pass an existing connection |  Minor | Admin |
+| [HBASE-28743](https://issues.apache.org/jira/browse/HBASE-28743) | Snapshot based mapreduce jobs fails with NPE while trying to close mslab within mapper |  Major | snapshots |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29049](https://issues.apache.org/jira/browse/HBASE-29049) | Increase the interval for running flaky tests |  Major | jenkins, scripts |
+| [HBASE-29067](https://issues.apache.org/jira/browse/HBASE-29067) | Stagger the nightly tests on jenkins |  Major | jenkins, scripts |
+| [HBASE-29050](https://issues.apache.org/jira/browse/HBASE-29050) | Use node under 'hbase' label to run client integration tests |  Major | . |
+| [HBASE-28980](https://issues.apache.org/jira/browse/HBASE-28980) | Change the default Hadoop 3 version to 3.4.1 on branch-2.5 and branch-2.6 |  Major | hadoop3 |
+| [HBASE-28638](https://issues.apache.org/jira/browse/HBASE-28638) | Fail-fast retry limit for specific errors to recover from remote procedure failure using server crash |  Major | amv2, master, Region Assignment |
+| [HBASE-28906](https://issues.apache.org/jira/browse/HBASE-28906) | Run nightly tests with multiple Hadoop 3 versions |  Major | integration tests, test |
+| [HBASE-28745](https://issues.apache.org/jira/browse/HBASE-28745) | Default Zookeeper ConnectionRegistry APIs timeout should be less |  Minor | . |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29056](https://issues.apache.org/jira/browse/HBASE-29056) | Bump commons-io:commons-io from 2.14.0 to 2.18.0 |  Major | dependencies |
+| [HBASE-29028](https://issues.apache.org/jira/browse/HBASE-29028) | Backport missing UI patches to branch-2.5 |  Major | UI |
+| [HBASE-29043](https://issues.apache.org/jira/browse/HBASE-29043) | Bump jinja2 from 3.1.4 to 3.1.5 in /dev-support/flaky-tests |  Major | dependabot, scripts, security |
+| [HBASE-28949](https://issues.apache.org/jira/browse/HBASE-28949) | Remove the netty 3 dependency management section |  Major | dependencies |
+| [HBASE-28943](https://issues.apache.org/jira/browse/HBASE-28943) | Remove all jackson 1.x dependencies for hadoop-3 profile, since all jackson 1.x versions have vulnerabilities |  Major | hadoop3, security |
+| [HBASE-28942](https://issues.apache.org/jira/browse/HBASE-28942) | Purge all netty 3 dependencies by default |  Major | dependencies, security |
+| [HBASE-28922](https://issues.apache.org/jira/browse/HBASE-28922) | Bump commons-io:commons-io from 2.11.0 to 2.14.0 |  Major | dependabot, dependencies, security |
+| [HBASE-28895](https://issues.apache.org/jira/browse/HBASE-28895) | Bump Avro dependency version to 1.11.4 |  Major | . |
+| [HBASE-28642](https://issues.apache.org/jira/browse/HBASE-28642) | Hide old PR comments when posting new |  Major | build, community |
+| [HBASE-28868](https://issues.apache.org/jira/browse/HBASE-28868) | Add missing permission check for updateRSGroupConfig in branch-2 |  Minor | rsgroup |
+| [HBASE-28731](https://issues.apache.org/jira/browse/HBASE-28731) | Remove the IA.Private annotation on WALEdit's add methods as they have already been used by CP users |  Major | Coprocessors, wal |
+| [HBASE-28784](https://issues.apache.org/jira/browse/HBASE-28784) | Exclude samples and release-documentation zip of jaxws-ri from output tarball |  Major | . |
+
+
 ## Release 2.5.10 - 2024-07-26
 
 
