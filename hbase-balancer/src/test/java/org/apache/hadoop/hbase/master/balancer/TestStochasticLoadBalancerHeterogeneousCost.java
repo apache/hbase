@@ -245,7 +245,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
     }
 
     @Override
-    protected CandidateGenerator getRandomGenerator() {
+    protected CandidateGenerator getRandomGenerator(BalancerClusterState cluster) {
       return fairRandomCandidateGenerator;
     }
   }
