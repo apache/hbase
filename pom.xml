@@ -1403,7 +1403,6 @@
         <groupId>net.spy</groupId>
         <artifactId>spymemcached</artifactId>
         <version>${spy.version}</version>
-        <optional>true</optional>
       </dependency>
       <dependency>
         <groupId>org.bouncycastle</groupId>
