@@ -215,6 +215,7 @@ log "Checked out ${PROJECT} at ${GIT_REF} commit $git_hash"
 if [ -z "${RELEASE_VERSION}" ]; then
   RELEASE_VERSION="$(maven_get_version)"
 fi
+init_java_17
 
 # This is a band-aid fix to avoid the failure of Maven nightly snapshot in some Jenkins
 # machines by explicitly calling /usr/sbin/lsof. Please see SPARK-22377 and the discussion
