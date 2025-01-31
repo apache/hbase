@@ -25,16 +25,12 @@ module Shell
 Count the number of rows in a table.  Return value is the number of rows.
 This operation may take a LONG time (Run '$HADOOP_HOME/bin/hadoop jar
 hbase.jar rowcount' to run a counting mapreduce job). Current count is shown
-every 1000 rows by default. Count interval may be optionally specified. Scan
-caching is enabled on count scans by default. Default cache size is 10 rows.
-If your rows are small in size, you may want to increase this
-parameter. Examples:
+every 1000 rows by default. Count interval may be optionally specified.
+Examples:
 
  hbase> count 'ns1:t1'
  hbase> count 't1'
  hbase> count 't1', INTERVAL => 100000
- hbase> count 't1', CACHE => 1000
- hbase> count 't1', INTERVAL => 10, CACHE => 1000
  hbase> count 't1', FILTER => "
     (QualifierFilter (>=, 'binary:xyz')) AND (TimestampsFilter ( 123, 456))"
  hbase> count 't1', COLUMNS => ['c1', 'c2'], STARTROW => 'abc', STOPROW => 'xyz'
@@ -44,8 +40,6 @@ t to table 't1', the corresponding commands would be:
 
  hbase> t.count
  hbase> t.count INTERVAL => 100000
- hbase> t.count CACHE => 1000
- hbase> t.count INTERVAL => 10, CACHE => 1000
  hbase> t.count FILTER => "
     (QualifierFilter (>=, 'binary:xyz')) AND (TimestampsFilter ( 123, 456))"
  hbase> t.count COLUMNS => ['c1', 'c2'], STARTROW => 'abc', STOPROW => 'xyz'
@@ -85,7 +79,6 @@ EOF
         # Merge params with defaults
         params = {
           'INTERVAL' => 1000,
-          'CACHE' => 10,
           'CACHE_BLOCKS' => false
         }.merge(params)
 
