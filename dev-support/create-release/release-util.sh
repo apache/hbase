@@ -753,6 +753,12 @@ function maven_get_version {
   "${MVN[@]}" -q -N -Dexec.executable="echo" -Dexec.args='${project.version}' exec:exec
 }
 
+# Do maven command to read target Java version from local pom
+function maven_get_release_target {
+  # shellcheck disable=SC2016
+  "${MVN[@]}"  -q -N -Dexec.executable="echo" -Dexec.args='${releaseTarget}' exec:exec
+}
+
 # Do maven deploy to snapshot or release artifact repository, with checks.
 function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   local timing_token
@@ -881,4 +887,24 @@ function maven_spotless_apply() {
 
 function git_add_poms() {
   find . -name pom.xml -exec git add {} \;
+}
+
+# Check the releaseTarget defined in the project, and switch to JDK17
+# if JAVA_HOME does not already point to JDK17
+function init_java_17() {
+  RELEASETARGET=$(maven_get_release_target)
+  if [ "$RELEASETARGET" = "17" ]; then
+    log "Build requires JDK 17"
+    # Must be called after init_java
+    if [ "$JAVA_VERSION" != 17* ]; then
+      if [ -z "$JAVA_17_HOME" ]; then
+        #Ubuntu default, included in docker image
+        JAVA_17_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+      fi
+      log "Changing JAVA_HOME to $JAVA_17_HOME"
+      export JAVA_HOME="$JAVA_17_HOME"
+      # re-detect java version
+      init_java
+    fi
+  fi
 }
