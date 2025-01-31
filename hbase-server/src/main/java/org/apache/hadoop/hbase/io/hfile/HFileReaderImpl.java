@@ -1289,11 +1289,15 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     BlockCacheKey cacheKey =
       new BlockCacheKey(path, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
-    Attributes attributes = Attributes.of(BLOCK_CACHE_KEY_KEY, cacheKey.toString());
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
     final Span span = Span.current();
+    // BlockCacheKey#toString() is quite expensive to call, so if tracing isn't enabled, don't
+    // record
+    Attributes attributes = span.isRecording()
+      ? Attributes.of(BLOCK_CACHE_KEY_KEY, cacheKey.toString())
+      : Attributes.empty();
     try {
       while (true) {
         // Check cache for block. If found return.
