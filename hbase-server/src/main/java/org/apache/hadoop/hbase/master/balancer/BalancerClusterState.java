@@ -106,6 +106,7 @@ class BalancerClusterState {
   int numRacks;
   int numTables;
   int numRegions;
+  int maxReplicas = 1;
 
   int numMovedRegions = 0; // num moved regions from the initial configuration
   Map<ServerName, List<RegionInfo>> clusterState;
@@ -431,6 +432,11 @@ class BalancerClusterState {
             ? -1
             : serversToIndex.get(loc.get(i).getAddress()));
       }
+    }
+
+    int numReplicas = region.getReplicaId() + 1;
+    if (numReplicas > maxReplicas) {
+      maxReplicas = numReplicas;
     }
   }
 
