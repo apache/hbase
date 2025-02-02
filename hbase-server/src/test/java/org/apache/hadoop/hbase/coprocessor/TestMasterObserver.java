@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -39,11 +38,9 @@ import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BalanceRequest;
-import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -54,10 +51,8 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -376,11 +371,6 @@ public class TestMasterObserver {
 
     public boolean preTruncateTableCalledOnly() {
       return preTruncateTableCalled && !postTruncateTableCalled;
-    }
-
-    @Override
-    public void postSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final boolean newValue, final MasterSwitchType switchType) throws IOException {
     }
 
     @Override
@@ -1044,16 +1034,6 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preTableFlush(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName) throws IOException {
-    }
-
-    @Override
-    public void postTableFlush(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName) throws IOException {
-    }
-
-    @Override
     public void preMasterStoreFlush(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
       preMasterStoreFlushCalled = true;
@@ -1063,120 +1043,6 @@ public class TestMasterObserver {
     public void postMasterStoreFlush(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
       postMasterStoreFlushCalled = true;
-    }
-
-    @Override
-    public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final GlobalQuotaSettings quotas) throws IOException {
-    }
-
-    @Override
-    public void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final GlobalQuotaSettings quotas) throws IOException {
-    }
-
-    @Override
-    public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final TableName tableName, final GlobalQuotaSettings quotas)
-      throws IOException {
-    }
-
-    @Override
-    public void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final TableName tableName, final GlobalQuotaSettings quotas)
-      throws IOException {
-    }
-
-    @Override
-    public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final String namespace, final GlobalQuotaSettings quotas)
-      throws IOException {
-    }
-
-    @Override
-    public void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String userName, final String namespace, final GlobalQuotaSettings quotas)
-      throws IOException {
-    }
-
-    @Override
-    public void preSetTableQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName, final GlobalQuotaSettings quotas) throws IOException {
-    }
-
-    @Override
-    public void postSetTableQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName, final GlobalQuotaSettings quotas) throws IOException {
-    }
-
-    @Override
-    public void preSetNamespaceQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String namespace, final GlobalQuotaSettings quotas) throws IOException {
-    }
-
-    @Override
-    public void postSetNamespaceQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String namespace, final GlobalQuotaSettings quotas) throws IOException {
-    }
-
-    @Override
-    public void preMoveServersAndTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
-    }
-
-    @Override
-    public void postMoveServersAndTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
-    }
-
-    @Override
-    public void preMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers, String targetGroup) throws IOException {
-    }
-
-    @Override
-    public void postMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers, String targetGroup) throws IOException {
-    }
-
-    @Override
-    public void preMoveTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<TableName> tables, String targetGroupGroup) throws IOException {
-    }
-
-    @Override
-    public void postMoveTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<TableName> tables, String targetGroup) throws IOException {
-    }
-
-    @Override
-    public void preAddRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
-      throws IOException {
-    }
-
-    @Override
-    public void postAddRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
-      throws IOException {
-    }
-
-    @Override
-    public void preRemoveRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
-      throws IOException {
-    }
-
-    @Override
-    public void postRemoveRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
-      throws IOException {
-    }
-
-    @Override
-    public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String groupName, BalanceRequest request) throws IOException {
-    }
-
-    @Override
-    public void postBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String groupName, BalanceRequest request, BalanceResponse response) throws IOException {
     }
 
     @Override
@@ -1209,63 +1075,8 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preSplitRegion(final ObserverContext<MasterCoprocessorEnvironment> c,
-      final TableName tableName, final byte[] splitRow) throws IOException {
-    }
-
-    @Override
-    public void preSplitRegionAction(final ObserverContext<MasterCoprocessorEnvironment> c,
-      final TableName tableName, final byte[] splitRow) throws IOException {
-    }
-
-    @Override
-    public void postCompletedSplitRegionAction(
-      final ObserverContext<MasterCoprocessorEnvironment> c, final RegionInfo regionInfoA,
-      final RegionInfo regionInfoB) throws IOException {
-    }
-
-    @Override
-    public void preSplitRegionBeforeMETAAction(
-      final ObserverContext<MasterCoprocessorEnvironment> ctx, final byte[] splitKey,
-      final List<Mutation> metaEntries) throws IOException {
-    }
-
-    @Override
-    public void preSplitRegionAfterMETAAction(
-      final ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
-    }
-
-    @Override
-    public void postRollBackSplitRegionAction(
-      final ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
-    }
-
-    @Override
-    public void preMergeRegionsAction(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final RegionInfo[] regionsToMerge) throws IOException {
-    }
-
-    @Override
-    public void postCompletedMergeRegionsAction(
-      final ObserverContext<MasterCoprocessorEnvironment> c, final RegionInfo[] regionsToMerge,
-      final RegionInfo mergedRegion) throws IOException {
-    }
-
-    @Override
     public void preMergeRegionsCommitAction(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final RegionInfo[] regionsToMerge, final List<Mutation> metaEntries) throws IOException {
-    }
-
-    @Override
-    public void postMergeRegionsCommitAction(
-      final ObserverContext<MasterCoprocessorEnvironment> ctx, final RegionInfo[] regionsToMerge,
-      final RegionInfo mergedRegion) throws IOException {
-    }
-
-    @Override
-    public void postRollBackMergeRegionsAction(
-      final ObserverContext<MasterCoprocessorEnvironment> ctx, final RegionInfo[] regionsToMerge)
-      throws IOException {
     }
 
     @Override
