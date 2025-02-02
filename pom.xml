@@ -816,7 +816,7 @@
       in the dependencyManagement section as it could still lead to different versions of netty
       modules and cause trouble if we only rely on transitive dependencies.
     -->
-    <netty4.version>4.1.112.Final</netty4.version>
+    <netty4.version>4.1.116.Final</netty4.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.15.0</audience-annotations.version>
     <javadoc.audience-annotations.version>0.15.0</javadoc.audience-annotations.version>
