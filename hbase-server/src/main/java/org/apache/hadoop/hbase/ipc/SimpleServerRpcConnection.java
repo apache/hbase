@@ -253,16 +253,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
         doRawSaslReply(SaslStatus.SUCCESS, new BytesWritable(replyToken), null, null);
       }
       if (saslServer.isComplete()) {
-        String negotiatedQop = saslServer.getNegotiatedQop();
-        SaslUtil.verifyNegotiatedQop(saslServer.getRequestedQop(), negotiatedQop);
-        useWrap = negotiatedQop != null && !"auth".equalsIgnoreCase(negotiatedQop);
-        ugi =
-          provider.getAuthorizedUgi(saslServer.getAuthorizationID(), this.rpcServer.secretManager);
-        RpcServer.LOG.debug(
-          "SASL server context established. Authenticated client: {}. Negotiated QoP is {}", ugi,
-          negotiatedQop);
-        this.rpcServer.metrics.authenticationSuccess();
-        RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);
+        finishSaslNegotiation();
         saslContextEstablished = true;
       }
     }
