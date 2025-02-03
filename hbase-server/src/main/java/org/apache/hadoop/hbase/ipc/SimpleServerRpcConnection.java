@@ -253,6 +253,8 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       }
       if (saslServer.isComplete()) {
         finishSaslNegotiation();
+        String qop = saslServer.getNegotiatedQop();
+        useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
         saslContextEstablished = true;
       }
     }
