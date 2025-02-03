@@ -195,7 +195,7 @@ public class TestBackupBase {
         failStageIf(Stage.stage_4);
 
         // backup complete
-        completeBackup(conn, backupInfo, backupManager, BackupType.INCREMENTAL, conf);
+        completeBackup(conn, backupInfo, BackupType.INCREMENTAL, conf);
 
       } catch (Exception e) {
         failBackup(conn, backupInfo, backupManager, e, "Unexpected Exception : ",
@@ -279,7 +279,7 @@ public class TestBackupBase {
         backupManager.writeBackupStartCode(newStartCode);
         failStageIf(Stage.stage_4);
         // backup complete
-        completeBackup(conn, backupInfo, backupManager, BackupType.FULL, conf);
+        completeBackup(conn, backupInfo, BackupType.FULL, conf);
 
       } catch (Exception e) {
 

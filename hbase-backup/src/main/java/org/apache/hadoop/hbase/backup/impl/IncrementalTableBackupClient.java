@@ -311,7 +311,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
 
       handleBulkLoad(backupInfo.getTableNames());
       // backup complete
-      completeBackup(conn, backupInfo, backupManager, BackupType.INCREMENTAL, conf);
+      completeBackup(conn, backupInfo, BackupType.INCREMENTAL, conf);
 
     } catch (IOException e) {
       failBackup(conn, backupInfo, backupManager, e, "Unexpected Exception : ",
