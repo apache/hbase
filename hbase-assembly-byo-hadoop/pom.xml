@@ -305,12 +305,6 @@
       <groupId>io.opentelemetry.javaagent</groupId>
       <artifactId>opentelemetry-javaagent</artifactId>
     </dependency>
-    <!-- This is an optional dependency of hbase-external-blockcache.
-    The assembly traditionally includes it, so we add it as an explicit dependency -->
-    <dependency>
-      <groupId>net.spy</groupId>
-      <artifactId>spymemcached</artifactId>
-    </dependency>
     <!-- The tomcat JSP Compiler dependencies are not needed for runtime -->
     <dependency>
       <groupId>org.apache.tomcat</groupId>
