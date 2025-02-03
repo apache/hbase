@@ -222,7 +222,7 @@ if [ "$HBASE_DISABLE_HADOOP_CLASSPATH_LOOKUP" != "true" ] ; then
 fi
 
 #If Hadoop is not specified with HADOOP_HOME, check that the assembly includes Hadoop
-if [[ -z "${HADOOP_IN_PATH}" && ! -e "lib/hadoop-common*" ]] ; then
+if [[ $in_dev_env = false && -z "${HADOOP_IN_PATH}" && ! -e "lib/hadoop-common*" ]] ; then
   echo Installation does not contain Hadoop, and HADOOP_HOME does not point to a Hadoop installation.
   echo Specify a compatible Hadoop installation via HADOOP_HOME, or use the HBase assembly variant
   echo that includes Hadoop.
