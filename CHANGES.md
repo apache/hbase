@@ -18,7 +18,7 @@
 -->
 # HBASE Changelog
 
-## Release 2.6.2 - Unreleased (as of 2025-02-02)
+## Release 2.6.2 - Unreleased (as of 2025-02-04)
 
 
 
@@ -83,6 +83,8 @@
 | [HBASE-29072](https://issues.apache.org/jira/browse/HBASE-29072) | StochasticLoadBalancer#areReplicasColocated ignores rack colocation |  Major | . |
 | [HBASE-29073](https://issues.apache.org/jira/browse/HBASE-29073) | StochasticLoadBalancer will always run the balancer on startup because of uninitialized sumMultiplier |  Major | . |
 | [HBASE-29088](https://issues.apache.org/jira/browse/HBASE-29088) | The denominator cannot be 0 when calculating percentages in SnapshotStats |  Major | . |
+| [HBASE-29089](https://issues.apache.org/jira/browse/HBASE-29089) | Remove optional flag from spymemcached dependency |  Minor | BlockCache |
+| [HBASE-29041](https://issues.apache.org/jira/browse/HBASE-29041) | Set UncaughtException Handler for RegionServer ExecutorService |  Minor | regionserver |
 
 
 ### SUB-TASKS:
