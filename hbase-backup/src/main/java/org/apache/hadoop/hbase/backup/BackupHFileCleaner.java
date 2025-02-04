@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.backup;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -103,7 +104,7 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
       }
 
       try (BackupSystemTable tbl = new BackupSystemTable(connection)) {
-        fullyBackedUpTables = tbl.getTablesForBackupType(BackupType.FULL);
+        fullyBackedUpTables = new ArrayList<>(tbl.getTablesIncludedInBackups());
       } catch (IOException ioe) {
         LOG.error("Failed to get tables which have been fully backed up, skipping checking", ioe);
         return Collections.emptyList();
