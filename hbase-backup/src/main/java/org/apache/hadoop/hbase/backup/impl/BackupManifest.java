@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import com.google.errorprone.annotations.RestrictedApi;
 
 /**
  * Backup manifest contains all the meta data of a backup image. The manifest info will be bundled
@@ -562,5 +563,19 @@ public class BackupManifest {
         BackupUtils.getLogBackupDir(backupImage.getRootDir(), backupImage.getBackupId()));
     }
     return info;
+  }
+
+  /* Visible for testing only */
+  @RestrictedApi(explanation = "Should only be called internally or in tests", link = "",
+    allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupManifest.java)")
+  public static BackupImage hydrateRootDir(BackupImage backupImage, Path backupPath)
+    throws IOException {
+    String providedRootDir =
+      HBackupFileSystem.getRootDirFromBackupPath(backupPath, backupImage.backupId).toString();
+    backupImage.setRootDir(providedRootDir);
+    for (BackupImage ancestor : backupImage.getAncestors()) {
+      ancestor.setRootDir(providedRootDir);
+    }
+    return backupImage;
   }
 }

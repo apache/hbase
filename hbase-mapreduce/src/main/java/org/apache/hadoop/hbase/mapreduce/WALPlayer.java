@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2.TableInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
+import org.apache.hadoop.hbase.snapshot.SnapshotRegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
@@ -380,7 +381,7 @@ public class WALPlayer extends Configured implements Tool {
         List<TableInfo> tableInfoList = new ArrayList<>();
         for (TableName tableName : tableNames) {
           Table table = conn.getTable(tableName);
-          RegionLocator regionLocator = conn.getRegionLocator(tableName);
+          RegionLocator regionLocator = getRegionLocator(tableName, conf, conn);
           tableInfoList.add(new TableInfo(table.getDescriptor(), regionLocator));
         }
         if (multiTableSupport) {
@@ -475,5 +476,14 @@ public class WALPlayer extends Configured implements Tool {
     }
     Job job = createSubmittableJob(args);
     return job.waitForCompletion(true) ? 0 : 1;
+  }
+
+  private static RegionLocator getRegionLocator(TableName tableName, Configuration conf,
+    Connection conn) throws IOException {
+    if (SnapshotRegionLocator.shouldUseSnapshotRegionLocator(conf, tableName)) {
+      return SnapshotRegionLocator.create(conf, tableName);
+    }
+
+    return conn.getRegionLocator(tableName);
   }
 }

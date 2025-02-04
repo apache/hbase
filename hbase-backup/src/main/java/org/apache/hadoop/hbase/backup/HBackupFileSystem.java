@@ -27,6 +27,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 /**
  * View to an on-disk Backup Image FileSytem Provides the set of methods necessary to interact with
  * the on-disk Backup Image data.
@@ -114,5 +116,14 @@ public final class HBackupFileSystem {
     BackupManifest manifest =
       new BackupManifest(conf, getManifestPath(conf, backupRootPath, backupId));
     return manifest;
+  }
+
+  public static Path getRootDirFromBackupPath(Path backupPath, String backupId) {
+    if (backupPath.getName().equals(BackupManifest.MANIFEST_FILE_NAME)) {
+      backupPath = backupPath.getParent();
+    }
+    Preconditions.checkArgument(backupPath.getName().equals(backupId),
+      String.format("Backup path %s must end in backupId %s", backupPath, backupId));
+    return backupPath.getParent();
   }
 }
