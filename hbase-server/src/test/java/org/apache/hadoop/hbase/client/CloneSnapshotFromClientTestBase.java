@@ -60,6 +60,7 @@ public class CloneSnapshotFromClientTestBase {
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
+    TEST_UTIL.getConfiguration().setBoolean("hbase.regionserver.compaction.enabled", false);
   }
 
   @BeforeClass
