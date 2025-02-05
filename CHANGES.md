@@ -18,7 +18,7 @@
 -->
 # HBASE Changelog
 
-## Release 2.6.2 - Unreleased (as of 2025-02-04)
+## Release 2.6.2 - Unreleased (as of 2025-02-05)
 
 
 
@@ -85,6 +85,7 @@
 | [HBASE-29088](https://issues.apache.org/jira/browse/HBASE-29088) | The denominator cannot be 0 when calculating percentages in SnapshotStats |  Major | . |
 | [HBASE-29089](https://issues.apache.org/jira/browse/HBASE-29089) | Remove optional flag from spymemcached dependency |  Minor | BlockCache |
 | [HBASE-29041](https://issues.apache.org/jira/browse/HBASE-29041) | Set UncaughtException Handler for RegionServer ExecutorService |  Minor | regionserver |
+| [HBASE-29111](https://issues.apache.org/jira/browse/HBASE-29111) | Data loss in table cloned from a snapshot |  Major | dataloss, snapshots |
 
 
 ### SUB-TASKS:
