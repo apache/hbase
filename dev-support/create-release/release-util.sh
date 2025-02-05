@@ -646,7 +646,6 @@ make_src_release() {
 build_release_binary() {
   local project="${1}"
   local version="${2}"
-  local base_name="${project}-${version}"
   local extra_flags=()
   if [[ "${version}" = *-hadoop3 ]] || [[ "${version}" = *-hadoop3-SNAPSHOT ]]; then
     extra_flags=("-Drevision=${version}" "-Dhadoop.profile=3.0")
