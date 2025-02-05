@@ -146,12 +146,8 @@ public class TestWALReplay {
       new String[] { outPath, tableName.getNameAsString() }));
 
     /*
-     * TODO fix it
-     // Verify restored table 
-     Get g = new Get(ROW);
-     Result r = t1.get(g);
-     assertEquals(1, r.size());
-     assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
+     * TODO fix it // Verify restored table Get g = new Get(ROW); Result r = t1.get(g);
+     * assertEquals(1, r.size()); assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
      */
   }
 
