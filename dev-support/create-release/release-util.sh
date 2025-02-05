@@ -646,7 +646,6 @@ make_src_release() {
 build_release_binary() {
   local project="${1}"
   local version="${2}"
-  local base_name="${project}-${version}"
   local extra_flags=()
   if [[ "${version}" = *-hadoop3 ]] || [[ "${version}" = *-hadoop3-SNAPSHOT ]]; then
     extra_flags=("-Drevision=${version}" "-Dhadoop.profile=3.0")
@@ -670,19 +669,25 @@ build_release_binary() {
   echo "${cmd[*]}"
   "${cmd[@]}"
 
-  # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
-  local f_bin_prefix="./${PROJECT}-assembly/target/${base_name}"
-  if ls "${f_bin_prefix}"*-bin.tar.gz &>/dev/null; then
-    cp "${f_bin_prefix}"*-bin.tar.gz ..
-    cd .. || exit
-    for i in "${base_name}"*-bin.tar.gz; do
-      "${GPG}" "${GPG_ARGS[@]}" --armour --output "${i}.asc" --detach-sig "${i}"
-      "${GPG}" "${GPG_ARGS[@]}" --print-md SHA512 "${i}" > "${i}.sha512"
-    done
-  else
-    cd .. || exit
-    log "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
-  fi
+  # Check there are bin gz outputs. The build may not produce one: e.g. hbase-thirdparty.
+  POSTFIXES=("" "-byo-hadoop")
+  local builddir=$(pwd)
+  for postfix in "${POSTFIXES[@]}"; do
+    cd "${builddir}"
+    local assembly_name=${project}${postfix}-${version}
+    local f_bin_prefix="./${PROJECT}-assembly${postfix}/target/${assembly_name}"
+    if ls "${f_bin_prefix}"*-bin.tar.gz &>/dev/null; then
+      cp "${f_bin_prefix}"*-bin.tar.gz ..
+      cd .. || exit
+      for i in "${assembly_name}"*-bin.tar.gz; do
+        "${GPG}" "${GPG_ARGS[@]}" --armour --output "${i}.asc" --detach-sig "${i}"
+        "${GPG}" "${GPG_ARGS[@]}" --print-md SHA512 "${i}" > "${i}.sha512"
+      done
+    else
+      cd .. || exit
+      log "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
+    fi
+  done
 }
 
 # Make binary release.
