@@ -2749,6 +2749,54 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>unpack</id>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>bootstrap</artifactId>
+                  <version>2.3.2</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/css/bootstrap-responsive.min.css</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>highlightjs</artifactId>
+                  <version>8.7</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/styles/github.min.css,
+                    **/highlight.min.js,</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>font-awesome</artifactId>
+                  <version>4.7.0</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/css/font-awesome.css,
+                    **/fonts/fontawesome-webfont.eot,
+                    **/fonts/fontawesome-webfont.svg,
+                    **/fonts/fontawesome-webfont.ttf,
+                    **/fonts/fontawesome-webfont.woff,
+                    **/fonts/fontawesome-webfont.woff2,</includes>
+                </artifactItem>
+              </artifactItems>
+              <outputDirectory>${basedir}/target/</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <!-- Special configuration for spotbugs just in the parent so
       the filter file location can be more general (see definition in pluginManagement) -->
       <plugin>
@@ -2802,6 +2850,8 @@
             <docVersion>${project.version}</docVersion>
             <imagesdir>images</imagesdir>
             <source-highlighter>coderay</source-highlighter>
+            <iconfont-remote>false</iconfont-remote>
+            <stylesdir>css</stylesdir>
           </attributes>
         </configuration>
         <dependencies>
@@ -2907,6 +2957,39 @@
             <configuration>
               <target name="rename file">
                 <move file="${project.reporting.outputDirectory}/book.pdf" tofile="${project.reporting.outputDirectory}/apache_hbase_reference_guide.pdf"/>
+              </target>
+            </configuration>
+          </execution>
+          <!-- Copy static CSS and JS files for the website. -->
+          <execution>
+            <id>copy-css-js-to-site</id>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <target>
+                <copy flatten="true" todir="${project.build.directory}/site/css">
+                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/bootstrap/2.3.2/css">
+                    <include name="bootstrap-responsive.min.css"/>
+                  </fileset>
+                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/highlightjs/8.7/styles">
+                    <include name="github.min.css"/>
+                  </fileset>
+                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/font-awesome/4.7.0/css">
+                    <include name="font-awesome.css"/>
+                  </fileset>
+                </copy>
+                <copy flatten="true" todir="${project.build.directory}/site/js">
+                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/highlightjs/8.7/">
+                    <include name="highlight.min.js"/>
+                  </fileset>
+                </copy>
+                <copy flatten="true" todir="${project.build.directory}/site/fonts">
+                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/font-awesome/4.7.0/fonts">
+                    <include name="fontawesome-webfont.*"/>
+                  </fileset>
+                </copy>
               </target>
             </configuration>
           </execution>

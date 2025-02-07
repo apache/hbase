@@ -77,10 +77,10 @@
   <body>
     <head>
       <![CDATA[<meta name="viewport" content="width=device-width, initial-scale=1.0"></meta>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.2/css/bootstrap-responsive.min.css"/>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.9.1/styles/github.min.css"/>
+      <link rel="stylesheet" href="css/bootstrap-responsive.min.css"/>
+      <link rel="stylesheet" href="css/github.min.css"/>
       <link rel="stylesheet" href="css/site.css"/>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.9.1/highlight.min.js"></script>]]>
+      <script src="js/highlight.min.js"></script>]]>
     </head>
     <menu name="Apache HBase Project">
       <item name="Overview" href="index.html"/>
