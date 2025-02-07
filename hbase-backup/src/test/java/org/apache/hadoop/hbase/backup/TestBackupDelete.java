@@ -29,8 +29,11 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -50,32 +53,44 @@ public class TestBackupDelete extends TestBackupBase {
     HBaseClassTestRule.forClass(TestBackupDelete.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupDelete.class);
+  private static final byte[] QUALIFIER = Bytes.toBytes("myqual");
+  private static final byte[] FAMILY = Bytes.toBytes("f");
 
   /**
-   * Verify that full backup is created on a single table with data correctly. Verify that history
-   * works as expected.
+   * Test basic deletion of a backup when only a single on is present.
    * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
   public void testBackupDelete() throws Exception {
-    LOG.info("test backup delete on a single table with data");
-    List<TableName> tableList = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tableList);
-    assertTrue(checkSucceeded(backupId));
-    LOG.info("backup complete");
-    String[] backupIds = new String[] { backupId };
-    BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection());
-    BackupInfo info = table.readBackupInfo(backupId);
-    Path path = new Path(info.getBackupRootDir(), backupId);
-    FileSystem fs = FileSystem.get(path.toUri(), conf1);
-    assertTrue(fs.exists(path));
-    int deleted = getBackupAdmin().deleteBackups(backupIds);
+    try (BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection())) {
+      LOG.info("Test backup delete on a single table with data");
+      String backupId = fullTableBackup(List.of(table1));
+      assertTrue(checkSucceeded(backupId));
+      LOG.info("Backup complete");
 
-    assertTrue(!fs.exists(path));
-    assertTrue(fs.exists(new Path(info.getBackupRootDir())));
-    assertTrue(1 == deleted);
-    table.close();
-    LOG.info("delete_backup");
+      // Verify the backup exists
+      BackupInfo info = table.readBackupInfo(backupId);
+      Path path = new Path(info.getBackupRootDir(), backupId);
+      FileSystem fs = FileSystem.get(path.toUri(), conf1);
+      assertTrue(fs.exists(path));
+
+      // Perform a bulk load
+      Path dir = TEST_UTIL.getDataTestDirOnTestFS("bulkload");
+      Path familyDir = new Path(dir, Bytes.toString(FAMILY));
+      byte[] from = Bytes.toBytes("begin");
+      byte[] to = Bytes.toBytes("end");
+      HFileTestUtil.createHFile(TEST_UTIL.getConfiguration(), fs, new Path(familyDir, "hfile"),
+        FAMILY, QUALIFIER, from, to, 5);
+      BulkLoadHFiles.create(TEST_UTIL.getConfiguration()).bulkLoad(table1, dir);
+      assertEquals(1, table.readBulkloadRows().size());
+
+      // Delete the backup
+      int deleted = getBackupAdmin().deleteBackups(new String[] { backupId });
+      assertTrue(!fs.exists(path));
+      assertTrue(fs.exists(new Path(info.getBackupRootDir())));
+      assertEquals(1, deleted);
+      assertEquals(0, table.readBulkloadRows().size());
+    }
   }
 
   /**

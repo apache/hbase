@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
@@ -292,32 +291,6 @@ public final class BackupSystemTable implements Closeable {
     try (Table table = connection.getTable(tableName)) {
       Put put = createPutForBackupInfo(info);
       table.put(put);
-    }
-  }
-
-  /*
-   * @param backupId the backup Id
-   * @return Map of rows to path of bulk loaded hfile
-   */
-  Map<byte[], String> readBulkLoadedFiles(String backupId) throws IOException {
-    Scan scan = BackupSystemTable.createScanForBulkLoadedFiles(backupId);
-    try (Table table = connection.getTable(bulkLoadTableName);
-      ResultScanner scanner = table.getScanner(scan)) {
-      Result res = null;
-      Map<byte[], String> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      while ((res = scanner.next()) != null) {
-        res.advance();
-        byte[] row = CellUtil.cloneRow(res.listCells().get(0));
-        for (Cell cell : res.listCells()) {
-          if (
-            CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
-              BackupSystemTable.PATH_COL.length) == 0
-          ) {
-            map.put(row, Bytes.toString(CellUtil.cloneValue(cell)));
-          }
-        }
-      }
-      return map;
     }
   }
 
@@ -1630,25 +1603,6 @@ public final class BackupSystemTable implements Closeable {
     String region = Iterators.get(i, idx);
     LOG.debug("bulk row string " + rowStr + " region " + region);
     return region;
-  }
-
-  /*
-   * Used to query bulk loaded hfiles which have been copied by incremental backup
-   * @param backupId the backup Id. It can be null when querying for all tables
-   * @return the Scan object
-   * @deprecated This method is broken if a backupId is specified - see HBASE-28715
-   */
-  static Scan createScanForBulkLoadedFiles(String backupId) {
-    Scan scan = new Scan();
-    byte[] startRow =
-      backupId == null ? BULK_LOAD_PREFIX_BYTES : rowkey(BULK_LOAD_PREFIX, backupId + BLK_LD_DELIM);
-    byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
-    stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
-    scan.withStartRow(startRow);
-    scan.withStopRow(stopRow);
-    scan.addFamily(BackupSystemTable.META_FAMILY);
-    scan.readVersions(1);
-    return scan;
   }
 
   /**
