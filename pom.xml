@@ -4209,8 +4209,8 @@
       </dependencyManagement>
 
     </profile>
-    <!-- Override Kerby version for the supported Hadoop 3.3.x versions 
-    MUST come after the hadoop-3.0 profile -->
+    <!-- Override Kerby version for the supported Hadoop 3.3.x versions
+    must come after the hadoop-3.0 profile -->
     <profile>
       <id>hadoop-3.3.5</id>
       <activation>
