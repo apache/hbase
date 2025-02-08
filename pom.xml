@@ -626,7 +626,9 @@
     <spy.version>2.12.3</spy.version>
     <bouncycastle.version>1.78</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
-    <kerby.version>1.0.1</kerby.version>
+    <kerby-one.version>1.0.1</kerby-one.version>
+    <kerby-two.version>2.0.3</kerby-two.version>
+    <kerby.version>${kerby-one.version}</kerby.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
     <curator.version>4.2.0</curator.version>
     <!-- Plugin Dependencies -->
@@ -3951,8 +3953,8 @@
       <properties>
         <hadoop.profile>3.0</hadoop.profile>
         <hadoop.version>${hadoop-three.version}</hadoop.version>
-        <!--Use this compat module for now. TODO: Make h3 one if we need one-->
         <compat.module>hbase-hadoop2-compat</compat.module>
+        <kerby.version>${kerby-two.version}</kerby.version>
         <assembly.file>src/main/assembly/hadoop-three-compat.xml</assembly.file>
         <!--This property is for hadoops netty. HBase netty
              comes in via hbase-thirdparty hbase-shaded-netty-->
@@ -4556,6 +4558,32 @@
         </dependencies>
       </dependencyManagement>
 
+    </profile>
+    <!-- Override Kerby version for the supported Hadoop 3.3.x versions
+    must come after the hadoop-3.0 profile -->
+    <profile>
+      <id>hadoop-3.3.5</id>
+      <activation>
+        <property>
+          <name>hadoop-three.version</name>
+          <value>3.3.5</value>
+        </property>
+      </activation>
+      <properties>
+        <kerby.version>${kerby-one.version}</kerby.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>hadoop-3.3.6</id>
+      <activation>
+        <property>
+          <name>hadoop-three.version</name>
+          <value>3.3.6</value>
+        </property>
+      </activation>
+      <properties>
+        <kerby.version>${kerby-one.version}</kerby.version>
+      </properties>
     </profile>
     <!-- profiles for the tests
          See as well the properties of the project for the values
