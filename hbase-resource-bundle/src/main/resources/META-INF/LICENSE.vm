@@ -1469,9 +1469,12 @@ ${dep.scm.url}
   "Apache License, Version 2.0" is the official name in the past
   "The Apache Software License, Version 2.0" is the official name in the past too
   "Apache Software License - Version 2.0" is what jetty uses in pom
+  "Apache License, version 2.0" and "Apache License 2.0" are used by Jboss artifacts
   "Apache-2.0" is the new short official name
 *#
 #elseif( !(${dep.licenses[0].name.contains("Apache License, Version 2.0")}
+  || ${dep.licenses[0].name.contains("Apache License, version 2.0")}
+  || ${dep.licenses[0].name.contains("Apache License 2.0")}
   || ${dep.licenses[0].name.contains("The Apache Software License, Version 2.0")}
   || ${dep.licenses[0].name.contains("Apache Software License - Version 2.0")}
   || ${dep.licenses[0].name.contains("Apache-2.0")}) )
