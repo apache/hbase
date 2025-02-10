@@ -29,6 +29,7 @@
   import="org.apache.hadoop.hbase.regionserver.HRegion"
   import="org.apache.hadoop.hbase.regionserver.HStore"
 %>
+<%@ page import="java.nio.charset.StandardCharsets" %>
 <%
   String regionName = request.getParameter("name");
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
@@ -87,7 +88,7 @@
             count++; %>
          <tr>
            <td><a href="storeFile.jsp?name=<%= sf.getEncodedPath() %>"><%= sf.getPath() %></a></td>
-           <td><%= (int) (fs.getLength(sf.getPath()) / 1024 / 1024) %></td>
+           <td><%= (int) (fs.getFileStatus(sf.getPath()).getLen() / 1024 / 1024) %></td>
            <td><%= new Date(sf.getModificationTimestamp()) %></td>
          </tr>
          <% } %>
