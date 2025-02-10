@@ -231,7 +231,7 @@
         </property>
       </activation>
       <properties>
-        <hadoop.version>3.0-SNAPSHOT</hadoop.version>
+        <hadoop.version>${hadoop-three.version}</hadoop.version>
       </properties>
       <dependencies>
         <dependency>
