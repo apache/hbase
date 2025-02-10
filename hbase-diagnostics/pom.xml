@@ -193,7 +193,7 @@
   </build>
   <profiles>
     <profile>
-     <id>hadoop-3.0</id>
+      <id>hadoop-3.0</id>
       <activation>
         <property>
           <name>!hadoop.profile</name>
