@@ -32,6 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface RestoreJob extends Configurable {
 
   String KEEP_ORIGINAL_SPLITS_KEY = "hbase.backup.restorejob.keep.original.splits";
+  String BACKUP_ROOT_PATH_KEY = "hbase.backup.root.path";
   boolean KEEP_ORIGINAL_SPLITS_DEFAULT = false;
 
   /**
