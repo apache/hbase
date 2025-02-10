@@ -339,7 +339,7 @@ public abstract class Compactor<T extends CellSink> {
       }
       writer = sinkFactory.createWriter(scanner, fd, dropCache);
       finished = performCompaction(fd, scanner, writer, smallestReadPoint, cleanSeqId,
-        throughputController, request.isAllFiles(), request.getFiles().size());
+        throughputController, request.isMajor(), request.getFiles().size());
       if (!finished) {
         throw new InterruptedIOException("Aborting compaction of store " + store + " in region "
             + store.getRegionInfo().getRegionNameAsString() + " because it was interrupted.");
