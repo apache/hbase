@@ -392,4 +392,151 @@ public class TestScannerResource {
     Response response = client.delete("/" + TABLE + "/scanner/NONEXISTENT_SCAN");
     assertEquals(404, response.getCode());
   }
+
+  @Test
+  public void testScannerWithIncludeStartStopRowXML() throws IOException, JAXBException {
+    // new scanner
+    ScannerModel model = new ScannerModel();
+    model.addColumn(Bytes.toBytes(COLUMN_1));
+    model.setStartRow(Bytes.toBytes("aaa"));
+    model.setEndRow(Bytes.toBytes("aae"));
+    StringWriter writer = new StringWriter();
+    marshaller.marshal(model, writer);
+    byte[] body = Bytes.toBytes(writer.toString());
+
+    conf.set("hbase.rest.readonly", "false");
+    Response response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_XML, body);
+    assertEquals(201, response.getCode());
+    String scannerURI = response.getLocation();
+    assertNotNull(scannerURI);
+
+    // get a cell set
+    response = client.get(scannerURI, Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
+    CellSetModel cellSet =
+      (CellSetModel) unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+
+    assertEquals(4, countCellSet(cellSet));
+
+    // test with include the start row false
+    model.setIncludeStartRow(false);
+    writer = new StringWriter();
+    marshaller.marshal(model, writer);
+    body = Bytes.toBytes(writer.toString());
+
+    conf.set("hbase.rest.readonly", "false");
+    response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_XML, body);
+    assertEquals(201, response.getCode());
+    scannerURI = response.getLocation();
+    assertNotNull(scannerURI);
+
+    // get a cell set
+    response = client.get(scannerURI, Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
+    cellSet = (CellSetModel) unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+
+    assertEquals(3, countCellSet(cellSet));
+
+    // test with include stop row true and start row false
+    model.setIncludeStartRow(false);
+    model.setIncludeStopRow(true);
+    writer = new StringWriter();
+    marshaller.marshal(model, writer);
+    body = Bytes.toBytes(writer.toString());
+
+    conf.set("hbase.rest.readonly", "false");
+    response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_XML, body);
+    assertEquals(201, response.getCode());
+    scannerURI = response.getLocation();
+    assertNotNull(scannerURI);
+
+    // get a cell set
+    response = client.get(scannerURI, Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
+    cellSet = (CellSetModel) unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+
+    assertEquals(4, countCellSet(cellSet));
+
+    // test with including the start row true and stop row true
+    model.setIncludeStartRow(true);
+    model.setIncludeStopRow(true);
+    writer = new StringWriter();
+    marshaller.marshal(model, writer);
+    body = Bytes.toBytes(writer.toString());
+
+    conf.set("hbase.rest.readonly", "false");
+    response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_XML, body);
+    assertEquals(201, response.getCode());
+    scannerURI = response.getLocation();
+    assertNotNull(scannerURI);
+
+    // get a cell set
+    response = client.get(scannerURI, Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
+    cellSet = (CellSetModel) unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+
+    assertEquals(5, countCellSet(cellSet));
+  }
+
+  @Test
+  public void testScannerWithIncludeStartStopRowPB() throws IOException {
+    // new scanner
+    ScannerModel model = new ScannerModel();
+    model.addColumn(Bytes.toBytes(COLUMN_1));
+    model.setStartRow(Bytes.toBytes("aaa"));
+    model.setEndRow(Bytes.toBytes("aae"));
+
+    // test put operation is forbidden in read-only mode
+    conf.set("hbase.rest.readonly", "false");
+    Response response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_PROTOBUF,
+      model.createProtobufOutput());
+    assertEquals(201, response.getCode());
+    String scannerURI = response.getLocation();
+    assertNotNull(scannerURI);
+
+    // get a cell set
+    response = client.get(scannerURI, Constants.MIMETYPE_PROTOBUF);
+    assertEquals(200, response.getCode());
+    assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
+    CellSetModel cellSet = new CellSetModel();
+    cellSet.getObjectFromMessage(response.getBody());
+    assertEquals(4, countCellSet(cellSet));
+
+    // test with include start row false
+    model.setIncludeStartRow(false);
+    response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_PROTOBUF,
+      model.createProtobufOutput());
+    assertEquals(201, response.getCode());
+    scannerURI = response.getLocation();
+    assertNotNull(scannerURI);
+
+    // get a cell set
+    response = client.get(scannerURI, Constants.MIMETYPE_PROTOBUF);
+    assertEquals(200, response.getCode());
+    assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
+    cellSet = new CellSetModel();
+    cellSet.getObjectFromMessage(response.getBody());
+    assertEquals(3, countCellSet(cellSet));
+
+    // test with include stop row true
+    model.setIncludeStartRow(true);
+    model.setIncludeStopRow(true);
+    response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_PROTOBUF,
+      model.createProtobufOutput());
+    assertEquals(201, response.getCode());
+    scannerURI = response.getLocation();
+    assertNotNull(scannerURI);
+
+    // get a cell set
+    response = client.get(scannerURI, Constants.MIMETYPE_PROTOBUF);
+    assertEquals(200, response.getCode());
+    assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
+    cellSet = new CellSetModel();
+    cellSet.getObjectFromMessage(response.getBody());
+    assertEquals(5, countCellSet(cellSet));
+  }
 }

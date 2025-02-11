@@ -112,4 +112,7 @@ public interface Constants {
   /** Configuration parameter to set rest client socket timeout */
   String REST_CLIENT_SOCKET_TIMEOUT = "hbase.rest.client.socket.timeout";
   int DEFAULT_REST_CLIENT_SOCKET_TIMEOUT = 30 * 1000;
+
+  String SCAN_INCLUDE_START_ROW = "includeStartRow";
+  String SCAN_INCLUDE_STOP_ROW = "includeStopRow";
 }
