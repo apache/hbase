@@ -203,7 +203,7 @@ public class RestoreTool {
           LOG.info("Changed " + newTableDescriptor.getTableName() + " to: " + newTableDescriptor);
         }
       }
-      conf.setBoolean(RestoreJob.KEEP_ORIGINAL_SPLITS_KEY, keepOriginalSplits);
+      configureForRestoreJob(keepOriginalSplits);
       RestoreJob restoreService = BackupRestoreFactory.getRestoreJob(conf);
 
       restoreService.run(logDirs, tableNames, restoreRootDir, newTableNames, false);
@@ -355,7 +355,7 @@ public class RestoreTool {
       // should only try to create the table with all region informations, so we could pre-split
       // the regions in fine grain
       checkAndCreateTable(conn, newTableName, regionPathList, tableDescriptor, truncateIfExists);
-      conf.setBoolean(RestoreJob.KEEP_ORIGINAL_SPLITS_KEY, isKeepOriginalSplits);
+      configureForRestoreJob(isKeepOriginalSplits);
       RestoreJob restoreService = BackupRestoreFactory.getRestoreJob(conf);
       Path[] paths = new Path[regionPathList.size()];
       regionPathList.toArray(paths);
@@ -535,5 +535,10 @@ public class RestoreTool {
         }
       }
     }
+  }
+
+  private void configureForRestoreJob(boolean keepOriginalSplits) {
+    conf.setBoolean(RestoreJob.KEEP_ORIGINAL_SPLITS_KEY, keepOriginalSplits);
+    conf.set(RestoreJob.BACKUP_ROOT_PATH_KEY, backupRootPath.toString());
   }
 }

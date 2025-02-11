@@ -45,7 +45,9 @@ public class MapReduceRestoreToOriginalSplitsJob implements RestoreJob {
     // We are using the files from the snapshot. We should copy them rather than move them over
     conf.setBoolean(BulkLoadHFiles.ALWAYS_COPY_FILES, true);
 
-    FileSystem fs = FileSystem.get(conf);
+    Path backupRootDir = new Path(conf.get(RestoreJob.BACKUP_ROOT_PATH_KEY));
+
+    FileSystem fs = backupRootDir.getFileSystem(conf);
     Map<byte[], List<Path>> family2Files = buildFamily2Files(fs, dirPaths, fullBackupRestore);
 
     BulkLoadHFiles bulkLoad = BulkLoadHFiles.create(conf);
