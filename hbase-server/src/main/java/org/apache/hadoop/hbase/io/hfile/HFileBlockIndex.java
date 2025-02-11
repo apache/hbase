@@ -45,8 +45,8 @@ import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1087,8 +1087,8 @@ public class HFileBlockIndex {
         LOG.trace("Wrote a " + numLevels + "-level index with root level at pos "
           + rootLevelIndexPos + ", " + rootChunk.getNumEntries() + " root-level entries, "
           + totalNumEntries + " total entries, "
-          + StringUtils.humanReadableInt(this.totalBlockOnDiskSize) + " on-disk size, "
-          + StringUtils.humanReadableInt(totalBlockUncompressedSize) + " total uncompressed size.");
+          + Strings.humanReadableInt(this.totalBlockOnDiskSize) + " on-disk size, "
+          + Strings.humanReadableInt(totalBlockUncompressedSize) + " total uncompressed size.");
       }
       return rootLevelIndexPos;
     }

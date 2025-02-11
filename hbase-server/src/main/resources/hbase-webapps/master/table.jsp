@@ -76,6 +76,8 @@
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota" %>
 <%@ page import="java.net.URLEncoder" %>
 <%@ page import="java.util.stream.Collectors" %>
+<%@ page import="java.nio.charset.StandardCharsets" %>
+<%@ page import="java.io.UnsupportedEncodingException" %>
 <%!
   /**
    * @return An empty region load stamped with the passed in <code>regionInfo</code>
@@ -115,7 +117,7 @@
    * @return an <td> tag contents server name links to server rs-status page.
    */
   private static String buildRegionDeployedServerTag(RegionInfo regionInfo, HMaster master,
-    Map<RegionInfo, ServerName> regionsToServer) {
+                                                     Map<RegionInfo, ServerName> regionsToServer) throws UnsupportedEncodingException {
     ServerName serverName = regionsToServer.get(regionInfo);
 
     if (serverName == null) {
@@ -123,7 +125,7 @@
     }
 
     String hostName = serverName.getHostname();
-    String hostNameEncoded = URLEncoder.encode(hostName);
+    String hostNameEncoded = URLEncoder.encode(hostName, StandardCharsets.UTF_8.toString());
     // This port might be wrong if RS actually ended up using something else.
     int serverInfoPort = master.getRegionServerInfoPort(serverName);
     String urlRegionServer = "//" + hostNameEncoded + ":" + serverInfoPort + "/rs-status";
@@ -135,9 +137,9 @@
   /**
    * @return an <p> tag guide user to see all region messages.
    */
-  private static String moreRegionsToRender(int numRegionsRendered, int numRegions, String fqtn) {
+  private static String moreRegionsToRender(int numRegionsRendered, int numRegions, String fqtn) throws UnsupportedEncodingException {
     if (numRegions > numRegionsRendered) {
-      String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn) + "&numRegions=all";
+      String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn, StandardCharsets.UTF_8.toString()) + "&numRegions=all";
 
       return "This table has <b>" + numRegions
         + "</b> regions in total, in order to improve the page load time, only <b>"
@@ -347,7 +349,7 @@
               if (metaLocation != null) {
                 ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
                 // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
-                hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation);
+                hostAndPort = URLEncoder.encode(metaLocation.getHostname(), StandardCharsets.UTF_8.toString()) + ":" + master.getRegionServerInfoPort(metaLocation);
                 if (sl != null) {
                   Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
                   if (map.containsKey(meta.getRegionName())) {
@@ -416,7 +418,7 @@
                float localityForSsd = 0.0f;
                if (metaLocation != null) {
                  ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
-                 hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation);
+                 hostAndPort = URLEncoder.encode(metaLocation.getHostname(), StandardCharsets.UTF_8.toString()) + ":" + master.getRegionServerInfoPort(metaLocation);
                  if (sl != null) {
                    Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
                    if (map.containsKey(meta.getRegionName())) {
@@ -468,7 +470,7 @@
               String compactionProgress = "";
               if (metaLocation != null) {
                 ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
-                hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation);
+                hostAndPort = URLEncoder.encode(metaLocation.getHostname(), StandardCharsets.UTF_8.toString()) + ":" + master.getRegionServerInfoPort(metaLocation);
                 if (sl != null) {
                   Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
                   if (map.containsKey(meta.getRegionName())) {
@@ -1033,11 +1035,9 @@ for (ColumnFamilyDescriptor family: families) {
           numRegionsRendered = 0;
           for (Map.Entry<RegionInfo, RegionMetrics> hriEntry : entryList) {
             RegionInfo regionInfo = hriEntry.getKey();
-            ServerName addr = regionsToServer.get(regionInfo);
             RegionMetrics load = hriEntry.getValue();
             float locality = 0.0f;
             float localityForSsd = 0.0f;
-            String state = "N/A";
             if (load != null) {
               locality = load.getDataLocality();
               localityForSsd = load.getDataLocalityForSsd();
@@ -1121,11 +1121,11 @@ for (ColumnFamilyDescriptor family: families) {
   <%
     for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
       ServerName addr = rdEntry.getKey();
-      String url = "//" + URLEncoder.encode(addr.getHostname()) + ":"
+      String url = "//" + URLEncoder.encode(addr.getHostname(), StandardCharsets.UTF_8.toString()) + ":"
         + master.getRegionServerInfoPort(addr) + "/rs-status";
   %>
       <tr>
-        <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname().toString())
+        <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname())
           + ":" + master.getRegionServerInfoPort(addr) %></a></td>
         <td><%= rdEntry.getValue()%></td>
         <td><%= primaryRegDistribution.get(addr) == null ? 0 : primaryRegDistribution.get(addr)%></td>

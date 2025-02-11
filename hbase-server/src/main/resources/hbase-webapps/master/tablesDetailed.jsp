@@ -19,10 +19,8 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
          import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
-         import="java.io.IOException"
          import="java.util.ArrayList"
          import="java.util.List"
-         import="java.util.Map"
 %>
 <%@ page import="org.apache.hadoop.hbase.client.TableDescriptor" %>
 <%@ page import="org.apache.hadoop.hbase.master.HMaster" %>

@@ -169,7 +169,7 @@
                      totalRequestsPerSecond += sl.getRequestCountPerSecond();
                      lastContact = (System.currentTimeMillis() - sl.getReportTimestamp())/1000;
                    }
-                   long startcode = serverName.getStartcode();
+                   long startcode = serverName.getStartCode();
                    int infoPort = master.getRegionServerInfoPort(serverName);
                    String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";%>
                    <tr>
