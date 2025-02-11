@@ -62,8 +62,8 @@ public class TestMetaTableForReplica {
   @BeforeClass
   public static void beforeClass() throws Exception {
     Configuration c = new Configuration(UTIL.getConfiguration());
-    //Start cluster having non-default hbase meta table name
-    c.setStrings(HConstants.HBASE_META_TABLE_SUFFIX,"test");
+    // Start cluster having non-default hbase meta table name
+    c.setStrings(HConstants.HBASE_META_TABLE_SUFFIX, "test");
     UTIL.startMiniCluster(3);
     connection = ConnectionFactory.createConnection(c);
   }
@@ -82,13 +82,13 @@ public class TestMetaTableForReplica {
 
   @Test
   public void testNameOfMetaForReplica() {
-    //Check the correctness of the meta table for replica
+    // Check the correctness of the meta table for replica
     String metaTableName = TableName.META_TABLE_NAME.getNameWithNamespaceInclAsString();
     assertNotNull(metaTableName);
 
-    //Check if name of the meta table for replica is not same as default table
-    assertEquals(0, TableName.META_TABLE_NAME.compareTo(
-      TableName.getDefaultNameOfMetaForReplica()));
+    // Check if name of the meta table for replica is not same as default table
+    assertEquals(0,
+      TableName.META_TABLE_NAME.compareTo(TableName.getDefaultNameOfMetaForReplica()));
   }
 
   @Test

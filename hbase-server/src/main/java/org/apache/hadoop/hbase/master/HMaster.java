@@ -1094,7 +1094,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
       initMetaProc = optProc.orElseGet(() -> {
         // schedule an init meta procedure if meta has not been deployed yet
-        InitMetaProcedure temp = new InitMetaProcedure(conf);
+        InitMetaProcedure temp = new InitMetaProcedure();
         procedureExecutor.submitProcedure(temp);
         return temp;
       });

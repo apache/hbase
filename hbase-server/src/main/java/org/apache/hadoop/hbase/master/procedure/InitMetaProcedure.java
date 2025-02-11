@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.apache.hadoop.hbase.NamespaceDescriptor.DEFAULT_NAMESPACE;
 import static org.apache.hadoop.hbase.NamespaceDescriptor.SYSTEM_NAMESPACE;
-import static org.apache.hadoop.hbase.TableName.valueOf;
 import static org.apache.hadoop.hbase.master.TableNamespaceManager.insertNamespaceToMeta;
 import static org.apache.hadoop.hbase.master.procedure.AbstractStateMachineNamespaceProcedure.createDirectory;
 
@@ -29,8 +28,6 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -64,14 +61,9 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   private RetryCounter retryCounter;
 
-  protected final Configuration conf;
-  public InitMetaProcedure(Configuration conf) {
-    this.conf = conf;
-  }
-
   @Override
   public TableName getTableName() {
-    return TableName.initializeHbaseMetaTableName(conf);
+    return TableName.META_TABLE_NAME;
   }
 
   @Override
