@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -371,6 +372,51 @@ public class TestIncrementalBackup extends TestBackupBase {
     }
   }
 
+  @Test
+  public void TestIncBackupRestoreWithOriginalSplitsSeperateFs() throws Exception {
+    String originalBackupRoot = BACKUP_ROOT_DIR;
+    // prepare BACKUP_ROOT_DIR on a different filesystem from HBase.
+    try (Connection conn = ConnectionFactory.createConnection(conf1);
+      BackupAdminImpl admin = new BackupAdminImpl(conn)) {
+      String backupTargetDir = TEST_UTIL.getDataTestDir("backupTarget").toString();
+      BACKUP_ROOT_DIR = new File(backupTargetDir).toURI().toString();
+
+      List<TableName> tables = Lists.newArrayList(table1);
+
+      insertIntoTable(conn, table1, famName, 3, 100);
+      String fullBackupId = takeFullBackup(tables, admin);
+      assertTrue(checkSucceeded(fullBackupId));
+
+      insertIntoTable(conn, table1, famName, 4, 100);
+      BackupRequest request =
+        createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
+      String incrementalBackupId = admin.backupTables(request);
+      assertTrue(checkSucceeded(incrementalBackupId));
+
+      TableName[] fromTable = new TableName[] { table1 };
+      TableName[] toTable = new TableName[] { table1_restore };
+
+      // Using original splits
+      admin.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, incrementalBackupId, false,
+        fromTable, toTable, true, true));
+
+      int actualRowCount = TEST_UTIL.countRows(table1_restore);
+      int expectedRowCount = TEST_UTIL.countRows(table1);
+      assertEquals(expectedRowCount, actualRowCount);
+
+      // Using new splits
+      admin.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, incrementalBackupId, false,
+        fromTable, toTable, true, false));
+
+      expectedRowCount = TEST_UTIL.countRows(table1);
+      assertEquals(expectedRowCount, actualRowCount);
+
+    } finally {
+      BACKUP_ROOT_DIR = originalBackupRoot;
+    }
+
+  }
+
   private void checkThrowsCFMismatch(IOException ex, List<TableName> tables) {
     Throwable cause = Throwables.getRootCause(ex);
     assertEquals(cause.getClass(), ColumnFamilyMismatchException.class);
@@ -380,7 +426,8 @@ public class TestIncrementalBackup extends TestBackupBase {
 
   private String takeFullBackup(List<TableName> tables, BackupAdminImpl backupAdmin)
     throws IOException {
-    BackupRequest req = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
+    BackupRequest req =
+      createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
     String backupId = backupAdmin.backupTables(req);
     checkSucceeded(backupId);
     return backupId;
