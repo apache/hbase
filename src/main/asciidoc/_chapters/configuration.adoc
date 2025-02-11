@@ -453,6 +453,7 @@ expressly advises downstream users to avoid running on top of this release. For 
 the link:https://s.apache.org/hadoop-3.1.0-announcement[release announcement for Hadoop 3.1.0].
 ====
 
+[[note_replace_hadoop]]
 .Replace the Hadoop Bundled With HBase!
 [NOTE]
 ====
@@ -706,6 +707,27 @@ c. if only a small set of HDFS client configurations, add them to _hbase-site.xm
 An example of such an HDFS client configuration is `dfs.replication`.
 If for example, you want to run with a replication factor of 5, HBase will create files with the
 default of 3 unless you do the above to make the configuration available to HBase.
+
+[[byo-hadoop-assembly]]
+=== Choosing between the Classic Package and the BYO Hadoop Package
+
+Starting with HBase 3.0, HBase includes two binary packages. The classic package
+includes both the HBase and Hadoop components, while the Hadoop-less "Bring Your Own Hadoop"
+package omits the Hadoop components, and uses the files from an existing Hadoop installation.
+The classic binary package filename is named `hbase-<version>-bin.tar.gz` i.e.
+_hbase-3.0.0-bin.tar.gz_ , while the Hadoop-less package is
+`hbase-byo-hadoop-<version>-bin.tar.gz` i.e. _hbase-byo-hadoop-3.0.0-bin.tar.gz_.
+
+If the cluster nodes already have Hadoop installed, you can use the Hadoop-less package.
+In this case you need to make sure that the `HADOOP_HOME` environment variable is set and
+points to the Hadoop installation.
+The easiest way to ensure this is to set it in _hbase-env.sh_. You still need to make sure that
+the Hadoop configuration files are present on the HBase classpath, as described above.
+
+.Advantages of the BYO Hadoop package
+* There is no need to replace the Hadoop libraries, as noted <<note_replace_hadoop,above>>.
+* It is easier to upgrade Hadoop and HBase independently (as long as compatible versions are used).
+* Both the package and installed size are about 100 MB smaller.
 
 [[confirm]]
 == Running and Confirming Your Installation
