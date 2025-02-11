@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.NoEOFWALStreamReader;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -80,7 +81,6 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitUtil.MutationReplay;
 import org.apache.hadoop.hbase.wal.WALStreamReader;
-import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -388,7 +388,7 @@ public class TestHRegionReplayEvents {
           // assert that the store memstore is smaller now
           long newStoreMemstoreSize = store.getMemStoreSize().getHeapSize();
           LOG.info("Memstore size reduced by:"
-            + StringUtils.humanReadableInt(newStoreMemstoreSize - storeMemstoreSize));
+            + Strings.humanReadableInt(newStoreMemstoreSize - storeMemstoreSize));
           assertTrue(storeMemstoreSize > newStoreMemstoreSize);
 
         } else if (flushDesc.getAction() == FlushAction.COMMIT_FLUSH) {
@@ -489,7 +489,7 @@ public class TestHRegionReplayEvents {
           // assert that the store memstore is smaller now
           long newStoreMemstoreSize = store.getMemStoreSize().getHeapSize();
           LOG.info("Memstore size reduced by:"
-            + StringUtils.humanReadableInt(newStoreMemstoreSize - storeMemstoreSize));
+            + Strings.humanReadableInt(newStoreMemstoreSize - storeMemstoreSize));
           assertTrue(storeMemstoreSize > newStoreMemstoreSize);
           verifyData(secondaryRegion, 0, lastReplayed + 1, cq, families);
 

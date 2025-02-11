@@ -36,11 +36,11 @@ import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -125,8 +125,8 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
       .println("total time to open: " + fileOpenTimer.elapsed(TimeUnit.MILLISECONDS) + " ms");
     System.out.println("total time to read: " + streamTimer.elapsed(TimeUnit.MILLISECONDS) + " ms");
     System.out.println(
-      "total bytes: " + totalBytes + " bytes (" + StringUtils.humanReadableInt(totalBytes) + ")");
-    System.out.println("throghput  : " + StringUtils.humanReadableInt((long) throughput) + "B/s");
+      "total bytes: " + totalBytes + " bytes (" + Strings.humanReadableInt(totalBytes) + ")");
+    System.out.println("throghput  : " + Strings.humanReadableInt((long) throughput) + "B/s");
   }
 
   private Scan getScan() {
@@ -189,14 +189,14 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     System.out.println("Scan metrics:\n" + metrics.getMetricsMap());
 
     System.out.println(
-      "total bytes: " + totalBytes + " bytes (" + StringUtils.humanReadableInt(totalBytes) + ")");
-    System.out.println("throughput  : " + StringUtils.humanReadableInt((long) throughput) + "B/s");
+      "total bytes: " + totalBytes + " bytes (" + Strings.humanReadableInt(totalBytes) + ")");
+    System.out.println("throughput  : " + Strings.humanReadableInt((long) throughput) + "B/s");
     System.out.println("total rows  : " + numRows);
     System.out
-      .println("throughput  : " + StringUtils.humanReadableInt((long) throughputRows) + " rows/s");
+      .println("throughput  : " + Strings.humanReadableInt((long) throughputRows) + " rows/s");
     System.out.println("total cells : " + numCells);
-    System.out.println(
-      "throughput  : " + StringUtils.humanReadableInt((long) throughputCells) + " cells/s");
+    System.out
+      .println("throughput  : " + Strings.humanReadableInt((long) throughputCells) + " cells/s");
   }
 
   public void testSnapshotScan() throws IOException {
@@ -246,14 +246,14 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     System.out.println("Scan metrics:\n" + metrics.getMetricsMap());
 
     System.out.println(
-      "total bytes: " + totalBytes + " bytes (" + StringUtils.humanReadableInt(totalBytes) + ")");
-    System.out.println("throughput  : " + StringUtils.humanReadableInt((long) throughput) + "B/s");
+      "total bytes: " + totalBytes + " bytes (" + Strings.humanReadableInt(totalBytes) + ")");
+    System.out.println("throughput  : " + Strings.humanReadableInt((long) throughput) + "B/s");
     System.out.println("total rows  : " + numRows);
     System.out
-      .println("throughput  : " + StringUtils.humanReadableInt((long) throughputRows) + " rows/s");
+      .println("throughput  : " + Strings.humanReadableInt((long) throughputRows) + " rows/s");
     System.out.println("total cells : " + numCells);
-    System.out.println(
-      "throughput  : " + StringUtils.humanReadableInt((long) throughputCells) + " cells/s");
+    System.out
+      .println("throughput  : " + Strings.humanReadableInt((long) throughputCells) + " cells/s");
 
   }
 
@@ -311,14 +311,14 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     System.out.println("total time to scan: " + scanTimer.elapsed(TimeUnit.MILLISECONDS) + " ms");
 
     System.out.println(
-      "total bytes: " + totalBytes + " bytes (" + StringUtils.humanReadableInt(totalBytes) + ")");
-    System.out.println("throughput  : " + StringUtils.humanReadableInt((long) throughput) + "B/s");
+      "total bytes: " + totalBytes + " bytes (" + Strings.humanReadableInt(totalBytes) + ")");
+    System.out.println("throughput  : " + Strings.humanReadableInt((long) throughput) + "B/s");
     System.out.println("total rows  : " + numRows);
     System.out
-      .println("throughput  : " + StringUtils.humanReadableInt((long) throughputRows) + " rows/s");
+      .println("throughput  : " + Strings.humanReadableInt((long) throughputRows) + " rows/s");
     System.out.println("total cells : " + numCells);
-    System.out.println(
-      "throughput  : " + StringUtils.humanReadableInt((long) throughputCells) + " cells/s");
+    System.out
+      .println("throughput  : " + Strings.humanReadableInt((long) throughputCells) + " cells/s");
   }
 
   public void testSnapshotScanMapReduce()
@@ -362,14 +362,14 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     System.out.println("total time to scan: " + scanTimer.elapsed(TimeUnit.MILLISECONDS) + " ms");
 
     System.out.println(
-      "total bytes: " + totalBytes + " bytes (" + StringUtils.humanReadableInt(totalBytes) + ")");
-    System.out.println("throughput  : " + StringUtils.humanReadableInt((long) throughput) + "B/s");
+      "total bytes: " + totalBytes + " bytes (" + Strings.humanReadableInt(totalBytes) + ")");
+    System.out.println("throughput  : " + Strings.humanReadableInt((long) throughput) + "B/s");
     System.out.println("total rows  : " + numRows);
     System.out
-      .println("throughput  : " + StringUtils.humanReadableInt((long) throughputRows) + " rows/s");
+      .println("throughput  : " + Strings.humanReadableInt((long) throughputRows) + " rows/s");
     System.out.println("total cells : " + numCells);
-    System.out.println(
-      "throughput  : " + StringUtils.humanReadableInt((long) throughputCells) + " cells/s");
+    System.out
+      .println("throughput  : " + Strings.humanReadableInt((long) throughputCells) + " cells/s");
   }
 
   @Override

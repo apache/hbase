@@ -21,9 +21,9 @@ import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,7 +63,7 @@ public class MetricsWAL implements WALActionsListener {
     if (time > 1000) {
       source.incrementSlowAppendCount();
       LOG.warn(String.format("%s took %d ms appending an edit to wal; len~=%s",
-        Thread.currentThread().getName(), time, StringUtils.humanReadableInt(size)));
+        Thread.currentThread().getName(), time, Strings.humanReadableInt(size)));
     }
   }
 
