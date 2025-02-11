@@ -21,7 +21,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Comparator;
-import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -77,7 +76,8 @@ public class CodecPool {
     decompressorCounts = createCache();
   }
 
-  private static <T> T borrow(Map<Class<T>, NavigableSet<T>> pool, Class<? extends T> codecClass) {
+  private static <T> T borrow(ConcurrentMap<Class<T>, NavigableSet<T>> pool,
+    Class<? extends T> codecClass) {
     if (codecClass == null) {
       return null;
     }
@@ -92,7 +92,7 @@ public class CodecPool {
     }
   }
 
-  private static <T> boolean payback(Map<Class<T>, NavigableSet<T>> pool, T codec) {
+  private static <T> boolean payback(ConcurrentMap<Class<T>, NavigableSet<T>> pool, T codec) {
     if (codec != null) {
       Class<T> codecClass = ReflectionUtils.getClass(codec);
       Set<T> codecSet = pool.computeIfAbsent(codecClass,
@@ -102,12 +102,24 @@ public class CodecPool {
     return false;
   }
 
+  /**
+   * Copied from hadoop-common without significant modification.
+   */
   @SuppressWarnings("unchecked")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
+      justification = "LoadingCache will compute value if absent")
   private static <T> int getLeaseCount(LoadingCache<Class<T>, AtomicInteger> usageCounts,
     Class<? extends T> codecClass) {
     return usageCounts.get((Class<T>) codecClass).get();
   }
 
+  /**
+   * Copied from hadoop-common without significant modification.
+   */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
+      justification = "LoadingCache will compute value if absent")
   private static <T> void updateLeaseCount(LoadingCache<Class<T>, AtomicInteger> usageCounts,
     T codec, int delta) {
     if (codec != null && usageCounts != null) {
@@ -118,7 +130,7 @@ public class CodecPool {
 
   /**
    * Get a {@link Compressor} for the given {@link CompressionCodec} from the pool, or get a new one
-   * if the pool is empty.
+   * if the pool is empty. Copied from hadoop-common without significant modification.
    */
   public static Compressor getCompressor(CompressionCodec codec, Configuration conf) {
     Compressor compressor = borrow(COMPRESSOR_POOL, codec.getCompressorType());
@@ -143,7 +155,7 @@ public class CodecPool {
 
   /**
    * Get a {@link Decompressor} for the given {@link CompressionCodec} from the pool, or get a new
-   * one if the pool is empty.
+   * one if the pool is empty. Copied from hadoop-common without significant modification.
    */
   public static Decompressor getDecompressor(CompressionCodec codec) {
     Decompressor decompressor = borrow(DECOMPRESSOR_POOL, codec.getDecompressorType());
@@ -162,7 +174,8 @@ public class CodecPool {
   }
 
   /**
-   * Return the {@link Compressor} to the pool.
+   * Return the {@link Compressor} to the pool. Copied from hadoop-common without significant
+   * modification.
    */
   public static void returnCompressor(Compressor compressor) {
     if (compressor == null) {
@@ -180,7 +193,8 @@ public class CodecPool {
   }
 
   /**
-   * Return the {@link Decompressor} to the pool.
+   * Return the {@link Decompressor} to the pool. Copied from hadoop-common without significant
+   * modification.
    */
   public static void returnDecompressor(Decompressor decompressor) {
     if (decompressor == null) {
@@ -197,7 +211,10 @@ public class CodecPool {
     }
   }
 
-  /** Returns the number of leased {@link Compressor}s for this {@link CompressionCodec}. */
+  /**
+   * Returns the number of leased {@link Compressor}s for this {@link CompressionCodec}. Copied from
+   * hadoop-common without significant modification.
+   */
   static int getLeasedCompressorsCount(@Nullable CompressionCodec codec) {
     if (compressorCounts == null) {
       throw new IllegalStateException("initLeaseCounting() not called to set up lease counting");
@@ -205,7 +222,10 @@ public class CodecPool {
     return (codec == null) ? 0 : getLeaseCount(compressorCounts, codec.getCompressorType());
   }
 
-  /** Returns the number of leased {@link Decompressor}s for this {@link CompressionCodec}. */
+  /**
+   * Returns the number of leased {@link Decompressor}s for this {@link CompressionCodec}. Copied
+   * from hadoop-common without significant modification.
+   */
   static int getLeasedDecompressorsCount(@Nullable CompressionCodec codec) {
     if (decompressorCounts == null) {
       throw new IllegalStateException("initLeaseCounting() not called to set up lease counting");

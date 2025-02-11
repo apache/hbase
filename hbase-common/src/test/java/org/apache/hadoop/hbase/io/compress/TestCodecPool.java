@@ -44,8 +44,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- * Along with CodecPool, this is copied from the class of the same name in hadoop-common.
- * Modified to accommodate changes to HBase's CodecPool.
+ * Along with CodecPool, this is copied from the class of the same name in hadoop-common. Modified
+ * to accommodate changes to HBase's CodecPool.
  */
 public class TestCodecPool {
   private final String LEASE_COUNT_ERR = "Incorrect number of leased (de)compressors";
