@@ -1423,21 +1423,6 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.apache.kerby</groupId>
-        <artifactId>kerb-core</artifactId>
-        <version>${kerby.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.kerby</groupId>
-        <artifactId>kerb-client</artifactId>
-        <version>${kerby.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.kerby</groupId>
-        <artifactId>kerb-simplekdc</artifactId>
-        <version>${kerby.version}</version>
-      </dependency>
-      <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-crypto</artifactId>
         <version>${commons-crypto.version}</version>
@@ -3929,6 +3914,25 @@
             <artifactId>hadoop-hdfs-client</artifactId>
             <version>${hadoop-two.version}</version>
           </dependency>
+          <!--
+			for hadoop 2.x, we need to manually depend on kerby
+		  -->
+          <dependency>
+            <groupId>org.apache.kerby</groupId>
+            <artifactId>kerb-core</artifactId>
+            <version>${kerby.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.kerby</groupId>
+            <artifactId>kerb-client</artifactId>
+            <version>${kerby.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.kerby</groupId>
+            <artifactId>kerb-simplekdc</artifactId>
+            <version>${kerby.version}</version>
+          </dependency>
+
         </dependencies>
       </dependencyManagement>
     </profile>
@@ -4280,6 +4284,14 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>jline</groupId>
+                <artifactId>jline</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.jline</groupId>
+                <artifactId>jline</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -4539,6 +4551,18 @@
               <exclusion>
                 <groupId>bouncycastle</groupId>
                 <artifactId>bcprov-jdk15</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.apache.directory.api</groupId>
+                <artifactId>api-all</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>jline</groupId>
+                <artifactId>jline</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.jline</groupId>
+                <artifactId>jline</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
