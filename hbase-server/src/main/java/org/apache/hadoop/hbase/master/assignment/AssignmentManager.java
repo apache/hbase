@@ -2087,7 +2087,7 @@ public class AssignmentManager {
     State.OPEN // Retrying
   };
 
-  private static final State[] STATES_EXPECTED_ON_CLOSING = { State.OPEN, // Normal case
+  static final State[] STATES_EXPECTED_ON_CLOSING = { State.OPEN, // Normal case
     State.CLOSING, // Retrying
     State.SPLITTING, // Offline the split parent
     State.MERGING // Offline the merge parents
