@@ -97,7 +97,7 @@ public final class TableName implements Comparable<TableName> {
     }
     TableName META_TABLE =
       valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta_" + suffix_val);
-    
+
     LOG.info("Meta table name: {}", META_TABLE);
     return META_TABLE;
   }
