@@ -26,6 +26,8 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.agrona.collections.Hashing;
 import org.agrona.collections.Int2IntCounterMap;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -38,6 +40,9 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Supplier;
+import org.apache.hbase.thirdparty.com.google.common.base.Suppliers;
 
 /**
  * An efficient array based implementation similar to ClusterState for keeping the status of the
@@ -122,6 +127,14 @@ class BalancerClusterState {
   private int[] regionServerIndexWithBestRegionCachedRatio;
   // Maps regionName -> oldServerName -> cache ratio of the region on the old server
   Map<String, Pair<ServerName, Float>> regionCacheRatioOnOldServerMap;
+
+  private Supplier<List<Integer>> shuffledServerIndicesSupplier =
+    Suppliers.memoizeWithExpiration(() -> {
+      Collection<Integer> serverIndices = serversToIndex.values();
+      List<Integer> shuffledServerIndices = new ArrayList<>(serverIndices);
+      Collections.shuffle(shuffledServerIndices);
+      return shuffledServerIndices;
+    }, 5, TimeUnit.SECONDS);
 
   static class DefaultRackManager extends RackManager {
     @Override
@@ -742,8 +755,25 @@ class BalancerClusterState {
         regionMoved(a.getFromRegion(), a.getFromServer(), a.getToServer());
         regionMoved(a.getToRegion(), a.getToServer(), a.getFromServer());
         break;
+      case MOVE_BATCH:
+        assert action instanceof MoveBatchAction : action.getClass();
+        MoveBatchAction mba = (MoveBatchAction) action;
+        for (int serverIndex : mba.getServerToRegionsToRemove().keySet()) {
+          Set<Integer> regionsToRemove = mba.getServerToRegionsToRemove().get(serverIndex);
+          regionsPerServer[serverIndex] =
+            removeRegions(regionsPerServer[serverIndex], regionsToRemove);
+        }
+        for (int serverIndex : mba.getServerToRegionsToAdd().keySet()) {
+          Set<Integer> regionsToAdd = mba.getServerToRegionsToAdd().get(serverIndex);
+          regionsPerServer[serverIndex] = addRegions(regionsPerServer[serverIndex], regionsToAdd);
+        }
+        for (MoveRegionAction moveRegionAction : mba.getMoveActions()) {
+          regionMoved(moveRegionAction.getRegion(), moveRegionAction.getFromServer(),
+            moveRegionAction.getToServer());
+        }
+        break;
       default:
-        throw new RuntimeException("Uknown action:" + action.getType());
+        throw new RuntimeException("Unknown action:" + action.getType());
     }
   }
 
@@ -905,6 +935,52 @@ class BalancerClusterState {
     return newRegions;
   }
 
+  int[] removeRegions(int[] regions, Set<Integer> regionIndicesToRemove) {
+    // Calculate the size of the new regions array
+    int newSize = regions.length - regionIndicesToRemove.size();
+    if (newSize < 0) {
+      throw new IllegalStateException(
+        "Region indices mismatch: more regions to remove than in the regions array");
+    }
+
+    int[] newRegions = new int[newSize];
+    int newIndex = 0;
+
+    // Copy only the regions not in the removal set
+    for (int region : regions) {
+      if (!regionIndicesToRemove.contains(region)) {
+        newRegions[newIndex++] = region;
+      }
+    }
+
+    // If the newIndex is smaller than newSize, some regions were missing from the input array
+    if (newIndex != newSize) {
+      throw new IllegalStateException("Region indices mismatch: some regions in the removal "
+        + "set were not found in the regions array");
+    }
+
+    return newRegions;
+  }
+
+  int[] addRegions(int[] regions, Set<Integer> regionIndicesToAdd) {
+    int[] newRegions = new int[regions.length + regionIndicesToAdd.size()];
+
+    // Copy the existing regions to the new array
+    System.arraycopy(regions, 0, newRegions, 0, regions.length);
+
+    // Add the new regions at the end of the array
+    int newIndex = regions.length;
+    for (int regionIndex : regionIndicesToAdd) {
+      newRegions[newIndex++] = regionIndex;
+    }
+
+    return newRegions;
+  }
+
+  List<Integer> getShuffledServerIndices() {
+    return shuffledServerIndicesSupplier.get();
+  }
+
   int[] addRegionSorted(int[] regions, int regionIndex) {
     int[] newRegions = new int[regions.length + 1];
     int i = 0;
@@ -1002,6 +1078,10 @@ class BalancerClusterState {
 
   void setNumMovedRegions(int numMovedRegions) {
     this.numMovedRegions = numMovedRegions;
+  }
+
+  public int getMaxReplicas() {
+    return maxReplicas;
   }
 
   @Override
