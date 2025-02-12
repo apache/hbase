@@ -41,8 +41,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ObjectStoreProtobufWalWriter extends ProtobufLogWriter {
-
-  protected FSDataOutputStream output;
   private final AtomicLong syncedLength = new AtomicLong(0);
 
   @Override
