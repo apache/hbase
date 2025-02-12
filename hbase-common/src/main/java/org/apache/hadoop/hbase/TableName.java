@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 /**
  * Immutable POJO class for representing a table name. Which is of the form: &lt;table
@@ -78,6 +79,7 @@ public final class TableName implements Comparable<TableName> {
   static {
     Configuration conf = HBaseConfiguration.create();
     META_TABLE_NAME = initializeHbaseMetaTableName(conf);
+    LOG.info("Meta table name: {}", META_TABLE_NAME);
   }
 
   /* Visible for testing only */
@@ -90,16 +92,11 @@ public final class TableName implements Comparable<TableName> {
   public static TableName initializeHbaseMetaTableName(Configuration conf) {
     String suffix_val = conf.get(HConstants.HBASE_META_TABLE_SUFFIX,
       HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE);
-
-    if (suffix_val == null || suffix_val.isEmpty()) {
-      LOG.info("Meta table name: {}", META_TABLE_NAME);
-      return TableName.META_TABLE_NAME;
+    if (Strings.isNullOrEmpty(suffix_val)) {
+      return valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
+    } else {
+      return valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta_" + suffix_val);
     }
-    TableName META_TABLE =
-      valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta_" + suffix_val);
-
-    LOG.info("Meta table name: {}", META_TABLE);
-    return META_TABLE;
   }
 
   /**
