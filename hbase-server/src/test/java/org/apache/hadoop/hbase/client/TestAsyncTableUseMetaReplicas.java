@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.RegionLocator.LOCATOR_META_REPLICAS_MODE;
 import static org.junit.Assert.assertArrayEquals;
 
 import java.io.IOException;
@@ -24,6 +25,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogReplicaMode;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -66,6 +68,7 @@ public class TestAsyncTableUseMetaReplicas {
   private static byte[] VALUE = Bytes.toBytes("Value");
 
   private static volatile boolean FAIL_PRIMARY_SCAN = false;
+  private static volatile boolean USE_META_REPLICA = false;
 
   public static final class FailPrimaryMetaScanCp implements RegionObserver, RegionCoprocessor {
 
@@ -78,6 +81,10 @@ public class TestAsyncTableUseMetaReplicas {
     public void preScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c, Scan scan)
       throws IOException {
       RegionInfo region = c.getEnvironment().getRegionInfo();
+      if (!USE_META_REPLICA && TableName.isMetaTableName(region.getTable())) {
+        assert region.getReplicaId() == RegionReplicaUtil.DEFAULT_REPLICA_ID
+          : "should read default meta region!";
+      }
       if (
         FAIL_PRIMARY_SCAN && TableName.isMetaTableName(region.getTable())
           && region.getReplicaId() == RegionReplicaUtil.DEFAULT_REPLICA_ID
@@ -118,11 +125,11 @@ public class TestAsyncTableUseMetaReplicas {
     FAIL_PRIMARY_SCAN = false;
   }
 
-  private void testRead(boolean useMetaReplicas)
-    throws IOException, InterruptedException, ExecutionException {
+  private void testRead() throws IOException, InterruptedException, ExecutionException {
     FAIL_PRIMARY_SCAN = true;
     Configuration conf = new Configuration(UTIL.getConfiguration());
-    conf.setBoolean(HConstants.USE_META_REPLICAS, useMetaReplicas);
+    conf.setBoolean(HConstants.USE_META_REPLICAS, USE_META_REPLICA);
+    conf.set(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.LOAD_BALANCE.toString());
     conf.setLong(HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT, TimeUnit.SECONDS.toMicros(1));
     try (AsyncConnection conn = ConnectionFactory.createAsyncConnection(conf).get()) {
       Result result = FutureUtils.get(conn.getTableBuilder(TABLE_NAME)
@@ -134,11 +141,13 @@ public class TestAsyncTableUseMetaReplicas {
   @Test(expected = RetriesExhaustedException.class)
   public void testNotUseMetaReplicas()
     throws IOException, InterruptedException, ExecutionException {
-    testRead(false);
+    USE_META_REPLICA = false;
+    testRead();
   }
 
   @Test
   public void testUseMetaReplicas() throws IOException, InterruptedException, ExecutionException {
-    testRead(true);
+    USE_META_REPLICA = true;
+    testRead();
   }
 }
