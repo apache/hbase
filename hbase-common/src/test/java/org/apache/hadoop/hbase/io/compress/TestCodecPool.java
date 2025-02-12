@@ -32,6 +32,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.compress.AlreadyClosedException;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.Compressor;
@@ -41,13 +44,21 @@ import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Along with CodecPool, this is copied from the class of the same name in hadoop-common. Modified
  * to accommodate changes to HBase's CodecPool.
  */
+@Category({ MiscTests.class, SmallTests.class })
 public class TestCodecPool {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestCodecPool.class);
+
   private final String LEASE_COUNT_ERR = "Incorrect number of leased (de)compressors";
   DefaultCodec codec;
 
