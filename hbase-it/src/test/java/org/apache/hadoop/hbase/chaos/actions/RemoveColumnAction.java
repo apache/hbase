@@ -35,9 +35,9 @@ import org.slf4j.LoggerFactory;
  */
 public class RemoveColumnAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(RemoveColumnAction.class);
-  private final TableName tableName;
-  private final Set<String> protectedColumns;
-  private Admin admin;
+  protected final TableName tableName;
+  protected final Set<String> protectedColumns;
+  protected Admin admin;
 
   public RemoveColumnAction(TableName tableName, Set<String> protectedColumns) {
     this.tableName = tableName;
