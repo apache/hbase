@@ -875,7 +875,7 @@ public class TestStoreScanner {
     scan.readVersions(1);
     ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE,
       HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
-    try (StoreScanner scanner = new StoreScanner(scan, scanInfo, null, scanners)) {
+    try (StoreScanner scanner = new StoreScanner(scan, scanInfo, null, scanners, now)) {
       List<Cell> results = new ArrayList<>();
       assertEquals(true, scanner.next(results));
       assertEquals(2, results.size());
