@@ -101,18 +101,8 @@
     </dependency>
     <!-- Test dependencies -->
     <dependency>
-      <groupId>org.apache.kerby</groupId>
-      <artifactId>kerb-simplekdc</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk18on</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.kerby</groupId>
-      <artifactId>kerb-core</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -425,12 +415,6 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minikdc</artifactId>
           <scope>test</scope>
-          <exclusions>
-            <exclusion>
-              <groupId>org.apache.directory.api</groupId>
-              <artifactId>api-all</artifactId>
-            </exclusion>
-          </exclusions>
         </dependency>
       </dependencies>
       <build>

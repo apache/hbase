@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.BindException;
 import java.net.InetAddress;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.net.BoundSocketMaker;
@@ -85,12 +84,9 @@ public final class SimpleKdcServerUtil {
         if (kdc != null) {
           kdc.stop();
         }
-        if (ke.getCause() != null && ke.getCause() instanceof BindException) {
-          LOG.info("Clashed using port {}; getting a new random port", kdcPort);
-          continue;
-        } else {
-          throw ke;
-        }
+        // new kerby just eats the cause exception so we can not test for BindException any more.
+        // the only way is to always retry...
+        LOG.info("Failed to init/start kdc server, retry = {}", i, ke);
       } finally {
         if (bsm != null) {
           bsm.close();
