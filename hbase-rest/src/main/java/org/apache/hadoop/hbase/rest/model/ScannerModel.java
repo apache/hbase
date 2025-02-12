@@ -146,7 +146,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-      value = { "EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS", "HE_EQUALS_NO_HASHCODE", "HE_EQUALS_USE_HASHCODE" },
+      value = { "EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS", "HE_EQUALS_NO_HASHCODE",
+        "HE_EQUALS_USE_HASHCODE" },
       justification = "1.The supplied value from the JSON Value Filter is of Type Boolean, hence supressing the check, 2.hashCode method will not be invoked, hence supressing the check")
   private static class IncludeStartRowFilter {
     @Override
