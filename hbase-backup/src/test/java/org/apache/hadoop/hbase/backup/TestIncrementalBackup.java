@@ -395,6 +395,11 @@ public class TestIncrementalBackup extends TestBackupBase {
       assertTrue(checkSucceeded(fullBackupId));
 
       insertIntoTable(conn, table1, famName, 4, 100);
+
+      HRegion regionToBulkload = TEST_UTIL.getHBaseCluster().getRegions(table1).get(0);
+      String regionName = regionToBulkload.getRegionInfo().getEncodedName();
+      doBulkload(table1, regionName, famName);
+
       BackupRequest request =
         createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, true);
       String incrementalBackupId = admin.backupTables(request);
