@@ -508,6 +508,47 @@ public class TestImportExport {
   }
 
   /**
+   * Create a simple table, run an Export Job on it, Import with bulk output and enable largeResult
+   */
+  @Test
+  public void testBulkImportAndLargeResult() throws Throwable {
+    // Create simple table to export
+    TableDescriptor desc = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(name.getMethodName()))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA).setMaxVersions(5).build())
+      .build();
+    UTIL.getAdmin().createTable(desc);
+    Table exportTable = UTIL.getConnection().getTable(desc.getTableName());
+
+    Put p1 = new Put(ROW1);
+    p1.addColumn(FAMILYA, QUAL, now, QUAL);
+
+    // Having another row would actually test the filter.
+    Put p2 = new Put(ROW2);
+    p2.addColumn(FAMILYA, QUAL, now, QUAL);
+
+    exportTable.put(Arrays.asList(p1, p2));
+
+    // Export the simple table
+    String[] args = new String[] { name.getMethodName(), FQ_OUTPUT_DIR, "1000" };
+    assertTrue(runExport(args));
+
+    // Import to a new table
+    final String IMPORT_TABLE = name.getMethodName() + "import";
+    desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(IMPORT_TABLE))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA).setMaxVersions(5).build())
+      .build();
+    UTIL.getAdmin().createTable(desc);
+
+    String O_OUTPUT_DIR =
+      new Path(OUTPUT_DIR + 1).makeQualified(FileSystem.get(UTIL.getConfiguration())).toString();
+
+    args = new String[] { "-D" + Import.BULK_OUTPUT_CONF_KEY + "=" + O_OUTPUT_DIR,
+      "-D" + Import.HAS_LARGE_RESULT + "=" + true, IMPORT_TABLE, FQ_OUTPUT_DIR, "1000" };
+    assertTrue(runImport(args));
+  }
+
+  /**
    * Count the number of keyvalues in the specified table with the given filter
    * @param table the table to scan
    * @return the number of keyvalues found
