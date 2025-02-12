@@ -17,14 +17,18 @@
  */
 package org.apache.hadoop.hbase;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
@@ -44,6 +48,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Public
 public final class TableName implements Comparable<TableName> {
+  private static final Logger LOG = LoggerFactory.getLogger(TableName.class);
 
   /** See {@link #createTableNameIfNecessary(ByteBuffer, ByteBuffer)} */
   private static final Set<TableName> tableCache = new CopyOnWriteArraySet<>();
@@ -65,9 +70,37 @@ public final class TableName implements Comparable<TableName> {
   public static final String VALID_USER_TABLE_REGEX = "(?:(?:(?:" + VALID_NAMESPACE_REGEX + "\\"
     + NAMESPACE_DELIM + ")?)" + "(?:" + VALID_TABLE_QUALIFIER_REGEX + "))";
 
-  /** The hbase:meta table's name. */
-  public static final TableName META_TABLE_NAME =
-    valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
+  /**
+   * The name of hbase meta table could either be hbase:meta_xxx or 'hbase:meta' otherwise. Config
+   * hbase.meta.table.suffix will govern the decision of adding suffix to the habase:meta
+   */
+  public static final TableName META_TABLE_NAME;
+  static {
+    Configuration conf = HBaseConfiguration.create();
+    META_TABLE_NAME = initializeHbaseMetaTableName(conf);
+  }
+
+  /* Visible for testing only */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public static TableName getDefaultNameOfMetaForReplica() {
+    return valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
+  }
+
+  public static TableName initializeHbaseMetaTableName(Configuration conf) {
+    String suffix_val = conf.get(HConstants.HBASE_META_TABLE_SUFFIX,
+      HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE);
+
+    if (suffix_val == null || suffix_val.isEmpty()) {
+      LOG.info("Meta table name: {}", META_TABLE_NAME);
+      return TableName.META_TABLE_NAME;
+    }
+    TableName META_TABLE =
+      valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta_" + suffix_val);
+
+    LOG.info("Meta table name: {}", META_TABLE);
+    return META_TABLE;
+  }
 
   /**
    * The Namespace table's name.
