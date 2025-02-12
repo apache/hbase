@@ -1059,6 +1059,12 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void moveAllServersFromOneRSGroupToOther(String sourceGroup, String targetGroup)
+    throws IOException {
+    get(admin.moveAllServersFromOneRSGroupToOther(sourceGroup, targetGroup));
+  }
+
+  @Override
   public void addRSGroup(String groupName) throws IOException {
     get(admin.addRSGroup(groupName));
   }
