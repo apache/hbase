@@ -655,12 +655,16 @@ function hadoopcheck_rebuild
   fi
   for hadoopver in ${hbase_hadoop3_versions}; do
     logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
+    if [[${hadoopver} == 3.2.* ]] || [[${hadoopver} == 3.3.* ]]; then
+      extra_opts = "-Dkerby.version=1.0.1"
+    fi
     # disabled because "maven_executor" needs to return both command and args
     # shellcheck disable=2046
     echo_and_redirect "${logfile}" \
       $(maven_executor) clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-three.version="${hadoopver}" \
+        ${extra_opts} \
         ${hadoop_profile}
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
