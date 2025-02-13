@@ -3915,8 +3915,8 @@
             <version>${hadoop-two.version}</version>
           </dependency>
           <!--
-			for hadoop 2.x, we need to manually depend on kerby
-		  -->
+            for hadoop 2.x, we need to manually depend on kerby
+          -->
           <dependency>
             <groupId>org.apache.kerby</groupId>
             <artifactId>kerb-core</artifactId>
