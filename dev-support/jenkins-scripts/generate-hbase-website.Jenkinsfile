@@ -43,7 +43,22 @@ pipeline {
       }
       steps {
         dir('hbase') {
-          checkout scm
+          script {
+            checkout([
+              $class: 'GitSCM',
+              branches: [[name: '*/master']], // 指定分支
+              doGenerateSubmoduleConfigurations: false,
+              extensions: [
+                [$class: 'CloneOption', 
+                  noTags: true,
+                  shallow: true,
+                  depth: 1
+                ],
+                [$class: 'CheckoutOption', timeout: 20]
+              ],
+              userRemoteConfigs: [[url: 'https://github.com/apache/hbase']]
+            ])
+          }
         }
         sh '''#!/usr/bin/env bash
           set -e
