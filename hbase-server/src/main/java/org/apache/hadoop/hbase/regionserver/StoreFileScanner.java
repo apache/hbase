@@ -564,7 +564,7 @@ public class StoreFileScanner implements KeyValueScanner {
    * calls by using the {@link StoreFileScanner#seekToPreviousRowWithHint} which this method seeds
    * the state for by setting {@link StoreFileScanner#previousRow}
    */
-  private boolean seekToPreviousRowWithoutHint(Cell originalKey) throws IOException {
+  private boolean seekToPreviousRowWithoutHint(ExtendedCell originalKey) throws IOException {
     // Rewind to the cell before the beginning of this row
     ExtendedCell keyAtBeginningOfRow = PrivateCellUtil.createFirstOnRow(originalKey);
     if (!seekBefore(keyAtBeginningOfRow)) {
