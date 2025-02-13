@@ -46,7 +46,7 @@ pipeline {
           script {
             checkout([
               $class: 'GitSCM',
-              branches: [[name: '*/master']], // 指定分支
+              branches: [[name: '*/HBASE-29078']], // 指定分支
               doGenerateSubmoduleConfigurations: false,
               extensions: [
                 [$class: 'CloneOption', 
