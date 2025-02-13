@@ -421,9 +421,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
 
   private void incrementalCopyBulkloadHFiles(FileSystem tgtFs, TableName tn) throws IOException {
     Path bulkOutDir = getBulkOutputDirForTable(tn);
-    FileSystem fs = FileSystem.get(conf);
 
-    if (fs.exists(bulkOutDir)) {
+    if (tgtFs.exists(bulkOutDir)) {
       conf.setInt(MapReduceBackupCopyJob.NUMBER_OF_LEVELS_TO_PRESERVE_KEY, 2);
       Path tgtPath = getTargetDirForTable(tn);
       try {
