@@ -22,6 +22,7 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashSet;
 import java.util.Random;
@@ -35,7 +36,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.io.compress.AlreadyClosedException;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
@@ -238,7 +238,10 @@ public class TestCodecPool {
     boolean passed = false;
     try {
       inputStream.read();
-    } catch (AlreadyClosedException e) {
+    } catch (IOException e) {
+      // adjustment to support both Hadoop3 and Hadoop2. HADOOP-18383 introduced
+      // AlreadyClosedException on Hadoop3.
+      // Maintain backward compatibility by catching its parent IOException instead.
       if (e.getMessage().contains("decompress called on closed decompressor")) {
         passed = true;
       }
