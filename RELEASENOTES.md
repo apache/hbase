@@ -112,6 +112,15 @@ Skips unnecessary BlockCacheKey.toString() calls when tracing is disabled
 Fixes a bug which caused the balancer to always run on HMaster startup.
 
 
+---
+
+* [HBASE-29117](https://issues.apache.org/jira/browse/HBASE-29117) | *Major* | **Kerby version conflict with Hadoop 3.4**
+
+HBase now uses Kerby 1.0.1when built with Hadoop 2.x and Kerby 2.3.0 when built with Hadoop 3.x.
+This works for the default Hadoop 3.4.x. However, when building HBase with Hadoop 3.2.x or 3.3.x , the kerby.version property must be manually overriden, i.e.
+"mvn clean install -Dhadoop-three.version=3.3.6 -Dkerby.version=1.0.1"
+
+
 
 # HBASE  2.6.1 Release Notes
 

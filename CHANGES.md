@@ -18,7 +18,7 @@
 -->
 # HBASE Changelog
 
-## Release 2.6.2 - Unreleased (as of 2025-02-05)
+## Release 2.6.2 - Unreleased (as of 2025-02-14)
 
 
 
@@ -52,6 +52,7 @@
 | [HBASE-29071](https://issues.apache.org/jira/browse/HBASE-29071) | StochasticLoadBalancer candidate generators should use a Map, rather than ordinal based indexing |  Major | . |
 | [HBASE-29099](https://issues.apache.org/jira/browse/HBASE-29099) | Avoid expensive BlockCacheKey.toString() calls when tracing is disabled |  Major | Performance |
 | [HBASE-29047](https://issues.apache.org/jira/browse/HBASE-29047) | Remove redundant methods in TestMasterObserver |  Minor | . |
+| [HBASE-29045](https://issues.apache.org/jira/browse/HBASE-29045) | Support new async-profiler \> 2.9 version |  Major | profiler |
 
 
 ### BUG FIXES:
@@ -86,6 +87,10 @@
 | [HBASE-29089](https://issues.apache.org/jira/browse/HBASE-29089) | Remove optional flag from spymemcached dependency |  Minor | BlockCache |
 | [HBASE-29041](https://issues.apache.org/jira/browse/HBASE-29041) | Set UncaughtException Handler for RegionServer ExecutorService |  Minor | regionserver |
 | [HBASE-29111](https://issues.apache.org/jira/browse/HBASE-29111) | Data loss in table cloned from a snapshot |  Major | dataloss, snapshots |
+| [HBASE-29122](https://issues.apache.org/jira/browse/HBASE-29122) | Some modules are built with Hadoop 3.0-SNAPSHOT on branch-2.x |  Critical | . |
+| [HBASE-29114](https://issues.apache.org/jira/browse/HBASE-29114) | Restoring to original splits fails if backups are on separate FileSystem |  Major | backup&restore |
+| [HBASE-29124](https://issues.apache.org/jira/browse/HBASE-29124) | Restoring to original splits fails if bulkloads are on separate FileSystem |  Major | backup&restore |
+| [HBASE-29117](https://issues.apache.org/jira/browse/HBASE-29117) | Kerby version conflict with Hadoop 3.4 |  Major | dependencies |
 
 
 ### SUB-TASKS:
