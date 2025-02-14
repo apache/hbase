@@ -4159,13 +4159,13 @@
             </exclusions>
           </dependency>
           <!--
-			We use hadoop-minikdc everywhere instead of depending on kerby is
-			because hadoop upgrade kerby version in hadoop 3.4.x and kerby 1.x
-			and 2.x are not compatible, so if we specify the version of kerby
-			in our pom will cause compile/runtime error while compiling against
-			different hadoop versions, and also cause problem for downstream
-			projects. See HBASE-29117 for more details.
-		  -->
+            We use hadoop-minikdc everywhere instead of depending on kerby is
+            because hadoop upgrade kerby version in hadoop 3.4.x and kerby 1.x
+            and 2.x are not compatible, so if we specify the version of kerby
+            in our pom will cause compile/runtime error while compiling against
+            different hadoop versions, and also cause problem for downstream
+            projects. See HBASE-29117 for more details.
+          -->
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-minikdc</artifactId>
