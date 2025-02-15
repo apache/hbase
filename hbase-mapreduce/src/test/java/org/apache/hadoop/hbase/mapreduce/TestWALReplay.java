@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.apache.hadoop.hbase.mapreduce.WALReplay.BULKLOAD_BACKUP_LOCATION;
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_BULKLOAD_ENABLE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -25,12 +25,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -47,6 +49,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Basic test for the WALReplay M/R tool to test restore of bulkload operation
@@ -56,6 +60,7 @@ public class TestWALReplay {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestWALReplay.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWALReplay.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static SingleProcessHBaseCluster cluster;
   private static Path rootDir;
@@ -99,7 +104,6 @@ public class TestWALReplay {
     Put p = new Put(ROW);
     p.addColumn(FAMILY, COLUMN1, COLUMN1);
     t1.put(p);
-    Get gg = new Get(ROW);
 
     WAL log = cluster.getRegionServer(0).getWAL(null);
     log.rollWriter();
@@ -109,46 +113,73 @@ public class TestWALReplay {
 
     // Create hfile to outPath needed for bulkload operation later
     Configuration configuration = new Configuration(TEST_UTIL.getConfiguration());
-    String outPath = "/tmp/" + name.getMethodName();
-    configuration.set(WALPlayer.BULK_OUTPUT_CONF_KEY, outPath);
+    String backupDir = "/" + name.getMethodName() + "/backup/";
+    String bulkloadDir = backupDir + "/bulk-load-files/";
+    Path bulkloadPath = new Path(bulkloadDir);
+    configuration.set(WALPlayer.BULK_OUTPUT_CONF_KEY, bulkloadDir);
     configuration.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
     WALPlayer player = new WALPlayer(configuration);
     assertEquals(0, ToolRunner.run(configuration, player,
       new String[] { walInputDir, tableName.getNameAsString() }));
 
+    LOG.info("ANKIT Hfile created");
     // Recreate walDir to get rid of Put WALEntry from WAL
-    fs.delete(walRootDir, true);
-    fs.mkdirs(walRootDir);
+    //fs.delete(walRootDir, true);
+    //fs.mkdirs(walRootDir);
+
+    // Delete table, later bulkload it
+    TEST_UTIL.deleteTable(t1.getName());
+    LOG.info("ANKIT deleted table first time");
+
+    //configuration.setBoolean(BulkLoadHFiles.ALWAYS_COPY_FILES, true);
+    configuration.setBoolean(REPLICATION_BULKLOAD_ENABLE_KEY, true);
 
     // Do bulkload operation, this will create a bulkload WAL entry
     BulkLoadHFiles.create(configuration).bulkLoad(tableName,
-      new Path(outPath, tableName.getNamespaceAsString() + "/" + tableName.getNameAsString()));
+      new Path(bulkloadDir, tableName.getNamespaceAsString() + "/" + tableName.getNameAsString()));
 
-    // Roll log and copy WAL to the backup directory (/tmp/)
+    LOG.info("ANKIT Bulkload done");
+
+    // Verify table
+    Get g = new Get(ROW);
+    Result r = t1.get(g);
+    assertEquals(1, r.size());
+    assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
+
+
+    // Roll log and copy WAL to the backup directory
     log = cluster.getRegionServer(0).getWAL(null);
     log.rollWriter();
-    Path outP = new Path(outPath);
+    String backupWalsDir = backupDir + "/WALs/";
+    Path backupWalsPath = new Path(backupWalsDir);
     assertTrue(FileUtil.copy(walInputPath.getFileSystem(conf), walInputPath,
-      outP.getFileSystem(conf), outP, true, true, conf));
+      backupWalsPath.getFileSystem(conf), backupWalsPath, false, false, conf));
+
+    //FileUtil.copy(bulkloadPath.getFileSystem(conf), bulkloadPath,
+    //  backupWalsPath.getFileSystem(conf), backupWalsPath, false, false, conf);
 
     // Delete table
     TEST_UTIL.deleteTable(t1.getName());
 
+    LOG.info("ANKIT deleted table second time");
+
     // Use WALReplay to restore hfile
     configuration = new Configuration(TEST_UTIL.getConfiguration());
-    configuration.set(BULKLOAD_BACKUP_LOCATION, outPath);
     WALReplay walReplay = new WALReplay(configuration);
     String optionName = "_test_.name";
     configuration.set(optionName, "1000");
     player.setupTime(configuration, optionName);
     assertEquals(1000, configuration.getLong(optionName, 0));
     assertEquals(0, ToolRunner.run(configuration, walReplay,
-      new String[] { outPath, tableName.getNameAsString() }));
+      new String[] { backupDir, tableName.getNameAsString() }));
 
-    /*
-     * TODO fix it // Verify restored table Get g = new Get(ROW); Result r = t1.get(g);
-     * assertEquals(1, r.size()); assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
-     */
+    // Verify restored table
+    g = new Get(ROW);
+    r = t1.get(g);
+    //assertEquals(1, r.size());
+    //assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
+
+
   }
 
 }

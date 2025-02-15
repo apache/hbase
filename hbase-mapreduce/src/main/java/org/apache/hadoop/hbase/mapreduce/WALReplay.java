@@ -66,6 +66,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 public class WALReplay extends Configured implements Tool {
   private static final Logger LOG = LoggerFactory.getLogger(WALReplay.class);
   final static String NAME = "WALReplay";
+  final static String WALs = "WALs";
+  final static String BulkloadFiles = "bulk-load-files";
   public final static String TABLES_KEY = "wal.input.tables";
   public final static String TABLE_MAP_KEY = "wal.input.tablesmap";
   public final static String BULKLOAD_BACKUP_LOCATION = "wal.bulk.backup.location";
@@ -115,11 +117,6 @@ public class WALReplay extends Configured implements Tool {
           for (ExtendedCell cell : WALEditInternalHelper.getExtendedCells(value)) {
             context.getCounter(Counter.CELLS_READ).increment(1);
 
-            // Filtering WAL meta marker entries.
-            if (WALEdit.isMetaEditFamily(cell)) {
-              continue;
-            }
-
             // Handle BulkLoad WAL entries
             if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
               String namespace = key.getTableName().getNamespaceAsString();
@@ -165,6 +162,11 @@ public class WALReplay extends Configured implements Tool {
                 throw new IOException("Failed to copy files for bulk load.", e);
               }
               context.write(tableOut, MutationOrBulkLoad.fromBulkLoadFiles(stagingPaths));
+            }
+
+            // Filtering WAL meta marker entries.
+            if (WALEdit.isMetaEditFamily(cell)) {
+              continue;
             }
 
             // Allow a subclass filter out this cell.
@@ -328,8 +330,8 @@ public class WALReplay extends Configured implements Tool {
     setupTime(conf, WALInputFormat.START_TIME_KEY);
     setupTime(conf, WALInputFormat.END_TIME_KEY);
     String inputDirs = args[0];
-    String walDir = new Path(inputDirs, "WALs").toString();
-    String bulkLoadFilesDir = new Path(inputDirs, "bulk-load-files").toString();
+    String walDir = new Path(inputDirs, WALs).toString();
+    String bulkLoadFilesDir = new Path(inputDirs, BulkloadFiles).toString();
     String[] tables = args.length == 1 ? new String[] {} : args[1].split(",");
     String[] tableMap;
     if (args.length > 2) {
