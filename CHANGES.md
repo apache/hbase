@@ -33,6 +33,8 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-29097](https://issues.apache.org/jira/browse/HBASE-29097) | Add error logging when put creation fails |  Major | . |
+| [HBASE-29045](https://issues.apache.org/jira/browse/HBASE-29045) | Support new async-profiler \> 2.9 version |  Major | profiler |
 | [HBASE-29004](https://issues.apache.org/jira/browse/HBASE-29004) | Optimize unnecessary type castings in Scan and Get setter methods |  Major | Performance |
 | [HBASE-28600](https://issues.apache.org/jira/browse/HBASE-28600) | Enable setting blockcache on-heap sizes in bytes |  Major | regionserver |
 | [HBASE-29040](https://issues.apache.org/jira/browse/HBASE-29040) | Fix incorrect description of "sampleRate" option of PerformanceEvaluation |  Trivial | . |
@@ -64,6 +66,13 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-29038](https://issues.apache.org/jira/browse/HBASE-29038) | NPE in processRS.jsp due to failure to get value from MBean |  Minor | regionserver |
+| [HBASE-29117](https://issues.apache.org/jira/browse/HBASE-29117) | Kerby version conflict with Hadoop 3.4 |  Major | dependencies |
+| [HBASE-29122](https://issues.apache.org/jira/browse/HBASE-29122) | Some modules are built with Hadoop 3.0-SNAPSHOT on branch-2.x |  Critical | . |
+| [HBASE-29111](https://issues.apache.org/jira/browse/HBASE-29111) | Data loss in table cloned from a snapshot |  Major | dataloss, snapshots |
+| [HBASE-29041](https://issues.apache.org/jira/browse/HBASE-29041) | Set UncaughtException Handler for RegionServer ExecutorService |  Minor | regionserver |
+| [HBASE-29089](https://issues.apache.org/jira/browse/HBASE-29089) | Remove optional flag from spymemcached dependency |  Minor | BlockCache |
+| [HBASE-29088](https://issues.apache.org/jira/browse/HBASE-29088) | The denominator cannot be 0 when calculating percentages in SnapshotStats |  Major | . |
 | [HBASE-29070](https://issues.apache.org/jira/browse/HBASE-29070) | Balancer cost function epsilon is imprecise |  Major | . |
 | [HBASE-28023](https://issues.apache.org/jira/browse/HBASE-28023) | ITBLL's RollingBatchSuspendResumeRsAction runs the "suspendRs" method to perform the action, but it inadvertently uses the "waitForRegionServerToStop" method to check if it was executed successfully. |  Major | . |
 | [HBASE-29046](https://issues.apache.org/jira/browse/HBASE-29046) | Log message is not correct when the Master bind address configured wrongly |  Major | . |
