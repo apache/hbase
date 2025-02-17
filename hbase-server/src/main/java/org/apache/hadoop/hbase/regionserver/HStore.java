@@ -835,7 +835,7 @@ public class HStore
         try {
           for (Path pathName : pathNames) {
             lastPathName = pathName;
-            storeEngine.validateStoreFile(pathName);
+            storeEngine.validateStoreFile(pathName, false);
           }
           return pathNames;
         } catch (Exception e) {
@@ -1121,7 +1121,7 @@ public class HStore
    * block for long periods.
    * <p>
    * During this time, the Store can work as usual, getting values from StoreFiles and writing new
-   * StoreFiles from the memstore. Existing StoreFiles are not destroyed until the new compacted
+   * StoreFiles from the MemStore. Existing StoreFiles are not destroyed until the new compacted
    * StoreFile is completely written-out to disk.
    * <p>
    * The compactLock prevents multiple simultaneous compactions. The structureLock prevents us from
@@ -1132,21 +1132,29 @@ public class HStore
    * <p>
    * Compaction event should be idempotent, since there is no IO Fencing for the region directory in
    * hdfs. A region server might still try to complete the compaction after it lost the region. That
-   * is why the following events are carefully ordered for a compaction: 1. Compaction writes new
-   * files under region/.tmp directory (compaction output) 2. Compaction atomically moves the
-   * temporary file under region directory 3. Compaction appends a WAL edit containing the
-   * compaction input and output files. Forces sync on WAL. 4. Compaction deletes the input files
-   * from the region directory. Failure conditions are handled like this: - If RS fails before 2,
-   * compaction wont complete. Even if RS lives on and finishes the compaction later, it will only
-   * write the new data file to the region directory. Since we already have this data, this will be
-   * idempotent but we will have a redundant copy of the data. - If RS fails between 2 and 3, the
-   * region will have a redundant copy of the data. The RS that failed won't be able to finish
-   * sync() for WAL because of lease recovery in WAL. - If RS fails after 3, the region region
-   * server who opens the region will pick up the the compaction marker from the WAL and replay it
-   * by removing the compaction input files. Failed RS can also attempt to delete those files, but
-   * the operation will be idempotent See HBASE-2231 for details.
+   * is why the following events are carefully ordered for a compaction:
+   * <ol>
+   * <li>Compaction writes new files under region/.tmp directory (compaction output)</li>
+   * <li>Compaction atomically moves the temporary file under region directory</li>
+   * <li>Compaction appends a WAL edit containing the compaction input and output files. Forces sync
+   * on WAL.</li>
+   * <li>Compaction deletes the input files from the region directory.</li>
+   * </ol>
+   * Failure conditions are handled like this:
+   * <ul>
+   * <li>If RS fails before 2, compaction won't complete. Even if RS lives on and finishes the
+   * compaction later, it will only write the new data file to the region directory. Since we
+   * already have this data, this will be idempotent, but we will have a redundant copy of the
+   * data.</li>
+   * <li>If RS fails between 2 and 3, the region will have a redundant copy of the data. The RS that
+   * failed won't be able to finish sync() for WAL because of lease recovery in WAL.</li>
+   * <li>If RS fails after 3, the region server who opens the region will pick up the compaction
+   * marker from the WAL and replay it by removing the compaction input files. Failed RS can also
+   * attempt to delete those files, but the operation will be idempotent</li>
+   * </ul>
+   * See HBASE-2231 for details.
    * @param compaction compaction details obtained from requestCompaction()
-   * @return Storefile we compacted into or null if we failed or opted out early.
+   * @return The storefiles that we compacted into or null if we failed or opted out early.
    */
   public List<HStoreFile> compact(CompactionContext compaction,
     ThroughputController throughputController, User user) throws IOException {
@@ -1189,7 +1197,7 @@ public class HStore
     throws IOException {
     // Do the steps necessary to complete the compaction.
     setStoragePolicyFromFileName(newFiles);
-    List<HStoreFile> sfs = storeEngine.commitStoreFiles(newFiles, true);
+    List<HStoreFile> sfs = storeEngine.commitStoreFiles(newFiles, true, true);
     if (this.getCoprocessorHost() != null) {
       for (HStoreFile sf : sfs) {
         getCoprocessorHost().postCompact(this, sf, cr.getTracker(), cr, user);
@@ -1982,7 +1990,7 @@ public class HStore
           return false;
         }
         status.setStatus("Flushing " + this + ": reopening flushed file");
-        List<HStoreFile> storeFiles = storeEngine.commitStoreFiles(tempFiles, false);
+        List<HStoreFile> storeFiles = storeEngine.commitStoreFiles(tempFiles, false, false);
         for (HStoreFile sf : storeFiles) {
           StoreFileReader r = sf.getReader();
           if (LOG.isInfoEnabled()) {
