@@ -37,6 +37,8 @@ import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
@@ -94,6 +96,9 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   C extends Compactor<?>, SFM extends StoreFileManager> {
 
   private static final Logger LOG = LoggerFactory.getLogger(StoreEngine.class);
+
+  private static final String READ_FULLY_ON_VALIDATE_KEY = "hbase.hstore.validate.read_fully";
+  private static final boolean DEFAULT_READ_FULLY_ON_VALIDATE = false;
 
   protected SF storeFlusher;
   protected CP compactionPolicy;
@@ -162,7 +167,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   }
 
   /** Returns Store flusher to use. */
-  public StoreFlusher getStoreFlusher() {
+  StoreFlusher getStoreFlusher() {
     return this.storeFlusher;
   }
 
@@ -201,7 +206,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     this.openStoreFileThreadPoolCreator = store.getHRegion()::getStoreFileOpenAndCloseThreadPool;
     this.storeFileTracker = createStoreFileTracker(conf, store);
     assert compactor != null && compactionPolicy != null && storeFileManager != null
-      && storeFlusher != null && storeFileTracker != null;
+      && storeFlusher != null;
   }
 
   /**
@@ -228,12 +233,34 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   /**
    * Validates a store file by opening and closing it. In HFileV2 this should not be an expensive
    * operation.
-   * @param path the path to the store file
+   * @param path         the path to the store file
+   * @param isCompaction whether this is called from the context of a compaction
    */
-  public void validateStoreFile(Path path) throws IOException {
+  public void validateStoreFile(Path path, boolean isCompaction) throws IOException {
     HStoreFile storeFile = null;
     try {
       storeFile = createStoreFileAndReader(path);
+      if (conf.getBoolean(READ_FULLY_ON_VALIDATE_KEY, DEFAULT_READ_FULLY_ON_VALIDATE)) {
+        if (!storeFile.getFirstKey().isPresent()) {
+          LOG.debug("'{}=true' but storefile does not contain any data. skipping validation.",
+            READ_FULLY_ON_VALIDATE_KEY);
+          return;
+        }
+        LOG.debug("Validating the store file by reading the first cell from each block : {}", path);
+        StoreFileReader reader = storeFile.getReader();
+        try (StoreFileScanner scanner =
+          reader.getStoreFileScanner(false, false, isCompaction, Long.MAX_VALUE, 0, false)) {
+          boolean hasNext = scanner.seek(KeyValue.LOWESTKEY);
+          assert hasNext : "StoreFile contains no data";
+          for (ExtendedCell cell = scanner.next(); cell != null; cell = scanner.next()) {
+            ExtendedCell nextIndexedKey = scanner.getNextIndexedKey();
+            if (nextIndexedKey == null) {
+              break;
+            }
+            scanner.seek(nextIndexedKey);
+          }
+        }
+      }
     } catch (IOException e) {
       LOG.error("Failed to open store file : {}, keeping it in tmp location", path, e);
       throw e;
@@ -293,8 +320,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     }
     if (ioe != null) {
       // close StoreFile readers
-      boolean evictOnClose =
-        ctx.getCacheConf() != null ? ctx.getCacheConf().shouldEvictOnClose() : true;
+      boolean evictOnClose = ctx.getCacheConf() == null || ctx.getCacheConf().shouldEvictOnClose();
       for (HStoreFile file : results) {
         try {
           if (file != null) {
@@ -314,10 +340,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
       for (HStoreFile storeFile : results) {
         if (compactedStoreFiles.contains(storeFile.getPath().getName())) {
           LOG.warn("Clearing the compacted storefile {} from {}", storeFile, this);
-          storeFile.getReader()
-            .close(storeFile.getCacheConf() != null
-              ? storeFile.getCacheConf().shouldEvictOnClose()
-              : true);
+          storeFile.getReader().close(
+            storeFile.getCacheConf() == null || storeFile.getCacheConf().shouldEvictOnClose());
           filesToRemove.add(storeFile);
         }
       }
@@ -379,7 +403,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
       compactedFilesSet.put(sf.getFileInfo(), sf);
     }
 
-    Set<StoreFileInfo> newFilesSet = new HashSet<StoreFileInfo>(newFiles);
+    Set<StoreFileInfo> newFilesSet = new HashSet<>(newFiles);
     // Exclude the files that have already been compacted
     newFilesSet = Sets.difference(newFilesSet, compactedFilesSet.keySet());
     Set<StoreFileInfo> toBeAddedFiles = Sets.difference(newFilesSet, currentFilesSet.keySet());
@@ -389,8 +413,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
       return;
     }
 
-    LOG.info("Refreshing store files for " + this + " files to add: " + toBeAddedFiles
-      + " files to remove: " + toBeRemovedFiles);
+    LOG.info("Refreshing store files for {} files to add: {} files to remove: {}", this,
+      toBeAddedFiles, toBeRemovedFiles);
 
     Set<HStoreFile> toBeRemovedStoreFiles = new HashSet<>(toBeRemovedFiles.size());
     for (StoreFileInfo sfi : toBeRemovedFiles) {
@@ -400,7 +424,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     // try to open the files
     List<HStoreFile> openedFiles = openStoreFiles(toBeAddedFiles, false);
 
-    // propogate the file changes to the underlying store file manager
+    // propagate the file changes to the underlying store file manager
     replaceStoreFiles(toBeRemovedStoreFiles, openedFiles, () -> {
     }, () -> {
     }); // won't throw an exception
@@ -410,11 +434,13 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
    * Commit the given {@code files}.
    * <p/>
    * We will move the file into data directory, and open it.
-   * @param files    the files want to commit
-   * @param validate whether to validate the store files
+   * @param files        the files want to commit
+   * @param isCompaction whether this is called from the context of a compaction
+   * @param validate     whether to validate the store files
    * @return the committed store files
    */
-  public List<HStoreFile> commitStoreFiles(List<Path> files, boolean validate) throws IOException {
+  public List<HStoreFile> commitStoreFiles(List<Path> files, boolean isCompaction, boolean validate)
+    throws IOException {
     List<HStoreFile> committedFiles = new ArrayList<>(files.size());
     HRegionFileSystem hfs = ctx.getRegionFileSystem();
     String familyName = ctx.getFamily().getNameAsString();
@@ -422,13 +448,13 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     for (Path file : files) {
       try {
         if (validate) {
-          validateStoreFile(file);
+          validateStoreFile(file, isCompaction);
         }
         Path committedPath;
         // As we want to support writing to data directory directly, here we need to check whether
         // the store file is already in the right place
         if (file.getParent() != null && file.getParent().equals(storeDir)) {
-          // already in the right place, skip renmaing
+          // already in the right place, skip renaming
           committedPath = file;
         } else {
           // Write-out finished successfully, move into the right spot
