@@ -118,7 +118,6 @@ public class CacheStats {
    * Keep running age at eviction time
    */
   private FastLongHistogram ageAtEviction;
-  private long startTime = System.nanoTime();
 
   public CacheStats(final String name) {
     this(name, DEFAULT_WINDOW_PERIODS);
@@ -241,9 +240,7 @@ public class CacheStats {
   }
 
   public void evicted(final long t, boolean primary) {
-    if (t > this.startTime) {
-      this.ageAtEviction.add((t - this.startTime) / BlockCacheUtil.NANOS_PER_SECOND, 1);
-    }
+    this.ageAtEviction.add((System.nanoTime() - t) / BlockCacheUtil.NANOS_PER_SECOND, 1);
     this.evictedBlockCount.increment();
     if (primary) {
       primaryEvictedBlockCount.increment();
