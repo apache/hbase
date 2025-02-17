@@ -52,12 +52,13 @@ public class HFilePerformanceEvaluation {
   private static final int RFILE_BLOCKSIZE = 8 * 1024;
   private static StringBuilder testSummary = new StringBuilder();
 
-  // Disable verbose INFO logging from org.apache.hadoop.io.compress.CodecPool
+  // Disable verbose INFO logging from org.apache.hadoop.hbase.io.compress.CodecPool
   static {
     System.setProperty("org.apache.commons.logging.Log",
       "org.apache.commons.logging.impl.SimpleLog");
     System.setProperty(
-      "org.apache.commons.logging.simplelog.log.org.apache.hadoop.io.compress.CodecPool", "WARN");
+      "org.apache.commons.logging.simplelog.log.org.apache.hadoop.hbase.io.compress.CodecPool",
+      "WARN");
   }
 
   private static final Logger LOG =
