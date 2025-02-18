@@ -628,7 +628,7 @@
     <skyscreamer.version>1.5.1</skyscreamer.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
-    <curator.version>4.2.0</curator.version>
+    <curator.version>5.7.1</curator.version>
     <!-- Plugin Dependencies -->
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
