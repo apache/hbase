@@ -37,9 +37,10 @@ final class SlopFixingCandidateGenerator extends RegionPlanConditionalCandidateG
 
   private final float slop;
 
-  SlopFixingCandidateGenerator(BalancerConditionals balancerConditionals, float slop) {
+  SlopFixingCandidateGenerator(BalancerConditionals balancerConditionals) {
     super(balancerConditionals);
-    this.slop = slop;
+    this.slop = balancerConditionals.getConf().getFloat(BaseLoadBalancer.REGIONS_SLOP_KEY,
+      BaseLoadBalancer.REGIONS_SLOP_DEFAULT);
   }
 
   @Override

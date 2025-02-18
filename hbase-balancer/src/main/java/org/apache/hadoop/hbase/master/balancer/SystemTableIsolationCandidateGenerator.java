@@ -18,21 +18,24 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * If enabled, this class will help the balancer ensure that the meta table lives on its own
- * RegionServer. Configure this via {@link BalancerConditionals#ISOLATE_META_TABLE_KEY}
- */
-class MetaTableIsolationConditional extends TableIsolationConditional {
+@InterfaceAudience.Private
+public class SystemTableIsolationCandidateGenerator extends TableIsolationCandidateGenerator {
 
-  public MetaTableIsolationConditional(BalancerConditionals balancerConditionals,
-    BalancerClusterState cluster) {
-    super(new MetaTableIsolationCandidateGenerator(balancerConditionals), balancerConditionals,
-      cluster);
+  private final BalancerConditionals balancerConditionals;
+
+  SystemTableIsolationCandidateGenerator(BalancerConditionals balancerConditionals) {
+    super(balancerConditionals);
+    this.balancerConditionals = balancerConditionals;
   }
 
   @Override
-  boolean isRegionToIsolate(RegionInfo regionInfo) {
-    return regionInfo.isMetaRegion();
+  boolean shouldBeIsolated(RegionInfo regionInfo) {
+    if (balancerConditionals.isMetaTableIsolationEnabled() && regionInfo.isMetaRegion()) {
+      // If meta isolation is enabled, we can ignore meta regions here
+      return false;
+    }
+    return regionInfo.getTable().isSystemTable();
   }
 }
