@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -51,6 +52,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
 
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
   class Context {
+    private final ReplicationSourceInterface replicationSource;
     private final Server server;
     private final Configuration localConf;
     private final Configuration conf;
@@ -63,10 +65,12 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
     private final Abortable abortable;
 
     @InterfaceAudience.Private
-    public Context(final Server server, final Configuration localConf, final Configuration conf,
-      final FileSystem fs, final String peerId, final UUID clusterId,
-      final ReplicationPeer replicationPeer, final MetricsSource metrics,
-      final TableDescriptors tableDescriptors, final Abortable abortable) {
+    public Context(final ReplicationSourceInterface replicationSource, final Server server,
+      final Configuration localConf, final Configuration conf, final FileSystem fs,
+      final String peerId, final UUID clusterId, final ReplicationPeer replicationPeer,
+      final MetricsSource metrics, final TableDescriptors tableDescriptors,
+      final Abortable abortable) {
+      this.replicationSource = replicationSource;
       this.server = server;
       this.localConf = localConf;
       this.conf = conf;
@@ -77,6 +81,10 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
       this.metrics = metrics;
       this.tableDescriptors = tableDescriptors;
       this.abortable = abortable;
+    }
+
+    public ReplicationSourceInterface getReplicationSource() {
+      return replicationSource;
     }
 
     public Server getServer() {
@@ -208,7 +216,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
    * the context are assumed to be persisted in the target cluster.
    * @param replicateContext a context where WAL entries and other parameters can be obtained.
    */
-  boolean replicate(ReplicateContext replicateContext);
+  ReplicationResult replicate(ReplicateContext replicateContext);
 
   // The below methods are inspired by Guava Service. See
   // https://github.com/google/guava/wiki/ServiceExplained for overview of Guava Service.

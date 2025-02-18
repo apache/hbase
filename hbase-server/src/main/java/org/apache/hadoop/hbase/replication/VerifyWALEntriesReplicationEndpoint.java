@@ -59,10 +59,10 @@ public class VerifyWALEntriesReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   @Override
-  public boolean replicate(ReplicateContext replicateContext) {
+  public ReplicationResult replicate(ReplicateContext replicateContext) {
     replicateContext.entries.stream().map(WAL.Entry::getEdit).flatMap(e -> e.getCells().stream())
       .forEach(this::checkCell);
-    return true;
+    return ReplicationResult.COMMITTED;
   }
 
   @Override
