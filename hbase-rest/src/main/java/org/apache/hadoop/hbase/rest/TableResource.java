@@ -133,7 +133,9 @@ public class TableResource extends ResourceBase {
     @DefaultValue("true") @QueryParam(Constants.SCAN_CACHE_BLOCKS) boolean cacheBlocks,
     @DefaultValue("false") @QueryParam(Constants.SCAN_REVERSED) boolean reversed,
     @QueryParam(Constants.FILTER) String paramFilter,
-    @QueryParam(Constants.FILTER_B64) @Encoded String paramFilterB64) {
+    @QueryParam(Constants.FILTER_B64) @Encoded String paramFilterB64,
+    @DefaultValue("true") @QueryParam(Constants.SCAN_INCLUDE_START_ROW) boolean includeStartRow,
+    @DefaultValue("false") @QueryParam(Constants.SCAN_INCLUDE_STOP_ROW) boolean includeStopRow) {
     try {
       Filter prefixFilter = null;
       Scan tableScan = new Scan();
@@ -142,7 +144,7 @@ public class TableResource extends ResourceBase {
         byte[] prefixBytes = Bytes.toBytes(prefix);
         prefixFilter = new PrefixFilter(Bytes.toBytes(prefix));
         if (startRow.isEmpty()) {
-          tableScan.setStartRow(prefixBytes);
+          tableScan.withStartRow(prefixBytes, includeStartRow);
         }
       }
       if (LOG.isTraceEnabled()) {
@@ -156,9 +158,9 @@ public class TableResource extends ResourceBase {
       tableScan.setMaxVersions(maxVersions);
       tableScan.setTimeRange(startTime, endTime);
       if (!startRow.isEmpty()) {
-        tableScan.setStartRow(Bytes.toBytes(startRow));
+        tableScan.withStartRow(Bytes.toBytes(startRow), includeStartRow);
       }
-      tableScan.setStopRow(Bytes.toBytes(endRow));
+      tableScan.withStopRow(Bytes.toBytes(endRow), includeStopRow);
       for (String col : column) {
         byte[][] parts = CellUtil.parseColumn(Bytes.toBytes(col.trim()));
         if (parts.length == 1) {
