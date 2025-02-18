@@ -630,4 +630,82 @@ public class TestRemoteTable {
       Thread.sleep(trialPause);
     }
   }
+
+  @Test
+  public void testScanWithInlcudeStartStopRow() throws Exception {
+    int numTrials = 6;
+
+    // Truncate the test table for inserting test scenarios rows keys
+    TEST_UTIL.getAdmin().disableTable(TABLE);
+    TEST_UTIL.getAdmin().truncateTable(TABLE, false);
+    String row = "testrow";
+
+    try (Table table = TEST_UTIL.getConnection().getTable(TABLE)) {
+      List<Put> puts = new ArrayList<>();
+      Put put = null;
+      for (int i = 1; i <= numTrials; i++) {
+        put = new Put(Bytes.toBytes(row + i));
+        put.addColumn(COLUMN_1, QUALIFIER_1, TS_2, Bytes.toBytes("testvalue" + i));
+        puts.add(put);
+      }
+      table.put(puts);
+    }
+
+    remoteTable =
+      new RemoteHTable(new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort())),
+        TEST_UTIL.getConfiguration(), TABLE.toBytes());
+
+    Scan scan =
+      new Scan().withStartRow(Bytes.toBytes(row + "1")).withStopRow(Bytes.toBytes(row + "5"));
+
+    ResultScanner scanner = remoteTable.getScanner(scan);
+    Iterator<Result> resultIterator = scanner.iterator();
+    int counter = 0;
+    while (resultIterator.hasNext()) {
+      byte[] row1 = resultIterator.next().getRow();
+      System.out.println(Bytes.toString(row1));
+      counter++;
+    }
+    assertEquals(4, counter);
+
+    // test with include start row false
+    scan = new Scan().withStartRow(Bytes.toBytes(row + "1"), false)
+      .withStopRow(Bytes.toBytes(row + "5"));
+    scanner = remoteTable.getScanner(scan);
+    resultIterator = scanner.iterator();
+    counter = 0;
+    while (resultIterator.hasNext()) {
+      byte[] row1 = resultIterator.next().getRow();
+      System.out.println(Bytes.toString(row1));
+      counter++;
+    }
+    assertEquals(3, counter);
+
+    // test with include start row false and stop row true
+    scan = new Scan().withStartRow(Bytes.toBytes(row + "1"), false)
+      .withStopRow(Bytes.toBytes(row + "5"), true);
+    scanner = remoteTable.getScanner(scan);
+    resultIterator = scanner.iterator();
+    counter = 0;
+    while (resultIterator.hasNext()) {
+      byte[] row1 = resultIterator.next().getRow();
+      System.out.println(Bytes.toString(row1));
+      counter++;
+    }
+    assertEquals(4, counter);
+
+    // test with include start row true and stop row true
+    scan = new Scan().withStartRow(Bytes.toBytes(row + "1"), true)
+      .withStopRow(Bytes.toBytes(row + "5"), true);
+    scanner = remoteTable.getScanner(scan);
+    resultIterator = scanner.iterator();
+    counter = 0;
+    while (resultIterator.hasNext()) {
+      byte[] row1 = resultIterator.next().getRow();
+      System.out.println(Bytes.toString(row1));
+      counter++;
+    }
+    assertEquals(5, counter);
+  }
+
 }
