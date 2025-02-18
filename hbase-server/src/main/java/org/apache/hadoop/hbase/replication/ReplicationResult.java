@@ -17,52 +17,17 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import java.util.UUID;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * A dummy replication endpoint that does nothing, for test use only.
- */
-@InterfaceAudience.Private
-public class DummyReplicationEndpoint extends BaseReplicationEndpoint {
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
+public enum ReplicationResult {
+  /* Batch has been replicated and persisted successfully. */
+  COMMITTED,
 
-  @Override
-  public boolean canReplicateToSameCluster() {
-    return true;
-  }
+  /* Batch has been submitted for replication, but not persisted yet. */
+  SUBMITTED,
 
-  @Override
-  public UUID getPeerUUID() {
-    return ctx.getClusterId();
-  }
-
-  @Override
-  public WALEntryFilter getWALEntryfilter() {
-    return null;
-  }
-
-  @Override
-  public ReplicationResult replicate(ReplicateContext replicateContext) {
-    return ReplicationResult.COMMITTED;
-  }
-
-  @Override
-  public void start() {
-    startAsync();
-  }
-
-  @Override
-  public void stop() {
-    stopAsync();
-  }
-
-  @Override
-  protected void doStart() {
-    notifyStarted();
-  }
-
-  @Override
-  protected void doStop() {
-    notifyStopped();
-  }
+  /* Batch replicaton failed, should be re-tried */
+  FAILED
 }
