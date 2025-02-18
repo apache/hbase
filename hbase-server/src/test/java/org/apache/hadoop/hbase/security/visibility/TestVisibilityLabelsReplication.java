@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -473,8 +474,8 @@ public class TestVisibilityLabelsReplication {
     }
 
     @Override
-    public boolean replicate(ReplicateContext replicateContext) {
-      boolean ret = super.replicate(replicateContext);
+    public ReplicationResult replicate(ReplicateContext replicateContext) {
+      ReplicationResult ret = super.replicate(replicateContext);
       lastEntries = replicateContext.getEntries();
       replicateCount.incrementAndGet();
       return ret;
