@@ -170,7 +170,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         bulkloadInfo.addActiveFile(p.toString());
       } else if (fs.exists(archive)) {
         LOG.debug("copying archive {} to {}", archive, tgt);
-        bulkloadInfo.addArchivedFiles(p.toString());
+        bulkloadInfo.addArchivedFiles(archive.toString());
       }
       toBulkload.put(srcTable, bulkloadInfo);
     }
