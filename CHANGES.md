@@ -41,7 +41,6 @@
 | [HBASE-29008](https://issues.apache.org/jira/browse/HBASE-29008) | Upgrade JAX-WS to to 2.3.7 |  Major | REST |
 | [HBASE-29013](https://issues.apache.org/jira/browse/HBASE-29013) | Make PerformanceEvaluation support larger data sets |  Minor | PE |
 | [HBASE-29009](https://issues.apache.org/jira/browse/HBASE-29009) | Depend on jaxws-rt instead jaxws-ri |  Major | REST |
-| [HBASE-28525](https://issues.apache.org/jira/browse/HBASE-28525) | Extend REST Documentation: Stateless Scanner, table exists, multiget with filter |  Major | documentation, REST |
 | [HBASE-28328](https://issues.apache.org/jira/browse/HBASE-28328) | Add an option to count different types of Delete Markers in RowCounter |  Minor | mapreduce |
 | [HBASE-28965](https://issues.apache.org/jira/browse/HBASE-28965) | Make the approach in HBASE-28955 can work together with hadoop 2.x |  Major | Filesystem Integration, hadoop2, io |
 | [HBASE-28268](https://issues.apache.org/jira/browse/HBASE-28268) | Provide option to skip wal while using TableOutputFormat |  Minor | mapreduce |
@@ -52,6 +51,7 @@
 | [HBASE-28921](https://issues.apache.org/jira/browse/HBASE-28921) | Avoid bundling hbase-webapps folder in default jars |  Major | security, UI |
 | [HBASE-28621](https://issues.apache.org/jira/browse/HBASE-28621) | PrefixFilter should use SEEK\_NEXT\_USING\_HINT |  Major | Filters |
 | [HBASE-28940](https://issues.apache.org/jira/browse/HBASE-28940) | Do not run the backwards compatibility tests with the default Hadoop3 version |  Major | integration tests, test |
+| [HBASE-26789](https://issues.apache.org/jira/browse/HBASE-26789) | Automatically add default security headers to http/rest if SSL enabled |  Major | REST, UI |
 | [HBASE-28816](https://issues.apache.org/jira/browse/HBASE-28816) | The description of "hbase.superuser" is confusing |  Major | documentation |
 | [HBASE-27118](https://issues.apache.org/jira/browse/HBASE-27118) | Add security headers to Thrift/HTTP server |  Major | Thrift |
 | [HBASE-28850](https://issues.apache.org/jira/browse/HBASE-28850) | Only return from ReplicationSink.replicationEntries while all background tasks are finished |  Major | Replication, rpc |
@@ -86,7 +86,6 @@
 | [HBASE-28948](https://issues.apache.org/jira/browse/HBASE-28948) |  RegionMover tool fails when table is deleted |  Major | . |
 | [HBASE-28928](https://issues.apache.org/jira/browse/HBASE-28928) | Handle NPE in Split/Merge table when getMasterQuotaManager returns null |  Major | proc-v2 |
 | [HBASE-28876](https://issues.apache.org/jira/browse/HBASE-28876) | Should call ProcedureSchduler.completionCleanup for non-root procedure too |  Major | proc-v2 |
-| [HBASE-28865](https://issues.apache.org/jira/browse/HBASE-28865) | Implement proper string builder for MoveRegionRequest in ProtobufUtil.getShortTextFormat |  Major | logging |
 | [HBASE-28721](https://issues.apache.org/jira/browse/HBASE-28721) | AsyncFSWAL is broken when running against hadoop 3.4.0 |  Major | hadoop3, wal |
 | [HBASE-28890](https://issues.apache.org/jira/browse/HBASE-28890) | RefCnt Leak error when caching index blocks at write time |  Major | . |
 | [HBASE-28884](https://issues.apache.org/jira/browse/HBASE-28884) | SFT's BrokenStoreFileCleaner may cause data loss |  Major | SFT |
