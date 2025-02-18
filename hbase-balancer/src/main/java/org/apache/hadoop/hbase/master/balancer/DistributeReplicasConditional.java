@@ -25,8 +25,6 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.replicas.ReplicaKey;
 import org.apache.hadoop.hbase.master.balancer.replicas.ReplicaKeyCache;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
@@ -46,16 +44,19 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
   public static final String TEST_MODE_ENABLED_KEY =
     "hbase.replica.distribution.conditional.testModeEnabled";
 
-  private static final Logger LOG = LoggerFactory.getLogger(DistributeReplicasConditional.class);
-
   private final boolean isTestModeEnabled;
-  private final float slop;
+  private final List<RegionPlanConditionalCandidateGenerator> candidateGenerators;
 
-  public DistributeReplicasConditional(Configuration conf, BalancerClusterState cluster) {
-    super(conf, cluster);
+  public DistributeReplicasConditional(BalancerConditionals balancerConditionals,
+    BalancerClusterState cluster) {
+    super(balancerConditionals.getConf(), cluster);
+    Configuration conf = balancerConditionals.getConf();
     this.isTestModeEnabled = conf.getBoolean(TEST_MODE_ENABLED_KEY, false);
-    this.slop =
+    float slop =
       conf.getFloat(BaseLoadBalancer.REGIONS_SLOP_KEY, BaseLoadBalancer.REGIONS_SLOP_DEFAULT);
+    this.candidateGenerators =
+      ImmutableList.of(new DistributeReplicasCandidateGenerator(balancerConditionals),
+        new SlopFixingCandidateGenerator(balancerConditionals, slop));
   }
 
   @Override
@@ -63,13 +64,12 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
     if (isTestModeEnabled) {
       return ValidationLevel.SERVER;
     }
-    return ValidationLevel.RACK;
+    return ValidationLevel.SERVER_HOST_RACK;
   }
 
   @Override
   List<RegionPlanConditionalCandidateGenerator> getCandidateGenerators() {
-    return ImmutableList.of(DistributeReplicasCandidateGenerator.INSTANCE,
-      new SlopFixingCandidateGenerator(slop));
+    return candidateGenerators;
   }
 
   @Override
@@ -104,7 +104,7 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
   }
 
   static ReplicaKey getReplicaKey(RegionInfo regionInfo) {
-    return ReplicaKeyCache.INSTANCE.getReplicaKey(regionInfo);
+    return ReplicaKeyCache.getInstance().getReplicaKey(regionInfo);
   }
 
 }

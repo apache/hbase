@@ -29,8 +29,6 @@ import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 
 @InterfaceAudience.Private
 public final class ReplicaKeyCache implements Configurable {
-  public static final ReplicaKeyCache INSTANCE = new ReplicaKeyCache();
-
   /**
    * ReplicaKey creation is expensive if you have lots of regions. If your HMaster has adequate
    * memory, and you would like balancing to be faster, then you can turn on this flag to cache
@@ -48,21 +46,28 @@ public final class ReplicaKeyCache implements Configurable {
     "hbase.replica.distribution.conditional.replicaKeyCacheSize";
   public static final int REPLICA_KEY_CACHE_SIZE_DEFAULT = 1000;
 
+  private static final ReplicaKeyCache INSTANCE = new ReplicaKeyCache();
+
   private volatile LoadingCache<RegionInfo, ReplicaKey> replicaKeyCache = null;
+
+  private Configuration conf;
+
+  public static ReplicaKeyCache getInstance() {
+    return INSTANCE;
+  }
 
   private ReplicaKeyCache() {
   }
 
   public ReplicaKey getReplicaKey(RegionInfo regionInfo) {
-    if (replicaKeyCache == null) {
-      return new ReplicaKey(regionInfo);
-    } else {
-      return replicaKeyCache.getUnchecked(regionInfo);
-    }
+    return replicaKeyCache == null
+      ? new ReplicaKey(regionInfo)
+      : replicaKeyCache.getUnchecked(regionInfo);
   }
 
   @Override
   public void setConf(Configuration conf) {
+    this.conf = conf;
     boolean cacheKeys = conf.getBoolean(CACHE_REPLICA_KEYS_KEY, CACHE_REPLICA_KEYS_DEFAULT);
     if (cacheKeys && replicaKeyCache == null) {
       int replicaKeyCacheSize =
@@ -74,13 +79,13 @@ public final class ReplicaKeyCache implements Configurable {
             return new ReplicaKey(regionInfo);
           }
         });
-    } else if (!cacheKeys && replicaKeyCache != null) {
+    } else if (!cacheKeys) {
       replicaKeyCache = null;
     }
   }
 
   @Override
   public Configuration getConf() {
-    return null;
+    return conf;
   }
 }

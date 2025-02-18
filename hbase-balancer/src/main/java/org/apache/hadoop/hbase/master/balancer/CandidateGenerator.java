@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 abstract class CandidateGenerator {
 
-  protected static double MAX_WEIGHT = 1.0;
+  protected static final double MAX_WEIGHT = 1.0;
 
   abstract BalanceAction generate(BalancerClusterState cluster);
 

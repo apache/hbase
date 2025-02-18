@@ -172,7 +172,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return shuffled;
     }, 5, TimeUnit.SECONDS);
 
-  private final BalancerConditionals balancerConditionals = BalancerConditionals.INSTANCE;
+  private final BalancerConditionals balancerConditionals = BalancerConditionals.create();
 
   /**
    * The constructor that pass a MetricsStochasticBalancer to BaseLoadBalancer to replace its
@@ -280,7 +280,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     localityCost = new ServerLocalityCostFunction(conf);
     rackLocalityCost = new RackLocalityCostFunction(conf);
 
-    // Order is important here. We need to construct conditionals to load candidate generators
     balancerConditionals.setConf(conf);
     this.candidateGenerators = createCandidateGenerators();
 
@@ -467,7 +466,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       LOG.info(
         "{} - skipping load balancing because weighted average imbalance={} <= "
           + "threshold({}) and conditionals do not have opinionated move candidates. "
-          + "consecutive balancer runs. If you want more aggressive balancing, either lower "
+          + "If you want more aggressive balancing, either lower "
           + "hbase.master.balancer.stochastic.minCostNeedBalance from {} or increase the relative "
           + "multiplier(s) of the specific cost function(s). functionCost={}",
         isByTable ? "Table specific (" + tableName + ")" : "Cluster wide", total / sumMultiplier,

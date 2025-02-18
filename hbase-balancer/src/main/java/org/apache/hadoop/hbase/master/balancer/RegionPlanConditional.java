@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.HashSet;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -40,18 +41,29 @@ public abstract class RegionPlanConditional {
   }
 
   public enum ValidationLevel {
-    SERVER, // Just check server
-    HOST, // Check host and server
-    RACK // Check rack, host, and server
+    /**
+     * Just check the server.
+     */
+    SERVER,
+    /**
+     * Check the server and the host.
+     */
+    SERVER_HOST,
+    /**
+     * Check the server, host, and rack.
+     */
+    SERVER_HOST_RACK
   }
 
-  public ValidationLevel getValidationLevel() {
-    return ValidationLevel.SERVER;
-  }
-
-  void refreshClusterState(BalancerClusterState cluster) {
+  void setClusterState(BalancerClusterState cluster) {
     this.cluster = cluster;
   }
+
+  /**
+   * Returns a {@link ValidationLevel} that is appropriate for this conditional.
+   * @return the validation level
+   */
+  abstract ValidationLevel getValidationLevel();
 
   /**
    * Get the candidate generator(s) for this conditional. This can be useful to provide the balancer
@@ -73,7 +85,8 @@ public abstract class RegionPlanConditional {
 
     // Check Server
     int[] destinationRegionIndices = cluster.regionsPerServer[destinationServerIdx];
-    Set<RegionInfo> serverRegions = new HashSet<>(destinationRegionIndices.length);
+    Set<RegionInfo> serverRegions = Arrays.stream(cluster.regionsPerServer[destinationServerIdx])
+      .mapToObj(idx -> cluster.regions[idx]).collect(Collectors.toSet());
     for (int regionIdx : destinationRegionIndices) {
       serverRegions.add(cluster.regions[regionIdx]);
     }
@@ -87,26 +100,20 @@ public abstract class RegionPlanConditional {
 
     // Check Host
     int hostIdx = cluster.serverIndexToHostIndex[destinationServerIdx];
-    int[] hostRegionIndices = cluster.regionsPerHost[hostIdx];
-    Set<RegionInfo> hostRegions = new HashSet<>(hostRegionIndices.length);
-    for (int regionIdx : hostRegionIndices) {
-      hostRegions.add(cluster.regions[regionIdx]);
-    }
+    Set<RegionInfo> hostRegions = Arrays.stream(cluster.regionsPerHost[hostIdx])
+      .mapToObj(idx -> cluster.regions[idx]).collect(Collectors.toSet());
     if (isViolatingHost(regionPlan, hostRegions)) {
       return true;
     }
 
-    if (getValidationLevel() == ValidationLevel.HOST) {
+    if (getValidationLevel() == ValidationLevel.SERVER_HOST) {
       return false;
     }
 
     // Check Rack
     int rackIdx = cluster.serverIndexToRackIndex[destinationServerIdx];
-    int[] rackRegionIndices = cluster.regionsPerRack[rackIdx];
-    Set<RegionInfo> rackRegions = new HashSet<>(rackRegionIndices.length);
-    for (int regionIdx : rackRegionIndices) {
-      rackRegions.add(cluster.regions[regionIdx]);
-    }
+    Set<RegionInfo> rackRegions = Arrays.stream(cluster.regionsPerRack[rackIdx])
+      .mapToObj(idx -> cluster.regions[idx]).collect(Collectors.toSet());
     if (isViolatingRack(regionPlan, rackRegions)) {
       return true;
     }

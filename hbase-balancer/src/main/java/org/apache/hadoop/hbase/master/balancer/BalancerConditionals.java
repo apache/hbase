@@ -56,7 +56,6 @@ final class BalancerConditionals implements Configurable {
 
   private static final Logger LOG = LoggerFactory.getLogger(BalancerConditionals.class);
 
-  static final BalancerConditionals INSTANCE = new BalancerConditionals();
   public static final String DISTRIBUTE_REPLICAS_KEY =
     "hbase.master.balancer.stochastic.conditionals.distributeReplicas";
   public static final boolean DISTRIBUTE_REPLICAS_DEFAULT = false;
@@ -67,6 +66,10 @@ final class BalancerConditionals implements Configurable {
   private Set<Class<? extends RegionPlanConditional>> conditionalClasses = Collections.emptySet();
   private Set<RegionPlanConditional> conditionals = Collections.emptySet();
   private Configuration conf;
+
+  static BalancerConditionals create() {
+    return new BalancerConditionals();
+  }
 
   private BalancerConditionals() {
   }
@@ -104,7 +107,7 @@ final class BalancerConditionals implements Configurable {
   }
 
   void loadClusterState(BalancerClusterState cluster) {
-    conditionals = conditionalClasses.stream().map(clazz -> createConditional(clazz, conf, cluster))
+    conditionals = conditionalClasses.stream().map(clazz -> createConditional(clazz, cluster))
       .filter(Objects::nonNull).collect(Collectors.toSet());
   }
 
@@ -115,8 +118,17 @@ final class BalancerConditionals implements Configurable {
    * @return -1 if conditionals improve, 0 if neutral, 1 if conditionals degrade
    */
   int getViolationCountChange(BalancerClusterState cluster, BalanceAction action) {
-    boolean isViolatingPre = isViolating(cluster, action.undoAction());
+    // Cluster is in pre-move state, so figure out the proposed violations
     boolean isViolatingPost = isViolating(cluster, action);
+    cluster.doAction(action);
+
+    // Cluster is in post-move state, so figure out the original violations
+    BalanceAction undoAction = action.undoAction();
+    boolean isViolatingPre = isViolating(cluster, undoAction);
+
+    // Reset cluster
+    cluster.doAction(undoAction);
+
     if (isViolatingPre && isViolatingPost) {
       return 0;
     } else if (!isViolatingPre && isViolatingPost) {
@@ -132,7 +144,7 @@ final class BalancerConditionals implements Configurable {
    * @param action  The proposed action
    */
   boolean isViolating(BalancerClusterState cluster, BalanceAction action) {
-    conditionals.forEach(conditional -> conditional.refreshClusterState(cluster));
+    conditionals.forEach(conditional -> conditional.setClusterState(cluster));
     if (conditionals.isEmpty()) {
       return false;
     }
@@ -155,17 +167,14 @@ final class BalancerConditionals implements Configurable {
   }
 
   private RegionPlanConditional createConditional(Class<? extends RegionPlanConditional> clazz,
-    Configuration conf, BalancerClusterState cluster) {
-    if (conf == null) {
-      conf = new Configuration();
-    }
+    BalancerClusterState cluster) {
     if (cluster == null) {
       cluster = new BalancerClusterState(Collections.emptyMap(), null, null, null, null);
     }
     try {
       Constructor<? extends RegionPlanConditional> ctor =
-        clazz.getDeclaredConstructor(Configuration.class, BalancerClusterState.class);
-      return ReflectionUtils.instantiate(clazz.getName(), ctor, conf, cluster);
+        clazz.getDeclaredConstructor(BalancerConditionals.class, BalancerClusterState.class);
+      return ReflectionUtils.instantiate(clazz.getName(), ctor, this, cluster);
     } catch (NoSuchMethodException e) {
       LOG.warn("Cannot find constructor with Configuration and "
         + "BalancerClusterState parameters for class '{}': {}", clazz.getName(), e.getMessage());
@@ -194,7 +203,7 @@ final class BalancerConditionals implements Configurable {
       conditionalClasses.add(clazz.asSubclass(RegionPlanConditional.class));
     }
     this.conditionalClasses = conditionalClasses.build();
-    ReplicaKeyCache.INSTANCE.setConf(conf);
+    ReplicaKeyCache.getInstance().setConf(conf);
     loadClusterState(null);
   }
 

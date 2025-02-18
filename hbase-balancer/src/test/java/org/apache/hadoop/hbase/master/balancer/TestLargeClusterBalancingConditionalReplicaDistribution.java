@@ -94,7 +94,7 @@ public class TestLargeClusterBalancingConditionalReplicaDistribution {
 
   @Test
   public void testReplicaDistribution() {
-    Configuration conf = new Configuration(false);
+    Configuration conf = new Configuration(true);
     conf.setBoolean(BalancerConditionals.DISTRIBUTE_REPLICAS_KEY, true);
     conf.setBoolean(DistributeReplicasConditional.TEST_MODE_ENABLED_KEY, true);
     conf.setBoolean(ReplicaKeyCache.CACHE_REPLICA_KEYS_KEY, true);

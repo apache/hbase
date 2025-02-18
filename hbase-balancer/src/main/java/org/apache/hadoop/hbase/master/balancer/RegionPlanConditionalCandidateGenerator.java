@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.time.Duration;
 import java.util.List;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -35,6 +36,22 @@ public abstract class RegionPlanConditionalCandidateGenerator extends CandidateG
   private long lastWeighedAt = -1;
   private double lastWeight = 0.0;
 
+  private final BalancerConditionals balancerConditionals;
+
+  RegionPlanConditionalCandidateGenerator(BalancerConditionals balancerConditionals) {
+    this.balancerConditionals = balancerConditionals;
+  }
+
+  BalancerConditionals getBalancerConditionals() {
+    return this.balancerConditionals;
+  }
+
+  /**
+   * Generates a balancing action to appease the conditional.
+   * @param cluster    Current state of the cluster.
+   * @param isWeighing Flag indicating if the generator is being used for weighing.
+   * @return A BalanceAction, or NULL_ACTION if no action is needed.
+   */
   abstract BalanceAction generateCandidate(BalancerClusterState cluster, boolean isWeighing);
 
   @Override
@@ -55,7 +72,11 @@ public abstract class RegionPlanConditionalCandidateGenerator extends CandidateG
   }
 
   boolean willBeAccepted(BalancerClusterState cluster, BalanceAction action) {
-    return !BalancerConditionals.INSTANCE.isViolating(cluster, action);
+    BalancerConditionals balancerConditionals = getBalancerConditionals();
+    if (balancerConditionals == null) {
+      return true;
+    }
+    return !balancerConditionals.isViolating(cluster, action);
   }
 
   void undoBatchAction(BalancerClusterState cluster, MoveBatchAction batchAction) {
@@ -74,11 +95,11 @@ public abstract class RegionPlanConditionalCandidateGenerator extends CandidateG
 
     // Candidate generation is expensive, so for re-weighing generators we will cache
     // the value for a bit
-    if (System.currentTimeMillis() - lastWeighedAt < WEIGHT_CACHE_TTL.toMillis()) {
+    if (EnvironmentEdgeManager.currentTime() - lastWeighedAt < WEIGHT_CACHE_TTL.toMillis()) {
       return lastWeight;
     } else {
       hasCandidate = generateCandidate(cluster, true) != BalanceAction.NULL_ACTION;
-      lastWeighedAt = System.currentTimeMillis();
+      lastWeighedAt = EnvironmentEdgeManager.currentTime();
     }
 
     if (hasCandidate) {

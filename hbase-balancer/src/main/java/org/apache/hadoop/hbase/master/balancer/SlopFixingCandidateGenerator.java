@@ -37,7 +37,8 @@ final class SlopFixingCandidateGenerator extends RegionPlanConditionalCandidateG
 
   private final float slop;
 
-  SlopFixingCandidateGenerator(float slop) {
+  SlopFixingCandidateGenerator(BalancerConditionals balancerConditionals, float slop) {
+    super(balancerConditionals);
     this.slop = slop;
   }
 

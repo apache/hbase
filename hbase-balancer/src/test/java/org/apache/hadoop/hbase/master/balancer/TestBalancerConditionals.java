@@ -40,7 +40,7 @@ public class TestBalancerConditionals extends BalancerTestBase {
 
   @Before
   public void setUp() {
-    balancerConditionals = BalancerConditionals.INSTANCE;
+    balancerConditionals = BalancerConditionals.create();
     mockCluster = mockCluster(new int[] { 0, 1, 2 });
   }
 

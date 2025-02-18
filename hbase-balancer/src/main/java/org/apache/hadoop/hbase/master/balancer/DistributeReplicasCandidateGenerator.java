@@ -34,22 +34,14 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 final class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCandidateGenerator {
 
-  static DistributeReplicasCandidateGenerator INSTANCE = new DistributeReplicasCandidateGenerator();
-
   private static final Logger LOG =
     LoggerFactory.getLogger(DistributeReplicasCandidateGenerator.class);
   private static final int BATCH_SIZE = 100_000;
 
-  private DistributeReplicasCandidateGenerator() {
+  DistributeReplicasCandidateGenerator(BalancerConditionals balancerConditionals) {
+    super(balancerConditionals);
   }
 
-  /**
-   * Generates a balancing action to distribute colocated replicas. Moves one replica of a colocated
-   * region to a different server.
-   * @param cluster    Current state of the cluster.
-   * @param isWeighing Flag indicating if the generator is being used for weighing.
-   * @return A BalanceAction to move a replica or NULL_ACTION if no action is needed.
-   */
   @Override
   BalanceAction generateCandidate(BalancerClusterState cluster, boolean isWeighing) {
     return generateCandidate(cluster, isWeighing, false);
@@ -66,6 +58,9 @@ final class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCa
     boolean foundColocatedReplicas = false;
     List<MoveRegionAction> moveRegionActions = new ArrayList<>();
     for (int sourceIndex : cluster.getShuffledServerIndices()) {
+      if (moveRegionActions.size() >= BATCH_SIZE) {
+        break;
+      }
       int[] serverRegions = cluster.regionsPerServer[sourceIndex];
       Set<ReplicaKey> replicaKeys = new HashSet<>(serverRegions.length);
       for (int regionIndex : serverRegions) {
@@ -76,34 +71,27 @@ final class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCa
             // If weighing, fast exit with an actionable move
             return getAction(sourceIndex, regionIndex, pickOtherRandomServer(cluster, sourceIndex),
               -1);
-          } else {
-            // If not weighing, pick a good move
-            for (int i = 0; i < cluster.numServers; i++) {
-              // Randomize destination ordering so we aren't overloading one destination
-              int destinationIndex = pickOtherRandomServer(cluster, sourceIndex);
-              if (destinationIndex == sourceIndex) {
-                continue;
-              }
-              MoveRegionAction possibleAction =
-                new MoveRegionAction(regionIndex, sourceIndex, destinationIndex);
-              if (isForced) {
-                return possibleAction;
-              } else if (willBeAccepted(cluster, possibleAction)) {
-                cluster.doAction(possibleAction); // Update cluster state to reflect move
-                moveRegionActions.add(possibleAction);
-                break;
-              }
+          }
+          // If not weighing, pick a good move
+          for (int i = 0; i < cluster.numServers; i++) {
+            // Randomize destination ordering so we aren't overloading one destination
+            int destinationIndex = pickOtherRandomServer(cluster, sourceIndex);
+            if (destinationIndex == sourceIndex) {
+              continue;
+            }
+            MoveRegionAction possibleAction =
+              new MoveRegionAction(regionIndex, sourceIndex, destinationIndex);
+            if (isForced) {
+              return possibleAction;
+            } else if (willBeAccepted(cluster, possibleAction)) {
+              cluster.doAction(possibleAction); // Update cluster state to reflect move
+              moveRegionActions.add(possibleAction);
+              break;
             }
           }
         } else {
           replicaKeys.add(replicaKey);
         }
-        if (moveRegionActions.size() >= BATCH_SIZE) {
-          break;
-        }
-      }
-      if (moveRegionActions.size() >= BATCH_SIZE) {
-        break;
       }
     }
 
@@ -114,9 +102,8 @@ final class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCa
     if (foundColocatedReplicas) {
       LOG.warn("Could not find a place to put a colocated replica! We will force a move.");
       return generateCandidate(cluster, isWeighing, true);
-    } else {
-      LOG.trace("No colocated replicas found. No balancing action required.");
     }
+    LOG.trace("No colocated replicas found. No balancing action required.");
     return BalanceAction.NULL_ACTION;
   }
 }
