@@ -81,7 +81,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer
 
   @Override
   protected Map<Class<? extends CandidateGenerator>, CandidateGenerator>
-    createCandidateGenerators() {
+    createCandidateGenerators(Configuration conf) {
     Map<Class<? extends CandidateGenerator>, CandidateGenerator> fnPickers = new HashMap<>(2);
     fnPickers.put(FavoredNodeLoadPicker.class, new FavoredNodeLoadPicker());
     fnPickers.put(FavoredNodeLocalityPicker.class, new FavoredNodeLocalityPicker());

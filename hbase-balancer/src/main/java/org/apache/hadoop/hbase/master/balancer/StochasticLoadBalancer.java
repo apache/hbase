@@ -226,17 +226,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   protected Map<Class<? extends CandidateGenerator>, CandidateGenerator>
-    createCandidateGenerators() {
+    createCandidateGenerators(Configuration conf) {
+    balancerConditionals.setConf(conf);
+    Map<Class<? extends CandidateGenerator>, CandidateGenerator> candidateGenerators;
     if (balancerConditionals.isReplicaDistributionEnabled()) {
-      Map<Class<? extends CandidateGenerator>, CandidateGenerator> candidateGenerators =
-        new HashMap<>(3);
+      candidateGenerators = new HashMap<>(3);
       candidateGenerators.put(RandomCandidateGenerator.class, new RandomCandidateGenerator());
       candidateGenerators.put(LoadCandidateGenerator.class, new LoadCandidateGenerator());
       candidateGenerators.put(LocalityBasedCandidateGenerator.class, localityCandidateGenerator);
-      return candidateGenerators;
     } else {
-      Map<Class<? extends CandidateGenerator>, CandidateGenerator> candidateGenerators =
-        new HashMap<>(5);
+      candidateGenerators = new HashMap<>(5);
       candidateGenerators.put(RandomCandidateGenerator.class, new RandomCandidateGenerator());
       candidateGenerators.put(LoadCandidateGenerator.class, new LoadCandidateGenerator());
       candidateGenerators.put(LocalityBasedCandidateGenerator.class, localityCandidateGenerator);
@@ -244,8 +243,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         new RegionReplicaCandidateGenerator());
       candidateGenerators.put(RegionReplicaRackCandidateGenerator.class,
         new RegionReplicaRackCandidateGenerator());
-      return candidateGenerators;
     }
+    return candidateGenerators;
   }
 
   protected List<CostFunction> createCostFunctions(Configuration conf) {
@@ -281,7 +280,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     rackLocalityCost = new RackLocalityCostFunction(conf);
 
     balancerConditionals.setConf(conf);
-    this.candidateGenerators = createCandidateGenerators();
+    this.candidateGenerators = createCandidateGenerators(conf);
 
     regionReplicaHostCostFunction = new RegionReplicaHostCostFunction(conf);
     regionReplicaRackCostFunction = new RegionReplicaRackCostFunction(conf);
