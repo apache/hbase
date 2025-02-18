@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationQueueData;
 import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -165,6 +166,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
    * @see WALEntryFilter
    */
   private final List<WALEntryFilter> baseFilterOutWALEntries;
+
+  private final Map<String, WALEntryBatch> lastEntryBatch = new ConcurrentHashMap<>();
 
   ReplicationSource() {
     // Default, filters *in* all WALs but meta WALs & filters *out* all WALEntries of System Tables.
@@ -318,8 +321,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
     if (server instanceof HRegionServer) {
       tableDescriptors = ((HRegionServer) server).getTableDescriptors();
     }
-    replicationEndpoint
-      .init(new ReplicationEndpoint.Context(server, conf, replicationPeer.getConfiguration(), fs,
+    replicationEndpoint.init(
+      new ReplicationEndpoint.Context(this, server, conf, replicationPeer.getConfiguration(), fs,
         replicationPeer.getId(), clusterId, replicationPeer, metrics, tableDescriptors, server));
     replicationEndpoint.start();
     replicationEndpoint.awaitRunning(waitOnEndpointSeconds, TimeUnit.SECONDS);
@@ -860,5 +863,33 @@ public class ReplicationSource implements ReplicationSourceInterface {
   // Visible for testing purpose
   public long getTotalReplicatedEdits() {
     return totalReplicatedEdits.get();
+  }
+
+  @Override
+  public void logPositionAndCleanOldLogs(WALEntryBatch entryBatch, ReplicationResult replicated) {
+    String walName = entryBatch.getLastWalPath().getName();
+    String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(walName);
+
+    synchronized (lastEntryBatch) { // Synchronize addition and processing
+      lastEntryBatch.put(walPrefix, entryBatch);
+
+      if (replicated == ReplicationResult.COMMITTED) {
+        processAndClearEntries();
+      }
+    }
+  }
+
+  public void persistOffsets() {
+    synchronized (lastEntryBatch) {
+      processAndClearEntries();
+    }
+  }
+
+  private void processAndClearEntries() {
+    // Process all entries
+    lastEntryBatch
+      .forEach((prefix, batch) -> getSourceManager().logPositionAndCleanOldLogs(this, batch));
+    // Clear all processed entries
+    lastEntryBatch.clear();
   }
 }
