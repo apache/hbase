@@ -123,8 +123,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
    * @param tablesToBackup list of tables to be backed up
    */
   protected List<BulkLoad> handleBulkLoad(List<TableName> tablesToBackup) throws IOException {
-    List<String> activeFiles = new ArrayList<>();
-    List<String> archiveFiles = new ArrayList<>();
+    Map<TableName, MergeSplitBulkloadInfo> toBulkload = new HashMap<>();
     List<BulkLoad> bulkLoads = backupManager.readBulkloadRows(tablesToBackup);
     FileSystem tgtFs;
     try {
@@ -137,6 +136,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
 
     for (BulkLoad bulkLoad : bulkLoads) {
       TableName srcTable = bulkLoad.getTableName();
+      MergeSplitBulkloadInfo bulkloadInfo =
+        toBulkload.computeIfAbsent(srcTable, MergeSplitBulkloadInfo::new);
       String regionName = bulkLoad.getRegion();
       String fam = bulkLoad.getColumnFamily();
       String filename = FilenameUtils.getName(bulkLoad.getHfilePath());
@@ -166,20 +167,27 @@ public class IncrementalTableBackupClient extends TableBackupClient {
             srcTableQualifier);
           LOG.trace("copying {} to {}", p, tgt);
         }
-        activeFiles.add(p.toString());
+        bulkloadInfo.addActiveFile(p.toString());
       } else if (fs.exists(archive)) {
         LOG.debug("copying archive {} to {}", archive, tgt);
-        archiveFiles.add(archive.toString());
+        bulkloadInfo.addArchivedFiles(p.toString());
       }
-      mergeSplitBulkloads(activeFiles, archiveFiles, srcTable);
-      incrementalCopyBulkloadHFiles(tgtFs, srcTable);
+      toBulkload.put(srcTable, bulkloadInfo);
     }
+
+    for (MergeSplitBulkloadInfo bulkloadInfo : toBulkload.values()) {
+      mergeSplitBulkloads(bulkloadInfo);
+      incrementalCopyBulkloadHFiles(tgtFs, bulkloadInfo.getSrcTable());
+    }
+
     return bulkLoads;
   }
 
-  private void mergeSplitBulkloads(List<String> activeFiles, List<String> archiveFiles,
-    TableName tn) throws IOException {
+  private void mergeSplitBulkloads(MergeSplitBulkloadInfo bulkload) throws IOException {
     int attempt = 1;
+    List<String> activeFiles = bulkload.getActiveFiles();
+    List<String> archiveFiles = bulkload.getArchiveFiles();
+    TableName tn = bulkload.getSrcTable();
 
     while (!activeFiles.isEmpty()) {
       LOG.info("MergeSplit {} active bulk loaded files. Attempt={}", activeFiles.size(), attempt++);
@@ -398,7 +406,6 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     Path bulkOutputPath = getBulkOutputDir();
     conf.set(WALPlayer.BULK_OUTPUT_CONF_KEY, bulkOutputPath.toString());
     conf.set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ";");
-    conf.setBoolean(HFileOutputFormat2.TABLE_NAME_WITH_NAMESPACE_INCLUSIVE_KEY, true);
     conf.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
     conf.set(JOB_NAME_CONF_KEY, jobname);
     String[] playerArgs = { dirs, StringUtils.join(tableList, ",") };
