@@ -66,8 +66,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 public class WALReplay extends Configured implements Tool {
   private static final Logger LOG = LoggerFactory.getLogger(WALReplay.class);
   final static String NAME = "WALReplay";
-  final static String WALs = "WALs";
-  final static String BulkloadFiles = "bulk-load-files";
+  final static String WAL_DIR = "WALs";
+  final static String BULKLOAD_FILES = "bulk-load-files";
   public final static String TABLES_KEY = "wal.input.tables";
   public final static String TABLE_MAP_KEY = "wal.input.tablesmap";
   public final static String BULKLOAD_BACKUP_LOCATION = "wal.bulk.backup.location";
@@ -124,7 +124,7 @@ public class WALReplay extends Configured implements Tool {
               LOG.debug("Processing bulk load for namespace: {}, table: {}", namespace, tableName);
 
               List<String> bulkloadFiles = handleBulkLoadCell(cell);
-              LOG.debug("Found {} bulk load files for table: {}", bulkloadFiles.size(), tableName);
+              LOG.info("Found {} bulk load files for table: {}", bulkloadFiles.size(), tableName);
 
               // Prefix each file path with namespace and table name to construct the full paths
               List<String> bulkloadFilesWithFullPath = new ArrayList<>();
@@ -228,6 +228,7 @@ public class WALReplay extends Configured implements Tool {
       LOG.debug("Bulk load detected in cell. Processing...");
 
       WALProtos.BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
+      LOG.debug("BulkLoadDescriptor " + bld.toString());
 
       if (bld == null) {
         LOG.warn("BulkLoadDescriptor is null for cell: {}", cell);
@@ -330,8 +331,8 @@ public class WALReplay extends Configured implements Tool {
     setupTime(conf, WALInputFormat.START_TIME_KEY);
     setupTime(conf, WALInputFormat.END_TIME_KEY);
     String inputDirs = args[0];
-    String walDir = new Path(inputDirs, WALs).toString();
-    String bulkLoadFilesDir = new Path(inputDirs, BulkloadFiles).toString();
+    String walDir = new Path(inputDirs, WAL_DIR).toString();
+    String bulkLoadFilesDir = new Path(inputDirs, BULKLOAD_FILES).toString();
     String[] tables = args.length == 1 ? new String[] {} : args[1].split(",");
     String[] tableMap;
     if (args.length > 2) {
@@ -403,7 +404,7 @@ public class WALReplay extends Configured implements Tool {
     System.err.println(" E.g. 1234567890120 or 2009-02-13T23:32:30.12");
     System.err.println("Other options:");
     System.err.println(" -D" + JOB_NAME_CONF_KEY + "=jobName");
-    System.err.println(" Use the specified mapreduce job name for the wal player");
+    System.err.println(" Use the specified mapreduce job name for the walReplay");
     System.err.println(" -Dwal.input.separator=' '");
     System.err.println(" Change WAL filename separator (WAL dir names use default ','.)");
     System.err.println("For performance also consider the following options:\n"
