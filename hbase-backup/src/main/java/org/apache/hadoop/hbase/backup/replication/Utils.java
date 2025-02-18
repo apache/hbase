@@ -15,54 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.replication;
+package org.apache.hadoop.hbase.backup.replication;
 
-import java.util.UUID;
 import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * A dummy replication endpoint that does nothing, for test use only.
- */
 @InterfaceAudience.Private
-public class DummyReplicationEndpoint extends BaseReplicationEndpoint {
-
-  @Override
-  public boolean canReplicateToSameCluster() {
-    return true;
+public final class Utils {
+  private Utils() {
   }
 
-  @Override
-  public UUID getPeerUUID() {
-    return ctx.getClusterId();
-  }
-
-  @Override
-  public WALEntryFilter getWALEntryfilter() {
-    return null;
-  }
-
-  @Override
-  public ReplicationResult replicate(ReplicateContext replicateContext) {
-    return ReplicationResult.COMMITTED;
-  }
-
-  @Override
-  public void start() {
-    startAsync();
-  }
-
-  @Override
-  public void stop() {
-    stopAsync();
-  }
-
-  @Override
-  protected void doStart() {
-    notifyStarted();
-  }
-
-  @Override
-  protected void doStop() {
-    notifyStopped();
+  public static String logPeerId(String peerId) {
+    return "[Source for peer " + peerId + "]:";
   }
 }
