@@ -36,8 +36,6 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A default implementation of {@link HFileBlockDecodingContext}. It assumes the block data section
@@ -46,8 +44,6 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingContext {
-
-  private static final Logger LOG = LoggerFactory.getLogger(HFileBlockDefaultDecodingContext.class);
 
   private final Configuration conf;
   private final HFileContext fileContext;

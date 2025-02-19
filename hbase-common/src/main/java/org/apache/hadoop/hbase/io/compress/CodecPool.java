@@ -167,7 +167,7 @@ public class CodecPool {
       LOG.info("Got brand-new Decompressor [" + codec.getDefaultExtension() + "]");
     } else {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Got recycled decompressor");
+        LOG.debug("Got recycled Decompressor");
       }
     }
     if (decompressor != null && !decompressor.getClass().isAnnotationPresent(DoNotPool.class)) {
