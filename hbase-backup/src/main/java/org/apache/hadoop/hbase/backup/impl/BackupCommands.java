@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDW
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP;
@@ -339,14 +341,24 @@ public final class BackupCommands {
 
       boolean ignoreChecksum = cmdline.hasOption(OPTION_IGNORECHECKSUM);
 
+      BackupType backupType = BackupType.valueOf(args[1].toUpperCase());
+      List<TableName> tableNameList = null;
+      if (tables != null) {
+        tableNameList = Lists.newArrayList(BackupUtils.parseTableNames(tables));
+      }
+      boolean continuousBackup = cmdline.hasOption(OPTION_ENABLE_CONTINUOUS_BACKUP);
+      if (continuousBackup && !BackupType.FULL.equals(backupType)) {
+        System.out.println("ERROR: Continuous backup can Only be specified for Full Backup");
+        printUsage();
+        throw new IOException(INCORRECT_USAGE);
+      }
+
       try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         BackupRequest.Builder builder = new BackupRequest.Builder();
-        BackupRequest request = builder.withBackupType(BackupType.valueOf(args[1].toUpperCase()))
-          .withTableList(
-            tables != null ? Lists.newArrayList(BackupUtils.parseTableNames(tables)) : null)
+        BackupRequest request = builder.withBackupType(backupType).withTableList(tableNameList)
           .withTargetRootDir(targetBackupDir).withTotalTasks(workers)
           .withBandwidthPerTasks(bandwidth).withNoChecksumVerify(ignoreChecksum)
-          .withBackupSetName(setName).build();
+          .withBackupSetName(setName).withContinuousBackupEnabled(continuousBackup).build();
         String backupId = admin.backupTables(request);
         System.out.println("Backup session " + backupId + " finished. Status: SUCCESS");
       } catch (IOException e) {
@@ -400,6 +412,8 @@ public final class BackupCommands {
       options.addOption(OPTION_YARN_QUEUE_NAME, true, OPTION_YARN_QUEUE_NAME_DESC);
       options.addOption(OPTION_DEBUG, false, OPTION_DEBUG_DESC);
       options.addOption(OPTION_IGNORECHECKSUM, false, OPTION_IGNORECHECKSUM_DESC);
+      options.addOption(OPTION_ENABLE_CONTINUOUS_BACKUP, false,
+        OPTION_ENABLE_CONTINUOUS_BACKUP_DESC);
 
       HelpFormatter helpFormatter = new HelpFormatter();
       helpFormatter.setLeftPadding(2);
