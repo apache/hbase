@@ -22,25 +22,28 @@ import com.github.luben.zstd.ZstdDictDecompress;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.compress.BlockDecompressorHelper;
 import org.apache.hadoop.hbase.io.compress.ByteBuffDecompressor;
+import org.apache.hadoop.hbase.io.compress.CanReinit;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Glue for ByteBuffDecompressor on top of zstd-jni. Note that this doesn't implement CanReinit
- * because it's faster to avoid reinitializing on each usage.
+ * Glue for ByteBuffDecompressor on top of zstd-jni
  */
 @InterfaceAudience.Private
-public class ZstdByteBuffDecompressor implements ByteBuffDecompressor {
+public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit {
 
+  protected int dictId;
   protected ZstdDictDecompress dict;
   protected ZstdDecompressCtx ctx;
 
   ZstdByteBuffDecompressor(@Nullable byte[] dictionary) {
     ctx = new ZstdDecompressCtx();
     if (dictionary != null) {
+      this.dictId = ZstdCodec.getDictionaryId(dictionary);
       this.dict = new ZstdDictDecompress(dictionary);
       this.ctx.loadDict(this.dict);
     }
@@ -108,5 +111,35 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor {
   public void close() {
     ctx.close();
     dict.close();
+  }
+
+  @Override
+  public void reinit(Configuration conf) {
+    if (conf != null) {
+      // Dictionary may have changed
+      byte[] b = ZstdCodec.getDictionary(conf);
+      if (b != null) {
+        // Don't casually create dictionary objects; they consume native memory
+        int thisDictId = ZstdCodec.getDictionaryId(b);
+        if (dict == null || dictId != thisDictId) {
+          dictId = thisDictId;
+          ZstdDictDecompress oldDict = dict;
+          dict = new ZstdDictDecompress(b);
+          ctx.loadDict(dict);
+          if (oldDict != null) {
+            oldDict.close();
+          }
+        }
+      } else {
+        ZstdDictDecompress oldDict = dict;
+        dict = null;
+        dictId = 0;
+        // loadDict((byte[]) accepts null to clear the dictionary
+        ctx.loadDict((byte[]) null);
+        if (oldDict != null) {
+          oldDict.close();
+        }
+      }
+    }
   }
 }
