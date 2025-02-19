@@ -659,7 +659,8 @@ public class TestHFileArchiving {
 
         try {
           // Try to archive the file
-          HFileArchiver.archiveRegion(fs, rootDir, sourceRegionDir.getParent(), sourceRegionDir);
+          HFileArchiver.archiveRegion(conf, fs, rootDir, sourceRegionDir.getParent(),
+            sourceRegionDir);
 
           // The archiver succeded, the file is no longer in the original location
           // but it's in the archive location.
@@ -690,12 +691,14 @@ public class TestHFileArchiving {
   public void testArchiveRegionTableAndRegionDirsNull() throws IOException {
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
     FileSystem fileSystem = UTIL.getTestFileSystem();
+    Configuration conf = UTIL.getMiniHBaseCluster().getMaster().getConfiguration();
     // Try to archive the file but with null regionDir, can't delete sourceFile
-    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, null, null));
+    assertFalse(HFileArchiver.archiveRegion(conf, fileSystem, rootDir, null, null));
   }
 
   @Test
   public void testArchiveRegionWithTableDirNull() throws IOException {
+    Configuration conf = UTIL.getMiniHBaseCluster().getMaster().getConfiguration();
     Path regionDir = new Path(
       CommonFSUtils.getTableDir(new Path("./"), TableName.valueOf(name.getMethodName())), "xyzabc");
     Path familyDir = new Path(regionDir, "rd");
@@ -707,12 +710,13 @@ public class TestHFileArchiving {
     Path sourceRegionDir = new Path(rootDir, regionDir);
     fileSystem.mkdirs(sourceRegionDir);
     // Try to archive the file
-    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, null, sourceRegionDir));
+    assertFalse(HFileArchiver.archiveRegion(conf, fileSystem, rootDir, null, sourceRegionDir));
     assertFalse(fileSystem.exists(sourceRegionDir));
   }
 
   @Test
   public void testArchiveRegionWithRegionDirNull() throws IOException {
+    Configuration conf = UTIL.getMiniHBaseCluster().getMaster().getConfiguration();
     Path regionDir =
       new Path(CommonFSUtils.getTableDir(new Path("./"), TableName.valueOf(name.getMethodName())),
         "elgn4nf");
@@ -726,7 +730,7 @@ public class TestHFileArchiving {
     fileSystem.mkdirs(sourceRegionDir);
     // Try to archive the file but with null regionDir, can't delete sourceFile
     assertFalse(
-      HFileArchiver.archiveRegion(fileSystem, rootDir, sourceRegionDir.getParent(), null));
+      HFileArchiver.archiveRegion(conf, fileSystem, rootDir, sourceRegionDir.getParent(), null));
     assertTrue(fileSystem.exists(sourceRegionDir));
     fileSystem.delete(sourceRegionDir, true);
   }
