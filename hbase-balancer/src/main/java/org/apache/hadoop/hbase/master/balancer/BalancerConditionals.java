@@ -46,10 +46,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
  * than have perfectly intentional balance. But conditionals allow you to, for example, define that
  * a region's primary and secondary should not live on the same rack. Another example, conditionals
  * make it easy to define that system tables will ideally be isolated on their own RegionServer
- * (without needing to manage distinct RegionServer groups). Use of conditionals may cause an
- * extremely unbalanced cluster to exceed its max balancer runtime. This is necessary because
- * conditional candidate generation is quite expensive, and cutting it off early could prevent us
- * from finding a solution.
+ * (without needing to manage distinct RegionServer groups).
  */
 @InterfaceAudience.Private
 final class BalancerConditionals implements Configurable {
@@ -89,7 +86,8 @@ final class BalancerConditionals implements Configurable {
   }
 
   boolean isReplicaDistributionEnabled() {
-    return conditionalClasses.contains(DistributeReplicasConditional.class);
+    return conditionalClasses.stream()
+      .anyMatch(DistributeReplicasConditional.class::isAssignableFrom);
   }
 
   boolean shouldSkipSloppyServerEvaluation() {

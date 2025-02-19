@@ -577,6 +577,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       rackManager, regionCacheRatioOnOldServerMap);
 
     long startTime = EnvironmentEdgeManager.currentTime();
+    cluster.setStopRequestedAt(startTime + maxRunningTime);
 
     initCosts(cluster);
     balancerConditionals.loadClusterState(cluster);
@@ -700,7 +701,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         updateCostsAndWeightsWithAction(cluster, undoAction);
       }
 
-      if (EnvironmentEdgeManager.currentTime() - startTime > maxRunningTime) {
+      if (EnvironmentEdgeManager.currentTime() > cluster.getStopRequestedAt()) {
         break;
       }
     }

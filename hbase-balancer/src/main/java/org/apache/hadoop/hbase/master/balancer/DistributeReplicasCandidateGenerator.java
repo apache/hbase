@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.hbase.master.balancer.replicas.ReplicaKey;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,8 +58,12 @@ final class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCa
     // Iterate through shuffled servers to find colocated replicas
     boolean foundColocatedReplicas = false;
     List<MoveRegionAction> moveRegionActions = new ArrayList<>();
-    for (int sourceIndex : cluster.getShuffledServerIndices()) {
-      if (moveRegionActions.size() >= BATCH_SIZE) {
+    List<Integer> shuffledServerIndices = cluster.getShuffledServerIndices();
+    for (int sourceIndex : shuffledServerIndices) {
+      if (
+        moveRegionActions.size() >= BATCH_SIZE
+          || EnvironmentEdgeManager.currentTime() > cluster.getStopRequestedAt()
+      ) {
         break;
       }
       int[] serverRegions = cluster.regionsPerServer[sourceIndex];

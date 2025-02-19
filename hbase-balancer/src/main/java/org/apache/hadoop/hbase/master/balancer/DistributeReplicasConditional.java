@@ -36,22 +36,12 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 @InterfaceAudience.Private
 public class DistributeReplicasConditional extends RegionPlanConditional {
 
-  /**
-   * Local mini cluster tests are only run on one host/rack by design. If enabled, this will pretend
-   * that only server isolation is necessary for sufficient replica distribution. This should only
-   * be used in tests.
-   */
-  public static final String TEST_MODE_ENABLED_KEY =
-    "hbase.replica.distribution.conditional.testModeEnabled";
-
-  private final boolean isTestModeEnabled;
   private final List<RegionPlanConditionalCandidateGenerator> candidateGenerators;
 
   public DistributeReplicasConditional(BalancerConditionals balancerConditionals,
     BalancerClusterState cluster) {
     super(balancerConditionals.getConf(), cluster);
     Configuration conf = balancerConditionals.getConf();
-    this.isTestModeEnabled = conf.getBoolean(TEST_MODE_ENABLED_KEY, false);
     float slop =
       conf.getFloat(BaseLoadBalancer.REGIONS_SLOP_KEY, BaseLoadBalancer.REGIONS_SLOP_DEFAULT);
     this.candidateGenerators =
@@ -61,9 +51,6 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
 
   @Override
   public ValidationLevel getValidationLevel() {
-    if (isTestModeEnabled) {
-      return ValidationLevel.SERVER;
-    }
     return ValidationLevel.SERVER_HOST_RACK;
   }
 

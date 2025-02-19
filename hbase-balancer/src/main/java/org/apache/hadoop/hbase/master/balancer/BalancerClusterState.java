@@ -128,13 +128,14 @@ class BalancerClusterState {
   // Maps regionName -> oldServerName -> cache ratio of the region on the old server
   Map<String, Pair<ServerName, Float>> regionCacheRatioOnOldServerMap;
 
-  private Supplier<List<Integer>> shuffledServerIndicesSupplier =
+  private final Supplier<List<Integer>> shuffledServerIndicesSupplier =
     Suppliers.memoizeWithExpiration(() -> {
       Collection<Integer> serverIndices = serversToIndex.values();
       List<Integer> shuffledServerIndices = new ArrayList<>(serverIndices);
       Collections.shuffle(shuffledServerIndices);
       return shuffledServerIndices;
     }, 5, TimeUnit.SECONDS);
+  private long stopRequestedAt = Long.MAX_VALUE;
 
   static class DefaultRackManager extends RackManager {
     @Override
@@ -1082,6 +1083,14 @@ class BalancerClusterState {
 
   public int getMaxReplicas() {
     return maxReplicas;
+  }
+
+  void setStopRequestedAt(long stopRequestedAt) {
+    this.stopRequestedAt = stopRequestedAt;
+  }
+
+  long getStopRequestedAt() {
+    return stopRequestedAt;
   }
 
   @Override

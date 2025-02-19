@@ -18,17 +18,21 @@
 package org.apache.hadoop.hbase.master.balancer.replicas;
 
 import java.util.Arrays;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public final class ReplicaKey {
-  private final Pair<ByteArrayWrapper, ByteArrayWrapper> startAndStopKeys;
+  private final TableName tableName;
+  private final byte[] start;
+  private final byte[] stop;
 
   public ReplicaKey(RegionInfo regionInfo) {
-    this.startAndStopKeys = new Pair<>(new ByteArrayWrapper(regionInfo.getStartKey()),
-      new ByteArrayWrapper(regionInfo.getEndKey()));
+    this.tableName = regionInfo.getTable();
+    this.start = regionInfo.getStartKey();
+    this.stop = regionInfo.getEndKey();
   }
 
   @Override
@@ -36,40 +40,15 @@ public final class ReplicaKey {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ReplicaKey)) {
+    if (!(o instanceof ReplicaKey other)) {
       return false;
     }
-    ReplicaKey other = (ReplicaKey) o;
-    return this.startAndStopKeys.equals(other.startAndStopKeys);
+    return Arrays.equals(this.start, other.start) && Arrays.equals(this.stop, other.stop)
+      && this.tableName.equals(other.tableName);
   }
 
   @Override
   public int hashCode() {
-    return startAndStopKeys.hashCode();
-  }
-
-  static class ByteArrayWrapper {
-    private final byte[] bytes;
-
-    ByteArrayWrapper(byte[] prefix) {
-      this.bytes = Arrays.copyOf(prefix, prefix.length);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (!(o instanceof ByteArrayWrapper)) {
-        return false;
-      }
-      ByteArrayWrapper other = (ByteArrayWrapper) o;
-      return Arrays.equals(this.bytes, other.bytes);
-    }
-
-    @Override
-    public int hashCode() {
-      return Arrays.hashCode(bytes);
-    }
+    return new HashCodeBuilder().append(tableName).append(start).append(stop).toHashCode();
   }
 }

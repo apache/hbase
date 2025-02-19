@@ -58,9 +58,8 @@ public class TestReplicaDistributionBalancerConditional {
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean(BalancerConditionals.DISTRIBUTE_REPLICAS_KEY, true);
-    TEST_UTIL.getConfiguration().setBoolean(DistributeReplicasConditional.TEST_MODE_ENABLED_KEY,
-      true);
+    DistributeReplicasTestConditional
+      .enableConditionalReplicaDistributionForTest(TEST_UTIL.getConfiguration());
     TEST_UTIL.getConfiguration()
       .setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CONF_KEY, true);
     TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_BALANCER_PERIOD, 1000L);

@@ -18,11 +18,13 @@
 package org.apache.hadoop.hbase.master.balancer.replicas;
 
 import java.time.Duration;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Suppliers;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
@@ -46,14 +48,14 @@ public final class ReplicaKeyCache implements Configurable {
     "hbase.replica.distribution.conditional.replicaKeyCacheSize";
   public static final int REPLICA_KEY_CACHE_SIZE_DEFAULT = 1000;
 
-  private static final ReplicaKeyCache INSTANCE = new ReplicaKeyCache();
+  private static final Supplier<ReplicaKeyCache> INSTANCE = Suppliers.memoize(ReplicaKeyCache::new);
 
   private volatile LoadingCache<RegionInfo, ReplicaKey> replicaKeyCache = null;
 
   private Configuration conf;
 
   public static ReplicaKeyCache getInstance() {
-    return INSTANCE;
+    return INSTANCE.get();
   }
 
   private ReplicaKeyCache() {

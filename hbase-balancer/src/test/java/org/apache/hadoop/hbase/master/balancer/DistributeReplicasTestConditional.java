@@ -17,20 +17,23 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 
-/**
- * Used for FavoredNode unit tests
- */
-public class LoadOnlyFavoredStochasticBalancer extends FavoredStochasticBalancer {
+public class DistributeReplicasTestConditional extends DistributeReplicasConditional {
+
+  static void enableConditionalReplicaDistributionForTest(Configuration conf) {
+    conf.set(BalancerConditionals.ADDITIONAL_CONDITIONALS_KEY,
+      DistributeReplicasTestConditional.class.getCanonicalName());
+  }
+
+  public DistributeReplicasTestConditional(BalancerConditionals balancerConditionals,
+    BalancerClusterState cluster) {
+    super(balancerConditionals, cluster);
+  }
 
   @Override
-  protected Map<Class<? extends CandidateGenerator>, CandidateGenerator>
-    createCandidateGenerators(Configuration conf) {
-    Map<Class<? extends CandidateGenerator>, CandidateGenerator> fnPickers = new HashMap<>(1);
-    fnPickers.put(FavoredNodeLoadPicker.class, new FavoredNodeLoadPicker());
-    return fnPickers;
+  public ValidationLevel getValidationLevel() {
+    // Unit tests can't validate at host/rack levels
+    return ValidationLevel.SERVER;
   }
 }
