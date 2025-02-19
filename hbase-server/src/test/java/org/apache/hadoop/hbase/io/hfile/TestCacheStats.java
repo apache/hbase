@@ -17,14 +17,20 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ IOTests.class, SmallTests.class })
 public class TestCacheStats {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestCacheStats.class);
+
   @Test
   public void testEvicted() {
     CacheStats cacheStats = new CacheStats("testEvicted");
