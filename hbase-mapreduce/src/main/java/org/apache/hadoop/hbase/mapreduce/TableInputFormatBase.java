@@ -46,7 +46,6 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.net.DNS;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -171,7 +170,7 @@ public abstract class TableInputFormatBase extends InputFormat<ImmutableBytesWri
       throw new IOException(INITIALIZATION_ERROR, exception);
     }
     TableSplit tSplit = (TableSplit) split;
-    LOG.info("Input split length: " + StringUtils.humanReadableInt(tSplit.getLength()) + " bytes.");
+    LOG.info("Input split length: " + Strings.humanReadableInt(tSplit.getLength()) + " bytes.");
     final TableRecordReader trr =
       this.tableRecordReader != null ? this.tableRecordReader : new TableRecordReader();
     Scan sc = new Scan(this.scan);

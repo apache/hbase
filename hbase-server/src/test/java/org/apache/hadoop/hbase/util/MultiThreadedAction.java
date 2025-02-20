@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
-import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -204,7 +203,7 @@ public abstract class MultiThreadedAction {
           double averageKeysPerSecond = (time > 0) ? (numKeys * 1000 / time) : 0;
 
           LOG.info(threadsLeft + "Keys=" + numKeys + ", cols="
-            + StringUtils.humanReadableInt(numCols.get()) + ", time=" + formatTime(time)
+            + Strings.humanReadableInt(numCols.get()) + ", time=" + formatTime(time)
             + ((numKeys > 0 && time > 0)
               ? (" Overall: [" + "keys/s= " + numKeys * 1000 / time + ", latency="
                 + String.format("%.2f", (double) totalOpTime / (double) numKeys) + " ms]")
