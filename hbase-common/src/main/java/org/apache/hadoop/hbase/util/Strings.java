@@ -93,4 +93,16 @@ public final class Strings {
     int numPaddingCharacters = length - input.length();
     return StringUtils.repeat(padding, numPaddingCharacters) + input;
   }
+
+  /**
+   * Note: This method was taken from org.apache.hadoop.util.StringUtils.humanReadableInt(long).
+   * Reason: that method got deprecated and this method provides an easy-to-understand usage of
+   * StringUtils.TraditionalBinaryPrefix.long2String. Given an integer, return a string that is in
+   * an approximate, but human readable format.
+   * @param number the number to format
+   * @return a human readable form of the integer
+   */
+  public static String humanReadableInt(long number) {
+    return org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.long2String(number, "", 1);
+  }
 }
