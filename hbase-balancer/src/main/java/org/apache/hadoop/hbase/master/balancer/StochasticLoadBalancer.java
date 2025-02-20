@@ -558,7 +558,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * approach the optimal state given enough steps.
    */
   @Override
-  @SuppressWarnings("checkstyle:MethodLength")
   protected List<RegionPlan> balanceTable(TableName tableName,
     Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     // On clusters with lots of HFileLinks or lots of reference files,
