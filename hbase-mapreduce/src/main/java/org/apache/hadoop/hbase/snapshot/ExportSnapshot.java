@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
@@ -232,7 +233,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       // Use the default block size of the outputFs if bigger
       int defaultBlockSize = Math.max((int) outputFs.getDefaultBlockSize(outputRoot), BUFFER_SIZE);
       bufferSize = conf.getInt(CONF_BUFFER_SIZE, defaultBlockSize);
-      LOG.info("Using bufferSize=" + StringUtils.humanReadableInt(bufferSize));
+      LOG.info("Using bufferSize=" + Strings.humanReadableInt(bufferSize));
 
       for (Counter c : Counter.values()) {
         context.getCounter(c).increment(0);
@@ -333,10 +334,9 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
         long etime = EnvironmentEdgeManager.currentTime();
         LOG.info("copy completed for input=" + inputPath + " output=" + outputPath);
-        LOG
-          .info("size=" + totalBytesWritten + " (" + StringUtils.humanReadableInt(totalBytesWritten)
-            + ")" + " time=" + StringUtils.formatTimeDiff(etime, stime) + String
-              .format(" %.3fM/sec", (totalBytesWritten / ((etime - stime) / 1000.0)) / 1048576.0));
+        LOG.info("size=" + totalBytesWritten + " (" + Strings.humanReadableInt(totalBytesWritten)
+          + ")" + " time=" + StringUtils.formatTimeDiff(etime, stime) + String.format(" %.3fM/sec",
+            (totalBytesWritten / ((etime - stime) / 1000.0)) / 1048576.0));
         context.getCounter(Counter.FILES_COPIED).increment(1);
 
         // Try to Preserve attributes
@@ -428,7 +428,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       final Path outputPath, final FSDataOutputStream out, final long inputFileSize)
       throws IOException {
       final String statusMessage =
-        "copied %s/" + StringUtils.humanReadableInt(inputFileSize) + " (%.1f%%)";
+        "copied %s/" + Strings.humanReadableInt(inputFileSize) + " (%.1f%%)";
 
       try {
         byte[] buffer = new byte[bufferSize];
@@ -443,8 +443,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
           if (reportBytes >= REPORT_SIZE) {
             context.getCounter(Counter.BYTES_COPIED).increment(reportBytes);
-            context.setStatus(
-              String.format(statusMessage, StringUtils.humanReadableInt(totalBytesWritten),
+            context
+              .setStatus(String.format(statusMessage, Strings.humanReadableInt(totalBytesWritten),
                 (totalBytesWritten / (float) inputFileSize) * 100.0f) + " from " + inputPath
                 + " to " + outputPath);
             reportBytes = 0;
@@ -452,10 +452,9 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         }
 
         context.getCounter(Counter.BYTES_COPIED).increment(reportBytes);
-        context
-          .setStatus(String.format(statusMessage, StringUtils.humanReadableInt(totalBytesWritten),
-            (totalBytesWritten / (float) inputFileSize) * 100.0f) + " from " + inputPath + " to "
-            + outputPath);
+        context.setStatus(String.format(statusMessage, Strings.humanReadableInt(totalBytesWritten),
+          (totalBytesWritten / (float) inputFileSize) * 100.0f) + " from " + inputPath + " to "
+          + outputPath);
 
         return totalBytesWritten;
       } finally {
@@ -748,7 +747,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
     if (LOG.isDebugEnabled()) {
       for (int i = 0; i < sizeGroups.length; ++i) {
-        LOG.debug("export split=" + i + " size=" + StringUtils.humanReadableInt(sizeGroups[i]));
+        LOG.debug("export split=" + i + " size=" + Strings.humanReadableInt(sizeGroups[i]));
       }
     }
 

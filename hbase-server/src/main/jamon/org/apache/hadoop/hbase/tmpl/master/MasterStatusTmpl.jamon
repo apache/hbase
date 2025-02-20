@@ -64,6 +64,7 @@ org.apache.hadoop.hbase.util.CommonFSUtils;
 org.apache.hadoop.hbase.util.JvmVersion;
 org.apache.hadoop.hbase.util.PrettyPrinter;
 org.apache.hadoop.util.StringUtils;
+org.apache.hadoop.hbase.util.Strings;
 </%import>
 
 <%if format.equals("json") %>
@@ -786,7 +787,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <td><% peerConfig.getReplicationEndpointImpl() %></td>
         <td><% peer.isEnabled() ? "ENABLED" : "DISABLED" %></td>
         <td><% peerConfig.isSerial() %></td>
-        <td><% peerConfig.getBandwidth() == 0? "UNLIMITED" : StringUtils.humanReadableInt(peerConfig.getBandwidth()) %></td>
+        <td><% peerConfig.getBandwidth() == 0? "UNLIMITED" : Strings.humanReadableInt(peerConfig.getBandwidth()) %></td>
         <td><% peerConfig.replicateAllUserTables() %></td>
         <td>
            <% peerConfig.getNamespaces() == null ? "" : ReplicationPeerConfigUtil.convertToString(peerConfig.getNamespaces()).replaceAll(";", "; ") %>
