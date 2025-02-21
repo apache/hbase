@@ -95,11 +95,11 @@ public class TestLargeClusterBalancingConditionalReplicaDistribution {
 
   @Test
   public void testReplicaDistribution() {
-    Configuration conf = new Configuration(true);
+    Configuration conf = new Configuration();
     DistributeReplicasTestConditional.enableConditionalReplicaDistributionForTest(conf);
     conf.setBoolean(ReplicaKeyCache.CACHE_REPLICA_KEYS_KEY, true);
     conf.setInt(ReplicaKeyCache.REPLICA_KEY_CACHE_SIZE_KEY, Integer.MAX_VALUE);
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120_000);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 30_000);
 
     // turn off replica cost functions
     conf.setLong("hbase.master.balancer.stochastic.regionReplicaRackCostKey", 0);

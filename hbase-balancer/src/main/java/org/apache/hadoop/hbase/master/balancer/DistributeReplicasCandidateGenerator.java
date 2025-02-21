@@ -88,7 +88,8 @@ final class DistributeReplicasCandidateGenerator extends RegionPlanConditionalCa
               new MoveRegionAction(regionIndex, sourceIndex, destinationIndex);
             if (isForced) {
               return possibleAction;
-            } else if (willBeAccepted(cluster, possibleAction)) {
+            }
+            if (willBeAccepted(cluster, possibleAction)) {
               cluster.doAction(possibleAction); // Update cluster state to reflect move
               moveRegionActions.add(possibleAction);
               break;

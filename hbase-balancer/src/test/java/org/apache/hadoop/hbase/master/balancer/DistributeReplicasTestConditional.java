@@ -33,7 +33,7 @@ public class DistributeReplicasTestConditional extends DistributeReplicasConditi
 
   @Override
   public ValidationLevel getValidationLevel() {
-    // Unit tests can't validate at host/rack levels
+    // Mini-cluster tests can't validate at host/rack levels
     return ValidationLevel.SERVER;
   }
 }
