@@ -37,6 +37,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit {
 
   protected int dictId;
+  @Nullable
   protected ZstdDictDecompress dict;
   protected ZstdDecompressCtx ctx;
 
@@ -108,7 +109,9 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit
   @Override
   public void close() {
     ctx.close();
-    dict.close();
+    if (dict != null) {
+      dict.close();
+    }
   }
 
   @Override

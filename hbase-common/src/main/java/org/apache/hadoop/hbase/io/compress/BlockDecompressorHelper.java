@@ -48,6 +48,10 @@ public class BlockDecompressorHelper {
         int compressedChunkSize = rawReadInt(input);
         compressedBytesConsumed += 4;
         int n = rawDecompressor.decompress(output, input, compressedChunkSize);
+        if (n <= 0) {
+          throw new IOException("Decompression failed. Compressed size: " + compressedChunkSize
+            + ", decompressed size: " + decompressedBlockSize);
+        }
         compressedBytesConsumed += compressedChunkSize;
         decompressedBytesInBlock += n;
         totalDecompressedBytes += n;

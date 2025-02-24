@@ -18,10 +18,8 @@
 package org.apache.hadoop.hbase.io.compress;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface ByteBuffDecompressionCodec {
 
   Class<? extends ByteBuffDecompressor> getByteBuffDecompressorType();
