@@ -21,14 +21,12 @@ import java.io.Closeable;
 import java.io.IOException;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Specification of a block-based decompressor, which can be more efficient than the stream-based
  * Decompressor.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface ByteBuffDecompressor extends Closeable {
 
   /**
