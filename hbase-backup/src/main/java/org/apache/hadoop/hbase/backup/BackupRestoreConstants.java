@@ -96,6 +96,10 @@ public interface BackupRestoreConstants {
   String OPTION_YARN_QUEUE_NAME_DESC = "Yarn queue name to run backup create command on";
   String OPTION_YARN_QUEUE_NAME_RESTORE_DESC = "Yarn queue name to run backup restore command on";
 
+  String OPTION_TO_DATETIME = "td";
+  String LONG_OPTION_TO_DATETIME = "to-datetime";
+  String OPTION_TO_DATETIME_DESC = "Target date and time up to which data should be restored";
+
   String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
   String BACKUP_CONFIG_STRING =
@@ -121,6 +125,8 @@ public interface BackupRestoreConstants {
   String CONF_STAGING_ROOT = "snapshot.export.staging.root";
 
   String BACKUPID_PREFIX = "backup_";
+
+  String CONF_CONTINUOUS_BACKUP_WAL_DIR = "hbase.backup.continuous.wal.dir";
 
   enum BackupCommand {
     CREATE,

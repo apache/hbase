@@ -17,18 +17,28 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
+import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.WALS_DIR;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
+
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupAdmin;
 import org.apache.hadoop.hbase.backup.BackupClientFactory;
@@ -40,12 +50,17 @@ import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
+import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
+import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.hadoop.hbase.backup.util.BackupSet;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.mapreduce.WALInputFormat;
+import org.apache.hadoop.hbase.mapreduce.WALPlayer;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -507,6 +522,124 @@ public class BackupAdminImpl implements BackupAdmin {
     }
     // Execute restore request
     new RestoreTablesClient(conn, request).execute();
+  }
+
+  @Override
+  public void pointInTimeRestore(PointInTimeRestoreRequest request) throws IOException {
+    Path backupRootDirPath = new Path(request.getBackupRootDir());
+    List<BackupImage> sortedImages =
+      HBackupFileSystem.getAllBackupImages(conn.getConfiguration(), backupRootDirPath);
+
+    TableName[] sTableArray = request.getFromTables();
+    TableName[] tTableArray = request.getToTables();
+
+    // Ensure target tables array is properly set
+    if (tTableArray == null || tTableArray.length == 0) {
+      tTableArray = sTableArray;
+    }
+
+    for (int i = 0; i < sTableArray.length; i++) {
+      TableName sTableName = sTableArray[i];
+      TableName tTableName = tTableArray[i];
+
+      BackupImage latestBackupImage = findLatestBackupWithTable(sTableName, sortedImages);
+      if (latestBackupImage == null) {
+        LOG.error("No full or incremental backup found for table: {}", sTableName);
+        throw new IOException("No valid backup found for table: " + sTableName);
+      }
+
+      RestoreRequest restoreRequest = BackupUtils.createRestoreRequest(request.getBackupRootDir(),
+        latestBackupImage.getBackupId(), request.isCheck(), new TableName[] { sTableName },
+        new TableName[] { tTableName }, request.isOverwrite());
+
+      restore(restoreRequest);
+
+      long startTime = latestBackupImage.getStartTs();
+      long endTime = request.getToDateTime();
+      // TODO: already verified the existence of the property in the beginning of the process. still
+      // required???
+      String walBackupDir = conn.getConfiguration().get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+      replayWal(sTableName, tTableName, startTime, endTime, new Path(walBackupDir));
+    }
+
+    LOG.info("Successfully completed Point In Time Restore for all tables.");
+  }
+
+  private BackupImage findLatestBackupWithTable(TableName tableName,
+    List<BackupImage> sortedImages) {
+    return sortedImages.stream().filter(image -> image.hasTable(tableName)).findFirst()
+      .orElse(null);
+  }
+
+  private void replayWal(TableName sourceTableName, TableName targetTableName, long startTime,
+    long endTime, Path walBackupDir) throws IOException {
+    LOG.info(
+      "Starting WAL replay for source: {}, target: {}, time range: {} - {}, WAL backup dir: {}",
+      sourceTableName, targetTableName, startTime, endTime, walBackupDir);
+
+    // TODO: Verify anything before replaying WALs
+    // TODO: Authentication Keys?????
+    Configuration conf = HBaseConfiguration.create();
+    Tool player = new WALPlayer();
+    player.setConf(conf);
+
+    conf.setLong(WALInputFormat.START_TIME_KEY, startTime);
+    conf.setLong(WALInputFormat.END_TIME_KEY, endTime);
+
+    List<String> validDirs = getValidWalDirs(conf, walBackupDir, startTime, endTime);
+    if (validDirs.isEmpty()) {
+      LOG.warn("No valid WAL directories found for time range: {} - {}. Skipping WAL replay.",
+        startTime, endTime);
+      return;
+    }
+
+    String[] playerArgs = { String.join(",", validDirs), sourceTableName.getNameAsString(),
+      targetTableName.getNameAsString() };
+    try {
+      LOG.info("Running WALPlayer with arguments: {}", Arrays.toString(playerArgs));
+      int result = player.run(playerArgs);
+
+      if (result == 0) {
+        LOG.info("WAL replay completed successfully for table: {}", targetTableName);
+      } else {
+        LOG.error("WAL replay failed for table: {} with exit code: {}", targetTableName, result);
+        throw new IOException("WAL replay failed with exit code: " + result);
+      }
+    } catch (Exception e) {
+      LOG.error("Error occurred during WAL replay for table: {}. Exception: {}", targetTableName,
+        e.getMessage(), e);
+      throw new IOException("Exception during WAL replay", e);
+    }
+  }
+
+  private List<String> getValidWalDirs(Configuration conf, Path walBackupDir, long startTime,
+    long endTime) throws IOException {
+    FileSystem backupFs = FileSystem.get(walBackupDir.toUri(), conf);
+    FileStatus[] dayDirs = backupFs.listStatus(new Path(walBackupDir, WALS_DIR));
+    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+    List<String> validDirs = new ArrayList<>();
+
+    for (FileStatus dayDir : dayDirs) {
+      if (!dayDir.isDirectory()) {
+        continue; // Skip files, only process directories
+      }
+
+      String dirName = dayDir.getPath().getName();
+      try {
+        Date dirDate = dateFormat.parse(dirName);
+        long dirStartTime = dirDate.getTime(); // Start of that day (00:00:00)
+        long dirEndTime = dirStartTime + ONE_DAY_IN_MILLISECONDS - 1; // End time of the day
+                                                                      // (23:59:59)
+
+        // Check if this day's WAL files overlap with the required time range
+        if (dirEndTime >= startTime && dirStartTime <= endTime) {
+          validDirs.add(dayDir.getPath().toString());
+        }
+      } catch (ParseException e) {
+        LOG.warn("Skipping invalid directory name: " + dirName, e);
+      }
+    }
+    return validDirs;
   }
 
   @Override
