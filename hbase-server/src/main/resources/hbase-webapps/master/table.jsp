@@ -355,7 +355,10 @@
                         writeReq = String.format("%,1d", load.getWriteRequestCount());
                         double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
                         if (rSize > 0) {
-                        fileSize = StringUtils.byteDesc((long) rSize);
+                          fileSize = StringUtils.byteDesc((long) rSize);
+                          if (totalStoreFileSizeMB == 0) {
+                            totalStoreFileSizeMB += load.getStoreFileSize().get(Size.Unit.MEGABYTE);
+                          }
                         }
                         double rSizeUncompressed = load.getUncompressedStoreFileSize().get(Size.Unit.BYTE);
                         if (rSizeUncompressed > 0) {
