@@ -81,8 +81,12 @@ public final class AuthManager {
     void cleanUp(ListMultimap<String, ? extends Permission> newPermissions) {
       synchronized (mutex) {
         for (Map.Entry<String, Set<T>> entry : cache.entrySet()) {
-          if (!newPermissions.containsKey(entry.getKey())) {
-            entry.getValue().clear();
+          String key = entry.getKey();
+          Set<T> value = entry.getValue();
+          if (newPermissions.containsKey(key)) {
+            value.removeIf(t -> !newPermissions.get(key).contains(t));
+          } else {
+            value.clear();
           }
         }
       }
