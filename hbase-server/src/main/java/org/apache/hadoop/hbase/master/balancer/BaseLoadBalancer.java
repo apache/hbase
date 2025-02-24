@@ -77,6 +77,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   public static final boolean DEFAULT_HBASE_MASTER_LOADBALANCE_BYTABLE = false;
 
+  public static final String REGIONS_SLOP_KEY = "hbase.regions.slop";
+  public static final float REGIONS_SLOP_DEFAULT = 0.2f;
+
   protected static final int MIN_SERVER_BALANCE = 2;
   private volatile boolean stopped = false;
 
@@ -256,7 +259,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     float average = cs.getLoadAverage(); // for logging
     int floor = (int) Math.floor(average * (1 - slop));
     int ceiling = (int) Math.ceil(average * (1 + slop));
-    if (!(cs.getMaxLoad() > ceiling || cs.getMinLoad() < floor)) {
+    int maxLoad = cs.getMaxLoad();
+    int minLoad = cs.getMinLoad();
+    if (!(maxLoad > ceiling || minLoad < floor)) {
       NavigableMap<ServerAndLoad, List<RegionInfo>> serversByLoad = cs.getServersByLoad();
       if (LOG.isTraceEnabled()) {
         // If nothing to balance, then don't say anything unless trace-level logging.
@@ -549,7 +554,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   protected float getDefaultSlop() {
-    return 0.2f;
+    return REGIONS_SLOP_DEFAULT;
   }
 
   private RegionLocationFinder createRegionLocationFinder(Configuration conf) {
@@ -560,9 +565,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   protected void loadConf(Configuration conf) {
-    this.slop = conf.getFloat("hbase.regions.slop", getDefaultSlop());
+    this.slop = conf.getFloat(REGIONS_SLOP_KEY, getDefaultSlop());
     this.rackManager = new RackManager(getConf());
-    this.onlySystemTablesOnMaster = LoadBalancer.isSystemTablesOnlyOnMaster(conf);
     useRegionFinder = conf.getBoolean("hbase.master.balancer.uselocality", true);
     if (useRegionFinder) {
       regionFinder = createRegionLocationFinder(conf);
