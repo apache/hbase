@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
+import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
@@ -662,6 +663,14 @@ public final class BackupUtils {
       builder.withBackupRootDir(backupRootDir).withBackupId(backupId).withCheck(check)
         .withFromTables(fromTables).withToTables(toTables).withOvewrite(isOverwrite).build();
     return request;
+  }
+
+  public static PointInTimeRestoreRequest createPointInTimeRestoreRequest(String backupRootDir,
+    boolean check, TableName[] fromTables, TableName[] toTables, boolean isOverwrite,
+    long toDateTime) {
+    PointInTimeRestoreRequest.Builder builder = new PointInTimeRestoreRequest.Builder();
+    return builder.withBackupRootDir(backupRootDir).withCheck(check).withFromTables(fromTables)
+      .withToTables(toTables).withOverwrite(isOverwrite).withToDateTime(toDateTime).build();
   }
 
   public static boolean validate(List<TableName> tables, BackupManifest backupManifest,
