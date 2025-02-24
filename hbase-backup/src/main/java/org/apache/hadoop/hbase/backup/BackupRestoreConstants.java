@@ -101,6 +101,10 @@ public interface BackupRestoreConstants {
   String OPTION_ENABLE_CONTINUOUS_BACKUP_DESC =
     "Flag indicating that the full backup is part of a continuous backup process.";
 
+  String OPTION_TO_DATETIME = "td";
+  String LONG_OPTION_TO_DATETIME = "to-datetime";
+  String OPTION_TO_DATETIME_DESC = "Target date and time up to which data should be restored";
+
   String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
   String BACKUP_CONFIG_STRING =
