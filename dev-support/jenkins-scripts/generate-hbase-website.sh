@@ -191,6 +191,10 @@ else
   exit $status
 fi
 
+# Replace MathJax CDN URI with local one in book.html
+echo "Replace MathJax URI"
+sed -i 's,https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/,js/,g' "${component_dir}"/target/site/book.html
+
 # Stage the site
 echo "Staging HBase site"
 mvn \

@@ -2791,6 +2791,33 @@
                     **/fonts/fontawesome-webfont.woff,
                     **/fonts/fontawesome-webfont.woff2,</includes>
                 </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>MathJax</artifactId>
+                  <version>2.7.0</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/MathJax.js,
+                    **/config/TeX-MML-AM_HTMLorMML.js,
+                    **/jax/output/HTML-CSS/jax.js,
+                    **/jax/output/HTML-CSS/imageFonts.js,
+                    **/jax/output/HTML-CSS/fonts/TeX/fontdata.js,
+                    **/jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/Main.js,
+                    **/jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/BasicLatin.js,
+                    **/extensions/MathMenu.js,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Main-Regular.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Main-Italic.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Math-Italic.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Size1-Regular.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Size3-Regular.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_SansSerif-Italic.woff,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Main-Regular.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Main-Italic.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Math-Italic.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Size1-Regular.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Size3-Regular.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_SansSerif-Italic.otf,</includes>
+                </artifactItem>
               </artifactItems>
               <outputDirectory>${basedir}/target/</outputDirectory>
             </configuration>
@@ -2983,6 +3010,22 @@
                 <copy flatten="true" todir="${project.build.directory}/site/js">
                   <fileset dir="${project.build.directory}/META-INF/resources/webjars/highlightjs/8.7/">
                     <include name="highlight.min.js"/>
+                  </fileset>
+                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/MathJax/2.7.0">
+                    <include name="MathJax.js"/>
+                  </fileset>
+                </copy>
+                <copy flatten="false" todir="${project.build.directory}/site/js">
+                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/MathJax/2.7.0">
+                    <include name="config/TeX-MML-AM_HTMLorMML.js"/>
+                    <include name="jax/output/HTML-CSS/jax.js"/>
+                    <include name="jax/output/HTML-CSS/imageFonts.js"/>
+                    <include name="jax/output/HTML-CSS/fonts/TeX/fontdata.js"/>
+                    <include name="jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/Main.js"/>
+                    <include name="jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/BasicLatin.js"/>
+                    <include name="extensions/MathMenu.js"/>
+                    <include name="fonts/HTML-CSS/TeX/woff/MathJax_*.woff"/>
+                    <include name="fonts/HTML-CSS/TeX/otf/MathJax_*.otf"/>
                   </fileset>
                 </copy>
                 <copy flatten="true" todir="${project.build.directory}/site/fonts">
