@@ -23,6 +23,12 @@ import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
 import static org.apache.hadoop.hbase.regionserver.compactions.CloseChecker.SIZE_LIMIT_KEY;
 import static org.apache.hadoop.hbase.regionserver.compactions.CloseChecker.TIME_LIMIT_KEY;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
@@ -35,13 +41,17 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.GZIPInputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -60,6 +70,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
@@ -75,6 +86,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.io.IOUtils;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -86,6 +98,7 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test compaction framework and common functions
@@ -114,8 +127,6 @@ public class TestCompaction {
 
   /** constructor */
   public TestCompaction() {
-    super();
-
     // Set cache flush size to 1MB
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     conf.setInt(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 100);
@@ -141,6 +152,12 @@ public class TestCompaction {
         DummyCompactor.class.getName());
       HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
       hcd.setMaxVersions(65536);
+      this.htd.addFamily(hcd);
+    }
+    if (name.getMethodName().equals("testCompactionWithCorruptBlock")) {
+      UTIL.getConfiguration().setBoolean("hbase.hstore.validate.read_fully", true);
+      HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
+      hcd.setCompressionType(Compression.Algorithm.GZ);
       this.htd.addFamily(hcd);
     }
     this.r = UTIL.createLocalHRegion(htd, null, null);
@@ -354,11 +371,65 @@ public class TestCompaction {
     try (FSDataOutputStream stream = fs.create(tmpPath, null, true, 512, (short) 3, 1024L, null)) {
       stream.writeChars("CORRUPT FILE!!!!");
     }
+
     // The complete compaction should fail and the corrupt file should remain
     // in the 'tmp' directory;
     assertThrows(IOException.class, () -> store.doCompaction(null, null, null,
       EnvironmentEdgeManager.currentTime(), Collections.singletonList(tmpPath)));
     assertTrue(fs.exists(tmpPath));
+  }
+
+  /**
+   * This test uses a hand-modified HFile, which is loaded in from the resources' path. That file
+   * was generated from the test support code in this class and then edited to corrupt the
+   * GZ-encoded block by zeroing-out the first two bytes of the GZip header, the "standard
+   * declaration" of {@code 1f 8b}, found at offset 33 in the file. I'm not sure why, but it seems
+   * that in this test context we do not enforce CRC checksums. Thus, this corruption manifests in
+   * the Decompressor rather than in the reader when it loads the block bytes and compares vs. the
+   * header.
+   */
+  @Test
+  public void testCompactionWithCorruptBlock() throws Exception {
+    createStoreFile(r, Bytes.toString(FAMILY));
+    createStoreFile(r, Bytes.toString(FAMILY));
+    HStore store = r.getStore(FAMILY);
+
+    Collection<HStoreFile> storeFiles = store.getStorefiles();
+    DefaultCompactor tool = (DefaultCompactor) store.storeEngine.getCompactor();
+    CompactionRequestImpl request = new CompactionRequestImpl(storeFiles);
+    tool.compact(request, NoLimitThroughputController.INSTANCE, null);
+
+    // insert the hfile with a corrupted data block into the region's tmp directory, where
+    // compaction output is collected.
+    FileSystem fs = store.getFileSystem();
+    Path tmpPath = store.getRegionFileSystem().createTempName();
+    try (
+      InputStream inputStream =
+        getClass().getResourceAsStream("TestCompaction_HFileWithCorruptBlock.gz");
+      GZIPInputStream gzipInputStream = new GZIPInputStream(Objects.requireNonNull(inputStream));
+      OutputStream outputStream = fs.create(tmpPath, null, true, 512, (short) 3, 1024L, null)) {
+      assertThat(gzipInputStream, notNullValue());
+      assertThat(outputStream, notNullValue());
+      IOUtils.copyBytes(gzipInputStream, outputStream, 512);
+    }
+    LoggerFactory.getLogger(TestCompaction.class).info("Wrote corrupted HFile to {}", tmpPath);
+
+    // The complete compaction should fail and the corrupt file should remain
+    // in the 'tmp' directory;
+    try {
+      store.doCompaction(request, storeFiles, null, EnvironmentEdgeManager.currentTime(),
+        Collections.singletonList(tmpPath));
+    } catch (IOException e) {
+      Throwable rootCause = e;
+      while (rootCause.getCause() != null) {
+        rootCause = rootCause.getCause();
+      }
+      assertThat(rootCause, allOf(instanceOf(IOException.class),
+        hasProperty("message", containsString("not a gzip file"))));
+      assertTrue(fs.exists(tmpPath));
+      return;
+    }
+    fail("Compaction should have failed due to corrupt block");
   }
 
   /**
