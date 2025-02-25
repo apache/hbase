@@ -120,7 +120,8 @@ public class TestZKPermissionWatcher {
     assertFalse(AUTH_B.authorizeUserTable(hubert, TEST_TABLE, Permission.Action.WRITE));
 
     // update ACL: george RW
-    writeToZookeeper(WATCHER_A, updatePermissions(permissions, george, Permission.Action.READ, Permission.Action.WRITE));
+    writeToZookeeper(WATCHER_A,
+      updatePermissions(permissions, george, Permission.Action.READ, Permission.Action.WRITE));
     waitForModification(AUTH_B, 1000);
 
     // check it
@@ -156,7 +157,8 @@ public class TestZKPermissionWatcher {
     ListMultimap<String, UserPermission> permissions = ArrayListMultimap.create();
 
     // update ACL: george RW
-    writeToZookeeper(WATCHER_A, updatePermissions(permissions, george, Permission.Action.READ, Permission.Action.WRITE));
+    writeToZookeeper(WATCHER_A,
+      updatePermissions(permissions, george, Permission.Action.READ, Permission.Action.WRITE));
     waitForModification(AUTH_A, 1000);
 
     // check it
@@ -174,16 +176,18 @@ public class TestZKPermissionWatcher {
   }
 
   private ListMultimap<String, UserPermission> updatePermissions(
-    ListMultimap<String, UserPermission> permissions, User user, Permission.Action... actions
-  ) {
+    ListMultimap<String, UserPermission> permissions, User user, Permission.Action... actions) {
     List<UserPermission> acl = new ArrayList<>(1);
-    acl.add(new UserPermission(user.getShortName(), Permission.newBuilder(TEST_TABLE).withActions(actions).build()));
+    acl.add(new UserPermission(user.getShortName(),
+      Permission.newBuilder(TEST_TABLE).withActions(actions).build()));
     permissions.putAll(user.getShortName(), acl);
     return permissions;
   }
 
-  private void writeToZookeeper(ZKPermissionWatcher watcher, ListMultimap<String, UserPermission> permissions) {
-    byte[] serialized = PermissionStorage.writePermissionsAsBytes(permissions, UTIL.getConfiguration());
+  private void writeToZookeeper(ZKPermissionWatcher watcher,
+    ListMultimap<String, UserPermission> permissions) {
+    byte[] serialized =
+      PermissionStorage.writePermissionsAsBytes(permissions, UTIL.getConfiguration());
     watcher.writeToZookeeper(TEST_TABLE.getName(), serialized);
   }
 
