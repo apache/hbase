@@ -531,7 +531,7 @@ public final class Compression {
         ByteBuffDecompressor decompressor =
           CodecPool.getByteBuffDecompressor((ByteBuffDecompressionCodec) codec);
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Retrieved decompressor " + decompressor + " from pool.");
+          LOG.trace("Retrieved decompressor {} from pool.", decompressor);
         }
         return decompressor;
       } else {
@@ -542,7 +542,7 @@ public final class Compression {
     public void returnByteBuffDecompressor(ByteBuffDecompressor decompressor) {
       if (decompressor != null) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Returning decompressor " + decompressor + " to pool.");
+          LOG.trace("Returning decompressor {} to pool.", decompressor);
         }
         CodecPool.returnByteBuffDecompressor(decompressor);
       }

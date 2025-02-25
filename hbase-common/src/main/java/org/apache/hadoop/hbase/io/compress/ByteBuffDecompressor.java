@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Specification of a block-based decompressor, which can be more efficient than the stream-based
+ * Specification of a ByteBuff-based decompressor, which can be more efficient than the stream-based
  * Decompressor.
  */
 @InterfaceAudience.Private

@@ -59,8 +59,8 @@ public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingConte
     ByteBuff blockBufferWithoutHeader, ByteBuff onDiskBlock) throws IOException {
 
     // If possible, use the ByteBuffer decompression mechanism to avoid extra copies.
-    if (canFastDecompress(blockBufferWithoutHeader, onDiskBlock)) {
-      fastDecompress(blockBufferWithoutHeader, onDiskBlock, onDiskSizeWithoutHeader);
+    if (canDecompressViaByteBuff(blockBufferWithoutHeader, onDiskBlock)) {
+      decompressViaByteBuff(blockBufferWithoutHeader, onDiskBlock, onDiskSizeWithoutHeader);
       return;
     }
 
@@ -131,10 +131,10 @@ public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingConte
   /**
    * When only decompression is needed (not decryption), and the input and output buffers are
    * SingleByteBuffs, and the decompression algorithm supports it, we can do decompression without
-   * any intermediate heap buffers. Do not call unless you've checked {@link #canFastDecompress}
-   * first.
+   * any intermediate heap buffers. Do not call unless you've checked
+   * {@link #canDecompressViaByteBuff} first.
    */
-  private void fastDecompress(ByteBuff blockBufferWithoutHeader, ByteBuff onDiskBlock,
+  private void decompressViaByteBuff(ByteBuff blockBufferWithoutHeader, ByteBuff onDiskBlock,
     int onDiskSizeWithoutHeader) throws IOException {
     Compression.Algorithm compression = fileContext.getCompression();
     ByteBuffDecompressor decompressor = compression.getByteBuffDecompressor();
@@ -148,7 +148,8 @@ public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingConte
     }
   }
 
-  private boolean canFastDecompress(ByteBuff blockBufferWithoutHeader, ByteBuff onDiskBlock) {
+  private boolean canDecompressViaByteBuff(ByteBuff blockBufferWithoutHeader,
+    ByteBuff onDiskBlock) {
     // Theoretically we can do ByteBuff decompression after doing streaming decryption, but the
     // refactoring necessary to support this has not been attempted. For now, we skip ByteBuff
     // decompression if the input is encrypted.

@@ -40,6 +40,8 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit
   @Nullable
   protected ZstdDictDecompress dict;
   protected ZstdDecompressCtx ctx;
+  // Intended to be set to false by some unit tests
+  private boolean allowByteBuffDecompression;
 
   ZstdByteBuffDecompressor(@Nullable byte[] dictionary) {
     ctx = new ZstdDecompressCtx();
@@ -48,10 +50,14 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit
       this.dict = new ZstdDictDecompress(dictionary);
       this.ctx.loadDict(this.dict);
     }
+    allowByteBuffDecompression = true;
   }
 
   @Override
   public boolean canDecompress(ByteBuff output, ByteBuff input) {
+    if (!allowByteBuffDecompression) {
+      return false;
+    }
     if (output instanceof SingleByteBuff && input instanceof SingleByteBuff) {
       ByteBuffer nioOutput = output.nioByteBuffers()[0];
       ByteBuffer nioInput = input.nioByteBuffers()[0];
@@ -141,6 +147,10 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit
           oldDict.close();
         }
       }
+
+      // unit test helper
+      this.allowByteBuffDecompression =
+        conf.getBoolean("hbase.io.compress.zstd.allowByteBuffDecompression", true);
     }
   }
 }

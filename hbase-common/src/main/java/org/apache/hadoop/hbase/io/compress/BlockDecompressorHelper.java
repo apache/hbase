@@ -21,6 +21,13 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * Helper to decompress a ByteBuff that was created by a
+ * {@link org.apache.hadoop.io.compress.BlockCompressorStream}, or is at least in the same format.
+ * Parses the binary format and delegates actual decompression work to the provided
+ * {@link RawDecompressor}. Note that the use of the word "block" here does not refer to an HFile
+ * block.
+ */
 @InterfaceAudience.Private
 public class BlockDecompressorHelper {
 
@@ -28,12 +35,6 @@ public class BlockDecompressorHelper {
     int decompress(ByteBuff output, ByteBuff input, int inputLen) throws IOException;
   }
 
-  /**
-   * Helper to decompress a ByteBuff that was created by a
-   * {@link org.apache.hadoop.io.compress.BlockCompressorStream}, or is at least in the same format.
-   * Parses the binary format and delegates actual decompression work to the provided
-   * {@link RawDecompressor}.
-   */
   public static int decompress(ByteBuff output, ByteBuff input, int inputSize,
     RawDecompressor rawDecompressor) throws IOException {
     int totalDecompressedBytes = 0;
