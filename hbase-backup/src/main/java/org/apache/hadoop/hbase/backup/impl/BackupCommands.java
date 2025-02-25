@@ -47,6 +47,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -351,6 +352,46 @@ public final class BackupCommands {
         System.out.println("ERROR: Continuous backup can Only be specified for Full Backup");
         printUsage();
         throw new IOException(INCORRECT_USAGE);
+      }
+
+      /*
+       * The `continuousBackup` flag is specified only during the first full backup to initiate
+       * continuous WAL replication. After that, it is redundant because the tables are already set
+       * up for continuous backup. If the `continuousBackup` flag is not explicitly enabled, we need
+       * to determine the backup mode based on the current state of the specified tables: - If all
+       * the specified tables are already part of continuous backup, we treat the request as a
+       * continuous backup request and proceed accordingly (since these tables are already
+       * continuously backed up, no additional setup is needed). - If none of the specified tables
+       * are part of continuous backup, we treat the request as a normal full backup without
+       * continuous backup. - If the request includes a mix of tables—some with continuous backup
+       * enabled and others without—we cannot determine a clear backup strategy. In this case, we
+       * throw an error. If all tables are already in continuous backup mode, we explicitly set the
+       * `continuousBackup` flag to `true` so that the request is processed using the continuous
+       * backup approach rather than the normal full backup flow.
+       */
+      if (!continuousBackup && tableNameList != null && !tableNameList.isEmpty()) {
+        try (BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
+          Set<TableName> continuousBackupTableSet =
+            backupSystemTable.getContinuousBackupTableSet().keySet();
+
+          boolean allTablesInContinuousBackup = continuousBackupTableSet.containsAll(tableNameList);
+          boolean noTablesInContinuousBackup =
+            tableNameList.stream().noneMatch(continuousBackupTableSet::contains);
+
+          // Ensure that all tables are either fully in continuous backup or not at all
+          if (!allTablesInContinuousBackup && !noTablesInContinuousBackup) {
+            System.err
+              .println("ERROR: Some tables are already in continuous backup, while others are not. "
+                + "Cannot mix both in a single request.");
+            printUsage();
+            throw new IOException(INCORRECT_USAGE);
+          }
+
+          // If all tables are already in continuous backup, enable the flag
+          if (allTablesInContinuousBackup) {
+            continuousBackup = true;
+          }
+        }
       }
 
       try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {

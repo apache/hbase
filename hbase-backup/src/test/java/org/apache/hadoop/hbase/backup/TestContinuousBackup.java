@@ -95,7 +95,7 @@ public class TestContinuousBackup extends TestBackupBase {
       int before = table.getBackupHistory().size();
 
       // Run backup
-      String[] args = buildBackupArgs("full", new TableName[] { tableName });
+      String[] args = buildBackupArgs("full", new TableName[] { tableName }, true);
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
       assertEquals("Backup should succeed", 0, ret);
 
@@ -133,12 +133,12 @@ public class TestContinuousBackup extends TestBackupBase {
       int before = table.getBackupHistory().size();
 
       // Create full backup for table1
-      String[] args = buildBackupArgs("full", new TableName[] { tableName1 });
+      String[] args = buildBackupArgs("full", new TableName[] { tableName1 }, true);
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
       assertEquals("Backup should succeed", 0, ret);
 
       // Create full backup for table2
-      args = buildBackupArgs("full", new TableName[] { tableName2 });
+      args = buildBackupArgs("full", new TableName[] { tableName2 }, true);
       ret = ToolRunner.run(conf1, new BackupDriver(), args);
       assertEquals("Backup should succeed", 0, ret);
 
@@ -166,6 +166,39 @@ public class TestContinuousBackup extends TestBackupBase {
   }
 
   @Test
+  public void testInvalidBackupScenarioWithContinuousEnabled() throws Exception {
+    LOG.info("Testing invalid backup scenario with continuous backup enabled");
+    String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
+    TableName tableName1 = TableName.valueOf("table_" + methodName);
+    TEST_UTIL.createTable(tableName1, "cf");
+    TableName tableName2 = TableName.valueOf("table_" + methodName + "2");
+    TEST_UTIL.createTable(tableName2, "cf");
+
+    try (BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection())) {
+      int before = table.getBackupHistory().size();
+
+      // Create full backup for table1 with continuous backup enabled
+      String[] args = buildBackupArgs("full", new TableName[] { tableName1 }, true);
+      int ret = ToolRunner.run(conf1, new BackupDriver(), args);
+      assertEquals("Backup should succeed", 0, ret);
+
+      // Create full backup for table2 without continuous backup enabled
+      args = buildBackupArgs("full", new TableName[] { tableName2 }, false);
+      ret = ToolRunner.run(conf1, new BackupDriver(), args);
+      assertEquals("Backup should succeed", 0, ret);
+
+      // Attempt full backup for both tables without continuous backup enabled (should fail)
+      args = buildBackupArgs("full", new TableName[] { tableName1, tableName2 }, false);
+      ret = ToolRunner.run(conf1, new BackupDriver(), args);
+      assertTrue("Backup should fail due to mismatch in continuous backup settings", ret != 0);
+
+      // Verify backup history size is unchanged after the failed backup
+      int after = table.getBackupHistory().size();
+      assertEquals("Backup history should remain unchanged on failure", before + 2, after);
+    }
+  }
+
+  @Test
   public void testContinuousBackupWithWALDirNotSpecified() throws Exception {
     LOG.info("Testing that continuous backup fails when WAL directory is not specified");
     String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
@@ -179,7 +212,7 @@ public class TestContinuousBackup extends TestBackupBase {
       int before = table.getBackupHistory().size();
 
       // Run full backup without specifying WAL directory (invalid scenario)
-      String[] args = buildBackupArgs("full", new TableName[] { tableName });
+      String[] args = buildBackupArgs("full", new TableName[] { tableName }, true);
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
 
       assertTrue("Backup should fail when WAL directory is not specified", ret != 0);
@@ -204,7 +237,7 @@ public class TestContinuousBackup extends TestBackupBase {
       int before = table.getBackupHistory().size();
 
       // Run incremental backup with continuous backup flag (invalid scenario)
-      String[] args = buildBackupArgs("incremental", new TableName[] { tableName });
+      String[] args = buildBackupArgs("incremental", new TableName[] { tableName }, true);
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
 
       assertTrue("Backup should fail when using continuous backup with incremental mode", ret != 0);
@@ -226,12 +259,17 @@ public class TestContinuousBackup extends TestBackupBase {
     }
   }
 
-  private String[] buildBackupArgs(String backupType, TableName[] tables) {
+  private String[] buildBackupArgs(String backupType, TableName[] tables,
+    boolean continuousEnabled) {
     String tableNames =
       Arrays.stream(tables).map(TableName::getNameAsString).collect(Collectors.joining(","));
 
-    return new String[] { "create", backupType, BACKUP_ROOT_DIR, "-t", tableNames,
-      "-" + OPTION_ENABLE_CONTINUOUS_BACKUP };
+    if (continuousEnabled) {
+      return new String[] { "create", backupType, BACKUP_ROOT_DIR, "-t", tableNames,
+        "-" + OPTION_ENABLE_CONTINUOUS_BACKUP };
+    } else {
+      return new String[] { "create", backupType, BACKUP_ROOT_DIR, "-t", tableNames };
+    }
   }
 
   private BackupManifest getLatestBackupManifest(List<BackupInfo> backups) throws IOException {
