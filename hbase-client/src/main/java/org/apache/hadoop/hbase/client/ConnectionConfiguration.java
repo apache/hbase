@@ -69,7 +69,7 @@ public class ConnectionConfiguration {
   private final int metaReplicaCallTimeoutMicroSecondScan;
   private final int retries;
   private final int maxKeyValueSize;
-  private final int bufferdMutatorMaxMutations;
+  private final int bufferedMutatorMaxMutations;
   private final int rpcTimeout;
   private final int readRpcTimeout;
   private final int metaReadRpcTimeout;
@@ -121,7 +121,7 @@ public class ConnectionConfiguration {
 
     this.maxKeyValueSize = conf.getInt(MAX_KEYVALUE_SIZE_KEY, MAX_KEYVALUE_SIZE_DEFAULT);
 
-    this.bufferdMutatorMaxMutations =
+    this.bufferedMutatorMaxMutations =
       conf.getInt(BUFFERED_MUTATOR_MAX_MUTATIONS_KEY, BUFFERED_MUTATOR_MAX_MUTATIONS_DEFAULT);
 
     this.rpcTimeout =
@@ -155,7 +155,7 @@ public class ConnectionConfiguration {
     this.retries = HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER;
     this.clientScannerAsyncPrefetch = Scan.DEFAULT_HBASE_CLIENT_SCANNER_ASYNC_PREFETCH;
     this.maxKeyValueSize = MAX_KEYVALUE_SIZE_DEFAULT;
-    this.bufferdMutatorMaxMutations = BUFFERED_MUTATOR_MAX_MUTATIONS_DEFAULT;
+    this.bufferedMutatorMaxMutations = BUFFERED_MUTATOR_MAX_MUTATIONS_DEFAULT;
     this.readRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
     this.metaReadRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
     this.writeRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
@@ -216,6 +216,10 @@ public class ConnectionConfiguration {
 
   public int getMaxKeyValueSize() {
     return maxKeyValueSize;
+  }
+
+  public int getBufferedMutatorMaxMutations() {
+    return bufferedMutatorMaxMutations;
   }
 
   public long getScannerMaxResultSize() {

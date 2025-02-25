@@ -107,6 +107,9 @@ class ConnectionOverAsyncConnection implements Connection {
     if (params.getMaxKeyValueSize() != BufferedMutatorParams.UNSET) {
       builder.setMaxKeyValueSize(params.getMaxKeyValueSize());
     }
+    if (params.getMaxMutations() != BufferedMutatorParams.UNSET) {
+      builder.setMaxMutations(params.getMaxMutations());
+    }
     if (!params.getRequestAttributes().isEmpty()) {
 
       builder.setRequestAttributes(params.getRequestAttributes());
