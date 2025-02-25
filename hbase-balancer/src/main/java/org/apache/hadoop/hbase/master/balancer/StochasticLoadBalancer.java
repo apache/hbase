@@ -434,7 +434,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return true;
     }
 
-    if (sloppyRegionServerExist(cs)) {
+    if (
+      !balancerConditionals.isTableIsolationEnabled() // table isolation is inherently incompatible
+                                                      // with naive "sloppy server" checks
+        && sloppyRegionServerExist(cs)
+    ) {
       LOG.info("Running balancer because cluster has sloppy server(s)." + " function cost={}",
         functionCost());
       return true;
