@@ -71,6 +71,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
    */
   public enum BackupPhase {
     REQUEST,
+    SETUP_WAL_REPLICATION,
     SNAPSHOT,
     PREPARE_INCREMENTAL,
     SNAPSHOTCOPY,
@@ -170,6 +171,8 @@ public class BackupInfo implements Comparable<BackupInfo> {
    */
   private boolean noChecksumVerify;
 
+  private boolean continuousBackupEnabled;
+
   public BackupInfo() {
     backupTableInfoMap = new HashMap<>();
   }
@@ -185,6 +188,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     }
     this.startTs = 0;
     this.completeTs = 0;
+    this.continuousBackupEnabled = false;
   }
 
   public int getWorkers() {
@@ -591,5 +595,13 @@ public class BackupInfo implements Comparable<BackupInfo> {
       Long.valueOf(this.getBackupId().substring(this.getBackupId().lastIndexOf("_") + 1));
     Long otherTS = Long.valueOf(o.getBackupId().substring(o.getBackupId().lastIndexOf("_") + 1));
     return thisTS.compareTo(otherTS);
+  }
+
+  public void setContinuousBackupEnabled(boolean continuousBackupEnabled) {
+    this.continuousBackupEnabled = continuousBackupEnabled;
+  }
+
+  public boolean isContinuousBackupEnabled() {
+    return this.continuousBackupEnabled;
   }
 }
