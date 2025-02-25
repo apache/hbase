@@ -241,7 +241,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     try {
       storeFile = createStoreFileAndReader(path);
       if (conf.getBoolean(READ_FULLY_ON_VALIDATE_KEY, DEFAULT_READ_FULLY_ON_VALIDATE)) {
-        if (storeFile.getFirstKey().isEmpty()) {
+        if (!storeFile.getFirstKey().isPresent()) {
           LOG.debug("'{}=true' but storefile does not contain any data. skipping validation.",
             READ_FULLY_ON_VALIDATE_KEY);
           return;
