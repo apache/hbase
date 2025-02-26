@@ -2558,7 +2558,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     // pre-get CP hook
     if (region.getCoprocessorHost() != null) {
       if (region.getCoprocessorHost().preGet(get, results)) {
-        region.metricsUpdateForGet(results, before);
+        region.metricsUpdateForGet(before);
         return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null,
           stale);
       }
@@ -2593,7 +2593,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     if (region.getCoprocessorHost() != null) {
       region.getCoprocessorHost().postGet(get, results);
     }
-    region.metricsUpdateForGet(results, before);
+    region.metricsUpdateForGet(before);
 
     return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
   }

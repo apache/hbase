@@ -7942,7 +7942,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // pre-get CP hook
     if (withCoprocessor && (coprocessorHost != null)) {
       if (coprocessorHost.preGet(get, results)) {
-        metricsUpdateForGet(results, before);
+        metricsUpdateForGet(before);
         return results;
       }
     }
@@ -7966,12 +7966,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       coprocessorHost.postGet(get, results);
     }
 
-    metricsUpdateForGet(results, before);
+    metricsUpdateForGet(before);
 
     return results;
   }
 
-  void metricsUpdateForGet(List<Cell> results, long before) {
+  void metricsUpdateForGet(long before) {
     if (this.metricsRegion != null) {
       this.metricsRegion.updateGet(EnvironmentEdgeManager.currentTime() - before);
     }
