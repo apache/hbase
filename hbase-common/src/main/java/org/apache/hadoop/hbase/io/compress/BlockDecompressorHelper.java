@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.compress;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -61,6 +62,10 @@ public class BlockDecompressorHelper {
     return totalDecompressedBytes;
   }
 
+  /**
+   * Read an integer from the buffer in big-endian byte order. Note that {@link ByteBuffer#getInt()}
+   * reads in system-dependent endian-ness, so we can't use that.
+   */
   private static int rawReadInt(ByteBuff input) {
     int b1 = Byte.toUnsignedInt(input.get());
     int b2 = Byte.toUnsignedInt(input.get());
