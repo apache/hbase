@@ -73,14 +73,15 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
   void updateDelete();
 
   /**
-   * Update related counts of gets
+   * Update time of gets
+   * @param mills time for this get operation.
    */
-  void updateGet();
+  void updateGet(long mills);
 
   /**
-   * Update related counts of resultScanner.next().
+   * Update time used of resultScanner.next().
    */
-  void updateScan();
+  void updateScanTime(long mills);
 
   /**
    * Update related counts of increments.
