@@ -435,9 +435,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     if (
-      !balancerConditionals.isTableIsolationEnabled() // table isolation is inherently incompatible
-                                                      // with naive "sloppy server" checks
-        && sloppyRegionServerExist(cs)
+      // table isolation is inherently incompatible with naive "sloppy server" checks
+      !balancerConditionals.isTableIsolationEnabled() && sloppyRegionServerExist(cs)
     ) {
       LOG.info("Running balancer because cluster has sloppy server(s)." + " function cost={}",
         functionCost());
@@ -704,7 +703,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         updateCostsAndWeightsWithAction(cluster, undoAction);
       }
 
-      if (EnvironmentEdgeManager.currentTime() > cluster.getStopRequestedAt()) {
+      if (cluster.isStopRequested()) {
         break;
       }
     }

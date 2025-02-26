@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -39,7 +40,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Category({ MediumTests.class, MasterTests.class })
 public class TestLargeClusterBalancingMetaTableIsolation {
 
   @ClassRule
@@ -49,7 +50,6 @@ public class TestLargeClusterBalancingMetaTableIsolation {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestLargeClusterBalancingMetaTableIsolation.class);
 
-  private static final TableName META_TABLE_NAME = TableName.valueOf("hbase:meta");
   private static final TableName NON_META_TABLE_NAME = TableName.valueOf("userTable");
 
   private static final int NUM_SERVERS = 1000;
@@ -68,7 +68,7 @@ public class TestLargeClusterBalancingMetaTableIsolation {
     // Create regions
     List<RegionInfo> allRegions = new ArrayList<>();
     for (int i = 0; i < NUM_REGIONS; i++) {
-      TableName tableName = i < 3 ? META_TABLE_NAME : NON_META_TABLE_NAME;
+      TableName tableName = i < 3 ? TableName.META_TABLE_NAME : NON_META_TABLE_NAME;
       byte[] startKey = new byte[1];
       startKey[0] = (byte) i;
       byte[] endKey = new byte[1];
@@ -91,10 +91,11 @@ public class TestLargeClusterBalancingMetaTableIsolation {
     Configuration conf = new Configuration(false);
     conf.setBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, true);
     runBalancerToExhaustion(conf, serverToRegions, Set.of(this::isMetaTableIsolated), 10.0f);
+    LOG.info("Meta table regions are successfully isolated.");
   }
 
   private boolean isMetaTableIsolated(BalancerClusterState cluster) {
-    return isTableIsolated(cluster, META_TABLE_NAME, "Meta");
+    return isTableIsolated(cluster, TableName.META_TABLE_NAME, "Meta");
   }
 
 }

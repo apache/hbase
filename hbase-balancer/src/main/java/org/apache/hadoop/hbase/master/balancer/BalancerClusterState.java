@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -1089,8 +1090,8 @@ class BalancerClusterState {
     this.stopRequestedAt = stopRequestedAt;
   }
 
-  long getStopRequestedAt() {
-    return stopRequestedAt;
+  boolean isStopRequested() {
+    return EnvironmentEdgeManager.currentTime() > stopRequestedAt;
   }
 
   @Override

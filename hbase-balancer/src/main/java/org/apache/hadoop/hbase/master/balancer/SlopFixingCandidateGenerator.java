@@ -96,7 +96,7 @@ final class SlopFixingCandidateGenerator extends RegionPlanConditionalCandidateG
         }
         fixedServers.forEach(s -> cs.getServersByLoad().remove(s));
         fixedServers.clear();
-        if (!regionFoundMove) {
+        if (!regionFoundMove && LOG.isTraceEnabled()) {
           LOG.trace("Could not find a destination for region {} from server {}.", regionIdx,
             sourceServer);
         }

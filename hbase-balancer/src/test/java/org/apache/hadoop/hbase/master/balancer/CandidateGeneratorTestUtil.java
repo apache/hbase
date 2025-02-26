@@ -257,14 +257,14 @@ public final class CandidateGeneratorTestUtil {
 
         // If the target table and any other table are on the same server, isolation is violated
         if (hasTargetTableRegion && hasOtherTableRegion) {
-          LOG.warn(
+          LOG.debug(
             "Server {} has both {} table regions and other table regions, violating isolation.",
             cluster.servers[i].getServerName(), tableType);
           return false;
         }
       }
     }
-    LOG.info("{} table isolation validation passed.", tableType);
+    LOG.debug("{} table isolation validation passed.", tableType);
     return true;
   }
 

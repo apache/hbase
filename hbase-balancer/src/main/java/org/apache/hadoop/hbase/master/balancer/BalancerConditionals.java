@@ -99,15 +99,9 @@ final class BalancerConditionals implements Configurable {
   }
 
   boolean isServerHostingIsolatedTables(BalancerClusterState cluster, int serverIdx) {
-    Set<TableIsolationConditional> tableIsolationConditionals =
-      conditionals.stream().filter(TableIsolationConditional.class::isInstance)
-        .map(TableIsolationConditional.class::cast).collect(Collectors.toSet());
-    for (TableIsolationConditional tableIsolationConditional : tableIsolationConditionals) {
-      if (tableIsolationConditional.isServerHostingIsolatedTables(cluster, serverIdx)) {
-        return true;
-      }
-    }
-    return false;
+    return conditionals.stream().filter(TableIsolationConditional.class::isInstance)
+      .map(TableIsolationConditional.class::cast)
+      .anyMatch(conditional -> conditional.isServerHostingIsolatedTables(cluster, serverIdx));
   }
 
   boolean isConditionalBalancingEnabled() {

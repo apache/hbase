@@ -107,7 +107,6 @@ public class TestLargeClusterBalancingConditionalReplicaDistribution {
 
     runBalancerToExhaustion(conf, serverToRegions,
       Set.of(CandidateGeneratorTestUtil::areAllReplicasDistributed), 10.0f);
-    LOG.info("Meta table regions are successfully isolated, "
-      + "meanwhile region replicas are appropriately distributed across RegionServers.");
+    LOG.info("Region replicas are appropriately distributed across RegionServers.");
   }
 }

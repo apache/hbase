@@ -20,13 +20,18 @@ package org.apache.hadoop.hbase.master.balancer;
 import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.isTableIsolated;
 import static org.apache.hadoop.hbase.master.balancer.CandidateGeneratorTestUtil.runBalancerToExhaustion;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -35,7 +40,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Category({ MediumTests.class, MasterTests.class })
 public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
 
   @ClassRule
@@ -44,8 +49,6 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestLargeClusterBalancingTableIsolationAndReplicaDistribution.class);
-
-  private static final TableName META_TABLE_NAME = TableName.valueOf("hbase:meta");
   private static final TableName SYSTEM_TABLE_NAME = TableName.valueOf("hbase:system");
   private static final TableName NON_ISOLATED_TABLE_NAME = TableName.valueOf("userTable");
 
@@ -69,7 +72,7 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
     for (int i = 0; i < NUM_REGIONS; i++) {
       TableName tableName;
       if (i < 1) {
-        tableName = META_TABLE_NAME;
+        tableName = TableName.META_TABLE_NAME;
       } else if (i < 10) {
         tableName = SYSTEM_TABLE_NAME;
       } else {
@@ -106,13 +109,14 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
     runBalancerToExhaustion(conf, serverToRegions,
       Set.of(this::isMetaTableIsolated, CandidateGeneratorTestUtil::areAllReplicasDistributed),
       10.0f);
-    LOG.info("Meta table regions are successfully isolated.");
+    LOG.info("Meta table regions are successfully isolated, "
+      + "and region replicas are appropriately distributed.");
   }
 
   /**
    * Validates whether all meta table regions are isolated.
    */
   private boolean isMetaTableIsolated(BalancerClusterState cluster) {
-    return isTableIsolated(cluster, META_TABLE_NAME, "Meta");
+    return isTableIsolated(cluster, TableName.META_TABLE_NAME, "Meta");
   }
 }

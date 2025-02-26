@@ -22,7 +22,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +52,7 @@ public abstract class TableIsolationCandidateGenerator
     List<Integer> serverIndicesHoldingIsolatedRegions = new ArrayList<>();
     int isolatedTableMaxReplicaCount = 1;
     for (int serverIdx : cluster.getShuffledServerIndices()) {
-      if (EnvironmentEdgeManager.currentTime() > cluster.getStopRequestedAt()) {
+      if (cluster.isStopRequested()) {
         break;
       }
       boolean hasRegionsToIsolate = false;
