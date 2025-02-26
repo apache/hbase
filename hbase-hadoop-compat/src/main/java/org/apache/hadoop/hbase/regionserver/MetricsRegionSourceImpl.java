@@ -52,9 +52,11 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private final String regionPutKey;
   private final String regionDeleteKey;
   private final String regionGetKey;
+  private final String regionGetTimeKey;
   private final String regionIncrementKey;
   private final String regionAppendKey;
   private final String regionScanKey;
+  private final String regionScanTimeKey;
 
   /*
    * Implementation note: Do not put histograms per region. With hundreds of regions in a server
@@ -66,6 +68,8 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private final MutableFastCounter regionAppend;
   private final MutableFastCounter regionGet;
   private final MutableFastCounter regionScan;
+  private final MutableFastCounter regionGetTime;
+  private final MutableFastCounter regionScanTime;
 
   private final int hashCode;
 
@@ -105,6 +109,12 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
     regionScanKey = regionNamePrefix + MetricsRegionServerSource.SCAN_KEY + suffix;
     regionScan = registry.getCounter(regionScanKey, 0L);
+
+    regionGetTimeKey = regionNamePrefix + MetricsRegionServerSource.GET_TIME_KEY;
+    regionGetTime = registry.getCounter(regionGetTimeKey, 0L);
+
+    regionScanTimeKey = regionNamePrefix + MetricsRegionServerSource.SCAN_TIME_KEY;
+    regionScanTime = registry.getCounter(regionScanTimeKey, 0L);
   }
 
   @Override
@@ -133,6 +143,8 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
       registry.removeMetric(regionAppendKey);
       registry.removeMetric(regionGetKey);
       registry.removeMetric(regionScanKey);
+      registry.removeMetric(regionGetTimeKey);
+      registry.removeMetric(regionScanTimeKey);
 
       regionWrapper = null;
     }
@@ -151,11 +163,13 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   @Override
   public void updateGet(long mills) {
     regionGet.incr();
+    regionGetTime.incr(mills);
   }
 
   @Override
   public void updateScanTime(long mills) {
     regionScan.incr();
+    regionScanTime.incr(mills);
   }
 
   @Override

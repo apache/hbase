@@ -448,6 +448,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String DELETE_BATCH_KEY = "deleteBatch";
   String GET_SIZE_KEY = "getSize";
   String GET_KEY = "get";
+  String GET_TIME_KEY = "getTime";
   String INCREMENT_KEY = "increment";
   String PUT_KEY = "put";
   String PUT_BATCH_KEY = "putBatch";

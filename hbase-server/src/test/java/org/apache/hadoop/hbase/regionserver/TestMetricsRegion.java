@@ -39,6 +39,8 @@ public class TestMetricsRegion {
   @Test
   public void testRegionWrapperMetrics() {
     MetricsRegion mr = new MetricsRegion(new MetricsRegionWrapperStub(), new Configuration());
+    mr.updateGet(1);
+    mr.updateScanTime(2);
     MetricsRegionAggregateSource agg = mr.getSource().getAggregateSource();
 
     HELPER.assertGauge(
@@ -70,6 +72,18 @@ public class TestMetricsRegion {
         + "filteredReadRequestCount", 107, agg);
     HELPER.assertCounter(
       "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_replicaid", 0,
+      agg);
+    HELPER.assertCounter(
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001" + "_metric_getCount", 1,
+      agg);
+    HELPER.assertCounter(
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001" + "_metric_getTime", 1,
+      agg);
+    HELPER.assertCounter(
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001" + "_metric_scanCount", 1,
+      agg);
+    HELPER.assertCounter(
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001" + "_metric_scanTime", 2,
       agg);
     mr.close();
 
