@@ -1038,6 +1038,7 @@
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0.AM26</apacheds.version>
     <ldap-api.version>2.0.0</ldap-api.version>
+    <webjars-dir>${project.build.directory}/META-INF/resources/webjars</webjars-dir>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -2819,7 +2820,8 @@
                     **/fonts/HTML-CSS/TeX/otf/MathJax_SansSerif-Italic.otf,</includes>
                 </artifactItem>
               </artifactItems>
-              <outputDirectory>${basedir}/target/</outputDirectory>
+              <!-- TODO paksyd: Check if this is bundled in our assembly tarballs! -->
+              <outputDirectory>${project.build.directory}</outputDirectory>
             </configuration>
           </execution>
         </executions>
@@ -2997,26 +2999,26 @@
             <configuration>
               <target>
                 <copy flatten="true" todir="${project.build.directory}/site/css">
-                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/bootstrap/2.3.2/css">
+                  <fileset dir="${webjars-dir}/bootstrap/2.3.2/css">
                     <include name="bootstrap-responsive.min.css"/>
                   </fileset>
-                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/highlightjs/8.7/styles">
+                  <fileset dir="${webjars-dir}/highlightjs/8.7/styles">
                     <include name="github.min.css"/>
                   </fileset>
-                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/font-awesome/4.7.0/css">
+                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/css">
                     <include name="font-awesome.css"/>
                   </fileset>
                 </copy>
                 <copy flatten="true" todir="${project.build.directory}/site/js">
-                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/highlightjs/8.7/">
+                  <fileset dir="${webjars-dir}/highlightjs/8.7/">
                     <include name="highlight.min.js"/>
                   </fileset>
-                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/MathJax/2.7.0">
+                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
                     <include name="MathJax.js"/>
                   </fileset>
                 </copy>
                 <copy flatten="false" todir="${project.build.directory}/site/js">
-                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/MathJax/2.7.0">
+                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
                     <include name="config/TeX-MML-AM_HTMLorMML.js"/>
                     <include name="jax/output/HTML-CSS/jax.js"/>
                     <include name="jax/output/HTML-CSS/imageFonts.js"/>
@@ -3029,7 +3031,7 @@
                   </fileset>
                 </copy>
                 <copy flatten="true" todir="${project.build.directory}/site/fonts">
-                  <fileset dir="${project.build.directory}/META-INF/resources/webjars/font-awesome/4.7.0/fonts">
+                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/fonts">
                     <include name="fontawesome-webfont.*"/>
                   </fileset>
                 </copy>
