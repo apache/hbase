@@ -1038,6 +1038,7 @@
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0.AM26</apacheds.version>
     <ldap-api.version>2.0.0</ldap-api.version>
+    <webjars-dir>${project.build.directory}/META-INF/resources/webjars</webjars-dir>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -2749,6 +2750,82 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>unpack</id>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>bootstrap</artifactId>
+                  <version>2.3.2</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/css/bootstrap-responsive.min.css</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>highlightjs</artifactId>
+                  <version>8.7</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/styles/github.min.css,
+                    **/highlight.min.js,</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>font-awesome</artifactId>
+                  <version>4.7.0</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/css/font-awesome.css,
+                    **/fonts/fontawesome-webfont.eot,
+                    **/fonts/fontawesome-webfont.svg,
+                    **/fonts/fontawesome-webfont.ttf,
+                    **/fonts/fontawesome-webfont.woff,
+                    **/fonts/fontawesome-webfont.woff2,</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>MathJax</artifactId>
+                  <version>2.7.0</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/MathJax.js,
+                    **/config/TeX-MML-AM_HTMLorMML.js,
+                    **/jax/output/HTML-CSS/jax.js,
+                    **/jax/output/HTML-CSS/imageFonts.js,
+                    **/jax/output/HTML-CSS/fonts/TeX/fontdata.js,
+                    **/jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/Main.js,
+                    **/jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/BasicLatin.js,
+                    **/extensions/MathMenu.js,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Main-Regular.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Main-Italic.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Math-Italic.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Size1-Regular.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Size3-Regular.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_SansSerif-Italic.woff,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Main-Regular.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Main-Italic.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Math-Italic.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Size1-Regular.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Size3-Regular.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_SansSerif-Italic.otf,</includes>
+                </artifactItem>
+              </artifactItems>
+              <!-- TODO paksyd: Check if this is bundled in our assembly tarballs! -->
+              <outputDirectory>${project.build.directory}</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <!-- Special configuration for spotbugs just in the parent so
       the filter file location can be more general (see definition in pluginManagement) -->
       <plugin>
@@ -2802,6 +2879,8 @@
             <docVersion>${project.version}</docVersion>
             <imagesdir>images</imagesdir>
             <source-highlighter>coderay</source-highlighter>
+            <iconfont-remote>false</iconfont-remote>
+            <stylesdir>css</stylesdir>
           </attributes>
         </configuration>
         <dependencies>
@@ -2907,6 +2986,55 @@
             <configuration>
               <target name="rename file">
                 <move file="${project.reporting.outputDirectory}/book.pdf" tofile="${project.reporting.outputDirectory}/apache_hbase_reference_guide.pdf"/>
+              </target>
+            </configuration>
+          </execution>
+          <!-- Copy static CSS and JS files for the website. -->
+          <execution>
+            <id>copy-css-js-to-site</id>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <target>
+                <copy flatten="true" todir="${project.build.directory}/site/css">
+                  <fileset dir="${webjars-dir}/bootstrap/2.3.2/css">
+                    <include name="bootstrap-responsive.min.css"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/highlightjs/8.7/styles">
+                    <include name="github.min.css"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/css">
+                    <include name="font-awesome.css"/>
+                  </fileset>
+                </copy>
+                <copy flatten="true" todir="${project.build.directory}/site/js">
+                  <fileset dir="${webjars-dir}/highlightjs/8.7/">
+                    <include name="highlight.min.js"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
+                    <include name="MathJax.js"/>
+                  </fileset>
+                </copy>
+                <copy flatten="false" todir="${project.build.directory}/site/js">
+                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
+                    <include name="config/TeX-MML-AM_HTMLorMML.js"/>
+                    <include name="jax/output/HTML-CSS/jax.js"/>
+                    <include name="jax/output/HTML-CSS/imageFonts.js"/>
+                    <include name="jax/output/HTML-CSS/fonts/TeX/fontdata.js"/>
+                    <include name="jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/Main.js"/>
+                    <include name="jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/BasicLatin.js"/>
+                    <include name="extensions/MathMenu.js"/>
+                    <include name="fonts/HTML-CSS/TeX/woff/MathJax_*.woff"/>
+                    <include name="fonts/HTML-CSS/TeX/otf/MathJax_*.otf"/>
+                  </fileset>
+                </copy>
+                <copy flatten="true" todir="${project.build.directory}/site/fonts">
+                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/fonts">
+                    <include name="fontawesome-webfont.*"/>
+                  </fileset>
+                </copy>
               </target>
             </configuration>
           </execution>
