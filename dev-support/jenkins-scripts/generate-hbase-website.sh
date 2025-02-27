@@ -191,7 +191,11 @@ else
   exit $status
 fi
 
-# Replace MathJax CDN URI with local one in book.html
+# Workaround to replace MathJax CDN URI with local one in book.html
+# There is no way to influence from where the book.html Asciidoc includes the MathJax.js library.
+# https://docs.asciidoctor.org/asciidoctor/latest/stem/mathjax/
+# https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref/
+# https://github.com/asciidoctor/asciidoctor/issues/761
 echo "Replace MathJax URI"
 sed -i 's,https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/,js/,g' "${component_dir}"/target/site/book.html
 
