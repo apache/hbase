@@ -297,7 +297,13 @@ public enum EventType {
    * RS flush regions.<br>
    * RS_FLUSH_OPERATIONS
    */
-  RS_FLUSH_REGIONS(89, ExecutorType.RS_FLUSH_OPERATIONS);
+  RS_FLUSH_REGIONS(89, ExecutorType.RS_FLUSH_OPERATIONS),
+
+  /**
+   * RS log roll.<br>
+   * RS_LOG_ROLL
+   */
+  RS_LOG_ROLL(90, ExecutorType.RS_LOG_ROLL);
 
   private final int code;
   private final ExecutorType executor;
