@@ -3380,10 +3380,6 @@
         <argLine>${hbase-surefire.jdk17.flags}
           ${hbase-surefire.argLine}
           @{jacocoArgLine}</argLine>
-        <!--
-          Value to use for surefire when running jdk11.
-          TODO: replicate logic for windows
-        -->
         <surefire.Xmx>2200m</surefire.Xmx>
       </properties>
       <build>
@@ -3530,7 +3526,7 @@
       </activation>
       <properties>
         <build.platform>cygwin</build.platform>
-        <argLine>${hbase-surefire.cygwin-argLine} @{jacocoArgLine}</argLine>
+        <argLine>${hbase-surefire.jdk17.flags} ${hbase-surefire.cygwin-argLine} @{jacocoArgLine}</argLine>
       </properties>
     </profile>
     <!-- this profile should match the name of the release profile in the root asf pom -->
