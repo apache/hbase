@@ -15,41 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.balancer.replicas;
+package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.Arrays;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public final class ReplicaKey {
-  private final TableName tableName;
-  private final byte[] start;
-  private final byte[] stop;
+public final class MetaTableIsolationCandidateGenerator extends TableIsolationCandidateGenerator {
 
-  public ReplicaKey(RegionInfo regionInfo) {
-    this.tableName = regionInfo.getTable();
-    this.start = regionInfo.getStartKey();
-    this.stop = regionInfo.getEndKey();
+  MetaTableIsolationCandidateGenerator(BalancerConditionals balancerConditionals) {
+    super(balancerConditionals);
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof ReplicaKey)) {
-      return false;
-    }
-    ReplicaKey other = (ReplicaKey) o;
-    return Arrays.equals(this.start, other.start) && Arrays.equals(this.stop, other.stop)
-      && this.tableName.equals(other.tableName);
-  }
-
-  @Override
-  public int hashCode() {
-    return new HashCodeBuilder().append(tableName).append(start).append(stop).toHashCode();
+  boolean shouldBeIsolated(RegionInfo regionInfo) {
+    return regionInfo.isMetaRegion();
   }
 }
