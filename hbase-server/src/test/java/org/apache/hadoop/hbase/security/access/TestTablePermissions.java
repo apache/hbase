@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -461,5 +462,100 @@ public class TestTablePermissions {
           authManager.authorizeUserGlobal(currentUser, Permission.Action.ADMIN));
       }
     }
+  }
+
+  @Test
+  public void testPermissionShouldAlwaysSucceedDuringUpdate()
+    throws IOException, InterruptedException {
+    Configuration conf = UTIL.getConfiguration();
+    AuthManager authManager = new AuthManager(conf);
+
+    User user = User.createUserForTesting(conf, "test-user", new String[] {});
+    AtomicBoolean authorizationSucceeded = new AtomicBoolean(true);
+
+    // test from fine-grained to coarse-grained permissions
+    // test table permission
+    byte[] tableAclData = createPermissionsData(conf, user, Permission.newBuilder(TEST_TABLE));
+    authManager.refreshTableCacheFromWritable(TEST_TABLE, tableAclData);
+    verifyAuthorization(() -> {
+      for (int i = 0; i < 1000; i++) {
+        try {
+          authManager.refreshTableCacheFromWritable(TEST_TABLE, tableAclData);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }, () -> {
+      for (int i = 0; i < 1000; i++) {
+        if (!authManager.authorizeUserTable(user, TEST_TABLE, Permission.Action.READ)) {
+          authorizationSucceeded.set(false);
+          break;
+        }
+      }
+    }, authorizationSucceeded);
+
+    // test namespace permission
+    byte[] nsAclData = createPermissionsData(conf, user, Permission.newBuilder(TEST_NAMESPACE));
+    authManager.refreshNamespaceCacheFromWritable(TEST_NAMESPACE, nsAclData);
+
+    verifyAuthorization(() -> {
+      for (int i = 0; i < 1000; i++) {
+        try {
+          authManager.refreshNamespaceCacheFromWritable(TEST_NAMESPACE, nsAclData);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }, () -> {
+      for (int i = 0; i < 1000; i++) {
+        if (!authManager.authorizeUserNamespace(user, TEST_NAMESPACE, Permission.Action.READ)) {
+          authorizationSucceeded.set(false);
+          break;
+        }
+      }
+    }, authorizationSucceeded);
+
+    // test global permission
+    byte[] globalAclData = createPermissionsData(conf, user, Permission.newBuilder());
+    authManager.refreshTableCacheFromWritable(PermissionStorage.ACL_TABLE_NAME, globalAclData);
+
+    verifyAuthorization(() -> {
+      for (int i = 0; i < 1000; i++) {
+        try {
+          authManager.refreshTableCacheFromWritable(PermissionStorage.ACL_TABLE_NAME,
+            globalAclData);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }, () -> {
+      for (int i = 0; i < 1000; i++) {
+        if (!authManager.authorizeUserGlobal(user, Permission.Action.READ)) {
+          authorizationSucceeded.set(false);
+          break;
+        }
+      }
+    }, authorizationSucceeded);
+  }
+
+  private static void verifyAuthorization(Runnable m1, Runnable m2,
+    AtomicBoolean authorizationSucceeded) throws InterruptedException {
+    Thread t1 = new Thread(m1);
+    Thread t2 = new Thread(m2);
+    t1.start();
+    t2.start();
+    t1.join();
+    t2.join();
+    assertTrue("Authorization should always succeed", authorizationSucceeded.get());
+  }
+
+  private static byte[] createPermissionsData(Configuration conf, User user,
+    Permission.Builder newBuilder) {
+    List<UserPermission> acl = new ArrayList<>(1);
+    acl.add(new UserPermission(user.getShortName(),
+      newBuilder.withActions(Permission.Action.READ, Permission.Action.WRITE).build()));
+    ListMultimap<String, UserPermission> permissions = ArrayListMultimap.create();
+    permissions.putAll(user.getShortName(), acl);
+    return PermissionStorage.writePermissionsAsBytes(permissions, conf);
   }
 }
