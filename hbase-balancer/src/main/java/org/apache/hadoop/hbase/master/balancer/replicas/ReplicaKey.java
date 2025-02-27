@@ -40,9 +40,10 @@ public final class ReplicaKey {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ReplicaKey other)) {
+    if (!(o instanceof ReplicaKey)) {
       return false;
     }
+    ReplicaKey other = (ReplicaKey) o;
     return Arrays.equals(this.start, other.start) && Arrays.equals(this.stop, other.stop)
       && this.tableName.equals(other.tableName);
   }
