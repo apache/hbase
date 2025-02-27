@@ -65,7 +65,7 @@ public class TestBalancerConditionals extends BalancerTestBase {
     balancerConditionals.loadClusterState(mockCluster);
 
     assertTrue("Custom conditionals should be loaded",
-      balancerConditionals.shouldSkipSloppyServerEvaluation());
+      balancerConditionals.isConditionalBalancingEnabled());
   }
 
   @Test
@@ -78,6 +78,18 @@ public class TestBalancerConditionals extends BalancerTestBase {
 
     assertEquals("Invalid classes should not be loaded as conditionals", 0,
       balancerConditionals.getConditionalClasses().size());
+  }
+
+  @Test
+  public void testMetaTableIsolationConditionalEnabled() {
+    Configuration conf = new Configuration();
+    conf.setBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, true);
+
+    balancerConditionals.setConf(conf);
+    balancerConditionals.loadClusterState(mockCluster);
+
+    assertTrue("MetaTableIsolationConditional should be active",
+      balancerConditionals.isTableIsolationEnabled());
   }
 
 }

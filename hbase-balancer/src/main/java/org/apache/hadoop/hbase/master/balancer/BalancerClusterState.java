@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -313,16 +314,16 @@ class BalancerClusterState {
       regionIndex++;
     }
 
-    if (LOG.isDebugEnabled()) {
+    if (LOG.isTraceEnabled()) {
       for (int i = 0; i < numServers; i++) {
-        LOG.debug("server {} has {} regions", i, regionsPerServer[i].length);
+        LOG.trace("server {} has {} regions", i, regionsPerServer[i].length);
       }
     }
     for (int i = 0; i < serversPerHostList.size(); i++) {
       serversPerHost[i] = new int[serversPerHostList.get(i).size()];
       for (int j = 0; j < serversPerHost[i].length; j++) {
         serversPerHost[i][j] = serversPerHostList.get(i).get(j);
-        LOG.debug("server {} is on host {}", serversPerHostList.get(i).get(j), i);
+        LOG.trace("server {} is on host {}", serversPerHostList.get(i).get(j), i);
       }
       if (serversPerHost[i].length > 1) {
         multiServersPerHost = true;
@@ -333,7 +334,7 @@ class BalancerClusterState {
       serversPerRack[i] = new int[serversPerRackList.get(i).size()];
       for (int j = 0; j < serversPerRack[i].length; j++) {
         serversPerRack[i][j] = serversPerRackList.get(i).get(j);
-        LOG.info("server {} is on rack {}", serversPerRackList.get(i).get(j), i);
+        LOG.trace("server {} is on rack {}", serversPerRackList.get(i).get(j), i);
       }
     }
 
@@ -1089,8 +1090,8 @@ class BalancerClusterState {
     this.stopRequestedAt = stopRequestedAt;
   }
 
-  long getStopRequestedAt() {
-    return stopRequestedAt;
+  boolean isStopRequested() {
+    return EnvironmentEdgeManager.currentTime() > stopRequestedAt;
   }
 
   @Override

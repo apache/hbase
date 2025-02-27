@@ -44,6 +44,7 @@ final class SlopFixingCandidateGenerator extends RegionPlanConditionalCandidateG
 
   @Override
   BalanceAction generateCandidate(BalancerClusterState cluster, boolean isWeighing) {
+    boolean isTableIsolationEnabled = getBalancerConditionals().isTableIsolationEnabled();
     ClusterLoadState cs = new ClusterLoadState(cluster.clusterState);
     float average = cs.getLoadAverage();
     int ceiling = (int) Math.ceil(average * (1 + slop));
@@ -63,6 +64,13 @@ final class SlopFixingCandidateGenerator extends RegionPlanConditionalCandidateG
     List<MoveRegionAction> moves = new ArrayList<>();
     Set<ServerAndLoad> fixedServers = new HashSet<>();
     for (int sourceServer : sloppyServerIndices) {
+      if (
+        isTableIsolationEnabled
+          && getBalancerConditionals().isServerHostingIsolatedTables(cluster, sourceServer)
+      ) {
+        // Don't fix sloppiness of servers hosting isolated tables
+        continue;
+      }
       for (int regionIdx : cluster.regionsPerServer[sourceServer]) {
         boolean regionFoundMove = false;
         for (ServerAndLoad serverAndLoad : cs.getServersByLoad().keySet()) {
@@ -88,8 +96,8 @@ final class SlopFixingCandidateGenerator extends RegionPlanConditionalCandidateG
         }
         fixedServers.forEach(s -> cs.getServersByLoad().remove(s));
         fixedServers.clear();
-        if (!regionFoundMove) {
-          LOG.debug("Could not find a destination for region {} from server {}.", regionIdx,
+        if (!regionFoundMove && LOG.isTraceEnabled()) {
+          LOG.trace("Could not find a destination for region {} from server {}.", regionIdx,
             sourceServer);
         }
         if (cluster.regionsPerServer[sourceServer].length <= ceiling) {
@@ -98,8 +106,6 @@ final class SlopFixingCandidateGenerator extends RegionPlanConditionalCandidateG
       }
     }
 
-    MoveBatchAction batch = new MoveBatchAction(moves);
-    undoBatchAction(cluster, batch);
-    return batch;
+    return batchMovesAndResetClusterState(cluster, moves);
   }
 }
