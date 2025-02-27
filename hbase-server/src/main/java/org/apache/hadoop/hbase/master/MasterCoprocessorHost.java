@@ -1450,6 +1450,26 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preMoveAllServers(final String sourceGroup, final String targetGroup)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preMoveAllServers(this, sourceGroup, targetGroup);
+      }
+    });
+  }
+
+  public void postMoveAllServers(final String sourceGroup, final String targetGroup)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postMoveAllServers(this, sourceGroup, targetGroup);
+      }
+    });
+  }
+
   public void preMoveTables(final Set<TableName> tables, final String targetGroup)
     throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
