@@ -720,11 +720,11 @@ public class TestAtomicOperation {
 
     @Override
     protected RowLock getRowLockInternal(final byte[] row, boolean readLock,
-      final RowLock prevRowlock) throws IOException {
+      final RowLock prevRowlock, int rowLockTimeout) throws IOException {
       if (testStep == TestStep.CHECKANDPUT_STARTED) {
         latch.countDown();
       }
-      return new WrappedRowLock(super.getRowLockInternal(row, readLock, null));
+      return new WrappedRowLock(super.getRowLockInternal(row, readLock, null, rowLockTimeout));
     }
 
     public class WrappedRowLock implements RowLock {
