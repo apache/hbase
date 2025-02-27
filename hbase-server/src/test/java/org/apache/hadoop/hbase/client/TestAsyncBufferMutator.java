@@ -175,6 +175,23 @@ public class TestAsyncBufferMutator {
     assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(0))).get().getValue(CF, CQ));
   }
 
+  @Test
+  public void testMaxMutationsFlush() throws InterruptedException, ExecutionException {
+    AsyncBufferedMutator mutator =
+      CONN.getBufferedMutatorBuilder(TABLE_NAME).setMaxMutations(3).build();
+    CompletableFuture<?> future1 =
+      mutator.mutate(new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE));
+    CompletableFuture<?> future2 =
+      mutator.mutate(new Put(Bytes.toBytes(1)).addColumn(CF, CQ, VALUE));
+    CompletableFuture<?> future3 =
+      mutator.mutate(new Put(Bytes.toBytes(2)).addColumn(CF, CQ, VALUE));
+    CompletableFuture.allOf(future1, future2, future3).join();
+    AsyncTable<?> table = CONN.getTable(TABLE_NAME);
+    assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(0))).get().getValue(CF, CQ));
+    assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(1))).get().getValue(CF, CQ));
+    assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(2))).get().getValue(CF, CQ));
+  }
+
   // a bit deep into the implementation
   @Test
   public void testCancelPeriodicFlush() throws InterruptedException, ExecutionException {
@@ -244,8 +261,9 @@ public class TestAsyncBufferMutator {
     private int flushCount;
 
     AsyncBufferMutatorForTest(HashedWheelTimer periodicalFlushTimer, AsyncTable<?> table,
-      long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize) {
-      super(periodicalFlushTimer, table, writeBufferSize, periodicFlushTimeoutNs, maxKeyValueSize);
+      long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize, int maxMutation) {
+      super(periodicalFlushTimer, table, writeBufferSize, periodicFlushTimeoutNs, maxKeyValueSize,
+        maxMutation);
     }
 
     @Override
@@ -261,7 +279,7 @@ public class TestAsyncBufferMutator {
     Put put = new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE);
     try (AsyncBufferMutatorForTest mutator =
       new AsyncBufferMutatorForTest(AsyncConnectionImpl.RETRY_TIMER, CONN.getTable(TABLE_NAME),
-        10 * put.heapSize(), TimeUnit.MILLISECONDS.toNanos(200), 1024 * 1024)) {
+        10 * put.heapSize(), TimeUnit.MILLISECONDS.toNanos(200), 1024 * 1024, 100)) {
       CompletableFuture<?> future = mutator.mutate(put);
       Timeout task = mutator.periodicFlushTask;
       // we should have scheduled a periodic flush task
