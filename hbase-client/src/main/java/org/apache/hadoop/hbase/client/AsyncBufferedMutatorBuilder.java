@@ -115,6 +115,13 @@ public interface AsyncBufferedMutatorBuilder {
   AsyncBufferedMutatorBuilder setMaxKeyValueSize(int maxKeyValueSize);
 
   /**
+   * Set the maximum number of mutations that this buffered mutator will buffer before flushing
+   * them. If you are talking to a cluster that uses hbase.rpc.rows.size.threshold.reject to reject
+   * large Multi requests, you may need this setting to avoid rejections. Default is no limit.
+   */
+  AsyncBufferedMutatorBuilder setMaxMutations(int maxMutations);
+
+  /**
    * Create the {@link AsyncBufferedMutator} instance.
    */
   AsyncBufferedMutator build();

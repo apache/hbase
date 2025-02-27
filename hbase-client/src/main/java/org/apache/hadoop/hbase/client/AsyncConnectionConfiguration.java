@@ -38,6 +38,8 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_META_SCANNER_CACHING;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_READ_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY;
+import static org.apache.hadoop.hbase.client.ConnectionConfiguration.BUFFERED_MUTATOR_MAX_MUTATIONS_DEFAULT;
+import static org.apache.hadoop.hbase.client.ConnectionConfiguration.BUFFERED_MUTATOR_MAX_MUTATIONS_KEY;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_SCANNER_TIMEOUT;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.MAX_KEYVALUE_SIZE_DEFAULT;
@@ -148,6 +150,8 @@ class AsyncConnectionConfiguration {
 
   private final int maxKeyValueSize;
 
+  private final int bufferedMutatorMaxMutations;
+
   AsyncConnectionConfiguration(Configuration conf) {
     long operationTimeoutMs =
       conf.getLong(HBASE_CLIENT_OPERATION_TIMEOUT, DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
@@ -200,6 +204,8 @@ class AsyncConnectionConfiguration {
       TimeUnit.MICROSECONDS.toNanos(conf.getLong(HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT,
         HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT));
     this.maxKeyValueSize = conf.getInt(MAX_KEYVALUE_SIZE_KEY, MAX_KEYVALUE_SIZE_DEFAULT);
+    this.bufferedMutatorMaxMutations =
+      conf.getInt(BUFFERED_MUTATOR_MAX_MUTATIONS_KEY, BUFFERED_MUTATOR_MAX_MUTATIONS_DEFAULT);
   }
 
   long getMetaOperationTimeoutNs() {
@@ -284,5 +290,9 @@ class AsyncConnectionConfiguration {
 
   int getMaxKeyValueSize() {
     return maxKeyValueSize;
+  }
+
+  int getBufferedMutatorMaxMutations() {
+    return bufferedMutatorMaxMutations;
   }
 }
