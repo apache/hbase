@@ -36,7 +36,7 @@ pipeline {
         YETUS_REL = 'yetus'
         DOCKERFILE_REL = "${SRC_REL}/dev-support/docker/Dockerfile"
         YETUS_DRIVER_REL = "${SRC_REL}/dev-support/jenkins_precommit_github_yetus.sh"
-        YETUS_VERSION = '0.15.0'
+        YETUS_VERSION = '0.15.1'
         GENERAL_CHECK_PLUGINS = 'all,-javadoc,-jira,-shadedjars,-unit'
         JDK_SPECIFIC_PLUGINS = 'compile,github,htmlout,javac,javadoc,maven,mvninstall,shadedjars,unit'
         // This section of the docs tells folks not to use the javadoc tag. older branches have our old version of the check for said tag.
@@ -104,7 +104,7 @@ pipeline {
                         }
                         dir("${YETUSDIR}") {
                             sh'''#!/usr/bin/env bash
-                              wget https://dlcdn.apache.org/yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
+                              wget https://dist.apache.org/repos/dist/dev/yetus/0.15.1-RC1/apache-yetus-0.15.1-bin.tar.gz && \
                               tar --strip-components=1 -xzf apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
                               rm apache-yetus-${YETUS_VERSION}-bin.tar.gz
                             '''
@@ -244,7 +244,7 @@ pipeline {
                         }
                         dir("${YETUSDIR}") {
                             sh'''#!/usr/bin/env bash
-                              wget https://dlcdn.apache.org/yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
+                              wget https://dist.apache.org/repos/dist/dev/yetus/0.15.1-RC1/apache-yetus-0.15.1-bin.tar.gz && \
                               tar --strip-components=1 -xzf apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
                               rm apache-yetus-${YETUS_VERSION}-bin.tar.gz
                             '''
