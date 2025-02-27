@@ -40,23 +40,60 @@ import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 /**
  * Servlet that runs async-profiler as web-endpoint. Following options from async-profiler can be
- * specified as query paramater. // -e event profiling event: cpu|alloc|lock|cache-misses etc. // -d
- * duration run profiling for 'duration' seconds (integer) // -i interval sampling interval in
- * nanoseconds (long) // -j jstackdepth maximum Java stack depth (integer) // -b bufsize frame
- * buffer size (long) // -t profile different threads separately // -s simple class names instead of
- * FQN // -o fmt[,fmt...] output format: summary|traces|flat|collapsed|svg|tree|jfr|html // --width
- * px SVG width pixels (integer) // --height px SVG frame height pixels (integer) // --minwidth px
- * skip frames smaller than px (double) // --reverse generate stack-reversed FlameGraph / Call tree
- * Example: - To collect 30 second CPU profile of current process (returns FlameGraph svg) curl
- * "http://localhost:10002/prof" - To collect 1 minute CPU profile of current process and output in
- * tree format (html) curl "http://localhost:10002/prof?output=tree&amp;duration=60" - To collect 30
- * second heap allocation profile of current process (returns FlameGraph svg) curl
- * "http://localhost:10002/prof?event=alloc" - To collect lock contention profile of current process
- * (returns FlameGraph svg) curl "http://localhost:10002/prof?event=lock" Following event types are
- * supported (default is 'cpu') (NOTE: not all OS'es support all events) // Perf events: // cpu //
- * page-faults // context-switches // cycles // instructions // cache-references // cache-misses //
- * branches // branch-misses // bus-cycles // L1-dcache-load-misses // LLC-load-misses //
- * dTLB-load-misses // mem:breakpoint // trace:tracepoint // Java events: // alloc // lock
+ * specified as query parameter.
+ * <ul>
+ * <li>-e event profiling event: cpu|alloc|lock|cache-misses etc.</li>
+ * <li>-d duration run profiling for 'duration' seconds (integer), default 10s</li>
+ * <li>-i interval sampling interval in nanoseconds (long), default 10ms</li>
+ * <li>-j jstackdepth maximum Java stack depth (integer), default 2048</li>
+ * <li>-t profile different threads separately</li>
+ * <li>-s simple class names instead of FQN</li>
+ * <li>-g print method signatures</li>
+ * <li>-a annotate Java methods</li>
+ * <li>-l prepend library names</li>
+ * <li>-o fmt output format: flat|traces|collapsed|flamegraph|tree|jfr</li>
+ * <li>--minwidth pct skip frames smaller than pct% (double)</li>
+ * <li>--reverse generate stack-reversed FlameGraph / Call tree</li>
+ * </ul>
+ * Example:
+ * <ul>
+ * <li>To collect 30 second CPU profile of current process (returns FlameGraph svg):
+ * {@code curl http://localhost:10002/prof"}</li>
+ * <li>To collect 1 minute CPU profile of current process and output in tree format (html)
+ * {@code curl "http://localhost:10002/prof?output=tree&amp;duration=60"}</li>
+ * <li>To collect 30 second heap allocation profile of current process (returns FlameGraph):
+ * {@code curl "http://localhost:10002/prof?event=alloc"}</li>
+ * <li>To collect lock contention profile of current process (returns FlameGraph):
+ * {@code curl "http://localhost:10002/prof?event=lock"}</li>
+ * </ul>
+ * Following event types are supported (default is 'cpu') (NOTE: not all OS'es support all
+ * events).<br/>
+ * Basic events:
+ * <ul>
+ * <li>cpu</li>
+ * <li>alloc</li>
+ * <li>lock</li>
+ * <li>wall</li>
+ * <li>itimer</li>
+ * </ul>
+ * Perf events:
+ * <ul>
+ * <li>L1-dcache-load-misses</li>
+ * <li>LLC-load-misses</li>
+ * <li>branch-instructions</li>
+ * <li>branch-misses</li>
+ * <li>bus-cycles</li>
+ * <li>cache-misses</li>
+ * <li>cache-references</li>
+ * <li>context-switches</li>
+ * <li>cpu</li>
+ * <li>cycles</li>
+ * <li>dTLB-load-misses</li>
+ * <li>instructions</li>
+ * <li>mem:breakpoint</li>
+ * <li>page-faults</li>
+ * <li>trace:tracepoint</li>
+ * </ul>
  */
 @InterfaceAudience.Private
 public class ProfileServlet extends HttpServlet {
@@ -78,22 +115,23 @@ public class ProfileServlet extends HttpServlet {
 
   enum Event {
     CPU("cpu"),
-    WALL("wall"),
     ALLOC("alloc"),
     LOCK("lock"),
-    PAGE_FAULTS("page-faults"),
-    CONTEXT_SWITCHES("context-switches"),
-    CYCLES("cycles"),
-    INSTRUCTIONS("instructions"),
-    CACHE_REFERENCES("cache-references"),
-    CACHE_MISSES("cache-misses"),
-    BRANCHES("branches"),
+    WALL("wall"),
+    ITIMER("itimer"),
+    BRANCH_INSTRUCTIONS("branch-instructions"),
     BRANCH_MISSES("branch-misses"),
     BUS_CYCLES("bus-cycles"),
+    CACHE_MISSES("cache-misses"),
+    CACHE_REFERENCES("cache-references"),
+    CONTEXT_SWITCHES("context-switches"),
+    CYCLES("cycles"),
+    DTLB_LOAD_MISSES("dTLB-load-misses"),
+    INSTRUCTIONS("instructions"),
     L1_DCACHE_LOAD_MISSES("L1-dcache-load-misses"),
     LLC_LOAD_MISSES("LLC-load-misses"),
-    DTLB_LOAD_MISSES("dTLB-load-misses"),
     MEM_BREAKPOINT("mem:breakpoint"),
+    PAGE_FAULTS("page-faults"),
     TRACE_TRACEPOINT("trace:tracepoint"),;
 
     private final String internalName;
@@ -102,11 +140,11 @@ public class ProfileServlet extends HttpServlet {
       this.internalName = internalName;
     }
 
-    public String getInternalName() {
+    String getInternalName() {
       return internalName;
     }
 
-    public static Event fromInternalName(final String name) {
+    static Event fromInternalName(final String name) {
       for (Event event : values()) {
         if (event.getInternalName().equalsIgnoreCase(name)) {
           return event;
@@ -117,30 +155,26 @@ public class ProfileServlet extends HttpServlet {
     }
   }
 
-  enum Output {
-    SUMMARY,
-    TRACES,
-    FLAT,
+  private enum Output {
     COLLAPSED,
-    // No SVG in 2.x asyncprofiler.
-    SVG,
-    TREE,
+    FLAMEGRAPH,
+    FLAT,
     JFR,
-    // In 2.x asyncprofiler, this is how you get flamegraphs.
-    HTML
+    TRACES,
+    TREE
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "SE_TRANSIENT_FIELD_NOT_RESTORED",
       justification = "This class is never serialized nor restored.")
-  private transient Lock profilerLock = new ReentrantLock();
+  private final transient Lock profilerLock = new ReentrantLock();
   private transient volatile Process process;
-  private String asyncProfilerHome;
+  private final String asyncProfilerHome;
   private Integer pid;
 
   public ProfileServlet() {
     this.asyncProfilerHome = getAsyncProfilerHome();
     this.pid = ProcessUtils.getPid();
-    LOG.info("Servlet process PID: " + pid + " asyncProfilerHome: " + asyncProfilerHome);
+    LOG.info("Servlet process PID: {} asyncProfilerHome: {}", pid, asyncProfilerHome);
   }
 
   @Override
@@ -159,9 +193,9 @@ public class ProfileServlet extends HttpServlet {
       setResponseHeader(resp);
       resp.getWriter()
         .write("ASYNC_PROFILER_HOME env is not set.\n\n"
-          + "Please ensure the prerequsites for the Profiler Servlet have been installed and the\n"
+          + "Please ensure the prerequisites for the Profiler Servlet have been installed and the\n"
           + "environment is properly configured. For more information please see\n"
-          + "http://hbase.apache.org/book.html#profiler\n");
+          + "https://hbase.apache.org/book.html#profiler\n");
       return;
     }
 
@@ -177,18 +211,18 @@ public class ProfileServlet extends HttpServlet {
       return;
     }
 
-    final int duration = getInteger(req, "duration", DEFAULT_DURATION_SECONDS);
-    final Output output = getOutput(req);
-    final Event event = getEvent(req);
-    final Long interval = getLong(req, "interval");
-    final Integer jstackDepth = getInteger(req, "jstackdepth", null);
-    final Long bufsize = getLong(req, "bufsize");
-    final boolean thread = req.getParameterMap().containsKey("thread");
-    final boolean simple = req.getParameterMap().containsKey("simple");
-    final Integer width = getInteger(req, "width", null);
-    final Integer height = getInteger(req, "height", null);
-    final Double minwidth = getMinWidth(req);
-    final boolean reverse = req.getParameterMap().containsKey("reverse");
+    Event event = getEvent(req);
+    int duration = getInteger(req, "duration", DEFAULT_DURATION_SECONDS);
+    Long interval = getLong(req, "interval");
+    Integer jstackDepth = getInteger(req, "jstackdepth", null);
+    boolean thread = req.getParameterMap().containsKey("thread");
+    boolean simple = req.getParameterMap().containsKey("simple");
+    boolean signature = req.getParameterMap().containsKey("signature");
+    boolean annotate = req.getParameterMap().containsKey("annotate");
+    boolean prependLib = req.getParameterMap().containsKey("prependlib");
+    Output output = getOutput(req);
+    Double minwidth = getMinWidth(req);
+    boolean reverse = req.getParameterMap().containsKey("reverse");
 
     if (process == null || !process.isAlive()) {
       try {
@@ -198,6 +232,7 @@ public class ProfileServlet extends HttpServlet {
             File outputFile =
               new File(OUTPUT_DIR, "async-prof-pid-" + pid + "-" + event.name().toLowerCase() + "-"
                 + ID_GEN.incrementAndGet() + "." + output.name().toLowerCase());
+
             List<String> cmd = new ArrayList<>();
             Path profilerScriptPath = Paths.get(asyncProfilerHome, "bin", PROFILER_SCRIPT);
             if (!Files.exists(profilerScriptPath)) {
@@ -210,11 +245,7 @@ public class ProfileServlet extends HttpServlet {
             cmd.add("-e");
             cmd.add(event.getInternalName());
             cmd.add("-d");
-            cmd.add("" + duration);
-            cmd.add("-o");
-            cmd.add(output.name().toLowerCase());
-            cmd.add("-f");
-            cmd.add(outputFile.getAbsolutePath());
+            cmd.add(String.valueOf(duration));
             if (interval != null) {
               cmd.add("-i");
               cmd.add(interval.toString());
@@ -223,24 +254,25 @@ public class ProfileServlet extends HttpServlet {
               cmd.add("-j");
               cmd.add(jstackDepth.toString());
             }
-            if (bufsize != null) {
-              cmd.add("-b");
-              cmd.add(bufsize.toString());
-            }
             if (thread) {
               cmd.add("-t");
             }
             if (simple) {
               cmd.add("-s");
             }
-            if (width != null) {
-              cmd.add("--width");
-              cmd.add(width.toString());
+            if (signature) {
+              cmd.add("-g");
             }
-            if (height != null) {
-              cmd.add("--height");
-              cmd.add(height.toString());
+            if (annotate) {
+              cmd.add("-a");
             }
+            if (prependLib) {
+              cmd.add("-l");
+            }
+            cmd.add("-o");
+            cmd.add(output.name().toLowerCase());
+            cmd.add("-f");
+            cmd.add(outputFile.getAbsolutePath());
             if (minwidth != null) {
               cmd.add("--minwidth");
               cmd.add(minwidth.toString());
@@ -248,6 +280,7 @@ public class ProfileServlet extends HttpServlet {
             if (reverse) {
               cmd.add("--reverse");
             }
+
             cmd.add(pid.toString());
             process = ProcessUtils.runCmdAsync(cmd);
 
@@ -279,8 +312,9 @@ public class ProfileServlet extends HttpServlet {
           resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
           resp.getWriter()
             .write("Unable to acquire lock. Another instance of profiler might be running.");
-          LOG.warn("Unable to acquire lock in " + lockTimeoutSecs
-            + " seconds. Another instance of profiler might be running.");
+          LOG.warn(
+            "Unable to acquire lock in {} seconds. Another instance of profiler might be running.",
+            lockTimeoutSecs);
         }
       } catch (InterruptedException e) {
         LOG.warn("Interrupted while acquiring profile lock.", e);
@@ -293,9 +327,9 @@ public class ProfileServlet extends HttpServlet {
     }
   }
 
-  private Integer getInteger(final HttpServletRequest req, final String param,
+  private static Integer getInteger(final HttpServletRequest req, final String param,
     final Integer defaultValue) {
-    final String value = req.getParameter(param);
+    String value = req.getParameter(param);
     if (value != null) {
       try {
         return Integer.valueOf(value);
@@ -306,8 +340,8 @@ public class ProfileServlet extends HttpServlet {
     return defaultValue;
   }
 
-  private Long getLong(final HttpServletRequest req, final String param) {
-    final String value = req.getParameter(param);
+  private static Long getLong(final HttpServletRequest req, final String param) {
+    String value = req.getParameter(param);
     if (value != null) {
       try {
         return Long.valueOf(value);
@@ -318,8 +352,8 @@ public class ProfileServlet extends HttpServlet {
     return null;
   }
 
-  private Double getMinWidth(final HttpServletRequest req) {
-    final String value = req.getParameter("minwidth");
+  private static Double getMinWidth(final HttpServletRequest req) {
+    String value = req.getParameter("minwidth");
     if (value != null) {
       try {
         return Double.valueOf(value);
@@ -330,8 +364,8 @@ public class ProfileServlet extends HttpServlet {
     return null;
   }
 
-  private Event getEvent(final HttpServletRequest req) {
-    final String eventArg = req.getParameter("event");
+  private static Event getEvent(final HttpServletRequest req) {
+    String eventArg = req.getParameter("event");
     if (eventArg != null) {
       Event event = Event.fromInternalName(eventArg);
       return event == null ? Event.CPU : event;
@@ -339,16 +373,16 @@ public class ProfileServlet extends HttpServlet {
     return Event.CPU;
   }
 
-  private Output getOutput(final HttpServletRequest req) {
-    final String outputArg = req.getParameter("output");
+  private static Output getOutput(final HttpServletRequest req) {
+    String outputArg = req.getParameter("output");
     if (req.getParameter("output") != null) {
       try {
         return Output.valueOf(outputArg.trim().toUpperCase());
       } catch (IllegalArgumentException e) {
-        return Output.HTML;
+        return Output.FLAMEGRAPH;
       }
     }
-    return Output.HTML;
+    return Output.FLAMEGRAPH;
   }
 
   static void setResponseHeader(final HttpServletResponse response) {
@@ -380,8 +414,7 @@ public class ProfileServlet extends HttpServlet {
         .write("The profiler servlet was disabled at startup.\n\n"
           + "Please ensure the prerequisites for the Profiler Servlet have been installed and the\n"
           + "environment is properly configured. For more information please see\n"
-          + "http://hbase.apache.org/book.html#profiler\n");
-      return;
+          + "https://hbase.apache.org/book.html#profiler\n");
     }
 
   }
