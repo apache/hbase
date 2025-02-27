@@ -52,6 +52,9 @@ public class CodecPool {
   private static final ConcurrentMap<Class<Decompressor>,
     NavigableSet<Decompressor>> DECOMPRESSOR_POOL = new ConcurrentHashMap<>();
 
+  private static final ConcurrentMap<Class<ByteBuffDecompressor>,
+    NavigableSet<ByteBuffDecompressor>> BYTE_BUFF_DECOMPRESSOR_POOL = new ConcurrentHashMap<>();
+
   private static <T> LoadingCache<Class<T>, AtomicInteger> createCache() {
     return Caffeine.newBuilder().build(key -> new AtomicInteger());
   }
@@ -161,14 +164,28 @@ public class CodecPool {
     Decompressor decompressor = borrow(DECOMPRESSOR_POOL, codec.getDecompressorType());
     if (decompressor == null) {
       decompressor = codec.createDecompressor();
-      LOG.info("Got brand-new decompressor [" + codec.getDefaultExtension() + "]");
+      LOG.info("Got brand-new Decompressor [" + codec.getDefaultExtension() + "]");
     } else {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Got recycled decompressor");
+        LOG.debug("Got recycled Decompressor");
       }
     }
     if (decompressor != null && !decompressor.getClass().isAnnotationPresent(DoNotPool.class)) {
       updateLeaseCount(decompressorCounts, decompressor, 1);
+    }
+    return decompressor;
+  }
+
+  public static ByteBuffDecompressor getByteBuffDecompressor(ByteBuffDecompressionCodec codec) {
+    ByteBuffDecompressor decompressor =
+      borrow(BYTE_BUFF_DECOMPRESSOR_POOL, codec.getByteBuffDecompressorType());
+    if (decompressor == null) {
+      decompressor = codec.createByteBuffDecompressor();
+      LOG.info("Got brand-new ByteBuffDecompressor " + decompressor.getClass().getName());
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Got recycled ByteBuffDecompressor");
+      }
     }
     return decompressor;
   }
@@ -209,6 +226,17 @@ public class CodecPool {
     if (payback(DECOMPRESSOR_POOL, decompressor)) {
       updateLeaseCount(decompressorCounts, decompressor, -1);
     }
+  }
+
+  public static void returnByteBuffDecompressor(ByteBuffDecompressor decompressor) {
+    if (decompressor == null) {
+      return;
+    }
+    // if the decompressor can't be reused, don't pool it.
+    if (decompressor.getClass().isAnnotationPresent(DoNotPool.class)) {
+      return;
+    }
+    payback(BYTE_BUFF_DECOMPRESSOR_POOL, decompressor);
   }
 
   /**

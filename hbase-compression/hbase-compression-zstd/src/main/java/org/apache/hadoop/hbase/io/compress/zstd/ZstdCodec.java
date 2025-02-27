@@ -26,6 +26,8 @@ import java.nio.ByteOrder;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hbase.io.compress.ByteBuffDecompressionCodec;
+import org.apache.hadoop.hbase.io.compress.ByteBuffDecompressor;
 import org.apache.hadoop.hbase.io.compress.DictionaryCache;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
@@ -42,7 +44,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * This is data format compatible with Hadoop's native ZStandard codec.
  */
 @InterfaceAudience.Private
-public class ZstdCodec implements Configurable, CompressionCodec {
+public class ZstdCodec implements Configurable, CompressionCodec, ByteBuffDecompressionCodec {
 
   public static final String ZSTD_LEVEL_KEY = "hbase.io.compress.zstd.level";
   public static final String ZSTD_BUFFER_SIZE_KEY = "hbase.io.compress.zstd.buffersize";
@@ -81,6 +83,11 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   }
 
   @Override
+  public ByteBuffDecompressor createByteBuffDecompressor() {
+    return new ZstdByteBuffDecompressor(dictionary);
+  }
+
+  @Override
   public CompressionInputStream createInputStream(InputStream in) throws IOException {
     return createInputStream(in, createDecompressor());
   }
@@ -111,6 +118,11 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   @Override
   public Class<? extends Decompressor> getDecompressorType() {
     return ZstdDecompressor.class;
+  }
+
+  @Override
+  public Class<? extends ByteBuffDecompressor> getByteBuffDecompressorType() {
+    return ZstdByteBuffDecompressor.class;
   }
 
   @Override

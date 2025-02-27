@@ -140,6 +140,9 @@ public class CompressionContext {
       }
     }
 
+    /**
+     * Read an integer from the stream in big-endian byte order.
+     */
     private int rawReadInt(InputStream in) throws IOException {
       int b1 = in.read();
       int b2 = in.read();
