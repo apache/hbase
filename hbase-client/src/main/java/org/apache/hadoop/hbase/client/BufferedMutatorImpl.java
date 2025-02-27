@@ -87,6 +87,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
   private Timer writeBufferPeriodicFlushTimer = null;
 
   private final int maxKeyValueSize;
+  private final int maxMutations;
   private final ExecutorService pool;
   private final AtomicInteger rpcTimeout;
   private final AtomicInteger operationTimeout;
@@ -129,6 +130,10 @@ public class BufferedMutatorImpl implements BufferedMutator {
     this.maxKeyValueSize = params.getMaxKeyValueSize() != UNSET
       ? params.getMaxKeyValueSize()
       : tableConf.getMaxKeyValueSize();
+
+    this.maxMutations = params.getMaxMutations() != UNSET
+      ? params.getMaxMutations()
+      : conn.getConnectionConfiguration().getBufferedMutatorMaxMutations();
 
     this.rpcTimeout = new AtomicInteger(params.getRpcTimeout() != UNSET
       ? params.getRpcTimeout()
@@ -286,7 +291,9 @@ public class BufferedMutatorImpl implements BufferedMutator {
     throws InterruptedIOException, RetriesExhaustedWithDetailsException {
     List<RetriesExhaustedWithDetailsException> errors = new ArrayList<>();
     while (true) {
-      if (!flushAll && currentWriteBufferSize.get() <= writeBufferSize) {
+      if (
+        !flushAll && (currentWriteBufferSize.get() <= writeBufferSize) && (size() < maxMutations)
+      ) {
         // There is the room to accept more mutations.
         break;
       }
