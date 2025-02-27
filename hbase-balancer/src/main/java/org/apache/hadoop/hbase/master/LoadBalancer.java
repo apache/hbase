@@ -154,4 +154,8 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
   default void
     updateBalancerLoadInfo(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
   }
+
+  default void throttle(RegionPlan plan) throws Exception {
+    // noop
+  }
 }

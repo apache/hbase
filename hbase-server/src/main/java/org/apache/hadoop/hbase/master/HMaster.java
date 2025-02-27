@@ -2188,10 +2188,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         // TODO: bulk assign
         try {
           this.assignmentManager.balance(plan);
+          this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
+          this.balancer.throttle(plan);
         } catch (HBaseIOException hioe) {
           // should ignore failed plans here, avoiding the whole balance plans be aborted
           // later calls of balance() can fetch up the failed and skipped plans
           LOG.warn("Failed balance plan {}, skipping...", plan, hioe);
+        } catch (Exception e) {
+          LOG.warn("Failed throttling assigning a new plan.", e);
         }
         // rpCount records balance plans processed, does not care if a plan succeeds
         rpCount++;
