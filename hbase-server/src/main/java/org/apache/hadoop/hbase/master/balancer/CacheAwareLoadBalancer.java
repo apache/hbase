@@ -80,7 +80,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
 
   @Override
   protected Map<Class<? extends CandidateGenerator>, CandidateGenerator>
-    createCandidateGenerators() {
+    createCandidateGenerators(Configuration conf) {
     Map<Class<? extends CandidateGenerator>, CandidateGenerator> candidateGenerators =
       new HashMap<>(2);
     candidateGenerators.put(CacheAwareSkewnessCandidateGenerator.class,
