@@ -244,6 +244,14 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     return regionLocation;
   }
 
+  public String getRegionServerName() {
+    ServerName sn = getRegionLocation();
+    if (sn != null) {
+      return sn.getServerName();
+    }
+    return null;
+  }
+
   public State getState() {
     return state;
   }

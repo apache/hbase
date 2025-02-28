@@ -97,7 +97,7 @@
                 <td><%= regionStateNode.getRegionInfo().getEncodedName() %></td>
                 <td><%= regionStateNode.getRegionInfo().getTable() %></td>
                 <td><%= regionStateNode.getState() %></td>
-                <td><%= regionStateNode.getRegionLocation().getServerName() %></td>
+                <td><%= regionStateNode.getRegionServerName() %></td>
                 <%
                     TransitRegionStateProcedure procedure = regionStateNode.getProcedure();
 
@@ -123,27 +123,30 @@
 </div>
 <jsp:include page="footer.jsp" />
 <% } else if (format.equals("json")) { %>
-<%
-    Gson GSON = GsonUtil.createGson().create();
-    Map<String, List<Map<String, Object>>> map = new HashMap<>();
-    List<Map<String, Object>> rits = new ArrayList<>();
-    map.put("rits", rits);
-    for (RegionStateNode regionStateNode : rit) {
-        Map<String, Object> r = new HashMap<>();
-        r.put("region", regionStateNode.getRegionInfo().getEncodedName());
-        r.put("table", regionStateNode.getRegionInfo().getTable().getNameAsString());
-        r.put("state", regionStateNode.getState());
-        r.put("server", regionStateNode.getRegionLocation().getServerName());
-        TransitRegionStateProcedure procedure = regionStateNode.getProcedure();
-        if (procedure != null) {
-          r.put("procedureId", procedure.getProcId());
-          r.put("procedureState", procedure.getState().toString());
+    <%
+        Gson GSON = GsonUtil.createGson().create();
+        Map<String, List<Map<String, Object>>> map = new HashMap<>();
+        List<Map<String, Object>> rits = new ArrayList<>();
+        map.put("rits", rits);
+        for (RegionStateNode regionStateNode : rit) {
+            Map<String, Object> r = new HashMap<>();
+            r.put("region", regionStateNode.getRegionInfo().getEncodedName());
+            r.put("table", regionStateNode.getRegionInfo().getTable().getNameAsString());
+            r.put("state", regionStateNode.getState());
+            r.put("server", regionStateNode.getRegionServerName());
+
+            TransitRegionStateProcedure procedure = regionStateNode.getProcedure();
+            if (procedure != null) {
+                r.put("procedureId", procedure.getProcId());
+                r.put("procedureState", procedure.getState().toString());
+            }
+
+            RegionState rs = regionStateNode.toRegionState();
+            r.put("startTime", rs.getStamp());
+            r.put("duration", System.currentTimeMillis() - rs.getStamp());
+
+            rits.add(r);
         }
-        RegionState rs = regionStateNode.toRegionState();
-        r.put("startTime", rs.getStamp());
-        r.put("duration", System.currentTimeMillis() - rs.getStamp());
-        rits.add(r);
-      }
     %>
     <%= GSON.toJson(map) %>
 <% } else { %>
