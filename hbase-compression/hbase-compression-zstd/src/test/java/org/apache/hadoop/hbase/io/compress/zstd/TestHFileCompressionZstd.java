@@ -60,15 +60,15 @@ public class TestHFileCompressionZstd extends HFileTestBase {
     conf.setBoolean("hbase.io.compress.zstd.allowByteBuffDecompression", false);
     Compression.Algorithm.ZSTD.reload(conf);
 
-    Path path =
-      new Path(TEST_UTIL.getDataTestDir(), HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
+    Path path = new Path(TEST_UTIL.getDataTestDir(),
+      HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
     doTest(conf, path, Compression.Algorithm.ZSTD);
   }
 
   @Test
   public void testWithByteBuffDecompression() throws Exception {
-    Path path =
-      new Path(TEST_UTIL.getDataTestDir(), HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
+    Path path = new Path(TEST_UTIL.getDataTestDir(),
+      HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
     doTest(conf, path, Compression.Algorithm.ZSTD);
   }
 
