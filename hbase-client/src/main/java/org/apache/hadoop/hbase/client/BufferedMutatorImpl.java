@@ -292,9 +292,10 @@ public class BufferedMutatorImpl implements BufferedMutator {
     List<RetriesExhaustedWithDetailsException> errors = new ArrayList<>();
     while (true) {
       if (
-        !flushAll && (currentWriteBufferSize.get() <= writeBufferSize) && (size() < maxMutations)
+        !flushAll && (currentWriteBufferSize.get() <= writeBufferSize) &&
+          (maxMutations == UNSET || size() < maxMutations)
       ) {
-        // There is the room to accept more mutations.
+        // There is room to accept more mutations.
         break;
       }
       AsyncRequestFuture asf;
