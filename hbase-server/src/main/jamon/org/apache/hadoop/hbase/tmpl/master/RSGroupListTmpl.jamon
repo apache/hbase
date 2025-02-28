@@ -56,27 +56,27 @@ if (master.getServerManager() != null) {
 </%java>
 
 <div class="tabbable">
-    <ul class="nav nav-pills">
-        <li class="active"><a href="#tab_rsgroup_baseStats" data-toggle="tab">Base Stats</a></li>
-        <li class=""><a href="#tab_rsgroup_memoryStats" data-toggle="tab">Memory</a></li>
-        <li class=""><a href="#tab_rsgroup_requestStats" data-toggle="tab">Requests</a></li>
-        <li class=""><a href="#tab_rsgroup_storeStats" data-toggle="tab">Storefiles</a></li>
-        <li class=""><a href="#tab_rsgroup_compactStats" data-toggle="tab">Compactions</a></li>
+    <ul class="nav nav-pills" role="tablist">
+        <li class="nav-item"><a class="nav-link active" href="#tab_rsgroup_baseStats" data-bs-toggle="tab" role="tab">Base Stats</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_rsgroup_memoryStats" data-bs-toggle="tab" role="tab">Memory</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_rsgroup_requestStats" data-bs-toggle="tab" role="tab">Requests</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_rsgroup_storeStats" data-bs-toggle="tab" role="tab">Storefiles</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_rsgroup_compactStats" data-bs-toggle="tab" role="tab">Compactions</a></li>
     </ul>
-    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-        <div class="tab-pane active" id="tab_rsgroup_baseStats">
+    <div class="tab-content">
+        <div class="tab-pane active" id="tab_rsgroup_baseStats" role="tabpanel">
             <& rsgroup_baseStats; rsGroupInfos = rsGroupInfos; collectServers= collectServers &>
         </div>
-        <div class="tab-pane" id="tab_rsgroup_memoryStats">
+        <div class="tab-pane" id="tab_rsgroup_memoryStats" role="tabpanel">
             <& rsgroup_memoryStats; rsGroupInfos = rsGroupInfos; collectServers= collectServers &>
         </div>
-        <div class="tab-pane" id="tab_rsgroup_requestStats">
+        <div class="tab-pane" id="tab_rsgroup_requestStats" role="tabpanel">
             <& rsgroup_requestStats; rsGroupInfos = rsGroupInfos; collectServers= collectServers &>
         </div>
-        <div class="tab-pane" id="tab_rsgroup_storeStats">
+        <div class="tab-pane" id="tab_rsgroup_storeStats" role="tabpanel">
             <& rsgroup_storeStats; rsGroupInfos = rsGroupInfos; collectServers= collectServers &>
         </div>
-        <div class="tab-pane" id="tab_rsgroup_compactStats">
+        <div class="tab-pane" id="tab_rsgroup_compactStats" role="tabpanel">
             <& rsgroup_compactStats; rsGroupInfos = rsGroupInfos; collectServers= collectServers &>
         </div>
     </div>
