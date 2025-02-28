@@ -872,8 +872,6 @@
     <commons-crypto.version>1.1.0</commons-crypto.version>
     <curator.version>5.7.1</curator.version>
     <!-- Plugin Dependencies -->
-    <asciidoctor.plugin.version>2.2.2</asciidoctor.plugin.version>
-    <asciidoctorj.pdf.version>2.0.6</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
     <!--
@@ -2705,60 +2703,6 @@
             <version>${wagon.ssh.version}</version>
           </dependency>
         </dependencies>
-      </plugin>
-      <!-- For AsciiDoc docs building -->
-      <plugin>
-        <groupId>org.asciidoctor</groupId>
-        <artifactId>asciidoctor-maven-plugin</artifactId>
-        <version>${asciidoctor.plugin.version}</version>
-        <inherited>false</inherited>
-        <configuration>
-          <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
-          <doctype>book</doctype>
-          <attributes>
-            <docVersion>${project.version}</docVersion>
-            <imagesdir>images</imagesdir>
-            <source-highlighter>coderay</source-highlighter>
-          </attributes>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.asciidoctor</groupId>
-            <artifactId>asciidoctorj-pdf</artifactId>
-            <version>${asciidoctorj.pdf.version}</version>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <id>output-html</id>
-            <goals>
-              <goal>process-asciidoc</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <attributes>
-                <stylesheet>hbase.css</stylesheet>
-              </attributes>
-              <backend>html5</backend>
-            </configuration>
-          </execution>
-          <execution>
-            <id>output-pdf</id>
-            <goals>
-              <goal>process-asciidoc</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <backend>pdf</backend>
-              <attributes>
-                <pagenums/>
-                <toc/>
-                <idprefix/>
-                <idseparator>-</idseparator>
-              </attributes>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
