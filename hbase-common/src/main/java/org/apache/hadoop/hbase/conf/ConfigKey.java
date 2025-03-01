@@ -99,7 +99,7 @@ public class ConfigKey {
       try {
         Class.forName(value);
       } catch (ClassNotFoundException e) {
-        throw new IllegalArgumentException("Class " + value + " not found.");
+        throw new IllegalArgumentException(String.format("'%s' must be a class.", key), e);
       }
     });
   }
