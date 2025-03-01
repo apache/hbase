@@ -1331,10 +1331,11 @@ $(document).ready(function()
                 2: {sorter: 'separator'},
                 3: {sorter: 'separator'},
                 4: {sorter: 'filesize'},
-                5: {sorter: 'separator'},
-                6: {sorter: 'filesize'},
-                7: {empty: 'emptyMin'},
-                8: {empty: 'emptyMax'}
+                5: {sorter: 'filesize'},
+                6: {sorter: 'separator'},
+                7: {sorter: 'filesize'},
+                8: {empty: 'emptyMin'},
+                9: {empty: 'emptyMax'}
             }
         });
         $("#metaTableBaseStatsTable").tablesorter({
@@ -1342,10 +1343,11 @@ $(document).ready(function()
                 2: {sorter: 'separator'},
                 3: {sorter: 'separator'},
                 4: {sorter: 'filesize'},
-                5: {sorter: 'separator'},
-                6: {sorter: 'filesize'},
-                7: {empty: 'emptyMin'},
-                8: {empty: 'emptyMax'}
+                5: {sorter: 'filesize'},
+                6: {sorter: 'separator'},
+                7: {sorter: 'filesize'},
+                8: {empty: 'emptyMin'},
+                9: {empty: 'emptyMax'}
             }
         });
         $("#tableLocalityStatsTable").tablesorter({
