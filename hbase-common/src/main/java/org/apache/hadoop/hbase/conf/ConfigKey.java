@@ -143,7 +143,7 @@ public class ConfigKey {
         }
       }
     } catch (NumberFormatException e) {
-      throw new IllegalArgumentException(String.format("'%s' must be %s.", name, expected));
+      throw new IllegalArgumentException(String.format("'%s' must be %s.", name, expected), e);
     }
   }
 
