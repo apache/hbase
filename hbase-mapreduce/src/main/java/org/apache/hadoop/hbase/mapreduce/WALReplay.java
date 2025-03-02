@@ -18,14 +18,11 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -39,16 +36,13 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -63,28 +57,21 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
  * replay bulkload operation from WAL files
  */
 @InterfaceAudience.Public
-public class WALReplay extends Configured implements Tool {
+public class WALReplay extends
+  WALReplayBase<MutationOrBulkLoad,
+    Mapper<WALKey, WALEdit, ImmutableBytesWritable, MutationOrBulkLoad>,
+    OutputFormat<ImmutableBytesWritable, MutationOrBulkLoad>> {
   private static final Logger LOG = LoggerFactory.getLogger(WALReplay.class);
   final static String NAME = "WALReplay";
-  final static String WAL_DIR = "WALs";
-  final static String BULKLOAD_FILES = "bulk-load-files";
-  public final static String TABLES_KEY = "wal.input.tables";
-  public final static String TABLE_MAP_KEY = "wal.input.tablesmap";
-  public final static String BULKLOAD_BACKUP_LOCATION = "wal.bulk.backup.location";
-  private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
-
-  public WALReplay() {
-  }
 
   protected WALReplay(final Configuration c) {
-    super(c);
+    super(c, WALMapper.class, MultiTableOutputFormatWalReplay.class);
   }
 
   /**
    * Enum for map metrics. Keep it out here rather than inside in the Map inner-class so we can find
    * associated properties.
    */
-
   protected static enum Counter {
     /** Number of aggregated writes */
     PUTS,
@@ -99,8 +86,7 @@ public class WALReplay extends Configured implements Tool {
    * A mapper that writes out {@link Mutation} or list of bulkload files to be directly applied to a
    * running HBase instance.
    */
-  protected static class WALMapper
-    extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, MutationOrBulkLoad> {
+  protected static class WALMapper extends WALMapperBase<MutationOrBulkLoad> {
     private Map<TableName, TableName> tables = new TreeMap<>();
 
     @Override
@@ -275,106 +261,6 @@ public class WALReplay extends Configured implements Tool {
       super.cleanup(context);
     }
 
-    @SuppressWarnings("checkstyle:EmptyBlock")
-    @Override
-    public void setup(Context context) throws IOException {
-      String[] tableMap = context.getConfiguration().getStrings(TABLE_MAP_KEY);
-      String[] tablesToUse = context.getConfiguration().getStrings(TABLES_KEY);
-      if (tableMap == null) {
-        tableMap = tablesToUse;
-      }
-      if (tablesToUse == null) {
-        // Then user wants all tables.
-      } else if (tablesToUse.length != tableMap.length) {
-        // this can only happen when WALMapper is used directly by a class other than WALReplay
-        throw new IOException("Incorrect table mapping specified .");
-      }
-      int i = 0;
-      if (tablesToUse != null) {
-        for (String table : tablesToUse) {
-          tables.put(TableName.valueOf(table), TableName.valueOf(tableMap[i++]));
-        }
-      }
-    }
-  }
-
-  void setupTime(Configuration conf, String option) throws IOException {
-    String val = conf.get(option);
-    if (null == val) {
-      return;
-    }
-    long ms;
-    try {
-      // first try to parse in user friendly form
-      ms = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SS").parse(val).getTime();
-    } catch (ParseException pe) {
-      try {
-        // then see if just a number of ms's was specified
-        ms = Long.parseLong(val);
-      } catch (NumberFormatException nfe) {
-        throw new IOException(
-          option + " must be specified either in the form 2001-02-20T16:35:06.99 "
-            + "or as number of milliseconds");
-      }
-    }
-    conf.setLong(option, ms);
-  }
-
-  /**
-   * Sets up the actual job.
-   * @param args The command line parameters.
-   * @return The newly created job.
-   * @throws IOException When setting up the job fails.
-   */
-  public Job createSubmittableJob(String[] args) throws IOException {
-    Configuration conf = getConf();
-    setupTime(conf, WALInputFormat.START_TIME_KEY);
-    setupTime(conf, WALInputFormat.END_TIME_KEY);
-    String inputDirs = args[0];
-    String walDir = new Path(inputDirs, WAL_DIR).toString();
-    String bulkLoadFilesDir = new Path(inputDirs, BULKLOAD_FILES).toString();
-    String[] tables = args.length == 1 ? new String[] {} : args[1].split(",");
-    String[] tableMap;
-    if (args.length > 2) {
-      tableMap = args[2].split(",");
-      if (tableMap.length != tables.length) {
-        throw new IOException("The same number of tables and mapping must be provided.");
-      }
-    } else {
-      // if no mapping is specified, map each table to itself
-      tableMap = tables;
-    }
-    conf.setStrings(TABLES_KEY, tables);
-    conf.setStrings(TABLE_MAP_KEY, tableMap);
-    conf.set(FileInputFormat.INPUT_DIR, walDir);
-    conf.set(BULKLOAD_BACKUP_LOCATION, bulkLoadFilesDir);
-    Job job = Job.getInstance(conf,
-      conf.get(JOB_NAME_CONF_KEY, NAME + "_" + EnvironmentEdgeManager.currentTime()));
-    job.setJarByClass(WALReplay.class);
-    job.setInputFormatClass(WALInputFormat.class);
-    job.setMapOutputKeyClass(ImmutableBytesWritable.class);
-    job.setMapperClass(WALMapper.class);
-    job.setOutputFormatClass(MultiTableOutputFormatWalReplay.class);
-    TableMapReduceUtil.addDependencyJars(job);
-    TableMapReduceUtil.initCredentials(job);
-    // No reducers.
-    job.setNumReduceTasks(0);
-    String codecCls = WALCellCodec.getWALCellCodecClass(conf).getName();
-    try {
-      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
-        Class.forName(codecCls));
-    } catch (Exception e) {
-      throw new IOException("Cannot determine wal codec class " + codecCls, e);
-    }
-    return job;
-  }
-
-  private List<TableName> getTableNameList(String[] tables) {
-    List<TableName> list = new ArrayList<TableName>();
-    for (String name : tables) {
-      list.add(TableName.valueOf(name));
-    }
-    return list;
   }
 
   /**

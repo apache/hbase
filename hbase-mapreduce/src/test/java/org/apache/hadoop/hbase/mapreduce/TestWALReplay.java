@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
 import static org.apache.hadoop.hbase.mapreduce.WALReplay.BULKLOAD_FILES;
 import static org.apache.hadoop.hbase.mapreduce.WALReplay.WAL_DIR;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.EOFException;
@@ -121,18 +122,14 @@ public class TestWALReplay {
     return table;
   }
 
-  private void createHFile() throws Exception {
+  private void createHFile(String walDir) throws Exception {
     conf.set(WALPlayer.BULK_OUTPUT_CONF_KEY, bulkLoadPath.toString());
     conf.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
     WALPlayer player = new WALPlayer(conf);
     assertEquals(0,
       ToolRunner.run(conf, player, new String[] { getWalDir(), TABLENAME.getNameAsString() }));
-  }
-
-  private void copyWALtoBackupDir(Path walPath) throws IOException {
-    WAL log = cluster.getRegionServer(0).getWAL(null);
-    log.rollWriter();
-    assertTrue(FileUtil.copy(fs, walPath, fs, backupWALPath, false, false, conf));
+    conf.unset(WALPlayer.BULK_OUTPUT_CONF_KEY);
+    LOG.info("Hfile created");
   }
 
   private String getWalDir() throws IOException {
@@ -168,10 +165,12 @@ public class TestWALReplay {
     return files;
   }
 
-  private Path getBulkloadStorePath(Path walInputPath) throws IOException {
+  private void backupBulkloadFileAndWalFile(Path walInputPath)
+    throws IOException, InterruptedException {
     WALProtos.BulkLoadDescriptor bld = null;
     WALFactory wals = new WALFactory(TEST_UTIL.getConfiguration(), "wals");
     Set<String> listOfFiles = listFiles(fs, rootDir, walInputPath);
+    Path walFileWithBld = null;
     for (String file : listOfFiles) {
       if (bld != null) {
         break;
@@ -194,11 +193,14 @@ public class TestWALReplay {
             && WALEdit.getBulkLoadDescriptor(edit.getCells().get(0)) != null
         ) {
           bld = WALEdit.getBulkLoadDescriptor(edit.getCells().get(0));
+          walFileWithBld = new Path(file);
+          LOG.info("Bulk load WAL entry found in file {} with details : {}", file, bld);
           break;
         }
       }
       reader.close();
     }
+    assertNotNull("BulkLoadDescriptor found null", bld);
 
     String regionName = bld.getEncodedRegionName().toStringUtf8();
     String columnFamilyName = bld.getStoresList().get(0).getFamilyName().toStringUtf8();
@@ -210,7 +212,14 @@ public class TestWALReplay {
     String backupBLFDir = backupBLFPath.toString() + Path.SEPARATOR + pathFromNS;
     backupBLFPath = new Path(backupBLFDir);
     Path storePath = new Path(baseNamespacePath.toString() + Path.SEPARATOR + pathFromNS);
-    return storePath;
+
+    assertTrue(FileUtil.copy(fs, storePath, fs, backupBLFPath, false, false, conf));
+    assertTrue(FileUtil.copy(fs, walFileWithBld, fs, backupWALPath, false, false, conf));
+
+    Set<String> backedUpFiles = listFiles(fs, rootDir, backupPath);
+    for (String file : listOfFiles) {
+      LOG.info("Backedup file : {}", file);
+    }
   }
 
   /**
@@ -224,8 +233,7 @@ public class TestWALReplay {
     Path walPath = new Path(walDir);
 
     // Create hfile to bulkLoadPath using WALPlayer
-    createHFile();
-    LOG.info("Hfile created");
+    createHFile(walDir);
 
     // Truncate test table
     TEST_UTIL.truncateTable(t1.getName());
@@ -233,23 +241,18 @@ public class TestWALReplay {
     // Do bulkload operation, this will create a bulkload WAL entry
     BulkLoadHFiles.create(conf).bulkLoad(TABLENAME, new Path(bulkLoadPath.toString(),
       TABLENAME.getNamespaceAsString() + "/" + TABLENAME.getNameAsString()));
-    Thread.sleep(100);
     LOG.info("Bulkload done");
     verifyTable(t1);
 
     // copy bulkload files to backupBLFPath (This is to simulate backup operation of hfile)
-    Path storeFile = getBulkloadStorePath(walPath);
-    assertTrue(FileUtil.copy(fs, storeFile, fs, backupBLFPath, false, false, conf));
-
-    // Roll log and copy WAL to the backup directory
-    copyWALtoBackupDir(walPath);
+    backupBulkloadFileAndWalFile(walPath);
 
     TEST_UTIL.truncateTable(t1.getName());
 
     // Use WALReplay to restore hfile
     WALReplay walReplay = new WALReplay(conf);
-    assertEquals(0, ToolRunner.run(conf, walReplay,
-      new String[] { backupPath.toString(), TABLENAME.getNameAsString() }));
+    ToolRunner.run(conf, walReplay,
+      new String[] { backupPath.toString(), TABLENAME.getNameAsString() });
 
     // Verify restored table
     verifyTable(t1);

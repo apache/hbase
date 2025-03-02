@@ -18,45 +18,30 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2.TableInfo;
-import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -70,25 +55,22 @@ import org.slf4j.LoggerFactory;
  * only.
  */
 @InterfaceAudience.Public
-public class WALPlayer extends Configured implements Tool {
+public class WALPlayer
+  extends WALReplayBase<Mutation, Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation>,
+    OutputFormat<ImmutableBytesWritable, Mutation>> {
   private static final Logger LOG = LoggerFactory.getLogger(WALPlayer.class);
   final static String NAME = "WALPlayer";
-  public final static String BULK_OUTPUT_CONF_KEY = "wal.bulk.output";
-  public final static String TABLES_KEY = "wal.input.tables";
-  public final static String TABLE_MAP_KEY = "wal.input.tablesmap";
   public final static String INPUT_FILES_SEPARATOR_KEY = "wal.input.separator";
   public final static String IGNORE_MISSING_FILES = "wal.input.ignore.missing.files";
   public final static String MULTI_TABLES_SUPPORT = "wal.multi.tables.support";
-
   protected static final String tableSeparator = ";";
 
-  private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
-
   public WALPlayer() {
+    super(WALMapper.class, MultiTableOutputFormat.class);
   }
 
   protected WALPlayer(final Configuration c) {
-    super(c);
+    super(c, WALMapper.class, MultiTableOutputFormat.class);
   }
 
   /**
@@ -258,115 +240,6 @@ public class WALPlayer extends Configured implements Tool {
         }
       }
     }
-  }
-
-  void setupTime(Configuration conf, String option) throws IOException {
-    String val = conf.get(option);
-    if (null == val) {
-      return;
-    }
-    long ms;
-    try {
-      // first try to parse in user friendly form
-      ms = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SS").parse(val).getTime();
-    } catch (ParseException pe) {
-      try {
-        // then see if just a number of ms's was specified
-        ms = Long.parseLong(val);
-      } catch (NumberFormatException nfe) {
-        throw new IOException(
-          option + " must be specified either in the form 2001-02-20T16:35:06.99 "
-            + "or as number of milliseconds");
-      }
-    }
-    conf.setLong(option, ms);
-  }
-
-  /**
-   * Sets up the actual job.
-   * @param args The command line parameters.
-   * @return The newly created job.
-   * @throws IOException When setting up the job fails.
-   */
-  public Job createSubmittableJob(String[] args) throws IOException {
-    Configuration conf = getConf();
-    setupTime(conf, WALInputFormat.START_TIME_KEY);
-    setupTime(conf, WALInputFormat.END_TIME_KEY);
-    String inputDirs = args[0];
-    String[] tables = args.length == 1 ? new String[] {} : args[1].split(",");
-    String[] tableMap;
-    if (args.length > 2) {
-      tableMap = args[2].split(",");
-      if (tableMap.length != tables.length) {
-        throw new IOException("The same number of tables and mapping must be provided.");
-      }
-    } else {
-      // if no mapping is specified, map each table to itself
-      tableMap = tables;
-    }
-    conf.setStrings(TABLES_KEY, tables);
-    conf.setStrings(TABLE_MAP_KEY, tableMap);
-    conf.set(FileInputFormat.INPUT_DIR, inputDirs);
-    Job job = Job.getInstance(conf,
-      conf.get(JOB_NAME_CONF_KEY, NAME + "_" + EnvironmentEdgeManager.currentTime()));
-    job.setJarByClass(WALPlayer.class);
-
-    job.setInputFormatClass(WALInputFormat.class);
-    job.setMapOutputKeyClass(ImmutableBytesWritable.class);
-
-    String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
-    if (hfileOutPath != null) {
-      LOG.debug("add incremental job :" + hfileOutPath + " from " + inputDirs);
-
-      // WALPlayer needs ExtendedCellSerialization so that sequenceId can be propagated when
-      // sorting cells in CellSortReducer
-      job.getConfiguration().setBoolean(HFileOutputFormat2.EXTENDED_CELL_SERIALIZATION_ENABLED_KEY,
-        true);
-
-      // the bulk HFile case
-      List<TableName> tableNames = getTableNameList(tables);
-
-      job.setMapperClass(WALKeyValueMapper.class);
-      job.setReducerClass(CellSortReducer.class);
-      Path outputDir = new Path(hfileOutPath);
-      FileOutputFormat.setOutputPath(job, outputDir);
-      job.setMapOutputValueClass(MapReduceExtendedCell.class);
-      try (Connection conn = ConnectionFactory.createConnection(conf);) {
-        List<TableInfo> tableInfoList = new ArrayList<TableInfo>();
-        for (TableName tableName : tableNames) {
-          Table table = conn.getTable(tableName);
-          RegionLocator regionLocator = conn.getRegionLocator(tableName);
-          tableInfoList.add(new TableInfo(table.getDescriptor(), regionLocator));
-        }
-        MultiTableHFileOutputFormat.configureIncrementalLoad(job, tableInfoList);
-      }
-      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
-        org.apache.hbase.thirdparty.com.google.common.base.Preconditions.class);
-    } else {
-      // output to live cluster
-      job.setMapperClass(WALMapper.class);
-      job.setOutputFormatClass(MultiTableOutputFormat.class);
-      TableMapReduceUtil.addDependencyJars(job);
-      TableMapReduceUtil.initCredentials(job);
-      // No reducers.
-      job.setNumReduceTasks(0);
-    }
-    String codecCls = WALCellCodec.getWALCellCodecClass(conf).getName();
-    try {
-      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
-        Class.forName(codecCls));
-    } catch (Exception e) {
-      throw new IOException("Cannot determine wal codec class " + codecCls, e);
-    }
-    return job;
-  }
-
-  private List<TableName> getTableNameList(String[] tables) {
-    List<TableName> list = new ArrayList<TableName>();
-    for (String name : tables) {
-      list.add(TableName.valueOf(name));
-    }
-    return list;
   }
 
   /**
