@@ -519,6 +519,9 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     if (params.getMaxKeyValueSize() == BufferedMutatorParams.UNSET) {
       params.maxKeyValueSize(connectionConfig.getMaxKeyValueSize());
     }
+    if (params.getMaxMutations() == BufferedMutatorParams.UNSET) {
+      params.setMaxMutations(connectionConfig.getBufferedMutatorMaxMutations());
+    }
     // Look to see if an alternate BufferedMutation implementation is wanted.
     // Look in params and in config. If null, use default.
     String implementationClassName = params.getImplementationClassName();
