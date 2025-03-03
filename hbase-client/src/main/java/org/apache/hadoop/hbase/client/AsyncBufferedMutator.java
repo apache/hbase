@@ -88,6 +88,11 @@ public interface AsyncBufferedMutator extends Closeable {
   long getWriteBufferSize();
 
   /**
+   * The maximum number of mutations that this buffered mutator will buffer before flushing them
+   */
+  int getMaxMutations();
+
+  /**
    * Returns the periodical flush interval, 0 means disabled.
    */
   default long getPeriodicalFlushTimeout(TimeUnit unit) {

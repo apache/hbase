@@ -195,6 +195,14 @@ public interface BufferedMutator extends Closeable {
   }
 
   /**
+   * The maximum number of mutations that this buffered mutator will buffer before flushing them
+   */
+  default int getMaxMutations() {
+    throw new UnsupportedOperationException(
+      "The BufferedMutator::getMaxMutations has not been implemented");
+  }
+
+  /**
    * Listens for asynchronous exceptions on a {@link BufferedMutator}.
    */
   @InterfaceAudience.Public
