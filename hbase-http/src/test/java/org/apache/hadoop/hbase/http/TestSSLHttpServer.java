@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.http;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -26,6 +27,9 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.KeyStore;
+import java.security.cert.X509Certificate;
 import javax.net.ssl.HttpsURLConnection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -37,6 +41,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -45,6 +50,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.AbstractConnector;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
 
 /**
  * This testcase issues SSL certificates configures the HttpServer to serve HTTPS using the created
@@ -65,6 +75,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static String sslConfDir;
   private static SSLFactory clientSslFactory;
   private static HBaseCommonTestingUtil HTU;
+  private static long reloadInterval;
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -74,6 +85,9 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
     serverConf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);
     serverConf.setBoolean(ServerConfigurationKeys.HBASE_SSL_ENABLED_KEY, true);
+    reloadInterval = 1000;
+    serverConf.setLong(FileBasedKeyStoresFactory.SSL_STORES_RELOAD_INTERVAL_TPL_KEY,
+      reloadInterval);
 
     keystoresDir = new File(HTU.getDataTestDir("keystore").toString());
     keystoresDir.mkdirs();
@@ -129,6 +143,45 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
       conn.getHeaderField("Strict-Transport-Security"));
     assertEquals("default-src https: data: 'unsafe-inline' 'unsafe-eval'",
       conn.getHeaderField("Content-Security-Policy"));
+  }
+
+  @Test(timeout = 60000)
+  public void testReloadKeyStore() throws Exception {
+    String serverKS = keystoresDir + "/serverKS.jks";
+    String serverPassword = "serverP";
+
+    KeyStore oldKeyStore = KeyStoreTestUtil.loadKeyStore(serverKS, serverPassword.toCharArray());
+
+    KeyPair sKP = KeyStoreTestUtil.generateKeyPair("RSA");
+    X509Certificate sCert =
+      KeyStoreTestUtil.generateCertificate("CN=localhost, O=server", sKP, 30, "SHA1withRSA");
+    KeyStoreTestUtil.createKeyStore(serverKS, serverPassword, "server", sKP.getPrivate(), sCert);
+    KeyStore newKeyStore = KeyStoreTestUtil.loadKeyStore(serverKS, serverPassword.toCharArray());
+
+    Thread.sleep((reloadInterval + 1000));
+
+    for (AbstractConnector connector : server.getServerConnectors()) {
+      if (connector != null) {
+        for (ConnectionFactory connectionFactory : connector.getConnectionFactories()) {
+          if (connectionFactory instanceof SslConnectionFactory) {
+            SslContextFactory sslContextFactory =
+              ((SslConnectionFactory) connectionFactory).getSslContextFactory();
+            KeyStore currentKeyStore = sslContextFactory.getKeyStore();
+
+            assertNotEquals(currentKeyStore.getCertificate("server"),
+              oldKeyStore.getCertificate("server"));
+            assertNotEquals(currentKeyStore.getKey("server", serverPassword.toCharArray()),
+              oldKeyStore.getKey("server", serverPassword.toCharArray()));
+
+            assertEquals(currentKeyStore.getCertificate("server"),
+              newKeyStore.getCertificate("server"));
+            assertEquals(currentKeyStore.getKey("server", serverPassword.toCharArray()),
+              newKeyStore.getKey("server", serverPassword.toCharArray()));
+
+          }
+        }
+      }
+    }
   }
 
   private static String readOut(URL url) throws Exception {
