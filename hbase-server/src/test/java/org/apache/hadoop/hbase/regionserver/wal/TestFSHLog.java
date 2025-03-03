@@ -324,7 +324,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
   /**
    * Test for jira https://issues.apache.org/jira/browse/HBASE-28665
    */
-  public void testWALClosureFailureAndCleanup() throws IOException {
+  public void testWALClosureFailureAndCleanup() throws IOException, InterruptedException {
 
     class FailingWriter implements WALProvider.Writer {
       @Override
@@ -375,12 +375,15 @@ public class TestFSHLog extends AbstractTestFSWAL {
         region.put(new Put(b).addColumn(b, b, b));
         log.rollWriter();
       }
-      assertEquals(2, log.getClosedErrorCount());
       region.put(new Put(b).addColumn(b, b, b));
       region.put(new Put(b).addColumn(b, b, b));
-      region.flush(true);
+      log.highestUnsyncedTxid = log.highestSyncedTxid.get() + 100;
+      assertTrue("WAL has unflushed entries ", log.getUnflushedEntriesCount() > 0);
       log.rollWriter();
-      assertEquals("WAL Files not cleaned ", 0, log.walFile2Props.size());
+      assertEquals("WAL Files not cleaned ", 3, log.walFile2Props.size());
+      region.flush(true);
+      log.markClosedAndClean(log.walFile2Props.firstKey());
+      assertEquals("WAL Files not cleaned ", 1, log.walFile2Props.size());
       region.close();
     }
   }
