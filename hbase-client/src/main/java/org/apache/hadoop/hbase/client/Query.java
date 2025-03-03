@@ -46,6 +46,7 @@ public abstract class Query extends OperationWithAttributes {
   protected Consistency consistency = Consistency.STRONG;
   protected Map<byte[], TimeRange> colFamTimeRangeMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
   protected Boolean loadColumnFamiliesOnDemand = null;
+  protected boolean queryMetricsEnabled = false;
 
   public Filter getFilter() {
     return filter;
@@ -155,6 +156,15 @@ public abstract class Query extends OperationWithAttributes {
   public Query setIsolationLevel(IsolationLevel level) {
     setAttribute(ISOLATION_LEVEL, level.toBytes());
     return this;
+  }
+
+  public Query setQueryMetricsEnabled(boolean enabled) {
+    this.queryMetricsEnabled = enabled;
+    return this;
+  }
+
+  public boolean isQueryMetricsEnabled() {
+    return queryMetricsEnabled;
   }
 
   /**
