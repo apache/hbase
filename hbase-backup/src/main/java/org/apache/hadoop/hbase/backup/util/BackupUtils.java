@@ -17,6 +17,14 @@
  */
 package org.apache.hadoop.hbase.backup.util;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_PAUSE;
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_PAUSE;
+import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_TIMEOUT_KEY;
+import static org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_ID;
+import static org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME;
+import static org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -51,14 +59,17 @@ import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -770,4 +781,30 @@ public final class BackupUtils {
     return BackupRestoreConstants.BACKUPID_PREFIX + recentTimestamp;
   }
 
+  public static void rollWALWriters(Admin admin, Map<String, String> props) throws IOException {
+    byte[] ret =
+      admin.execProcedureWithReturn(ROLLLOG_PROCEDURE_SIGNATURE, ROLLLOG_PROCEDURE_NAME, props);
+    // if ret is empty, it means that the master is configured to use zk as coordinator to roll
+    // WAL for all region servers, otherwise proc-v2 would be used, and the ret is the proc id
+    if (ret != null && ret.length > 0) {
+      // add proc id to the props map
+      props.put(ROLLLOG_PROCEDURE_ID, Long.toString(Bytes.toLong(ret)));
+    }
+
+    // keep asking if procedure is finished until it times out
+    Configuration conf = admin.getConfiguration();
+    long start = EnvironmentEdgeManager.currentTime();
+    long rpcTimeoutMs = conf.getLong(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT);
+    long pauseTimeMs = conf.getLong(HBASE_CLIENT_PAUSE, DEFAULT_HBASE_CLIENT_PAUSE);
+
+    int tries = 0;
+    boolean done = false;
+    while ((EnvironmentEdgeManager.currentTime() - start) < rpcTimeoutMs && !done) {
+      Threads.sleep(ConnectionUtils.getPauseTime(pauseTimeMs, tries++));
+      done = admin.isProcedureFinished(ROLLLOG_PROCEDURE_SIGNATURE, ROLLLOG_PROCEDURE_NAME, props);
+    }
+    if (!done) {
+      throw new IOException("Unable to roll WALs in " + rpcTimeoutMs + " ms, last try = " + tries);
+    }
+  }
 }

@@ -652,6 +652,26 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
+   * read Region Server last roll log result (timestamp) from the backup system table
+   * @param server     Region Server name
+   * @param backupRoot root directory path to backup
+   * @throws IOException exception
+   */
+  public long getRegionServerLastLogRollResult(String server, String backupRoot)
+    throws IOException {
+    try (Table table = connection.getTable(tableName)) {
+      Get get = createGetForRegionServerLastLogRollResult(server, backupRoot);
+      byte[] value =
+        table.get(get).getValue(BackupSystemTable.META_FAMILY, Bytes.toBytes("rs-log-ts"));
+      if (value == null) {
+        return Long.MIN_VALUE;
+      } else {
+        return Bytes.toLong(value);
+      }
+    }
+  }
+
+  /**
    * Writes Region Server last roll log result (timestamp) to backup system table table
    * @param server     Region Server name
    * @param ts         last log timestamp
@@ -1404,6 +1424,17 @@ public final class BackupSystemTable implements Closeable {
     String s = Bytes.toString(cloneRow);
     int index = s.lastIndexOf(NULL);
     return s.substring(index + 1);
+  }
+
+  /**
+   * Creates Get for store RS last log result
+   * @param server server name
+   * @return put operation
+   */
+  private Get createGetForRegionServerLastLogRollResult(String server, String backupRoot) {
+    Get get = new Get(rowkey(RS_LOG_TS_PREFIX, backupRoot, NULL, server));
+    get.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes("rs-log-ts"));
+    return get;
   }
 
   /**
