@@ -169,6 +169,7 @@ public final class BackupSystemTable implements Closeable {
   private final static byte[] ACTIVE_SESSION_NO = Bytes.toBytes("no");
 
   private final static String INCR_BACKUP_SET = "incrbackupset:";
+  private final static String CONTINUOUS_BACKUP_SET = "continuousbackupset";
   private final static String TABLE_RS_LOG_MAP_PREFIX = "trslm:";
   private final static String RS_LOG_TS_PREFIX = "rslogts:";
 
@@ -893,6 +894,37 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
+   * Retrieves the current set of tables covered by continuous backup along with the timestamp
+   * indicating when continuous backup started for each table.
+   * @return a map where the key is the table name and the value is the timestamp representing the
+   *         start time of continuous backup for that table.
+   * @throws IOException if an I/O error occurs while accessing the backup system table.
+   */
+  public Map<TableName, Long> getContinuousBackupTableSet() throws IOException {
+    LOG.trace("Retrieving continuous backup table set from the backup system table.");
+    Map<TableName, Long> tableMap = new TreeMap<>();
+
+    try (Table systemTable = connection.getTable(tableName)) {
+      Get getOperation = createGetForContinuousBackupTableSet();
+      Result result = systemTable.get(getOperation);
+
+      if (result.isEmpty()) {
+        return tableMap;
+      }
+
+      // Extract table names and timestamps from the result cells
+      List<Cell> cells = result.listCells();
+      for (Cell cell : cells) {
+        TableName tableName = TableName.valueOf(CellUtil.cloneQualifier(cell));
+        long timestamp = Bytes.toLong(CellUtil.cloneValue(cell));
+        tableMap.put(tableName, timestamp);
+      }
+    }
+
+    return tableMap;
+  }
+
+  /**
    * Add tables to global incremental backup set
    * @param tables     set of tables
    * @param backupRoot root directory path to backup
@@ -910,6 +942,34 @@ public final class BackupSystemTable implements Closeable {
     try (Table table = connection.getTable(tableName)) {
       Put put = createPutForIncrBackupTableSet(tables, backupRoot);
       table.put(put);
+    }
+  }
+
+  /**
+   * Add tables to the global continuous backup set. Only updates tables that are not already in the
+   * continuous backup set.
+   * @param tables         set of tables to add
+   * @param startTimestamp timestamp indicating when continuous backup started
+   * @throws IOException if an error occurs while updating the backup system table
+   */
+  public void addContinuousBackupTableSet(Set<TableName> tables, long startTimestamp)
+    throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Add continuous backup table set to backup system table. tables ["
+        + StringUtils.join(tables, " ") + "]");
+    }
+    if (LOG.isDebugEnabled()) {
+      tables.forEach(table -> LOG.debug(Objects.toString(table)));
+    }
+
+    // Get existing continuous backup tables
+    Map<TableName, Long> existingTables = getContinuousBackupTableSet();
+
+    try (Table table = connection.getTable(tableName)) {
+      Put put = createPutForContinuousBackupTableSet(tables, existingTables, startTimestamp);
+      if (!put.isEmpty()) {
+        table.put(put);
+      }
     }
   }
 
@@ -1242,6 +1302,18 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
+   * Creates a Get operation to retrieve the continuous backup table set from the backup system
+   * table.
+   * @return a Get operation for retrieving the table set
+   */
+  private Get createGetForContinuousBackupTableSet() throws IOException {
+    Get get = new Get(rowkey(CONTINUOUS_BACKUP_SET));
+    get.addFamily(BackupSystemTable.META_FAMILY);
+    get.readVersions(1);
+    return get;
+  }
+
+  /**
    * Creates Put to store incremental backup table set
    * @param tables tables
    * @return put operation
@@ -1252,6 +1324,28 @@ public final class BackupSystemTable implements Closeable {
       put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes(table.getNameAsString()),
         EMPTY_VALUE);
     }
+    return put;
+  }
+
+  /**
+   * Creates a Put operation to store the continuous backup table set. Only includes tables that are
+   * not already in the set.
+   * @param tables         tables to add
+   * @param existingTables tables that already have continuous backup enabled
+   * @param startTimestamp timestamp indicating when continuous backup started
+   * @return put operation
+   */
+  private Put createPutForContinuousBackupTableSet(Set<TableName> tables,
+    Map<TableName, Long> existingTables, long startTimestamp) {
+    Put put = new Put(rowkey(CONTINUOUS_BACKUP_SET));
+
+    for (TableName table : tables) {
+      if (!existingTables.containsKey(table)) {
+        put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes(table.getNameAsString()),
+          Bytes.toBytes(startTimestamp));
+      }
+    }
+
     return put;
   }
 
