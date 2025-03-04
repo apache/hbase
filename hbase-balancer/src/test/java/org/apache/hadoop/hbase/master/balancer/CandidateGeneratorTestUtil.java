@@ -49,9 +49,16 @@ public final class CandidateGeneratorTestUtil {
   static void runBalancerToExhaustion(Configuration conf,
     Map<ServerName, List<RegionInfo>> serverToRegions,
     Set<Function<BalancerClusterState, Boolean>> expectations, float targetMaxBalancerCost) {
+    runBalancerToExhaustion(conf, serverToRegions, expectations, targetMaxBalancerCost, 15000);
+  }
+
+  static void runBalancerToExhaustion(Configuration conf,
+    Map<ServerName, List<RegionInfo>> serverToRegions,
+    Set<Function<BalancerClusterState, Boolean>> expectations, float targetMaxBalancerCost,
+    long maxRunningTime) {
     // Do the full plan. We're testing with a lot of regions
     conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
-    conf.setLong(MAX_RUNNING_TIME_KEY, 15000);
+    conf.setLong(MAX_RUNNING_TIME_KEY, maxRunningTime);
 
     conf.setFloat(MIN_COST_NEED_BALANCE_KEY, targetMaxBalancerCost);
 
