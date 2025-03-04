@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDW
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP;
@@ -45,6 +47,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -339,14 +342,64 @@ public final class BackupCommands {
 
       boolean ignoreChecksum = cmdline.hasOption(OPTION_IGNORECHECKSUM);
 
+      BackupType backupType = BackupType.valueOf(args[1].toUpperCase());
+      List<TableName> tableNameList = null;
+      if (tables != null) {
+        tableNameList = Lists.newArrayList(BackupUtils.parseTableNames(tables));
+      }
+      boolean continuousBackup = cmdline.hasOption(OPTION_ENABLE_CONTINUOUS_BACKUP);
+      if (continuousBackup && !BackupType.FULL.equals(backupType)) {
+        System.out.println("ERROR: Continuous backup can Only be specified for Full Backup");
+        printUsage();
+        throw new IOException(INCORRECT_USAGE);
+      }
+
+      /*
+       * The `continuousBackup` flag is specified only during the first full backup to initiate
+       * continuous WAL replication. After that, it is redundant because the tables are already set
+       * up for continuous backup. If the `continuousBackup` flag is not explicitly enabled, we need
+       * to determine the backup mode based on the current state of the specified tables: - If all
+       * the specified tables are already part of continuous backup, we treat the request as a
+       * continuous backup request and proceed accordingly (since these tables are already
+       * continuously backed up, no additional setup is needed). - If none of the specified tables
+       * are part of continuous backup, we treat the request as a normal full backup without
+       * continuous backup. - If the request includes a mix of tables—some with continuous backup
+       * enabled and others without—we cannot determine a clear backup strategy. In this case, we
+       * throw an error. If all tables are already in continuous backup mode, we explicitly set the
+       * `continuousBackup` flag to `true` so that the request is processed using the continuous
+       * backup approach rather than the normal full backup flow.
+       */
+      if (!continuousBackup && tableNameList != null && !tableNameList.isEmpty()) {
+        try (BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
+          Set<TableName> continuousBackupTableSet =
+            backupSystemTable.getContinuousBackupTableSet().keySet();
+
+          boolean allTablesInContinuousBackup = continuousBackupTableSet.containsAll(tableNameList);
+          boolean noTablesInContinuousBackup =
+            tableNameList.stream().noneMatch(continuousBackupTableSet::contains);
+
+          // Ensure that all tables are either fully in continuous backup or not at all
+          if (!allTablesInContinuousBackup && !noTablesInContinuousBackup) {
+            System.err
+              .println("ERROR: Some tables are already in continuous backup, while others are not. "
+                + "Cannot mix both in a single request.");
+            printUsage();
+            throw new IOException(INCORRECT_USAGE);
+          }
+
+          // If all tables are already in continuous backup, enable the flag
+          if (allTablesInContinuousBackup) {
+            continuousBackup = true;
+          }
+        }
+      }
+
       try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         BackupRequest.Builder builder = new BackupRequest.Builder();
-        BackupRequest request = builder.withBackupType(BackupType.valueOf(args[1].toUpperCase()))
-          .withTableList(
-            tables != null ? Lists.newArrayList(BackupUtils.parseTableNames(tables)) : null)
+        BackupRequest request = builder.withBackupType(backupType).withTableList(tableNameList)
           .withTargetRootDir(targetBackupDir).withTotalTasks(workers)
           .withBandwidthPerTasks(bandwidth).withNoChecksumVerify(ignoreChecksum)
-          .withBackupSetName(setName).build();
+          .withBackupSetName(setName).withContinuousBackupEnabled(continuousBackup).build();
         String backupId = admin.backupTables(request);
         System.out.println("Backup session " + backupId + " finished. Status: SUCCESS");
       } catch (IOException e) {
@@ -400,6 +453,8 @@ public final class BackupCommands {
       options.addOption(OPTION_YARN_QUEUE_NAME, true, OPTION_YARN_QUEUE_NAME_DESC);
       options.addOption(OPTION_DEBUG, false, OPTION_DEBUG_DESC);
       options.addOption(OPTION_IGNORECHECKSUM, false, OPTION_IGNORECHECKSUM_DESC);
+      options.addOption(OPTION_ENABLE_CONTINUOUS_BACKUP, false,
+        OPTION_ENABLE_CONTINUOUS_BACKUP_DESC);
 
       HelpFormatter helpFormatter = new HelpFormatter();
       helpFormatter.setLeftPadding(2);
