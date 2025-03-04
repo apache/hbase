@@ -61,6 +61,10 @@ final class BalancerConditionals implements Configurable {
     "hbase.master.balancer.stochastic.conditionals.isolateMetaTable";
   public static final boolean ISOLATE_META_TABLE_DEFAULT = false;
 
+  public static final String ISOLATE_SYSTEM_TABLES_KEY =
+    "hbase.master.balancer.stochastic.conditionals.isolateSystemTables";
+  public static final boolean ISOLATE_SYSTEM_TABLES_DEFAULT = false;
+
   public static final String ADDITIONAL_CONDITIONALS_KEY =
     "hbase.master.balancer.stochastic.additionalConditionals";
 
@@ -95,6 +99,10 @@ final class BalancerConditionals implements Configurable {
   }
 
   boolean isTableIsolationEnabled() {
+    return conditionalClasses.stream().anyMatch(TableIsolationConditional.class::isAssignableFrom);
+  }
+
+  boolean isMetaTableIsolationEnabled() {
     return conditionalClasses.contains(MetaTableIsolationConditional.class);
   }
 
@@ -205,6 +213,12 @@ final class BalancerConditionals implements Configurable {
     boolean isolateMetaTable = conf.getBoolean(ISOLATE_META_TABLE_KEY, ISOLATE_META_TABLE_DEFAULT);
     if (isolateMetaTable) {
       conditionalClasses.add(MetaTableIsolationConditional.class);
+    }
+
+    boolean isolateSystemTables =
+      conf.getBoolean(ISOLATE_SYSTEM_TABLES_KEY, ISOLATE_SYSTEM_TABLES_DEFAULT);
+    if (isolateSystemTables) {
+      conditionalClasses.add(SystemTableIsolationConditional.class);
     }
 
     Class<?>[] classes = conf.getClasses(ADDITIONAL_CONDITIONALS_KEY);
