@@ -174,7 +174,7 @@ public final class BackupRequest {
     this.continuousBackupEnabled = continuousBackupEnabled;
   }
 
-  public boolean getContinuousBackupEnabled() {
+  public boolean isContinuousBackupEnabled() {
     return this.continuousBackupEnabled;
   }
 }

@@ -582,7 +582,7 @@ public class BackupAdminImpl implements BackupAdmin {
       .withTargetRootDir(request.getTargetRootDir()).withBackupSetName(request.getBackupSetName())
       .withTotalTasks(request.getTotalTasks()).withBandwidthPerTasks((int) request.getBandwidth())
       .withNoChecksumVerify(request.getNoChecksumVerify())
-      .withContinuousBackupEnabled(request.getContinuousBackupEnabled()).build();
+      .withContinuousBackupEnabled(request.isContinuousBackupEnabled()).build();
 
     TableBackupClient client;
     try {
