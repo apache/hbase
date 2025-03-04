@@ -17,16 +17,24 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_GLOBAL;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.BACKUP_ATTEMPTS_PAUSE_MS_KEY;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.BACKUP_MAX_ATTEMPTS_KEY;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_BACKUP_ATTEMPTS_PAUSE_MS;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_BACKUP_MAX_ATTEMPTS;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_CONTINUOUS_BACKUP_REPLICATION_ENDPOINT;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_ROOT_DIR;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_PEER_UUID;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupCopyJob;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -37,7 +45,13 @@ import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -61,9 +75,9 @@ public class FullTableBackupClient extends TableBackupClient {
   /**
    * Do snapshot copy.
    * @param backupInfo backup info
-   * @throws Exception exception
+   * @throws IOException exception
    */
-  protected void snapshotCopy(BackupInfo backupInfo) throws Exception {
+  protected void snapshotCopy(BackupInfo backupInfo) throws IOException {
     LOG.info("Snapshot copy is starting.");
 
     // set overall backup phase: snapshot_copy
@@ -131,78 +145,197 @@ public class FullTableBackupClient extends TableBackupClient {
   @Override
   public void execute() throws IOException {
     try (Admin admin = conn.getAdmin()) {
-      // Begin BACKUP
       beginBackup(backupManager, backupInfo);
-      String savedStartCode;
-      boolean firstBackup;
-      // do snapshot for full table backup
-
-      savedStartCode = backupManager.readBackupStartCode();
-      firstBackup = savedStartCode == null || Long.parseLong(savedStartCode) == 0L;
-      if (firstBackup) {
-        // This is our first backup. Let's put some marker to system table so that we can hold the
-        // logs while we do the backup.
-        backupManager.writeBackupStartCode(0L);
-      }
-      // We roll log here before we do the snapshot. It is possible there is duplicate data
-      // in the log that is already in the snapshot. But if we do it after the snapshot, we
-      // could have data loss.
-      // A better approach is to do the roll log on each RS in the same global procedure as
-      // the snapshot.
-      LOG.info("Execute roll log procedure for full backup ...");
 
       // Gather the bulk loads being tracked by the system, which can be deleted (since their data
       // will be part of the snapshot being taken). We gather this list before taking the actual
       // snapshots for the same reason as the log rolls.
       List<BulkLoad> bulkLoadsToDelete = backupManager.readBulkloadRows(tableList);
 
-      BackupUtils.logRoll(conn, backupInfo.getBackupRootDir(), conf);
-
-      newTimestamps = backupManager.readRegionServerLastLogRollResult();
-
-      // SNAPSHOT_TABLES:
-      backupInfo.setPhase(BackupPhase.SNAPSHOT);
-      for (TableName tableName : tableList) {
-        String snapshotName = "snapshot_" + Long.toString(EnvironmentEdgeManager.currentTime())
-          + "_" + tableName.getNamespaceAsString() + "_" + tableName.getQualifierAsString();
-
-        snapshotTable(admin, tableName, snapshotName);
-        backupInfo.setSnapshotName(tableName, snapshotName);
+      if (backupInfo.isContinuousBackupEnabled()) {
+        handleContinuousBackup(admin);
+      } else {
+        handleNonContinuousBackup(admin);
       }
-
-      // SNAPSHOT_COPY:
-      // do snapshot copy
-      LOG.debug("snapshot copy for " + backupId);
-      snapshotCopy(backupInfo);
-      // Updates incremental backup table set
-      backupManager.addIncrementalBackupTableSet(backupInfo.getTables());
-
-      // BACKUP_COMPLETE:
-      // set overall backup status: complete. Here we make sure to complete the backup.
-      // After this checkpoint, even if entering cancel process, will let the backup finished
-      backupInfo.setState(BackupState.COMPLETE);
-      // The table list in backupInfo is good for both full backup and incremental backup.
-      // For incremental backup, it contains the incremental backup table set.
-      backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
-
-      Map<TableName, Map<String, Long>> newTableSetTimestampMap =
-        backupManager.readLogTimestampMap();
-
-      backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
-      Long newStartCode =
-        BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
-      backupManager.writeBackupStartCode(newStartCode);
 
       backupManager
         .deleteBulkLoadedRows(bulkLoadsToDelete.stream().map(BulkLoad::getRowKey).toList());
 
-      // backup complete
       completeBackup(conn, backupInfo, BackupType.FULL, conf);
     } catch (Exception e) {
       failBackup(conn, backupInfo, backupManager, e, "Unexpected BackupException : ",
         BackupType.FULL, conf);
       throw new IOException(e);
     }
+  }
+
+  private void handleContinuousBackup(Admin admin) throws IOException {
+    backupInfo.setPhase(BackupInfo.BackupPhase.SETUP_WAL_REPLICATION);
+    long startTimestamp = startContinuousWALBackup(admin);
+
+    performBackupSnapshots(admin);
+
+    backupManager.addContinuousBackupTableSet(backupInfo.getTables(), startTimestamp);
+
+    // set overall backup status: complete. Here we make sure to complete the backup.
+    // After this checkpoint, even if entering cancel process, will let the backup finished
+    backupInfo.setState(BackupState.COMPLETE);
+
+    if (!conf.getBoolean("hbase.replication.bulkload.enabled", false)) {
+      System.out.println("NOTE: Bulkload replication is not enabled. "
+        + "Bulk loaded files will not be backed up as part of continuous backup. "
+        + "To ensure bulk loaded files are included in the backup, please enable bulkload replication "
+        + "(hbase.replication.bulkload.enabled=true) and configure other necessary settings "
+        + "to properly enable bulkload replication.");
+    }
+  }
+
+  private void handleNonContinuousBackup(Admin admin) throws IOException {
+    initializeBackupStartCode(backupManager);
+    performLogRoll();
+    performBackupSnapshots(admin);
+    backupManager.addIncrementalBackupTableSet(backupInfo.getTables());
+
+    // set overall backup status: complete. Here we make sure to complete the backup.
+    // After this checkpoint, even if entering cancel process, will let the backup finished
+    backupInfo.setState(BackupState.COMPLETE);
+
+    updateBackupMetadata();
+  }
+
+  private void initializeBackupStartCode(BackupManager backupManager) throws IOException {
+    String savedStartCode;
+    boolean firstBackup;
+    // do snapshot for full table backup
+    savedStartCode = backupManager.readBackupStartCode();
+    firstBackup = savedStartCode == null || Long.parseLong(savedStartCode) == 0L;
+    if (firstBackup) {
+      // This is our first backup. Let's put some marker to system table so that we can hold the
+      // logs while we do the backup.
+      backupManager.writeBackupStartCode(0L);
+    }
+  }
+
+  private void performLogRoll() throws IOException {
+    // We roll log here before we do the snapshot. It is possible there is duplicate data
+    // in the log that is already in the snapshot. But if we do it after the snapshot, we
+    // could have data loss.
+    // A better approach is to do the roll log on each RS in the same global procedure as
+    // the snapshot.
+    LOG.info("Execute roll log procedure for full backup ...");
+    BackupUtils.logRoll(conn, backupInfo.getBackupRootDir(), conf);
+    newTimestamps = backupManager.readRegionServerLastLogRollResult();
+  }
+
+  private void performBackupSnapshots(Admin admin) throws IOException {
+    backupInfo.setPhase(BackupPhase.SNAPSHOT);
+    performSnapshots(admin);
+    LOG.debug("Performing snapshot copy for backup ID: {}", backupInfo.getBackupId());
+    snapshotCopy(backupInfo);
+  }
+
+  private void performSnapshots(Admin admin) throws IOException {
+    backupInfo.setPhase(BackupPhase.SNAPSHOT);
+
+    for (TableName tableName : tableList) {
+      String snapshotName = String.format("snapshot_%d_%s_%s", EnvironmentEdgeManager.currentTime(),
+        tableName.getNamespaceAsString(), tableName.getQualifierAsString());
+      snapshotTable(admin, tableName, snapshotName);
+      backupInfo.setSnapshotName(tableName, snapshotName);
+    }
+  }
+
+  private void updateBackupMetadata() throws IOException {
+    // The table list in backupInfo is good for both full backup and incremental backup.
+    // For incremental backup, it contains the incremental backup table set.
+    backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
+    Map<TableName, Map<String, Long>> timestampMap = backupManager.readLogTimestampMap();
+    backupInfo.setTableSetTimestampMap(timestampMap);
+    Long newStartCode = BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(timestampMap));
+    backupManager.writeBackupStartCode(newStartCode);
+  }
+
+  private long startContinuousWALBackup(Admin admin) throws IOException {
+    enableTableReplication(admin);
+    if (continuousBackupReplicationPeerExists(admin)) {
+      updateContinuousBackupReplicationPeer(admin);
+    } else {
+      addContinuousBackupReplicationPeer(admin);
+    }
+    LOG.info("Continuous WAL Backup setup completed.");
+    return EnvironmentEdgeManager.getDelegate().currentTime();
+  }
+
+  private void enableTableReplication(Admin admin) throws IOException {
+    for (TableName table : tableList) {
+      TableDescriptor tableDescriptor = admin.getDescriptor(table);
+      TableDescriptorBuilder tableDescriptorBuilder =
+        TableDescriptorBuilder.newBuilder(tableDescriptor);
+
+      for (ColumnFamilyDescriptor cfDescriptor : tableDescriptor.getColumnFamilies()) {
+        if (cfDescriptor.getScope() != REPLICATION_SCOPE_GLOBAL) {
+          ColumnFamilyDescriptor newCfDescriptor = ColumnFamilyDescriptorBuilder
+            .newBuilder(cfDescriptor).setScope(REPLICATION_SCOPE_GLOBAL).build();
+
+          tableDescriptorBuilder.modifyColumnFamily(newCfDescriptor);
+        }
+      }
+
+      admin.modifyTable(tableDescriptorBuilder.build());
+      LOG.info("Enabled Global replication scope for table: {}", table);
+    }
+  }
+
+  private void updateContinuousBackupReplicationPeer(Admin admin) throws IOException {
+    Map<TableName, List<String>> tableMap = tableList.stream()
+      .collect(Collectors.toMap(tableName -> tableName, tableName -> new ArrayList<>()));
+
+    try {
+      admin.appendReplicationPeerTableCFs(CONTINUOUS_BACKUP_REPLICATION_PEER, tableMap);
+      LOG.info("Updated replication peer {} with table and column family map.",
+        CONTINUOUS_BACKUP_REPLICATION_PEER);
+    } catch (ReplicationException e) {
+      LOG.error("Error while updating the replication peer: {}. Error: {}",
+        CONTINUOUS_BACKUP_REPLICATION_PEER, e.getMessage(), e);
+      throw new IOException("Error while updating the continuous backup replication peer.", e);
+    }
+  }
+
+  private void addContinuousBackupReplicationPeer(Admin admin) throws IOException {
+    String backupWalDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+
+    if (backupWalDir == null || backupWalDir.isEmpty()) {
+      String errorMsg = "WAL Directory is not specified for continuous backup.";
+      LOG.error(errorMsg);
+      throw new IOException(errorMsg);
+    }
+
+    Map<String, String> additionalArgs = new HashMap<>();
+    additionalArgs.put(CONF_PEER_UUID, UUID.randomUUID().toString());
+    additionalArgs.put(CONF_BACKUP_ROOT_DIR, backupWalDir);
+
+    Map<TableName, List<String>> tableMap = tableList.stream()
+      .collect(Collectors.toMap(tableName -> tableName, tableName -> new ArrayList<>()));
+
+    ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
+      .setReplicationEndpointImpl(DEFAULT_CONTINUOUS_BACKUP_REPLICATION_ENDPOINT)
+      .setReplicateAllUserTables(false).setTableCFsMap(tableMap).putAllConfiguration(additionalArgs)
+      .build();
+
+    try {
+      admin.addReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER, peerConfig, true);
+      LOG.info("Successfully added replication peer with ID: {}",
+        CONTINUOUS_BACKUP_REPLICATION_PEER);
+    } catch (IOException e) {
+      LOG.error("Failed to add replication peer with ID: {}. Error: {}",
+        CONTINUOUS_BACKUP_REPLICATION_PEER, e.getMessage(), e);
+      throw e;
+    }
+  }
+
+  private boolean continuousBackupReplicationPeerExists(Admin admin) throws IOException {
+    return admin.listReplicationPeers().stream()
+      .anyMatch(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER));
   }
 
   protected void snapshotTable(Admin admin, TableName tableName, String snapshotName)
