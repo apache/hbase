@@ -64,8 +64,11 @@ public abstract class RegionPlanConditionalCandidateGenerator extends CandidateG
     return balanceAction;
   }
 
-  MoveBatchAction batchMovesAndResetClusterState(BalancerClusterState cluster,
+  BalanceAction batchMovesAndResetClusterState(BalancerClusterState cluster,
     List<MoveRegionAction> moves) {
+    if (moves.isEmpty()) {
+      return BalanceAction.NULL_ACTION;
+    }
     MoveBatchAction batchAction = new MoveBatchAction(moves);
     undoBatchAction(cluster, batchAction);
     return batchAction;

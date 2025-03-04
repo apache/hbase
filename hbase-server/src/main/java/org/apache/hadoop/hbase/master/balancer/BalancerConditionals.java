@@ -58,6 +58,10 @@ final class BalancerConditionals implements Configurable {
     "hbase.master.balancer.stochastic.conditionals.distributeReplicas";
   public static final boolean DISTRIBUTE_REPLICAS_DEFAULT = false;
 
+  public static final String ISOLATE_META_TABLE_KEY =
+    "hbase.master.balancer.stochastic.conditionals.isolateMetaTable";
+  public static final boolean ISOLATE_META_TABLE_DEFAULT = false;
+
   public static final String ADDITIONAL_CONDITIONALS_KEY =
     "hbase.master.balancer.stochastic.additionalConditionals";
 
@@ -91,8 +95,14 @@ final class BalancerConditionals implements Configurable {
       .anyMatch(DistributeReplicasConditional.class::isAssignableFrom);
   }
 
-  boolean shouldSkipSloppyServerEvaluation() {
-    return isConditionalBalancingEnabled();
+  boolean isTableIsolationEnabled() {
+    return conditionalClasses.contains(MetaTableIsolationConditional.class);
+  }
+
+  boolean isServerHostingIsolatedTables(BalancerClusterState cluster, int serverIdx) {
+    return conditionals.stream().filter(TableIsolationConditional.class::isInstance)
+      .map(TableIsolationConditional.class::cast)
+      .anyMatch(conditional -> conditional.isServerHostingIsolatedTables(cluster, serverIdx));
   }
 
   boolean isConditionalBalancingEnabled() {
@@ -191,6 +201,11 @@ final class BalancerConditionals implements Configurable {
       conf.getBoolean(DISTRIBUTE_REPLICAS_KEY, DISTRIBUTE_REPLICAS_DEFAULT);
     if (distributeReplicas) {
       conditionalClasses.add(DistributeReplicasConditional.class);
+    }
+
+    boolean isolateMetaTable = conf.getBoolean(ISOLATE_META_TABLE_KEY, ISOLATE_META_TABLE_DEFAULT);
+    if (isolateMetaTable) {
+      conditionalClasses.add(MetaTableIsolationConditional.class);
     }
 
     Class<?>[] classes = conf.getClasses(ADDITIONAL_CONDITIONALS_KEY);
