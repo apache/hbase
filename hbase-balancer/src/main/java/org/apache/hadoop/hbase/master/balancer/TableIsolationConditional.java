@@ -26,15 +26,12 @@ abstract class TableIsolationConditional extends RegionPlanConditional {
 
   private final List<RegionPlanConditionalCandidateGenerator> candidateGenerators;
 
-  TableIsolationConditional(BalancerConditionals balancerConditionals,
-    BalancerClusterState cluster) {
+  TableIsolationConditional(TableIsolationCandidateGenerator generator,
+    BalancerConditionals balancerConditionals, BalancerClusterState cluster) {
     super(balancerConditionals.getConf(), cluster);
 
-    float slop = balancerConditionals.getConf().getFloat(BaseLoadBalancer.REGIONS_SLOP_KEY,
-      BaseLoadBalancer.REGIONS_SLOP_DEFAULT);
     this.candidateGenerators =
-      List.of(new MetaTableIsolationCandidateGenerator(balancerConditionals),
-        new SlopFixingCandidateGenerator(balancerConditionals, slop));
+      List.of(generator, new SlopFixingCandidateGenerator(balancerConditionals));
   }
 
   abstract boolean isRegionToIsolate(RegionInfo regionInfo);

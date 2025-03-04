@@ -42,11 +42,9 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
     BalancerClusterState cluster) {
     super(balancerConditionals.getConf(), cluster);
     Configuration conf = balancerConditionals.getConf();
-    float slop =
-      conf.getFloat(BaseLoadBalancer.REGIONS_SLOP_KEY, BaseLoadBalancer.REGIONS_SLOP_DEFAULT);
     this.candidateGenerators =
       ImmutableList.of(new DistributeReplicasCandidateGenerator(balancerConditionals),
-        new SlopFixingCandidateGenerator(balancerConditionals, slop));
+        new SlopFixingCandidateGenerator(balancerConditionals));
   }
 
   @Override
