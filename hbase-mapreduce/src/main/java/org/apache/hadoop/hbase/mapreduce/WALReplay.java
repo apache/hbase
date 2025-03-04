@@ -214,12 +214,11 @@ public class WALReplay extends
       LOG.debug("Bulk load detected in cell. Processing...");
 
       WALProtos.BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
-      LOG.debug("BulkLoadDescriptor " + bld.toString());
-
       if (bld == null) {
         LOG.warn("BulkLoadDescriptor is null for cell: {}", cell);
         return resultFiles;
       }
+      LOG.debug("BulkLoadDescriptor " + bld.toString());
       if (!bld.getReplicate()) {
         LOG.warn("Replication is disabled for bulk load cell: {}", cell);
       }

@@ -111,7 +111,6 @@ public class WALReplayBase<V, T extends Mapper<WALKey, WALEdit, ImmutableBytesWr
     setupTime(conf, WALInputFormat.START_TIME_KEY);
     setupTime(conf, WALInputFormat.END_TIME_KEY);
     String inputDirs = args[0];
-    String walDir = new Path(inputDirs, WAL_DIR).toString();
     String bulkLoadFilesDir = new Path(inputDirs, BULKLOAD_FILES).toString();
     String[] tables = args.length == 1 ? new String[] {} : args[1].split(",");
     String[] tableMap;
