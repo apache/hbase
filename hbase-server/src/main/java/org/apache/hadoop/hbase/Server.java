@@ -23,6 +23,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -82,6 +84,9 @@ public interface Server extends Abortable, Stoppable {
 
   /** Returns The {@link ChoreService} instance for this server */
   ChoreService getChoreService();
+
+  public PBEKeyAccessor getPBEKeyAccessor();
+  public PBEKeymetaAdmin getPBEKeymetaAdmin();
 
   /** Returns Return the FileSystem object used (can return null!). */
   // TODO: Distinguish between "dataFs" and "walFs".

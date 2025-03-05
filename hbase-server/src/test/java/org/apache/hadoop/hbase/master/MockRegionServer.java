@@ -52,6 +52,8 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
@@ -553,6 +555,14 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
 
   @Override
   public ChoreService getChoreService() {
+    return null;
+  }
+
+  @Override public PBEKeyAccessor getPBEKeyAccessor() {
+    return null;
+  }
+
+  @Override public PBEKeymetaAdmin getPBEKeymetaAdmin() {
     return null;
   }
 

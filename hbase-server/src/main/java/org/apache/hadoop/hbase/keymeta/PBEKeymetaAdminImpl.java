@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,18 +28,19 @@ import java.io.IOException;
 import java.util.Base64;
 
 @InterfaceAudience.Private
-public class KeyMetaManager extends KeyMetaTableAccessor implements KeyMetaAdmin {
-  private static final Logger LOG = LoggerFactory.getLogger(KeyMetaManager.class);
+public class PBEKeymetaAdminImpl extends PBEKeymetaTableAccessor implements PBEKeymetaAdmin {
+  private static final Logger LOG = LoggerFactory.getLogger(PBEKeymetaAdminImpl.class);
 
-  public KeyMetaManager(MasterServices master) {
-    super(master);
+  public PBEKeymetaAdminImpl(Server server) {
+    super(server);
   }
 
-  @Override public PBEKeyStatus enablePBE(String pbePrefix) throws IOException {
+  @Override
+  public PBEKeyStatus enablePBE(String pbePrefix, String keyNamespace) throws IOException {
     if (! isPBEEnabled()) {
       throw new IOException("PBE is currently not enabled in HBase configuration");
     }
-    LOG.info("Trying to enable PBE on key: {}", pbePrefix);
+    LOG.info("Trying to enable PBE on key: {} for namespace: {}", pbePrefix, keyNamespace);
     byte[] pbe_prefix;
     try {
       pbe_prefix = Base64.getDecoder().decode(pbePrefix);
@@ -48,8 +49,7 @@ public class KeyMetaManager extends KeyMetaTableAccessor implements KeyMetaAdmin
       throw new IOException("Failed to decode specified prefix as Base64 string: " + pbePrefix, e);
     }
     PBEKeyProvider provider = getKeyProvider();
-    // TODO: key provider already decodes, should the param type be changed to encoded prefix?
-    PBEKeyData pbeKey = provider.getPBEKey(pbe_prefix);
+    PBEKeyData pbeKey = provider.getPBEKey(pbe_prefix, keyNamespace);
     LOG.info("Got key data with status: {} for prefix: {}", pbeKey.getKeyStatus(), pbePrefix);
     addKey(pbeKey);
     return pbeKey.getKeyStatus();

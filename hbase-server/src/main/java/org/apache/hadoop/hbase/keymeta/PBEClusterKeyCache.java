@@ -28,18 +28,16 @@ import java.util.List;
 import java.util.Map;
 
 @InterfaceAudience.Private
-public class ClusterKeyCache {
-  private static final Logger LOG = LoggerFactory.getLogger(ClusterKeyCache.class);
+public class PBEClusterKeyCache {
+  private static final Logger LOG = LoggerFactory.getLogger(PBEClusterKeyCache.class);
 
-  private final ClusterKeyAccessor accessor;
   private PBEKeyData latestClusterKey;
   private Map<Long, PBEKeyData> clusterKeys = new HashMap<>();
 
-  public ClusterKeyCache(ClusterKeyAccessor accessor) throws IOException {
-    this.accessor = accessor;
-
+  public PBEClusterKeyCache createCache(PBEClusterKeyAccessor accessor) throws IOException {
     List<Path> allClusterKeys = accessor.getAllClusterKeys();
     int latestKeySequence = accessor.findLatestKeySequence(allClusterKeys);
+    PBEKeyData latestClusterKey = null;
     for (Path keyPath: allClusterKeys) {
       LOG.info("Loading cluster key from: {}", keyPath);
       PBEKeyData keyData = accessor.loadClusterKey(keyPath);
@@ -48,6 +46,15 @@ public class ClusterKeyCache {
       }
       clusterKeys.put(keyData.getKeyChecksum(), keyData);
     }
+    if (latestClusterKey == null) {
+      throw new RuntimeException("Expected to find a key for sequence: " + latestKeySequence);
+    }
+    return new PBEClusterKeyCache(clusterKeys, latestClusterKey);
+  }
+
+  private PBEClusterKeyCache(Map<Long, PBEKeyData> clusterKeys, PBEKeyData latestClusterKey) {
+    this.clusterKeys = clusterKeys;
+    this.latestClusterKey = latestClusterKey;
   }
 
   public PBEKeyData getLatestClusterKey() {

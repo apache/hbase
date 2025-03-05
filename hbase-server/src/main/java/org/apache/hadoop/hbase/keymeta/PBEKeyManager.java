@@ -26,8 +26,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A base class for all keymeta manager implementations.
+ */
 @InterfaceAudience.Private
-public class PBEKeyManager {
+public abstract class PBEKeyManager {
   protected static final Logger LOG = LoggerFactory.getLogger(PBEKeyManager.class);
 
   protected final Server server;
@@ -38,6 +41,12 @@ public class PBEKeyManager {
     this.server = server;
   }
 
+  /**
+   * A utility method for getting the PBE key provider.
+   * @return the key provider
+   * @throws RuntimeException if no provider is configured or if the configured provider is not an
+   * instance of PBEKeyProvider
+   */
   protected PBEKeyProvider getKeyProvider() {
     KeyProvider provider = Encryption.getKeyProvider(server.getConfiguration());
     if (!(provider instanceof PBEKeyProvider)) {
@@ -47,6 +56,10 @@ public class PBEKeyManager {
     return (PBEKeyProvider) provider;
   }
 
+  /**
+   * A utility method for checking if PBE is enabled.
+   * @return true if PBE is enabled
+   */
   protected boolean isPBEEnabled() {
     if (pbeEnabled == null) {
       pbeEnabled = server.getConfiguration().getBoolean(HConstants.CRYPTO_PBE_ENABLED_CONF_KEY,

@@ -38,49 +38,86 @@ import java.io.IOException;
 import java.util.Base64;
 import java.util.Collections;
 
-@CoreCoprocessor
-@InterfaceAudience.Private
-public class KeyMetaServiceEndpoint implements MasterCoprocessor {
-  private static final Logger LOG = LoggerFactory.getLogger(KeyMetaServiceEndpoint.class);
+/**
+ * This class implements a coprocessor service endpoint for the Phoenix Query Server's
+ * PBE (Prefix Based Encryption) key metadata operations. It handles the following
+ * methods:
+ *
+ * <ul>
+ * <li>enablePBE(): Enables PBE for a given pbe_prefix and namespace.</li>
+ * </ul>
+ *
+ * This endpoint is designed to work in conjunction with the {@link org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin}
+ * interface, which provides the actual implementation of the key metadata operations.
+ * </p>
+ */
+@CoreCoprocessor @InterfaceAudience.Private
+public class PBEKeymetaServiceEndpoint implements MasterCoprocessor {
+  private static final Logger LOG = LoggerFactory.getLogger(PBEKeymetaServiceEndpoint.class);
 
   private MasterServices master = null;
-  private KeyMetaManager keyMetaManager;
 
   private final PBEAdminService pbeAdminService = new KeyMetaAdminServiceImpl();
 
-  @Override public void start(CoprocessorEnvironment env) throws IOException {
+  /**
+   * Starts the coprocessor by initializing the reference to the {@link org.apache.hadoop.hbase.master.MasterServices}
+   * instance.
+   *
+   * @param env The coprocessor environment.
+   * @throws IOException If an error occurs during initialization.
+   */
+  @Override
+  public void start(CoprocessorEnvironment env) throws IOException {
     if (!(env instanceof HasMasterServices)) {
       throw new IOException("Does not implement HMasterServices");
     }
 
     master = ((HasMasterServices) env).getMasterServices();
-    keyMetaManager = new KeyMetaManager(master);
   }
 
+  /**
+   * Returns an iterable of the available coprocessor services, which includes the
+   * {@link org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEAdminService} implemented by
+   * {@link org.apache.hadoop.hbase.keymeta.PBEKeymetaServiceEndpoint.KeyMetaAdminServiceImpl}.
+   *
+   * @return An iterable of the available coprocessor services.
+   */
   @Override
   public Iterable<Service> getServices() {
     return Collections.singleton(pbeAdminService);
   }
 
+  /**
+   * The implementation of the {@link org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEAdminService}
+   * interface, which provides the actual method implementations for enabling PBE.
+   */
   private class KeyMetaAdminServiceImpl extends PBEAdminService {
 
+    /**
+     * Enables PBE for a given tenant and namespace, as specified in the provided request.
+     *
+     * @param controller The RPC controller.
+     * @param request    The request containing the tenant and table specifications.
+     * @param done       The callback to be invoked with the response.
+     */
     @Override
     public void enablePBE(RpcController controller, PBEAdminRequest request,
-        RpcCallback<PBEAdminResponse> done) {
+      RpcCallback<PBEAdminResponse> done) {
       PBEAdminResponse.Builder builder =
-        PBEAdminResponse.newBuilder().setPbePrefix(request.getPbePrefix());
+        PBEAdminResponse.newBuilder().setPbePrefix(request.getPbePrefix())
+          .setKeyNamespace(request.getKeyNamespace());
       byte[] pbe_prefix = null;
       try {
         pbe_prefix = Base64.getDecoder().decode(request.getPbePrefix());
-      }
-      catch (IllegalArgumentException e) {
+      } catch (IllegalArgumentException e) {
         builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.PBE_FAILED);
         CoprocessorRpcUtils.setControllerException(controller, new IOException(
           "Failed to decode specified prefix as Base64 string: " + request.getPbePrefix(), e));
       }
       if (pbe_prefix != null) {
         try {
-          PBEKeyStatus pbeKeyStatus = keyMetaManager.enablePBE(request.getPbePrefix());
+          PBEKeyStatus pbeKeyStatus = master.getPBEKeymetaAdmin()
+            .enablePBE(request.getPbePrefix(), request.getKeyNamespace());
           builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.valueOf(pbeKeyStatus.getVal()));
         } catch (IOException e) {
           CoprocessorRpcUtils.setControllerException(controller, e);

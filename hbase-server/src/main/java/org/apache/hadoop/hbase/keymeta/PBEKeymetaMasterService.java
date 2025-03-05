@@ -27,22 +27,22 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 @InterfaceAudience.Private
-public class KeyMetaMasterService {
-  private static final Logger LOG = LoggerFactory.getLogger(KeyMetaMasterService.class);
+public class PBEKeymetaMasterService {
+  private static final Logger LOG = LoggerFactory.getLogger(PBEKeymetaMasterService.class);
 
   private final MasterServices master;
   Boolean pbeEnabled;
 
   private static final TableDescriptorBuilder TABLE_DESCRIPTOR_BUILDER = TableDescriptorBuilder
-    .newBuilder(KeyMetaTableAccessor.KEY_META_TABLE_NAME).setRegionReplication(1)
+    .newBuilder(PBEKeymetaTableAccessor.KEY_META_TABLE_NAME).setRegionReplication(1)
     .setPriority(HConstants.SYSTEMTABLE_QOS)
     .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(
-        KeyMetaTableAccessor.KEY_META_INFO_FAMILY)
+        PBEKeymetaTableAccessor.KEY_META_INFO_FAMILY)
       .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setMaxVersions(1)
       .setInMemory(true)
       .build());
 
-  public KeyMetaMasterService(MasterServices masterServices) {
+  public PBEKeymetaMasterService(MasterServices masterServices) {
     this.master = masterServices;
   }
 
@@ -50,9 +50,9 @@ public class KeyMetaMasterService {
     if (!isPBEEnabled()) {
       return;
     }
-    if (!master.getTableDescriptors().exists(KeyMetaTableAccessor.KEY_META_TABLE_NAME)) {
+    if (!master.getTableDescriptors().exists(PBEKeymetaTableAccessor.KEY_META_TABLE_NAME)) {
       LOG.info("{} table not found. Creating.",
-        KeyMetaTableAccessor.KEY_META_TABLE_NAME.getNameWithNamespaceInclAsString());
+        PBEKeymetaTableAccessor.KEY_META_TABLE_NAME.getNameWithNamespaceInclAsString());
       this.master.createSystemTable(TABLE_DESCRIPTOR_BUILDER.build());
     }
   }

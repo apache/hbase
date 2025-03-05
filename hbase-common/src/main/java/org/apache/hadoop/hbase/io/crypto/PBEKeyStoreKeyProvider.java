@@ -34,10 +34,11 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
     // Encode clusterId too for consistency with that of PBE prefixes.
     String keyMetadata = generateKeyMetadata(masterKeyAlias,
       Base64.getEncoder().encodeToString(clusterId));
-    return new PBEKeyData(clusterId, key, PBEKeyStatus.ACTIVE, keyMetadata);
+    return new PBEKeyData(clusterId, PBEKeyData.KEY_NAMESPACE_GLOBAL, key, PBEKeyStatus.ACTIVE,
+      keyMetadata);
   }
 
-  @Override public PBEKeyData getPBEKey(byte[] pbe_prefix) throws IOException {
+  @Override public PBEKeyData getPBEKey(byte[] pbe_prefix, String key_namespace) throws IOException {
     checkConfig();
     String encodedPrefix = Base64.getEncoder().encodeToString(pbe_prefix);
     String aliasConfKey = HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encodedPrefix + "." +
@@ -64,10 +65,10 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
     String alias = keyMetadata.get(KEY_METADATA_ALIAS);
     Key key = alias != null ? getKey(alias) : null;
     if (key != null) {
-      return new PBEKeyData(pbe_prefix, key,
+      return new PBEKeyData(pbe_prefix, PBEKeyData.KEY_NAMESPACE_GLOBAL, key,
         isActive ? PBEKeyStatus.ACTIVE : PBEKeyStatus.INACTIVE, keyMetadataStr);
     }
-    return new PBEKeyData(pbe_prefix, null,
+    return new PBEKeyData(pbe_prefix, PBEKeyData.KEY_NAMESPACE_GLOBAL, null,
       isActive ? PBEKeyStatus.FAILED : PBEKeyStatus.DISABLED, keyMetadataStr);
   }
 

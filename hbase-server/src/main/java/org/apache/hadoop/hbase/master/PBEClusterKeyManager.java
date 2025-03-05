@@ -20,20 +20,19 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
-import org.apache.hadoop.hbase.keymeta.ClusterKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.PBEClusterKeyAccessor;
 import org.apache.yetus.audience.InterfaceAudience;
 import static org.apache.hadoop.hbase.HConstants.CLUSTER_KEY_FILE_PREFIX;
 
 @InterfaceAudience.Private
-public class ClusterKeyManager extends ClusterKeyAccessor {
+public class PBEClusterKeyManager extends PBEClusterKeyAccessor {
   private final MasterServices master;
 
-  public ClusterKeyManager(MasterServices master) throws IOException {
+  public PBEClusterKeyManager(MasterServices master) throws IOException {
     super(master);
     this.master = master;
   }
@@ -63,8 +62,8 @@ public class ClusterKeyManager extends ClusterKeyAccessor {
       return null;
     }
     Path latestFile = getLatestClusterKeyFile();
-    String latestKeyMeta = loadKeyMetadata(latestFile);
-    return rotateClusterKey(latestKeyMeta);
+    String latestKeyMetadata = loadKeyMetadata(latestFile);
+    return rotateClusterKey(latestKeyMetadata);
   }
 
   private PBEKeyData rotateClusterKey(String currentKeyMetadata) throws IOException {

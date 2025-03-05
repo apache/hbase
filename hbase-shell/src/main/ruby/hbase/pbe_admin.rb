@@ -21,7 +21,7 @@ module Hbase
   class PBEAdmin
     def initialize(connection)
       @connection = connection
-      @admin = org.apache.hadoop.hbase.keymeta.KeyMetaAdminClient.new(connection)
+      @admin = org.apache.hadoop.hbase.keymeta.PBEKeymetaAdminClient.new(connection)
       @hb_admin = @connection.getAdmin
     end
 
@@ -30,7 +30,10 @@ module Hbase
     end
 
     def pbe_enable(pbe_prefix)
-      @admin.enablePBE(pbe_prefix)
+      prefixInfo = pbe_prefix.split(':')
+      assert prefixInfo.length <= 2, 'Invalid prefix:namespace format'
+      @admin.enablePBE(prefixInfo[0], prefixInfo.length > 1? prefixInfo[1] :
+        org.apache.hadoop.hbase.io.crypto.PBEKeyData.KEY_NAMESPACE_GLOBAL)
     end
   end
 end

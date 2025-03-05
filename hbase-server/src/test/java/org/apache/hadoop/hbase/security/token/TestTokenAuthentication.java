@@ -55,6 +55,8 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
+import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.SecurityInfo;
@@ -347,6 +349,14 @@ public class TestTokenAuthentication {
 
     @Override
     public ChoreService getChoreService() {
+      return null;
+    }
+
+    @Override public PBEKeyAccessor getPBEKeyAccessor() {
+      return null;
+    }
+
+    @Override public PBEKeymetaAdmin getPBEKeymetaAdmin() {
       return null;
     }
 

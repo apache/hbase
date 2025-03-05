@@ -13,15 +13,15 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 @InterfaceAudience.Public
-public class KeyMetaAdminClient implements KeyMetaAdmin {
-  private static final Logger LOG = LoggerFactory.getLogger(KeyMetaAdminClient.class);
+public class PBEKeymetaAdminClient implements PBEKeymetaAdmin {
+  private static final Logger LOG = LoggerFactory.getLogger(PBEKeymetaAdminClient.class);
   private PBEAdminProtos.PBEAdminService.BlockingInterface stub;
 
-  public KeyMetaAdminClient(Connection conn) throws IOException {
+  public PBEKeymetaAdminClient(Connection conn) throws IOException {
     this.stub = PBEAdminProtos.PBEAdminService.newBlockingStub(conn.getAdmin().coprocessorService());
   }
 
-  @Override public PBEKeyStatus enablePBE(String pbePrefix) throws IOException {
+  @Override public PBEKeyStatus enablePBE(String pbePrefix, String keyNamespace) throws IOException {
     try {
       PBEAdminResponse pbeAdminResponse = stub.enablePBE(null,
         PBEAdminRequest.newBuilder().setPbePrefix(pbePrefix).build());

@@ -21,11 +21,18 @@ import org.apache.yetus.audience.InterfaceAudience;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Enum of PBE key status. The status of a PBE key is used to indicate the state of the key.
+ */
 @InterfaceAudience.Public
 public enum PBEKeyStatus {
+  /** Represents the active status of a PBE key. */
   ACTIVE((byte) 1),
+  /** Represents the inactive status of a PBE key. */
   INACTIVE((byte) 2),
+  /** Represents the retrieval failure status of a PBE key. */
   FAILED((byte) 3),
+  /** Represents the disabled status of a PBE key. */
   DISABLED((byte) 4),
   ;
 
@@ -33,14 +40,23 @@ public enum PBEKeyStatus {
 
   private final byte val;
 
-  PBEKeyStatus(byte val) {
+  private PBEKeyStatus(byte val) {
     this.val = val;
   }
 
+  /**
+   * Returns the numeric value of the PBE key status.
+   * @return byte value
+   */
   public byte getVal() {
     return val;
   }
 
+  /**
+   * Returns the PBEKeyStatus for the given numeric value.
+   * @param val The numeric value of the desired PBEKeyStatus
+   * @return The PBEKeyStatus corresponding to the given value
+   */
   public static PBEKeyStatus forValue(byte val) {
     if (lookupByVal == null) {
       Map<Byte, PBEKeyStatus> tbl = new HashMap<>();

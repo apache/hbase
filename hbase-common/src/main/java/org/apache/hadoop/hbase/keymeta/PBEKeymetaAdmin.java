@@ -21,7 +21,24 @@ import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 
+/**
+ * PBEKeymetaAdmin is an interface for administrative functions related to PBE keys.
+ * It handles the following methods:
+ *
+ * <ul>
+ * <li>enablePBE(): Enables PBE for a given pbe_prefix and namespace.</li>
+ * </ul>
+ */
 @InterfaceAudience.Public
-public interface KeyMetaAdmin {
-  PBEKeyStatus enablePBE(String pbePrefix) throws IOException;
+public interface PBEKeymetaAdmin {
+  /**
+   * Enables PBE for the specified key prefix and namespace.
+   *
+   * @param pbePrefix    The prefix for the PBE key.
+   * @param keyNamespace The namespace for the PBE key.
+   *
+   * @return The current status of the PBE key.
+   * @throws IOException if an error occurs while enabling PBE.
+   */
+  PBEKeyStatus enablePBE(String pbePrefix, String keyNamespace) throws IOException;
 }

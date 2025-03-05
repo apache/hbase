@@ -26,6 +26,7 @@ option optimize_for = SPEED;
 
 message PBEAdminRequest {
   required string pbe_prefix = 1;
+  required string key_namespace = 2;
 }
 
 enum PBEKeyStatus {
@@ -37,7 +38,8 @@ enum PBEKeyStatus {
 
 message PBEAdminResponse {
   required string pbe_prefix = 1;
-  required PBEKeyStatus pbe_status = 2;
+  required string key_namespace = 2;
+  required PBEKeyStatus pbe_status = 3;
 }
 
 service PBEAdminService {

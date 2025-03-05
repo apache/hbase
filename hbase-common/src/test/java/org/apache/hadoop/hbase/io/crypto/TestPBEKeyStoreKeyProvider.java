@@ -115,7 +115,7 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
   @Test
   public void testGetPBEKey() throws Exception {
     for (Bytes prefix: prefix2key.keySet()) {
-      PBEKeyData keyData = pbeProvider.getPBEKey(prefix.get());
+      PBEKeyData keyData = pbeProvider.getPBEKey(prefix.get(), PBEKeyData.KEY_NAMESPACE_GLOBAL);
       assertPBEKeyData(keyData, PBEKeyStatus.ACTIVE, prefix2key.get(prefix).get(), prefix.get(),
         prefix2alias.get(prefix));
     }

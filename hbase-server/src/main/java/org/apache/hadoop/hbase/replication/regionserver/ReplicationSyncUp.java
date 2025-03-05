@@ -41,6 +41,8 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.master.replication.OfflineTableReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationGroupOffset;
@@ -363,6 +365,14 @@ public class ReplicationSyncUp extends Configured implements Tool {
 
     @Override
     public ChoreService getChoreService() {
+      return null;
+    }
+
+    @Override public PBEKeyAccessor getPBEKeyAccessor() {
+      return null;
+    }
+
+    @Override public PBEKeymetaAdmin getPBEKeymetaAdmin() {
       return null;
     }
 

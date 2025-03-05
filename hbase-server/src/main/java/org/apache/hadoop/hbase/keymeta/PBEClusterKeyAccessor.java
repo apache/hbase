@@ -32,10 +32,10 @@ import java.util.List;
 import static org.apache.hadoop.hbase.HConstants.CLUSTER_KEY_FILE_PREFIX;
 
 @InterfaceAudience.Private
-public class ClusterKeyAccessor extends PBEKeyManager {
+public class PBEClusterKeyAccessor extends PBEKeyManager {
   protected final Path clusterKeyDir;
 
-  public ClusterKeyAccessor(Server server) throws IOException {
+  public PBEClusterKeyAccessor(Server server) throws IOException {
     super(server);
     this.clusterKeyDir = CommonFSUtils.getClusterKeyDir(server.getConfiguration());
   }

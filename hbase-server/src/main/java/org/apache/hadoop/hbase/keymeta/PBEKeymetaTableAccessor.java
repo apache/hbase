@@ -23,8 +23,13 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -32,20 +37,19 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Accessor for PBE keymeta table.
+ */
 @InterfaceAudience.Private
-public class KeyMetaTableAccessor extends PBEKeyManager {
+public class PBEKeymetaTableAccessor extends PBEKeyManager {
   private static final String KEY_META_INFO_FAMILY_STR = "info";
 
   public static final byte[] KEY_META_INFO_FAMILY = Bytes.toBytes(KEY_META_INFO_FAMILY_STR);
 
   public static final TableName KEY_META_TABLE_NAME =
     TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "keymeta");
-
-  public static final String PBE_PREFIX_QUAL_NAME = "pbe_prefix";
-  public static final byte[] PBE_PREFIX_QUAL_BYTES = Bytes.toBytes(PBE_PREFIX_QUAL_NAME);
 
   public static final String DEK_METADATA_QUAL_NAME = "dek_metadata";
   public static final byte[] DEK_METADATA_QUAL_BYTES = Bytes.toBytes(DEK_METADATA_QUAL_NAME);
@@ -65,24 +69,55 @@ public class KeyMetaTableAccessor extends PBEKeyManager {
   public static final String KEY_STATUS_QUAL_NAME = "key_status";
   public static final byte[] KEY_STATUS_QUAL_BYTES = Bytes.toBytes(KEY_STATUS_QUAL_NAME);
 
-  public KeyMetaTableAccessor(Server server) {
+  public PBEKeymetaTableAccessor(Server server) {
     super(server);
   }
 
   public void addKey(PBEKeyData keyData) throws IOException {
-    long refreshTime = EnvironmentEdgeManager.currentTime();
-    final Put putForPrefix = addMutationColumns(new Put(keyData.getPbe_prefix()), keyData,
-      refreshTime);
     final Put putForMetadata = addMutationColumns(new Put(constructRowKeyForMetadata(keyData)),
-      keyData, refreshTime);
+      keyData);
 
     Connection connection = server.getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      table.put(Arrays.asList(putForPrefix, putForMetadata));
+      table.put(putForMetadata);
     }
   }
 
-  private Put addMutationColumns(Put put, PBEKeyData keyData, long refreshTime) {
+  public List<PBEKeyData> getActiveKeys(byte[] pbePrefix, String keyNamespace) throws IOException {
+    Connection connection = server.getConnection();
+    byte[] prefixForScan = Bytes.add(Bytes.toBytes(pbePrefix.length), pbePrefix,
+      Bytes.toBytes(keyNamespace));
+    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
+      PrefixFilter prefixFilter = new PrefixFilter(prefixForScan);
+      Scan scan = new Scan();
+      scan.setFilter(prefixFilter);
+      scan.addFamily(KEY_META_INFO_FAMILY);
+
+      ResultScanner scanner = table.getScanner(scan);
+      List<PBEKeyData> activeKeys = new ArrayList<>();
+      for (Result result : scanner) {
+        PBEKeyData keyData = parseFromResult(pbePrefix, keyNamespace, result);
+        if (keyData.getKeyStatus() == PBEKeyStatus.ACTIVE) {
+          activeKeys.add(keyData);
+        }
+      }
+
+      return activeKeys;
+    }
+  }
+
+  public PBEKeyData getKey(byte[] pbePrefix, String keyNamespace, String keyMetadata)
+      throws IOException {
+    Connection connection = server.getConnection();
+    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
+      byte[] rowKey = constructRowKeyForMetadata(pbePrefix, keyNamespace,
+        PBEKeyData.makeMetadataHash(keyMetadata));
+      Result result = table.get(new Get(rowKey));
+      return parseFromResult(pbePrefix, keyNamespace, result);
+    }
+  }
+
+  private Put addMutationColumns(Put put, PBEKeyData keyData) {
     if (keyData.getTheKey() != null) {
       put.addColumn(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES,
         Bytes.toBytes(keyData.getKeyChecksum()));
@@ -92,25 +127,39 @@ public class KeyMetaTableAccessor extends PBEKeyManager {
       .addColumn(KEY_META_INFO_FAMILY, DEK_METADATA_QUAL_BYTES, keyData.getKeyMetadata().getBytes())
       //.addColumn(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES, null)
       //.addColumn(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES, null)
-      .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES, Bytes.toBytes(refreshTime))
+      .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
+        Bytes.toBytes(keyData.getRefreshTimestamp()))
       .addColumn(KEY_META_INFO_FAMILY, KEY_STATUS_QUAL_BYTES,
         new byte[] { keyData.getKeyStatus().getVal() })
       ;
   }
 
   private byte[] constructRowKeyForMetadata(PBEKeyData keyData) {
-    byte[] pbePrefix = keyData.getPbe_prefix();
+    return constructRowKeyForMetadata(keyData.getPbe_prefix(), keyData.getKeyNamespace(),
+      keyData.getKeyMetadataHash());
+  }
+
+  private static byte[] constructRowKeyForMetadata(byte[] pbePrefix, String keyNamespace,
+      byte[] keyMetadataHash) {
     int prefixLength = pbePrefix.length;
-    byte[] keyMetadataHash = keyData.getKeyMetadataHash();
-    return Bytes.add(Bytes.toBytes(prefixLength), pbePrefix, keyMetadataHash);
+    return Bytes.add(Bytes.toBytes(prefixLength), pbePrefix, Bytes.toBytesBinary(keyNamespace),
+      keyMetadataHash);
   }
 
-  private byte[] extractPBEPrefix(byte[] rowkey) {
-    int prefixLength = Bytes.toInt(rowkey);
-    return Bytes.copy(rowkey, Bytes.SIZEOF_INT, prefixLength);
-  }
+  private PBEKeyData parseFromResult(byte[] pbePrefix, String keyNamespace, Result result) {
+    if (result == null || result.isEmpty()) {
+      return null;
+    }
+    PBEKeyStatus keyStatus = PBEKeyStatus.forValue(
+      result.getValue(KEY_META_INFO_FAMILY, KEY_STATUS_QUAL_BYTES)[0]);
+    String dekMetadata = Bytes.toString(result.getValue(KEY_META_INFO_FAMILY,
+      DEK_METADATA_QUAL_BYTES));
+    long refreshedTimestamp = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES));
+    byte[] dekChecksum = result.getValue(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES);
+    //byte[] dekWrappedByStk = result.getValue(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES);
+    //byte[] stkChecksum = result.getValue(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES);
 
-  private byte[] extractKeyMetadataHash(byte[] rowkey, byte[] pbePreefix) {
-    return Bytes.copy(rowkey, Bytes.SIZEOF_INT + pbePreefix.length, rowkey.length);
+    return new PBEKeyData(pbePrefix, keyNamespace, null, keyStatus, dekMetadata,
+      refreshedTimestamp);
   }
 }
