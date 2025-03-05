@@ -1641,6 +1641,16 @@ public final class HConstants {
    */
   public final static boolean REJECT_DECOMMISSIONED_HOSTS_DEFAULT = false;
 
+  /**
+   * Should HBase only serve Read Requests
+   */
+  public final static String HBASE_GLOBAL_READONLY_ENABLED_KEY = "hbase.global.readonly.enabled";
+
+  /**
+   * Default value of {@link #HBASE_GLOBAL_READONLY_ENABLED_KEY}
+   */
+  public final static boolean HBASE_GLOBAL_READONLY_ENABLED_DEFAULT = false;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
