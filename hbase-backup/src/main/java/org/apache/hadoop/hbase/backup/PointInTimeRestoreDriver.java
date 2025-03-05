@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.LONG_OPTION_TO_DATETIME;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TO_DATETIME;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TO_DATETIME_DESC;
+
 import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -27,6 +32,7 @@ import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -34,31 +40,53 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Command-line entry point for restore operation
  */
 @InterfaceAudience.Private
-public class RestoreDriver extends AbstractRestoreDriver {
+public class PointInTimeRestoreDriver extends AbstractRestoreDriver {
   private static final String USAGE_STRING = """
-      Usage: hbase restore <backup_path> <backup_id> [options]
-        backup_path     Path to a backup destination root
-        backup_id       Backup image ID to restore
+      Usage: hbase pitr <backup_path> [options]
+        <backup_path>                  Path to a backup destination root
         table(s)        Comma-separated list of tables to restore
       """;
 
   @Override
   protected int executeRestore(boolean check, TableName[] fromTables, TableName[] toTables,
     boolean isOverwrite) {
-    // parse main restore command options
+    String walBackupDir = getConf().get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+    if (walBackupDir == null || walBackupDir.isEmpty()) {
+      System.err.printf(
+        "Point-in-Time Restore requires the WAL backup directory (%s) to replay logs after full and incremental backups. "
+          + "Set this property if you need Point-in-Time Restore. Otherwise, use the normal restore process with the appropriate backup ID.%n",
+        CONF_CONTINUOUS_BACKUP_WAL_DIR);
+      return -1;
+    }
+
     String[] remainArgs = cmd.getArgs();
-    if (remainArgs.length != 2) {
+    if (remainArgs.length != 1) {
       printToolUsage();
       return -1;
     }
 
     String backupRootDir = remainArgs[0];
-    String backupId = remainArgs[1];
 
     try (final Connection conn = ConnectionFactory.createConnection(conf);
       BackupAdmin client = new BackupAdminImpl(conn)) {
-      client.restore(BackupUtils.createRestoreRequest(backupRootDir, backupId, check, fromTables,
-        toTables, isOverwrite));
+      long endTime = EnvironmentEdgeManager.getDelegate().currentTime();
+      if (cmd.hasOption(OPTION_TO_DATETIME)) {
+        String time = cmd.getOptionValue(OPTION_TO_DATETIME);
+        try {
+          endTime = Long.parseLong(time);
+          // Convert seconds to milliseconds if input is in seconds
+          if (endTime < 10_000_000_000L) {
+            endTime *= 1000;
+          }
+        } catch (NumberFormatException e) {
+          System.out.println("ERROR: Invalid timestamp format for --to-datetime: " + time);
+          printToolUsage();
+          return -5;
+        }
+      }
+
+      client.pointInTimeRestore(BackupUtils.createPointInTimeRestoreRequest(backupRootDir, check,
+        fromTables, toTables, isOverwrite, endTime));
     } catch (Exception e) {
       LOG.error("Error while running restore backup", e);
       return -5;
@@ -66,12 +94,18 @@ public class RestoreDriver extends AbstractRestoreDriver {
     return 0;
   }
 
+  @Override
+  protected void addOptions() {
+    super.addOptions();
+    addOptWithArg(OPTION_TO_DATETIME, LONG_OPTION_TO_DATETIME, OPTION_TO_DATETIME_DESC);
+  }
+
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    Path hbasedir = CommonFSUtils.getRootDir(conf);
-    URI defaultFs = hbasedir.getFileSystem(conf).getUri();
+    Path rootDir = CommonFSUtils.getRootDir(conf);
+    URI defaultFs = rootDir.getFileSystem(conf).getUri();
     CommonFSUtils.setFsDefault(conf, new Path(defaultFs));
-    int ret = ToolRunner.run(conf, new RestoreDriver(), args);
+    int ret = ToolRunner.run(conf, new PointInTimeRestoreDriver(), args);
     System.exit(ret);
   }
 
