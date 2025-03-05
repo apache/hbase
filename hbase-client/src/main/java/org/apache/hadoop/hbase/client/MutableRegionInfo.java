@@ -64,6 +64,7 @@ class MutableRegionInfo implements RegionInfo {
   private final int hashCode;
   private final String encodedName;
   private final byte[] encodedNameAsBytes;
+  private String nameAsString = null;
   private final TableName tableName;
 
   private static int generateHashCode(final TableName tableName, final byte[] startKey,
@@ -149,10 +150,21 @@ class MutableRegionInfo implements RegionInfo {
     return regionName;
   }
 
-  /** Returns Region name as a String for use in logging, etc. */
+  /**
+   * Returns region name as a String for use in logging, tracing, etc. Expensive enough to compute
+   * that we do it on first request and save it. Used often because it's included in trace of every
+   * RPC.
+   */
   @Override
   public String getRegionNameAsString() {
-    return RegionInfo.getRegionNameAsString(this, this.regionName);
+    if (nameAsString == null) {
+      String name = RegionInfo.getRegionNameAsString(this, this.regionName);
+      // may race with other threads setting this, but that's ok
+      nameAsString = name;
+      return name;
+    } else {
+      return nameAsString;
+    }
   }
 
   /** Returns the encoded region name */
