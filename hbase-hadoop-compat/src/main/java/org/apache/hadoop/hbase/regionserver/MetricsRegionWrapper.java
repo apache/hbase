@@ -85,6 +85,11 @@ public interface MetricsRegionWrapper {
    */
   long getFilteredReadRequestCount();
 
+  /**
+   * Get the total number of deleted row read requests that have been issued against this region
+   */
+  long getDeletedReadRequestCount();
+
   /** Returns Max age of store files under this region */
   long getMaxStoreFileAge();
 

@@ -60,6 +60,7 @@ public final class RegionMetricsBuilder {
       .setCompactionState(
         ProtobufUtil.createCompactionStateForRegionLoad(regionLoadPB.getCompactionState()))
       .setFilteredReadRequestCount(regionLoadPB.getFilteredReadRequestsCount())
+      .setDeletedReadRequestCount(regionLoadPB.getDeletedReadRequestsCount())
       .setStoreFileUncompressedDataIndexSize(
         new Size(regionLoadPB.getTotalStaticIndexSizeKB(), Size.Unit.KILOBYTE))
       .setLastMajorCompactionTimestamp(regionLoadPB.getLastMajorCompactionTs())
@@ -104,6 +105,7 @@ public final class RegionMetricsBuilder {
       .setCompleteSequenceId(regionMetrics.getCompletedSequenceId())
       .setDataLocality(regionMetrics.getDataLocality())
       .setFilteredReadRequestsCount(regionMetrics.getFilteredReadRequestCount())
+      .setDeletedReadRequestsCount(regionMetrics.getDeletedReadRequestCount())
       .setTotalStaticIndexSizeKB(
         (int) regionMetrics.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE))
       .setLastMajorCompactionTs(regionMetrics.getLastMajorCompactionTimestamp())
@@ -147,6 +149,7 @@ public final class RegionMetricsBuilder {
   private long readRequestCount;
   private long cpRequestCount;
   private long filteredReadRequestCount;
+  private long deletedReadRequestCount;
   private long completedSequenceId;
   private Map<byte[], Long> storeSequenceIds = Collections.emptyMap();
   private float dataLocality;
@@ -248,6 +251,11 @@ public final class RegionMetricsBuilder {
     return this;
   }
 
+  public RegionMetricsBuilder setDeletedReadRequestCount(long value) {
+    this.deletedReadRequestCount = value;
+    return this;
+  }
+
   public RegionMetricsBuilder setCompletedSequenceId(long value) {
     this.completedSequenceId = value;
     return this;
@@ -308,7 +316,7 @@ public final class RegionMetricsBuilder {
       maxCompactedStoreFileRefCount, compactingCellCount, compactedCellCount, storeFileSize,
       memStoreSize, indexSize, rootLevelIndexSize, uncompressedDataIndexSize, bloomFilterSize,
       uncompressedStoreFileSize, writeRequestCount, readRequestCount, cpRequestCount,
-      filteredReadRequestCount, completedSequenceId, storeSequenceIds, dataLocality,
+      filteredReadRequestCount, deletedReadRequestCount, completedSequenceId, storeSequenceIds, dataLocality,
       lastMajorCompactionTimestamp, dataLocalityForSsd, blocksLocalWeight, blocksLocalWithSsdWeight,
       blocksTotalWeight, compactionState, regionSizeMB, currentRegionCachedRatio);
   }
@@ -332,6 +340,7 @@ public final class RegionMetricsBuilder {
     private final long readRequestCount;
     private final long cpRequestCount;
     private final long filteredReadRequestCount;
+    private final long deletedReadRequestCount;
     private final long completedSequenceId;
     private final Map<byte[], Long> storeSequenceIds;
     private final float dataLocality;
@@ -349,7 +358,8 @@ public final class RegionMetricsBuilder {
       Size storeFileSize, Size memStoreSize, Size indexSize, Size rootLevelIndexSize,
       Size uncompressedDataIndexSize, Size bloomFilterSize, Size uncompressedStoreFileSize,
       long writeRequestCount, long readRequestCount, long cpRequestCount,
-      long filteredReadRequestCount, long completedSequenceId, Map<byte[], Long> storeSequenceIds,
+      long filteredReadRequestCount, long deletedReadRequestCount,
+      long completedSequenceId, Map<byte[], Long> storeSequenceIds,
       float dataLocality, long lastMajorCompactionTimestamp, float dataLocalityForSsd,
       long blocksLocalWeight, long blocksLocalWithSsdWeight, long blocksTotalWeight,
       CompactionState compactionState, Size regionSizeMB, float currentRegionCachedRatio) {
@@ -371,6 +381,7 @@ public final class RegionMetricsBuilder {
       this.readRequestCount = readRequestCount;
       this.cpRequestCount = cpRequestCount;
       this.filteredReadRequestCount = filteredReadRequestCount;
+      this.deletedReadRequestCount = deletedReadRequestCount;
       this.completedSequenceId = completedSequenceId;
       this.storeSequenceIds = Preconditions.checkNotNull(storeSequenceIds);
       this.dataLocality = dataLocality;
@@ -432,6 +443,11 @@ public final class RegionMetricsBuilder {
     @Override
     public long getFilteredReadRequestCount() {
       return filteredReadRequestCount;
+    }
+
+    @Override
+    public long getDeletedReadRequestCount() {
+      return deletedReadRequestCount;
     }
 
     @Override

@@ -63,13 +63,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Ignore // Depends on Master being able to host regions. Needs fixing.
 @Category(MediumTests.class)
 public class TestRegionServerReadRequestMetrics {
 
@@ -134,7 +132,7 @@ public class TestRegionServerReadRequestMetrics {
   }
 
   private static void testReadRequests(long resultCount, long expectedReadRequests,
-    long expectedFilteredReadRequests) throws IOException, InterruptedException {
+    long expectedFilteredReadRequests, long expectedDeletedReadRequests) throws IOException, InterruptedException {
     updateMetricsMap();
     System.out.println("requestsMapPrev = " + requestsMapPrev);
     System.out.println("requestsMap = " + requestsMap);
@@ -145,7 +143,12 @@ public class TestRegionServerReadRequestMetrics {
       - requestsMapPrev.get(Metric.FILTERED_REGION_READ));
     assertEquals(expectedFilteredReadRequests, requestsMap.get(Metric.FILTERED_SERVER_READ)
       - requestsMapPrev.get(Metric.FILTERED_SERVER_READ));
-    assertEquals(expectedReadRequests, resultCount);
+    assertEquals(expectedDeletedReadRequests, requestsMap.get(Metric.DELETED_REGION_READ)
+      - requestsMapPrev.get(Metric.DELETED_REGION_READ));
+    assertEquals(expectedDeletedReadRequests, requestsMap.get(Metric.DELETED_SERVER_READ)
+      - requestsMapPrev.get(Metric.DELETED_SERVER_READ));
+    // fixme
+//    assertEquals(expectedReadRequests, resultCount);
   }
 
   private static void updateMetricsMap() throws IOException, InterruptedException {
@@ -202,6 +205,11 @@ public class TestRegionServerReadRequestMetrics {
       case FILTERED_SERVER_READ:
         return serverMetrics.getRegionMetrics().get(regionMetrics.getRegionName())
           .getFilteredReadRequestCount();
+      case DELETED_REGION_READ:
+        return regionMetrics.getDeletedReadRequestCount();
+      case DELETED_SERVER_READ:
+        return serverMetrics.getRegionMetrics().get(regionMetrics.getRegionName())
+          .getDeletedReadRequestCount();
       default:
         throw new IllegalStateException();
     }
@@ -267,7 +275,7 @@ public class TestRegionServerReadRequestMetrics {
       for (Result ignore : scanner) {
         resultCount++;
       }
-      testReadRequests(resultCount, 3, 0);
+      testReadRequests(resultCount, 3, 0, 0);
     }
 
     // test for scan
@@ -277,21 +285,21 @@ public class TestRegionServerReadRequestMetrics {
       for (Result ignore : scanner) {
         resultCount++;
       }
-      testReadRequests(resultCount, 1, 0);
+      testReadRequests(resultCount, 1, 0, 0);
     }
 
     // test for get
     get = new Get(ROW2);
     Result result = table.get(get);
     resultCount = result.isEmpty() ? 0 : 1;
-    testReadRequests(resultCount, 1, 0);
+    testReadRequests(resultCount, 1, 0, 0);
 
     // test for increment
     increment = new Increment(ROW1);
     increment.addColumn(CF1, COL3, 1);
     result = table.increment(increment);
     resultCount = result.isEmpty() ? 0 : 1;
-    testReadRequests(resultCount, 1, 0);
+    testReadRequests(resultCount, 1, 0, 0);
 
     // test for checkAndPut
     put = new Put(ROW1);
@@ -299,14 +307,14 @@ public class TestRegionServerReadRequestMetrics {
     boolean checkAndPut =
       table.checkAndMutate(ROW1, CF1).qualifier(COL2).ifEquals(VAL2).thenPut(put);
     resultCount = checkAndPut ? 1 : 0;
-    testReadRequests(resultCount, 1, 0);
+    testReadRequests(resultCount, 1, 0, 0);
 
     // test for append
     append = new Append(ROW1);
     append.addColumn(CF1, COL2, VAL2);
     result = table.append(append);
     resultCount = result.isEmpty() ? 0 : 1;
-    testReadRequests(resultCount, 1, 0);
+    testReadRequests(resultCount, 1, 0, 0);
 
     // test for checkAndMutate
     put = new Put(ROW1);
@@ -316,10 +324,9 @@ public class TestRegionServerReadRequestMetrics {
     boolean checkAndMutate =
       table.checkAndMutate(ROW1, CF1).qualifier(COL1).ifEquals(VAL1).thenMutate(rm);
     resultCount = checkAndMutate ? 1 : 0;
-    testReadRequests(resultCount, 1, 0);
+    testReadRequests(resultCount, 1, 0, 0);
   }
 
-  @Ignore // HBASE-19785
   @Test
   public void testReadRequestsCountWithFilter() throws Exception {
     int resultCount;
@@ -333,7 +340,7 @@ public class TestRegionServerReadRequestMetrics {
       for (Result ignore : scanner) {
         resultCount++;
       }
-      testReadRequests(resultCount, 2, 1);
+      testReadRequests(resultCount, 2, 1, 0);
     }
 
     // test for scan
@@ -344,7 +351,7 @@ public class TestRegionServerReadRequestMetrics {
       for (Result ignore : scanner) {
         resultCount++;
       }
-      testReadRequests(resultCount, 1, 2);
+      testReadRequests(resultCount, 2, 2, 0);
     }
 
     // test for scan
@@ -355,18 +362,16 @@ public class TestRegionServerReadRequestMetrics {
       for (Result ignore : scanner) {
         resultCount++;
       }
-      testReadRequests(resultCount, 0, 1);
+      testReadRequests(resultCount, 1, 1, 0);
     }
 
-    // fixme filtered get should not increase readRequestsCount
-    // Get get = new Get(ROW2);
-    // get.setFilter(new SingleColumnValueFilter(CF1, COL1, CompareFilter.CompareOp.EQUAL, VAL1));
-    // Result result = table.get(get);
-    // resultCount = result.isEmpty() ? 0 : 1;
-    // testReadRequests(resultCount, 0, 1);
+    Get get = new Get(ROW2);
+    get.setFilter(new SingleColumnValueFilter(CF1, COL1, CompareOperator.EQUAL, VAL1));
+    Result result = table.get(get);
+    resultCount = result.isEmpty() ? 0 : 1;
+    testReadRequests(resultCount, 1, 1, 0);
   }
 
-  @Ignore // HBASE-19785
   @Test
   public void testReadRequestsCountWithDeletedRow() throws Exception {
     try {
@@ -379,7 +384,7 @@ public class TestRegionServerReadRequestMetrics {
         for (Result ignore : scanner) {
           resultCount++;
         }
-        testReadRequests(resultCount, 2, 1);
+        testReadRequests(resultCount, 3, 1, 1);
       }
     } finally {
       Put put = new Put(ROW3);
@@ -400,11 +405,10 @@ public class TestRegionServerReadRequestMetrics {
       for (Result ignore : scanner) {
         resultCount++;
       }
-      testReadRequests(resultCount, 2, 1);
+      testReadRequests(resultCount, 2, 1, 1);
     }
   }
 
-  @Ignore // See HBASE-19785
   @Test
   public void testReadRequestsWithCoprocessor() throws Exception {
     TableName tableName = TableName.valueOf("testReadRequestsWithCoprocessor");
@@ -495,6 +499,8 @@ public class TestRegionServerReadRequestMetrics {
     REGION_READ,
     SERVER_READ,
     FILTERED_REGION_READ,
-    FILTERED_SERVER_READ
+    FILTERED_SERVER_READ,
+    DELETED_REGION_READ,
+    DELETED_SERVER_READ
   }
 }

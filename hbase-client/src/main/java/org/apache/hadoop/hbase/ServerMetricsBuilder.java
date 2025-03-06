@@ -417,6 +417,7 @@ public final class ServerMetricsBuilder {
       long cpRequestsCount = 0;
       long writeRequestsCount = 0;
       long filteredReadRequestsCount = 0;
+      long deletedReadRequestsCount = 0;
       long bloomFilterSizeMB = 0;
       long compactingCellCount = 0;
       long compactedCellCount = 0;
@@ -437,6 +438,7 @@ public final class ServerMetricsBuilder {
         cpRequestsCount += r.getCpRequestCount();
         writeRequestsCount += r.getWriteRequestCount();
         filteredReadRequestsCount += r.getFilteredReadRequestCount();
+        deletedReadRequestsCount += r.getDeletedReadRequestCount();
         rootLevelIndexSizeKB += (long) r.getStoreFileRootLevelIndexSize().get(Size.Unit.KILOBYTE);
         bloomFilterSizeMB += (long) r.getBloomFilterSize().get(Size.Unit.MEGABYTE);
         compactedCellCount += r.getCompactedCellCount();
@@ -462,6 +464,7 @@ public final class ServerMetricsBuilder {
       Strings.appendKeyValue(sb, "readRequestsCount", readRequestsCount);
       Strings.appendKeyValue(sb, "cpRequestsCount", cpRequestsCount);
       Strings.appendKeyValue(sb, "filteredReadRequestsCount", filteredReadRequestsCount);
+      Strings.appendKeyValue(sb, "deletedReadRequestsCount", deletedReadRequestsCount);
       Strings.appendKeyValue(sb, "writeRequestsCount", writeRequestsCount);
       Strings.appendKeyValue(sb, "rootIndexSizeKB", rootLevelIndexSizeKB);
       Strings.appendKeyValue(sb, "totalStaticIndexSizeKB", storefileIndexSizeKB);

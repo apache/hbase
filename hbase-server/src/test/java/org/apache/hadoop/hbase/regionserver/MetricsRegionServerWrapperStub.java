@@ -178,6 +178,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getDeletedReadRequestsCount() {
+    return 1998;
+  }
+
+  @Override
   public long getWriteRequestsCount() {
     return 707;
   }

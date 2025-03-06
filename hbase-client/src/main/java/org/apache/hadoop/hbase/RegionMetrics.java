@@ -68,6 +68,9 @@ public interface RegionMetrics {
   /** Returns the number of filtered read requests made to region */
   long getFilteredReadRequestCount();
 
+  /** Returns the number of deleted row read requests made to region */
+  long getDeletedReadRequestCount();
+
   /**
    * TODO: why we pass the same value to different counters? Currently, the value from
    * getStoreFileIndexSize() is same with getStoreFileRootLevelIndexSize() see

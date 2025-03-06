@@ -523,6 +523,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public long getDeletedReadRequestsCount() {
+    return aggregate.deletedReadRequestsCount;
+  }
+
+  @Override
   public long getWriteRequestsCount() {
     return aggregate.writeRequestsCount;
   }
@@ -754,6 +759,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     private long readRequestsCount = 0;
     private double readRequestsRatePerSecond = 0;
     private long filteredReadRequestsCount = 0;
+    private long deletedReadRequestsCount = 0;
     private long writeRequestsCount = 0;
     private double writeRequestsRatePerSecond = 0;
     private long checkAndMutateChecksFailed = 0;
@@ -817,6 +823,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
         cpRequestsCount += r.getCpRequestsCount();
         readRequestsCount += r.getReadRequestsCount();
         filteredReadRequestsCount += r.getFilteredReadRequestsCount();
+        deletedReadRequestsCount += r.getDeletedReadRequestsCount();
         writeRequestsCount += r.getWriteRequestsCount();
         checkAndMutateChecksFailed += r.getCheckAndMutateChecksFailed();
         checkAndMutateChecksPassed += r.getCheckAndMutateChecksPassed();

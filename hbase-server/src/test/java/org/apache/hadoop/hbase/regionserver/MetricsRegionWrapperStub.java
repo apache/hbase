@@ -98,6 +98,11 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
+  public long getDeletedReadRequestCount() {
+    return 108;
+  }
+
+  @Override
   public long getMaxStoreFileAge() {
     return 2;
   }

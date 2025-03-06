@@ -59,14 +59,14 @@ public final class TestUtils {
     userMetricsList.add(createUserMetrics("FOO", 1, 2, 4));
     userMetricsList.add(createUserMetrics("BAR", 2, 3, 3));
     regionMetricsList.add(createRegionMetrics("table1,,1.00000000000000000000000000000000.", 100,
-      50, 100, new Size(100, Size.Unit.MEGABYTE), new Size(200, Size.Unit.MEGABYTE), 1,
+      50, 51, 100, new Size(100, Size.Unit.MEGABYTE), new Size(200, Size.Unit.MEGABYTE), 1,
       new Size(100, Size.Unit.MEGABYTE), 0.1f, 100, 100, "2019-07-22 00:00:00"));
     regionMetricsList.add(createRegionMetrics("table2,1,2.00000000000000000000000000000001.", 200,
-      100, 200, new Size(200, Size.Unit.MEGABYTE), new Size(400, Size.Unit.MEGABYTE), 2,
+      100, 101, 200, new Size(200, Size.Unit.MEGABYTE), new Size(400, Size.Unit.MEGABYTE), 2,
       new Size(200, Size.Unit.MEGABYTE), 0.2f, 50, 200, "2019-07-22 00:00:01"));
     regionMetricsList
       .add(createRegionMetrics("namespace:table3,,3_0001.00000000000000000000000000000002.", 300,
-        150, 300, new Size(300, Size.Unit.MEGABYTE), new Size(600, Size.Unit.MEGABYTE), 3,
+        150, 151, 300, new Size(300, Size.Unit.MEGABYTE), new Size(600, Size.Unit.MEGABYTE), 3,
         new Size(300, Size.Unit.MEGABYTE), 0.3f, 100, 300, "2019-07-22 00:00:02"));
 
     ServerName host1 = ServerName.valueOf("host1.apache.com", 1000, 1);
@@ -79,14 +79,14 @@ public final class TestUtils {
     userMetricsList.add(createUserMetrics("FOO", 5, 7, 3));
     userMetricsList.add(createUserMetrics("BAR", 4, 8, 4));
     regionMetricsList.add(createRegionMetrics("table1,1,4.00000000000000000000000000000003.", 100,
-      50, 100, new Size(100, Size.Unit.MEGABYTE), new Size(200, Size.Unit.MEGABYTE), 1,
+      50, 51, 100, new Size(100, Size.Unit.MEGABYTE), new Size(200, Size.Unit.MEGABYTE), 1,
       new Size(100, Size.Unit.MEGABYTE), 0.4f, 50, 100, "2019-07-22 00:00:03"));
     regionMetricsList.add(createRegionMetrics("table2,,5.00000000000000000000000000000004.", 200,
-      100, 200, new Size(200, Size.Unit.MEGABYTE), new Size(400, Size.Unit.MEGABYTE), 2,
+      100, 101, 200, new Size(200, Size.Unit.MEGABYTE), new Size(400, Size.Unit.MEGABYTE), 2,
       new Size(200, Size.Unit.MEGABYTE), 0.5f, 150, 200, "2019-07-22 00:00:04"));
     regionMetricsList
       .add(createRegionMetrics("namespace:table3,,6.00000000000000000000000000000005.", 300, 150,
-        300, new Size(300, Size.Unit.MEGABYTE), new Size(600, Size.Unit.MEGABYTE), 3,
+        300, 301, new Size(300, Size.Unit.MEGABYTE), new Size(600, Size.Unit.MEGABYTE), 3,
         new Size(300, Size.Unit.MEGABYTE), 0.6f, 200, 300, "2019-07-22 00:00:05"));
 
     ServerName host2 = ServerName.valueOf("host2.apache.com", 1001, 2);
@@ -116,14 +116,16 @@ public final class TestUtils {
 
   @SuppressWarnings("JavaUtilDate")
   private static RegionMetrics createRegionMetrics(String regionName, long readRequestCount,
-    long filteredReadRequestCount, long writeRequestCount, Size storeFileSize,
+    long filteredReadRequestCount, long deletedReadRequestCount, long writeRequestCount, Size storeFileSize,
     Size uncompressedStoreFileSize, int storeFileCount, Size memStoreSize, float locality,
     long compactedCellCount, long compactingCellCount, String lastMajorCompactionTime) {
 
     FastDateFormat df = FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss");
     try {
       return RegionMetricsBuilder.newBuilder(Bytes.toBytes(regionName))
-        .setReadRequestCount(readRequestCount).setFilteredReadRequestCount(filteredReadRequestCount)
+        .setReadRequestCount(readRequestCount)
+        .setFilteredReadRequestCount(filteredReadRequestCount)
+        .setDeletedReadRequestCount(deletedReadRequestCount)
         .setWriteRequestCount(writeRequestCount).setStoreFileSize(storeFileSize)
         .setUncompressedStoreFileSize(uncompressedStoreFileSize).setStoreFileCount(storeFileCount)
         .setMemStoreSize(memStoreSize).setDataLocality(locality)

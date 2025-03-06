@@ -121,6 +121,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
 
           mt.readRequestCount += r.getReadRequestsCount();
           mt.filteredReadRequestCount += r.getFilteredReadRequestsCount();
+          mt.deletedReadRequestCount += r.getDeletedReadRequestsCount();
           mt.writeRequestCount += r.getWriteRequestsCount();
         }
       }
@@ -194,6 +195,14 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       return 0;
     }
     return metricsTable.filteredReadRequestCount;
+  }
+
+  public long getDeletedReadRequestCount(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+    return metricsTable.deletedReadRequestCount;
   }
 
   @Override
@@ -397,6 +406,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   private static class MetricsTableValues {
     long readRequestCount;
     long filteredReadRequestCount;
+    long deletedReadRequestCount;
     long writeRequestCount;
     long memstoreSize;
     long regionCount;
