@@ -240,6 +240,41 @@ public final class CandidateGeneratorTestUtil {
   }
 
   /**
+   * Generic method to validate table isolation.
+   */
+  static boolean isTableIsolated(BalancerClusterState cluster, TableName tableName,
+    String tableType) {
+    for (int i = 0; i < cluster.numServers; i++) {
+      int[] regionsOnServer = cluster.regionsPerServer[i];
+      if (regionsOnServer == null || regionsOnServer.length == 0) {
+        continue; // Skip empty servers
+      }
+
+      boolean hasTargetTableRegion = false;
+      boolean hasOtherTableRegion = false;
+
+      for (int regionIndex : regionsOnServer) {
+        RegionInfo regionInfo = cluster.regions[regionIndex];
+        if (regionInfo.getTable().equals(tableName)) {
+          hasTargetTableRegion = true;
+        } else {
+          hasOtherTableRegion = true;
+        }
+
+        // If the target table and any other table are on the same server, isolation is violated
+        if (hasTargetTableRegion && hasOtherTableRegion) {
+          LOG.debug(
+            "Server {} has both {} table regions and other table regions, violating isolation.",
+            cluster.servers[i].getServerName(), tableType);
+          return false;
+        }
+      }
+    }
+    LOG.debug("{} table isolation validation passed.", tableType);
+    return true;
+  }
+
+  /**
    * Generates a unique key for a region based on its start and end keys. This method ensures that
    * regions with identical start and end keys have the same key.
    * @param regionInfo The RegionInfo object.
