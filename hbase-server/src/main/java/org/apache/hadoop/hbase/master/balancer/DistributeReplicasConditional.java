@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.List;
 import java.util.Set;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.replicas.ReplicaKey;
@@ -41,12 +40,9 @@ public class DistributeReplicasConditional extends RegionPlanConditional {
   public DistributeReplicasConditional(BalancerConditionals balancerConditionals,
     BalancerClusterState cluster) {
     super(balancerConditionals.getConf(), cluster);
-    Configuration conf = balancerConditionals.getConf();
-    float slop =
-      conf.getFloat(BaseLoadBalancer.REGIONS_SLOP_KEY, BaseLoadBalancer.REGIONS_SLOP_DEFAULT);
     this.candidateGenerators =
       ImmutableList.of(new DistributeReplicasCandidateGenerator(balancerConditionals),
-        new SlopFixingCandidateGenerator(balancerConditionals, slop));
+        new SlopFixingCandidateGenerator(balancerConditionals));
   }
 
   @Override
