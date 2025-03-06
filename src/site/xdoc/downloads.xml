@@ -95,26 +95,26 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        2.5.10
+        2.5.11
       </td>
       <td style="test-align: left">
-        2024/07/24
+        2025/03/06
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.5.10/api_compare_2.5.9_to_2.5.10RC1.html">2.5.10 vs 2.5.9</a>
+        <a href="https://downloads.apache.org/hbase/2.5.11/api_compare_2.5.10_to_2.5.11RC1.html">2.5.11 vs 2.5.10</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.5.10/CHANGES.md">Changes</a>
+        <a href="https://downloads.apache.org/hbase/2.5.11/CHANGES.md">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.5.10/RELEASENOTES.md">Release Notes</a>
+        <a href="https://downloads.apache.org/hbase/2.5.11/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.10/hbase-2.5.10-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.5.10/hbase-2.5.10-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.10/hbase-2.5.10-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.10/hbase-2.5.10-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.5.10/hbase-2.5.10-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.10/hbase-2.5.10-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.10/hbase-2.5.10-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.10/hbase-2.5.10-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.10/hbase-2.5.10-client-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.10/hbase-2.5.10-hadoop3-bin.tar.gz">hadoop3-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.10/hbase-2.5.10-hadoop3-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.10/hbase-2.5.10-hadoop3-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.10/hbase-2.5.10-hadoop3-client-bin.tar.gz">hadoop3-client-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.10/hbase-2.5.10-hadoop3-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.10/hbase-2.5.10-hadoop3-client-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.11/hbase-2.5.11-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.5.11/hbase-2.5.11-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.11/hbase-2.5.11-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.11/hbase-2.5.11-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.5.11/hbase-2.5.11-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.11/hbase-2.5.11-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.11/hbase-2.5.11-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.11/hbase-2.5.11-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.11/hbase-2.5.11-client-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.11/hbase-2.5.11-hadoop3-bin.tar.gz">hadoop3-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.11/hbase-2.5.11-hadoop3-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.11/hbase-2.5.11-hadoop3-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.11/hbase-2.5.11-hadoop3-client-bin.tar.gz">hadoop3-client-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.11/hbase-2.5.11-hadoop3-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.11/hbase-2.5.11-hadoop3-client-bin.tar.gz.asc">asc</a>)
       </td>
       <td><em>stable release</em></td>
     </tr>
