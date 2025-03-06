@@ -116,19 +116,18 @@ public final class TestUtils {
 
   @SuppressWarnings("JavaUtilDate")
   private static RegionMetrics createRegionMetrics(String regionName, long readRequestCount,
-    long filteredReadRequestCount, long deletedReadRequestCount, long writeRequestCount, Size storeFileSize,
-    Size uncompressedStoreFileSize, int storeFileCount, Size memStoreSize, float locality,
-    long compactedCellCount, long compactingCellCount, String lastMajorCompactionTime) {
+    long filteredReadRequestCount, long deletedReadRequestCount, long writeRequestCount,
+    Size storeFileSize, Size uncompressedStoreFileSize, int storeFileCount, Size memStoreSize,
+    float locality, long compactedCellCount, long compactingCellCount,
+    String lastMajorCompactionTime) {
 
     FastDateFormat df = FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss");
     try {
       return RegionMetricsBuilder.newBuilder(Bytes.toBytes(regionName))
-        .setReadRequestCount(readRequestCount)
-        .setFilteredReadRequestCount(filteredReadRequestCount)
-        .setDeletedReadRequestCount(deletedReadRequestCount)
-        .setWriteRequestCount(writeRequestCount).setStoreFileSize(storeFileSize)
-        .setUncompressedStoreFileSize(uncompressedStoreFileSize).setStoreFileCount(storeFileCount)
-        .setMemStoreSize(memStoreSize).setDataLocality(locality)
+        .setReadRequestCount(readRequestCount).setFilteredReadRequestCount(filteredReadRequestCount)
+        .setDeletedReadRequestCount(deletedReadRequestCount).setWriteRequestCount(writeRequestCount)
+        .setStoreFileSize(storeFileSize).setUncompressedStoreFileSize(uncompressedStoreFileSize)
+        .setStoreFileCount(storeFileCount).setMemStoreSize(memStoreSize).setDataLocality(locality)
         .setCompactedCellCount(compactedCellCount).setCompactingCellCount(compactingCellCount)
         .setLastMajorCompactionTimestamp(df.parse(lastMajorCompactionTime).getTime()).build();
     } catch (ParseException e) {

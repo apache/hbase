@@ -102,20 +102,18 @@ public class TestServerMetrics {
       .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
       .setValue(ByteString.copyFromUtf8("QWERTYUIOP")).build();
 
-    ClusterStatusProtos.RegionLoad rlOne =
-      ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecOne).setStores(10)
-        .setStorefiles(101).setStoreUncompressedSizeMB(106).setStorefileSizeMB(520)
-        .setFilteredReadRequestsCount(100).setDeletedReadRequestsCount(101)
-        .setStorefileIndexSizeKB(42).setRootIndexSizeKB(201)
-        .setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE)
-        .setRegionSizeMB(100).setCurrentRegionCachedRatio(0.9f).build();
-    ClusterStatusProtos.RegionLoad rlTwo =
-      ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecTwo).setStores(3)
-        .setStorefiles(13).setStoreUncompressedSizeMB(23).setStorefileSizeMB(300)
-        .setFilteredReadRequestsCount(200).setDeletedReadRequestsCount(202)
-        .setStorefileIndexSizeKB(40).setRootIndexSizeKB(303)
-        .setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE)
-        .setCpRequestsCount(100).setRegionSizeMB(50).setCurrentRegionCachedRatio(1.0f).build();
+    ClusterStatusProtos.RegionLoad rlOne = ClusterStatusProtos.RegionLoad.newBuilder()
+      .setRegionSpecifier(rSpecOne).setStores(10).setStorefiles(101).setStoreUncompressedSizeMB(106)
+      .setStorefileSizeMB(520).setFilteredReadRequestsCount(100).setDeletedReadRequestsCount(101)
+      .setStorefileIndexSizeKB(42).setRootIndexSizeKB(201).setReadRequestsCount(Integer.MAX_VALUE)
+      .setWriteRequestsCount(Integer.MAX_VALUE).setRegionSizeMB(100)
+      .setCurrentRegionCachedRatio(0.9f).build();
+    ClusterStatusProtos.RegionLoad rlTwo = ClusterStatusProtos.RegionLoad.newBuilder()
+      .setRegionSpecifier(rSpecTwo).setStores(3).setStorefiles(13).setStoreUncompressedSizeMB(23)
+      .setStorefileSizeMB(300).setFilteredReadRequestsCount(200).setDeletedReadRequestsCount(202)
+      .setStorefileIndexSizeKB(40).setRootIndexSizeKB(303).setReadRequestsCount(Integer.MAX_VALUE)
+      .setWriteRequestsCount(Integer.MAX_VALUE).setCpRequestsCount(100).setRegionSizeMB(50)
+      .setCurrentRegionCachedRatio(1.0f).build();
 
     ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
       .addRegionLoads(rlOne).addRegionLoads(rlTwo).build();

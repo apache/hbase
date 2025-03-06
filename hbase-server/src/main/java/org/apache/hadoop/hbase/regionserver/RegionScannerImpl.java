@@ -634,7 +634,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     }
   }
 
-  private void incrementCountOfRowsFilteredMetric(ScannerContext scannerContext, boolean deletedRead) {
+  private void incrementCountOfRowsFilteredMetric(ScannerContext scannerContext,
+    boolean deletedRead) {
     region.filteredReadRequestsCount.increment();
     if (deletedRead) {
       region.deletedReadRequestsCount.increment();

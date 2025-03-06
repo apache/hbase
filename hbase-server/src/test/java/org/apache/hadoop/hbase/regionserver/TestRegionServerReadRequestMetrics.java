@@ -132,7 +132,8 @@ public class TestRegionServerReadRequestMetrics {
   }
 
   private static void testReadRequests(long resultCount, long expectedReadRequests,
-    long expectedFilteredReadRequests, long expectedDeletedReadRequests) throws IOException, InterruptedException {
+    long expectedFilteredReadRequests, long expectedDeletedReadRequests)
+    throws IOException, InterruptedException {
     updateMetricsMap();
     System.out.println("requestsMapPrev = " + requestsMapPrev);
     System.out.println("requestsMap = " + requestsMap);

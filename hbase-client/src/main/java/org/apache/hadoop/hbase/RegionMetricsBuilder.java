@@ -316,9 +316,10 @@ public final class RegionMetricsBuilder {
       maxCompactedStoreFileRefCount, compactingCellCount, compactedCellCount, storeFileSize,
       memStoreSize, indexSize, rootLevelIndexSize, uncompressedDataIndexSize, bloomFilterSize,
       uncompressedStoreFileSize, writeRequestCount, readRequestCount, cpRequestCount,
-      filteredReadRequestCount, deletedReadRequestCount, completedSequenceId, storeSequenceIds, dataLocality,
-      lastMajorCompactionTimestamp, dataLocalityForSsd, blocksLocalWeight, blocksLocalWithSsdWeight,
-      blocksTotalWeight, compactionState, regionSizeMB, currentRegionCachedRatio);
+      filteredReadRequestCount, deletedReadRequestCount, completedSequenceId, storeSequenceIds,
+      dataLocality, lastMajorCompactionTimestamp, dataLocalityForSsd, blocksLocalWeight,
+      blocksLocalWithSsdWeight, blocksTotalWeight, compactionState, regionSizeMB,
+      currentRegionCachedRatio);
   }
 
   private static class RegionMetricsImpl implements RegionMetrics {
@@ -358,11 +359,11 @@ public final class RegionMetricsBuilder {
       Size storeFileSize, Size memStoreSize, Size indexSize, Size rootLevelIndexSize,
       Size uncompressedDataIndexSize, Size bloomFilterSize, Size uncompressedStoreFileSize,
       long writeRequestCount, long readRequestCount, long cpRequestCount,
-      long filteredReadRequestCount, long deletedReadRequestCount,
-      long completedSequenceId, Map<byte[], Long> storeSequenceIds,
-      float dataLocality, long lastMajorCompactionTimestamp, float dataLocalityForSsd,
-      long blocksLocalWeight, long blocksLocalWithSsdWeight, long blocksTotalWeight,
-      CompactionState compactionState, Size regionSizeMB, float currentRegionCachedRatio) {
+      long filteredReadRequestCount, long deletedReadRequestCount, long completedSequenceId,
+      Map<byte[], Long> storeSequenceIds, float dataLocality, long lastMajorCompactionTimestamp,
+      float dataLocalityForSsd, long blocksLocalWeight, long blocksLocalWithSsdWeight,
+      long blocksTotalWeight, CompactionState compactionState, Size regionSizeMB,
+      float currentRegionCachedRatio) {
       this.name = Preconditions.checkNotNull(name);
       this.storeCount = storeCount;
       this.storeFileCount = storeFileCount;
