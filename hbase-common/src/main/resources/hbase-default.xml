@@ -1909,6 +1909,8 @@ possible configurations would overwhelm and obscure the important.
     <value>5000</value>
     <description>
       Number of rows in a batch operation above which a warning will be logged.
+      If hbase.client.write.buffer.maxmutations is not set, this will be used as
+      fallback for that setting.
     </description>
   </property>
   <property>
