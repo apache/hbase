@@ -621,7 +621,7 @@ public class BucketCache implements BlockCache, HeapSize {
       try {
         successfulAddition = bq.offer(re, queueAdditionWaitTime, TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
-        LOG.error("Thread interrupted: ",e);
+        LOG.error("Thread interrupted: ", e);
         Thread.currentThread().interrupt();
       }
     } else {

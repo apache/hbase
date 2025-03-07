@@ -871,8 +871,7 @@ public class TestBucketCache {
       config.setLong(QUEUE_ADDITION_WAIT_TIME, 1000);
 
       bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
-        constructedBlockSizes, 1, 1, persistencePath,
-        DEFAULT_ERROR_TOLERATION_DURATION, config);
+        constructedBlockSizes, 1, 1, persistencePath, DEFAULT_ERROR_TOLERATION_DURATION, config);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       long usedByteSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedByteSize);
