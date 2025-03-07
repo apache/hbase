@@ -480,6 +480,9 @@ public class SequenceIdAccounting {
           continue;
         }
         for (Map.Entry<ImmutableByteArray, Long> me : m.entrySet()) {
+          if (me.getKey().toString().equals("METAFAMILY")) {
+            continue;
+          }
           if (me.getValue() <= e.getValue()) {
             if (toFlush == null) {
               toFlush = new TreeMap(Bytes.BYTES_COMPARATOR);
