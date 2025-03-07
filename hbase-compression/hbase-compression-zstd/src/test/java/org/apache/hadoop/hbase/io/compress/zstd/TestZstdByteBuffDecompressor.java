@@ -40,10 +40,17 @@ public class TestZstdByteBuffDecompressor {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestZstdByteBuffDecompressor.class);
 
-  // "HBase is awesome" compressed with zstd, and then prepended with metadata as a
-  // BlockCompressorStream would
+  // "HBase is fun to use and very fast" compressed with zstd, and then prepended with metadata as a
+  // BlockCompressorStream would. The phrase is split in three parts and put into the payload in
+  // this structure:
+  //   block 1:
+  //     chunk 1: HBase is
+  //     chunk 2: fun to use
+  //   block 2:
+  //     chunk 1: and very fast
+
   private static final byte[] COMPRESSED_PAYLOAD =
-    Bytes.fromHex("000000100000001928b52ffd2010810000484261736520697320617765736f6d65");
+    Bytes.fromHex("000000130000001228b52ffd20094900004842617365206973200000001428b52ffd200b59000066756e20746f20757365200000000d0000001628b52ffd200d690000616e6420766572792066617374");
 
   @Test
   public void testCapabilities() {
@@ -71,7 +78,7 @@ public class TestZstdByteBuffDecompressor {
       ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
       ByteBuff input = new SingleByteBuff(ByteBuffer.wrap(COMPRESSED_PAYLOAD));
       int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);
-      assertEquals("HBase is awesome", Bytes.toString(output.toBytes(0, decompressedSize)));
+      assertEquals("HBase is fun to use and very fast", Bytes.toString(output.toBytes(0, decompressedSize)));
     }
   }
 
@@ -83,7 +90,7 @@ public class TestZstdByteBuffDecompressor {
       input.put(COMPRESSED_PAYLOAD);
       input.rewind();
       int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);
-      assertEquals("HBase is awesome", Bytes.toString(output.toBytes(0, decompressedSize)));
+      assertEquals("HBase is fun to use and very fast", Bytes.toString(output.toBytes(0, decompressedSize)));
     }
   }
 
