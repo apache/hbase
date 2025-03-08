@@ -125,6 +125,11 @@ public class TestZKReplicationQueueStorage {
           ZKUtil.createWithParents(zk, wal);
         }
       }
+      if (i % 2 == 0) {
+        // add a region_replica_replication znode
+        ZKUtil.createWithParents(zk, ZNodePaths.joinZNode(rsZNode,
+          ZKReplicationQueueStorageForMigration.REGION_REPLICA_REPLICATION_PEER));
+      }
     }
     ZKUtil.createWithParents(zk,
       ZNodePaths.joinZNode(storage.getQueuesZNode(), deadServer.toString()));
@@ -218,8 +223,20 @@ public class TestZKReplicationQueueStorage {
       Pair<ServerName, List<ZkReplicationQueueData>> pair = iter.next();
       assertNotNull(pair);
       if (previousServerName != null) {
-        assertEquals(-1, ZKUtil.checkExists(zk,
-          ZNodePaths.joinZNode(storage.getQueuesZNode(), previousServerName.toString())));
+        int index = previousServerName.equals(deadServer)
+          ? -1
+          : Integer
+            .parseInt(Iterables.getLast(Splitter.on('-').split(previousServerName.getHostname())));
+        if (index % 2 == 0) {
+          List<String> children = ZKUtil.listChildrenNoWatch(zk,
+            ZNodePaths.joinZNode(storage.getQueuesZNode(), previousServerName.toString()));
+          assertEquals(1, children.size());
+          assertEquals(ZKReplicationQueueStorageForMigration.REGION_REPLICA_REPLICATION_PEER,
+            children.get(0));
+        } else {
+          assertEquals(-1, ZKUtil.checkExists(zk,
+            ZNodePaths.joinZNode(storage.getQueuesZNode(), previousServerName.toString())));
+        }
       }
       ServerName sn = pair.getFirst();
       previousServerName = sn;
@@ -258,7 +275,7 @@ public class TestZKReplicationQueueStorage {
       }
     }
     assertNull(iter.next());
-    assertEquals(-1, ZKUtil.checkExists(zk, storage.getQueuesZNode()));
+    assertEquals(nServers / 2, ZKUtil.listChildrenNoWatch(zk, storage.getQueuesZNode()).size());
   }
 
   @Test
