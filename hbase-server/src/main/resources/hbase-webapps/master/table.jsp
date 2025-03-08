@@ -312,14 +312,14 @@
               <tr>
                 <th>Name</th>
                 <th>Region Server</th>
-                <th>ReadRequests</th>
-                <th>WriteRequests</th>
-                <th>Uncompressed StoreFileSize</th>
-                <th>StorefileSize</th>
-                <th>Num.Storefiles</th>
-                <th>MemSize</th>
-                <th>Start Key</th>
-                <th>End Key</th>
+                <th class="cls_separator">ReadRequests</th>
+                <th class="cls_separator">WriteRequests</th>
+                <th class="cls_filesize">Uncompressed StoreFileSize</th>
+                <th class="cls_filesize">StorefileSize</th>
+                <th class="cls_separator">Num.Storefiles</th>
+                <th class="cls_filesize">MemSize</th>
+                <th class="cls_emptyMin">Start Key</th>
+                <th class="cls_emptyMax">End Key</th>
                 <th>ReplicaID</th>
               </tr>
             </thead>
@@ -394,8 +394,8 @@
                <tr>
                  <th>Name</th>
                  <th>Region Server</th>
-                 <th>Locality</th>
-                 <th>LocalityForSsd</th>
+                 <th class="cls_separator">Locality</th>
+                 <th class="cls_separator">LocalityForSsd</th>
                </tr>
              </thead>
              <tbody>
@@ -444,9 +444,9 @@
               <tr>
                 <th>Name</th>
                 <th>Region Server</th>
-                <th>Num. Compacting Cells</th>
-                <th>Num. Compacted Cells</th>
-                <th>Remaining Cells</th>
+                <th class="cls_separator">Num. Compacting Cells</th>
+                <th class="cls_separator">Num. Compacted Cells</th>
+                <th class="cls_separator">Remaining Cells</th>
                 <th>Compaction Progress</th>
               </tr>
             </thead>
@@ -950,14 +950,14 @@
                 <tr>
                   <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
                   <th>Region Server</th>
-                  <th>ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)</th>
-                  <th>WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)</th>
-                  <th>Uncompressed StoreFileSize<br>(<%= totalSizeUncompressedStr %>)</th>
-                  <th>StorefileSize<br>(<%= totalSizeStr %>)</th>
-                  <th>Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)</th>
-                  <th>MemSize<br>(<%= totalMemSizeStr %>)</th>
-                  <th>Start Key</th>
-                  <th>End Key</th>
+                  <th class="cls_separator">ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)</th>
+                  <th class="cls_separator">WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)</th>
+                  <th class="cls_filesize">Uncompressed StoreFileSize<br>(<%= totalSizeUncompressedStr %>)</th>
+                  <th class="cls_filesize">StorefileSize<br>(<%= totalSizeStr %>)</th>
+                  <th class="cls_separator">Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)</th>
+                  <th class="cls_filesize">MemSize<br>(<%= totalMemSizeStr %>)</th>
+                  <th class="cls_emptyMin">Start Key</th>
+                  <th class="cls_emptyMax">End Key</th>
                   <th>Region State</th>
                   <th>ReplicaID</th>
                 </tr>
@@ -1046,8 +1046,8 @@
                 <tr>
                   <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
                   <th>Region Server</th>
-                  <th>Locality<br>(<%= totalLocality %>)</th>
-                  <th>LocalityForSsd<br>(<%= totalLocalityForSsd %>)</th>
+                  <th class="cls_separator">Locality<br>(<%= totalLocality %>)</th>
+                  <th class="cls_separator">LocalityForSsd<br>(<%= totalLocalityForSsd %>)</th>
                 </tr>
               </thead>
               <tbody>
@@ -1084,9 +1084,9 @@
                 <tr>
                   <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
                   <th>Region Server</th>
-                  <th>Num. Compacting Cells<br>(<%= String.format("%,1d", totalCompactingCells)%>)</th>
-                  <th>Num. Compacted Cells<br>(<%= String.format("%,1d", totalCompactedCells)%>)</th>
-                  <th>Remaining Cells<br>(<%= String.format("%,1d", totalCompactingCells-totalCompactedCells)%>)</th>
+                  <th class="cls_separator">Num. Compacting Cells<br>(<%= String.format("%,1d", totalCompactingCells)%>)</th>
+                  <th class="cls_separator">Num. Compacted Cells<br>(<%= String.format("%,1d", totalCompactedCells)%>)</th>
+                  <th class="cls_separator">Remaining Cells<br>(<%= String.format("%,1d", totalCompactingCells-totalCompactedCells)%>)</th>
                   <th>Compaction Progress<br>(<%= totalCompactionProgress %>)</th>
                 </tr>
               </thead>
@@ -1137,7 +1137,9 @@
 <table id="regionServerTable" class="tablesorter table table-striped">
   <thead>
     <tr>
-      <th>Region Server</th><th>Region Count</th><th>Primary Region Count</th>
+      <th>Region Server</th>
+      <th class="cls_separator">Region Count</th>
+      <th>Primary Region Count</th>
     </tr>
   </thead>
 
@@ -1323,57 +1325,43 @@ $(document).ready(function()
         });
         $("#regionServerTable").tablesorter({
             headers: {
-                1: {sorter: 'separator'}
+                '.cls_separator': {sorter: 'separator'}
             }
         });
         $("#tableBaseStatsTable").tablesorter({
             headers: {
-                2: {sorter: 'separator'},
-                3: {sorter: 'separator'},
-                4: {sorter: 'filesize'},
-                5: {sorter: 'filesize'},
-                6: {sorter: 'separator'},
-                7: {sorter: 'filesize'},
-                8: {empty: 'emptyMin'},
-                9: {empty: 'emptyMax'}
+                '.cls_separator': {sorter: 'separator'},
+                '.cls_filesize': {sorter: 'filesize'},
+                '.cls_emptyMin': {empty: 'emptyMin'},
+                '.cls_emptyMax': {empty: 'emptyMax'}
             }
         });
         $("#metaTableBaseStatsTable").tablesorter({
             headers: {
-                2: {sorter: 'separator'},
-                3: {sorter: 'separator'},
-                4: {sorter: 'filesize'},
-                5: {sorter: 'filesize'},
-                6: {sorter: 'separator'},
-                7: {sorter: 'filesize'},
-                8: {empty: 'emptyMin'},
-                9: {empty: 'emptyMax'}
+                '.cls_separator': {sorter: 'separator'},
+                '.cls_filesize': {sorter: 'filesize'},
+                '.cls_emptyMin': {empty: 'emptyMin'},
+                '.cls_emptyMax': {empty: 'emptyMax'}
             }
         });
         $("#tableLocalityStatsTable").tablesorter({
             headers: {
-                2: {sorter: 'separator'},
-                3: {sorter: 'separator'}
+               '.cls_separator': {sorter: 'separator'}
             }
         });
         $("#metaTableLocalityStatsTable").tablesorter({
             headers: {
-                2: {sorter: 'separator'},
-                3: {sorter: 'separator'}
+                '.cls_separator': {sorter: 'separator'}
             }
         });
         $("#tableCompactStatsTable").tablesorter({
             headers: {
-                2: {sorter: 'separator'},
-                3: {sorter: 'separator'},
-                4: {sorter: 'separator'}
+                '.cls_separator': {sorter: 'separator'}
             }
         });
         $("#metaTableCompactStatsTable").tablesorter({
             headers: {
-                2: {sorter: 'separator'},
-                3: {sorter: 'separator'},
-                4: {sorter: 'separator'}
+                '.cls_separator': {sorter: 'separator'}
             }
         });
     }
