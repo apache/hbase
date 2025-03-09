@@ -284,11 +284,9 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       outResults.addAll(tmpList);
     }
 
-    if (!outResults.isEmpty()) {
-      region.addReadRequestsCount(1);
-      if (region.getMetrics() != null) {
-        region.getMetrics().updateReadRequestCount();
-      }
+    region.addReadRequestsCount(1);
+    if (region.getMetrics() != null) {
+      region.getMetrics().updateReadRequestCount();
     }
 
     // If the size limit was reached it means a partial Result is being returned. Returning a
