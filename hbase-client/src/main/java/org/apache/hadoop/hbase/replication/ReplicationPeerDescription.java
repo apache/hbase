@@ -32,6 +32,7 @@ public class ReplicationPeerDescription {
   private final boolean enabled;
   private final ReplicationPeerConfig config;
   private final SyncReplicationState syncReplicationState;
+  private String createTime;
 
   public ReplicationPeerDescription(String id, boolean enabled, ReplicationPeerConfig config,
     SyncReplicationState syncReplicationState) {
@@ -39,6 +40,19 @@ public class ReplicationPeerDescription {
     this.enabled = enabled;
     this.config = config;
     this.syncReplicationState = syncReplicationState;
+  }
+
+  public ReplicationPeerDescription(String id, boolean enabled, ReplicationPeerConfig config,
+    SyncReplicationState syncReplicationState, String createTime) {
+    this.id = id;
+    this.enabled = enabled;
+    this.config = config;
+    this.syncReplicationState = syncReplicationState;
+    this.createTime = createTime;
+  }
+
+  public String getCreateTime() {
+    return createTime;
   }
 
   public String getPeerId() {
@@ -63,6 +77,7 @@ public class ReplicationPeerDescription {
     builder.append(", enabled : " + enabled);
     builder.append(", config : " + config);
     builder.append(", syncReplicationState : " + syncReplicationState);
+    builder.append(", createTime : " + createTime);
     return builder.toString();
   }
 }
