@@ -204,8 +204,8 @@ class AsyncConnectionConfiguration {
       TimeUnit.MICROSECONDS.toNanos(conf.getLong(HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT,
         HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT));
     this.maxKeyValueSize = conf.getInt(MAX_KEYVALUE_SIZE_KEY, MAX_KEYVALUE_SIZE_DEFAULT);
-    this.bufferedMutatorMaxMutations =
-      conf.getInt(BUFFERED_MUTATOR_MAX_MUTATIONS_KEY, BUFFERED_MUTATOR_MAX_MUTATIONS_DEFAULT);
+    this.bufferedMutatorMaxMutations = conf.getInt(BUFFERED_MUTATOR_MAX_MUTATIONS_KEY,
+      conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, BUFFERED_MUTATOR_MAX_MUTATIONS_DEFAULT));
   }
 
   long getMetaOperationTimeoutNs() {
