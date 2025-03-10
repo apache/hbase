@@ -46,8 +46,10 @@ public class TestZstdByteBuffDecompressor {
    * this structure: (block 1: (chunk 1: HBase is), (chunk 2: fun to use)), (block 2: (chunk 1: and
    * very fast))
    */
-  private static final byte[] COMPRESSED_PAYLOAD = Bytes.fromHex(
-    "000000130000001228b52ffd20094900004842617365206973200000001428b52ffd200b59000066756e20746f20757365200000000d0000001628b52ffd200d690000616e6420766572792066617374");
+  private static final byte[] COMPRESSED_PAYLOAD =
+    Bytes.fromHex("000000130000001228b52ffd200949000048426173652069732"
+      + "00000001428b52ffd200b59000066756e20746f207573652"
+      + "00000000d0000001628b52ffd200d690000616e6420766572792066617374");
 
   @Test
   public void testCapabilities() {
