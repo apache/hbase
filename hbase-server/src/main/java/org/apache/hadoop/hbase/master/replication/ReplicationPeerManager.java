@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration
 import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration.ZkReplicationQueueData;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -688,26 +689,17 @@ public class ReplicationPeerManager implements ConfigurationObserver {
         ReplicationUtils.LEGACY_REGION_REPLICATION_ENDPOINT_NAME
           .equals(peerConfig.getReplicationEndpointImpl())
       ) {
-        // we do not use this endpoint for region replication any more, see HBASE-26233
-        LOG.info("Legacy region replication peer found, removing: {}", peerConfig);
-        // do it asynchronous to not block the start up of HMaster
-        new Thread("Remove legacy replication peer " + peerId) {
-
-          @Override
-          public void run() {
-            try {
-              // need to delete two times to make sure we delete all the queues, see the comments in
-              // above
-              // removeAllQueues method for more details.
-              queueStorage.removeAllQueues(peerId);
-              queueStorage.removeAllQueues(peerId);
-              // delete queue first and then peer, because we use peer as a flag.
-              peerStorage.removePeer(peerId);
-            } catch (Exception e) {
-              LOG.warn("Failed to delete legacy replication peer {}", peerId);
-            }
-          }
-        }.start();
+        // If memstore region replication is enabled, there will be a special replication peer
+        // usually called 'region_replica_replication'. We do not need to load it or migrate its
+        // replication queue data since we do not rely on general replication framework for
+        // region replication in 3.x now, please see HBASE-26233 for more details.
+        // We can not delete it now since region server with old version still want to update
+        // the replicated wal position to zk, if we delete the replication queue zk node, rs
+        // will crash. See HBASE-29169 for more details.
+        // In MigrateReplicationQueueFromZkToTableProcedure, finally we will call a deleteAllData on
+        // the old replication queue storage, to make sure that we will delete the the queue data
+        // for this peer and also the peer info in replication peer storage
+        LOG.info("Found old region replica replication peer '{}', skip loading it", peerId);
         continue;
       }
       peerConfig = ReplicationPeerConfigUtil.updateReplicationBasePeerConfigs(conf, peerConfig);
@@ -816,6 +808,13 @@ public class ReplicationPeerManager implements ConfigurationObserver {
     return future;
   }
 
+  // this is for upgrading from 2.x to 3.x, in 3.x we will not load the 'region_replica_replication'
+  // peer, but we still need to know whether we have it on the old storage
+  boolean hasRegionReplicaReplicationPeer() throws ReplicationException {
+    return peerStorage.listPeerIds().stream()
+      .anyMatch(p -> p.equals(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER));
+  }
+
   /**
    * Submit the migration tasks to the given {@code executor}.
    */
@@ -832,5 +831,18 @@ public class ReplicationPeerManager implements ConfigurationObserver {
     return CompletableFuture.allOf(runAsync(() -> migrateQueues(oldStorage), executor),
       runAsync(() -> migrateLastPushedSeqIds(oldStorage), executor),
       runAsync(() -> migrateHFileRefs(oldStorage), executor));
+  }
+
+  void deleteLegacyRegionReplicaReplicationPeer() throws ReplicationException {
+    for (String peerId : peerStorage.listPeerIds()) {
+      ReplicationPeerConfig peerConfig = peerStorage.getPeerConfig(peerId);
+      if (
+        ReplicationUtils.LEGACY_REGION_REPLICATION_ENDPOINT_NAME
+          .equals(peerConfig.getReplicationEndpointImpl())
+      ) {
+        LOG.info("Delete old region replica replication peer '{}'", peerId);
+        peerStorage.removePeer(peerId);
+      }
+    }
   }
 }
