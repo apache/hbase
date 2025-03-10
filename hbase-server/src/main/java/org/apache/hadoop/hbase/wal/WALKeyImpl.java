@@ -402,7 +402,7 @@ public class WALKeyImpl implements WALKey {
    * Marks that the cluster with the given clusterId has consumed the change
    */
   public void addClusterId(UUID clusterId) {
-    if (!clusterIds.contains(clusterId)) {
+    if (!clusterIds.contains(clusterId) && clusterIds != EMPTY_UUIDS) {
       clusterIds.add(clusterId);
     }
   }
