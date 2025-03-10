@@ -493,41 +493,29 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             });
             $("#baseStatsTable").tablesorter({
                 headers: {
-                    1: {sorter: 'dateTime'},
-                    4: {sorter: 'separator'},
-                    5: {sorter: 'separator'}
+                    '.cls_dateTime': {sorter: 'dateTime'},
+                    '.cls_separator': {sorter: 'separator'}
                 }
             });
             $("#memoryStatsTable").tablesorter({
                 headers: {
-                    1: {sorter: 'filesize'},
-                    2: {sorter: 'filesize'},
-                    3: {sorter: 'filesize'}
+                    '.cls_filesize': {sorter: 'filesize'}
                 }
             });
             $("#requestStatsTable").tablesorter({
                 headers: {
-                    1: {sorter: 'separator'},
-                    2: {sorter: 'separator'},
-                    3: {sorter: 'separator'},
-                    4: {sorter: 'separator'}
+                    '.cls_separator': {sorter: 'separator'}
                 }
             });
             $("#storeStatsTable").tablesorter({
                 headers: {
-                    1: {sorter: 'separator'},
-                    2: {sorter: 'separator'},
-                    3: {sorter: 'filesize'},
-                    4: {sorter: 'filesize'},
-                    5: {sorter: 'filesize'},
-                    6: {sorter: 'filesize'}
+                    '.cls_separator': {sorter: 'separator'},
+                    '.cls_filesize': {sorter: 'filesize'}
                 }
             });
             $("#compactionStatsTable").tablesorter({
                 headers: {
-                    1: {sorter: 'separator'},
-                    2: {sorter: 'separator'},
-                    3: {sorter: 'separator'}
+                    '.cls_separator': {sorter: 'separator'}
                 }
             });
 
