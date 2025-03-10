@@ -1282,7 +1282,7 @@
 </div><!--/.row -->
 </div> <!--/.container-fluid -->
 
-<jsp:include page="footer.jsp" />
+<jsp:include page="scripts.jsp" />
 <script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
 
 <script>
@@ -1379,3 +1379,5 @@ $(document).ready(function()
     }
 );
 </script>
+</body>
+</html>
