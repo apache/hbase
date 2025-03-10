@@ -3175,31 +3175,42 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       // wrapper for the core created RegionScanner
       region.getCoprocessorHost().preScannerOpen(scan);
     }
-    RegionScannerImpl coreScanner = region.getScanner(scan);
-    Shipper shipper = coreScanner;
-    RegionScanner scanner = coreScanner;
+    RegionScanner scanner = null;
     try {
-      if (region.getCoprocessorHost() != null) {
-        scanner = region.getCoprocessorHost().postScannerOpen(scan, scanner);
+      RegionScannerImpl coreScanner = region.getScanner(scan);
+      Shipper shipper = coreScanner;
+      scanner = coreScanner;
+      try {
+        if (region.getCoprocessorHost() != null) {
+          scanner = region.getCoprocessorHost().postScannerOpen(scan, scanner);
+        }
+      } catch (Exception e) {
+        // Although region coprocessor is for advanced users and they should take care of the
+        // implementation to not damage the HBase system, closing the scanner on exception here does
+        // not have any bad side effect, so let's do it
+        scanner.close();
+        throw e;
       }
-    } catch (Exception e) {
-      // Although region coprocessor is for advanced users and they should take care of the
-      // implementation to not damage the HBase system, closing the scanner on exception here does
-      // not have any bad side effect, so let's do it
-      scanner.close();
-      throw e;
+      long scannerId = scannerIdGenerator.generateNewScannerId();
+      builder.setScannerId(scannerId);
+      builder.setMvccReadPoint(scanner.getMvccReadPoint());
+      builder.setTtl(scannerLeaseTimeoutPeriod);
+      String scannerName = toScannerName(scannerId);
+
+      boolean fullRegionScan =
+        !region.getRegionInfo().getTable().isSystemTable() && isFullRegionScan(scan, region);
+
+      return new Pair<String, RegionScannerHolder>(scannerName, addScanner(scannerName, scanner,
+        shipper, region, scan.isNeedCursorResult(), fullRegionScan));
+    } catch (Throwable t) {
+      // between the scanner gets created and being added to the lease manager, there is a bit of
+      // code that can cause an exception, in that case the scanner never gets closed. This can
+      // lead to resource leak, so closing the scanner in case of exception.
+      if (null != scanner) {
+        scanner.close();
+      }
+      throw t;
     }
-    long scannerId = scannerIdGenerator.generateNewScannerId();
-    builder.setScannerId(scannerId);
-    builder.setMvccReadPoint(scanner.getMvccReadPoint());
-    builder.setTtl(scannerLeaseTimeoutPeriod);
-    String scannerName = toScannerName(scannerId);
-
-    boolean fullRegionScan =
-      !region.getRegionInfo().getTable().isSystemTable() && isFullRegionScan(scan, region);
-
-    return new Pair<String, RegionScannerHolder>(scannerName,
-      addScanner(scannerName, scanner, shipper, region, scan.isNeedCursorResult(), fullRegionScan));
   }
 
   /**
