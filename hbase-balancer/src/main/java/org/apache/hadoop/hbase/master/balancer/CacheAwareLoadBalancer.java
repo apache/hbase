@@ -55,12 +55,13 @@ import org.slf4j.LoggerFactory;
 public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   private static final Logger LOG = LoggerFactory.getLogger(CacheAwareLoadBalancer.class);
 
-  public static final String CACHE_RATIO_THRESHOLD = "hbase.master.balancer.stochastic.cacheRatio";
-
-  public static final String MOVE_THROTTLING = "hbase.master.balancer.move.throttlingMs";
-
-  public static final long MOVE_THROTTLING_DEFAULT = 60 * 1000;
+  public static final String CACHE_RATIO_THRESHOLD =
+    "hbase.master.balancer.stochastic.throttling.cacheRatio";
   public static final float CACHE_RATIO_THRESHOLD_DEFAULT = 0.8f;
+
+  public Float ratioThreshold;
+
+  private Long sleepTime;
   private Configuration configuration;
 
   public enum GeneratorFunctionType {
@@ -73,6 +74,9 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     this.configuration = configuration;
     this.costFunctions = new ArrayList<>();
     super.loadConf(configuration);
+    ratioThreshold =
+      this.configuration.getFloat(CACHE_RATIO_THRESHOLD, CACHE_RATIO_THRESHOLD_DEFAULT);
+    sleepTime = configuration.getLong(MOVE_THROTTLING, MOVE_THROTTLING_DEFAULT.toMillis());
   }
 
   @Override
@@ -171,8 +175,6 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   @Override
   public void throttle(RegionPlan plan) {
     Pair<ServerName, Float> rsRatio = this.regionCacheRatioOnOldServerMap.get(plan.getRegionName());
-    float ratioThreshold =
-      this.configuration.getFloat(CACHE_RATIO_THRESHOLD, CACHE_RATIO_THRESHOLD_DEFAULT);
     if (
       rsRatio != null && plan.getDestination().equals(rsRatio.getFirst())
         && rsRatio.getSecond() >= ratioThreshold
@@ -180,7 +182,6 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
       LOG.debug("Moving region {} to server {} with cache ratio {}. No throttling needed.",
         plan.getRegionInfo().getEncodedName(), plan.getDestination(), rsRatio.getSecond());
     } else {
-      long sleepTime = configuration.getLong(MOVE_THROTTLING, MOVE_THROTTLING_DEFAULT);
       if (rsRatio != null) {
         LOG.debug("Moving region {} to server {} with cache ratio: {}. Throttling move for {}ms.",
           plan.getRegionInfo().getEncodedName(), plan.getDestination(),
