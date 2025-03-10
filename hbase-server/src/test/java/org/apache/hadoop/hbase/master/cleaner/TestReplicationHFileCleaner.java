@@ -38,6 +38,9 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
+import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
@@ -213,6 +216,18 @@ public class TestReplicationHFileCleaner {
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
+    }
+
+    @Override public PBEClusterKeyCache getPBEClusterKeyCache() {
+      return null;
+    }
+
+    @Override public PBEKeyAccessor getPBEKeyAccessor() {
+      return null;
+    }
+
+    @Override public PBEKeymetaAdmin getPBEKeymetaAdmin() {
+      return null;
     }
 
     @Override

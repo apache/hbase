@@ -50,7 +50,8 @@ public class PBEKeymetaAdminImpl extends PBEKeymetaTableAccessor implements PBEK
     }
     PBEKeyProvider provider = getKeyProvider();
     PBEKeyData pbeKey = provider.getPBEKey(pbe_prefix, keyNamespace);
-    LOG.info("Got key data with status: {} for prefix: {}", pbeKey.getKeyStatus(), pbePrefix);
+    LOG.info("Got key data with status: {} and metadata: {} for prefix: {}", pbeKey.getKeyStatus(),
+      pbeKey.getKeyMetadata(), pbePrefix);
     addKey(pbeKey);
     return pbeKey.getKeyStatus();
   }

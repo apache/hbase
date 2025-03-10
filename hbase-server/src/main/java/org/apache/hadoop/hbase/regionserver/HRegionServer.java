@@ -120,6 +120,8 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.keymeta.PBEClusterKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdminImpl;
@@ -1450,6 +1452,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         // initialize file system by the config fs.defaultFS and hbase.rootdir from master
         initializeFileSystem();
       }
+
+      buildPBEClusterKeyCache();
+      pbeKeyAccessor = new PBEKeyAccessor(pbeKeymetaAdmin);
 
       // hack! Maps DFSClient => RegionServer for logs. HDFS made this
       // config param for task trackers, but we can piggyback off of it.

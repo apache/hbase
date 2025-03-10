@@ -16,12 +16,14 @@
 #
 
 include Java
+java_import org.apache.hadoop.hbase.io.crypto.PBEKeyData
+java_import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdminClient
 
 module Hbase
   class PBEAdmin
     def initialize(connection)
       @connection = connection
-      @admin = org.apache.hadoop.hbase.keymeta.PBEKeymetaAdminClient.new(connection)
+      @admin = PBEKeymetaAdminClient.new(connection)
       @hb_admin = @connection.getAdmin
     end
 
@@ -31,9 +33,10 @@ module Hbase
 
     def pbe_enable(pbe_prefix)
       prefixInfo = pbe_prefix.split(':')
-      assert prefixInfo.length <= 2, 'Invalid prefix:namespace format'
-      @admin.enablePBE(prefixInfo[0], prefixInfo.length > 1? prefixInfo[1] :
-        org.apache.hadoop.hbase.io.crypto.PBEKeyData.KEY_NAMESPACE_GLOBAL)
+      raise(ArgumentError, 'Invalid prefix:namespace format') unless (prefixInfo.length == 1 ||
+        prefixInfo.length == 2)
+      @admin.enablePBE(prefixInfo[0], prefixInfo.length > 1 ? prefixInfo[1] :
+        PBEKeyData::KEY_NAMESPACE_GLOBAL)
     end
   end
 end

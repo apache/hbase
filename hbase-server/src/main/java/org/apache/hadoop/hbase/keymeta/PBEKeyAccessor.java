@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.keymeta;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
+import java.security.KeyException;
 import java.util.List;
 
 /**
@@ -46,7 +47,8 @@ public class PBEKeyAccessor {
    * @return The key data
    * @throws IOException if an error occurs while retrieving the key
    */
-  public PBEKeyData getKey(byte[] pbePrefix, String keyNamespace, String keyMetadata) throws IOException {
+  public PBEKeyData getKey(byte[] pbePrefix, String keyNamespace, String keyMetadata)
+    throws IOException, KeyException {
     PBEKeyData keyData = keyDataCache.getEntry(keyMetadata);
     if (keyData == null) {
       keyData = keymetaAccessor.getKey(pbePrefix, keyNamespace, keyMetadata);
@@ -63,7 +65,8 @@ public class PBEKeyAccessor {
    * @return The key data
    * @throws IOException if an error occurs while retrieving the key
    */
-  public PBEKeyData getAnActiveKey(byte[] pbePrefix, String keyNamespace) throws IOException {
+  public PBEKeyData getAnActiveKey(byte[] pbePrefix, String keyNamespace)
+    throws IOException, KeyException {
     PBEKeyData keyData = keyDataCache.getRandomEntryForPrefix(pbePrefix, keyNamespace);
     if (keyData == null) {
       List<PBEKeyData> activeKeys = keymetaAccessor.getActiveKeys(pbePrefix, keyNamespace);

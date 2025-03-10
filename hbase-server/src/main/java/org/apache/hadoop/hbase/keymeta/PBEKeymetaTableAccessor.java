@@ -32,10 +32,13 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
+import java.security.Key;
+import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -83,7 +86,8 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
     }
   }
 
-  public List<PBEKeyData> getActiveKeys(byte[] pbePrefix, String keyNamespace) throws IOException {
+  public List<PBEKeyData> getActiveKeys(byte[] pbePrefix, String keyNamespace)
+    throws IOException, KeyException {
     Connection connection = server.getConnection();
     byte[] prefixForScan = Bytes.add(Bytes.toBytes(pbePrefix.length), pbePrefix,
       Bytes.toBytes(keyNamespace));
@@ -107,26 +111,31 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
   }
 
   public PBEKeyData getKey(byte[] pbePrefix, String keyNamespace, String keyMetadata)
-      throws IOException {
+    throws IOException, KeyException {
     Connection connection = server.getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       byte[] rowKey = constructRowKeyForMetadata(pbePrefix, keyNamespace,
-        PBEKeyData.makeMetadataHash(keyMetadata));
+        PBEKeyData.constructMetadataHash(keyMetadata));
       Result result = table.get(new Get(rowKey));
       return parseFromResult(pbePrefix, keyNamespace, result);
     }
   }
 
-  private Put addMutationColumns(Put put, PBEKeyData keyData) {
+  private Put addMutationColumns(Put put, PBEKeyData keyData) throws IOException {
+    PBEKeyData latestClusterKey = server.getPBEClusterKeyCache().getLatestClusterKey();
     if (keyData.getTheKey() != null) {
+      byte[] dekWrappedBySTK = EncryptionUtil.wrapKey(server.getConfiguration(), null,
+        keyData.getTheKey(), latestClusterKey.getTheKey());
       put.addColumn(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES,
-        Bytes.toBytes(keyData.getKeyChecksum()));
+          Bytes.toBytes(keyData.getKeyChecksum()))
+         .addColumn(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES, dekWrappedBySTK)
+         ;
     }
     return put.setDurability(Durability.SKIP_WAL)
       .setPriority(HConstants.SYSTEMTABLE_QOS)
       .addColumn(KEY_META_INFO_FAMILY, DEK_METADATA_QUAL_BYTES, keyData.getKeyMetadata().getBytes())
-      //.addColumn(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES, null)
-      //.addColumn(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES, null)
+      .addColumn(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES,
+        Bytes.toBytes(latestClusterKey.getKeyChecksum()))
       .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
         Bytes.toBytes(keyData.getRefreshTimestamp()))
       .addColumn(KEY_META_INFO_FAMILY, KEY_STATUS_QUAL_BYTES,
@@ -146,7 +155,8 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
       keyMetadataHash);
   }
 
-  private PBEKeyData parseFromResult(byte[] pbePrefix, String keyNamespace, Result result) {
+  private PBEKeyData parseFromResult(byte[] pbePrefix, String keyNamespace, Result result)
+    throws IOException, KeyException {
     if (result == null || result.isEmpty()) {
       return null;
     }
@@ -154,12 +164,20 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
       result.getValue(KEY_META_INFO_FAMILY, KEY_STATUS_QUAL_BYTES)[0]);
     String dekMetadata = Bytes.toString(result.getValue(KEY_META_INFO_FAMILY,
       DEK_METADATA_QUAL_BYTES));
-    long refreshedTimestamp = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES));
+    long refreshedTimestamp = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,
+      REFRESHED_TIMESTAMP_QUAL_BYTES));
     byte[] dekChecksum = result.getValue(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES);
-    //byte[] dekWrappedByStk = result.getValue(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES);
-    //byte[] stkChecksum = result.getValue(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES);
+    byte[] dekWrappedByStk = result.getValue(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES);
+    long stkChecksum = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES));
 
-    return new PBEKeyData(pbePrefix, keyNamespace, null, keyStatus, dekMetadata,
-      refreshedTimestamp);
+    PBEKeyData clusterKey = server.getPBEClusterKeyCache().getClusterKeyByChecksum(stkChecksum);
+    Key dek = EncryptionUtil.unwrapKey(server.getConfiguration(), null, dekWrappedByStk,
+        clusterKey.getTheKey());
+    PBEKeyData dekKeyData =
+      new PBEKeyData(pbePrefix, keyNamespace, dek, keyStatus, dekMetadata, refreshedTimestamp);
+    if (!Bytes.equals(dekKeyData.getKeyMetadataHash(), dekChecksum)) {
+      throw new RuntimeException("Key has didn't match for key with metadata" + dekMetadata);
+    }
+    return dekKeyData;
   }
 }

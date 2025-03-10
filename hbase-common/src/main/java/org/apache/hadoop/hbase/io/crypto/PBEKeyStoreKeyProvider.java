@@ -17,11 +17,13 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
 
   private Configuration conf;
 
-  @Override public void initConfig(Configuration conf) {
+  @Override
+  public void initConfig(Configuration conf) {
     this.conf = conf;
   }
 
-  @Override public PBEKeyData getClusterKey(byte[] clusterId) {
+  @Override
+  public PBEKeyData getClusterKey(byte[] clusterId) {
     checkConfig();
     String masterKeyAlias = conf.get(HConstants.CRYPTO_PBE_MASTERKEY_NAME_CONF_KEY, null);
     if (masterKeyAlias == null) {
@@ -38,7 +40,8 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
       keyMetadata);
   }
 
-  @Override public PBEKeyData getPBEKey(byte[] pbe_prefix, String key_namespace) throws IOException {
+  @Override
+  public PBEKeyData getPBEKey(byte[] pbe_prefix, String key_namespace) throws IOException {
     checkConfig();
     String encodedPrefix = Base64.getEncoder().encodeToString(pbe_prefix);
     String aliasConfKey = HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encodedPrefix + "." +
@@ -47,7 +50,8 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
     return unwrapKey(keyMetadata);
   }
 
-  @Override public PBEKeyData unwrapKey(String keyMetadataStr) throws IOException {
+  @Override
+  public PBEKeyData unwrapKey(String keyMetadataStr) throws IOException {
     Map<String, String> keyMetadata = GsonUtil.getDefaultInstance().fromJson(keyMetadataStr,
       HashMap.class);
     String encodedPrefix = keyMetadata.get(KEY_METADATA_PREFIX);

@@ -52,6 +52,8 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.PBEClusterKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdminImpl;
@@ -190,8 +192,9 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   protected final NettyEventLoopGroupConfig eventLoopGroupConfig;
 
-  private PBEKeymetaAdminImpl pbeKeymetaAdmin;
-  private PBEKeyAccessor pbeKeyAccessor;
+  private PBEClusterKeyCache pbeClusterKeyCache;
+  protected PBEKeymetaAdminImpl pbeKeymetaAdmin;
+  protected PBEKeyAccessor pbeKeyAccessor;
 
   private void setupSignalHandlers() {
     if (!SystemUtils.IS_OS_WINDOWS) {
@@ -290,7 +293,6 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       initializeFileSystem();
 
       pbeKeymetaAdmin = new PBEKeymetaAdminImpl(this);
-      pbeKeyAccessor = new PBEKeyAccessor(pbeKeymetaAdmin);
 
       int choreServiceInitialSize =
         conf.getInt(CHORE_SERVICE_INITIAL_POOL_SIZE, DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE);
@@ -420,6 +422,17 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   @Override
   public PBEKeyAccessor getPBEKeyAccessor() {
     return pbeKeyAccessor;
+  }
+
+  @Override
+  public PBEClusterKeyCache getPBEClusterKeyCache() {
+    return pbeClusterKeyCache;
+  }
+
+  protected void buildPBEClusterKeyCache() throws IOException {
+    if (pbeClusterKeyCache == null) {
+      pbeClusterKeyCache = PBEClusterKeyCache.createCache(new PBEClusterKeyAccessor(this));
+    }
   }
 
   protected final void shutdownChore(ScheduledChore chore) {

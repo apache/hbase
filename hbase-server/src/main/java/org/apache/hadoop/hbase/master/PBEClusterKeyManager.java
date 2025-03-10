@@ -41,11 +41,11 @@ public class PBEClusterKeyManager extends PBEClusterKeyAccessor {
     if (! isPBEEnabled()) {
       return;
     }
-    List<Path> clusterKeys = getAllClusterKeys();
+    List<Path> clusterKeys = getAllClusterKeyFiles();
     if (clusterKeys.isEmpty()) {
       LOG.info("Initializing Cluster Key for the first time");
       // Double check for cluster key as another HMaster might have succeeded.
-      if (rotateClusterKey(null) == null && getAllClusterKeys().isEmpty()) {
+      if (rotateClusterKey(null) == null && getAllClusterKeyFiles().isEmpty()) {
         throw new RuntimeException("Failed to generate or save Cluster Key");
       }
     }
@@ -82,7 +82,9 @@ public class PBEClusterKeyManager extends PBEClusterKeyAccessor {
   }
 
   private boolean saveLatestClusterKey(String keyMetadata) throws IOException {
-    int nextClusterKeySeq = findLatestKeySequence(getAllClusterKeys()) + 1;
+    List<Path> allClusterKeyFiles = getAllClusterKeyFiles();
+    int nextClusterKeySeq = (allClusterKeyFiles.isEmpty() ? -1
+      : extractKeySequence(allClusterKeyFiles.get(0))) + 1;
     LOG.info("Trying to save a new cluster key at seq: {}", nextClusterKeySeq);
     MasterFileSystem masterFS = master.getMasterFileSystem();
     Path nextClusterKeyPath = new Path(clusterKeyDir,

@@ -21,10 +21,11 @@ public class PBEKeymetaAdminClient implements PBEKeymetaAdmin {
     this.stub = PBEAdminProtos.PBEAdminService.newBlockingStub(conn.getAdmin().coprocessorService());
   }
 
-  @Override public PBEKeyStatus enablePBE(String pbePrefix, String keyNamespace) throws IOException {
+  @Override
+  public PBEKeyStatus enablePBE(String pbePrefix, String keyNamespace) throws IOException {
     try {
       PBEAdminResponse pbeAdminResponse = stub.enablePBE(null,
-        PBEAdminRequest.newBuilder().setPbePrefix(pbePrefix).build());
+        PBEAdminRequest.newBuilder().setPbePrefix(pbePrefix).setKeyNamespace(keyNamespace).build());
       LOG.info("Got response: " + pbeAdminResponse);
       return PBEKeyStatus.forValue((byte) pbeAdminResponse.getPbeStatus().getNumber());
     } catch (ServiceException e) {

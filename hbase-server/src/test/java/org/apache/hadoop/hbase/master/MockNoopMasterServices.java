@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -115,6 +116,10 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public ChoreService getChoreService() {
+    return null;
+  }
+
+  @Override public PBEClusterKeyCache getPBEClusterKeyCache() {
     return null;
   }
 

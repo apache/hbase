@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
@@ -100,6 +101,10 @@ public class MockServer implements Server {
   @Override
   public ChoreService getChoreService() {
     throw new UnsupportedOperationException();
+  }
+
+  @Override public PBEClusterKeyCache getPBEClusterKeyCache() {
+    return null;
   }
 
   @Override public PBEKeyAccessor getPBEKeyAccessor() {

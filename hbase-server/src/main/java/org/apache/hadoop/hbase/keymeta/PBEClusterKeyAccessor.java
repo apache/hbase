@@ -28,7 +28,10 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import static org.apache.hadoop.hbase.HConstants.CLUSTER_KEY_FILE_PREFIX;
 
 @InterfaceAudience.Private
@@ -44,24 +47,36 @@ public class PBEClusterKeyAccessor extends PBEKeyManager {
     if (! isPBEEnabled()) {
       return null;
     }
-    int currentMaxSeqNum = findLatestKeySequence(getAllClusterKeys());
+    List<Path> allClusterKeyFiles = getAllClusterKeyFiles();
+    if (allClusterKeyFiles.isEmpty()) {
+      throw new RuntimeException("No cluster key initialized yet");
+    }
+    int currentMaxSeqNum = extractKeySequence(allClusterKeyFiles.get(0));
     return new Path(clusterKeyDir, CLUSTER_KEY_FILE_PREFIX + currentMaxSeqNum);
   }
 
-  public List<Path> getAllClusterKeys() throws IOException {
-    if (! isPBEEnabled()) {
+  /**
+   * Return all available cluster key files and return them in the order of latest to oldest.
+   * If no cluster key files are available, then return an empty list. If PBE is not enabled,
+   * then return null.
+   *
+   * @return  a list of all available cluster key files
+   * @throws IOException
+   */
+  public List<Path> getAllClusterKeyFiles() throws IOException {
+    if (!isPBEEnabled()) {
       return null;
     }
     FileSystem fs = server.getFileSystem();
-    List<Path> clusterKeys = new ArrayList<>();
-    for (FileStatus st: fs.globStatus(new Path(clusterKeyDir, CLUSTER_KEY_FILE_PREFIX + "*"))) {
+    Map<Integer, Path> clusterKeys = new TreeMap<>(Comparator.reverseOrder());
+    for (FileStatus st : fs.globStatus(new Path(clusterKeyDir, CLUSTER_KEY_FILE_PREFIX + "*"))) {
       Path keyPath = st.getPath();
-      extractClusterKeySeqNum(keyPath); // Just check for validity.
-      clusterKeys.add(keyPath);
+      int seqNum = extractClusterKeySeqNum(keyPath);
+      clusterKeys.put(seqNum, keyPath);
     }
-    return clusterKeys;
-  }
 
+    return new ArrayList<>(clusterKeys.values());
+  }
   public PBEKeyData loadClusterKey(Path keyPath) throws IOException {
     PBEKeyProvider provider = getKeyProvider();
     return provider.unwrapKey(loadKeyMetadata(keyPath));
@@ -79,17 +94,18 @@ public class PBEClusterKeyAccessor extends PBEKeyManager {
     throw new IOException("Couldn't parse key file name: " + keyPath.getName());
   }
 
-  protected int findLatestKeySequence(List<Path> clusterKeys) throws IOException {
-    int maxKeySeq = -1;
-    for (Path keyPath: clusterKeys) {
-      if (keyPath.getName().startsWith(CLUSTER_KEY_FILE_PREFIX)) {
-        int keySeq = Integer.valueOf(keyPath.getName().substring(CLUSTER_KEY_FILE_PREFIX.length()));
-        if (keySeq > maxKeySeq) {
-          maxKeySeq = keySeq;
-        }
-      }
+  /**
+   * Extract the key sequence number from the cluster key file name.
+   * @param clusterKeyFile
+   * @return The sequence or {@code -1} if not a valid sequence file.
+   * @throws IOException
+   */
+  protected int extractKeySequence(Path clusterKeyFile) throws IOException {
+    int keySeq = -1;
+    if (clusterKeyFile.getName().startsWith(CLUSTER_KEY_FILE_PREFIX)) {
+      keySeq = Integer.valueOf(clusterKeyFile.getName().substring(CLUSTER_KEY_FILE_PREFIX.length()));
     }
-    return maxKeySeq;
+    return keySeq;
   }
 
   protected String loadKeyMetadata(Path keyPath) throws IOException {

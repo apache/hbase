@@ -24,6 +24,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
+import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStorePerformanceEvaluation;
@@ -56,6 +59,18 @@ public class RegionProcedureStorePerformanceEvaluation
     @Override
     public ServerName getServerName() {
       return serverName;
+    }
+
+    @Override public PBEClusterKeyCache getPBEClusterKeyCache() {
+      return null;
+    }
+
+    @Override public PBEKeyAccessor getPBEKeyAccessor() {
+      return null;
+    }
+
+    @Override public PBEKeymetaAdmin getPBEKeymetaAdmin() {
+      return null;
     }
   }
 

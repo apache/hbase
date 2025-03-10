@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerContext;
@@ -836,6 +837,10 @@ public class TestHeapMemoryManager {
 
     @Override
     public ChoreService getChoreService() {
+      return null;
+    }
+
+    @Override public PBEClusterKeyCache getPBEClusterKeyCache() {
       return null;
     }
 

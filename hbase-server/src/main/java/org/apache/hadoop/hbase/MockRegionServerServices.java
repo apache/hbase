@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.mob.MobFileCache;
@@ -255,6 +256,10 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public ChoreService getChoreService() {
+    return null;
+  }
+
+  @Override public PBEClusterKeyCache getPBEClusterKeyCache() {
     return null;
   }
 

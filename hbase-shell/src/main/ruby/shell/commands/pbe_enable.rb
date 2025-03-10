@@ -20,7 +20,8 @@ module Shell
     class PbeEnable < Command
       def help
         <<-EOF
-Enable PBE for a given prefix (in Base64 format)
+Enable PBE for a given prefix:namespace (prefix in Base64 format).
+If no namespace is specified, the global namespace (*) is used.
 EOF
       end
 

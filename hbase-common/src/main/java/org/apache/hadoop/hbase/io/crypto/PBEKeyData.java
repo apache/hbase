@@ -166,12 +166,15 @@ public class PBEKeyData {
    */
   public long getKeyChecksum() {
     if (keyChecksum == 0) {
-      DataChecksum dataChecksum = DataChecksum.newDataChecksum(DataChecksum.Type.CRC32C, 16);
-      byte[] data = theKey.getEncoded();
-      dataChecksum.update(data, 0, data.length);
-      keyChecksum = dataChecksum.getValue();
+      keyChecksum = constructKeyChecksum(theKey.getEncoded());
     }
     return keyChecksum;
+  }
+
+  public static long constructKeyChecksum(byte[] data) {
+    DataChecksum dataChecksum = DataChecksum.newDataChecksum(DataChecksum.Type.CRC32C, 16);
+    dataChecksum.update(data, 0, data.length);
+    return dataChecksum.getValue();
   }
 
   /**
@@ -182,12 +185,12 @@ public class PBEKeyData {
    */
   public byte[] getKeyMetadataHash() {
     if (keyMetadataHash == null) {
-      keyMetadataHash = makeMetadataHash(keyMetadata);
+      keyMetadataHash = constructMetadataHash(keyMetadata);
     }
     return keyMetadataHash;
   }
 
-  public static byte[] makeMetadataHash(String metadata) {
+  public static byte[] constructMetadataHash(String metadata) {
     MessageDigest md5;
     try {
       md5 = MessageDigest.getInstance("MD5");

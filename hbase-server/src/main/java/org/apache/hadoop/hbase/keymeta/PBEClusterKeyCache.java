@@ -23,31 +23,38 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 @InterfaceAudience.Private
 public class PBEClusterKeyCache {
   private static final Logger LOG = LoggerFactory.getLogger(PBEClusterKeyCache.class);
 
-  private PBEKeyData latestClusterKey;
-  private Map<Long, PBEKeyData> clusterKeys = new HashMap<>();
+  private final PBEKeyData latestClusterKey;
+  private final Map<Long, PBEKeyData> clusterKeys;
 
-  public PBEClusterKeyCache createCache(PBEClusterKeyAccessor accessor) throws IOException {
-    List<Path> allClusterKeys = accessor.getAllClusterKeys();
-    int latestKeySequence = accessor.findLatestKeySequence(allClusterKeys);
+  /**
+   * Construct the Cluster Key cache from the specified accessor.
+   * @param accessor
+   * @return the cache or {@code null} if no keys are found.
+   * @throws IOException
+   */
+  public static PBEClusterKeyCache createCache(PBEClusterKeyAccessor accessor) throws IOException {
+    List<Path> allClusterKeyFiles = accessor.getAllClusterKeyFiles();
+    if (allClusterKeyFiles.isEmpty()) {
+      LOG.warn("No cluster key files found, skipping cache creation");
+      return null;
+    }
     PBEKeyData latestClusterKey = null;
-    for (Path keyPath: allClusterKeys) {
+    Map<Long, PBEKeyData> clusterKeys = new TreeMap<>();
+    for (Path keyPath: allClusterKeyFiles) {
       LOG.info("Loading cluster key from: {}", keyPath);
       PBEKeyData keyData = accessor.loadClusterKey(keyPath);
-      if (accessor.extractClusterKeySeqNum(keyPath) == latestKeySequence) {
+      if (latestClusterKey == null) {
         latestClusterKey = keyData;
       }
       clusterKeys.put(keyData.getKeyChecksum(), keyData);
-    }
-    if (latestClusterKey == null) {
-      throw new RuntimeException("Expected to find a key for sequence: " + latestKeySequence);
     }
     return new PBEClusterKeyCache(clusterKeys, latestClusterKey);
   }
