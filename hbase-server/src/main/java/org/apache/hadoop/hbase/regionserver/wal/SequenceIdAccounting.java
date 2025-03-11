@@ -480,7 +480,7 @@ public class SequenceIdAccounting {
           continue;
         }
         for (Map.Entry<ImmutableByteArray, Long> me : m.entrySet()) {
-          //FLUSH events produce an entry in the wal with a "fake" METAFAMILY CF. We need to ignore
+          // FLUSH events produce an entry in the wal with a "fake" METAFAMILY CF. We need to ignore
           // these entries here, as there is actual no such store.
           if (me.getKey().toString().equals("METAFAMILY")) {
             continue;
