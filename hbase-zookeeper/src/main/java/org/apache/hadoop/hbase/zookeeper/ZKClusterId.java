@@ -66,7 +66,7 @@ public class ZKClusterId {
       }
       if (data != null) {
         try {
-          return ClusterId.parseFrom(data).toString();
+          return new ClusterId.Parser().parseFrom(data).toString();
         } catch (DeserializationException e) {
           throw ZKUtil.convert(e);
         }

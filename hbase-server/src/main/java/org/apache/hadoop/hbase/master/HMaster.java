@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.PleaseRestartMasterException;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -170,6 +171,8 @@ import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
+import org.apache.hadoop.hbase.master.procedure.RefreshHFilesTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.RefreshMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReloadQuotasProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
@@ -248,10 +251,12 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AbstractReadOnlyController;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -1086,7 +1091,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!maintenanceMode) {
       startupTaskGroup.addTask("Initializing master coprocessors");
       setQuotasObserver(conf);
-      this.cpHost = new MasterCoprocessorHost(this, conf);
+      CoprocessorConfigurationUtil.syncReadOnlyConfigurations(conf,
+        CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+      AbstractReadOnlyController.manageActiveClusterIdFile(
+        ConfigurationUtil.isReadOnlyModeEnabledInConf(conf), this.getMasterFileSystem());
+      initializeCoprocessorHost(conf);
     } else {
       // start an in process region server for carrying system regions
       maintenanceRegionServer =
@@ -1188,8 +1197,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         int existingReplicasCount =
           assignmentManager.getRegionStates().getRegionsOfTable(TableName.META_TABLE_NAME).size();
         if (existingReplicasCount > metaDesc.getRegionReplication()) {
-          LOG.info("Update replica count of hbase:meta from {}(in TableDescriptor)"
-            + " to {}(existing ZNodes)", metaDesc.getRegionReplication(), existingReplicasCount);
+          LOG.info(
+            "Update replica count of {} from {}(in TableDescriptor)" + " to {}(existing ZNodes)",
+            TableName.META_TABLE_NAME, metaDesc.getRegionReplication(), existingReplicasCount);
           metaDesc = TableDescriptorBuilder.newBuilder(metaDesc)
             .setRegionReplication(existingReplicasCount).build();
           tableDescriptors.update(metaDesc);
@@ -1198,8 +1208,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         if (metaDesc.getRegionReplication() != replicasNumInConf) {
           LOG.info(
             "The {} config is {} while the replica count in TableDescriptor is {}"
-              + " for hbase:meta, altering...",
-            HConstants.META_REPLICAS_NUM, replicasNumInConf, metaDesc.getRegionReplication());
+              + " for {}, altering...",
+            HConstants.META_REPLICAS_NUM, replicasNumInConf, metaDesc.getRegionReplication(),
+            TableName.META_TABLE_NAME);
           procedureExecutor.submitProcedure(new ModifyTableProcedure(
             procedureExecutor.getEnvironment(), TableDescriptorBuilder.newBuilder(metaDesc)
               .setRegionReplication(replicasNumInConf).build(),
@@ -3135,8 +3146,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           if (isActiveMaster() && isInitialized() && assignmentManager != null) {
             try {
               Map<TableName, RegionStatesCount> tableRegionStatesCountMap = new HashMap<>();
-              Map<String, TableDescriptor> tableDescriptorMap = getTableDescriptors().getAll();
-              for (TableDescriptor tableDescriptor : tableDescriptorMap.values()) {
+              List<TableDescriptor> tableDescriptors = listTableDescriptors(null, null, null, true);
+              for (TableDescriptor tableDescriptor : tableDescriptors) {
                 TableName tableName = tableDescriptor.getTableName();
                 RegionStatesCount regionStatesCount =
                   assignmentManager.getRegionStatesCount(tableName);
@@ -3840,9 +3851,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   /**
-   * Return a list of table table descriptors after applying any provided filter parameters. Note
-   * that the user-facing description of this filter logic is presented on the class-level javadoc
-   * of {@link NormalizeTableFilterParams}.
+   * Return a list of table descriptors after applying any provided filter parameters. Note that the
+   * user-facing description of this filter logic is presented on the class-level javadoc of
+   * {@link NormalizeTableFilterParams}.
    */
   private List<TableDescriptor> getTableDescriptors(final List<TableDescriptor> htds,
     final String namespace, final String regex, final List<TableName> tableNameList,
@@ -3851,7 +3862,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       // request for all TableDescriptors
       Collection<TableDescriptor> allHtds;
       if (namespace != null && namespace.length() > 0) {
-        // Do a check on the namespace existence. Will fail if does not exist.
+        // Do a check on the namespace existence. Will fail if it does not exist.
         this.clusterSchemaService.getNamespace(namespace);
         allHtds = tableDescriptors.getByNamespace(namespace).values();
       } else {
@@ -4489,13 +4500,24 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     // append the quotas observer back to the master coprocessor key
     setQuotasObserver(newConf);
-    // update region server coprocessor if the configuration has changed.
-    if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(this.cpHost, newConf,
-        CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) && !maintenanceMode
-    ) {
-      LOG.info("Update the master coprocessor(s) because the configuration has changed");
-      this.cpHost = new MasterCoprocessorHost(this, newConf);
+
+    boolean originalIsReadOnlyEnabled = CoprocessorConfigurationUtil
+      .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, originalIsReadOnlyEnabled,
+      this.cpHost, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, this.maintenanceMode,
+      this.toString(), conf -> {
+        this.initializeCoprocessorHost(conf);
+        CoprocessorConfigurationUtil.updateCoprocessorListInConf(this.conf, conf,
+          CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+      });
+
+    boolean maybeUpdatedReadOnlyMode = CoprocessorConfigurationUtil
+      .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+
+    if (maybeUpdatedReadOnlyMode != originalIsReadOnlyEnabled) {
+      AbstractReadOnlyController.manageActiveClusterIdFile(maybeUpdatedReadOnlyMode,
+        this.getMasterFileSystem());
     }
   }
 
@@ -4594,6 +4616,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
   }
 
+  private void initializeCoprocessorHost(Configuration conf) {
+    // initialize master side coprocessors before we start handling requests
+    this.cpHost = new MasterCoprocessorHost(this, conf);
+  }
+
   @Override
   public long flushTable(TableName tableName, List<byte[]> columnFamilies, long nonceGroup,
     long nonce) throws IOException {
@@ -4647,4 +4674,91 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return mobFileCleanerChore;
   }
 
+  public Long refreshMeta(long nonceGroup, long nonce) throws IOException {
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshMetaProcedure");
+          submitProcedure(new RefreshMetaProcedure(procedureExecutor.getEnvironment()));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshMetaProcedure";
+        }
+      });
+  }
+
+  public Long refreshHfiles(final TableName tableName, final long nonceGroup, final long nonce)
+    throws IOException {
+    checkInitialized();
+
+    if (!tableDescriptors.exists(tableName)) {
+      LOG.info("RefreshHfilesProcedure failed because table {} does not exist",
+        tableName.getNameAsString());
+      throw new TableNotFoundException(tableName);
+    }
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshHfilesTableProcedure for table {}",
+            tableName.getNameAsString());
+          submitProcedure(
+            new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment(), tableName));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshHfilesProcedure for a table";
+        }
+      });
+  }
+
+  public Long refreshHfiles(final String namespace, final long nonceGroup, final long nonce)
+    throws IOException {
+    checkInitialized();
+
+    try {
+      this.clusterSchemaService.getNamespace(namespace);
+    } catch (IOException e) {
+      LOG.info("RefreshHfilesProcedure failed because namespace {} does not exist", namespace);
+      throw new NamespaceNotFoundException(namespace);
+    }
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshHfilesProcedure for namespace {}", namespace);
+          submitProcedure(
+            new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment(), namespace));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshHfilesProcedure for namespace";
+        }
+      });
+  }
+
+  public Long refreshHfiles(final long nonceGroup, final long nonce) throws IOException {
+    checkInitialized();
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshHfilesProcedure for all tables");
+          submitProcedure(new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment()));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshHfilesProcedure for all tables";
+        }
+      });
+  }
 }
