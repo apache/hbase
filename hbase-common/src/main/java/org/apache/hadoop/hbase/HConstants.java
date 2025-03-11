@@ -1659,6 +1659,18 @@ public final class HConstants {
    */
   public final static boolean REJECT_DECOMMISSIONED_HOSTS_DEFAULT = false;
 
+  /**
+   * Adds a suffix to the meta table name: value=’test’ -> ‘hbase:meta_test’ Added in HBASE-XXXXX to
+   * support having multiple hbase:meta tables (with distinct names )to enable storage sharing by
+   * more than one clusters.
+   */
+  public final static String HBASE_META_TABLE_SUFFIX = "hbase.meta.table.suffix";
+
+  /**
+   * Default value of {@link #HBASE_META_TABLE_SUFFIX}
+   */
+  public final static String HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE = "";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
