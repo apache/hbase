@@ -73,7 +73,7 @@ public class TestConfServlet {
     Set<String> programSet = new HashSet<>();
     programSet.add("programatically");
     programSet.add("programmatically");
-    Object parsed = JSON.parse(json);
+    Object parsed = new JSON().fromJSON(json);
     Object[] properties = ((Map<String, Object[]>) parsed).get("properties");
     for (Object o : properties) {
       Map<String, Object> propertyInfo = (Map<String, Object>) o;
