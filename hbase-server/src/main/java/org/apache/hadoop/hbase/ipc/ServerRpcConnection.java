@@ -351,10 +351,12 @@ abstract class ServerRpcConnection implements Closeable {
   }
 
   void finishSaslNegotiation() throws IOException {
-    String qop = saslServer.getNegotiatedQop();
+    String negotiatedQop = saslServer.getNegotiatedQop();
+    SaslUtil.verifyNegotiatedQop(saslServer.getRequestedQop(), negotiatedQop);
     ugi = provider.getAuthorizedUgi(saslServer.getAuthorizationID(), this.rpcServer.secretManager);
     RpcServer.LOG.debug(
-      "SASL server context established. Authenticated client: {}. Negotiated QoP is {}", ugi, qop);
+      "SASL server context established. Authenticated client: {}. Negotiated QoP is {}", ugi,
+      negotiatedQop);
     rpcServer.metrics.authenticationSuccess();
     RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);
   }
