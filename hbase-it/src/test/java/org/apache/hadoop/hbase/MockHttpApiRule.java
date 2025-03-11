@@ -28,17 +28,21 @@ import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Handler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.nested.AbstractHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Response;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Slf4jRequestLogWriter;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.Callback;
 import org.junit.rules.ExternalResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Request;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.CustomRequestLog;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.nested.Request;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.RequestLog;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Slf4jRequestLog;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.AbstractHandler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.RegexSet;
 
 /**
@@ -115,13 +119,12 @@ public class MockHttpApiRule extends ExternalResource {
   }
 
   private static RequestLog buildRequestLog() {
-    final Slf4jRequestLog requestLog = new Slf4jRequestLog();
-    requestLog.setLoggerName(LOG.getName() + ".RequestLog");
-    requestLog.setExtended(true);
-    return requestLog;
+    Slf4jRequestLogWriter writer = new Slf4jRequestLogWriter();
+    writer.setLoggerName(LOG.getName() + ".RequestLog");
+    return new CustomRequestLog(writer, CustomRequestLog.EXTENDED_NCSA_FORMAT);
   }
 
-  private static class MockHandler extends AbstractHandler {
+  private static class MockHandler extends Handler.Abstract {
 
     private final ReadWriteLock responseMappingLock = new ReentrantReadWriteLock();
     private final Map<String, BiConsumer<String, HttpServletResponse>> responseMapping =
@@ -151,6 +154,32 @@ public class MockHttpApiRule extends ExternalResource {
     }
 
     @Override
+    public boolean handle(org.apache.hbase.thirdparty.org.eclipse.jetty.server.Request request, Response response, Callback callback) throws Exception {
+      // TODO: TestRESTApiClusterManager is failing because of this line??
+      String target = request.getHttpURI().asString();
+      responseMappingLock.readLock().lock();
+      try {
+        if (!regexSet.matches(target)) {
+          response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+          callback.succeeded();
+          return true;
+        }
+        responseMapping.entrySet().stream()
+          .filter(e -> Pattern.matches(e.getKey(), target))
+          .findAny()
+          .map(Map.Entry::getValue)
+          .orElseThrow(() -> noMatchFound(target))
+          .accept(target, (HttpServletResponse) response);
+        callback.succeeded();
+      } catch (Exception e) {
+        callback.failed(e);
+      } finally {
+        responseMappingLock.readLock().unlock();
+      }
+      return true;
+    }
+
+    //@Override
     public void handle(final String target, final Request baseRequest,
       final HttpServletRequest request, final HttpServletResponse response) {
       responseMappingLock.readLock().lock();
@@ -168,8 +197,7 @@ public class MockHttpApiRule extends ExternalResource {
     }
 
     private static RuntimeException noMatchFound(final String target) {
-      return new RuntimeException(
-        String.format("Target path '%s' matches no registered regex.", target));
+      return new RuntimeException(String.format("Target path '%s' matches no registered regex.", target));
     }
   }
 }
