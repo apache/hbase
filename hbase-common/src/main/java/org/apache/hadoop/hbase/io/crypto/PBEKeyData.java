@@ -26,6 +26,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.Base64;
 
 /**
  * This class represents an encryption key data which includes the key itself, its status, metadata
@@ -51,8 +53,8 @@ import java.security.NoSuchAlgorithmException;
 public class PBEKeyData {
   public static final String KEY_NAMESPACE_GLOBAL = "*";
 
-  private byte[] pbe_prefix;
-  private String key_namespace;
+  private byte[] pbePrefix;
+  private String keyNamespace;
   private Key theKey;
   private PBEKeyStatus keyStatus;
   private String keyMetadata;
@@ -92,8 +94,8 @@ public class PBEKeyData {
     Preconditions.checkNotNull(keyStatus,  "keyStatus should not be null");
     Preconditions.checkNotNull(keyMetadata, "keyMetadata should not be null");
 
-    this.pbe_prefix = pbe_prefix;
-    this.key_namespace = key_namespace;
+    this.pbePrefix = pbe_prefix;
+    this.keyNamespace = key_namespace;
     this.theKey = theKey;
     this.keyStatus = keyStatus;
     this.keyMetadata = keyMetadata;
@@ -105,9 +107,18 @@ public class PBEKeyData {
    *
    * @return The PBE prefix as a byte array.
    */
-  public byte[] getPbe_prefix() {
-    return pbe_prefix;
+  public byte[] getPBEPrefix() {
+    return pbePrefix;
   }
+
+  /**
+   * Return the PBE prefix in Base64 encoded form.
+   * @return the encoded PBE prefix.
+   */
+  public String getPBEPrefixEncoded() {
+    return Base64.getEncoder().encodeToString(pbePrefix);
+  }
+
 
   /**
    * Returns the namespace associated with the key.
@@ -115,16 +126,7 @@ public class PBEKeyData {
    * @return The namespace as a {@code String}.
    */
   public String getKeyNamespace() {
-    return key_namespace;
-  }
-
-  /**
-   * Returns the namespace associated with the key.
-   *
-   * @return The namespace as a {@code String}.
-   */
-  public String getKey_namespace() {
-    return key_namespace;
+    return keyNamespace;
   }
 
   /**
@@ -152,6 +154,12 @@ public class PBEKeyData {
    */
   public String getKeyMetadata() {
     return keyMetadata;
+  }
+
+  @Override public String toString() {
+    return "PBEKeyData{" + "pbePrefix=" + Arrays.toString(pbePrefix) + ", keyNamespace='"
+      + keyNamespace + '\'' + ", keyStatus=" + keyStatus + ", keyMetadata='" + keyMetadata + '\''
+      + ", refreshTimestamp=" + refreshTimestamp + '}';
   }
 
   public long getRefreshTimestamp() {
@@ -190,6 +198,18 @@ public class PBEKeyData {
     return keyMetadataHash;
   }
 
+  /**
+   * Return the hash of key metadata in Base64 encoded form.
+   * @return the encoded hash or {@code null} if no meatadata is available.
+   */
+  public String getKeyMetadataHashEncoded() {
+    byte[] hash = getKeyMetadataHash();
+    if (hash != null) {
+      return Base64.getEncoder().encodeToString(hash);
+    }
+    return null;
+  }
+
   public static byte[] constructMetadataHash(String metadata) {
     MessageDigest md5;
     try {
@@ -209,8 +229,8 @@ public class PBEKeyData {
     PBEKeyData that = (PBEKeyData) o;
 
     return new EqualsBuilder()
-      .append(pbe_prefix, that.pbe_prefix)
-      .append(key_namespace, that.key_namespace)
+      .append(pbePrefix, that.pbePrefix)
+      .append(keyNamespace, that.keyNamespace)
       .append(theKey, that.theKey)
       .append(keyStatus, that.keyStatus)
       .append(keyMetadata, that.keyMetadata)
@@ -220,8 +240,8 @@ public class PBEKeyData {
   @Override
   public int hashCode() {
     return new HashCodeBuilder(17, 37)
-      .append(pbe_prefix)
-      .append(key_namespace)
+      .append(pbePrefix)
+      .append(keyNamespace)
       .append(theKey)
       .append(keyStatus)
       .append(keyMetadata)

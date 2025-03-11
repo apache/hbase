@@ -51,7 +51,7 @@ public class PBEKeyDataCache {
   public void addEntry(PBEKeyData pbeKeyData) {
     lock.lock();
     try {
-      Bytes pbePrefix = new Bytes(pbeKeyData.getPbe_prefix());
+      Bytes pbePrefix = new Bytes(pbeKeyData.getPBEPrefix());
       String keyNamespace = pbeKeyData.getKeyNamespace();
 
       cache.put(pbeKeyData.getKeyMetadata(), pbeKeyData);
@@ -100,7 +100,7 @@ public class PBEKeyDataCache {
     try {
       PBEKeyData removedEntry = cache.remove(keyMetadata);
       if (removedEntry != null) {
-        Bytes pbePrefix = new Bytes(removedEntry.getPbe_prefix());
+        Bytes pbePrefix = new Bytes(removedEntry.getPBEPrefix());
         String keyNamespace = removedEntry.getKeyNamespace();
         Map<Bytes, List<PBEKeyData>> nsCache = prefixCache.get(keyNamespace);
         List<PBEKeyData> keyList = nsCache != null ? nsCache.get(pbePrefix) : null;

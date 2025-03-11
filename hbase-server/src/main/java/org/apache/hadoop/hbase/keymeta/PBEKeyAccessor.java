@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.security.KeyException;
 import java.util.List;
 
+// TODO: Also integrate with the key provider when it is not found in the cache???
 /**
  * This class provides a unified access on top of both {@code PBEKeyDataCache} (L1) and
  * {@code PBEKeymetaTableAccessor} (L2) to access PBE keys. When the getter is called, it first
@@ -44,7 +45,7 @@ public class PBEKeyAccessor {
    * @param pbePrefix The prefix of the key
    * @param keyNamespace The namespace of the key
    * @param keyMetadata The metadata of the key
-   * @return The key data
+   * @return The key data or {@code null}
    * @throws IOException if an error occurs while retrieving the key
    */
   public PBEKeyData getKey(byte[] pbePrefix, String keyNamespace, String keyMetadata)
@@ -52,7 +53,9 @@ public class PBEKeyAccessor {
     PBEKeyData keyData = keyDataCache.getEntry(keyMetadata);
     if (keyData == null) {
       keyData = keymetaAccessor.getKey(pbePrefix, keyNamespace, keyMetadata);
-      keyDataCache.addEntry(keyData);
+      if (keyData != null) {
+        keyDataCache.addEntry(keyData);
+      }
     }
     return keyData;
   }

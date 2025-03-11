@@ -138,7 +138,7 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
     Map keyMetadata = GsonUtil.getDefaultInstance().fromJson(keyData.getKeyMetadata(),
       HashMap.class);
     assertNotNull(keyMetadata);
-    assertEquals(new Bytes(prefixBytes), keyData.getPbe_prefix());
+    assertEquals(new Bytes(prefixBytes), keyData.getPBEPrefix());
     assertEquals(alias, keyMetadata.get(KEY_METADATA_ALIAS));
     assertEquals(Base64.getEncoder().encodeToString(prefixBytes),
       keyMetadata.get(KEY_METADATA_PREFIX));

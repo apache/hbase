@@ -626,6 +626,7 @@ Shell.load_command_group(
   UnknownProtocolException: No registered Master Coprocessor Endpoint found for PBEAdminService",
   commands: %w[
     pbe_enable
+    pbe_get_statuses
   ]
 )
 

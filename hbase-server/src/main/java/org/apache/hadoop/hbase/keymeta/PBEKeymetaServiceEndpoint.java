@@ -21,13 +21,16 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
+import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEAdminRequest;
 import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEAdminResponse;
+import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEGetStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEAdminService;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
@@ -35,8 +38,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
+import java.security.KeyException;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * This class implements a coprocessor service endpoint for the Phoenix Query Server's
@@ -77,7 +82,7 @@ public class PBEKeymetaServiceEndpoint implements MasterCoprocessor {
 
   /**
    * Returns an iterable of the available coprocessor services, which includes the
-   * {@link org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEAdminService} implemented by
+   * {@link PBEAdminService} implemented by
    * {@link org.apache.hadoop.hbase.keymeta.PBEKeymetaServiceEndpoint.KeyMetaAdminServiceImpl}.
    *
    * @return An iterable of the available coprocessor services.
@@ -88,11 +93,10 @@ public class PBEKeymetaServiceEndpoint implements MasterCoprocessor {
   }
 
   /**
-   * The implementation of the {@link org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEAdminService}
+   * The implementation of the {@link PBEAdminProtos.PBEAdminService}
    * interface, which provides the actual method implementations for enabling PBE.
    */
   private class KeyMetaAdminServiceImpl extends PBEAdminService {
-
     /**
      * Enables PBE for a given tenant and namespace, as specified in the provided request.
      *
@@ -102,19 +106,9 @@ public class PBEKeymetaServiceEndpoint implements MasterCoprocessor {
      */
     @Override
     public void enablePBE(RpcController controller, PBEAdminRequest request,
-      RpcCallback<PBEAdminResponse> done) {
-      PBEAdminResponse.Builder builder =
-        PBEAdminResponse.newBuilder().setPbePrefix(request.getPbePrefix())
-          .setKeyNamespace(request.getKeyNamespace());
-      byte[] pbe_prefix = null;
-      try {
-        pbe_prefix = Base64.getDecoder().decode(request.getPbePrefix());
-      } catch (IllegalArgumentException e) {
-        builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.PBE_FAILED);
-        CoprocessorRpcUtils.setControllerException(controller, new IOException(
-          "Failed to decode specified prefix as Base64 string: " + request.getPbePrefix(), e));
-      }
-      if (pbe_prefix != null) {
+        RpcCallback<PBEAdminResponse> done) {
+      PBEAdminResponse.Builder builder = getResponseBuilder(controller, request);
+      if (builder.getPbePrefix() != null) {
         try {
           PBEKeyStatus pbeKeyStatus = master.getPBEKeymetaAdmin()
             .enablePBE(request.getPbePrefix(), request.getKeyNamespace());
@@ -125,6 +119,66 @@ public class PBEKeymetaServiceEndpoint implements MasterCoprocessor {
         }
       }
       done.run(builder.build());
+    }
+
+    @Override
+    public void getPBEStatuses(RpcController controller, PBEAdminRequest request,
+        RpcCallback<PBEGetStatusResponse> done) {
+      PBEGetStatusResponse.Builder responseBuilder =
+        PBEGetStatusResponse.newBuilder();
+      PBEAdminResponse.Builder builder = getResponseBuilder(controller, request);
+      if (builder.getPbePrefix() != null) {
+        try {
+          List<PBEKeyData> pbeKeyStatuses = master.getPBEKeymetaAdmin()
+            .getPBEKeyStatuses(request.getPbePrefix(), request.getKeyNamespace());
+          for (PBEKeyData keyData: pbeKeyStatuses) {
+            builder.setPbeStatus(
+              PBEAdminProtos.PBEKeyStatus.valueOf(keyData.getKeyStatus().getVal()));
+            builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.valueOf(
+                      keyData.getKeyStatus().getVal()))
+                   .setKeyMetadata(keyData.getKeyMetadata())
+                   .setRefreshTimestamp(keyData.getRefreshTimestamp())
+                   ;
+            responseBuilder.addStatus(builder.build());
+          }
+        } catch (IOException e) {
+          CoprocessorRpcUtils.setControllerException(controller, e);
+          builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.PBE_FAILED);
+        } catch (KeyException e) {
+          CoprocessorRpcUtils.setControllerException(controller, new IOException(e));
+          builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.PBE_FAILED);
+        }
+      }
+      done.run(responseBuilder.build());
+    }
+
+    private byte[] convertToPBEBytes(RpcController controller, PBEAdminRequest request,
+      PBEAdminResponse.Builder builder) {
+      byte[] pbe_prefix = null;
+      try {
+        pbe_prefix = Base64.getDecoder().decode(request.getPbePrefix());
+      } catch (IllegalArgumentException e) {
+        builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.PBE_FAILED);
+        CoprocessorRpcUtils.setControllerException(controller, new IOException(
+          "Failed to decode specified prefix as Base64 string: " + request.getPbePrefix(), e));
+      }
+      return pbe_prefix;
+    }
+
+    private PBEAdminResponse.Builder getResponseBuilder(RpcController controller,
+        PBEAdminRequest request) {
+      PBEAdminResponse.Builder builder = PBEAdminResponse.newBuilder()
+          .setKeyNamespace(request.getKeyNamespace());
+      byte[] pbe_prefix = null;
+      try {
+        pbe_prefix = Base64.getDecoder().decode(request.getPbePrefix());
+        builder.setPbePrefixBytes(ByteString.copyFrom(pbe_prefix));
+      } catch (IllegalArgumentException e) {
+        builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.PBE_FAILED);
+        CoprocessorRpcUtils.setControllerException(controller, new IOException(
+          "Failed to decode specified prefix as Base64 string: " + request.getPbePrefix(), e));
+      }
+      return builder;
     }
   }
 }

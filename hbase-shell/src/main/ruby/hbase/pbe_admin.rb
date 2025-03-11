@@ -32,11 +32,21 @@ module Hbase
     end
 
     def pbe_enable(pbe_prefix)
+      prefix, namespace = extract_prefix_info(pbe_prefix)
+      @admin.enablePBE(prefix, namespace)
+    end
+
+    def show_pbe_status(pbe_prefix)
+      prefix, namespace = extract_prefix_info(pbe_prefix)
+      @admin.getPBEKeyStatuses(prefix, namespace)
+    end
+
+    def extract_prefix_info(pbe_prefix)
       prefixInfo = pbe_prefix.split(':')
       raise(ArgumentError, 'Invalid prefix:namespace format') unless (prefixInfo.length == 1 ||
         prefixInfo.length == 2)
-      @admin.enablePBE(prefixInfo[0], prefixInfo.length > 1 ? prefixInfo[1] :
-        PBEKeyData::KEY_NAMESPACE_GLOBAL)
+      return prefixInfo[0], prefixInfo.length > 1 ? prefixInfo[1] :
+        PBEKeyData::KEY_NAMESPACE_GLOBAL
     end
   end
 end

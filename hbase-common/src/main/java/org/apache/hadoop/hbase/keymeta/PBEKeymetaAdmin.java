@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
+import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
+import java.security.KeyException;
+import java.util.List;
 
 /**
  * PBEKeymetaAdmin is an interface for administrative functions related to PBE keys.
@@ -41,4 +44,15 @@ public interface PBEKeymetaAdmin {
    * @throws IOException if an error occurs while enabling PBE.
    */
   PBEKeyStatus enablePBE(String pbePrefix, String keyNamespace) throws IOException;
+
+  /**
+   * Get the status of all the keys for the specified pbe_prefix.
+   *
+   * @param pbePrefix    The prefix for the PBE key.
+   * @param keyNamespace The namespace for the PBE key.
+   * @return The list of status objects each identifying the key and its current status.
+   * @throws IOException if an error occurs while enabling PBE.
+   */
+  List<PBEKeyData> getPBEKeyStatuses(String pbePrefix, String keyNamespace)
+    throws IOException, KeyException;
 }

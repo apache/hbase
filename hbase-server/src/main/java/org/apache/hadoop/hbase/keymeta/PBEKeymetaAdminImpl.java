@@ -25,7 +25,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
+import java.security.KeyException;
 import java.util.Base64;
+import java.util.List;
 
 @InterfaceAudience.Private
 public class PBEKeymetaAdminImpl extends PBEKeymetaTableAccessor implements PBEKeymetaAdmin {
@@ -40,7 +42,17 @@ public class PBEKeymetaAdminImpl extends PBEKeymetaTableAccessor implements PBEK
     if (! isPBEEnabled()) {
       throw new IOException("PBE is currently not enabled in HBase configuration");
     }
-    LOG.info("Trying to enable PBE on key: {} for namespace: {}", pbePrefix, keyNamespace);
+    LOG.info("Trying to enable PBE on key: {} under namespace: {}", pbePrefix, keyNamespace);
+    byte[] pbe_prefix = convertToPrefixBytes(pbePrefix);
+    PBEKeyProvider provider = getKeyProvider();
+    PBEKeyData pbeKey = provider.getPBEKey(pbe_prefix, keyNamespace);
+    LOG.info("Got key data with status: {} and metadata: {} for prefix: {}", pbeKey.getKeyStatus(),
+      pbeKey.getKeyMetadata(), pbePrefix);
+    addKey(pbeKey);
+    return pbeKey.getKeyStatus();
+  }
+
+  private static byte[] convertToPrefixBytes(String pbePrefix) throws IOException {
     byte[] pbe_prefix;
     try {
       pbe_prefix = Base64.getDecoder().decode(pbePrefix);
@@ -48,11 +60,18 @@ public class PBEKeymetaAdminImpl extends PBEKeymetaTableAccessor implements PBEK
     catch (IllegalArgumentException e) {
       throw new IOException("Failed to decode specified prefix as Base64 string: " + pbePrefix, e);
     }
-    PBEKeyProvider provider = getKeyProvider();
-    PBEKeyData pbeKey = provider.getPBEKey(pbe_prefix, keyNamespace);
-    LOG.info("Got key data with status: {} and metadata: {} for prefix: {}", pbeKey.getKeyStatus(),
-      pbeKey.getKeyMetadata(), pbePrefix);
-    addKey(pbeKey);
-    return pbeKey.getKeyStatus();
+    return pbe_prefix;
+  }
+
+  @Override
+  public List<PBEKeyData> getPBEKeyStatuses(String pbePrefix, String keyNamespace)
+    throws IOException, KeyException {
+    if (! isPBEEnabled()) {
+      throw new IOException("PBE is currently not enabled in HBase configuration");
+    }
+    LOG.info("Getting key statuses for PBE on key: {} under namespace: {}", pbePrefix,
+      keyNamespace);
+    byte[] pbe_prefix = convertToPrefixBytes(pbePrefix);
+    return super.getAllKeys(pbe_prefix, keyNamespace);
   }
 }

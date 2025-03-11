@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.security.Key;
 import java.security.KeyException;
@@ -86,7 +85,7 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
     }
   }
 
-  public List<PBEKeyData> getActiveKeys(byte[] pbePrefix, String keyNamespace)
+  protected List<PBEKeyData> getAllKeys(byte[] pbePrefix, String keyNamespace)
     throws IOException, KeyException {
     Connection connection = server.getConnection();
     byte[] prefixForScan = Bytes.add(Bytes.toBytes(pbePrefix.length), pbePrefix,
@@ -98,16 +97,26 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
       scan.addFamily(KEY_META_INFO_FAMILY);
 
       ResultScanner scanner = table.getScanner(scan);
-      List<PBEKeyData> activeKeys = new ArrayList<>();
+      List<PBEKeyData> allKeys = new ArrayList<>();
       for (Result result : scanner) {
         PBEKeyData keyData = parseFromResult(pbePrefix, keyNamespace, result);
-        if (keyData.getKeyStatus() == PBEKeyStatus.ACTIVE) {
-          activeKeys.add(keyData);
+        if (keyData != null) {
+          allKeys.add(keyData);
         }
       }
-
-      return activeKeys;
+      return allKeys;
     }
+  }
+
+  public List<PBEKeyData> getActiveKeys(byte[] pbePrefix, String keyNamespace)
+    throws IOException, KeyException {
+    List<PBEKeyData> activeKeys = new ArrayList<>();
+    for (PBEKeyData keyData : getAllKeys(pbePrefix, keyNamespace)) {
+      if (keyData.getKeyStatus() == PBEKeyStatus.ACTIVE) {
+        activeKeys.add(keyData);
+      }
+    }
+    return activeKeys;
   }
 
   public PBEKeyData getKey(byte[] pbePrefix, String keyNamespace, String keyMetadata)
@@ -144,7 +153,7 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
   }
 
   private byte[] constructRowKeyForMetadata(PBEKeyData keyData) {
-    return constructRowKeyForMetadata(keyData.getPbe_prefix(), keyData.getKeyNamespace(),
+    return constructRowKeyForMetadata(keyData.getPBEPrefix(), keyData.getKeyNamespace(),
       keyData.getKeyMetadataHash());
   }
 
@@ -166,17 +175,30 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
       DEK_METADATA_QUAL_BYTES));
     long refreshedTimestamp = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,
       REFRESHED_TIMESTAMP_QUAL_BYTES));
-    byte[] dekChecksum = result.getValue(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES);
     byte[] dekWrappedByStk = result.getValue(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES);
-    long stkChecksum = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES));
-
-    PBEKeyData clusterKey = server.getPBEClusterKeyCache().getClusterKeyByChecksum(stkChecksum);
-    Key dek = EncryptionUtil.unwrapKey(server.getConfiguration(), null, dekWrappedByStk,
+    Key dek = null;
+    if (dekWrappedByStk != null) {
+      long stkChecksum =
+        Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES));
+      PBEKeyData clusterKey = server.getPBEClusterKeyCache().getClusterKeyByChecksum(stkChecksum);
+      if (clusterKey == null) {
+        LOG.error("Dropping key with metadata: {} as STK with checksum: {} is unavailable",
+          dekMetadata, stkChecksum);
+        return null;
+      }
+      dek = EncryptionUtil.unwrapKey(server.getConfiguration(), null, dekWrappedByStk,
         clusterKey.getTheKey());
+    }
     PBEKeyData dekKeyData =
       new PBEKeyData(pbePrefix, keyNamespace, dek, keyStatus, dekMetadata, refreshedTimestamp);
-    if (!Bytes.equals(dekKeyData.getKeyMetadataHash(), dekChecksum)) {
-      throw new RuntimeException("Key has didn't match for key with metadata" + dekMetadata);
+    if (dek != null) {
+      long dekChecksum = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,
+        DEK_CHECKSUM_QUAL_BYTES));
+      if (dekKeyData.getKeyChecksum() != dekChecksum) {
+        LOG.error("Dropping key, current key checksum: {} didn't match the expected checksum: {}"
+          + " for key with metadata: {}", dekKeyData.getKeyChecksum(), dekChecksum, dekMetadata);
+        return null;
+      }
     }
     return dekKeyData;
   }

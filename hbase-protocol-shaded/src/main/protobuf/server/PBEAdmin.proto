@@ -40,9 +40,17 @@ message PBEAdminResponse {
   required string pbe_prefix = 1;
   required string key_namespace = 2;
   required PBEKeyStatus pbe_status = 3;
+  optional string key_metadata = 4;
+  optional int64 refresh_timestamp = 5;
+}
+
+message PBEGetStatusResponse {
+  repeated PBEAdminResponse status = 1;
 }
 
 service PBEAdminService {
   rpc EnablePBE(PBEAdminRequest)
     returns (PBEAdminResponse);
+  rpc GetPBEStatuses(PBEAdminRequest)
+    returns (PBEGetStatusResponse);
 }
