@@ -839,7 +839,7 @@
     <jackson.version>2.19.2</jackson.version>
     <jackson.databind.version>2.19.2</jackson.databind.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
-    <servlet.api.version>3.1.0</servlet.api.version>
+    <servlet.api.version>4.0.1</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <tomcat.jasper.version>9.0.104</tomcat.jasper.version>
     <jruby.version>9.4.12.1</jruby.version>
@@ -919,7 +919,7 @@
     <!-- for.exclusion version are NOT for direct dependencies. To use the provided
     scope to transitively exclude some transitive dependencies, we need to specify
     some existing version to for maven. -->
-    <tomcat.version.for.exclusion>9.0.93</tomcat.version.for.exclusion>
+    <tomcat.version.for.exclusion>${tomcat.jasper.version}</tomcat.version.for.exclusion>
     <!-- Coverage properties -->
     <jacoco.version>0.8.8</jacoco.version>
     <jacocoArgLine/>
@@ -1790,7 +1790,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
-        <artifactId>hbase-shaded-jetty</artifactId>
+        <artifactId>hbase-shaded-jetty-ee8</artifactId>
         <version>${hbase-thirdparty.version}</version>
       </dependency>
       <dependency>
