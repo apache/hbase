@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.ActiveClusterSuffix;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -60,6 +62,8 @@ public class MasterFileSystem {
   private final Configuration conf;
   // Persisted unique cluster ID
   private ClusterId clusterId;
+  // Persisted unique Active Cluster Suffix
+  private ActiveClusterSuffix activeClusterSuffix;
   // Keep around for convenience.
   private final FileSystem fs;
   // Keep around for convenience.
@@ -158,6 +162,8 @@ public class MasterFileSystem {
     if (isSecurityEnabled) {
       fs.setPermission(new Path(rootdir, HConstants.VERSION_FILE_NAME), secureRootFilePerms);
       fs.setPermission(new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME), secureRootFilePerms);
+      fs.setPermission(new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME),
+        secureRootFilePerms);
     }
     FsPermission currentRootPerms = fs.getFileStatus(this.rootdir).getPermission();
     if (
@@ -262,10 +268,15 @@ public class MasterFileSystem {
       throw iae;
     }
     // Make sure cluster ID exists
-    if (!FSUtils.checkClusterIdExists(fs, rd, threadWakeFrequency)) {
-      FSUtils.setClusterId(fs, rd, new ClusterId(), threadWakeFrequency);
+    if (
+      !FSUtils.checkFileExistsInHbaseRootDir(fs, rootdir, HConstants.CLUSTER_ID_FILE_NAME,
+        threadWakeFrequency)
+    ) {
+      FSUtils.setClusterIdFile(fs, rootdir, HConstants.CLUSTER_ID_FILE_NAME, new ClusterId(),
+        threadWakeFrequency);
     }
-    clusterId = FSUtils.getClusterId(fs, rd);
+    clusterId = FSUtils.getClusterIdFile(fs, rootdir, new ClusterId.Parser());
+    negotiateActiveClusterSuffixFile(threadWakeFrequency);
   }
 
   /**
@@ -381,5 +392,51 @@ public class MasterFileSystem {
 
   public void logFileSystemState(Logger log) throws IOException {
     CommonFSUtils.logFileSystemState(fs, rootdir, log);
+  }
+
+  private void negotiateActiveClusterSuffixFile(long wait) throws IOException {
+    this.activeClusterSuffix = ActiveClusterSuffix.fromConfig(conf, getClusterId());
+    if (!ConfigurationUtil.isReadOnlyModeEnabledInConf(conf)) {
+      try {
+        // verify the contents against the config set
+        ActiveClusterSuffix acs =
+          FSUtils.getClusterIdFile(fs, rootdir, new ActiveClusterSuffix.Parser());
+        if (acs == null) {
+          throw new FileNotFoundException("[Read-replica feature] Active Cluster Suffix File "
+            + new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME) + " not found");
+        }
+        LOG.debug(
+          "Negotiating active cluster suffix file. File {} : File Suffix {} : Configured suffix {} :  Cluster ID : {}",
+          new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME), acs, activeClusterSuffix,
+          getClusterId());
+        // Suffix file exists and we're in read/write mode. Content should match.
+        if (!this.activeClusterSuffix.equals(acs)) {
+          // throw error
+          LOG.error(
+            "[Read-replica feature] Another cluster is running in active (read-write) mode on this "
+              + "storage location. Active cluster ID: {}, This cluster ID {}. Rootdir location {} ",
+            acs, activeClusterSuffix, rootdir);
+          throw new IOException("Cannot start master, because another cluster is running in active "
+            + "(read-write) mode on this storage location. Active Cluster Id: " + acs
+            + ", This cluster Id: " + activeClusterSuffix);
+        }
+        LOG.info(
+          "[Read-replica feature] This is the active cluster on this storage location with cluster id: {}",
+          activeClusterSuffix);
+      } catch (FileNotFoundException fnfe) {
+        // We're in read/write mode, but suffix file missing, let's create it
+        FSUtils.setClusterIdFile(fs, rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME,
+          activeClusterSuffix, wait);
+        LOG.info("[Read-replica feature] Created Active cluster suffix file: {}, with content: {}",
+          HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME, activeClusterSuffix);
+      }
+    } else {
+      // This is a read-only cluster, don't care about suffix file
+      LOG.info("[Read-replica feature] Replica cluster is being started in Read Only Mode");
+    }
+  }
+
+  public ActiveClusterSuffix getActiveClusterSuffix() {
+    return activeClusterSuffix;
   }
 }

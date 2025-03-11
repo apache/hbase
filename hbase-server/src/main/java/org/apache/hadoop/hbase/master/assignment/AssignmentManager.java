@@ -354,7 +354,7 @@ public class AssignmentManager {
             if (RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
               setMetaAssigned(regionInfo, state == State.OPEN);
             }
-            LOG.debug("Loaded hbase:meta {}", regionNode);
+            LOG.debug("Loaded {} {}", TableName.META_TABLE_NAME, regionNode);
           }, result);
       }
     }
@@ -797,8 +797,10 @@ public class AssignmentManager {
         preTransitCheck(regionNode, STATES_EXPECTED_ON_ASSIGN);
       }
       assert regionNode.getProcedure() == null;
-      return regionNode.setProcedure(
+      TransitRegionStateProcedure proc = regionNode.setProcedure(
         TransitRegionStateProcedure.assign(getProcedureEnvironment(), regionInfo, sn));
+      regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
+      return proc;
     } finally {
       regionNode.unlock();
     }
@@ -813,8 +815,10 @@ public class AssignmentManager {
     ServerName targetServer) {
     regionNode.lock();
     try {
-      return regionNode.setProcedure(TransitRegionStateProcedure.assign(getProcedureEnvironment(),
-        regionNode.getRegionInfo(), targetServer));
+      TransitRegionStateProcedure proc = regionNode.setProcedure(TransitRegionStateProcedure
+        .assign(getProcedureEnvironment(), regionNode.getRegionInfo(), targetServer));
+      regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
+      return proc;
     } finally {
       regionNode.unlock();
     }
@@ -1962,8 +1966,8 @@ public class AssignmentManager {
     boolean meta = isMetaRegion(hri);
     boolean metaLoaded = isMetaLoaded();
     if (!meta && !metaLoaded) {
-      throw new PleaseHoldException(
-        "Master not fully online; hbase:meta=" + meta + ", metaLoaded=" + metaLoaded);
+      throw new PleaseHoldException("Master not fully online; " + TableName.META_TABLE_NAME + "="
+        + meta + ", metaLoaded=" + metaLoaded);
     }
   }
 
