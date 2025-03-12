@@ -301,36 +301,29 @@ $(document).ready(function()
 
         $("#baseStatsTable").tablesorter({
             headers: {
-                1: {empty: 'emptyMin'},
-                2: {empty: 'emptyMax'}
+                '.cls_emptyMin': {empty: 'emptyMin'},
+                '.cls_emptyMax': {empty: 'emptyMax'}
             }
         });
         $("#requestStatsTable").tablesorter({
             headers: {
-                1: {sorter: 'separator'},
-                2: {sorter: 'separator'},
-                3: {sorter: 'separator'}
+                '.cls_separator': {sorter: 'separator'}
             }
         });
         $("#storeStatsTable").tablesorter({
             headers: {
-                1: {sorter: 'separator'},
-                2: {sorter: 'separator'},
-                3: {sorter: 'filesize'},
-                4: {sorter: 'filesize'},
-                5: {sorter: 'filesize'},
-                6: {sorter: 'filesize'}
+                '.cls_separator': {sorter: 'separator'},
+                '.cls_filesize': {sorter: 'filesize'}
             }
         });
         $("#compactionStatsTable").tablesorter({
             headers: {
-                1: {sorter: 'separator'},
-                2: {sorter: 'separator'}
+                '.cls_separator': {sorter: 'separator'}
             }
         });
         $("#memstoreStatsTable").tablesorter({
             headers: {
-                1: {sorter: 'filesize'}
+                '.cls_filesize': {sorter: 'filesize'}
             }
         });
     }
