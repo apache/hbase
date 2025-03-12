@@ -247,7 +247,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
             READ_FULLY_ON_VALIDATE_KEY);
           return;
         }
-        LOG.info("Validating the store file by reading the first cell from each block : {}", path);
+        LOG.debug("Validating the store file by reading the first cell from each block : {}", path);
         StoreFileReader reader = storeFile.getReader();
         try (StoreFileScanner scanner =
           reader.getStoreFileScanner(false, false, isCompaction, Long.MAX_VALUE, 0, false)) {
