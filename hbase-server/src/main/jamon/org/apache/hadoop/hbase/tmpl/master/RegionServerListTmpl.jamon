@@ -101,11 +101,11 @@ Arrays.sort(serverNames);
 <tr>
     <th>ServerName</th>
     <th>State</th>
-    <th>Start time</th>
+    <th class="cls_dateTime">Start time</th>
     <th>Last contact</th>
     <th>Version</th>
-    <th>Requests Per Second</th>
-    <th>Num. Regions</th>
+    <th class="cls_separator">Requests Per Second</th>
+    <th class="cls_separator">Num. Regions</th>
     <%if !master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null %>
       <%if master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null &&
         master.getServerManager().getOnlineServersList().size() > 0 %>
@@ -206,9 +206,9 @@ Arrays.sort(serverNames);
 <thead>
 <tr>
     <th>ServerName</th>
-    <th>Used Heap</th>
-    <th>Max Heap</th>
-    <th>Memstore Size</th>
+    <th class="cls_filesize">Used Heap</th>
+    <th class="cls_filesize">Max Heap</th>
+    <th class="cls_filesize">Memstore Size</th>
 
 </tr>
 </thead>
@@ -268,10 +268,10 @@ for (ServerName serverName: serverNames) {
 <thead>
 <tr>
     <th>ServerName</th>
-    <th>Request Per Second</th>
-    <th>Read Request Count</th>
-    <th>Filtered Read Request Count</th>
-    <th>Write Request Count</th>
+    <th class="cls_separator">Request Per Second</th>
+    <th class="cls_separator">Read Request Count</th>
+    <th class="cls_separator">Filtered Read Request Count</th>
+    <th class="cls_separator">Write Request Count</th>
 </tr>
 </thead>
 <tbody>
@@ -317,12 +317,12 @@ if (sl != null) {
 <thead>
 <tr>
     <th>ServerName</th>
-    <th>Num. Stores</th>
-    <th>Num. Storefiles</th>
-    <th>Storefile Size Uncompressed</th>
-    <th>Storefile Size</th>
-    <th>Index Size</th>
-    <th>Bloom Size</th>
+    <th class="cls_separator">Num. Stores</th>
+    <th class="cls_separator">Num. Storefiles</th>
+    <th class="cls_filesize">Storefile Size Uncompressed</th>
+    <th class="cls_filesize">Storefile Size</th>
+    <th class="cls_filesize">Index Size</th>
+    <th class="cls_filesize">Bloom Size</th>
 </tr>
 </thead>
 <tbody>
@@ -397,9 +397,9 @@ for (ServerName serverName: serverNames) {
 <thead>
 <tr>
     <th>ServerName</th>
-    <th>Num. Compacting Cells</th>
-    <th>Num. Compacted Cells</th>
-    <th>Remaining Cells</th>
+    <th class="cls_separator">Num. Compacting Cells</th>
+    <th class="cls_separator">Num. Compacted Cells</th>
+    <th class="cls_separator">Remaining Cells</th>
     <th>Compaction Progress</th>
 </tr>
 </thead>
