@@ -26,7 +26,8 @@ EOF
       end
 
       def command(pbe_prefix)
-        formatter.header(['ENCODED-KEY', 'NAMESPACE', 'STATUS', 'METADATA', 'METADATA-HASH', 'REFRESH-TIMESTAMP'])
+        formatter.header(['ENCODED-KEY', 'NAMESPACE', 'STATUS', 'METADATA', 'METADATA-HASH',
+          'REFRESH-TIMESTAMP', 'READ-OP-COUNT', 'WRITE-OP-COUNT'])
         statuses = pbe_admin.show_pbe_status(pbe_prefix)
         statuses.each { |status|
           formatter.row([
@@ -35,7 +36,9 @@ EOF
             status.getKeyStatus().toString(),
             status.getKeyMetadata(),
             status.getKeyMetadataHashEncoded(),
-            status.getRefreshTimestamp()
+            status.getRefreshTimestamp(),
+            status.getReadOpCount(),
+            status.getWriteOpCount()
           ])
         }
         formatter.footer(statuses.size())

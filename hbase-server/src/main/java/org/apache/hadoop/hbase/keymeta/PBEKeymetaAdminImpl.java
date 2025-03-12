@@ -52,17 +52,6 @@ public class PBEKeymetaAdminImpl extends PBEKeymetaTableAccessor implements PBEK
     return pbeKey.getKeyStatus();
   }
 
-  private static byte[] convertToPrefixBytes(String pbePrefix) throws IOException {
-    byte[] pbe_prefix;
-    try {
-      pbe_prefix = Base64.getDecoder().decode(pbePrefix);
-    }
-    catch (IllegalArgumentException e) {
-      throw new IOException("Failed to decode specified prefix as Base64 string: " + pbePrefix, e);
-    }
-    return pbe_prefix;
-  }
-
   @Override
   public List<PBEKeyData> getPBEKeyStatuses(String pbePrefix, String keyNamespace)
     throws IOException, KeyException {
@@ -73,5 +62,16 @@ public class PBEKeymetaAdminImpl extends PBEKeymetaTableAccessor implements PBEK
       keyNamespace);
     byte[] pbe_prefix = convertToPrefixBytes(pbePrefix);
     return super.getAllKeys(pbe_prefix, keyNamespace);
+  }
+
+  private static byte[] convertToPrefixBytes(String pbePrefix) throws IOException {
+    byte[] pbe_prefix;
+    try {
+      pbe_prefix = Base64.getDecoder().decode(pbePrefix);
+    }
+    catch (IllegalArgumentException e) {
+      throw new IOException("Failed to decode specified prefix as Base64 string: " + pbePrefix, e);
+    }
+    return pbe_prefix;
   }
 }

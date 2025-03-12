@@ -49,7 +49,7 @@ public class PBEKeymetaAdminClient implements PBEKeymetaAdmin {
           status.getKeyNamespace(), null,
           PBEKeyStatus.forValue((byte) status.getPbeStatus().getNumber()),
           status.getKeyMetadata(),
-          status.getRefreshTimestamp()));
+          status.getRefreshTimestamp(), status.getReadOpCount(), status.getWriteOpCount()));
       }
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);

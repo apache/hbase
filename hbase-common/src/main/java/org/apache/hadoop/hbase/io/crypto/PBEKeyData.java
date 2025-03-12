@@ -53,12 +53,14 @@ import java.util.Base64;
 public class PBEKeyData {
   public static final String KEY_NAMESPACE_GLOBAL = "*";
 
-  private byte[] pbePrefix;
-  private String keyNamespace;
-  private Key theKey;
-  private PBEKeyStatus keyStatus;
-  private String keyMetadata;
-  private long refreshTimestamp;
+  private final byte[] pbePrefix;
+  private final String keyNamespace;
+  private final Key theKey;
+  private final PBEKeyStatus keyStatus;
+  private final String keyMetadata;
+  private final long refreshTimestamp;
+  private final long readOpCount;
+  private final long writeOpCount;
   private volatile long keyChecksum = 0;
   private byte[] keyMetadataHash;
 
@@ -74,25 +76,31 @@ public class PBEKeyData {
   public PBEKeyData(byte[] pbe_prefix, String key_namespace, Key theKey, PBEKeyStatus keyStatus,
       String keyMetadata) {
     this(pbe_prefix, key_namespace, theKey, keyStatus, keyMetadata,
-      EnvironmentEdgeManager.currentTime());
+      EnvironmentEdgeManager.currentTime(), 0, 0);
   }
 
   /**
    * Constructs a new instance with the given parameters.
    *
-   * @param pbe_prefix   The PBE prefix associated with the key.
-   * @param theKey       The actual key, can be {@code null}.
-   * @param keyStatus    The status of the key.
-   * @param keyMetadata  The metadata associated with the key.
+   * @param pbe_prefix       The PBE prefix associated with the key.
+   * @param theKey           The actual key, can be {@code null}.
+   * @param keyStatus        The status of the key.
+   * @param keyMetadata      The metadata associated with the key.
    * @param refreshTimestamp The timestamp when this key was last refreshed.
+   * @param readOpCount      The current number of read operations for this key.
+   * @param writeOpCount     The current number of write operations for this key.
    * @throws NullPointerException if any of pbe_prefix, keyStatus or keyMetadata is null.
    */
   public PBEKeyData(byte[] pbe_prefix, String key_namespace, Key theKey, PBEKeyStatus keyStatus,
-      String keyMetadata, long refreshTimestamp) {
+      String keyMetadata, long refreshTimestamp, long readOpCount, long writeOpCount) {
     Preconditions.checkNotNull(pbe_prefix, "pbe_prefix should not be null");
     Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
     Preconditions.checkNotNull(keyStatus,  "keyStatus should not be null");
     Preconditions.checkNotNull(keyMetadata, "keyMetadata should not be null");
+    Preconditions.checkArgument(readOpCount >= 0, "readOpCount: " + readOpCount +
+      " should be >= 0");
+    Preconditions.checkArgument(writeOpCount >= 0, "writeOpCount: " + writeOpCount +
+      " should be >= 0");
 
     this.pbePrefix = pbe_prefix;
     this.keyNamespace = key_namespace;
@@ -100,6 +108,8 @@ public class PBEKeyData {
     this.keyStatus = keyStatus;
     this.keyMetadata = keyMetadata;
     this.refreshTimestamp = refreshTimestamp;
+    this.readOpCount = readOpCount;
+    this.writeOpCount = writeOpCount;
   }
 
   /**
@@ -164,6 +174,22 @@ public class PBEKeyData {
 
   public long getRefreshTimestamp() {
     return refreshTimestamp;
+  }
+
+  /**
+   * @return the number of times this key has been used for read operations as of the time this
+   * key data was initialized.
+   */
+  public long getReadOpCount() {
+    return readOpCount;
+  }
+
+  /**
+   * @return the number of times this key has been used for write operations as of the time this
+   * key data was initialized.
+   */
+  public long getWriteOpCount() {
+    return writeOpCount;
   }
 
   /**

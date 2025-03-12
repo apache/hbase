@@ -138,6 +138,8 @@ public class PBEKeymetaServiceEndpoint implements MasterCoprocessor {
                       keyData.getKeyStatus().getVal()))
                    .setKeyMetadata(keyData.getKeyMetadata())
                    .setRefreshTimestamp(keyData.getRefreshTimestamp())
+                   .setReadOpCount(keyData.getReadOpCount())
+                   .setWriteOpCount(keyData.getWriteOpCount())
                    ;
             responseBuilder.addStatus(builder.build());
           }

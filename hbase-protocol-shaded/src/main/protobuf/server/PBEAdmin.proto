@@ -42,6 +42,8 @@ message PBEAdminResponse {
   required PBEKeyStatus pbe_status = 3;
   optional string key_metadata = 4;
   optional int64 refresh_timestamp = 5;
+  optional int64 read_op_count = 6;
+  optional int64 write_op_count = 7;
 }
 
 message PBEGetStatusResponse {
