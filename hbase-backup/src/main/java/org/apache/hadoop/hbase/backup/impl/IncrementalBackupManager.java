@@ -17,8 +17,16 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
+import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.WALS_DIR;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
+
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -130,6 +138,10 @@ public class IncrementalBackupManager extends BackupManager {
     throws IOException {
     LOG.debug("In getLogFilesForNewBackup()\n" + "olderTimestamps: " + olderTimestamps
       + "\n newestTimestamps: " + newestTimestamps);
+
+    if (backupInfo.isContinuousBackupEnabled()) {
+      return getBackupLogs(conf, savedStartCode);
+    }
 
     Path walRootDir = CommonFSUtils.getWALRootDir(conf);
     Path logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
@@ -248,6 +260,48 @@ public class IncrementalBackupManager extends BackupManager {
     }
     // remove newest log per host because they are still in use
     resultLogFiles.removeAll(newestLogs);
+    return resultLogFiles;
+  }
+
+  private List<String> getBackupLogs(Configuration conf, String savedStartCode) throws IOException {
+    // get log files from backup dir
+    String walBackupDir = getConf().get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+    if (walBackupDir == null || walBackupDir.isEmpty()) {
+      throw new IOException(
+        "Incremental backup requires the WAL backup directory " + CONF_CONTINUOUS_BACKUP_WAL_DIR);
+    }
+    List<String> resultLogFiles = new ArrayList<>();
+    Path walBackupPath = new Path(walBackupDir);
+    FileSystem backupFs = FileSystem.get(walBackupPath.toUri(), conf);
+    FileStatus[] dayDirs = backupFs.listStatus(new Path(walBackupDir, WALS_DIR));
+    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+
+    for (FileStatus dayDir : dayDirs) {
+      if (!dayDir.isDirectory()) {
+        continue; // Skip files, only process directories
+      }
+
+      String dirName = dayDir.getPath().getName();
+      try {
+        Date dirDate = dateFormat.parse(dirName);
+        long dirStartTime = dirDate.getTime(); // Start of that day (00:00:00)
+        long dirEndTime = dirStartTime + ONE_DAY_IN_MILLISECONDS - 1; // End time of the day
+        // (23:59:59)
+
+        if (dirEndTime >= Long.parseLong(savedStartCode)) {
+          Path dirPath = dayDir.getPath();
+          FileStatus[] logs = backupFs.listStatus(dirPath);
+          ;
+          for (FileStatus log : logs) {
+            String filepath = log.getPath().toString();
+            LOG.debug("currentLogFile: " + filepath);
+            resultLogFiles.add(filepath);
+          }
+        }
+      } catch (ParseException e) {
+        LOG.warn("Skipping invalid directory name: " + dirName, e);
+      }
+    }
     return resultLogFiles;
   }
 

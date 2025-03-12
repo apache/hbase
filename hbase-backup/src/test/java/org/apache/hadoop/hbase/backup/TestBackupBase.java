@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -406,6 +408,15 @@ public class TestBackupBase {
     return request;
   }
 
+  protected BackupRequest createBackupRequest(BackupType type, List<TableName> tables, String path,
+    boolean noChecksumVerify, boolean continuousBackupEnabled) {
+    BackupRequest.Builder builder = new BackupRequest.Builder();
+    BackupRequest request = builder.withBackupType(type).withTableList(tables)
+      .withTargetRootDir(path).withNoChecksumVerify(noChecksumVerify)
+      .withContinuousBackupEnabled(continuousBackupEnabled).build();
+    return request;
+  }
+
   protected String backupTables(BackupType type, List<TableName> tables, String path)
     throws IOException {
     Connection conn = null;
@@ -544,6 +555,16 @@ public class TestBackupBase {
     RemoteIterator<LocatedFileStatus> it = fs.listFiles(new Path(BACKUP_ROOT_DIR), true);
     while (it.hasNext()) {
       LOG.debug(Objects.toString(it.next().getPath()));
+    }
+  }
+
+  void deleteContinuousBackupReplicationPeerIfExists(Admin admin) throws IOException {
+    if (
+      admin.listReplicationPeers().stream()
+        .anyMatch(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER))
+    ) {
+      admin.disableReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
+      admin.removeReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
     }
   }
 }

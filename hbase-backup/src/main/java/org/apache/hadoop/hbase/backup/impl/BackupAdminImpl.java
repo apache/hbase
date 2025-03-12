@@ -519,7 +519,11 @@ public class BackupAdminImpl implements BackupAdmin {
     if (type == BackupType.INCREMENTAL) {
       Set<TableName> incrTableSet;
       try (BackupSystemTable table = new BackupSystemTable(conn)) {
-        incrTableSet = table.getIncrementalBackupTableSet(targetRootDir);
+        if (request.isContinuousBackupEnabled()) {
+          incrTableSet = table.getContinuousBackupTableSet().keySet();
+        } else {
+          incrTableSet = table.getIncrementalBackupTableSet(targetRootDir);
+        }
       }
 
       if (incrTableSet.isEmpty()) {

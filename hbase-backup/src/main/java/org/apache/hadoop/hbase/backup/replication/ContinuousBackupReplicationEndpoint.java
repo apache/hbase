@@ -19,8 +19,9 @@ package org.apache.hadoop.hbase.backup.replication;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -282,8 +283,9 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
 
   private FSHLogProvider.Writer createWalWriter(long dayInMillis) {
     // Convert dayInMillis to "yyyy-MM-dd" format
-    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-    String dayDirectoryName = dateFormat.format(new Date(dayInMillis));
+    DateTimeFormatter formatter =
+      DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(ZoneId.systemDefault());
+    String dayDirectoryName = formatter.format(Instant.ofEpochMilli(dayInMillis));
 
     FileSystem fs = backupFileSystemManager.getBackupFs();
     Path walsDir = backupFileSystemManager.getWalsDir();

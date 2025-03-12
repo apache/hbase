@@ -148,6 +148,8 @@ public class FullTableBackupClient extends TableBackupClient {
   public void execute() throws IOException {
     try (Admin admin = conn.getAdmin()) {
       beginBackup(backupManager, backupInfo);
+      initializeBackupStartCode(backupManager);
+      performLogRoll(admin);
 
       if (backupInfo.isContinuousBackupEnabled()) {
         handleContinuousBackup(admin);
@@ -155,6 +157,7 @@ public class FullTableBackupClient extends TableBackupClient {
         handleNonContinuousBackup(admin);
       }
 
+      updateBackupMetadata();
       completeBackup(conn, backupInfo, BackupType.FULL, conf);
     } catch (Exception e) {
       failBackup(conn, backupInfo, backupManager, e, "Unexpected BackupException : ",
@@ -185,16 +188,12 @@ public class FullTableBackupClient extends TableBackupClient {
   }
 
   private void handleNonContinuousBackup(Admin admin) throws IOException {
-    initializeBackupStartCode(backupManager);
-    performLogRoll(admin);
     performBackupSnapshots(admin);
     backupManager.addIncrementalBackupTableSet(backupInfo.getTables());
 
     // set overall backup status: complete. Here we make sure to complete the backup.
     // After this checkpoint, even if entering cancel process, will let the backup finished
     backupInfo.setState(BackupState.COMPLETE);
-
-    updateBackupMetadata();
   }
 
   private void initializeBackupStartCode(BackupManager backupManager) throws IOException {
