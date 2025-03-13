@@ -964,21 +964,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       if (!admin.tableExists(PermissionStorage.ACL_TABLE_NAME)) {
         createACLTable(admin);
       } else {
-        TableDescriptor tableDescriptor = admin.getDescriptor(PermissionStorage.ACL_TABLE_NAME);
-          if (!tableDescriptor.hasCoprocessor(ZKAclUpdaterCoprocessor.class.getName())) {
-            // Add coprocessor to the existing table
-            TableDescriptor modifiedTableDescriptor = TableDescriptorBuilder.newBuilder(tableDescriptor)
-              .setCoprocessor(ZKAclUpdaterCoprocessor.class.getName())
-              .build();
-            admin.modifyTable(modifiedTableDescriptor);
-            LOG.info("New descriptor is: {}", admin.getDescriptor(PermissionStorage.ACL_TABLE_NAME));
-        }
-        LOG.info("New Modified descriptor is: {}", admin.getDescriptor(PermissionStorage.ACL_TABLE_NAME));
         this.aclTabAvailable = true;
-
       }
     }
   }
+
 
   /**
    * Create the ACL table
@@ -990,8 +980,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         .setInMemory(true).setBlockCacheEnabled(true).setBlocksize(8 * 1024)
         .setBloomFilterType(BloomType.NONE).setScope(HConstants.REPLICATION_SCOPE_LOCAL).build();
     TableDescriptor td = TableDescriptorBuilder.newBuilder(PermissionStorage.ACL_TABLE_NAME)
-      .setColumnFamily(cfd).setCoprocessor(ZKAclUpdaterCoprocessor.class.getName())
-      .build();
+      .setColumnFamily(cfd).build();
     admin.createTable(td);
   }
 
@@ -2537,5 +2526,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     accessChecker.requirePermission(getActiveUser(ctx), "updateConfiguration", null,
       Permission.Action.ADMIN);
   }
-
 }
+
+

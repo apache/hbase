@@ -246,6 +246,7 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.ZKAclUpdaterCoprocessor;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -345,7 +346,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   public static final int DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS = 5 * 60;
 
   public static final String HBASE_MASTER_CLEANER_INTERVAL = "hbase.master.cleaner.interval";
-
   public static final int DEFAULT_HBASE_MASTER_CLEANER_INTERVAL = 600 * 1000;
 
   private String clusterId;
@@ -1077,6 +1077,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!maintenanceMode) {
       startupTaskGroup.addTask("Initializing master coprocessors");
       setQuotasObserver(conf);
+      appendToMasterCoprocessorConf(conf,ZKAclUpdaterCoprocessor.class.getName());
       initializeCoprocessorHost(conf);
     } else {
       // start an in process region server for carrying system regions
@@ -1513,7 +1514,17 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     return true;
   }
+  private void appendToMasterCoprocessorConf(Configuration conf,String className) {
 
+    String[] masterCoprocs = conf.getStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    final int length = null == masterCoprocs ? 0 : masterCoprocs.length;
+    String[] updatedCoprocs = new String[length + 1];
+    if (length > 0) {
+      System.arraycopy(masterCoprocs, 0, updatedCoprocs, 0, masterCoprocs.length);
+    }
+    updatedCoprocs[length] = className;
+    conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, updatedCoprocs);
+  }
   /**
    * Adds the {@code MasterQuotasObserver} to the list of configured Master observers to
    * automatically remove quotas for a table when that table is deleted.
@@ -1527,14 +1538,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     ) {
       return;
     }
-    String[] masterCoprocs = conf.getStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-    final int length = null == masterCoprocs ? 0 : masterCoprocs.length;
-    String[] updatedCoprocs = new String[length + 1];
-    if (length > 0) {
-      System.arraycopy(masterCoprocs, 0, updatedCoprocs, 0, masterCoprocs.length);
-    }
-    updatedCoprocs[length] = MasterQuotasObserver.class.getName();
-    conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, updatedCoprocs);
+    appendToMasterCoprocessorConf(conf,MasterQuotasObserver.class.getName());
   }
 
   private void initMobCleaner() {
@@ -4395,6 +4399,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     // append the quotas observer back to the master coprocessor key
     setQuotasObserver(newConf);
+    appendToMasterCoprocessorConf(conf, ZKAclUpdaterCoprocessor.class.getName());
+
+
     // update region server coprocessor if the configuration has changed.
     if (
       CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
