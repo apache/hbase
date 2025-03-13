@@ -1826,6 +1826,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         LOG.error(msg);
         if (canAbort) {
           // If we failed to acquire the write lock, abort the server
+          // print all thread stacks which are still holding locks and are the cause of RS abort
+          for (Map.Entry<Thread, Boolean> rslocks : regionLockHolders.entrySet()) {
+            LOG.warn("Thread still holding lock {} : Stack trace : {}", rslocks.getKey(),
+              Threads.printStackTrace(rslocks.getKey()));
+          }
           rsServices.abort(msg, null);
         }
         throw new IOException(msg);
@@ -8441,9 +8446,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Update regionLockHolders ONLY for any startRegionOperation call that is invoked from
     // an RPC handler
     Thread thisThread = Thread.currentThread();
-    if (isInterruptableOp) {
-      regionLockHolders.put(thisThread, true);
-    }
+
+    regionLockHolders.put(thisThread, isInterruptableOp);
+
     if (this.closed.get()) {
       lock.readLock().unlock();
       throw new NotServingRegionException(getRegionInfo().getRegionNameAsString() + " is closed");
@@ -8458,11 +8463,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         coprocessorHost.postStartRegionOperation(op);
       }
     } catch (Exception e) {
-      if (isInterruptableOp) {
-        // would be harmless to remove what we didn't add but we know by 'isInterruptableOp'
-        // if we added this thread to regionLockHolders
-        regionLockHolders.remove(thisThread);
-      }
+      regionLockHolders.remove(thisThread);
       lock.readLock().unlock();
       throw new IOException(e);
     }
@@ -8702,8 +8703,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     for (Map.Entry<Thread, Boolean> entry : regionLockHolders.entrySet()) {
       // An entry in this map will have a boolean value indicating if it is currently
       // eligible for interrupt; if so, we should interrupt it.
+      Thread key = entry.getKey();
       if (entry.getValue().booleanValue()) {
-        entry.getKey().interrupt();
+        key.interrupt();
+      } else {
+        String s = Threads.printStackTrace(key);
+        LOG.warn("Can't interrupt thread {} : holding lock. Stack trace : {}", key, s);
+
       }
     }
   }
