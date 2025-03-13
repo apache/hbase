@@ -81,7 +81,7 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
       ctx.alloc().buffer(4 + response.length).writeInt(response.length).writeBytes(response));
   }
 
-  private void tryComplete(ChannelHandlerContext ctx) {
+  private void tryComplete(ChannelHandlerContext ctx) throws IOException {
     if (!saslRpcClient.isComplete()) {
       return;
     }

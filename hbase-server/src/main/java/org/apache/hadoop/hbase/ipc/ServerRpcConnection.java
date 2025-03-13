@@ -397,15 +397,9 @@ abstract class ServerRpcConnection implements Closeable {
         doRawSaslReply(SaslStatus.SUCCESS, new BytesWritable(replyToken), null, null);
       }
       if (saslServer.isComplete()) {
+        finishSaslNegotiation();
         String qop = saslServer.getNegotiatedQop();
         useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
-        ugi =
-          provider.getAuthorizedUgi(saslServer.getAuthorizationID(), this.rpcServer.secretManager);
-        RpcServer.LOG.debug(
-          "SASL server context established. Authenticated client: {}. Negotiated QoP is {}", ugi,
-          qop);
-        this.rpcServer.metrics.authenticationSuccess();
-        RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);
         saslContextEstablished = true;
       }
     }
@@ -447,6 +441,17 @@ abstract class ServerRpcConnection implements Closeable {
         unwrappedData = null;
       }
     }
+  }
+
+  void finishSaslNegotiation() throws IOException {
+    String negotiatedQop = saslServer.getNegotiatedQop();
+    SaslUtil.verifyNegotiatedQop(saslServer.getRequestedQop(), negotiatedQop);
+    ugi = provider.getAuthorizedUgi(saslServer.getAuthorizationID(), this.rpcServer.secretManager);
+    RpcServer.LOG.debug(
+      "SASL server context established. Authenticated client: {}. Negotiated QoP is {}", ugi,
+      negotiatedQop);
+    rpcServer.metrics.authenticationSuccess();
+    RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);
   }
 
   public void processOneRpc(ByteBuff buf) throws IOException, InterruptedException {
