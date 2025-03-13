@@ -227,7 +227,7 @@ public class ZKAclUpdaterCoprocessor implements  MasterCoprocessor, RegionCoproc
   }
   @Override
   public void postDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-    final String namespace) throws IOException {
+      final String namespace) throws IOException {
     zkPermissionWatcher.deleteNamespaceACLNode(namespace);
   }
 
