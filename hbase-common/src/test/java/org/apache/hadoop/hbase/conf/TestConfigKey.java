@@ -36,6 +36,12 @@ public class TestConfigKey {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestConfigKey.class);
 
+  private interface Interface {
+  }
+
+  private class Class implements Interface {
+  }
+
   private void assertThrows(Runnable r) {
     try {
       r.run();
@@ -78,8 +84,8 @@ public class TestConfigKey {
     conf.set(doubleKey, "1.0");
 
     String classKey = UUID.randomUUID().toString();
-    ConfigKey.CLASS(classKey);
-    conf.set(classKey, "org.apache.hadoop.hbase.conf.ConfigKey");
+    ConfigKey.CLASS(classKey, Interface.class);
+    conf.set(classKey, Class.class.getName());
 
     String booleanKey = UUID.randomUUID().toString();
     ConfigKey.BOOLEAN(booleanKey);
@@ -116,5 +122,6 @@ public class TestConfigKey {
     assertThrows(conf, copy -> copy.set(floatKey, "x"));
     assertThrows(conf, copy -> copy.set(doubleKey, "x"));
     assertThrows(conf, copy -> copy.set(classKey, "NoSuchClass"));
+    assertThrows(conf, copy -> copy.set(classKey, getClass().getName()));
   }
 }

@@ -82,8 +82,8 @@ public class CompactionConfiguration {
     ConfigKey.LONG("hbase.hstore.compaction.date.tiered.max.storefile.age.millis");
   public static final String DATE_TIERED_INCOMING_WINDOW_MIN_KEY =
     ConfigKey.INT("hbase.hstore.compaction.date.tiered.incoming.window.min");
-  public static final String COMPACTION_POLICY_CLASS_FOR_DATE_TIERED_WINDOWS_KEY =
-    ConfigKey.CLASS("hbase.hstore.compaction.date.tiered.window.policy.class");
+  public static final String COMPACTION_POLICY_CLASS_FOR_DATE_TIERED_WINDOWS_KEY = ConfigKey.CLASS(
+    "hbase.hstore.compaction.date.tiered.window.policy.class", RatioBasedCompactionPolicy.class);
   public static final String DATE_TIERED_SINGLE_OUTPUT_FOR_MINOR_COMPACTION_KEY =
     ConfigKey.BOOLEAN("hbase.hstore.compaction.date.tiered.single.output.for.minor.compaction");
 
@@ -91,8 +91,8 @@ public class CompactionConfiguration {
     ? extends RatioBasedCompactionPolicy> DEFAULT_COMPACTION_POLICY_CLASS_FOR_DATE_TIERED_WINDOWS =
       ExploringCompactionPolicy.class;
 
-  public static final String DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS_KEY =
-    ConfigKey.CLASS("hbase.hstore.compaction.date.tiered.window.factory.class");
+  public static final String DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS_KEY = ConfigKey.CLASS(
+    "hbase.hstore.compaction.date.tiered.window.factory.class", CompactionWindowFactory.class);
 
   private static final Class<
     ? extends CompactionWindowFactory> DEFAULT_DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS =

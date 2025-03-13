@@ -134,7 +134,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDes
 public class HStore
   implements Store, HeapSize, StoreConfigInformation, PropagatingConfigurationObserver {
   public static final String MEMSTORE_CLASS_NAME =
-    ConfigKey.CLASS("hbase.regionserver.memstore.class");
+    ConfigKey.CLASS("hbase.regionserver.memstore.class", MemStore.class);
   public static final String COMPACTCHECKER_INTERVAL_MULTIPLIER_KEY =
     ConfigKey.INT("hbase.server.compactchecker.interval.multiplier");
   public static final String BLOCKING_STOREFILES_KEY =

@@ -90,14 +90,18 @@ public class ConfigKey {
 
   /**
    * Registers the configuration key that expects a class.
-   * @param key configuration key
+   * @param key      configuration key
+   * @param expected the expected class or interface the value should implement
    * @return the key
    */
-  public static String CLASS(String key) {
+  public static <T> String CLASS(String key, Class<T> expected) {
     return register(key, conf -> {
       String value = conf.get(key);
       try {
-        Class.forName(value);
+        if (!expected.isAssignableFrom(Class.forName(value))) {
+          throw new IllegalArgumentException(
+            String.format("%s ('%s') is not compatible to %s.", value, key, expected.getName()));
+        }
       } catch (ClassNotFoundException e) {
         throw new IllegalArgumentException(String.format("'%s' must be a class.", key), e);
       }
