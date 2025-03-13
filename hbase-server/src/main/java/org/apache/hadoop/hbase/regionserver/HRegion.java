@@ -715,7 +715,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // Used to track interruptible holders of the region lock. Currently that is only RPC handler
   // threads. Boolean value in map determines if lock holder can be interrupted, normally true,
   // but may be false when thread is transiting a critical section.
-  final ConcurrentHashMap<Thread, Boolean> regionLockHolders;
+  final ConcurrentHashMap<Thread, Boolean> intrRegionLockHolders;
+  final ConcurrentHashMap<Thread, Boolean> nonintrRegionLockHolders;
 
   // Stop updates lock
   private final ReentrantReadWriteLock updatesLock = new ReentrantReadWriteLock();
@@ -807,7 +808,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         : CellComparatorImpl.COMPARATOR;
     this.lock = new ReentrantReadWriteLock(
       conf.getBoolean(FAIR_REENTRANT_CLOSE_LOCK, DEFAULT_FAIR_REENTRANT_CLOSE_LOCK));
-    this.regionLockHolders = new ConcurrentHashMap<>();
+    this.intrRegionLockHolders = new ConcurrentHashMap<>();
+    this.nonintrRegionLockHolders = new ConcurrentHashMap<>();
     this.flushCheckInterval =
       conf.getInt(MEMSTORE_PERIODIC_FLUSH_INTERVAL, DEFAULT_CACHE_FLUSH_INTERVAL);
     this.flushPerChanges = conf.getLong(MEMSTORE_FLUSH_PER_CHANGES, DEFAULT_FLUSH_PER_CHANGES);
@@ -1826,6 +1828,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         LOG.error(msg);
         if (canAbort) {
           // If we failed to acquire the write lock, abort the server
+          // print all thread stacks which are still holding locks and are the cause of RS abort
+          for (Map.Entry<Thread, Boolean> rslocks : intrRegionLockHolders.entrySet()) {
+            Thread thread = rslocks.getKey();
+            LOG.warn(
+              "Aborting RS.Thread still holding lock: {} , interruptible: {} , Stack trace: {}",
+              thread, rslocks.getValue(), Threads.printStackTrace(thread));
+          }
+          for (Map.Entry<Thread, Boolean> rslocks : nonintrRegionLockHolders.entrySet()) {
+            Thread thread = rslocks.getKey();
+            LOG.warn(
+              "Aborting RS.Non interruptible thread holding lock: {} , interruptible: {} , Stack trace: {}",
+              thread, rslocks.getValue(), Threads.printStackTrace(thread));
+          }
           rsServices.abort(msg, null);
         }
         throw new IOException(msg);
@@ -8408,6 +8423,72 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public void startRegionOperation(Operation op) throws IOException {
+    boolean isInterruptibleOp = isOperationInterruptible(op);
+    if (!shouldLock(op)) return;
+
+    if (this.closing.get()) {
+      throw new NotServingRegionException(getRegionInfo().getRegionNameAsString() + " is closing");
+    }
+    lock(lock.readLock());
+    // Update regionLockHolders (INTR and non-INTR) for every startRegionOperation call that is
+    // invoked from either an RPC handler or otherwise. We will interrupt only intr RPC operations
+    Thread thisThread = Thread.currentThread();
+
+    Map<Thread, Boolean> lockHolders =
+      isInterruptibleOp ? intrRegionLockHolders : nonintrRegionLockHolders;
+    lockHolders.put(thisThread, isInterruptibleOp);
+
+    if (this.closed.get()) {
+      lock.readLock().unlock();
+      throw new NotServingRegionException(getRegionInfo().getRegionNameAsString() + " is closed");
+    }
+    // The unit for snapshot is a region. So, all stores for this region must be
+    // prepared for snapshot operation before proceeding.
+    if (op == Operation.SNAPSHOT) {
+      stores.values().forEach(HStore::preSnapshotOperation);
+    }
+    try {
+      if (coprocessorHost != null) {
+        coprocessorHost.postStartRegionOperation(op);
+      }
+    } catch (Exception e) {
+      lockHolders.remove(thisThread);
+      lock.readLock().unlock();
+      throw new IOException(e);
+    }
+  }
+
+  private static boolean shouldLock(Operation op) {
+    // split, merge or compact region doesn't need to check the closing/closed state or lock the
+    // region
+    List<Operation> lockFreeOperations = Arrays.asList(Operation.MERGE_REGION,
+      Operation.SPLIT_REGION, Operation.COMPACT_REGION, Operation.COMPACT_SWITCH);
+    if (lockFreeOperations.contains(op)) {
+
+      return false;
+    }
+    return true;
+  }
+
+  @Override
+  public void closeRegionOperation() throws IOException {
+    closeRegionOperation(Operation.ANY);
+  }
+
+  @Override
+  public void closeRegionOperation(Operation operation) throws IOException {
+    if (operation == Operation.SNAPSHOT) {
+      stores.values().forEach(HStore::postSnapshotOperation);
+    }
+    Thread thisThread = Thread.currentThread();
+    removeRPCThreadFromMap(thisThread);
+    lock.readLock().unlock();
+    if (coprocessorHost != null) {
+      coprocessorHost.postCloseRegionOperation(operation);
+    }
+  }
+
+  private boolean isOperationInterruptible(Operation op) throws IOException {
     boolean isInterruptableOp = false;
     switch (op) {
       case GET: // interruptible read operations
@@ -8426,64 +8507,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       default: // all others
         break;
     }
-    if (
-      op == Operation.MERGE_REGION || op == Operation.SPLIT_REGION || op == Operation.COMPACT_REGION
-        || op == Operation.COMPACT_SWITCH
-    ) {
-      // split, merge or compact region doesn't need to check the closing/closed state or lock the
-      // region
-      return;
-    }
-    if (this.closing.get()) {
-      throw new NotServingRegionException(getRegionInfo().getRegionNameAsString() + " is closing");
-    }
-    lock(lock.readLock());
-    // Update regionLockHolders ONLY for any startRegionOperation call that is invoked from
-    // an RPC handler
-    Thread thisThread = Thread.currentThread();
-    if (isInterruptableOp) {
-      regionLockHolders.put(thisThread, true);
-    }
-    if (this.closed.get()) {
-      lock.readLock().unlock();
-      throw new NotServingRegionException(getRegionInfo().getRegionNameAsString() + " is closed");
-    }
-    // The unit for snapshot is a region. So, all stores for this region must be
-    // prepared for snapshot operation before proceeding.
-    if (op == Operation.SNAPSHOT) {
-      stores.values().forEach(HStore::preSnapshotOperation);
-    }
-    try {
-      if (coprocessorHost != null) {
-        coprocessorHost.postStartRegionOperation(op);
-      }
-    } catch (Exception e) {
-      if (isInterruptableOp) {
-        // would be harmless to remove what we didn't add but we know by 'isInterruptableOp'
-        // if we added this thread to regionLockHolders
-        regionLockHolders.remove(thisThread);
-      }
-      lock.readLock().unlock();
-      throw new IOException(e);
-    }
-  }
-
-  @Override
-  public void closeRegionOperation() throws IOException {
-    closeRegionOperation(Operation.ANY);
-  }
-
-  @Override
-  public void closeRegionOperation(Operation operation) throws IOException {
-    if (operation == Operation.SNAPSHOT) {
-      stores.values().forEach(HStore::postSnapshotOperation);
-    }
-    Thread thisThread = Thread.currentThread();
-    regionLockHolders.remove(thisThread);
-    lock.readLock().unlock();
-    if (coprocessorHost != null) {
-      coprocessorHost.postCloseRegionOperation(operation);
-    }
+    return isInterruptableOp;
   }
 
   /**
@@ -8505,7 +8529,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       else lock.readLock().unlock();
       throw new NotServingRegionException(getRegionInfo().getRegionNameAsString() + " is closed");
     }
-    regionLockHolders.put(Thread.currentThread(), true);
+    intrRegionLockHolders.put(Thread.currentThread(), true);
   }
 
   /**
@@ -8513,7 +8537,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * #startRegionOperation
    */
   private void closeBulkRegionOperation() {
-    regionLockHolders.remove(Thread.currentThread());
+    removeRPCThreadFromMap(Thread.currentThread());
     if (lock.writeLock().isHeldByCurrentThread()) lock.writeLock().unlock();
     else lock.readLock().unlock();
   }
@@ -8682,7 +8706,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * {{@link #enableInterrupts()}.
    */
   void disableInterrupts() {
-    regionLockHolders.computeIfPresent(Thread.currentThread(), (t, b) -> false);
+    intrRegionLockHolders.computeIfPresent(Thread.currentThread(), (t, b) -> false);
   }
 
   /**
@@ -8690,7 +8714,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * it eligible again. No-op if interrupts are already enabled.
    */
   void enableInterrupts() {
-    regionLockHolders.computeIfPresent(Thread.currentThread(), (t, b) -> true);
+    intrRegionLockHolders.computeIfPresent(Thread.currentThread(), (t, b) -> true);
   }
 
   /**
@@ -8699,12 +8723,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * {@link #startBulkRegionOperation(boolean)}.
    */
   private void interruptRegionOperations() {
-    for (Map.Entry<Thread, Boolean> entry : regionLockHolders.entrySet()) {
+    for (Map.Entry<Thread, Boolean> rslocks : intrRegionLockHolders.entrySet()) {
       // An entry in this map will have a boolean value indicating if it is currently
       // eligible for interrupt; if so, we should interrupt it.
-      if (entry.getValue().booleanValue()) {
-        entry.getKey().interrupt();
+      Thread thread = rslocks.getKey();
+      LOG.warn("Thread still holding lock: {} , interruptible: {} , Stack trace: {}", thread,
+        rslocks.getValue(), Threads.printStackTrace(thread));
+      if (rslocks.getValue().booleanValue()) {
+        thread.interrupt();
       }
+    }
+  }
+
+  void removeRPCThreadFromMap(Thread thread) {
+    if (!intrRegionLockHolders.remove(thread)) {
+      nonintrRegionLockHolders.remove(thread);
     }
   }
 
