@@ -18,12 +18,12 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -960,9 +960,7 @@ public final class ZKUtil {
     }
     List<ZKUtilOp> ops = new ArrayList<>();
     for (String eachRoot : pathRoots) {
-      // ZooKeeper Watches are one time triggers; When children of parent nodes are deleted
-      // recursively, must set another watch, get notified of delete node
-      List<String> children = listChildrenBFSAndWatchThem(zkw, eachRoot);
+      List<String> children = listChildrenBFSNoWatch(zkw, eachRoot);
       // Delete the leaves first and eventually get rid of the root
       for (int i = children.size() - 1; i >= 0; --i) {
         ops.add(ZKUtilOp.deleteNodeFailSilent(children.get(i)));
@@ -1047,7 +1045,7 @@ public final class ZKUtil {
    */
   private static List<String> listChildrenBFSNoWatch(ZKWatcher zkw, final String znode)
     throws KeeperException {
-    Deque<String> queue = new LinkedList<>();
+    Deque<String> queue = new ArrayDeque<>();
     List<String> tree = new ArrayList<>();
     queue.add(znode);
     while (true) {
@@ -1056,35 +1054,6 @@ public final class ZKUtil {
         break;
       }
       List<String> children = listChildrenNoWatch(zkw, node);
-      if (children == null) {
-        continue;
-      }
-      for (final String child : children) {
-        final String childPath = node + "/" + child;
-        queue.add(childPath);
-        tree.add(childPath);
-      }
-    }
-    return tree;
-  }
-
-  /**
-   * BFS Traversal of all the children under path, with the entries in the list, in the same order
-   * as that of the traversal. Lists all the children and set watches on to them. - zk reference -
-   * path of node
-   * @return list of children znodes under the path if unexpected ZooKeeper exception
-   */
-  private static List<String> listChildrenBFSAndWatchThem(ZKWatcher zkw, final String znode)
-    throws KeeperException {
-    Deque<String> queue = new LinkedList<>();
-    List<String> tree = new ArrayList<>();
-    queue.add(znode);
-    while (true) {
-      String node = queue.pollFirst();
-      if (node == null) {
-        break;
-      }
-      List<String> children = listChildrenAndWatchThem(zkw, node);
       if (children == null) {
         continue;
       }
@@ -1304,7 +1273,7 @@ public final class ZKUtil {
       }
       useMultiWarn = false;
     }
-    List<Op> zkOps = new LinkedList<>();
+    List<Op> zkOps = new ArrayList<>();
     for (ZKUtilOp op : ops) {
       zkOps.add(toZooKeeperOp(zkw, op));
     }
