@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.http.ssl;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Writer;
 import java.math.BigInteger;
 import java.net.URL;
@@ -171,6 +172,34 @@ public final class KeyStoreTestUtil {
     KeyStore ks = createEmptyKeyStore(keystoreType);
     ks.setKeyEntry(alias, privateKey, keyPassword.toCharArray(), new Certificate[] { cert });
     saveKeyStore(ks, filename, password);
+  }
+
+  /**
+   * Load a keystore from the jks file.
+   * @param filename String filename to load keystore
+   * @param password char array password to load keystore
+   * @throws GeneralSecurityException for any error with the security APIs
+   * @throws IOException              if there is an I/O error saving the file
+   */
+  public static KeyStore loadKeyStore(String filename, char[] password)
+    throws GeneralSecurityException, IOException {
+    return loadKeyStore(filename, password, "JKS");
+  }
+
+  /**
+   * Load a keystore from the file.
+   * @param filename     String filename to load keystore
+   * @param password     char array password to load keystore
+   * @param keystoreType String keystore file type (e.g. "JKS")
+   * @throws GeneralSecurityException for any error with the security APIs
+   * @throws IOException              if there is an I/O error saving the file
+   */
+  public static KeyStore loadKeyStore(String filename, char[] password, String keystoreType)
+    throws GeneralSecurityException, IOException {
+    InputStream inputStream = java.nio.file.Files.newInputStream(new File(filename).toPath());
+    KeyStore ks = KeyStore.getInstance(keystoreType);
+    ks.load(inputStream, password);
+    return ks;
   }
 
   /**
