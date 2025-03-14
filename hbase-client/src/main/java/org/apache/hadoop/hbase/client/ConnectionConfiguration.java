@@ -155,8 +155,8 @@ public class ConnectionConfiguration {
 
     this.maxKeyValueSize = conf.getInt(MAX_KEYVALUE_SIZE_KEY, MAX_KEYVALUE_SIZE_DEFAULT);
 
-    this.bufferedMutatorMaxMutations =
-      conf.getInt(BUFFERED_MUTATOR_MAX_MUTATIONS_KEY, BUFFERED_MUTATOR_MAX_MUTATIONS_DEFAULT);
+    this.bufferedMutatorMaxMutations = conf.getInt(BUFFERED_MUTATOR_MAX_MUTATIONS_KEY,
+      conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, BUFFERED_MUTATOR_MAX_MUTATIONS_DEFAULT));
 
     this.rpcTimeout =
       conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
