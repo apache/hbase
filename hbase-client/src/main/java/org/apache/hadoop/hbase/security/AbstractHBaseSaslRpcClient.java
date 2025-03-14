@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
+import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.conf.Configuration;
@@ -103,6 +104,15 @@ public abstract class AbstractHBaseSaslRpcClient {
 
   public byte[] evaluateChallenge(byte[] challenge) throws SaslException {
     return saslClient.evaluateChallenge(challenge);
+  }
+
+  /**
+   * Check that SASL has successfully negotiated a QOP according to the requested rpcProtection
+   * @throws IOException if the negotiated QOP is insufficient
+   */
+  protected void verifyNegotiatedQop() throws IOException {
+    SaslUtil.verifyNegotiatedQop(saslProps.get(Sasl.QOP),
+      (String) saslClient.getNegotiatedProperty(Sasl.QOP));
   }
 
   /** Release resources used by wrapped saslClient */

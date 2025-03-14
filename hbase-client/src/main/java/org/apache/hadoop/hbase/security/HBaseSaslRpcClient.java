@@ -147,6 +147,9 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
         LOG.debug("SASL client context established. Negotiated QoP: "
           + saslClient.getNegotiatedProperty(Sasl.QOP));
       }
+
+      verifyNegotiatedQop();
+
       // initial the inputStream, outputStream for both Sasl encryption
       // and Crypto AES encryption if necessary
       // if Crypto AES encryption enabled, the saslInputStream/saslOutputStream is
