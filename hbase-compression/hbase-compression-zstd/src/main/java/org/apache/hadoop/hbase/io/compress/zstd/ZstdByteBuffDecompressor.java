@@ -98,6 +98,7 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit
       output.limit() - output.position(), input, input.position(), inputLen);
 
     output.position(origOutputPos + n);
+    input.position(input.position() + inputLen);
     return n;
   }
 
@@ -109,6 +110,7 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit
       inputLen);
 
     output.position(origOutputPos + n);
+    input.position(input.position() + inputLen);
     return n;
   }
 
