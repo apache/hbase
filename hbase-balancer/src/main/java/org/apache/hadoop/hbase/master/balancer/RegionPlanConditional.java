@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -85,8 +86,8 @@ public abstract class RegionPlanConditional {
 
     // Check Server
     int[] destinationRegionIndices = cluster.regionsPerServer[destinationServerIdx];
-    Set<RegionInfo> serverRegions = Arrays.stream(cluster.regionsPerServer[destinationServerIdx])
-      .mapToObj(idx -> cluster.regions[idx]).collect(Collectors.toSet());
+    Set<RegionInfo> serverRegions =
+      getRegionsFromIndex(destinationServerIdx, cluster.regionsPerServer);
     for (int regionIdx : destinationRegionIndices) {
       serverRegions.add(cluster.regions[regionIdx]);
     }
@@ -100,8 +101,7 @@ public abstract class RegionPlanConditional {
 
     // Check Host
     int hostIdx = cluster.serverIndexToHostIndex[destinationServerIdx];
-    Set<RegionInfo> hostRegions = Arrays.stream(cluster.regionsPerHost[hostIdx])
-      .mapToObj(idx -> cluster.regions[idx]).collect(Collectors.toSet());
+    Set<RegionInfo> hostRegions = getRegionsFromIndex(hostIdx, cluster.regionsPerHost);
     if (isViolatingHost(regionPlan, hostRegions)) {
       return true;
     }
@@ -112,8 +112,7 @@ public abstract class RegionPlanConditional {
 
     // Check Rack
     int rackIdx = cluster.serverIndexToRackIndex[destinationServerIdx];
-    Set<RegionInfo> rackRegions = Arrays.stream(cluster.regionsPerRack[rackIdx])
-      .mapToObj(idx -> cluster.regions[idx]).collect(Collectors.toSet());
+    Set<RegionInfo> rackRegions = getRegionsFromIndex(rackIdx, cluster.regionsPerRack);
     if (isViolatingRack(regionPlan, rackRegions)) {
       return true;
     }
@@ -129,5 +128,14 @@ public abstract class RegionPlanConditional {
 
   boolean isViolatingRack(RegionPlan regionPlan, Set<RegionInfo> destinationRegions) {
     return false;
+  }
+
+  private Set<RegionInfo> getRegionsFromIndex(int index, int[][] regionsPerIndex) {
+    int[] regionIndices = regionsPerIndex[index];
+    if (regionIndices == null) {
+      return Collections.emptySet();
+    }
+    return Arrays.stream(regionIndices).mapToObj(idx -> cluster.regions[idx])
+      .collect(Collectors.toSet());
   }
 }
