@@ -8441,9 +8441,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Update regionLockHolders ONLY for any startRegionOperation call that is invoked from
     // an RPC handler
     Thread thisThread = Thread.currentThread();
-    if (isInterruptableOp) {
-      regionLockHolders.put(thisThread, true);
-    }
+
+    regionLockHolders.put(thisThread, isInterruptableOp);
+
     if (this.closed.get()) {
       lock.readLock().unlock();
       throw new NotServingRegionException(getRegionInfo().getRegionNameAsString() + " is closed");
@@ -8458,11 +8458,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         coprocessorHost.postStartRegionOperation(op);
       }
     } catch (Exception e) {
-      if (isInterruptableOp) {
-        // would be harmless to remove what we didn't add but we know by 'isInterruptableOp'
-        // if we added this thread to regionLockHolders
-        regionLockHolders.remove(thisThread);
-      }
+      regionLockHolders.remove(thisThread);
       lock.readLock().unlock();
       throw new IOException(e);
     }
@@ -8704,6 +8700,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // eligible for interrupt; if so, we should interrupt it.
       if (entry.getValue().booleanValue()) {
         entry.getKey().interrupt();
+      } else {
+        LOG.warn("Can't interrupt thread {} holding lock", entry.getKey());
       }
     }
   }
