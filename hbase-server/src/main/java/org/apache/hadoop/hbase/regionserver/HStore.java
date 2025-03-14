@@ -1121,7 +1121,7 @@ public class HStore
    * block for long periods.
    * <p>
    * During this time, the Store can work as usual, getting values from StoreFiles and writing new
-   * StoreFiles from the memstore. Existing StoreFiles are not destroyed until the new compacted
+   * StoreFiles from the MemStore. Existing StoreFiles are not destroyed until the new compacted
    * StoreFile is completely written-out to disk.
    * <p>
    * The compactLock prevents multiple simultaneous compactions. The structureLock prevents us from
@@ -1144,18 +1144,17 @@ public class HStore
    * <ul>
    * <li>If RS fails before 2, compaction won't complete. Even if RS lives on and finishes the
    * compaction later, it will only write the new data file to the region directory. Since we
-   * already have this data, this will be idempotent but we will have a redundant copy of the
+   * already have this data, this will be idempotent, but we will have a redundant copy of the
    * data.</li>
-   * </ul>
    * <li>If RS fails between 2 and 3, the region will have a redundant copy of the data. The RS that
    * failed won't be able to finish sync() for WAL because of lease recovery in WAL.</li>
    * <li>If RS fails after 3, the region server who opens the region will pick up the compaction
    * marker from the WAL and replay it by removing the compaction input files. Failed RS can also
    * attempt to delete those files, but the operation will be idempotent</li>
-   * </ol>
+   * </ul>
    * See HBASE-2231 for details.
    * @param compaction compaction details obtained from requestCompaction()
-   * @return Storefile we compacted into or null if we failed or opted out early.
+   * @return The storefiles that we compacted into or null if we failed or opted out early.
    */
   public List<HStoreFile> compact(CompactionContext compaction,
     ThroughputController throughputController, User user) throws IOException {
