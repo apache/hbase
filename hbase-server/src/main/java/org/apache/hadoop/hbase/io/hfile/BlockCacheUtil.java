@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.io.hfile.HFileBlock.FILL_HEADER;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
@@ -28,8 +30,10 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -256,6 +260,44 @@ public class BlockCacheUtil {
 
   public static int getMaxCachedBlocksByFile(Configuration conf) {
     return conf == null ? DEFAULT_MAX : conf.getInt("hbase.ui.blockcache.by.file.max", DEFAULT_MAX);
+  }
+
+  /**
+   * Similarly to HFileBlock.Writer.getBlockForCaching(), creates a HFileBlock instance without
+   * checksum for caching. This is needed for when we cache blocks via readers (either prefetch or
+   * client read), otherwise we may fail equality comparison when checking against same block that
+   * may already have been cached at write time.
+   * @param cacheConf the related CacheConfig object.
+   * @param block     the HFileBlock instance to be converted.
+   * @return the resulting HFileBlock instance without checksum.
+   */
+  public static HFileBlock getBlockForCaching(CacheConfig cacheConf, HFileBlock block) {
+    // Calculate how many bytes we need for checksum on the tail of the block.
+    int numBytes = cacheConf.shouldCacheCompressed(block.getBlockType().getCategory())
+      ? 0
+      : (int) ChecksumUtil.numBytes(block.getOnDiskDataSizeWithHeader(),
+        block.getHFileContext().getBytesPerChecksum());
+    ByteBuff buff = block.getBufferReadOnly();
+    HFileBlockBuilder builder = new HFileBlockBuilder();
+    return builder.withBlockType(block.getBlockType())
+      .withOnDiskSizeWithoutHeader(block.getOnDiskSizeWithoutHeader())
+      .withUncompressedSizeWithoutHeader(block.getUncompressedSizeWithoutHeader())
+      .withPrevBlockOffset(block.getPrevBlockOffset()).withByteBuff(buff)
+      .withFillHeader(FILL_HEADER).withOffset(block.getOffset()).withNextBlockOnDiskSize(-1)
+      .withOnDiskDataSizeWithHeader(block.getOnDiskDataSizeWithHeader() + numBytes)
+      .withHFileContext(cloneContext(block.getHFileContext()))
+      .withByteBuffAllocator(cacheConf.getByteBuffAllocator()).withShared(!buff.hasArray()).build();
+  }
+
+  public static HFileContext cloneContext(HFileContext context) {
+    HFileContext newContext = new HFileContextBuilder().withBlockSize(context.getBlocksize())
+      .withBytesPerCheckSum(0).withChecksumType(ChecksumType.NULL) // no checksums in cached data
+      .withCompression(context.getCompression())
+      .withDataBlockEncoding(context.getDataBlockEncoding())
+      .withHBaseCheckSum(context.isUseHBaseChecksum()).withCompressTags(context.isCompressTags())
+      .withIncludesMvcc(context.isIncludesMvcc()).withIncludesTags(context.isIncludesTags())
+      .withColumnFamily(context.getColumnFamily()).withTableName(context.getTableName()).build();
+    return newContext;
   }
 
   /**
