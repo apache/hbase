@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BACKUP_LIST_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH_DESC;
@@ -24,6 +26,8 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_FORCE_DELETE;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_FORCE_DELETE_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP;
@@ -46,8 +50,11 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -632,15 +639,18 @@ public final class BackupCommands {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
+
+      boolean isForceDelete = cmdline.hasOption(OPTION_FORCE_DELETE);
       super.execute();
       if (cmdline.hasOption(OPTION_KEEP)) {
-        executeDeleteOlderThan(cmdline);
+        executeDeleteOlderThan(cmdline, isForceDelete);
       } else if (cmdline.hasOption(OPTION_LIST)) {
-        executeDeleteListOfBackups(cmdline);
+        executeDeleteListOfBackups(cmdline, isForceDelete);
       }
     }
 
-    private void executeDeleteOlderThan(CommandLine cmdline) throws IOException {
+    private void executeDeleteOlderThan(CommandLine cmdline, boolean isForceDelete)
+      throws IOException {
       String value = cmdline.getOptionValue(OPTION_KEEP);
       int days = 0;
       try {
@@ -662,6 +672,7 @@ public final class BackupCommands {
         BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         history = sysTable.getBackupHistory(-1, dateFilter);
         String[] backupIds = convertToBackupIds(history);
+        validatePITRBackupDeletion(backupIds, isForceDelete);
         int deleted = admin.deleteBackups(backupIds);
         System.out.println("Deleted " + deleted + " backups. Total older than " + days + " days: "
           + backupIds.length);
@@ -680,10 +691,11 @@ public final class BackupCommands {
       return ids;
     }
 
-    private void executeDeleteListOfBackups(CommandLine cmdline) throws IOException {
+    private void executeDeleteListOfBackups(CommandLine cmdline, boolean isForceDelete)
+      throws IOException {
       String value = cmdline.getOptionValue(OPTION_LIST);
       String[] backupIds = value.split(",");
-
+      validatePITRBackupDeletion(backupIds, isForceDelete);
       try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         int deleted = admin.deleteBackups(backupIds);
         System.out.println("Deleted " + deleted + " backups. Total requested: " + backupIds.length);
@@ -695,12 +707,161 @@ public final class BackupCommands {
 
     }
 
+    /**
+     * Validates whether the specified backups can be deleted while preserving Point-In-Time
+     * Recovery (PITR) capabilities. If a backup is the only remaining full backup enabling PITR for
+     * certain tables, deletion is prevented unless forced.
+     * @param backupIds     Array of backup IDs to validate.
+     * @param isForceDelete Flag indicating whether deletion should proceed regardless of PITR
+     *                      constraints.
+     * @throws IOException If a backup is essential for PITR and force deletion is not enabled.
+     */
+    private void validatePITRBackupDeletion(String[] backupIds, boolean isForceDelete)
+      throws IOException {
+      if (!isForceDelete) {
+        for (String backupId : backupIds) {
+          List<TableName> affectedTables = getTablesDependentOnBackupForPITR(backupId);
+          if (!affectedTables.isEmpty()) {
+            String errMsg = String.format(
+              "Backup %s is the only FULL backup remaining that enables PITR for tables: %s. "
+                + "Use the force option to delete it anyway.",
+              backupId, affectedTables);
+            System.err.println(errMsg);
+            throw new IOException(errMsg);
+          }
+        }
+      }
+    }
+
+    /**
+     * Identifies tables that rely on the specified backup for PITR. If a table has no other valid
+     * FULL backups that can facilitate recovery to all points within the PITR retention window, it
+     * is added to the dependent list.
+     * @param backupId The backup ID being evaluated.
+     * @return List of tables dependent on the specified backup for PITR.
+     * @throws IOException If backup metadata cannot be retrieved.
+     */
+    private List<TableName> getTablesDependentOnBackupForPITR(String backupId) throws IOException {
+      List<TableName> dependentTables = new ArrayList<>();
+
+      try (final BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
+        List<BackupInfo> backupHistory = backupSystemTable.getBackupInfos(BackupState.COMPLETE);
+        BackupInfo targetBackup = backupSystemTable.readBackupInfo(backupId);
+
+        if (targetBackup == null) {
+          throw new IOException("Backup info not found for backupId: " + backupId);
+        }
+
+        // Only full backups are mandatory for PITR
+        if (!BackupType.FULL.equals(targetBackup.getType())) {
+          return List.of();
+        }
+
+        // Retrieve the tables with continuous backup enabled and their start times
+        Map<TableName, Long> continuousBackupStartTimes =
+          backupSystemTable.getContinuousBackupTableSet();
+
+        // Determine the PITR time window
+        long pitrWindowDays = getConf().getLong(CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS,
+          DEFAULT_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS);
+        long currentTime = EnvironmentEdgeManager.getDelegate().currentTime();
+        long pitrMaxStartTime = currentTime - TimeUnit.DAYS.toMillis(pitrWindowDays);
+
+        // For all tables, determine the earliest (minimum) continuous backup start time.
+        // This represents the actual earliest point-in-time recovery (PITR) timestamp
+        // that can be used, ensuring we do not go beyond the available backup data.
+        long minContinuousBackupStartTime = currentTime;
+        for (TableName table : targetBackup.getTableNames()) {
+          minContinuousBackupStartTime = Math.min(minContinuousBackupStartTime,
+            continuousBackupStartTimes.getOrDefault(table, currentTime));
+        }
+
+        // The PITR max start time should be the maximum of the calculated minimum continuous backup
+        // start time and the default PITR max start time (based on the configured window).
+        // This ensures that PITR does not extend beyond what is practically possible.
+        pitrMaxStartTime = Math.max(minContinuousBackupStartTime, pitrMaxStartTime);
+
+        for (TableName table : targetBackup.getTableNames()) {
+          // This backup is not necessary for this table since it doesn't have PITR enabled
+          if (!continuousBackupStartTimes.containsKey(table)) {
+            continue;
+          }
+          if (
+            !isValidPITRBackup(targetBackup, table, continuousBackupStartTimes, pitrMaxStartTime)
+          ) {
+            continue; // This backup is not crucial for PITR of this table
+          }
+
+          // Check if another valid full backup exists for this table
+          long finalPitrMaxStartTime = pitrMaxStartTime;
+          boolean hasAnotherValidBackup = backupHistory.stream()
+            .anyMatch(backup -> !backup.getBackupId().equals(backupId) && isValidPITRBackup(backup,
+              table, continuousBackupStartTimes, finalPitrMaxStartTime));
+
+          if (!hasAnotherValidBackup) {
+            dependentTables.add(table);
+          }
+        }
+      }
+      return dependentTables;
+    }
+
+    /**
+     * Determines if a given backup is a valid candidate for Point-In-Time Recovery (PITR) for a
+     * specific table. A valid backup ensures that recovery is possible to any point within the PITR
+     * retention window. A backup qualifies if:
+     * <ul>
+     * <li>It is a FULL backup.</li>
+     * <li>It contains the specified table.</li>
+     * <li>Its completion timestamp is before the PITR retention window start time.</li>
+     * <li>Its completion timestamp is on or after the table’s continuous backup start time.</li>
+     * </ul>
+     * @param backupInfo             The backup information being evaluated.
+     * @param tableName              The table for which PITR validity is being checked.
+     * @param continuousBackupTables A map of tables to their continuous backup start time.
+     * @param pitrMaxStartTime       The maximum allowed start timestamp for PITR eligibility.
+     * @return {@code true} if the backup enables recovery to all valid points in time for the
+     *         table; {@code false} otherwise.
+     */
+    private boolean isValidPITRBackup(BackupInfo backupInfo, TableName tableName,
+      Map<TableName, Long> continuousBackupTables, long pitrMaxStartTime) {
+      // Only FULL backups are mandatory for PITR
+      if (!BackupType.FULL.equals(backupInfo.getType())) {
+        return false;
+      }
+
+      // The backup must include the table to be relevant for PITR
+      if (!backupInfo.getTableNames().contains(tableName)) {
+        return false;
+      }
+
+      // The backup must have been completed before the PITR retention window starts,
+      // otherwise, it won't be helpful in cases where the recovery point is between
+      // pitrMaxStartTime and the backup completion time.
+      if (backupInfo.getCompleteTs() > pitrMaxStartTime) {
+        return false;
+      }
+
+      // Retrieve the table's continuous backup start time
+      long continuousBackupStartTime = continuousBackupTables.getOrDefault(tableName, 0L);
+
+      // The backup must have been started on or after the table’s continuous backup start time,
+      // otherwise, it won't be helpful in few cases because we wouldn't have the WAL entries
+      // between the backup start time and the continuous backup start time.
+      if (backupInfo.getStartTs() < continuousBackupStartTime) {
+        return false;
+      }
+
+      return true;
+    }
+
     @Override
     protected void printUsage() {
       System.out.println(DELETE_CMD_USAGE);
       Options options = new Options();
       options.addOption(OPTION_KEEP, true, OPTION_KEEP_DESC);
       options.addOption(OPTION_LIST, true, OPTION_BACKUP_LIST_DESC);
+      options.addOption(OPTION_FORCE_DELETE, false, OPTION_FORCE_DELETE_DESC);
 
       HelpFormatter helpFormatter = new HelpFormatter();
       helpFormatter.setLeftPadding(2);
