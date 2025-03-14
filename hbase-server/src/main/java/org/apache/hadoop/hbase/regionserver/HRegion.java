@@ -357,6 +357,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   final LongAdder readRequestsCount = new LongAdder();
   final LongAdder cpRequestsCount = new LongAdder();
   final LongAdder filteredReadRequestsCount = new LongAdder();
+  final LongAdder deletedReadRequestsCount = new LongAdder();
   // Count rows for multi row mutations
   final LongAdder writeRequestsCount = new LongAdder();
 
@@ -1434,6 +1435,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public long getFilteredReadRequestsCount() {
     return filteredReadRequestsCount.sum();
+  }
+
+  @Override
+  public long getDeletedReadRequestsCount() {
+    return deletedReadRequestsCount.sum();
   }
 
   @Override
