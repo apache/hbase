@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_CLOSE
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_SPLIT_KEY;
 import static org.apache.hadoop.hbase.master.LoadBalancer.BOGUS_SERVER_NAME;
 import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.FORCE_REGION_RETAINMENT;
+import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.STATES_EXPECTED_ON_CLOSING;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
@@ -372,6 +373,12 @@ public class TransitRegionStateProcedure
   }
 
   private void closeRegionAfterUpdatingMeta(MasterProcedureEnv env, RegionStateNode regionNode) {
+    // This region was in FAILED_OPEN state. No need to close it.
+    if (regionNode.getRegionLocation() == null) {
+      setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED);
+      return;
+    }
+
     LOG.debug("Close region: isSplit: {}: evictOnSplit: {}: evictOnClose: {}", isSplit,
       env.getMasterConfiguration().getBoolean(EVICT_BLOCKS_ON_SPLIT_KEY, DEFAULT_EVICT_ON_SPLIT),
       evictCache);
@@ -392,10 +399,26 @@ public class TransitRegionStateProcedure
     ) {
       return;
     }
-    if (regionNode.isInState(State.OPEN, State.CLOSING, State.MERGING, State.SPLITTING)) {
-      // this is the normal case
-      ProcedureFutureUtil.suspendIfNecessary(this, this::setFuture,
-        env.getAssignmentManager().regionClosing(regionNode), env,
+
+    CompletableFuture<Void> future = null;
+    if (regionNode.isInState(STATES_EXPECTED_ON_CLOSING)) {
+      // This is the normal case
+      future = env.getAssignmentManager().regionClosing(regionNode);
+    } else if (regionNode.setState(State.CLOSED, State.FAILED_OPEN)) {
+      // FAILED_OPEN doesn't need further transition, immediately mark the region as closed
+      AssignmentManager am = env.getAssignmentManager();
+      am.getRegionStates().removeFromFailedOpen(regionNode.getRegionInfo());
+      future = am.getRegionStateStore().updateRegionLocation(regionNode);
+      FutureUtils.addListener(future, (r, e) -> {
+        if (e != null) {
+          // Failed to persist CLOSED state to meta. Revert.
+          LOG.error("Failed to update meta for {} to CLOSED", regionNode.getRegionInfo(), e);
+          regionNode.setState(State.FAILED_OPEN);
+        }
+      });
+    }
+    if (future != null) {
+      ProcedureFutureUtil.suspendIfNecessary(this, this::setFuture, future, env,
         () -> closeRegionAfterUpdatingMeta(env, regionNode));
     } else {
       forceNewPlan = true;
