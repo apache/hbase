@@ -29,8 +29,11 @@ import org.slf4j.LoggerFactory;
  * Utility class for basic validation of configuration values.
  */
 @InterfaceAudience.Private
-public class ConfigKey {
+public final class ConfigKey {
   private static final Logger LOG = LoggerFactory.getLogger(ConfigKey.class);
+
+  private ConfigKey() {
+  }
 
   @FunctionalInterface
   private interface Validator {
