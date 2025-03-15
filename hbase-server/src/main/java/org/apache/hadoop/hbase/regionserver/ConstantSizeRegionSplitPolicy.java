@@ -43,7 +43,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   private double jitterRate;
   protected boolean overallHRegionFiles;
 
-  public final String MAX_FILESIZE_JITTER_KEY =
+  public static final String MAX_FILESIZE_JITTER_KEY =
     ConfigKey.DOUBLE("hbase.hregion.max.filesize.jitter");
 
   @Override
