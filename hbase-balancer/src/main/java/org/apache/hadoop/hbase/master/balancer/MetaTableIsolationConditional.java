@@ -1,6 +1,4 @@
 /*
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,22 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.master.balancer;
 
-$(document).ready(
-  function(){
-    var prefix = "tab_";
-	$('.tabbable .nav-pills a').click(function (e) {
-        e.preventDefault();
-        location.hash = $(e.target).attr('href').substr(1).replace(prefix, "");
-        $(this).tab('show');
-    });
-            
-    if (location.hash !== '') {
-      var tabItem = $('a[href="' + location.hash.replace("#", "#"+prefix) + '"]');
-      tabItem.tab('show');
-      $(document).scrollTop(0);  
-      return false;  
-    }
-    return true;
+import org.apache.hadoop.hbase.client.RegionInfo;
+
+/**
+ * If enabled, this class will help the balancer ensure that the meta table lives on its own
+ * RegionServer. Configure this via {@link BalancerConditionals#ISOLATE_META_TABLE_KEY}
+ */
+class MetaTableIsolationConditional extends TableIsolationConditional {
+
+  public MetaTableIsolationConditional(BalancerConditionals balancerConditionals,
+    BalancerClusterState cluster) {
+    super(new MetaTableIsolationCandidateGenerator(balancerConditionals), balancerConditionals,
+      cluster);
   }
-);
+
+  @Override
+  boolean isRegionToIsolate(RegionInfo regionInfo) {
+    return regionInfo.isMetaRegion();
+  }
+}

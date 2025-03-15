@@ -96,8 +96,8 @@
     <thead>
         <tr>
             <th>Region Name</th>
-            <th>Start Key</th>
-            <th>End Key</th>
+            <th class="cls_emptyMin">Start Key</th>
+            <th class="cls_emptyMax">End Key</th>
             <th>ReplicaID</th>
         </tr>
     </thead>
@@ -129,9 +129,9 @@
     <thead>
         <tr>
             <th>Region Name</th>
-            <th>Read Request Count</th>
-            <th>Filtered Read Request Count</th>
-            <th>Write Request Count</th>
+            <th class="cls_separator">Read Request Count</th>
+            <th class="cls_separator">Filtered Read Request Count</th>
+            <th class="cls_separator">Write Request Count</th>
         </tr>
     </thead>
 
@@ -165,12 +165,12 @@
     <thead>
         <tr>
             <th>Region Name</th>
-            <th>Num. Stores</th>
-            <th>Num. Storefiles</th>
-            <th>Storefile Size Uncompressed</th>
-            <th>Storefile Size</th>
-            <th>Index Size</th>
-            <th>Bloom Size</th>
+            <th class="cls_separator">Num. Stores</th>
+            <th class="cls_separator">Num. Storefiles</th>
+            <th class="cls_filesize">Storefile Size Uncompressed</th>
+            <th class="cls_filesize">Storefile Size</th>
+            <th class="cls_filesize">Index Size</th>
+            <th class="cls_filesize">Bloom Size</th>
             <th>Data Locality</th>
             <th>Len Of Biggest Cell</th>
             <th>% Cached</th>
@@ -256,8 +256,8 @@
     <thead>
         <tr>
             <th>Region Name</th>
-            <th>Num. Compacting Cells</th>
-            <th>Num. Compacted Cells</th>
+            <th class="cls_separator">Num. Compacting Cells</th>
+            <th class="cls_separator">Num. Compacted Cells</th>
             <th>Compaction Progress</th>
             <th data-date-format="yyyymmdd hhmm zz">Last Major Compaction</th>
         </tr>
@@ -305,7 +305,7 @@
     <thead>
         <tr>
             <th>Region Name</th>
-            <th>Memstore Size</th>
+            <th class="cls_filesize">Memstore Size</th>
         </tr>
     </thead>
 

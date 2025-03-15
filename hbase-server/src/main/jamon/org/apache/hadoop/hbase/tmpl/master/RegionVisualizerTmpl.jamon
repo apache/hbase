@@ -17,9 +17,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 </%doc>
 
-    <script type="text/javascript" src="/static/js/vega@5.24.0.min.js"></script>
-    <script type="text/javascript" src="/static/js/vega-lite@5.6.1.min.js"></script>
-    <script type="text/javascript" src="/static/js/vega-embed@6.21.3.min.js"></script>
+    <script type="text/javascript" src="/static/js/vega@5.32.0.min.js"></script>
+    <script type="text/javascript" src="/static/js/vega-lite@5.23.0.min.js"></script>
+    <script type="text/javascript" src="/static/js/vega-embed@6.29.0.min.js"></script>
 
     <div id="vis" style="width:80%;"></div>
     <script type="text/javascript">

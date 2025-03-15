@@ -35,6 +35,7 @@ pipeline {
         PATCH_REL = 'output'
         YETUS_REL = 'yetus'
         DOCKERFILE_REL = "${SRC_REL}/dev-support/docker/Dockerfile"
+        CACHE_APACHE_ARTIFACT_REL = "${SRC_REL}/dev-support/jenkins-scripts/cache-apache-project-artifact.sh"
         YETUS_DRIVER_REL = "${SRC_REL}/dev-support/jenkins_precommit_github_yetus.sh"
         YETUS_VERSION = '0.15.0'
         GENERAL_CHECK_PLUGINS = 'all,-javadoc,-jira,-shadedjars,-unit'
@@ -90,6 +91,7 @@ pipeline {
                         PATCHDIR = "${WORKDIR}/${PATCH_REL}"
                         BUILD_URL_ARTIFACTS = "artifact/${WORKDIR_REL}/${PATCH_REL}"
                         DOCKERFILE = "${WORKDIR}/${DOCKERFILE_REL}"
+                        CACHE_APACHE_ARTIFACT = "${WORKDIR}/${CACHE_APACHE_ARTIFACT_REL}"
                         YETUS_DRIVER = "${WORKDIR}/${YETUS_DRIVER_REL}"
                         ASF_NIGHTLIES_GENERAL_CHECK_BASE="${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}"
                         HIDE_OLD_COMMENTS = "${SOURCEDIR}/dev-support/gh_hide_old_comments.sh"
@@ -104,7 +106,11 @@ pipeline {
                         }
                         dir("${YETUSDIR}") {
                             sh'''#!/usr/bin/env bash
-                              wget https://dlcdn.apache.org/yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
+                              "${CACHE_APACHE_ARTIFACT}" \
+                                --keys 'https://downloads.apache.org/yetus/KEYS' \
+                                --verify-tar-gz \
+                                ./apache-yetus-${YETUS_VERSION}-bin.tar.gz \
+                                yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
                               tar --strip-components=1 -xzf apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
                               rm apache-yetus-${YETUS_VERSION}-bin.tar.gz
                             '''
@@ -231,6 +237,7 @@ pipeline {
                         PATCHDIR = "${WORKDIR}/${PATCH_REL}"
                         BUILD_URL_ARTIFACTS = "artifact/${WORKDIR_REL}/${PATCH_REL}"
                         DOCKERFILE = "${WORKDIR}/${DOCKERFILE_REL}"
+                        CACHE_APACHE_ARTIFACT = "${WORKDIR}/${CACHE_APACHE_ARTIFACT_REL}"
                         YETUS_DRIVER = "${WORKDIR}/${YETUS_DRIVER_REL}"
                         SKIP_ERRORPRONE = true
                     }
@@ -244,7 +251,11 @@ pipeline {
                         }
                         dir("${YETUSDIR}") {
                             sh'''#!/usr/bin/env bash
-                              wget https://dlcdn.apache.org/yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
+                              "${CACHE_APACHE_ARTIFACT}" \
+                                --keys 'https://downloads.apache.org/yetus/KEYS' \
+                                --verify-tar-gz \
+                                ./apache-yetus-${YETUS_VERSION}-bin.tar.gz \
+                                yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
                               tar --strip-components=1 -xzf apache-yetus-${YETUS_VERSION}-bin.tar.gz && \
                               rm apache-yetus-${YETUS_VERSION}-bin.tar.gz
                             '''

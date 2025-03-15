@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * Used for FavoredNode unit tests
@@ -27,7 +28,7 @@ public class LoadOnlyFavoredStochasticBalancer extends FavoredStochasticBalancer
 
   @Override
   protected Map<Class<? extends CandidateGenerator>, CandidateGenerator>
-    createCandidateGenerators() {
+    createCandidateGenerators(Configuration conf) {
     Map<Class<? extends CandidateGenerator>, CandidateGenerator> fnPickers = new HashMap<>(1);
     fnPickers.put(FavoredNodeLoadPicker.class, new FavoredNodeLoadPicker());
     return fnPickers;

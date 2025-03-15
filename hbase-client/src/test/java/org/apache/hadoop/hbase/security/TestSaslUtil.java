@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.security;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
+import java.io.IOException;
 import java.util.Map;
 import javax.security.sasl.Sasl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -60,5 +62,61 @@ public class TestSaslUtil {
     exception.expect(IllegalArgumentException.class);
     props = SaslUtil.initSaslProperties("");
     assertEquals("auth", props.get(Sasl.QOP));
+  }
+
+  @Test
+  public void testVerifyQop() throws IOException {
+    String nullQop = null;
+    String authentication = "auth";
+    String integrity = "auth-int";
+    String confidentality = "auth-conf";
+    String anyQop = "auth-conf,auth-int,auth";
+
+    // Empty requested, got empty
+    SaslUtil.verifyNegotiatedQop(nullQop, nullQop);
+
+    // Auth requested, got null
+    SaslUtil.verifyNegotiatedQop(authentication, nullQop);
+
+    // Auth requested, got auth
+    SaslUtil.verifyNegotiatedQop(authentication, authentication);
+
+    // Auth requested, got confidentiality.
+    assertThrows(IOException.class,
+      () -> SaslUtil.verifyNegotiatedQop(authentication, confidentality));
+
+    // Integrity requested requested, got null
+    assertThrows(IOException.class, () -> SaslUtil.verifyNegotiatedQop(integrity, nullQop));
+
+    // Integrity requested requested, got auth
+    assertThrows(IOException.class, () -> SaslUtil.verifyNegotiatedQop(integrity, authentication));
+
+    // Integrity requested requested, got conf
+    assertThrows(IOException.class, () -> SaslUtil.verifyNegotiatedQop(integrity, authentication));
+
+    // Confidentiality requested requested, got null
+    assertThrows(IOException.class, () -> SaslUtil.verifyNegotiatedQop(confidentality, nullQop));
+
+    // Confidentiality requested requested, got auth
+    assertThrows(IOException.class,
+      () -> SaslUtil.verifyNegotiatedQop(confidentality, authentication));
+
+    // Confidentiality requested requested, got integrity
+    assertThrows(IOException.class, () -> SaslUtil.verifyNegotiatedQop(confidentality, integrity));
+
+    // Confidentiality requested requested, got confidentiality
+    assertThrows(IOException.class, () -> SaslUtil.verifyNegotiatedQop(confidentality, integrity));
+
+    // Any requested, got null
+    SaslUtil.verifyNegotiatedQop(anyQop, null);
+
+    // Any requested, got auth
+    SaslUtil.verifyNegotiatedQop(anyQop, authentication);
+
+    // Any requested, got integrity
+    SaslUtil.verifyNegotiatedQop(anyQop, integrity);
+
+    // Any requested, got confidentiality
+    SaslUtil.verifyNegotiatedQop(anyQop, confidentality);
   }
 }

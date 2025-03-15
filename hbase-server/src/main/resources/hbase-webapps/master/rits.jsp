@@ -97,7 +97,7 @@
                 <td><%= regionStateNode.getRegionInfo().getEncodedName() %></td>
                 <td><%= regionStateNode.getRegionInfo().getTable() %></td>
                 <td><%= regionStateNode.getState() %></td>
-                <td><%= regionStateNode.getRegionLocation().getServerName() %></td>
+                <td><%= regionStateNode.getRegionServerName() %></td>
                 <%
                     TransitRegionStateProcedure procedure = regionStateNode.getProcedure();
 
@@ -134,7 +134,7 @@
             r.put("region", regionStateNode.getRegionInfo().getEncodedName());
             r.put("table", regionStateNode.getRegionInfo().getTable().getNameAsString());
             r.put("state", regionStateNode.getState());
-            r.put("server", regionStateNode.getRegionLocation().getServerName());
+            r.put("server", regionStateNode.getRegionServerName());
 
             TransitRegionStateProcedure procedure = regionStateNode.getProcedure();
             if (procedure != null) {

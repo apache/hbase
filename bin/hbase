@@ -215,14 +215,19 @@ if [ -d "$HBASE_HOME/hbase-server/target/hbase-webapps" ]; then
   fi
 fi
 
-#If avail, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
+# If available, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
 # Allow this functionality to be disabled
 if [ "$HBASE_DISABLE_HADOOP_CLASSPATH_LOOKUP" != "true" ] ; then
   HADOOP_IN_PATH=$(PATH="${HADOOP_HOME:-${HADOOP_PREFIX}}/bin:$PATH" which hadoop 2>/dev/null)
 fi
 
-#If Hadoop is not specified with HADOOP_HOME, check that the assembly includes Hadoop
-if [[ $in_dev_env = false && -z "${HADOOP_IN_PATH}" && ! -e "${HBASE_HOME}/lib/hadoop-common*" ]] ; then
+# Check if hadoop jars are available
+has_hadoop_jars=false
+if ls "${HBASE_HOME}"/lib/hadoop-common* &>/dev/null; then
+  has_hadoop_jars=true
+fi
+
+if [[ $in_dev_env = false && -z "${HADOOP_IN_PATH}" && $has_hadoop_jars = false ]] ; then
   echo Installation does not contain Hadoop, and HADOOP_HOME does not point to a Hadoop installation.
   echo Specify a compatible Hadoop installation via HADOOP_HOME, or use the HBase assembly variant
   echo that includes Hadoop.
