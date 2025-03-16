@@ -78,12 +78,17 @@ public final class AuthManager {
       }
     }
 
-    void clear() {
+    void cleanUp(ListMultimap<String, ? extends Permission> newPermissions) {
       synchronized (mutex) {
         for (Map.Entry<String, Set<T>> entry : cache.entrySet()) {
-          entry.getValue().clear();
+          String key = entry.getKey();
+          Set<T> value = entry.getValue();
+          if (newPermissions.containsKey(key)) {
+            value.removeIf(t -> !newPermissions.get(key).contains(t));
+          } else {
+            value.clear();
+          }
         }
-        cache.clear();
       }
     }
   }
@@ -163,7 +168,6 @@ public final class AuthManager {
    * @param globalPerms new global permissions
    */
   private void updateGlobalCache(ListMultimap<String, Permission> globalPerms) {
-    globalCache.clear();
     for (String name : globalPerms.keySet()) {
       for (Permission permission : globalPerms.get(name)) {
         // Before 2.2, the global permission which storage in zk is not right. It was saved as a
@@ -175,6 +179,12 @@ public final class AuthManager {
         }
       }
     }
+    for (String name : globalCache.keySet()) {
+      if (!globalPerms.containsKey(name)) {
+        globalCache.remove(name);
+      }
+    }
+
     mtime.incrementAndGet();
   }
 
@@ -186,7 +196,6 @@ public final class AuthManager {
   private void updateTableCache(TableName table, ListMultimap<String, Permission> tablePerms) {
     PermissionCache<TablePermission> cacheToUpdate =
       tableCache.getOrDefault(table, new PermissionCache<>());
-    clearCache(cacheToUpdate);
     updateCache(tablePerms, cacheToUpdate);
     tableCache.put(table, cacheToUpdate);
     mtime.incrementAndGet();
@@ -200,14 +209,9 @@ public final class AuthManager {
   private void updateNamespaceCache(String namespace, ListMultimap<String, Permission> nsPerms) {
     PermissionCache<NamespacePermission> cacheToUpdate =
       namespaceCache.getOrDefault(namespace, new PermissionCache<>());
-    clearCache(cacheToUpdate);
     updateCache(nsPerms, cacheToUpdate);
     namespaceCache.put(namespace, cacheToUpdate);
     mtime.incrementAndGet();
-  }
-
-  private void clearCache(PermissionCache cacheToUpdate) {
-    cacheToUpdate.clear();
   }
 
   @SuppressWarnings("unchecked")
@@ -218,6 +222,7 @@ public final class AuthManager {
         cacheToUpdate.put(name, permission);
       }
     }
+    cacheToUpdate.cleanUp(newPermissions);
   }
 
   /**
