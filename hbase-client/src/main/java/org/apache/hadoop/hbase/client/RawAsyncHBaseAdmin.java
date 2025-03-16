@@ -763,8 +763,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     if (error != null) {
       future.completeExceptionally(error);
     } else {
-      tableState.ifPresentOrElse(t -> future.complete(t.inStates(targetState)),
-        () -> future.completeExceptionally(new TableNotFoundException(tableName)));
+      if (tableState.isPresent()) {
+        future.complete(tableState.get().inStates(targetState));
+      } else {
+        future.completeExceptionally(new TableNotFoundException(tableName));
+      }
     }
     return future;
   }
