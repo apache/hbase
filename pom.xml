@@ -763,6 +763,7 @@
     <module>hbase-examples</module>
     <module>hbase-assembly</module>
     <module>hbase-assembly-byo-hadoop</module>
+    <module>hbase-assembly-for-testing</module>
     <module>hbase-testing-util</module>
     <module>hbase-annotations</module>
     <module>hbase-rest</module>
