@@ -60,8 +60,8 @@ public class TestZstdByteBuffDecompressor {
     try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {
       assertTrue(decompressor.canDecompress(emptySingleHeapBuff, emptySingleHeapBuff));
       assertTrue(decompressor.canDecompress(emptySingleDirectBuff, emptySingleDirectBuff));
-      assertFalse(decompressor.canDecompress(emptySingleHeapBuff, emptySingleDirectBuff));
-      assertFalse(decompressor.canDecompress(emptySingleDirectBuff, emptySingleHeapBuff));
+      assertTrue(decompressor.canDecompress(emptySingleHeapBuff, emptySingleDirectBuff));
+      assertTrue(decompressor.canDecompress(emptySingleDirectBuff, emptySingleHeapBuff));
       assertFalse(decompressor.canDecompress(emptyMultiHeapBuff, emptyMultiHeapBuff));
       assertFalse(decompressor.canDecompress(emptyMultiDirectBuff, emptyMultiDirectBuff));
       assertFalse(decompressor.canDecompress(emptySingleHeapBuff, emptyMultiHeapBuff));
@@ -70,7 +70,7 @@ public class TestZstdByteBuffDecompressor {
   }
 
   @Test
-  public void testDecompressHeap() throws IOException {
+  public void testDecompressHeapToHeap() throws IOException {
     try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {
       ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
       ByteBuff input = new SingleByteBuff(ByteBuffer.wrap(COMPRESSED_PAYLOAD));
@@ -81,12 +81,36 @@ public class TestZstdByteBuffDecompressor {
   }
 
   @Test
-  public void testDecompressDirect() throws IOException {
+  public void testDecompressDirectToDirect() throws IOException {
     try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {
       ByteBuff output = new SingleByteBuff(ByteBuffer.allocateDirect(64));
       ByteBuff input = new SingleByteBuff(ByteBuffer.allocateDirect(COMPRESSED_PAYLOAD.length));
       input.put(COMPRESSED_PAYLOAD);
       input.rewind();
+      int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);
+      assertEquals("HBase is fun to use and very fast",
+        Bytes.toString(output.toBytes(0, decompressedSize)));
+    }
+  }
+
+  @Test
+  public void testDecompressDirectToHeap() throws IOException {
+    try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {
+      ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
+      ByteBuff input = new SingleByteBuff(ByteBuffer.allocateDirect(COMPRESSED_PAYLOAD.length));
+      input.put(COMPRESSED_PAYLOAD);
+      input.rewind();
+      int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);
+      assertEquals("HBase is fun to use and very fast",
+        Bytes.toString(output.toBytes(0, decompressedSize)));
+    }
+  }
+
+  @Test
+  public void testDecompressHeapToDirect() throws IOException {
+    try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {
+      ByteBuff output = new SingleByteBuff(ByteBuffer.allocateDirect(64));
+      ByteBuff input = new SingleByteBuff(ByteBuffer.wrap(COMPRESSED_PAYLOAD));
       int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);
       assertEquals("HBase is fun to use and very fast",
         Bytes.toString(output.toBytes(0, decompressedSize)));
