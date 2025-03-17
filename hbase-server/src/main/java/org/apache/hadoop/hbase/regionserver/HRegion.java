@@ -3201,17 +3201,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         try {
           closeRegionOperation(Operation.SCAN);
         } catch (Throwable t) {
-          throw handleException(t, regionScanner);
+          if (null != regionScanner) {
+            regionScanner.close();
+          }
+          throw t;
         }
       }
     }, () -> createRegionSpan("Region.getScanner"));
-  }
-
-  private static IOException handleException(Throwable t, RegionScannerImpl regionScanner) {
-    if (null != regionScanner) {
-      regionScanner.close();
-    }
-    return t instanceof IOException ? (IOException) t : new IOException(t);
   }
 
   protected RegionScannerImpl instantiateRegionScanner(Scan scan,
