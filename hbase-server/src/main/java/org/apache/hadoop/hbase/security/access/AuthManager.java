@@ -76,15 +76,6 @@ public final class AuthManager {
         return cache.get(name);
       }
     }
-
-    void clear() {
-      synchronized (mutex) {
-        for (Map.Entry<String, Set<T>> entry : cache.entrySet()) {
-          entry.getValue().clear();
-        }
-        cache.clear();
-      }
-    }
   }
 
   PermissionCache<NamespacePermission> NS_NO_PERMISSION = new PermissionCache<>();
@@ -183,9 +174,7 @@ public final class AuthManager {
    * @param tablePerms new table permissions
    */
   private void updateTableCache(TableName table, ListMultimap<String, Permission> tablePerms) {
-    PermissionCache<TablePermission> cacheToUpdate =
-      tableCache.getOrDefault(table, new PermissionCache<>());
-    clearCache(cacheToUpdate);
+    PermissionCache<TablePermission> cacheToUpdate = new PermissionCache<>();
     updateCache(tablePerms, cacheToUpdate);
     tableCache.put(table, cacheToUpdate);
     mtime.incrementAndGet();
@@ -197,16 +186,10 @@ public final class AuthManager {
    * @param nsPerms   new namespace permissions
    */
   private void updateNamespaceCache(String namespace, ListMultimap<String, Permission> nsPerms) {
-    PermissionCache<NamespacePermission> cacheToUpdate =
-      namespaceCache.getOrDefault(namespace, new PermissionCache<>());
-    clearCache(cacheToUpdate);
+    PermissionCache<NamespacePermission> cacheToUpdate = new PermissionCache<>();
     updateCache(nsPerms, cacheToUpdate);
     namespaceCache.put(namespace, cacheToUpdate);
     mtime.incrementAndGet();
-  }
-
-  private void clearCache(PermissionCache cacheToUpdate) {
-    cacheToUpdate.clear();
   }
 
   @SuppressWarnings("unchecked")
