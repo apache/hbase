@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -406,19 +407,22 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     }
 
     /**
-     * Returns true if the error or its cause is of type ConnectionClosedException.
+     * Returns true if the error or its cause indicates a network connection issue.
      * @param e IOException thrown by the underlying rpc framework.
-     * @return True if the error or its cause is of type ConnectionClosedException.
+     * @return True if the error or its cause indicates a network connection issue.
      */
-    private boolean isConnectionClosedError(IOException e) {
-      if (e instanceof ConnectionClosedException) {
+    private boolean isNetworkError(IOException e) {
+      if (e instanceof ConnectionClosedException || e instanceof UnknownHostException) {
         return true;
       }
       Throwable cause = e;
       while (true) {
         if (cause instanceof IOException) {
           IOException unwrappedCause = unwrapException((IOException) cause);
-          if (unwrappedCause instanceof ConnectionClosedException) {
+          if (
+            unwrappedCause instanceof ConnectionClosedException
+              || unwrappedCause instanceof UnknownHostException
+          ) {
             return true;
           }
         }
@@ -435,7 +439,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
      * @return True if the error type can allow fail-fast.
      */
     private boolean isErrorTypeFailFast(IOException e) {
-      return e instanceof CallQueueTooBigException || isSaslError(e) || isConnectionClosedError(e);
+      return e instanceof CallQueueTooBigException || isSaslError(e) || isNetworkError(e);
     }
 
     private long getMaxWaitTime() {
