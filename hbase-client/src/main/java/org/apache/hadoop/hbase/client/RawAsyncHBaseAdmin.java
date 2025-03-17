@@ -724,13 +724,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
    * targetState).
    */
   private static CompletableFuture<Boolean> completeCheckTableState(
-    CompletableFuture<Boolean> future, TableState tableState, Throwable error,
+    CompletableFuture<Boolean> future, Optional<TableState> tableState, Throwable error,
     TableState.State targetState, TableName tableName) {
     if (error != null) {
       future.completeExceptionally(error);
     } else {
-      if (tableState != null) {
-        future.complete(tableState.inStates(targetState));
+      if (tableState.isPresent()) {
+        future.complete(tableState.get().inStates(targetState));
       } else {
         future.completeExceptionally(new TableNotFoundException(tableName));
       }
@@ -745,8 +745,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (tableState, error) -> {
-      completeCheckTableState(future, tableState.isPresent() ? tableState.get() : null, error,
-        TableState.State.ENABLED, tableName);
+      completeCheckTableState(future, tableState, error, TableState.State.ENABLED, tableName);
     });
     return future;
   }
@@ -758,8 +757,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (tableState, error) -> {
-      completeCheckTableState(future, tableState.isPresent() ? tableState.get() : null, error,
-        TableState.State.DISABLED, tableName);
+      completeCheckTableState(future, tableState, error, TableState.State.DISABLED, tableName);
     });
     return future;
   }
