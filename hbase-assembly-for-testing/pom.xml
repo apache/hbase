@@ -28,7 +28,7 @@
   </parent>
   <artifactId>hbase-assembly-for-testing</artifactId>
   <packaging>pom</packaging>
-  <name>Apache HBase - Assembly for Testing </name>
+  <name>Apache HBase - Assembly for Testing</name>
   <description>Module that does project assembly for running integration tests and that is all that it does.</description>
   <properties>
     <license.bundles.dependencies>true</license.bundles.dependencies>
