@@ -215,7 +215,8 @@ public class RowSpec {
       startTime = time0;
       endTime = time1;
     } else {
-      endTime = time0;
+      startTime = time0;
+      endTime = startTime + 1;
     }
     return i;
   }
