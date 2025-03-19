@@ -163,7 +163,7 @@ public class TestProcDispatcher {
               == ProcedureProtos.ProcedureState.SUCCESS)
           .count() == master.getMasterProcedureExecutor().getProcedures().size()
         && master.getMasterProcedureExecutor().getProcedures().stream()
-          .filter(proc -> proc instanceof ServerCrashProcedure).count() > 0;
+          .anyMatch(proc -> proc instanceof ServerCrashProcedure);
     });
 
     // Ensure we have no inconsistent regions
