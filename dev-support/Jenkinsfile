@@ -825,9 +825,9 @@ pipeline {
                           set -e
                           declare -i status=0
                           if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                            echo '(/) {color:green}+1 jdk17 hadoop ${HADOOP_THREE_VERSION} backward compatibility checks{color}' > "${OUTPUT_DIR}/commentfile"
+                            echo "(/) {color:green}+1 jdk17 hadoop ${HADOOP_THREE_VERSION} backward compatibility checks{color}" > "${OUTPUT_DIR}/commentfile"
                           else
-                            echo '(x) {color:red}-1 jdk17 hadoop ${HADOOP_THREE_VERSION} backward compatibility checks{color}' > "${OUTPUT_DIR}/commentfile"
+                            echo "(x) {color:red}-1 jdk17 hadoop ${HADOOP_THREE_VERSION} backward compatibility checks{color}" > "${OUTPUT_DIR}/commentfile"
                             status=1
                           fi
                           echo "-- For more information [see jdk17 report|${BUILD_URL}JDK17_20Nightly_20Build_20Report_20_28Hadoop3_29/]" >> "${OUTPUT_DIR}/commentfile"
