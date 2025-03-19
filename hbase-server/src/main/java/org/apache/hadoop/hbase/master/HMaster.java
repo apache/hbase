@@ -346,6 +346,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   public static final int DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS = 5 * 60;
 
   public static final String HBASE_MASTER_CLEANER_INTERVAL = "hbase.master.cleaner.interval";
+
   public static final int DEFAULT_HBASE_MASTER_CLEANER_INTERVAL = 600 * 1000;
 
   private String clusterId;
