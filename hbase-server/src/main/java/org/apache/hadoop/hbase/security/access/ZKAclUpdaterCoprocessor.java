@@ -62,6 +62,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 
 @CoreCoprocessor
 @InterfaceAudience.Private
@@ -162,9 +164,7 @@ public class ZKAclUpdaterCoprocessor implements  MasterCoprocessor, RegionCoproc
       }
     }
 
-    if (zkPermissionWatcher == null) {
-      throw new NullPointerException("ZKPermissionWatcher is null");
-    }
+    Preconditions.checkState(zkPermissionWatcher != null, "ZKPermissionWatcher is null");
   }
 
   @Override public void stop(CoprocessorEnvironment env) {

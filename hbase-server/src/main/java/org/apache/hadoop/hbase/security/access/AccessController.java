@@ -650,7 +650,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       }
     }
 
-    //Preconditions.checkState(zkPermissionWatcher != null, "ZKPermissionWatcher is null");
+
     Preconditions.checkState(accessChecker != null, "AccessChecker is null");
 
     // set the user-provider.
@@ -969,7 +969,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     }
   }
 
-
   /**
    * Create the ACL table
    */
@@ -1082,7 +1081,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         return null;
       }
     });
-    LOG.info(namespace + " entry deleted in " + org.apache.hadoop.hbase.security.access.PermissionStorage.ACL_TABLE_NAME + " table.");
+    LOG.info(namespace + " entry deleted in " + PermissionStorage.ACL_TABLE_NAME + " table.");
   }
 
   @Override
@@ -1193,7 +1192,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     }
     initialized = true;
     }
-
 
   @Override
   public void preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
@@ -2526,6 +2524,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     accessChecker.requirePermission(getActiveUser(ctx), "updateConfiguration", null,
       Permission.Action.ADMIN);
   }
+
 }
 
 
