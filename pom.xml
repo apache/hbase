@@ -916,6 +916,7 @@
     <maven.javadoc.version>3.4.0</maven.javadoc.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
+    <maven-owasp-plugin.version>12.1.0</maven-owasp-plugin.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
     <spotbugs.version>4.7.3</spotbugs.version>
@@ -4759,6 +4760,36 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>owasp-dependency-check</id>
+      <activation>
+        <jdk>[11,)</jdk>
+        <property>
+          <name>owasp-check</name>
+        </property>
+      </activation>
+      <reporting>
+        <plugins>
+          <plugin>
+            <groupId>org.owasp</groupId>
+            <artifactId>dependency-check-maven</artifactId>
+            <version>${maven-owasp-plugin.version}</version>
+            <configuration>
+              <skipProvidedScope>true</skipProvidedScope>
+              <skipRuntimeScope>true</skipRuntimeScope>
+              <skipSystemScope>true</skipSystemScope>
+            </configuration>
+            <reportSets>
+              <reportSet>
+                <reports>
+                  <report>aggregate</report>
+                </reports>
+              </reportSet>
+            </reportSets>
+          </plugin>
+        </plugins>
+      </reporting>
     </profile>
     <profile>
       <!-- Used by the website generation script on jenkins to
