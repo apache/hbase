@@ -34,6 +34,7 @@
     <license.bundles.dependencies>true</license.bundles.dependencies>
     <!-- So that we don't have to add redundant exclusions to provided scope dependencies -->
     <enforcer.skip>true</enforcer.skip>
+    <final.name>hbase-byo-hadoop-${project.version}</final.name>
   </properties>
   <dependencies>
     <!-- Set every Hadoop dependency as provided. The byo-hadoop assembly relies an external Hadoop installation -->
@@ -370,7 +371,7 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
           <!--Else will use hbase-assembly as final name.-->
-          <finalName>hbase-byo-hadoop-${project.version}</finalName>
+          <finalName>${final.name}</finalName>
           <skipAssembly>false</skipAssembly>
           <appendAssemblyId>true</appendAssemblyId>
           <tarLongFileMode>posix</tarLongFileMode>
@@ -438,6 +439,9 @@
           <name>assemblyForTesting</name>
         </property>
       </activation>
+      <properties>
+        <final.name>hbase-byo-hadoop-for-testing-${project.version}</final.name>
+      </properties>
       <dependencies>
         <!-- Dependencies for running hbase-it -->
         <dependency>
