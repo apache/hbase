@@ -161,6 +161,7 @@ public class HRegionInfo implements RegionInfo {
   public static final String NO_HASH = null;
   private String encodedName = null;
   private byte[] encodedNameAsBytes = null;
+  private String nameAsString = null;
   private int replicaId = DEFAULT_REPLICA_ID;
 
   // Current TableName
@@ -455,15 +456,21 @@ public class HRegionInfo implements RegionInfo {
   /** Returns Region name as a String for use in logging, etc. */
   @Override
   public String getRegionNameAsString() {
-    if (RegionInfo.hasEncodedName(this.regionName)) {
-      // new format region names already have their encoded name.
-      return Bytes.toStringBinary(this.regionName);
+    if (nameAsString == null) {
+      String name;
+      if (RegionInfo.hasEncodedName(this.regionName)) {
+        // new format region names already have their encoded name.
+        name = Bytes.toStringBinary(this.regionName);
+      } else {
+        // old format. regionNameStr doesn't have the region name.
+        name = Bytes.toStringBinary(this.regionName) + "." + this.getEncodedName();
+      }
+      // may race with other threads setting this, but that's ok
+      nameAsString = name;
+      return name;
+    } else {
+      return nameAsString;
     }
-
-    // old format. regionNameStr doesn't have the region name.
-    //
-    //
-    return Bytes.toStringBinary(this.regionName) + "." + this.getEncodedName();
   }
 
   /** Returns the encoded region name */
