@@ -437,8 +437,22 @@ public class TestContinuousBackupReplicationEndpoint {
       assertEquals(0, getRowCount(tableName));
 
       replayWALs(new Path(backupRootDir, WALS_DIR).toString(), tableName);
-      replayBulkLoadHFilesIfPresent(new Path(backupRootDir, BULKLOAD_FILES_DIR).toString(),
-        tableName);
+
+      // replay Bulk loaded HFiles if Present
+      try {
+        Path bulkloadDir = new Path(backupRootDir, BULKLOAD_FILES_DIR);
+        if (fs.exists(bulkloadDir)) {
+          FileStatus[] directories = fs.listStatus(bulkloadDir);
+          for (FileStatus dirStatus : directories) {
+            if (dirStatus.isDirectory()) {
+              replayBulkLoadHFilesIfPresent(dirStatus.getPath().toString(), tableName);
+            }
+          }
+        }
+      } catch (Exception e) {
+        fail("Failed to replay BulkLoad HFiles properly: " + e.getMessage());
+      }
+
       assertEquals(expectedRows, getRowCount(tableName));
     }
   }
