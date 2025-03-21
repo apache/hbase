@@ -1568,6 +1568,24 @@ public class HFileBlock implements Cacheable {
     }
 
     /**
+     * Check that checksumType on {@code headerBuf} read from a block header seems reasonable,
+     * within the known value range.
+     * @return {@code true} if the headerBuf is safe to proceed, {@code false} otherwise.
+     */
+    private boolean checkCheckSumTypeOnHeaderBuf(ByteBuff headerBuf) {
+      if (headerBuf == null) {
+        return true;
+      }
+      byte b = headerBuf.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX);
+      for (ChecksumType t : ChecksumType.values()) {
+        if (t.getCode() == b) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    /**
      * Check that {@code value} read from a block header seems reasonable, within a large margin of
      * error.
      * @return {@code true} if the value is safe to proceed, {@code false} otherwise.
@@ -1722,6 +1740,21 @@ public class HFileBlock implements Cacheable {
         onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);
       }
 
+      // Inspect the header's checksumType for known valid values. If we don't find such a value,
+      // assume that the bytes read are corrupted.We will clear the cached value and roll back to
+      // HDFS checksum
+      if (!checkCheckSumTypeOnHeaderBuf(headerBuf)) {
+        if (verifyChecksum) {
+          invalidateNextBlockHeader();
+          span.addEvent("Falling back to HDFS checksumming.", attributesBuilder.build());
+          return null;
+        } else {
+          throw new IOException(
+            "Unknown checksum type code " + headerBuf.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX)
+              + "for file " + pathName + ", the headerBuf of HFileBlock may corrupted.");
+        }
+      }
+
       // The common case is that onDiskSizeWithHeader was produced by a read without checksum
       // validation, so give it a sanity check before trying to use it.
       if (!checkOnDiskSizeWithHeader(onDiskSizeWithHeader)) {
@@ -1864,6 +1897,17 @@ public class HFileBlock implements Cacheable {
       if (!fileContext.isUseHBaseChecksum()) {
         return false;
       }
+
+      // If the checksumType of the read block header is incorrect, it indicates that the block is
+      // corrupted and can be directly rolled back to HDFS checksum verification
+      if (!checkCheckSumTypeOnHeaderBuf(data)) {
+        HFile.LOG.warn(
+          "HBase checksumType verification failed for file {} at offset {} filesize {}"
+            + " checksumType {}. Retrying read with HDFS checksums turned on...",
+          pathName, offset, fileSize, data.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX));
+        return false;
+      }
+
       return ChecksumUtil.validateChecksum(data, pathName, offset, hdrSize);
     }
 
