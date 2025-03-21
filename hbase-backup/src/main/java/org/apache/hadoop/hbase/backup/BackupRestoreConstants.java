@@ -153,6 +153,7 @@ public interface BackupRestoreConstants {
     SET_DELETE,
     SET_DESCRIBE,
     SET_LIST,
-    REPAIR
+    REPAIR,
+    CLEANUP
   }
 }
