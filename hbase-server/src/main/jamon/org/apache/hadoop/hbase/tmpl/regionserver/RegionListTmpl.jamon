@@ -44,27 +44,27 @@
     </%java>
 
     <div class="tabbable">
-        <ul class="nav nav-pills">
-            <li class="active"><a href="#tab_regionBaseInfo" data-toggle="tab">Base Info</a> </li>
-            <li><a href="#tab_regionRequestStats" data-toggle="tab">Request metrics</a></li>
-            <li class=""><a href="#tab_regionStoreStats" data-toggle="tab">Storefile Metrics</a></li>
-            <li class=""><a href="#tab_regionMemstoreStats" data-toggle="tab">Memstore Metrics</a></li>
-            <li class=""><a href="#tab_regionCompactStats" data-toggle="tab">Compaction Metrics</a></li>
+        <ul class="nav nav-pills" role="tablist">
+            <li class="nav-item"><a class="nav-link active" href="#tab_regionBaseInfo" data-bs-toggle="tab" role="tab">Base Info</a> </li>
+            <li class="nav-item"><a class="nav-link" href="#tab_regionRequestStats" data-bs-toggle="tab" role="tab">Request metrics</a></li>
+            <li class="nav-item"><a class="nav-link" href="#tab_regionStoreStats" data-bs-toggle="tab" role="tab">Storefile Metrics</a></li>
+            <li class="nav-item"><a class="nav-link" href="#tab_regionMemstoreStats" data-bs-toggle="tab" role="tab">Memstore Metrics</a></li>
+            <li class="nav-item"><a class="nav-link" href="#tab_regionCompactStats" data-bs-toggle="tab" role="tab">Compaction Metrics</a></li>
         </ul>
-        <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-            <div class="tab-pane active" id="tab_regionBaseInfo">
+        <div class="tab-content">
+            <div class="tab-pane active" id="tab_regionBaseInfo" role="tabpanel">
                 <& baseInfo; onlineRegions = onlineRegions; &>
             </div>
-            <div class="tab-pane" id="tab_regionRequestStats">
+            <div class="tab-pane" id="tab_regionRequestStats" role="tabpanel">
                 <& requestStats; onlineRegions = onlineRegions; &>
             </div>
-            <div class="tab-pane" id="tab_regionStoreStats">
+            <div class="tab-pane" id="tab_regionStoreStats" role="tabpanel">
                 <& storeStats; onlineRegions = onlineRegions; &>
             </div>
-            <div class="tab-pane" id="tab_regionMemstoreStats">
+            <div class="tab-pane" id="tab_regionMemstoreStats" role="tabpanel">
                 <& memstoreStats; onlineRegions = onlineRegions; &>
             </div>
-            <div class="tab-pane" id="tab_regionCompactStats">
+            <div class="tab-pane" id="tab_regionCompactStats" role="tabpanel">
                 <& compactStats; onlineRegions = onlineRegions; &>
             </div>
         </div>
