@@ -51,16 +51,22 @@ public final class CandidateGeneratorTestUtil {
   private CandidateGeneratorTestUtil() {
   }
 
+  enum ExhaustionType {
+    COST_GOAL_ACHIEVED,
+    NO_MORE_MOVES;
+  }
+
   static void runBalancerToExhaustion(Configuration conf,
     Map<ServerName, List<RegionInfo>> serverToRegions,
     Set<Function<BalancerClusterState, Boolean>> expectations, float targetMaxBalancerCost) {
-    runBalancerToExhaustion(conf, serverToRegions, expectations, targetMaxBalancerCost, 15000);
+    runBalancerToExhaustion(conf, serverToRegions, expectations, targetMaxBalancerCost, 15000,
+      ExhaustionType.COST_GOAL_ACHIEVED);
   }
 
   static void runBalancerToExhaustion(Configuration conf,
     Map<ServerName, List<RegionInfo>> serverToRegions,
     Set<Function<BalancerClusterState, Boolean>> expectations, float targetMaxBalancerCost,
-    long maxRunningTime) {
+    long maxRunningTime, ExhaustionType exhaustionType) {
     // Do the full plan. We're testing with a lot of regions
     conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
     conf.setLong(MAX_RUNNING_TIME_KEY, maxRunningTime);
@@ -76,7 +82,7 @@ public final class CandidateGeneratorTestUtil {
     boolean isBalanced = false;
     while (!isBalanced) {
       balancerRuns++;
-      if (balancerRuns > 1000) {
+      if (balancerRuns > 10) {
         throw new RuntimeException("Balancer failed to find balance & meet expectations");
       }
       long start = System.currentTimeMillis();
@@ -111,16 +117,24 @@ public final class CandidateGeneratorTestUtil {
         }
       }
       if (isBalanced) { // Check if the balancer thinks we're done too
-        LOG.info("All balancer conditions passed. Checking if balancer thinks it's done.");
-        if (stochasticLoadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME, cluster)) {
-          LOG.info("Balancer would still like to run");
-          isBalanced = false;
+        if (exhaustionType == ExhaustionType.COST_GOAL_ACHIEVED) {
+          // If we expect to achieve the cost goal, then needsBalance should be false
+          if (stochasticLoadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME, cluster)) {
+            LOG.info("Balancer cost goal is not achieved. needsBalance=true");
+            isBalanced = false;
+          }
         } else {
-          LOG.info("Balancer is done");
+          // If we anticipate running out of moves, then our last balance run should have produced
+          // nothing
+          if (regionPlans != null && !regionPlans.isEmpty()) {
+            LOG.info("Balancer is not out of moves. regionPlans.size()={}", regionPlans.size());
+            isBalanced = false;
+          }
         }
       }
     }
-    LOG.info("Balancing took {}sec", Duration.ofMillis(balancingMillis).toMinutes());
+    LOG.info("Balancer is done. Balancing took {}sec",
+      Duration.ofMillis(balancingMillis).toMinutes());
   }
 
   /**
