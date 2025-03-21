@@ -148,7 +148,7 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
           TableState tableState =
             env.getMasterServices().getTableStateManager().getTableState(snapshotTable);
           if (tableState.isDisabled()) {
-            // Set the snapshot to be a DISABLED snapshot as this table is in DISABLED
+            // Set the snapshot type to DISABLED as the table is in DISABLED state
             snapshot = snapshot.toBuilder().setType(Type.DISABLED).build();
           }
           SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, workingDirFS);
