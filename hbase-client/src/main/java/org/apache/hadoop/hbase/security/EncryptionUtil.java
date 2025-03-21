@@ -120,7 +120,7 @@ public final class EncryptionUtil {
   public static Key unwrapKey(Configuration conf, String subject, byte[] value)
     throws IOException, KeyException {
     EncryptionProtos.WrappedKey wrappedKey =
-      EncryptionProtos.WrappedKey.PARSER.parseDelimitedFrom(new ByteArrayInputStream(value));
+      EncryptionProtos.WrappedKey.parser().parseDelimitedFrom(new ByteArrayInputStream(value));
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Cipher cipher = Encryption.getCipher(conf, algorithm);
     if (cipher == null) {
@@ -170,7 +170,7 @@ public final class EncryptionUtil {
   public static Key unwrapWALKey(Configuration conf, String subject, byte[] value)
     throws IOException, KeyException {
     EncryptionProtos.WrappedKey wrappedKey =
-      EncryptionProtos.WrappedKey.PARSER.parseDelimitedFrom(new ByteArrayInputStream(value));
+      EncryptionProtos.WrappedKey.parser().parseDelimitedFrom(new ByteArrayInputStream(value));
     String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Cipher cipher = Encryption.getCipher(conf, algorithm);
     if (cipher == null) {
