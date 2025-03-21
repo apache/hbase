@@ -490,7 +490,7 @@ public class StoreFileScanner implements KeyValueScanner {
             this.cur = null;
             return false;
           }
-          Cell curCell = hfs.getCell();
+          Cell curCell = hfs.getKey();
           Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(curCell);
 
           if (seekCount != null) seekCount.increment();
