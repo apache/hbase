@@ -531,6 +531,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       PrimaryRegionCountSkewCostFunction.class.getSimpleName(),
       MoveCostFunction.class.getSimpleName(), RackLocalityCostFunction.class.getSimpleName(),
       TableSkewCostFunction.class.getSimpleName(),
+      StoreFileTableSkewCostFunction.class.getSimpleName(),
       RegionReplicaHostCostFunction.class.getSimpleName(),
       RegionReplicaRackCostFunction.class.getSimpleName(),
       ReadRequestCostFunction.class.getSimpleName(), WriteRequestCostFunction.class.getSimpleName(),
