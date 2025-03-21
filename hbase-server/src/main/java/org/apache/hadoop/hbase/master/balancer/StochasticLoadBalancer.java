@@ -274,6 +274,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     addCostFunction(costFunctions, localityCost);
     addCostFunction(costFunctions, rackLocalityCost);
     addCostFunction(costFunctions, new TableSkewCostFunction(conf));
+    addCostFunction(costFunctions, new StoreFileTableSkewCostFunction(conf));
     addCostFunction(costFunctions, regionReplicaHostCostFunction);
     addCostFunction(costFunctions, regionReplicaRackCostFunction);
     addCostFunction(costFunctions, new ReadRequestCostFunction(conf));

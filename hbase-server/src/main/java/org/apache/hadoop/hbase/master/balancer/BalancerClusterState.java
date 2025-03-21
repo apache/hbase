@@ -1085,6 +1085,10 @@ class BalancerClusterState {
     return EnvironmentEdgeManager.currentTime() > stopRequestedAt;
   }
 
+  Deque<BalancerRegionLoad>[] getRegionLoads() {
+    return regionLoads;
+  }
+
   @Override
   public String toString() {
     StringBuilder desc = new StringBuilder("Cluster={servers=[");
