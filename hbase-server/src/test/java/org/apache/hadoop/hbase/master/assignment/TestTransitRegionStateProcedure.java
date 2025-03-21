@@ -17,23 +17,41 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.ASSIGN_MAX_ATTEMPTS;
+import static org.apache.hadoop.hbase.master.assignment.RegionStateStore.getStateColumn;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -66,6 +84,7 @@ public class TestTransitRegionStateProcedure {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     UTIL.getConfiguration().setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
+    UTIL.getConfiguration().setInt(ASSIGN_MAX_ATTEMPTS, 1);
     UTIL.startMiniCluster(3);
     UTIL.getAdmin().balancerSwitch(false, true);
   }
@@ -167,5 +186,45 @@ public class TestTransitRegionStateProcedure {
     long openSeqNum2 = region2.getOpenSeqNum();
     // confirm that the region is successfully opened
     assertTrue(openSeqNum2 > openSeqNum);
+  }
+
+  private static class BuggyStoreEngine extends DefaultStoreEngine {
+    @Override
+    protected void createComponents(Configuration conf, HStore store, CellComparator comparator)
+      throws IOException {
+      throw new IOException("I'm broken");
+    }
+  }
+
+  @Test
+  public void testDisableFailedOpenRegions() throws Exception {
+    // Perform a faulty modification to put regions into FAILED_OPEN state
+    Admin admin = UTIL.getAdmin();
+    TableDescriptor td = admin.getDescriptor(tableName);
+    TableDescriptorBuilder tdb = TableDescriptorBuilder.newBuilder(td);
+    tdb.setValue("hbase.hstore.engine.class", BuggyStoreEngine.class.getName());
+    try {
+      admin.modifyTable(tdb.build());
+      fail("Should fail to modify the table");
+    } catch (IOException e) {
+      // expected
+    }
+
+    // Table is still "ENABLED"
+    assertEquals(TableState.State.ENABLED,
+      MetaTableAccessor.getTableState(UTIL.getConnection(), tableName).getState());
+
+    // But the regions are in "FAILED_OPEN" state
+    List<RegionInfo> regions = MetaTableAccessor.getTableRegions(UTIL.getConnection(), tableName);
+    Set<String> regionStates = new HashSet<>();
+    for (RegionInfo region : regions) {
+      Result result = MetaTableAccessor.getRegionResult(UTIL.getConnection(), region);
+      String state = Bytes.toString(
+        result.getValue(HConstants.CATALOG_FAMILY, getStateColumn(region.getReplicaId())));
+      regionStates.add(state);
+    }
+    assertEquals(Collections.singleton("FAILED_OPEN"), regionStates);
+
+    // tearDown should be able to disable and delete the table successfully
   }
 }
