@@ -24,6 +24,8 @@ import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+
 /**
  * Parameters for instantiating a {@link BufferedMutator}.
  */
@@ -241,6 +243,7 @@ public class BufferedMutatorParams implements Cloneable {
     clone.writeBufferPeriodicFlushTimerTickMs = this.writeBufferPeriodicFlushTimerTickMs;
     clone.maxKeyValueSize = this.maxKeyValueSize;
     clone.maxMutations = this.maxMutations;
+    clone.requestAttributes = Maps.newHashMap(this.requestAttributes);
     clone.pool = this.pool;
     clone.listener = this.listener;
     clone.implementationClassName = this.implementationClassName;
