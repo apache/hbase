@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -97,7 +98,7 @@ public class TestUnattainableBalancerCostGoal {
   public void testSystemTableIsolation() {
     Configuration conf = new Configuration(false);
     conf.setBoolean(BalancerConditionals.ISOLATE_SYSTEM_TABLES_KEY, true);
-    runBalancerToExhaustion(conf, serverToRegions, Set.of(this::isSystemTableIsolated),
+    runBalancerToExhaustion(conf, serverToRegions, ImmutableSet.of(this::isSystemTableIsolated),
       UNACHIEVABLE_COST_GOAL, 10_000, CandidateGeneratorTestUtil.ExhaustionType.NO_MORE_MOVES);
     LOG.info("Meta table regions are successfully isolated.");
   }

@@ -230,7 +230,6 @@ public class TestStoreFileTableSkewCostFunction {
 
     // Not important
     when(regionMetrics.getReadRequestCount()).thenReturn(0L);
-    when(regionMetrics.getCpRequestCount()).thenReturn(0L);
     when(regionMetrics.getWriteRequestCount()).thenReturn(0L);
     when(regionMetrics.getMemStoreSize()).thenReturn(new Size(0, Size.Unit.MEGABYTE));
     when(regionMetrics.getCurrentRegionCachedRatio()).thenReturn(0.0f);
