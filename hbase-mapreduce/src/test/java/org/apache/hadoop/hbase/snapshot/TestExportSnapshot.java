@@ -51,10 +51,12 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
+import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -204,6 +206,51 @@ public class TestExportSnapshot {
     testExportFileSystemState(tableName0, snapshotName0, snapshotName0, tableNumFiles);
     // delete table
     TEST_UTIL.deleteTable(tableName0);
+  }
+
+  @Test
+  public void testExportFileSystemStateWithSplitRegion() throws Exception {
+    // disable compaction
+    admin.compactionSwitch(false,
+      admin.getRegionServers().stream().map(a -> a.getServerName()).collect(Collectors.toList()));
+    // create Table
+    TableName splitTableName = TableName.valueOf(testName.getMethodName());
+    String splitTableSnap = "snapshot-" + testName.getMethodName();
+    admin.createTable(TableDescriptorBuilder.newBuilder(splitTableName).setColumnFamilies(
+      Lists.newArrayList(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build())).build());
+
+    Path output = TEST_UTIL.getDataTestDir("output/cf");
+    TEST_UTIL.getTestFileSystem().mkdirs(output);
+    // Create and load a large hfile to ensure the execution time of MR job.
+    HFileTestUtil.createHFile(TEST_UTIL.getConfiguration(), TEST_UTIL.getTestFileSystem(),
+      new Path(output, "test_file"), FAMILY, Bytes.toBytes("q"), Bytes.toBytes("1"),
+      Bytes.toBytes("9"), 9999999);
+    BulkLoadHFilesTool tool = new BulkLoadHFilesTool(TEST_UTIL.getConfiguration());
+    tool.run(new String[] { output.getParent().toString(), splitTableName.getNameAsString() });
+
+    List<RegionInfo> regions = admin.getRegions(splitTableName);
+    assertEquals(1, regions.size());
+    tableNumFiles = regions.size();
+
+    // split region
+    admin.splitRegionAsync(regions.get(0).getEncodedNameAsBytes(), Bytes.toBytes("5")).get();
+    regions = admin.getRegions(splitTableName);
+    assertEquals(2, regions.size());
+
+    // take a snapshot
+    admin.snapshot(splitTableSnap, splitTableName);
+    // export snapshot and verify
+    Configuration tmpConf = TEST_UTIL.getConfiguration();
+    // Decrease the buffer size of copier to avoid the export task finished shortly
+    tmpConf.setInt("snapshot.export.buffer.size", 1);
+    // Decrease the maximum files of each mapper to ensure the three files(1 hfile + 2 reference
+    // files) copied in different mappers concurrently.
+    tmpConf.setInt("snapshot.export.default.map.group", 1);
+    testExportFileSystemState(tmpConf, splitTableName, Bytes.toBytes(splitTableSnap),
+      Bytes.toBytes(splitTableSnap), tableNumFiles, TEST_UTIL.getDefaultRootDirPath(),
+      getHdfsDestinationDir(), false, false, getBypassRegionPredicate(), true, false);
+    // delete table
+    TEST_UTIL.deleteTable(splitTableName);
   }
 
   @Test
