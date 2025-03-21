@@ -73,6 +73,39 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
     return new RecoveredEditsWriter(region, regionEditsPath, w, seqId);
   }
 
+  /**
+   * abortRecoveredEditsWriter closes the editsWriter, but does not rename and finalize the
+   * recovered edits WAL files. Please see HBASE-28569.
+   */
+  protected void abortRecoveredEditsWriter(RecoveredEditsWriter editsWriter,
+    List<IOException> thrown) throws IOException {
+    try {
+      editsWriter.writer.close();
+    } catch (IOException ioe) {
+      final String errorMsg = "Could not close recovered edits at " + editsWriter.path;
+      LOG.error(errorMsg, ioe);
+      updateStatusWithMsg(errorMsg);
+      thrown.add(ioe);
+    }
+    final String msg = "Closed recovered edits writer path=" + editsWriter.path + " (wrote "
+      + editsWriter.editsWritten + " edits, skipped " + editsWriter.editsSkipped + " edits in "
+      + (editsWriter.nanosSpent / 1000 / 1000) + " ms)";
+    LOG.info(msg);
+    updateStatusWithMsg(msg);
+    if (editsWriter.editsWritten == 0) {
+      // just remove the empty recovered.edits file
+      if (
+        walSplitter.walFS.exists(editsWriter.path)
+          && !walSplitter.walFS.delete(editsWriter.path, false)
+      ) {
+        final String errorMsg = "Failed deleting empty " + editsWriter.path;
+        LOG.warn(errorMsg);
+        updateStatusWithMsg(errorMsg);
+        throw new IOException("Failed deleting empty  " + editsWriter.path);
+      }
+    }
+  }
+
   protected Path closeRecoveredEditsWriter(RecoveredEditsWriter editsWriter,
     List<IOException> thrown) throws IOException {
     try {
