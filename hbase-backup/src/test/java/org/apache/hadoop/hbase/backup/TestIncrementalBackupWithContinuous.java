@@ -119,7 +119,7 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
       // Thread.sleep(5000);
 
       // Run incremental backup
-      LOG.info("ANKIT now run incremental backup");
+      LOG.info("Run incremental backup now");
       before = table.getBackupHistory().size();
       args = buildBackupArgs("incremental", new TableName[] { tableName }, false);
       ret = ToolRunner.run(conf1, new BackupDriver(), args);
