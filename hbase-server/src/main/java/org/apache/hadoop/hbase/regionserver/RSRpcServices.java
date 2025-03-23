@@ -3961,9 +3961,14 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   public GetAllBootstrapNodesResponse getAllBootstrapNodes(RpcController controller,
     GetAllBootstrapNodesRequest request) throws ServiceException {
     GetAllBootstrapNodesResponse.Builder builder = GetAllBootstrapNodesResponse.newBuilder();
-    server.getBootstrapNodes()
-      .forEachRemaining(server -> builder.addNode(ProtobufUtil.toServerName(server)));
-    return builder.build();
+    try {
+      checkOpen();
+      server.getBootstrapNodes()
+        .forEachRemaining(server -> builder.addNode(ProtobufUtil.toServerName(server)));
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   private void setReloadableGuardrails(Configuration conf) {
