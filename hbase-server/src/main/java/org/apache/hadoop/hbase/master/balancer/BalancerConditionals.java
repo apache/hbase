@@ -146,7 +146,7 @@ final class BalancerConditionals implements Configurable {
     // Reset cluster
     cluster.doAction(undoAction);
 
-    if (isViolatingPre && isViolatingPost) {
+    if (isViolatingPre == isViolatingPost) {
       return 0;
     } else if (!isViolatingPre && isViolatingPost) {
       return 1;
