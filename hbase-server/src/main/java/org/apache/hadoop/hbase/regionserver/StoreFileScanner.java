@@ -62,6 +62,9 @@ public class StoreFileScanner implements KeyValueScanner {
   // if have encountered the next row. Only used for reversed scan
   private boolean stopSkippingKVsIfNextRow = false;
   // A Cell that represents the row before the most previously seeked to row in seekToPreviousRow
+  // Note: Oftentimes this will contain an instance of a KeyOnly implementation of the Cell as it's
+  // not returned to callers and only used as a hint for seeking (so we can save on
+  // memory/allocations)
   private Cell previousRow = null;
   // Whether the underlying HFile is using a data block encoding that has lower cost for seeking to
   // a row from the beginning of a block (i.e. RIV1). If the data block encoding has a high cost for
@@ -566,7 +569,7 @@ public class StoreFileScanner implements KeyValueScanner {
     }
 
     // Rewind before this row and save what we find as a seek hint
-    Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getCell());
+    Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getKey());
     seekBeforeAndSaveKeyToPreviousRow(firstKeyOfPreviousRow);
 
     // Seek back to the start of the previous row
@@ -606,7 +609,7 @@ public class StoreFileScanner implements KeyValueScanner {
         return false;
       }
 
-      Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getCell());
+      Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(hfs.getKey());
       if (!seekAtOrAfter(firstKeyOfPreviousRow)) {
         return false;
       }
@@ -649,7 +652,7 @@ public class StoreFileScanner implements KeyValueScanner {
       hfs.seekTo();
       this.previousRow = null;
     } else {
-      this.previousRow = hfs.getCell();
+      this.previousRow = hfs.getKey();
     }
   }
 
