@@ -3963,6 +3963,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     GetAllBootstrapNodesResponse.Builder builder = GetAllBootstrapNodesResponse.newBuilder();
     try {
       checkOpen();
+      if (server.getBootstrapNodes() == null || !server.getBootstrapNodes().hasNext()) {
+        throw new IOException("BootstrapNodes are not initialized yet. Please try again later.");
+      }
       server.getBootstrapNodes()
         .forEachRemaining(server -> builder.addNode(ProtobufUtil.toServerName(server)));
       return builder.build();
