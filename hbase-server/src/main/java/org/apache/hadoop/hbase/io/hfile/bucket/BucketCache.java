@@ -174,14 +174,14 @@ public class BucketCache implements BlockCache, HeapSize {
    * together with the region those belong to and the total cached size for the
    * region.TestBlockEvictionOnRegionMovement
    */
-  final Map<String, Pair<String, Long>> fullyCachedFiles = new ConcurrentHashMap<>();
+  transient final Map<String, Pair<String, Long>> fullyCachedFiles = new ConcurrentHashMap<>();
   /**
    * Map of region -> total size of the region prefetched on this region server. This is the total
    * size of hFiles for this region prefetched on this region server
    */
   final Map<String, Long> regionCachedSize = new ConcurrentHashMap<>();
 
-  private BucketCachePersister cachePersister;
+  private transient BucketCachePersister cachePersister;
 
   /**
    * Enum to represent the state of cache
@@ -241,7 +241,7 @@ public class BucketCache implements BlockCache, HeapSize {
   // reset after a successful read/write.
   private volatile long ioErrorStartTime = -1;
 
-  private Configuration conf;
+  private transient Configuration conf;
 
   /**
    * A ReentrantReadWriteLock to lock on a particular block identified by offset. The purpose of
@@ -250,7 +250,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   transient final IdReadWriteLock<Long> offsetLock;
 
-  NavigableSet<BlockCacheKey> blocksByHFile = new ConcurrentSkipListSet<>(
+  transient NavigableSet<BlockCacheKey> blocksByHFile = new ConcurrentSkipListSet<>(
     Comparator.comparing(BlockCacheKey::getHfileName).thenComparingLong(BlockCacheKey::getOffset));
 
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
@@ -303,7 +303,7 @@ public class BucketCache implements BlockCache, HeapSize {
   private long allocFailLogPrevTs; // time of previous log event for allocation failure.
   private static final int ALLOCATION_FAIL_LOG_TIME_PERIOD = 60000; // Default 1 minute.
 
-  private Map<String, HRegion> onlineRegions;
+  private transient Map<String, HRegion> onlineRegions;
 
   private long orphanBlockGracePeriod = 0;
 
