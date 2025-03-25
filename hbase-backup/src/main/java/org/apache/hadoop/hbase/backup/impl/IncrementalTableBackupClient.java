@@ -171,14 +171,13 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         LOG.debug("copying archive {} to {}", archive, tgt);
         archiveFiles.add(archive.toString());
       }
-      mergeSplitBulkloads(activeFiles, archiveFiles, srcTable);
-      incrementalCopyBulkloadHFiles(tgtFs, srcTable);
+      mergeSplitAndCopyBulkloadedHFiles(activeFiles, archiveFiles, srcTable, tgtFs);
     }
     return bulkLoads;
   }
 
-  private void mergeSplitBulkloads(List<String> activeFiles, List<String> archiveFiles,
-    TableName tn) throws IOException {
+  private void mergeSplitAndCopyBulkloadedHFiles(List<String> activeFiles,
+    List<String> archiveFiles, TableName tn, FileSystem tgtFs) throws IOException {
     int attempt = 1;
 
     while (!activeFiles.isEmpty()) {
@@ -186,7 +185,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       // Active file can be archived during copy operation,
       // we need to handle this properly
       try {
-        mergeSplitBulkloads(activeFiles, tn);
+        mergeSplitAndCopyBulkloadedHFiles(activeFiles, tn, tgtFs);
         break;
       } catch (IOException e) {
         int numActiveFiles = activeFiles.size();
@@ -200,11 +199,12 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
 
     if (!archiveFiles.isEmpty()) {
-      mergeSplitBulkloads(archiveFiles, tn);
+      mergeSplitAndCopyBulkloadedHFiles(archiveFiles, tn, tgtFs);
     }
   }
 
-  private void mergeSplitBulkloads(List<String> files, TableName tn) throws IOException {
+  private void mergeSplitAndCopyBulkloadedHFiles(List<String> files, TableName tn, FileSystem tgtFs)
+    throws IOException {
     MapReduceHFileSplitterJob player = new MapReduceHFileSplitterJob();
     conf.set(MapReduceHFileSplitterJob.BULK_OUTPUT_CONF_KEY,
       getBulkOutputDirForTable(tn).toString());
@@ -226,6 +226,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       throw new IOException(
         "Failed to run MapReduceHFileSplitterJob with invalid result: " + result);
     }
+
+    incrementalCopyBulkloadHFiles(tgtFs, tn);
   }
 
   private void updateFileLists(List<String> activeFiles, List<String> archiveFiles)
