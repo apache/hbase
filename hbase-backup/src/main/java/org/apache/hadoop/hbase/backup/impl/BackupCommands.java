@@ -53,6 +53,7 @@ import java.net.URI;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -918,9 +919,53 @@ public final class BackupCommands {
           return;
         }
 
+        // Update the continuous backup table's start time to match the cutoff time *before* actual
+        // cleanup.
+        // This is safe because even if the WAL cleanup fails later, we won't be accessing data
+        // older than
+        // the cutoff timestamp, ensuring consistency in what the system considers valid for
+        // recovery.
+        //
+        // If we did this the other way around—cleaning up first and updating the table afterward—
+        // a failure between these two steps could leave us in an inconsistent state where some WALs
+        // are already deleted, but the backup metadata still references them.
+        updateContinuousBackupTablesStartTime(sysTable, cleanupCutoffTimestamp);
+
         // Perform WAL file cleanup
         cleanupOldWALFiles(conf, backupWalDir, cleanupCutoffTimestamp);
       }
+    }
+
+    /**
+     * Fetches the continuous backup tables from the system table and updates their start timestamps
+     * if the current start time is earlier than the given cutoff timestamp.
+     * @param sysTable               The backup system table from which continuous backup tables are
+     *                               retrieved and updated.
+     * @param cleanupCutoffTimestamp The cutoff timestamp before which WAL files can be deleted.
+     * @throws IOException If an error occurs while accessing the system table.
+     */
+    private void updateContinuousBackupTablesStartTime(BackupSystemTable sysTable,
+      long cleanupCutoffTimestamp) throws IOException {
+      Map<TableName, Long> continuousBackupTables = sysTable.getContinuousBackupTableSet();
+
+      // Identify tables that need updating
+      Set<TableName> tablesToUpdate = new HashSet<>();
+      for (Map.Entry<TableName, Long> entry : continuousBackupTables.entrySet()) {
+        TableName table = entry.getKey();
+        long startTimestamp = entry.getValue();
+
+        if (startTimestamp < cleanupCutoffTimestamp) {
+          tablesToUpdate.add(table);
+        }
+      }
+
+      // If no tables require updates, exit early
+      if (tablesToUpdate.isEmpty()) {
+        return;
+      }
+
+      // Perform the actual update in the system table
+      sysTable.updateContinuousBackupTableSet(tablesToUpdate, cleanupCutoffTimestamp);
     }
 
     private void validateArguments() throws IOException {

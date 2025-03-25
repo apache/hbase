@@ -29,11 +29,13 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -87,6 +89,9 @@ public class TestBackupCleanupCommand extends TestBackupBase {
 
     // Step 4: Verify Cleanup
     verifyBackupCleanup(fs, backupWalDir, currentTime);
+
+    // Step 5: Verify System Table Update
+    verifySystemTableUpdate(backupSystemTable, currentTime);
   }
 
   private static void setupBackupFolders(FileSystem fs, Path backupWalDir, long currentTime)
@@ -135,6 +140,19 @@ public class TestBackupCleanupCommand extends TestBackupBase {
       assertTrue(
         "Recent BulkLoad directory (" + bulkLoadPath + ") should exist, but it is missing!",
         fs.exists(bulkLoadPath));
+    }
+  }
+
+  private void verifySystemTableUpdate(BackupSystemTable backupSystemTable, long currentTime)
+    throws IOException {
+    Map<TableName, Long> updatedTables = backupSystemTable.getContinuousBackupTableSet();
+
+    for (Map.Entry<TableName, Long> entry : updatedTables.entrySet()) {
+      long updatedStartTime = entry.getValue();
+
+      // Ensure that the updated start time is not earlier than the expected cutoff time
+      assertTrue("System table update failed!",
+        updatedStartTime >= (currentTime - (3 * ONE_DAY_IN_MILLISECONDS)));
     }
   }
 
