@@ -3595,9 +3595,17 @@ public final class ProtobufUtil {
     if (filter != null) {
       builder.ifMatches(filter);
     } else {
-      builder.ifMatches(condition.getFamily().toByteArray(), condition.getQualifier().toByteArray(),
-        CompareOperator.valueOf(condition.getCompareType().name()),
-        ProtobufUtil.toComparator(condition.getComparator()).getValue());
+      if (condition.getCheckNonExists()) {
+        builder.ifMatchesOrNonExists(condition.getFamily().toByteArray(),
+          condition.getQualifier().toByteArray(),
+          CompareOperator.valueOf(condition.getCompareType().name()),
+          ProtobufUtil.toComparator(condition.getComparator()).getValue());
+      } else {
+        builder.ifMatches(condition.getFamily().toByteArray(),
+          condition.getQualifier().toByteArray(),
+          CompareOperator.valueOf(condition.getCompareType().name()),
+          ProtobufUtil.toComparator(condition.getComparator()).getValue());
+      }
     }
     TimeRange timeRange = condition.hasTimeRange()
       ? ProtobufUtil.toTimeRange(condition.getTimeRange())
@@ -3632,9 +3640,17 @@ public final class ProtobufUtil {
     if (filter != null) {
       builder.ifMatches(filter);
     } else {
-      builder.ifMatches(condition.getFamily().toByteArray(), condition.getQualifier().toByteArray(),
-        CompareOperator.valueOf(condition.getCompareType().name()),
-        ProtobufUtil.toComparator(condition.getComparator()).getValue());
+      if (condition.getCheckNonExists()) {
+        builder.ifMatchesOrNonExists(condition.getFamily().toByteArray(),
+          condition.getQualifier().toByteArray(),
+          CompareOperator.valueOf(condition.getCompareType().name()),
+          ProtobufUtil.toComparator(condition.getComparator()).getValue());
+      } else {
+        builder.ifMatches(condition.getFamily().toByteArray(),
+          condition.getQualifier().toByteArray(),
+          CompareOperator.valueOf(condition.getCompareType().name()),
+          ProtobufUtil.toComparator(condition.getComparator()).getValue());
+      }
     }
     TimeRange timeRange = condition.hasTimeRange()
       ? ProtobufUtil.toTimeRange(condition.getTimeRange())
