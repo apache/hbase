@@ -1051,6 +1051,27 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
+   * Updates the system table with the new start timestamps for continuous backup tables.
+   * @param tablesToUpdate    The set of tables that need their start timestamps updated.
+   * @param newStartTimestamp The new start timestamp to be set.
+   */
+  public void updateContinuousBackupTableSet(Set<TableName> tablesToUpdate, long newStartTimestamp)
+    throws IOException {
+    try (Table table = connection.getTable(tableName)) {
+      Put put = new Put(rowkey(CONTINUOUS_BACKUP_SET));
+
+      for (TableName tableName : tablesToUpdate) {
+        put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes(tableName.getNameAsString()),
+          Bytes.toBytes(newStartTimestamp));
+      }
+
+      table.put(put);
+      LOG.info("Successfully updated start timestamps for {} tables in the backup system table.",
+        tablesToUpdate.size());
+    }
+  }
+
+  /**
    * Deletes incremental backup set for a backup destination
    * @param backupRoot backup root
    */
