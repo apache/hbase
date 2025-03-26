@@ -73,7 +73,7 @@ public class AsyncMasterRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
       addListener(callable.call(controller, stub), (result, error2) -> {
         if (error2 != null) {
           onError(error2, () -> "Call to master failed",
-            err -> clearMasterStubCacheOnError(stub, error2));
+            err -> clearMasterStubCacheOnError(stub, err));
           return;
         }
         future.complete(result);
