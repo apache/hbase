@@ -524,6 +524,44 @@
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
+          <execution>
+            <!-- Copy static CSS and JS files for the UI. -->
+            <id>copy-css-js-to-ui</id>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <phase>process-resources</phase>
+            <configuration>
+              <target>
+                <copy flatten="true" todir="${project.build.directory}/hbase-webapps/static/css">
+                  <fileset dir="${webjars-dir}/bootstrap/5.3.3/css">
+                    <include name="bootstrap.min.css"/>
+                  </fileset>
+                </copy>
+                <copy flatten="true" todir="${project.build.directory}/hbase-webapps/static/js">
+                  <fileset dir="${webjars-dir}/bootstrap/5.3.3/js">
+                    <include name="bootstrap.min.js"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/jquery/3.7.1">
+                    <include name="jquery.min.js"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/tablesorter/2.32.0/js">
+                    <include name="jquery.tablesorter.min.js"/>
+                    <include name="parsers/parser-date-iso8601.min.js"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/vega/5.32.0/">
+                    <include name="vega.min.js"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/vega-embed/6.29.0/">
+                    <include name="vega-embed.min.js"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/vega-lite/5.23.0/">
+                    <include name="vega-lite.min.js"/>
+                  </fileset>
+                </copy>
+              </target>
+            </configuration>
+          </execution>
           <!-- Generate web app sources -->
           <execution>
             <id>generate</id>
@@ -766,6 +804,68 @@
                   of the launch container in the mini mr/yarn cluster
                   -->
                   <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
+                </configuration>
+              </execution>
+              <execution>
+                <id>unpack-ui-resources</id>
+                <goals>
+                  <goal>unpack</goal>
+                </goals>
+                <phase>process-resources</phase>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>org.webjars</groupId>
+                      <artifactId>bootstrap</artifactId>
+                      <version>5.3.3</version>
+                      <type>jar</type>
+                      <overWrite>true</overWrite>
+                      <includes>**/css/bootstrap.min.css,
+                        **/js/bootstrap.min.js</includes>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>org.webjars</groupId>
+                      <artifactId>jquery</artifactId>
+                      <version>3.7.1</version>
+                      <type>jar</type>
+                      <overWrite>true</overWrite>
+                      <includes>**/jquery.min.js</includes>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>org.webjars</groupId>
+                      <artifactId>tablesorter</artifactId>
+                      <version>2.32.0</version>
+                      <type>jar</type>
+                      <overWrite>true</overWrite>
+                      <includes>**/jquery.tablesorter.min.js,
+                        **/parsers/parser-date-iso8601.min.js</includes>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>org.webjars</groupId>
+                      <artifactId>vega</artifactId>
+                      <version>5.32.0</version>
+                      <type>jar</type>
+                      <overWrite>true</overWrite>
+                      <includes>**/vega.min.js</includes>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>org.webjars</groupId>
+                      <artifactId>vega-embed</artifactId>
+                      <version>6.29.0</version>
+                      <type>jar</type>
+                      <overWrite>true</overWrite>
+                      <includes>**/vega-embed.min.js</includes>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>org.webjars</groupId>
+                      <artifactId>vega-lite</artifactId>
+                      <version>5.23.0</version>
+                      <type>jar</type>
+                      <overWrite>true</overWrite>
+                      <includes>**/vega-lite.min.js</includes>
+                    </artifactItem>
+                  </artifactItems>
+                  <outputDirectory>${project.build.directory}</outputDirectory>
                 </configuration>
               </execution>
             </executions>
