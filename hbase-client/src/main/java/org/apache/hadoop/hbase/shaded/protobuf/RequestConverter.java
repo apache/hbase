@@ -212,8 +212,7 @@ public final class RequestConverter {
     Condition condition = ProtobufUtil.toCondition(row, family, qualifier, op, value, filter,
       timeRange, checkNonExists);
     return builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName))
-      .setCondition(condition)
-      .build();
+      .setCondition(condition).build();
   }
 
   /**
@@ -223,8 +222,8 @@ public final class RequestConverter {
   public static ClientProtos.MultiRequest buildMultiRequest(final byte[] regionName,
     final byte[] row, final byte[] family, final byte[] qualifier, final CompareOperator op,
     final byte[] value, final Filter filter, final TimeRange timeRange,
-    final boolean checkNonExists, final RowMutations rowMutations, long nonceGroup, long nonce
-  ) throws IOException {
+    final boolean checkNonExists, final RowMutations rowMutations, long nonceGroup, long nonce)
+    throws IOException {
     Condition condition = ProtobufUtil.toCondition(row, family, qualifier, op, value, filter,
       timeRange, checkNonExists);
     return buildMultiRequest(regionName, rowMutations, condition, nonceGroup, nonce);
@@ -562,10 +561,9 @@ public final class RequestConverter {
       getRegionActionBuilderWithRegion(builder, regionName);
 
       CheckAndMutate cam = (CheckAndMutate) action.getAction();
-      builder
-        .setCondition(ProtobufUtil.toCondition(cam.getRow(), cam.getFamily(), cam.getQualifier(),
-          cam.getCompareOp(), cam.getValue(), cam.getFilter(), cam.getTimeRange(),
-          cam.isCheckNonExists()));
+      builder.setCondition(ProtobufUtil.toCondition(cam.getRow(), cam.getFamily(),
+        cam.getQualifier(), cam.getCompareOp(), cam.getValue(), cam.getFilter(), cam.getTimeRange(),
+        cam.isCheckNonExists()));
 
       if (cam.getAction() instanceof Put) {
         actionBuilder.clear();

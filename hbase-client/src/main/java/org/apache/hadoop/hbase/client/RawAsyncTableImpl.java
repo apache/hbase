@@ -495,14 +495,14 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         return RawAsyncTableImpl.this
           .<CheckAndMutateResult> newCaller(checkAndMutate.getRow(), mutation.getPriority(),
             rpcTimeoutNs)
-          .action(
-            (controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub, mutation,
-              (rn, m) -> RequestConverter.buildMutateRequest(rn, checkAndMutate.getRow(),
-                checkAndMutate.getFamily(), checkAndMutate.getQualifier(),
-                checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
-                checkAndMutate.getFilter(), checkAndMutate.getTimeRange(),
-                checkAndMutate.isCheckNonExists(), m, nonceGroup, nonce),
-              (c, r) -> ResponseConverter.getCheckAndMutateResult(r, c.cellScanner())))
+          .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub,
+            mutation,
+            (rn, m) -> RequestConverter.buildMutateRequest(rn, checkAndMutate.getRow(),
+              checkAndMutate.getFamily(), checkAndMutate.getQualifier(),
+              checkAndMutate.getCompareOp(), checkAndMutate.getValue(), checkAndMutate.getFilter(),
+              checkAndMutate.getTimeRange(), checkAndMutate.isCheckNonExists(), m, nonceGroup,
+              nonce),
+            (c, r) -> ResponseConverter.getCheckAndMutateResult(r, c.cellScanner())))
           .call();
       } else if (checkAndMutate.getAction() instanceof RowMutations) {
         RowMutations rowMutations = (RowMutations) checkAndMutate.getAction();

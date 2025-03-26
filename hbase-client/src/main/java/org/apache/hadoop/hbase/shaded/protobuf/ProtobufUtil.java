@@ -3698,8 +3698,7 @@ public final class ProtobufUtil {
     }
 
     return builder.setTimeRange(ProtobufUtil.toTimeRange(timeRange))
-      .setCheckNonExists(checkNonExists)
-      .build();
+      .setCheckNonExists(checkNonExists).build();
   }
 
   public static ClientProtos.Condition toCondition(final byte[] row, final Filter filter,

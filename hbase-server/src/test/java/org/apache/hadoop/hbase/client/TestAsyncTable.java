@@ -1689,17 +1689,17 @@ public class TestAsyncTable {
     table.put(new Put(rk2).addColumn(FAMILY, checkQ, Bytes.toBytes("v2"))).get();
     table.put(new Put(rk3).addColumn(FAMILY, checkQ, Bytes.toBytes("v3"))).get();
 
-    List<CheckAndMutateResult> results = table.checkAndMutateAll(
-      Arrays.asList(checkAndMutate1, checkAndMutate2, checkAndMutate3)).get();
+    List<CheckAndMutateResult> results = table
+      .checkAndMutateAll(Arrays.asList(checkAndMutate1, checkAndMutate2, checkAndMutate3)).get();
 
     assertTrue(results.get(0).isSuccess());
     assertTrue(results.get(1).isSuccess());
     assertFalse(results.get(2).isSuccess());
 
-    assertEquals("vv1", Bytes.toString(
-      table.get(new Get(rk1).addColumn(FAMILY, setQ)).get().getValue(FAMILY, setQ)));
-    assertEquals("vv2", Bytes.toString(
-      table.get(new Get(rk2).addColumn(FAMILY, setQ)).get().getValue(FAMILY, setQ)));
+    assertEquals("vv1",
+      Bytes.toString(table.get(new Get(rk1).addColumn(FAMILY, setQ)).get().getValue(FAMILY, setQ)));
+    assertEquals("vv2",
+      Bytes.toString(table.get(new Get(rk2).addColumn(FAMILY, setQ)).get().getValue(FAMILY, setQ)));
     assertFalse(table.exists(new Get(rk3).addColumn(FAMILY, setQ)).get());
   }
 

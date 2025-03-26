@@ -1321,10 +1321,10 @@ public class TestCheckAndMutate {
       assertTrue(results.get(1).isSuccess());
       assertFalse(results.get(2).isSuccess());
 
-      assertEquals("vv1", Bytes.toString(
-        table.get(new Get(ROWKEY).addColumn(FAMILY, setQ)).getValue(FAMILY, setQ)));
-      assertEquals("vv2", Bytes.toString(
-        table.get(new Get(ROWKEY2).addColumn(FAMILY, setQ)).getValue(FAMILY, setQ)));
+      assertEquals("vv1",
+        Bytes.toString(table.get(new Get(ROWKEY).addColumn(FAMILY, setQ)).getValue(FAMILY, setQ)));
+      assertEquals("vv2",
+        Bytes.toString(table.get(new Get(ROWKEY2).addColumn(FAMILY, setQ)).getValue(FAMILY, setQ)));
       assertFalse(table.exists(new Get(ROWKEY3).addColumn(FAMILY, setQ)));
     }
   }
