@@ -51,7 +51,7 @@ public class TestBackupCleanupCommand extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupDelete.class);
+    HBaseClassTestRule.forClass(TestBackupCleanupCommand.class);
 
   String backupWalDirName = "TestContinuousBackupWalDir";
 
