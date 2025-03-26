@@ -1257,4 +1257,75 @@ public class TestCheckAndMutate {
         table.get(new Get(row3).addColumn(FAMILY, qualifier)).getValue(FAMILY, qualifier)));
     }
   }
+
+  @Test
+  public void testCheckAndMutateForIfMatchesOrNonExists() throws Exception {
+    byte[] qualifier = Bytes.toBytes("Q");
+    try (Table table = createTable()) {
+      Put put = new Put(ROWKEY);
+      put.addColumn(FAMILY, qualifier, Bytes.toBytes("v0"));
+
+      // Value non exists
+      CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(ROWKEY)
+        .ifMatchesOrNonExists(FAMILY, qualifier, CompareOperator.EQUAL, Bytes.toBytes("v0"))
+        .build(new Put(ROWKEY).addColumn(FAMILY, qualifier, Bytes.toBytes("v1")));
+      table.checkAndMutate(checkAndMutate1);
+      assertEquals("v1", Bytes.toString(
+        table.get(new Get(ROWKEY).addColumn(FAMILY, qualifier)).getValue(FAMILY, qualifier)));
+
+      // Value exists and matches
+      CheckAndMutate checkAndMutate2 = CheckAndMutate.newBuilder(ROWKEY)
+        .ifMatchesOrNonExists(FAMILY, qualifier, CompareOperator.EQUAL, Bytes.toBytes("v1"))
+        .build(new Put(ROWKEY).addColumn(FAMILY, qualifier, Bytes.toBytes("v2")));
+      table.checkAndMutate(checkAndMutate2);
+      assertEquals("v2", Bytes.toString(
+        table.get(new Get(ROWKEY).addColumn(FAMILY, qualifier)).getValue(FAMILY, qualifier)));
+
+      // Value exists but doesn't match
+      CheckAndMutate checkAndMutate3 = CheckAndMutate.newBuilder(ROWKEY)
+        .ifMatchesOrNonExists(FAMILY, qualifier, CompareOperator.NOT_EQUAL, Bytes.toBytes("v2"))
+        .build(new Put(ROWKEY).addColumn(FAMILY, qualifier, Bytes.toBytes("v3")));
+      table.checkAndMutate(checkAndMutate3);
+      assertEquals("v2", Bytes.toString(
+        table.get(new Get(ROWKEY).addColumn(FAMILY, qualifier)).getValue(FAMILY, qualifier)));
+    }
+  }
+
+  @Test
+  public void testCheckAndMutateForIfMatchesOrNonExistsBatch() throws Throwable {
+    byte[] checkQ = Bytes.toBytes("CQ");
+    byte[] setQ = Bytes.toBytes("SQ");
+    try (Table table = createTable()) {
+      table.put(new Put(ROWKEY2).addColumn(FAMILY, checkQ, Bytes.toBytes("v2")));
+      table.put(new Put(ROWKEY3).addColumn(FAMILY, checkQ, Bytes.toBytes("v3")));
+
+      // ROWKEY non exists
+      CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(ROWKEY)
+        .ifMatchesOrNonExists(FAMILY, checkQ, CompareOperator.EQUAL, Bytes.toBytes("v1"))
+        .build(new Put(ROWKEY).addColumn(FAMILY, setQ, Bytes.toBytes("vv1")));
+
+      // ROWKEY2 exists and matches
+      CheckAndMutate checkAndMutate2 = CheckAndMutate.newBuilder(ROWKEY2)
+        .ifMatchesOrNonExists(FAMILY, checkQ, CompareOperator.EQUAL, Bytes.toBytes("v2"))
+        .build(new Put(ROWKEY2).addColumn(FAMILY, setQ, Bytes.toBytes("vv2")));
+
+      // ROWKEY3 exists and doesn't match
+      CheckAndMutate checkAndMutate3 = CheckAndMutate.newBuilder(ROWKEY3)
+        .ifMatchesOrNonExists(FAMILY, checkQ, CompareOperator.EQUAL, Bytes.toBytes("vx"))
+        .build(new Put(ROWKEY3).addColumn(FAMILY, setQ, Bytes.toBytes("vv3")));
+
+      List<CheckAndMutateResult> results =
+        table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2, checkAndMutate3));
+
+      assertTrue(results.get(0).isSuccess());
+      assertTrue(results.get(1).isSuccess());
+      assertFalse(results.get(2).isSuccess());
+
+      assertEquals("vv1", Bytes.toString(
+        table.get(new Get(ROWKEY).addColumn(FAMILY, setQ)).getValue(FAMILY, setQ)));
+      assertEquals("vv2", Bytes.toString(
+        table.get(new Get(ROWKEY2).addColumn(FAMILY, setQ)).getValue(FAMILY, setQ)));
+      assertFalse(table.exists(new Get(ROWKEY3).addColumn(FAMILY, setQ)));
+    }
+  }
 }

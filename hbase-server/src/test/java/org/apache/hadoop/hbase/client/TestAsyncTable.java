@@ -1628,6 +1628,82 @@ public class TestAsyncTable {
   }
 
   @Test
+  public void testCheckAndMutateIfMatchesOrNonExists() throws Exception {
+    AsyncTable<?> table = getTable.get();
+    Put put = new Put(row);
+    put.addColumn(FAMILY, QUALIFIER, Bytes.toBytes("v0"));
+
+    // Value non exists
+    CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(row)
+      .ifMatchesOrNonExists(FAMILY, QUALIFIER, CompareOperator.EQUAL, Bytes.toBytes("v0"))
+      .build(new Put(row).addColumn(FAMILY, QUALIFIER, Bytes.toBytes("v1")));
+    CheckAndMutateResult result = table.checkAndMutate(checkAndMutate1).get();
+    assertTrue(result.isSuccess());
+    assertEquals("v1", Bytes.toString(
+      table.get(new Get(row).addColumn(FAMILY, QUALIFIER)).get().getValue(FAMILY, QUALIFIER)));
+
+    // Value exists and matches
+    CheckAndMutate checkAndMutate2 = CheckAndMutate.newBuilder(row)
+      .ifMatchesOrNonExists(FAMILY, QUALIFIER, CompareOperator.EQUAL, Bytes.toBytes("v1"))
+      .build(new Put(row).addColumn(FAMILY, QUALIFIER, Bytes.toBytes("v2")));
+    result = table.checkAndMutate(checkAndMutate2).get();
+    assertTrue(result.isSuccess());
+    assertEquals("v2", Bytes.toString(
+      table.get(new Get(row).addColumn(FAMILY, QUALIFIER)).get().getValue(FAMILY, QUALIFIER)));
+
+    // Value exists but doesn't match
+    CheckAndMutate checkAndMutate3 = CheckAndMutate.newBuilder(row)
+      .ifMatchesOrNonExists(FAMILY, QUALIFIER, CompareOperator.EQUAL, Bytes.toBytes("vx"))
+      .build(new Put(row).addColumn(FAMILY, QUALIFIER, Bytes.toBytes("v3")));
+    result = table.checkAndMutate(checkAndMutate3).get();
+    assertFalse(result.isSuccess());
+    assertEquals("v2", Bytes.toString(
+      table.get(new Get(row).addColumn(FAMILY, QUALIFIER)).get().getValue(FAMILY, QUALIFIER)));
+  }
+
+  @Test
+  public void testCheckAndMutateIfMatchesOrNonExistsBatch() throws Exception {
+    byte[] checkQ = Bytes.toBytes("CQ");
+    byte[] setQ = Bytes.toBytes("SQ");
+
+    byte[] rk1 = Bytes.toBytes("RK1-ifMatchesOrNonExists");
+    byte[] rk2 = Bytes.toBytes("RK2-ifMatchesOrNonExists");
+    byte[] rk3 = Bytes.toBytes("RK3-ifMatchesOrNonExists");
+
+    // rk1 non exists
+    CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(rk1)
+      .ifMatchesOrNonExists(FAMILY, checkQ, CompareOperator.EQUAL, Bytes.toBytes("v1"))
+      .build(new Put(rk1).addColumn(FAMILY, setQ, Bytes.toBytes("vv1")));
+
+    // rk2 exists and matches
+    CheckAndMutate checkAndMutate2 = CheckAndMutate.newBuilder(rk2)
+      .ifMatchesOrNonExists(FAMILY, checkQ, CompareOperator.EQUAL, Bytes.toBytes("v2"))
+      .build(new Put(rk2).addColumn(FAMILY, setQ, Bytes.toBytes("vv2")));
+
+    // rk3 exists and doesn't match
+    CheckAndMutate checkAndMutate3 = CheckAndMutate.newBuilder(rk3)
+      .ifMatchesOrNonExists(FAMILY, checkQ, CompareOperator.EQUAL, Bytes.toBytes("vx"))
+      .build(new Put(rk3).addColumn(FAMILY, setQ, Bytes.toBytes("vv3")));
+
+    AsyncTable<?> table = getTable.get();
+    table.put(new Put(rk2).addColumn(FAMILY, checkQ, Bytes.toBytes("v2"))).get();
+    table.put(new Put(rk3).addColumn(FAMILY, checkQ, Bytes.toBytes("v3"))).get();
+
+    List<CheckAndMutateResult> results = table.checkAndMutateAll(
+      Arrays.asList(checkAndMutate1, checkAndMutate2, checkAndMutate3)).get();
+
+    assertTrue(results.get(0).isSuccess());
+    assertTrue(results.get(1).isSuccess());
+    assertFalse(results.get(2).isSuccess());
+
+    assertEquals("vv1", Bytes.toString(
+      table.get(new Get(rk1).addColumn(FAMILY, setQ)).get().getValue(FAMILY, setQ)));
+    assertEquals("vv2", Bytes.toString(
+      table.get(new Get(rk2).addColumn(FAMILY, setQ)).get().getValue(FAMILY, setQ)));
+    assertFalse(table.exists(new Get(rk3).addColumn(FAMILY, setQ)).get());
+  }
+
+  @Test
   public void testDisabled() throws InterruptedException, ExecutionException {
     ASYNC_CONN.getAdmin().disableTable(TABLE_NAME).get();
     try {
