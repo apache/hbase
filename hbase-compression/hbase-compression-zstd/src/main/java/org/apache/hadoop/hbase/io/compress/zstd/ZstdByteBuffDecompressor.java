@@ -22,10 +22,9 @@ import com.github.luben.zstd.ZstdDictDecompress;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.compress.BlockDecompressorHelper;
 import org.apache.hadoop.hbase.io.compress.ByteBuffDecompressor;
-import org.apache.hadoop.hbase.io.compress.CanReinit;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -34,21 +33,18 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Glue for ByteBuffDecompressor on top of zstd-jni
  */
 @InterfaceAudience.Private
-public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit {
+public class ZstdByteBuffDecompressor implements ByteBuffDecompressor {
 
   protected int dictId;
-  @Nullable
-  protected ZstdDictDecompress dict;
   protected ZstdDecompressCtx ctx;
   // Intended to be set to false by some unit tests
   private boolean allowByteBuffDecompression;
 
-  ZstdByteBuffDecompressor(@Nullable byte[] dictionary) {
+  ZstdByteBuffDecompressor(@Nullable byte[] dictionaryBytes) {
     ctx = new ZstdDecompressCtx();
-    if (dictionary != null) {
-      this.dictId = ZstdCodec.getDictionaryId(dictionary);
-      this.dict = new ZstdDictDecompress(dictionary);
-      this.ctx.loadDict(this.dict);
+    if (dictionaryBytes != null) {
+      this.ctx.loadDict(new ZstdDictDecompress(dictionaryBytes));
+      dictId = ZstdCodec.getDictionaryId(dictionaryBytes);
     }
     allowByteBuffDecompression = true;
   }
@@ -100,44 +96,29 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit
   }
 
   @Override
-  public void close() {
-    ctx.close();
-    if (dict != null) {
-      dict.close();
+  public void reinit(@Nullable Compression.HFileDecompressionContext newHFileDecompressionContext) {
+    if (newHFileDecompressionContext != null) {
+      if (newHFileDecompressionContext instanceof ZstdHFileDecompressionContext) {
+        ZstdHFileDecompressionContext zstdContext =
+          (ZstdHFileDecompressionContext) newHFileDecompressionContext;
+        allowByteBuffDecompression = zstdContext.isAllowByteBuffDecompression();
+        if (zstdContext.getDict() == null && dictId != 0) {
+          ctx.loadDict((byte[]) null);
+          dictId = 0;
+        } else if (zstdContext.getDictId() != dictId) {
+          this.ctx.loadDict(zstdContext.getDict());
+          this.dictId = zstdContext.getDictId();
+        }
+      } else {
+        throw new IllegalArgumentException(
+          "ZstdByteBuffDecompression#reinit() was given an HFileDecompressionContext that was not a ZstdHFileDecompressionContext, this should never happen");
+      }
     }
   }
 
   @Override
-  public void reinit(Configuration conf) {
-    if (conf != null) {
-      // Dictionary may have changed
-      byte[] b = ZstdCodec.getDictionary(conf);
-      if (b != null) {
-        // Don't casually create dictionary objects; they consume native memory
-        int thisDictId = ZstdCodec.getDictionaryId(b);
-        if (dict == null || dictId != thisDictId) {
-          dictId = thisDictId;
-          ZstdDictDecompress oldDict = dict;
-          dict = new ZstdDictDecompress(b);
-          ctx.loadDict(dict);
-          if (oldDict != null) {
-            oldDict.close();
-          }
-        }
-      } else {
-        ZstdDictDecompress oldDict = dict;
-        dict = null;
-        dictId = 0;
-        // loadDict((byte[]) accepts null to clear the dictionary
-        ctx.loadDict((byte[]) null);
-        if (oldDict != null) {
-          oldDict.close();
-        }
-      }
-
-      // unit test helper
-      this.allowByteBuffDecompression =
-        conf.getBoolean("hbase.io.compress.zstd.allowByteBuffDecompression", true);
-    }
+  public void close() {
+    ctx.close();
   }
+
 }
