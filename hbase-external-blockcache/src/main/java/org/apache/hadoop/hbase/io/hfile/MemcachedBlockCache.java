@@ -82,8 +82,8 @@ public class MemcachedBlockCache implements BlockCache {
   public static final boolean MEMCACHED_OPTIMIZE_DEFAULT = false;
   public static final int STAT_THREAD_PERIOD = 60 * 5;
 
-  private final MemcachedClient client;
-  private final HFileBlockTranscoder tc = new HFileBlockTranscoder();
+  private transient final MemcachedClient client;
+  private transient final HFileBlockTranscoder tc = new HFileBlockTranscoder();
   private final CacheStats cacheStats = new CacheStats("MemcachedBlockCache");
   private final AtomicLong cachedCount = new AtomicLong();
   private final AtomicLong notCachedCount = new AtomicLong();

@@ -97,6 +97,8 @@ public class TestTinyLfuBlockCache {
 
     // Expect no evictions
     assertEquals(0, cache.getStats().getEvictionCount());
+
+    CacheTestUtils.testConvertToJSON(cache);
   }
 
   @Test

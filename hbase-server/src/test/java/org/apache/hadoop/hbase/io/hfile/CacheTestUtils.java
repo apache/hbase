@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -160,6 +161,8 @@ public class CacheTestUtils {
         // expected
       }
     }
+
+    testConvertToJSON(toBeTested);
 
   }
 
@@ -349,6 +352,15 @@ public class CacheTestUtils {
       if (actualBlock != null) {
         actualBlock.release();
       }
+    }
+  }
+
+  public static void testConvertToJSON(BlockCache toBeTested) {
+    try {
+      String json = BlockCacheUtil.toJSON(toBeTested);
+      assertNotNull(json);
+    } catch (Exception e) {
+      fail("conversion to JSON should not fail, exception is:" + e);
     }
   }
 }
