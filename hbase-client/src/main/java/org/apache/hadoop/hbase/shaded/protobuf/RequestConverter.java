@@ -200,8 +200,8 @@ public final class RequestConverter {
    */
   public static MutateRequest buildMutateRequest(final byte[] regionName, final byte[] row,
     final byte[] family, final byte[] qualifier, final CompareOperator op, final byte[] value,
-    final Filter filter, final TimeRange timeRange, final Mutation mutation, long nonceGroup,
-    long nonce) throws IOException {
+    final Filter filter, final TimeRange timeRange, final boolean checkNonExists,
+    final Mutation mutation, long nonceGroup, long nonce) throws IOException {
     MutateRequest.Builder builder = MutateRequest.newBuilder();
     if (mutation instanceof Increment || mutation instanceof Append) {
       builder.setMutation(ProtobufUtil.toMutation(getMutationType(mutation), mutation, nonce))
@@ -209,8 +209,10 @@ public final class RequestConverter {
     } else {
       builder.setMutation(ProtobufUtil.toMutation(getMutationType(mutation), mutation));
     }
+    Condition condition = ProtobufUtil.toCondition(row, family, qualifier, op, value, filter,
+      timeRange, checkNonExists);
     return builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName))
-      .setCondition(ProtobufUtil.toCondition(row, family, qualifier, op, value, filter, timeRange))
+      .setCondition(condition)
       .build();
   }
 
@@ -221,10 +223,11 @@ public final class RequestConverter {
   public static ClientProtos.MultiRequest buildMultiRequest(final byte[] regionName,
     final byte[] row, final byte[] family, final byte[] qualifier, final CompareOperator op,
     final byte[] value, final Filter filter, final TimeRange timeRange,
-    final RowMutations rowMutations, long nonceGroup, long nonce) throws IOException {
-    return buildMultiRequest(regionName, rowMutations,
-      ProtobufUtil.toCondition(row, family, qualifier, op, value, filter, timeRange), nonceGroup,
-      nonce);
+    final boolean checkNonExists, final RowMutations rowMutations, long nonceGroup, long nonce
+  ) throws IOException {
+    Condition condition = ProtobufUtil.toCondition(row, family, qualifier, op, value, filter,
+      timeRange, checkNonExists);
+    return buildMultiRequest(regionName, rowMutations, condition, nonceGroup, nonce);
   }
 
   /**
@@ -561,7 +564,8 @@ public final class RequestConverter {
       CheckAndMutate cam = (CheckAndMutate) action.getAction();
       builder
         .setCondition(ProtobufUtil.toCondition(cam.getRow(), cam.getFamily(), cam.getQualifier(),
-          cam.getCompareOp(), cam.getValue(), cam.getFilter(), cam.getTimeRange()));
+          cam.getCompareOp(), cam.getValue(), cam.getFilter(), cam.getTimeRange(),
+          cam.isCheckNonExists()));
 
       if (cam.getAction() instanceof Put) {
         actionBuilder.clear();
