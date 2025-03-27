@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.regionserver.StoreFileWriter.shouldEnableH
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -48,45 +49,50 @@ public class CompactionConfiguration {
 
   private static final Logger LOG = LoggerFactory.getLogger(CompactionConfiguration.class);
 
-  public static final String HBASE_HSTORE_COMPACTION_RATIO_KEY = "hbase.hstore.compaction.ratio";
+  public static final String HBASE_HSTORE_COMPACTION_RATIO_KEY =
+    ConfigKey.FLOAT("hbase.hstore.compaction.ratio");
   public static final String HBASE_HSTORE_COMPACTION_RATIO_OFFPEAK_KEY =
-    "hbase.hstore.compaction.ratio.offpeak";
+    ConfigKey.FLOAT("hbase.hstore.compaction.ratio.offpeak");
   public static final String HBASE_HSTORE_COMPACTION_MIN_KEY_OLD =
-    "hbase.hstore.compactionThreshold";
-  public static final String HBASE_HSTORE_COMPACTION_MIN_KEY = "hbase.hstore.compaction.min";
+    ConfigKey.INT("hbase.hstore.compactionThreshold");
+  public static final String HBASE_HSTORE_COMPACTION_MIN_KEY =
+    ConfigKey.INT("hbase.hstore.compaction.min");
   public static final String HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY =
-    "hbase.hstore.compaction.min.size";
-  public static final String HBASE_HSTORE_COMPACTION_MAX_KEY = "hbase.hstore.compaction.max";
+    ConfigKey.LONG("hbase.hstore.compaction.min.size");
+  public static final String HBASE_HSTORE_COMPACTION_MAX_KEY =
+    ConfigKey.INT("hbase.hstore.compaction.max");
   public static final String HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY =
-    "hbase.hstore.compaction.max.size";
+    ConfigKey.LONG("hbase.hstore.compaction.max.size");
   public static final String HBASE_HSTORE_COMPACTION_MAX_SIZE_OFFPEAK_KEY =
-    "hbase.hstore.compaction.max.size.offpeak";
-  public static final String HBASE_HSTORE_OFFPEAK_END_HOUR = "hbase.offpeak.end.hour";
-  public static final String HBASE_HSTORE_OFFPEAK_START_HOUR = "hbase.offpeak.start.hour";
+    ConfigKey.LONG("hbase.hstore.compaction.max.size.offpeak");
+  public static final String HBASE_HSTORE_OFFPEAK_END_HOUR =
+    ConfigKey.INT("hbase.offpeak.end.hour");
+  public static final String HBASE_HSTORE_OFFPEAK_START_HOUR =
+    ConfigKey.INT("hbase.offpeak.start.hour");
   public static final String HBASE_HSTORE_MIN_LOCALITY_TO_SKIP_MAJOR_COMPACT =
-    "hbase.hstore.min.locality.to.skip.major.compact";
+    ConfigKey.FLOAT("hbase.hstore.min.locality.to.skip.major.compact");
 
   public static final String HBASE_HFILE_COMPACTION_DISCHARGER_THREAD_COUNT =
-    "hbase.hfile.compaction.discharger.thread.count";
+    ConfigKey.INT("hbase.hfile.compaction.discharger.thread.count");
 
   /*
    * The epoch time length for the windows we no longer compact
    */
   public static final String DATE_TIERED_MAX_AGE_MILLIS_KEY =
-    "hbase.hstore.compaction.date.tiered.max.storefile.age.millis";
+    ConfigKey.LONG("hbase.hstore.compaction.date.tiered.max.storefile.age.millis");
   public static final String DATE_TIERED_INCOMING_WINDOW_MIN_KEY =
-    "hbase.hstore.compaction.date.tiered.incoming.window.min";
-  public static final String COMPACTION_POLICY_CLASS_FOR_DATE_TIERED_WINDOWS_KEY =
-    "hbase.hstore.compaction.date.tiered.window.policy.class";
+    ConfigKey.INT("hbase.hstore.compaction.date.tiered.incoming.window.min");
+  public static final String COMPACTION_POLICY_CLASS_FOR_DATE_TIERED_WINDOWS_KEY = ConfigKey.CLASS(
+    "hbase.hstore.compaction.date.tiered.window.policy.class", RatioBasedCompactionPolicy.class);
   public static final String DATE_TIERED_SINGLE_OUTPUT_FOR_MINOR_COMPACTION_KEY =
-    "hbase.hstore.compaction.date.tiered.single.output.for.minor.compaction";
+    ConfigKey.BOOLEAN("hbase.hstore.compaction.date.tiered.single.output.for.minor.compaction");
 
   private static final Class<
     ? extends RatioBasedCompactionPolicy> DEFAULT_COMPACTION_POLICY_CLASS_FOR_DATE_TIERED_WINDOWS =
       ExploringCompactionPolicy.class;
 
-  public static final String DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS_KEY =
-    "hbase.hstore.compaction.date.tiered.window.factory.class";
+  public static final String DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS_KEY = ConfigKey.CLASS(
+    "hbase.hstore.compaction.date.tiered.window.factory.class", CompactionWindowFactory.class);
 
   private static final Class<
     ? extends CompactionWindowFactory> DEFAULT_DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS =
@@ -95,11 +101,11 @@ public class CompactionConfiguration {
   public static final String DATE_TIERED_STORAGE_POLICY_ENABLE_KEY =
     "hbase.hstore.compaction.date.tiered.storage.policy.enable";
   public static final String DATE_TIERED_HOT_WINDOW_AGE_MILLIS_KEY =
-    "hbase.hstore.compaction.date.tiered.hot.window.age.millis";
+    ConfigKey.LONG("hbase.hstore.compaction.date.tiered.hot.window.age.millis");
   public static final String DATE_TIERED_HOT_WINDOW_STORAGE_POLICY_KEY =
     "hbase.hstore.compaction.date.tiered.hot.window.storage.policy";
   public static final String DATE_TIERED_WARM_WINDOW_AGE_MILLIS_KEY =
-    "hbase.hstore.compaction.date.tiered.warm.window.age.millis";
+    ConfigKey.LONG("hbase.hstore.compaction.date.tiered.warm.window.age.millis");
   public static final String DATE_TIERED_WARM_WINDOW_STORAGE_POLICY_KEY =
     "hbase.hstore.compaction.date.tiered.warm.window.storage.policy";
   /** Windows older than warm age belong to COLD_WINDOW **/
