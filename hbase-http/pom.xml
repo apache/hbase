@@ -78,7 +78,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase.thirdparty</groupId>
-      <artifactId>hbase-shaded-jetty-ee8</artifactId>
+      <artifactId>hbase-shaded-jetty-12-plus</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase.thirdparty</groupId>
