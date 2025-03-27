@@ -18,22 +18,10 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-         import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
          import="java.util.*"
          import="org.apache.hadoop.hbase.master.HMaster"
-         import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
-         import="org.apache.hadoop.hbase.replication.ReplicationLoadSource"
-         import="org.apache.hadoop.hbase.RegionMetrics"
-         import="org.apache.hadoop.hbase.ServerMetrics"
          import="org.apache.hadoop.hbase.ServerName"
-         import="org.apache.hadoop.hbase.Size"
-         import="org.apache.hadoop.hbase.util.VersionInfo"
-         import="org.apache.hadoop.hbase.util.Pair"
-         import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
-         import="org.apache.hadoop.hbase.net.Address"
-         import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo"
-         import="org.apache.hadoop.hbase.rsgroup.RSGroupUtil" %>
-<%@ page import="org.apache.hadoop.hbase.master.ServerManager" %>
+         import="org.apache.hadoop.hbase.master.ServerManager" %>
 
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
@@ -77,24 +65,24 @@
     </li>
   </ul>
   <div class="tab-content">
+    <% request.setAttribute("serverNames", serverNames); %>
     <div class="tab-pane active" id="tab_baseStats" role="tabpanel">
-      <% request.setAttribute("serverNames", serverNames); %>
       <jsp:include page="regionServerList_baseStats.jsp"/>
     </div>
     <div class="tab-pane" id="tab_memoryStats" role="tabpanel">
-      <& memoryStats; serverNames = serverNames; &>
+      <jsp:include page="regionServerList_memoryStats.jsp" />
     </div>
     <div class="tab-pane" id="tab_requestStats" role="tabpanel">
-      <& requestStats; serverNames = serverNames; &>
+      <jsp:include page="regionServerList_requestStats.jsp" />
     </div>
     <div class="tab-pane" id="tab_storeStats" role="tabpanel">
-      <& storeStats; serverNames = serverNames; &>
+      <jsp:include page="regionServerList_storeStats.jsp" />
     </div>
     <div class="tab-pane" id="tab_compactStats" role="tabpanel">
-      <& compactionStats; serverNames = serverNames; &>
+      <jsp:include page="regionServerList_compactionStats.jsp" />
     </div>
     <div class="tab-pane" id="tab_replicationStats" role="tabpanel">
-      <& replicationStats; serverNames = serverNames; &>
+      <jsp:include page="regionServerList_replicationStats.jsp" />
     </div>
   </div>
 </div>
