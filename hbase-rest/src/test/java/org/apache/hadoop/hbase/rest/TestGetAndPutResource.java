@@ -321,6 +321,8 @@ public class TestGetAndPutResource extends RowResourceBase {
 
   @Test
   public void testURLEncodedKey() throws IOException, JAXBException {
+    // Requires UriCompliance.Violation.AMBIGUOUS_PATH_SEPARATOR
+    // Otherwise fails with "400: Ambiguous URI path separator"
     String urlKey = "http://example.com/foo";
     StringBuilder path = new StringBuilder();
     path.append('/');
