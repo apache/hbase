@@ -17,26 +17,26 @@
  */
 package org.apache.hadoop.hbase.http.log;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.stream.Collectors;
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * HTTP utility class to help propagate server side exception in log level servlet to the client
- * over HTTP (HTML payload)
- * It parses HTTP client connections and recreates the exception.
+ * over HTTP (HTML payload) It parses HTTP client connections and recreates the exception.
  */
-@InterfaceAudience.Private public class LogLevelExceptionUtils {
+@InterfaceAudience.Private
+public class LogLevelExceptionUtils {
 
   private static void throwEx(Throwable ex) {
-    LogLevelExceptionUtils.<RuntimeException>throwException(ex);
+    LogLevelExceptionUtils.<RuntimeException> throwException(ex);
   }
 
   @SuppressWarnings("unchecked")
@@ -45,23 +45,19 @@ import org.apache.yetus.audience.InterfaceAudience;
   }
 
   /**
-   * Validates the status of an <code>HttpURLConnection</code> against an
-   * expected HTTP status code. If the current status code is not the expected
-   * one it throws an exception with a detail message using Server side error
-   * messages if available.
+   * Validates the status of an <code>HttpURLConnection</code> against an expected HTTP status code.
+   * If the current status code is not the expected one it throws an exception with a detail message
+   * using Server side error messages if available.
    * <p>
-   * <b>NOTE:</b> this method will throw the deserialized exception even if not
-   * declared in the <code>throws</code> of the method signature.
-   *
+   * <b>NOTE: This is an adapted version of the original method in HttpServerUtil.java of Hadoop,
+   * but we handle for HTML response.
    * @param conn           the <code>HttpURLConnection</code>.
    * @param expectedStatus the expected HTTP status code.
-   * @throws IOException thrown if the current status code does not match the
-   *                     expected one.
-   *                     NOTE: This is an adapted version of the original method in HttpServerUtil.java from Hadoop
-   *                     but we handle for HTML response.
+   * @throws IOException thrown if the current status code does not match the expected one.
    */
-  @SuppressWarnings("unchecked") public static void validateResponse(HttpURLConnection conn,
-    int expectedStatus) throws IOException {
+  @SuppressWarnings("unchecked")
+  public static void validateResponse(HttpURLConnection conn, int expectedStatus)
+    throws IOException {
     if (conn.getResponseCode() != expectedStatus) {
       Exception toThrow = null;
 
@@ -81,8 +77,8 @@ import org.apache.yetus.audience.InterfaceAudience;
               message, uri, exception));
         }
       } catch (Exception ex) {
-        toThrow = new IOException(
-          String.format("HTTP status [%d], message [%s], URL [%s], exception [%s]",
+        toThrow =
+          new IOException(String.format("HTTP status [%d], message [%s], URL [%s], exception [%s]",
             conn.getResponseCode(), conn.getResponseMessage(), conn.getURL(), ex), ex);
       }
       if (toThrow != null) {
