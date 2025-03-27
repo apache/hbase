@@ -790,7 +790,7 @@ public class HttpServer implements FilterContainer {
    * @param appDir The application directory
    */
   protected void addDefaultApps(ContextHandlerCollection parent, final String appDir,
-    Configuration conf) {
+    Configuration conf) throws IOException {
     // set up the context for "/logs/" if "hadoop.log.dir" property is defined.
     String logDir = this.logDir;
     if (logDir == null) {
@@ -799,7 +799,9 @@ public class HttpServer implements FilterContainer {
     if (logDir != null) {
       ServletContextHandler logContext = new ServletContextHandler(parent, "/logs");
       logContext.addServlet(AdminAuthorizedServlet.class, "/*");
-      logContext.setResourceBase(logDir);
+      // We are doing this as otherwise jetty 12 is not handling /dir0/dir1/../dir2
+      String logDirCanonical = Paths.get(logDir).toFile().getCanonicalPath();
+      logContext.setResourceBase(logDirCanonical);
       logContext.setDisplayName("logs");
       configureAliasChecks(logContext,
         conf.getBoolean(ServerConfigurationKeys.HBASE_JETTY_LOGS_SERVE_ALIASES,
@@ -837,7 +839,8 @@ public class HttpServer implements FilterContainer {
       if (context.getAliasChecks().stream().anyMatch(aliasCheckerClass::isInstance)) {
         LOG.debug("{} is already part of alias check list", aliasCheckerClass.getName());
       } else {
-        context.addAliasCheck(new SymlinkAllowedResourceAliasChecker(context.getCoreContextHandler()));
+        context
+          .addAliasCheck(new SymlinkAllowedResourceAliasChecker(context.getCoreContextHandler()));
         LOG.debug("{} added to the alias check list", aliasCheckerClass.getName());
       }
       LOG.info("Serving aliases allowed for /logs context");
@@ -1370,11 +1373,12 @@ public class HttpServer implements FilterContainer {
 
   /**
    * Throw a {@link Throwable} as a checked {@link Exception} if it cannot be thrown as unchecked.
+   *
+   * NOTE: This method is copied from Jetty-9
+   *
    * @param throwable The {@link Throwable} to throw or null.
    * @throws Error     If the passed {@link Throwable} is an {@link Error}.
    * @throws Exception Otherwise, if the passed {@link Throwable} is not null.
-   *
-   * NOTE: This method is copied from Jetty-9
    */
   public static void ifExceptionThrow(Throwable throwable) throws Error, Exception {
     if (throwable == null) {
