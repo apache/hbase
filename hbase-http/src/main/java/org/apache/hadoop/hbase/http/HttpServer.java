@@ -1373,9 +1373,8 @@ public class HttpServer implements FilterContainer {
 
   /**
    * Throw a {@link Throwable} as a checked {@link Exception} if it cannot be thrown as unchecked.
-   *
-   * NOTE: This method is copied from Jetty-9
-   *
+   * <p>
+   * <b>NOTE: This method is copied from Jetty-9
    * @param throwable The {@link Throwable} to throw or null.
    * @throws Error     If the passed {@link Throwable} is an {@link Error}.
    * @throws Exception Otherwise, if the passed {@link Throwable} is not null.
