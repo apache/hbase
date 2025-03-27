@@ -139,9 +139,7 @@ public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingConte
     Compression.Algorithm compression = fileContext.getCompression();
     ByteBuffDecompressor decompressor = compression.getByteBuffDecompressor();
     try {
-      if (decompressor instanceof CanReinit) {
-        ((CanReinit) decompressor).reinit(conf);
-      }
+      decompressor.reinit(fileContext.getDecompressionContext());
       decompressor.decompress(blockBufferWithoutHeader, onDiskBlock, onDiskSizeWithoutHeader);
     } finally {
       compression.returnByteBuffDecompressor(decompressor);
@@ -160,9 +158,7 @@ public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingConte
     } else {
       ByteBuffDecompressor decompressor = fileContext.getCompression().getByteBuffDecompressor();
       try {
-        if (decompressor instanceof CanReinit) {
-          ((CanReinit) decompressor).reinit(conf);
-        }
+        decompressor.reinit(fileContext.getDecompressionContext());
         // Even if we have a ByteBuffDecompressor, we still need to check if it can decompress
         // our particular ByteBuffs
         return decompressor.canDecompress(blockBufferWithoutHeader, onDiskBlock);

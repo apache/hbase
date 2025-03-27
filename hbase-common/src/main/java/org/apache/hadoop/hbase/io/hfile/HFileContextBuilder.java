@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -42,6 +44,8 @@ public class HFileContextBuilder {
   private boolean includesTags = false;
   /** Compression algorithm used **/
   private Algorithm compression = Algorithm.NONE;
+  @Nullable
+  private Compression.HFileDecompressionContext decompressionContext = null;
   /** Whether tags to be compressed or not **/
   private boolean compressTags = false;
   /** the checksum type **/
@@ -73,6 +77,7 @@ public class HFileContextBuilder {
     this.includesMvcc = hfc.isIncludesMvcc();
     this.includesTags = hfc.isIncludesTags();
     this.compression = hfc.getCompression();
+    this.decompressionContext = hfc.getDecompressionContext();
     this.compressTags = hfc.isCompressTags();
     this.checkSumType = hfc.getChecksumType();
     this.bytesPerChecksum = hfc.getBytesPerChecksum();
@@ -104,6 +109,12 @@ public class HFileContextBuilder {
 
   public HFileContextBuilder withCompression(Algorithm compression) {
     this.compression = compression;
+    return this;
+  }
+
+  public HFileContextBuilder
+    withDecompressionContext(@Nullable Compression.HFileDecompressionContext decompressionContext) {
+    this.decompressionContext = decompressionContext;
     return this;
   }
 
@@ -169,7 +180,8 @@ public class HFileContextBuilder {
 
   public HFileContext build() {
     return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
-      compressTags, checkSumType, bytesPerChecksum, blockSize, encoding, cryptoContext,
-      fileCreateTime, hfileName, columnFamily, tableName, cellComparator, indexBlockEncoding);
+      decompressionContext, compressTags, checkSumType, bytesPerChecksum, blockSize, encoding,
+      cryptoContext, fileCreateTime, hfileName, columnFamily, tableName, cellComparator,
+      indexBlockEncoding);
   }
 }
