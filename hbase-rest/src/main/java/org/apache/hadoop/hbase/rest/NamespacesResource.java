@@ -71,7 +71,7 @@ public class NamespacesResource extends ResourceBase {
       return Response.ok(rowModel).build();
     } catch (IOException e) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      throw new RuntimeException("Cannot retrieve list of namespaces.", e);
+      throw new RuntimeException("Cannot retrieve list of namespaces.");
     }
   }
 
