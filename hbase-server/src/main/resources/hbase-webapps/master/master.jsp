@@ -159,9 +159,15 @@
       <h2><a name="regionservers">Region Servers</a></h2>
       <jsp:include page="regionServerList.jsp"/>
 
-      <%if (deadServers != null) %>
-      <& deadRegionServers &> TODO
-    </%if>
+      <% if (deadServers != null) { %>
+        <% request.setAttribute("deadServers", deadServers); %>
+        <jsp:include page="deadRegionServers.jsp"/>
+      <% } %>
+    </section>
+  </div>
+  <div class="row">
+    <section>
+      <jsp:include page="backupMasterStatus.jsp"/>
     </section>
   </div>
 

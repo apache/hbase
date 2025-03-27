@@ -27,7 +27,18 @@
 <%@ page import="java.util.*" %>
 <%@ page import="org.apache.hadoop.hbase.ServerMetrics" %>
 <%@ page import="org.apache.hadoop.util.StringUtils" %>
-
+<%!
+  // TODO: Extract to common place!
+  private static String serverNameLink(HMaster master, ServerName serverName) {
+    int infoPort = master.getRegionServerInfoPort(serverName);
+    String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";
+    if (infoPort > 0) {
+      return "<a href=\"" + url + "\">" + serverName.getServerName() + "</a>";
+    } else {
+      return serverName.getServerName();
+    }
+  }
+%>
 <%
   ServerName[] serverNames = (ServerName[]) request.getAttribute("serverNames"); // TODO: intro constant!
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
@@ -96,8 +107,8 @@
       }
 %>
 <tr>
-    <td><& serverNameLink; serverName=serverName; &></td>
-    <td><%= state %></td>
+  <td><%= serverNameLink(master, serverName) %></td>
+  <td><%= state %></td>
   <td><%= new Date(startcode) %></td>
   <td><%= StringUtils.TraditionalBinaryPrefix.long2String(lastContact, "s", 1) %></td>
   <td><%= version %></td>
