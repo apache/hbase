@@ -145,6 +145,7 @@ message Condition {
   optional Comparator comparator = 5;
   optional TimeRange time_range = 6;
   optional Filter filter = 7;
+  optional bool check_non_exists = 8;
 }
 
 
