@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.security.token.TokenProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -101,7 +101,7 @@ import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
  * Test class for SPNEGO authentication on the HttpServer. Uses Kerby's MiniKDC and Apache
  * HttpComponents to verify that a simple Servlet is reachable via SPNEGO and unreachable w/o.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestSecureRESTServer {
 
   @ClassRule

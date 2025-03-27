@@ -164,6 +164,8 @@ public class TestRemoteTable {
 
   @Test
   public void testGet() throws IOException {
+    // Requires UriCompliance.Violation.SUSPICIOUS_PATH_CHARACTERS
+    // Otherwise fails with "400: Suspicious Path Character"
     Get get = new Get(ROW_1);
     Result result = remoteTable.get(get);
     byte[] value1 = result.getValue(COLUMN_1, QUALIFIER_1);
@@ -303,6 +305,8 @@ public class TestRemoteTable {
 
   @Test
   public void testPut() throws IOException {
+    // Requires UriCompliance.Violation.SUSPICIOUS_PATH_CHARACTERS
+    // Otherwise fails with "400: Suspicious Path Character"
     Put put = new Put(ROW_3);
     put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     remoteTable.put(put);
@@ -348,6 +352,8 @@ public class TestRemoteTable {
 
   @Test
   public void testDelete() throws IOException {
+    // Requires UriCompliance.Violation.AMBIGUOUS_EMPTY_SEGMENT
+    // Otherwise fails with "400: Ambiguous URI empty segment"
     Put put = new Put(ROW_3);
     put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     put.addColumn(COLUMN_2, QUALIFIER_2, VALUE_2);
@@ -493,6 +499,8 @@ public class TestRemoteTable {
 
   @Test
   public void testCheckAndDelete() throws IOException {
+    // Requires UriCompliance.Violation.SUSPICIOUS_PATH_CHARACTERS
+    // Otherwise fails with "400: Suspicious Path Character"
     Get get = new Get(ROW_1);
     Result result = remoteTable.get(get);
     byte[] value1 = result.getValue(COLUMN_1, QUALIFIER_1);
