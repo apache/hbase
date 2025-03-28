@@ -217,6 +217,18 @@
     </div>
     </section>
   </div>
+  <div class="row">
+    <section>
+      <h2><a name="region_visualizer"></a>Region Visualizer</h2>
+      <jsp:include page="regionVisualizer.jsp"/>
+    </section>
+  </div>
+  <div class="row">
+    <section>
+      <h2><a name="peers">Peers</a></h2>
+      <jsp:include page="peerConfigs.jsp"/>
+    </section>
+  </div>
 
   TODO
 
