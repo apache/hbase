@@ -246,6 +246,8 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AccessController;
+import org.apache.hadoop.hbase.security.access.ZKAclUpdaterCoprocessor;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1077,6 +1079,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!maintenanceMode) {
       startupTaskGroup.addTask("Initializing master coprocessors");
       setQuotasObserver(conf);
+      appendZkAclBeforeAccessControllerMaster(conf);
       initializeCoprocessorHost(conf);
     } else {
       // start an in process region server for carrying system regions
@@ -1513,7 +1516,18 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     return true;
   }
+  private void appendZkAclBeforeAccessControllerMaster(Configuration conf) {
+    String plugins = conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, "");
+    String zkAclClassName = ZKAclUpdaterCoprocessor.class.getCanonicalName();
+    String accessControllerClassName = AccessController.class.getCanonicalName();
 
+    if ((plugins.contains(accessControllerClassName) ) && !plugins.contains(zkAclClassName)) {
+        // Insert ZKAclCoprocessorUpdater before AccessController
+        String updatedPlugins = plugins.replace(accessControllerClassName,
+          zkAclClassName + "," + accessControllerClassName);
+        conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, updatedPlugins);
+    }
+  }
   /**
    * Adds the {@code MasterQuotasObserver} to the list of configured Master observers to
    * automatically remove quotas for a table when that table is deleted.
@@ -4395,6 +4409,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     // append the quotas observer back to the master coprocessor key
     setQuotasObserver(newConf);
+    appendZkAclBeforeAccessControllerMaster(conf);
+
     // update region server coprocessor if the configuration has changed.
     if (
       CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
