@@ -82,6 +82,8 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
+import org.apache.hadoop.hbase.client.metrics.QueryMetrics;
+import org.apache.hadoop.hbase.client.metrics.ServerSideMetricsCounter;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
@@ -235,7 +237,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos.ScanMetrics;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot;
@@ -2567,6 +2568,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
     }
     RegionScannerImpl scanner = null;
+    long blockBytesScannedBefore = context.getBlockBytesScanned();
     try {
       scanner = region.getScanner(scan);
       scanner.next(results);
@@ -2594,7 +2596,14 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     }
     region.metricsUpdateForGet();
 
-    return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
+    Result r =
+      Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
+    if (get.isQueryMetricsEnabled()) {
+      long blockBytesScanned = context.getBlockBytesScanned() - blockBytesScannedBefore;
+      QueryMetrics metrics = new QueryMetrics();
+      r.setMetrics(metrics.setBlockBytesScanned(blockBytesScanned));
+    }
+    return r;
   }
 
   private void checkBatchSizeAndLogLargeSize(MultiRequest request) throws ServiceException {
@@ -3376,6 +3385,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         contextBuilder.setTrackMetrics(trackMetrics);
         ScannerContext scannerContext = contextBuilder.build();
         boolean limitReached = false;
+        long blockBytesScannedBefore = 0;
         while (numOfResults < maxResults) {
           // Reset the batch progress to 0 before every call to RegionScanner#nextRaw. The
           // batch limit is a limit on the number of cells per Result. Thus, if progress is
@@ -3387,6 +3397,10 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
 
           // Collect values to be returned here
           moreRows = scanner.nextRaw(values, scannerContext);
+
+          long blockBytesScanned = scannerContext.getBlockSizeProgress() - blockBytesScannedBefore;
+          blockBytesScannedBefore = scannerContext.getBlockSizeProgress();
+
           if (rpcCall == null) {
             // When there is no RpcCallContext,copy EC to heap, then the scanner would close,
             // This can be an EXPENSIVE call. It may make an extra copy from offheap to onheap
@@ -3425,6 +3439,17 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
             }
             boolean mayHaveMoreCellsInRow = scannerContext.mayHaveMoreCellsInRow();
             Result r = Result.create(values, null, stale, mayHaveMoreCellsInRow);
+
+            if (request.getScan().getQueryMetricsEnabled()) {
+              ClientProtos.ServerSideMetricsCounter metrics =
+                ClientProtos.ServerSideMetricsCounter.newBuilder()
+                  .addMetrics(NameInt64Pair.newBuilder()
+                    .setName(ServerSideMetricsCounter.BLOCK_BYTES_SCANNED_KEY_METRIC_NAME)
+                    .setValue(blockBytesScanned).build())
+                  .build();
+              builder.addQueryMetrics(metrics);
+            }
+
             results.add(r);
             numOfResults++;
             if (!mayHaveMoreCellsInRow && limitOfRows > 0) {
@@ -3493,7 +3518,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
             scannerContext.getMetrics().fsReadTime.set(rpcCall.getFsReadTime());
           }
           Map<String, Long> metrics = scannerContext.getMetrics().getMetricsMap();
-          ScanMetrics.Builder metricBuilder = ScanMetrics.newBuilder();
+          ClientProtos.ServerSideMetricsCounter.Builder metricBuilder =
+            ClientProtos.ServerSideMetricsCounter.newBuilder();
           NameInt64Pair.Builder pairBuilder = NameInt64Pair.newBuilder();
 
           for (Entry<String, Long> entry : metrics.entrySet()) {

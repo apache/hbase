@@ -17,30 +17,25 @@
  */
 package org.apache.hadoop.hbase.client.metrics;
 
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
-/**
- * Provides server side metrics related to scan operations.
- */
 @InterfaceAudience.Public
-@SuppressWarnings("checkstyle:VisibilityModifier") // See HBASE-27757
-public class ServerSideScanMetrics extends ServerSideMetricsCounter {
+@InterfaceStability.Evolving
+public class QueryMetrics extends ServerSideMetricsCounter {
 
-  /**
-   * number of rows filtered during scan RPC
-   */
-  public final AtomicLong countOfRowsFiltered =
-    createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
-
-  /**
-   * number of rows scanned during scan RPC. Not every row scanned will be returned to the client
-   * since rows may be filtered.
-   */
-  public final AtomicLong countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
-
-  public final AtomicLong countOfBlockBytesScanned =
+  public QueryMetrics() {
     createCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME);
+  }
 
-  public final AtomicLong fsReadTime = createCounter(FS_READ_TIME_METRIC_NAME);
+  @InterfaceStability.Evolving
+  public long getBlockBytesScanned() {
+    return getCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME).get();
+  }
+
+  @InterfaceStability.Evolving
+  public QueryMetrics setBlockBytesScanned(long blockBytesScanned) {
+    setCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME, blockBytesScanned);
+    return this;
+  }
 }
