@@ -322,14 +322,27 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       avgRegionSize = targetRegionSize;
     } else {
       final int regionCount = tableRegions.size();
-      final long totalSizeMb = tableRegions.stream().mapToLong(this::getRegionSizeMB).sum();
-      if (targetRegionCount > 0) {
-        avgRegionSize = totalSizeMb / (double) targetRegionCount;
-      } else {
-        avgRegionSize = totalSizeMb / (double) regionCount;
+      // Count of regions whose size is known
+      int regionCountKnownSize = 0;
+      long totalSizeMb = 0;
+      for (RegionInfo regionInfo : tableRegions) {
+        long regionSize = getRegionSizeMB(regionInfo);
+        if (regionSize != -1) {
+          totalSizeMb += regionSize;
+          regionCountKnownSize++;
+        }
       }
-      LOG.debug("Table {}, total aggregated regions size: {} MB and average region size {} MB",
-        table, totalSizeMb, String.format("%.3f", avgRegionSize));
+      if (targetRegionCount > 0) {
+        avgRegionSize =
+          totalSizeMb / (double) targetRegionCount - (regionCount - regionCountKnownSize);
+      } else {
+        avgRegionSize = totalSizeMb / (double) regionCountKnownSize;
+      }
+      LOG.debug(
+        "Table {}, total aggregated regions size: {} MB and average region size {} MB, "
+          + "number of regions with unknown size {}",
+        table, totalSizeMb, String.format("%.3f", avgRegionSize),
+        regionCount - regionCountKnownSize);
     }
 
     return avgRegionSize;
@@ -393,6 +406,13 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       for (current = rangeStart; current < ctx.getTableRegions().size(); current++) {
         final RegionInfo regionInfo = ctx.getTableRegions().get(current);
         final long regionSizeMb = getRegionSizeMB(regionInfo);
+        if (regionSizeMb == -1) {
+          LOG.debug(
+            "For region {} in table {} cannot determine size, skipping check merging region",
+            regionInfo.getRegionNameAsString(), ctx.getTableName());
+          rangeStart = Math.max(current, rangeStart + 1);
+          continue;
+        }
         if (skipForMerge(configuration, ctx, regionInfo)) {
           // this region cannot participate in a range. resume the outer loop.
           rangeStart = Math.max(current, rangeStart + 1);
@@ -457,6 +477,12 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
         continue;
       }
       final long regionSizeMb = getRegionSizeMB(hri);
+      if (regionSizeMb == -1) {
+        LOG.debug(
+          "For region {} in table {} cannot determine size, skipping check splitting region",
+          hri.getRegionNameAsString(), ctx.getTableName());
+        continue;
+      }
       if (regionSizeMb > 2 * avgRegionSize) {
         LOG.info(
           "Table {}, large region {} has size {} MB, more than twice avg size {} MB, "
@@ -490,7 +516,12 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
    */
   private boolean isLargeEnoughForMerge(final NormalizerConfiguration normalizerConfiguration,
     final NormalizeContext ctx, final RegionInfo regionInfo) {
-    return getRegionSizeMB(regionInfo) >= normalizerConfiguration.getMergeMinRegionSizeMb(ctx);
+    long regionSizeMb = getRegionSizeMB(regionInfo);
+    if (regionSizeMb == -1) {
+      return false;
+    } else {
+      return regionSizeMb >= normalizerConfiguration.getMergeMinRegionSizeMb(ctx);
+    }
   }
 
   /**
