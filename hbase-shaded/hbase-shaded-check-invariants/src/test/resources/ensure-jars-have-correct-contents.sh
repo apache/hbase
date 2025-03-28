@@ -98,7 +98,7 @@ allowed_expr+="|^about.html$"
 allowed_expr+="|^jetty-dir.css$"
 # Required by jetty 12 on ee8
 allowed_expr="(|^javax/$)"
-# Required by jetty 12 on ee9
+# Required by jetty 12 on ee9+
 allowed_expr="(|^jakarta/$)"
 
 if [ -n "${allow_hadoop}" ]; then
