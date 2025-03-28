@@ -165,6 +165,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.ZKAclUpdaterCoprocessor;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
@@ -8935,16 +8936,24 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private static void decorateRegionConfiguration(Configuration conf) {
     if (ReplicationUtils.isReplicationForBulkLoadDataEnabled(conf)) {
       String replicationCoprocessorClass = ReplicationObserver.class.getCanonicalName();
-      appendToRegionCoprocessorConf(conf, replicationCoprocessorClass);
+      String plugins = conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
+      if (!plugins.contains(replicationCoprocessorClass)) {
+        conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+          (plugins.equals("") ? "" : (plugins + ",")) + replicationCoprocessorClass);
+      }
     }
-    appendToRegionCoprocessorConf(conf, ZKAclUpdaterCoprocessor.class.getCanonicalName());
+    appendZkAclBeforeAccessController(conf);
   }
 
-  private static void appendToRegionCoprocessorConf(Configuration conf, String className) {
+  private static void appendZkAclBeforeAccessController(Configuration conf) {
     String plugins = conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
-    if (!plugins.contains(className)) {
-      conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        (plugins.equals("") ? "" : (plugins + ",")) + className);
+    String accessControllerClassName = AccessController.class.getCanonicalName();
+
+    if (plugins.contains(accessControllerClassName) && !plugins.contains(ZKAclUpdaterCoprocessor.class.getCanonicalName())) {
+        // Insert ZKAclCoprocessorUpdater before AccessController
+        String updatedPlugins = plugins.replace(accessControllerClassName,
+          ZKAclUpdaterCoprocessor.class.getCanonicalName() + "," + accessControllerClassName);
+        conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, updatedPlugins);
     }
   }
 

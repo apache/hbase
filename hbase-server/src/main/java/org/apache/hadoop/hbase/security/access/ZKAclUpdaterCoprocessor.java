@@ -77,7 +77,6 @@ public class ZKAclUpdaterCoprocessor implements  MasterCoprocessor, RegionCoproc
    * flags if we are running on a region of the _acl_ table
    */
   private boolean aclRegion = false;
-  private boolean initialized = false;
 
   /**
    * defined only for Endpoint implementation, so it can have way to access region services
@@ -100,7 +99,6 @@ public class ZKAclUpdaterCoprocessor implements  MasterCoprocessor, RegionCoproc
       byte[] serialized = PermissionStorage.writePermissionsAsBytes(perms, conf);
       zkPermissionWatcher.writeToZookeeper(entry, serialized);
     }
-    initialized = true;
   }
 
   /**
@@ -199,8 +197,6 @@ public class ZKAclUpdaterCoprocessor implements  MasterCoprocessor, RegionCoproc
         // than perform checks incorrectly
         throw new RuntimeException("Failed to initialize permissions cache", ex);
       }
-    } else {
-      initialized = true;
     }
   }
 
