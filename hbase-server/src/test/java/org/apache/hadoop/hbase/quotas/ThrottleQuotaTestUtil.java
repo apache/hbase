@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -125,6 +126,23 @@ public final class ThrottleQuotaTestUtil {
       }
     } catch (IOException e) {
       LOG.error("get failed after nRetries=" + count, e);
+    }
+    return count;
+  }
+
+  static long doIncrements(int maxOps, byte[] family, byte[] qualifier, final Table... tables) {
+    int count = 0;
+    try {
+      while (count < maxOps) {
+        Increment inc = new Increment(Bytes.toBytes("row-" + count));
+        inc.addColumn(family, qualifier, 1L);
+        for (final Table table : tables) {
+          table.increment(inc);
+        }
+        count += tables.length;
+      }
+    } catch (IOException e) {
+      LOG.error("increment failed after nRetries=" + count, e);
     }
     return count;
   }

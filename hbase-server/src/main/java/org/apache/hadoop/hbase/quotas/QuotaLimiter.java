@@ -42,7 +42,8 @@ public interface QuotaLimiter {
    * @throws RpcThrottlingException thrown if not enough available resources to perform operation.
    */
   void checkQuota(long writeReqs, long estimateWriteSize, long readReqs, long estimateReadSize,
-    long estimateWriteCapacityUnit, long estimateReadCapacityUnit) throws RpcThrottlingException;
+    long estimateWriteCapacityUnit, long estimateReadCapacityUnit, boolean isAtomic)
+    throws RpcThrottlingException;
 
   /**
    * Removes the specified write and read amount from the quota. At this point the write and read
@@ -56,7 +57,7 @@ public interface QuotaLimiter {
    * @param readCapacityUnit  the read capacity unit num that will be removed from the current quota
    */
   void grabQuota(long writeReqs, long writeSize, long readReqs, long readSize,
-    long writeCapacityUnit, long readCapacityUnit);
+    long writeCapacityUnit, long readCapacityUnit, boolean isAtomic);
 
   /**
    * Removes or add back some write amount to the quota. (called at the end of an operation in case
