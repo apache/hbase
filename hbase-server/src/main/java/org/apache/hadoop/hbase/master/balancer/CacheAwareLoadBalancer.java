@@ -210,10 +210,10 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     plans.sort((p1, p2) -> {
       Pair<ServerName, Float> pair1 = snapshot.get(p1.getRegionName());
       Float ratio1 =
-        pair1 == null ? 0 : pair1.getFirst().equals(p1.getDestination()) ? pair1.getSecond() : 0f;
+        pair1 == null ? 0f : pair1.getFirst().equals(p1.getDestination()) ? pair1.getSecond() : 0f;
       Pair<ServerName, Float> pair2 = snapshot.get(p2.getRegionName());
       Float ratio2 =
-        pair2 == null ? 0 : pair2.getFirst().equals(p2.getDestination()) ? pair2.getSecond() : 0f;
+        pair2 == null ? 0f : pair2.getFirst().equals(p2.getDestination()) ? pair2.getSecond() : 0f;
       return ratio1.compareTo(ratio2) * (-1);
     });
     return plans;
