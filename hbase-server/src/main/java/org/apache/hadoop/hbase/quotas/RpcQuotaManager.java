@@ -87,6 +87,6 @@ public interface RpcQuotaManager {
    * @return the OperationQuota
    * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
-  OperationQuota checkBatchQuota(final Region region, int numWrites, int numReads)
+  OperationQuota checkBatchQuota(final Region region, int numWrites, int numReads, boolean isAtomic)
     throws IOException, RpcThrottlingException;
 }
