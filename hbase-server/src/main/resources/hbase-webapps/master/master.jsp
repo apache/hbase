@@ -206,11 +206,12 @@
           </div>
           <div class="tab-pane" id="tab_catalogTables" role="tabpanel">
             <%if (metaLocation != null) { %>
-              TODO!
-              <& catalogTables &>
+            <% request.setAttribute("frags", frags); %>
+              <jsp:include page="catalogTables.jsp"/>
             <% } %>
           </div>
         <div class="tab-pane" id="tab_userSnapshots" role="tabpanel">
+          <%-- tab.js will load userSnapshots.jsp with an AJAX request here. --%>
         </div>
       </div>
     </div>
