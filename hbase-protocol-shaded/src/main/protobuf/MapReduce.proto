@@ -27,10 +27,6 @@ option optimize_for = SPEED;
 
 import "HBase.proto";
 
-message ScanMetrics {
-  repeated NameInt64Pair metrics = 1;
-}
-
 message TableSnapshotRegionSplit {
   repeated string locations = 2;
   optional TableSchema table = 3;

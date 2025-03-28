@@ -28,10 +28,10 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
-import org.apache.hadoop.hbase.client.QueryMetrics;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.SingleResponse;
+import org.apache.hadoop.hbase.client.metrics.QueryMetrics;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.Reg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos.ScanMetrics;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreResponse;
@@ -418,7 +417,7 @@ public final class ResponseConverter {
     int noOfResults =
       cellScanner != null ? response.getCellsPerResultCount() : response.getResultsCount();
     Result[] results = new Result[noOfResults];
-    List<ClientProtos.QueryMetrics> queryMetrics = response.getQueryMetricsList();
+    List<ClientProtos.ServerSideMetricsCounter> queryMetrics = response.getQueryMetricsList();
     for (int i = 0; i < noOfResults; i++) {
       if (cellScanner != null) {
         // Cells are out in cellblocks. Group them up again as Results. How many to read at a
@@ -458,7 +457,8 @@ public final class ResponseConverter {
 
       // Populate result metrics if they exist
       if (queryMetrics.size() > i) {
-        QueryMetrics metrics = ProtobufUtil.toQueryMetrics(queryMetrics.get(i));
+        QueryMetrics metrics =
+          ProtobufUtil.fillMetricsCounter(queryMetrics.get(i), new QueryMetrics());
         results[i].setMetrics(metrics);
       }
     }
@@ -471,7 +471,7 @@ public final class ResponseConverter {
       return metricMap;
     }
 
-    ScanMetrics metrics = response.getScanMetrics();
+    ClientProtos.ServerSideMetricsCounter metrics = response.getScanMetrics();
     int numberOfMetrics = metrics.getMetricsCount();
     for (int i = 0; i < numberOfMetrics; i++) {
       NameInt64Pair metricPair = metrics.getMetrics(i);

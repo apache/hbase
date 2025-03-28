@@ -75,7 +75,6 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.QueryMetrics;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -83,6 +82,8 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
+import org.apache.hadoop.hbase.client.metrics.QueryMetrics;
+import org.apache.hadoop.hbase.client.metrics.ServerSideMetricsCounter;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
@@ -236,7 +237,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos.ScanMetrics;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot;
@@ -2600,7 +2600,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
     if (get.isQueryMetricsEnabled()) {
       long blockBytesScanned = context.getBlockBytesScanned() - blockBytesScannedBefore;
-      r.setMetrics(new QueryMetrics(blockBytesScanned));
+      QueryMetrics metrics = new QueryMetrics();
+      r.setMetrics(metrics.setBlockBytesScanned(blockBytesScanned));
     }
     return r;
   }
@@ -3440,8 +3441,13 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
             Result r = Result.create(values, null, stale, mayHaveMoreCellsInRow);
 
             if (request.getScan().getQueryMetricsEnabled()) {
-              builder.addQueryMetrics(ClientProtos.QueryMetrics.newBuilder()
-                .setBlockBytesScanned(blockBytesScanned).build());
+              ClientProtos.ServerSideMetricsCounter metrics =
+                ClientProtos.ServerSideMetricsCounter.newBuilder()
+                  .addMetrics(NameInt64Pair.newBuilder()
+                    .setName(ServerSideMetricsCounter.BLOCK_BYTES_SCANNED_KEY_METRIC_NAME)
+                    .setValue(blockBytesScanned).build())
+                  .build();
+              builder.addQueryMetrics(metrics);
             }
 
             results.add(r);
@@ -3512,7 +3518,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
             scannerContext.getMetrics().fsReadTime.set(rpcCall.getFsReadTime());
           }
           Map<String, Long> metrics = scannerContext.getMetrics().getMetricsMap();
-          ScanMetrics.Builder metricBuilder = ScanMetrics.newBuilder();
+          ClientProtos.ServerSideMetricsCounter.Builder metricBuilder =
+            ClientProtos.ServerSideMetricsCounter.newBuilder();
           NameInt64Pair.Builder pairBuilder = NameInt64Pair.newBuilder();
 
           for (Entry<String, Long> entry : metrics.entrySet()) {

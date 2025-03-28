@@ -120,7 +120,7 @@ message Result {
   optional bool partial = 5 [default = false];
 
   // Server side metrics about the result
-  optional QueryMetrics metrics = 6;
+  optional ServerSideMetricsCounter metrics = 6;
 }
 
 /**
@@ -361,7 +361,7 @@ message ScanResponse {
   // This field is filled in if the client has requested that scan metrics be tracked.
   // The metrics tracked here are sent back to the client to be tracked together with
   // the existing client side metrics.
-  optional ScanMetrics scan_metrics = 10;
+  optional ServerSideMetricsCounter scan_metrics = 10;
 
   // The mvcc read point which is used to open the scanner at server side. Client can
   // make use of this mvcc_read_point when restarting a scanner to get a consistent view
@@ -373,7 +373,7 @@ message ScanResponse {
   optional Cursor cursor = 12;
 
   // List of QueryMetrics that maps 1:1 to the results in the response based on index
-  repeated QueryMetrics query_metrics = 13;
+  repeated ServerSideMetricsCounter query_metrics = 13;
 }
 
 /**
@@ -467,10 +467,10 @@ message RegionAction {
 }
 
 /*
-* Statistics about the Result's server-side metrics
+* Statistics about server-side metrics
 */
-message QueryMetrics {
-  optional uint64 block_bytes_scanned = 1;
+message ServerSideMetricsCounter {
+  repeated NameInt64Pair metrics = 1;
 }
 
 /*

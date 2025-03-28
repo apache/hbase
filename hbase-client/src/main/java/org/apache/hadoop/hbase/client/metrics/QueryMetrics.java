@@ -15,22 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase.client.metrics;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class QueryMetrics {
-  private final long blockBytesScanned;
+public class QueryMetrics extends ServerSideMetricsCounter {
 
-  public QueryMetrics(long blockBytesScanned) {
-    this.blockBytesScanned = blockBytesScanned;
+  public QueryMetrics() {
+    createCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME);
   }
 
   @InterfaceStability.Evolving
   public long getBlockBytesScanned() {
-    return blockBytesScanned;
+    return getCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME).get();
+  }
+
+  @InterfaceStability.Evolving
+  public QueryMetrics setBlockBytesScanned(long blockBytesScanned) {
+    setCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME, blockBytesScanned);
+    return this;
   }
 }

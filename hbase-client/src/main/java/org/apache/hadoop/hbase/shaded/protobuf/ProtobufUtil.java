@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.shaded.protobuf;
 
 import static org.apache.hadoop.hbase.protobuf.ProtobufMagic.PB_MAGIC;
-
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -91,7 +90,6 @@ import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.QueryMetrics;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLoadStats;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -104,7 +102,8 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.client.metrics.QueryMetrics;
+import org.apache.hadoop.hbase.client.metrics.ServerSideMetricsCounter;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -135,7 +134,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.hbase.thirdparty.com.google.gson.JsonArray;
 import org.apache.hbase.thirdparty.com.google.gson.JsonElement;
@@ -151,7 +149,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponses;
@@ -200,7 +197,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpeci
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
@@ -1440,7 +1436,7 @@ public final class ProtobufUtil {
     builder.setPartial(result.mayHaveMoreCellsInRow());
 
     if (result.getMetrics() != null) {
-      builder.setMetrics(toQueryMetrics(result.getMetrics()));
+      builder.setMetrics(toServerSideMetricsCounter(result.getMetrics(), false));
     }
 
     return builder.build();
@@ -1473,7 +1469,7 @@ public final class ProtobufUtil {
     builder.setAssociatedCellCount(size);
     builder.setStale(result.isStale());
     if (result.getMetrics() != null) {
-      builder.setMetrics(toQueryMetrics(result.getMetrics()));
+      builder.setMetrics(toServerSideMetricsCounter(result.getMetrics(), false));
     }
     return builder.build();
   }
@@ -1517,7 +1513,7 @@ public final class ProtobufUtil {
     }
     Result r = Result.create(cells, null, proto.getStale(), proto.getPartial());
     if (proto.hasMetrics()) {
-      r.setMetrics(toQueryMetrics(proto.getMetrics()));
+      r.setMetrics(fillMetricsCounter(proto.getMetrics(), new QueryMetrics()));
     }
     return r;
   }
@@ -1569,7 +1565,7 @@ public final class ProtobufUtil {
       : Result.create(cells, null, proto.getStale());
 
     if (proto.hasMetrics()) {
-      r.setMetrics(toQueryMetrics(proto.getMetrics()));
+      r.setMetrics(fillMetricsCounter(proto.getMetrics(), new QueryMetrics()));
     }
 
     return r;
@@ -1958,27 +1954,39 @@ public final class ProtobufUtil {
     }
   }
 
-  public static ScanMetrics toScanMetrics(final byte[] bytes) {
-    MapReduceProtos.ScanMetrics pScanMetrics = null;
+  public static <T extends ServerSideMetricsCounter> T fillMetricsCounter(final byte[] bytes,
+    T impl) {
+    ClientProtos.ServerSideMetricsCounter metrics = null;
     try {
-      pScanMetrics = MapReduceProtos.ScanMetrics.parseFrom(bytes);
+      metrics = ClientProtos.ServerSideMetricsCounter.parseFrom(bytes);
     } catch (InvalidProtocolBufferException e) {
       // Ignored there are just no key values to add.
     }
-    ScanMetrics scanMetrics = new ScanMetrics();
-    if (pScanMetrics != null) {
-      for (HBaseProtos.NameInt64Pair pair : pScanMetrics.getMetricsList()) {
+
+    return fillMetricsCounter(metrics, impl);
+  }
+
+  /**
+   * Fills the object counter passed in with the protobuf metrics. Returns the argument counter for
+   * convenience
+   */
+  public static <T extends ServerSideMetricsCounter> T
+    fillMetricsCounter(final ClientProtos.ServerSideMetricsCounter metrics, T impl) {
+    if (metrics != null) {
+      for (HBaseProtos.NameInt64Pair pair : metrics.getMetricsList()) {
         if (pair.hasName() && pair.hasValue()) {
-          scanMetrics.setCounter(pair.getName(), pair.getValue());
+          impl.setCounter(pair.getName(), pair.getValue());
         }
       }
     }
-    return scanMetrics;
+    return impl;
   }
 
-  public static MapReduceProtos.ScanMetrics toScanMetrics(ScanMetrics scanMetrics, boolean reset) {
-    MapReduceProtos.ScanMetrics.Builder builder = MapReduceProtos.ScanMetrics.newBuilder();
-    Map<String, Long> metrics = scanMetrics.getMetricsMap(reset);
+  public static <T extends ServerSideMetricsCounter> ClientProtos.ServerSideMetricsCounter
+    toServerSideMetricsCounter(T counter, boolean reset) {
+    ClientProtos.ServerSideMetricsCounter.Builder builder =
+      ClientProtos.ServerSideMetricsCounter.newBuilder();
+    Map<String, Long> metrics = counter.getMetricsMap(reset);
     for (Entry<String, Long> e : metrics.entrySet()) {
       HBaseProtos.NameInt64Pair nameInt64Pair =
         HBaseProtos.NameInt64Pair.newBuilder().setName(e.getKey()).setValue(e.getValue()).build();
@@ -3831,15 +3839,6 @@ public final class ProtobufUtil {
       .setStatus(task.getStatus())
       .setState(ClusterStatusProtos.ServerTask.State.valueOf(task.getState().name()))
       .setStartTime(task.getStartTime()).setCompletionTime(task.getCompletionTime()).build();
-  }
-
-  public static ClientProtos.QueryMetrics toQueryMetrics(QueryMetrics metrics) {
-    return ClientProtos.QueryMetrics.newBuilder()
-      .setBlockBytesScanned(metrics.getBlockBytesScanned()).build();
-  }
-
-  public static QueryMetrics toQueryMetrics(ClientProtos.QueryMetrics metrics) {
-    return new QueryMetrics(metrics.getBlockBytesScanned());
   }
 
   /**
