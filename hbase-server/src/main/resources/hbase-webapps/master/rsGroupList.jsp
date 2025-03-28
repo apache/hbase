@@ -22,25 +22,56 @@
          import="java.util.Collections"
          import="java.util.List"
          import="java.util.Map"
-         import="java.util.Set"
          import="java.util.stream.Collectors"
          import="org.apache.hadoop.hbase.master.HMaster"
-         import="org.apache.hadoop.hbase.RegionMetrics"
          import="org.apache.hadoop.hbase.ServerMetrics"
-         import="org.apache.hadoop.hbase.Size"
-         import="org.apache.hadoop.hbase.master.ServerManager"
          import="org.apache.hadoop.hbase.net.Address"
-         import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo"
-         import="org.apache.hadoop.hbase.rsgroup.RSGroupUtil"
-         import="org.apache.hadoop.util.StringUtils"
-         import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
-         import="org.apache.hadoop.hbase.master.assignment.AssignmentManager" %>
+         import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo" %>
 
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
-  AssignmentManager assignmentManager = master.getAssignmentManager();
   List<RSGroupInfo> groups = master.getRSGroupInfoManager().listRSGroups();
-
 %>
 
-TODO: rsGroupList.jsp
+<%if (groups != null && groups.size() > 0)%>
+
+<%
+  RSGroupInfo [] rsGroupInfos = groups.toArray(new RSGroupInfo[groups.size()]);
+  Map<Address, ServerMetrics> collectServers = Collections.emptyMap();
+  if (master.getServerManager() != null) {
+  collectServers =
+  master.getServerManager().getOnlineServers().entrySet().stream()
+  .collect(Collectors.toMap(p -> p.getKey().getAddress(), Map.Entry::getValue));
+  }
+%>
+
+<div class="tabbable">
+  <ul class="nav nav-pills" role="tablist">
+    <li class="nav-item"><a class="nav-link active" href="#tab_rsgroup_baseStats" data-bs-toggle="tab" role="tab">Base Stats</a></li>
+    <li class="nav-item"><a class="nav-link" href="#tab_rsgroup_memoryStats" data-bs-toggle="tab" role="tab">Memory</a></li>
+    <li class="nav-item"><a class="nav-link" href="#tab_rsgroup_requestStats" data-bs-toggle="tab" role="tab">Requests</a></li>
+    <li class="nav-item"><a class="nav-link" href="#tab_rsgroup_storeStats" data-bs-toggle="tab" role="tab">Storefiles</a></li>
+    <li class="nav-item"><a class="nav-link" href="#tab_rsgroup_compactStats" data-bs-toggle="tab" role="tab">Compactions</a></li>
+  </ul>
+  <div class="tab-content">
+
+    <% request.setAttribute("rsGroupInfos", rsGroupInfos); %>
+    <% request.setAttribute("collectServers", collectServers); %>
+
+    <div class="tab-pane active" id="tab_rsgroup_baseStats" role="tabpanel">
+      <jsp:include page="rsGroupList_baseStats.jsp"/>
+    </div>
+    <div class="tab-pane" id="tab_rsgroup_memoryStats" role="tabpanel">
+      <jsp:include page="rsGroupList_memoryStats.jsp"/>
+    </div>
+    <div class="tab-pane" id="tab_rsgroup_requestStats" role="tabpanel">
+      <jsp:include page="rsGroupList_requestStats.jsp"/>
+    </div>
+    <div class="tab-pane" id="tab_rsgroup_storeStats" role="tabpanel">
+      <jsp:include page="rsGroupList_storeStats.jsp"/>
+    </div>
+    <div class="tab-pane" id="tab_rsgroup_compactStats" role="tabpanel">
+      <jsp:include page="rsGroupList_compactStats.jsp"/>
+    </div>
+  </div>
+</div>
