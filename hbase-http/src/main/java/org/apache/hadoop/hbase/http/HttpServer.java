@@ -80,6 +80,7 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.webapp.WebAppContext;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Handler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ExceptionUtil;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConfiguration;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConnectionFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.RequestLog;
@@ -710,9 +711,9 @@ public class HttpServer implements FilterContainer {
     // Check if disable stack trace property is configured
     if (!conf.getBoolean(HTTP_UI_SHOW_STACKTRACE_KEY, true)) {
       // Disable stack traces for server errors in UI
-      ErrorHandler errorHanlder = new ErrorHandler();
-      errorHanlder.setShowStacks(false);
-      webServer.setErrorHandler(errorHanlder);
+      ErrorHandler errorHandler = new ErrorHandler();
+      errorHandler.setShowStacks(false);
+      webServer.setErrorHandler(errorHandler);
       // Disable stack traces for web app errors in UI
       webAppContext.getErrorHandler().setShowStacks(false);
     }
@@ -1334,7 +1335,7 @@ public class HttpServer implements FilterContainer {
    * stop the server
    */
   public void stop() throws Exception {
-    Exception exception = null;
+    ExceptionUtil.MultiException exception = null;
     for (ListenerInfo li : listeners) {
       if (!li.isManaged) {
         continue;
@@ -1344,7 +1345,7 @@ public class HttpServer implements FilterContainer {
         li.listener.close();
       } catch (Exception e) {
         LOG.error("Error while stopping listener for webapp" + webAppContext.getDisplayName(), e);
-        exception.addSuppressed(e);
+        exception = addMultiException(exception, e);
       }
     }
 
@@ -1355,41 +1356,28 @@ public class HttpServer implements FilterContainer {
     } catch (Exception e) {
       LOG.error("Error while stopping web app context for webapp " + webAppContext.getDisplayName(),
         e);
-      exception.addSuppressed(e);
+      exception = addMultiException(exception, e);
     }
 
     try {
       webServer.stop();
     } catch (Exception e) {
       LOG.error("Error while stopping web server for webapp " + webAppContext.getDisplayName(), e);
-      exception.addSuppressed(e);
+      exception = addMultiException(exception, e);
     }
 
     if (exception != null) {
-      ifExceptionThrow(exception);
+      exception.ifExceptionThrow();
     }
 
   }
 
-  /**
-   * Throw a {@link Throwable} as a checked {@link Exception} if it cannot be thrown as unchecked.
-   * <p>
-   * <b>NOTE: This method is copied from Jetty-9
-   * @param throwable The {@link Throwable} to throw or null.
-   * @throws Error     If the passed {@link Throwable} is an {@link Error}.
-   * @throws Exception Otherwise, if the passed {@link Throwable} is not null.
-   */
-  public static void ifExceptionThrow(Throwable throwable) throws Error, Exception {
-    if (throwable == null) {
-      return;
+  private ExceptionUtil.MultiException addMultiException(ExceptionUtil.MultiException exception, Exception e) {
+    if (exception == null) {
+      exception = new ExceptionUtil.MultiException();
     }
-    if (throwable instanceof Error error) {
-      throw error;
-    }
-    if (throwable instanceof Exception exception) {
-      throw exception;
-    }
-    throw new RuntimeException(throwable);
+    exception.add(e);
+    return exception;
   }
 
   public void join() throws InterruptedException {
