@@ -42,13 +42,11 @@
          import="org.apache.hadoop.hbase.security.visibility.VisibilityConstants"
          import="org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription"
          import="org.apache.hadoop.hbase.tool.CanaryTool"
-         import="org.apache.hadoop.hbase.util.Bytes"
-         import="org.apache.hadoop.hbase.util.CommonFSUtils"
-         import="org.apache.hadoop.hbase.util.JvmVersion"
-         import="org.apache.hadoop.hbase.util.PrettyPrinter"
          import="org.apache.hadoop.util.StringUtils"
          import="org.apache.hadoop.hbase.master.assignment.RegionStateNode"
-         import="org.apache.hadoop.hbase.client.*" %>
+         import="org.apache.hadoop.hbase.client.*"
+         import="org.apache.hadoop.conf.Configuration"
+         import="org.apache.hadoop.hbase.util.*" %>
 <%!
   private static ServerName getMetaLocationOrNull(HMaster master) {
     RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
@@ -58,9 +56,23 @@
     }
     return null;
   }
+
+  private Map<String, Integer> getFragmentationInfo(HMaster master, Configuration conf)
+    throws IOException {
+    boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
+    if (showFragmentation) {
+      return FSUtils.getTableFragmentation(master);
+    } else {
+      return null;
+    }
+  }
 %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
+
+  Configuration conf = master.getConfiguration();
+  Map<String, Integer> frags = getFragmentationInfo(master, conf);
+
   String title;
   if(master.isActiveMaster()) {
     title = "Master: ";
@@ -168,6 +180,40 @@
   <div class="row">
     <section>
       <jsp:include page="backupMasterStatus.jsp"/>
+    </section>
+  </div>
+  <div class="row">
+    <section>
+      <h2><a name="tables">Tables</a></h2>
+      <div class="tabbable">
+        <ul class="nav nav-pills" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" href="#tab_userTables" data-bs-toggle="tab" role="tab">User Tables</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#tab_catalogTables" data-bs-toggle="tab" role="tab">System Tables</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#tab_userSnapshots" data-bs-toggle="tab" role="tab">Snapshots</a>
+          </li>
+        </ul>
+        <div class="tab-content">
+          <div class="tab-pane active" id="tab_userTables" role="tabpanel">
+            <%if (metaLocation != null) { %>
+              <% request.setAttribute("frags", frags); %>
+              <jsp:include page="userTables.jsp"/>
+            <% } %>
+          </div>
+          <div class="tab-pane" id="tab_catalogTables" role="tabpanel">
+            <%if (metaLocation != null) { %>
+              TODO!
+              <& catalogTables &>
+            <% } %>
+          </div>
+        <div class="tab-pane" id="tab_userSnapshots" role="tabpanel">
+        </div>
+      </div>
+    </div>
     </section>
   </div>
 
