@@ -1847,7 +1847,12 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
-        <artifactId>hbase-shaded-jetty-12-plus</artifactId>
+        <artifactId>hbase-shaded-jetty-12-plus-core</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-jetty-12-plus-ee8</artifactId>
         <version>${hbase-thirdparty.version}</version>
       </dependency>
       <dependency>
