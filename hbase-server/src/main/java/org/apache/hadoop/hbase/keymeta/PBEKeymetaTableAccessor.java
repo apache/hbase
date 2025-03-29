@@ -46,7 +46,7 @@ import java.util.List;
  * Accessor for PBE keymeta table.
  */
 @InterfaceAudience.Private
-public class PBEKeymetaTableAccessor extends PBEKeyManager {
+public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
   private static final String KEY_META_INFO_FAMILY_STR = "info";
 
   public static final byte[] KEY_META_INFO_FAMILY = Bytes.toBytes(KEY_META_INFO_FAMILY_STR);
@@ -88,6 +88,7 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
    * @throws IOException when there is an underlying IOException.
    */
   public void addKey(PBEKeyData keyData) throws IOException {
+    checkPBEEnabled();
     final Put putForMetadata = addMutationColumns(new Put(constructRowKeyForMetadata(keyData)),
       keyData);
     Connection connection = server.getConnection();
@@ -99,16 +100,17 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
   /**
    * Get all the keys for the specified pbe_prefix and key_namespace.
    *
-   * @param pbePrefix The prefix
+   * @param pbe_prefix The prefix
    * @param keyNamespace The namespace
    * @return a list of key data, one for each key, can be empty when none were found.
    * @throws IOException when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  protected List<PBEKeyData> getAllKeys(byte[] pbePrefix, String keyNamespace)
+  protected List<PBEKeyData> getAllKeys(byte[] pbe_prefix, String keyNamespace)
     throws IOException, KeyException {
+    checkPBEEnabled();
     Connection connection = server.getConnection();
-    byte[] prefixForScan = Bytes.add(Bytes.toBytes(pbePrefix.length), pbePrefix,
+    byte[] prefixForScan = Bytes.add(Bytes.toBytes(pbe_prefix.length), pbe_prefix,
       Bytes.toBytes(keyNamespace));
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       PrefixFilter prefixFilter = new PrefixFilter(prefixForScan);
@@ -119,7 +121,7 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
       ResultScanner scanner = table.getScanner(scan);
       List<PBEKeyData> allKeys = new ArrayList<>();
       for (Result result : scanner) {
-        PBEKeyData keyData = parseFromResult(pbePrefix, keyNamespace, result);
+        PBEKeyData keyData = parseFromResult(pbe_prefix, keyNamespace, result);
         if (keyData != null) {
           allKeys.add(keyData);
         }
@@ -131,16 +133,17 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
   /**
    * Get all the active keys for the specified pbe_prefix and key_namespace.
    *
-   * @param pbePrefix The prefix
+   * @param pbe_prefix The prefix
    * @param keyNamespace The namespace
    * @return a list of key data, one for each active key, can be empty when none were found.
    * @throws IOException when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  public List<PBEKeyData> getActiveKeys(byte[] pbePrefix, String keyNamespace)
+  public List<PBEKeyData> getActiveKeys(byte[] pbe_prefix, String keyNamespace)
     throws IOException, KeyException {
+    checkPBEEnabled();
     List<PBEKeyData> activeKeys = new ArrayList<>();
-    for (PBEKeyData keyData : getAllKeys(pbePrefix, keyNamespace)) {
+    for (PBEKeyData keyData : getAllKeys(pbe_prefix, keyNamespace)) {
       if (keyData.getKeyStatus() == PBEKeyStatus.ACTIVE) {
         activeKeys.add(keyData);
       }
@@ -149,40 +152,42 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
   }
 
   /**
-   * Get the specific key identified by pbePrefix, keyNamespace and keyMetadata.
+   * Get the specific key identified by pbe_prefix, keyNamespace and keyMetadata.
    *
-   * @param pbePrefix    The prefix.
+   * @param pbe_prefix    The prefix.
    * @param keyNamespace The namespace.
    * @param keyMetadata  The metadata.
    * @return the key or {@code null}
    * @throws IOException when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  public PBEKeyData getKey(byte[] pbePrefix, String keyNamespace, String keyMetadata)
+  public PBEKeyData getKey(byte[] pbe_prefix, String keyNamespace, String keyMetadata)
     throws IOException, KeyException {
+    checkPBEEnabled();
     Connection connection = server.getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      byte[] rowKey = constructRowKeyForMetadata(pbePrefix, keyNamespace,
+      byte[] rowKey = constructRowKeyForMetadata(pbe_prefix, keyNamespace,
         PBEKeyData.constructMetadataHash(keyMetadata));
       Result result = table.get(new Get(rowKey));
-      return parseFromResult(pbePrefix, keyNamespace, result);
+      return parseFromResult(pbe_prefix, keyNamespace, result);
     }
   }
 
   /**
-   * Report read or write operation count on the specific key identified by pbePrefix, keyNamespace
+   * Report read or write operation count on the specific key identified by pbe_prefix, keyNamespace
    * and keyMetadata. The reported value is added to the existing operation count using the
    * Increment mutation.
-   * @param pbePrefix    The prefix.
+   * @param pbe_prefix    The prefix.
    * @param keyNamespace The namespace.
    * @param keyMetadata  The metadata.
    * @throws IOException when there is an underlying IOException.
    */
-  public void reportOperation(byte[] pbePrefix, String keyNamespace, String keyMetadata, long count,
+  public void reportOperation(byte[] pbe_prefix, String keyNamespace, String keyMetadata, long count,
       boolean isReadOperation) throws IOException {
+    checkPBEEnabled();
     Connection connection = server.getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      byte[] rowKey = constructRowKeyForMetadata(pbePrefix, keyNamespace,
+      byte[] rowKey = constructRowKeyForMetadata(pbe_prefix, keyNamespace,
         PBEKeyData.constructMetadataHash(keyMetadata));
       Increment incr = new Increment(rowKey)
         .addColumn(KEY_META_INFO_FAMILY,
@@ -222,14 +227,14 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
       keyData.getKeyMetadataHash());
   }
 
-  private static byte[] constructRowKeyForMetadata(byte[] pbePrefix, String keyNamespace,
+  private static byte[] constructRowKeyForMetadata(byte[] pbe_prefix, String keyNamespace,
       byte[] keyMetadataHash) {
-    int prefixLength = pbePrefix.length;
-    return Bytes.add(Bytes.toBytes(prefixLength), pbePrefix, Bytes.toBytesBinary(keyNamespace),
+    int prefixLength = pbe_prefix.length;
+    return Bytes.add(Bytes.toBytes(prefixLength), pbe_prefix, Bytes.toBytesBinary(keyNamespace),
       keyMetadataHash);
   }
 
-  private PBEKeyData parseFromResult(byte[] pbePrefix, String keyNamespace, Result result)
+  private PBEKeyData parseFromResult(byte[] pbe_prefix, String keyNamespace, Result result)
     throws IOException, KeyException {
     if (result == null || result.isEmpty()) {
       return null;
@@ -258,7 +263,7 @@ public class PBEKeymetaTableAccessor extends PBEKeyManager {
     long readOpCount = readOpValue != null ? Bytes.toLong(readOpValue) : 0;
     byte[] writeOpValue = result.getValue(KEY_META_INFO_FAMILY, WRITE_OP_COUNT_QUAL_BYTES);
     long writeOpCount = writeOpValue != null ? Bytes.toLong(writeOpValue) : 0;
-    PBEKeyData dekKeyData = new PBEKeyData(pbePrefix, keyNamespace, dek, keyStatus, dekMetadata,
+    PBEKeyData dekKeyData = new PBEKeyData(pbe_prefix, keyNamespace, dek, keyStatus, dekMetadata,
       refreshedTimestamp, readOpCount, writeOpCount);
     if (dek != null) {
       long dekChecksum = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,

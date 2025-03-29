@@ -34,8 +34,7 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
       throw new RuntimeException("Unable to find cluster key with alias: " + masterKeyAlias);
     }
     // Encode clusterId too for consistency with that of PBE prefixes.
-    String keyMetadata = generateKeyMetadata(masterKeyAlias,
-      Base64.getEncoder().encodeToString(clusterId));
+    String keyMetadata = generateKeyMetadata(masterKeyAlias, encodeToPrefixStr(clusterId));
     return new PBEKeyData(clusterId, PBEKeyData.KEY_NAMESPACE_GLOBAL, key, PBEKeyStatus.ACTIVE,
       keyMetadata);
   }
@@ -43,7 +42,7 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
   @Override
   public PBEKeyData getPBEKey(byte[] pbe_prefix, String key_namespace) throws IOException {
     checkConfig();
-    String encodedPrefix = Base64.getEncoder().encodeToString(pbe_prefix);
+    String encodedPrefix = encodeToPrefixStr(pbe_prefix);
     String aliasConfKey = HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encodedPrefix + "." +
       "alias";
     String keyMetadata = generateKeyMetadata(conf.get(aliasConfKey, null), encodedPrefix);
@@ -58,14 +57,7 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
     String activeStatusConfKey = HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encodedPrefix +
       ".active";
     boolean isActive = conf.getBoolean(activeStatusConfKey, true);
-    byte[] pbe_prefix;
-    try {
-      pbe_prefix = Base64.getDecoder().decode(encodedPrefix);
-    }
-    catch (IllegalArgumentException e) {
-      throw new IOException("Failed to decode specified prefix as Base64 string: " +
-        encodedPrefix, e);
-    }
+    byte[] pbe_prefix = decodeToPrefixBytes(encodedPrefix);
     String alias = keyMetadata.get(KEY_METADATA_ALIAS);
     Key key = alias != null ? getKey(alias) : null;
     if (key != null) {
@@ -87,5 +79,20 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
     if (conf == null) {
       throw new IllegalStateException("initConfig is not called or config is null");
     }
+  }
+
+  public static byte[] decodeToPrefixBytes(String pbePrefix) throws IOException {
+    byte[] pbe_prefix;
+    try {
+      pbe_prefix = Base64.getDecoder().decode(pbePrefix);
+    }
+    catch (IllegalArgumentException e) {
+      throw new IOException("Failed to decode specified prefix as Base64 string: " + pbePrefix, e);
+    }
+    return pbe_prefix;
+  }
+
+  public static String encodeToPrefixStr(byte[] pbe_prefix) {
+    return Base64.getEncoder().encodeToString(pbe_prefix);
   }
 }

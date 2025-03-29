@@ -18,23 +18,25 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
+import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.PBEKeyStoreKeyProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 import java.security.KeyException;
 import java.util.List;
 
-// TODO: Also integrate with the key provider when it is not found in the cache???
 /**
  * This class provides a unified access on top of both {@code PBEKeyDataCache} (L1) and
  * {@code PBEKeymetaTableAccessor} (L2) to access PBE keys. When the getter is called, it first
  * checks if L1 cache has the key, if not, it tries to get the key from L2.
  */
 @InterfaceAudience.Private
-public class PBEKeyAccessor {
+public class PBEKeyAccessor extends PBEKeyAccessorBase {
   private final PBEKeyDataCache keyDataCache;
   private final PBEKeymetaTableAccessor keymetaAccessor;
 
   public PBEKeyAccessor(PBEKeymetaTableAccessor keymetaAccessor) {
+    super(keymetaAccessor.server);
     this.keymetaAccessor = keymetaAccessor;
     keyDataCache = new PBEKeyDataCache();
   }
@@ -42,17 +44,29 @@ public class PBEKeyAccessor {
   /**
    * Get key data by key metadata.
    *
-   * @param pbePrefix The prefix of the key
+   * @param pbe_prefix The prefix of the key
    * @param keyNamespace The namespace of the key
    * @param keyMetadata The metadata of the key
    * @return The key data or {@code null}
    * @throws IOException if an error occurs while retrieving the key
    */
-  public PBEKeyData getKey(byte[] pbePrefix, String keyNamespace, String keyMetadata)
-    throws IOException, KeyException {
+  public PBEKeyData getKey(byte[] pbe_prefix, String keyNamespace, String keyMetadata)
+      throws IOException, KeyException {
+    checkPBEEnabled();
+    // 1. Check L1 cache.
     PBEKeyData keyData = keyDataCache.getEntry(keyMetadata);
     if (keyData == null) {
-      keyData = keymetaAccessor.getKey(pbePrefix, keyNamespace, keyMetadata);
+      // 2. Check L2 cache.
+      keyData = keymetaAccessor.getKey(pbe_prefix, keyNamespace, keyMetadata);
+      if (keyData == null) {
+        // 3. Check with Key Provider.
+        PBEKeyProvider provider = getKeyProvider();
+        keyData = provider.unwrapKey(keyMetadata);
+        LOG.info("Got key data with status: {} and metadata: {} for prefix: {}",
+          keyData.getKeyStatus(), keyData.getKeyMetadata(),
+          PBEKeyStoreKeyProvider.encodeToPrefixStr(pbe_prefix));
+        keymetaAccessor.addKey(keyData);
+      }
       if (keyData != null) {
         keyDataCache.addEntry(keyData);
       }
@@ -70,6 +84,7 @@ public class PBEKeyAccessor {
    */
   public PBEKeyData getAnActiveKey(byte[] pbePrefix, String keyNamespace)
     throws IOException, KeyException {
+    checkPBEEnabled();
     PBEKeyData keyData = keyDataCache.getRandomEntryForPrefix(pbePrefix, keyNamespace);
     if (keyData == null) {
       List<PBEKeyData> activeKeys = keymetaAccessor.getActiveKeys(pbePrefix, keyNamespace);

@@ -89,6 +89,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdminClient;
 import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -200,6 +201,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /** This is for unit tests parameterized with a single boolean. */
   public static final List<Object[]> MEMSTORETS_TAGS_PARAMETRIZED = memStoreTSAndTagsCombination();
+
+  private Admin hbaseAdmin = null;
 
   /**
    * Checks to see if a specific port is available.
@@ -2942,7 +2945,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return hbaseAdmin;
   }
 
-  private Admin hbaseAdmin = null;
+  public PBEKeymetaAdminClient getPBEAdmin() throws IOException {
+    return new PBEKeymetaAdminClient(getConnection());
+  }
 
   /**
    * Returns an {@link Hbck} instance. Needs be closed when done.

@@ -21,13 +21,15 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.PBEKeyStoreKeyProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.security.KeyException;
-import java.util.Base64;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @InterfaceAudience.Private
 public class PBEKeymetaAdminImpl extends PBEKeymetaTableAccessor implements PBEKeymetaAdmin {
@@ -39,39 +41,41 @@ public class PBEKeymetaAdminImpl extends PBEKeymetaTableAccessor implements PBEK
 
   @Override
   public PBEKeyStatus enablePBE(String pbePrefix, String keyNamespace) throws IOException {
-    if (! isPBEEnabled()) {
-      throw new IOException("PBE is currently not enabled in HBase configuration");
-    }
+    checkPBEEnabled();
     LOG.info("Trying to enable PBE on key: {} under namespace: {}", pbePrefix, keyNamespace);
-    byte[] pbe_prefix = convertToPrefixBytes(pbePrefix);
+    byte[] pbe_prefix = PBEKeyStoreKeyProvider.decodeToPrefixBytes(pbePrefix);
     PBEKeyProvider provider = getKeyProvider();
-    PBEKeyData pbeKey = provider.getPBEKey(pbe_prefix, keyNamespace);
-    LOG.info("Got key data with status: {} and metadata: {} for prefix: {}", pbeKey.getKeyStatus(),
-      pbeKey.getKeyMetadata(), pbePrefix);
-    addKey(pbeKey);
-    return pbeKey.getKeyStatus();
+    int perPrefixActiveKeyConfCount = getPerPrefixActiveKeyConfCount();
+    Set<PBEKeyData> retrievedKeys = new HashSet<>(perPrefixActiveKeyConfCount);
+    PBEKeyData pbeKey = null;
+    for (int i = 0; i < perPrefixActiveKeyConfCount; ++i) {
+      pbeKey = provider.getPBEKey(pbe_prefix, keyNamespace);
+      if (pbeKey == null) {
+        throw new IOException("Invalid null PBE key received from key provider");
+      }
+      if (retrievedKeys.contains(pbeKey)) {
+        // This typically means, the key provider is not capable of producing multiple active keys.
+        LOG.info("enablePBE: configured key count per prefix: " + perPrefixActiveKeyConfCount +
+          " but received only: " + retrievedKeys.size() + " unique keys.");
+        break;
+      }
+      retrievedKeys.add(pbeKey);
+      LOG.info("enablePBE: got key data with status: {} and metadata: {} for prefix: {}",
+        pbeKey.getKeyStatus(), pbeKey.getKeyMetadata(), pbePrefix);
+      addKey(pbeKey);
+    }
+    // pbeKey can't be null at this point as perPrefixActiveKeyConfCount will always be > 0,
+    // but the null check is needed to avoid any warning.
+    return pbeKey == null ? null : pbeKey.getKeyStatus();
   }
 
   @Override
   public List<PBEKeyData> getPBEKeyStatuses(String pbePrefix, String keyNamespace)
     throws IOException, KeyException {
-    if (! isPBEEnabled()) {
-      throw new IOException("PBE is currently not enabled in HBase configuration");
-    }
+    checkPBEEnabled();
     LOG.info("Getting key statuses for PBE on key: {} under namespace: {}", pbePrefix,
       keyNamespace);
-    byte[] pbe_prefix = convertToPrefixBytes(pbePrefix);
+    byte[] pbe_prefix = PBEKeyStoreKeyProvider.decodeToPrefixBytes(pbePrefix);
     return super.getAllKeys(pbe_prefix, keyNamespace);
-  }
-
-  private static byte[] convertToPrefixBytes(String pbePrefix) throws IOException {
-    byte[] pbe_prefix;
-    try {
-      pbe_prefix = Base64.getDecoder().decode(pbePrefix);
-    }
-    catch (IllegalArgumentException e) {
-      throw new IOException("Failed to decode specified prefix as Base64 string: " + pbePrefix, e);
-    }
-    return pbe_prefix;
   }
 }

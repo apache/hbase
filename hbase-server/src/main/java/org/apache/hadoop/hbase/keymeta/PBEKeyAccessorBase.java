@@ -25,19 +25,21 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.io.IOException;
 
 /**
- * A base class for all keymeta manager implementations.
+ * A base class for all keymeta accessor/manager implementations.
  */
 @InterfaceAudience.Private
-public abstract class PBEKeyManager {
-  protected static final Logger LOG = LoggerFactory.getLogger(PBEKeyManager.class);
+public abstract class PBEKeyAccessorBase {
+  protected static final Logger LOG = LoggerFactory.getLogger(PBEKeyAccessorBase.class);
 
   protected final Server server;
 
   private Boolean pbeEnabled;
+  private Integer perPrefixActiveKeyCount;
 
-  public PBEKeyManager(Server server) {
+  public PBEKeyAccessorBase(Server server) {
     this.server = server;
   }
 
@@ -62,9 +64,31 @@ public abstract class PBEKeyManager {
    */
   protected boolean isPBEEnabled() {
     if (pbeEnabled == null) {
-      pbeEnabled = server.getConfiguration().getBoolean(HConstants.CRYPTO_PBE_ENABLED_CONF_KEY,
-        false);
+      pbeEnabled = Server.isPBEEnabled(server);
     }
     return pbeEnabled;
+  }
+
+  /**
+   * Check if PBE is enabled, otherwise throw exception.
+   * @throws IOException if PBE is not enabled.
+   */
+  protected void checkPBEEnabled() throws IOException {
+    if (! isPBEEnabled()) {
+      throw new IOException("PBE is currently not enabled in HBase configuration");
+    }
+  }
+
+  protected int getPerPrefixActiveKeyConfCount() throws IOException {
+    if (perPrefixActiveKeyCount == null) {
+      perPrefixActiveKeyCount = server.getConfiguration().getInt(
+        HConstants.CRYPTO_PBE_PER_PREFIX_ACTIVE_KEY_COUNT,
+        HConstants.CRYPTO_PBE_PER_PREFIX_ACTIVE_KEY_DEFAULT_COUNT);
+    }
+    if (perPrefixActiveKeyCount <= 0) {
+      throw new IOException("Invalid value: " + perPrefixActiveKeyCount + " configured for: " +
+        HConstants.CRYPTO_PBE_PER_PREFIX_ACTIVE_KEY_COUNT);
+    }
+    return perPrefixActiveKeyCount;
   }
 }

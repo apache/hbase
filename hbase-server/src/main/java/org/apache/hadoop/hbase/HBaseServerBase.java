@@ -430,7 +430,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   protected void buildPBEClusterKeyCache() throws IOException {
-    if (pbeClusterKeyCache == null) {
+    if (pbeClusterKeyCache == null && Server.isPBEEnabled(this)) {
       pbeClusterKeyCache = PBEClusterKeyCache.createCache(new PBEClusterKeyAccessor(this));
     }
   }

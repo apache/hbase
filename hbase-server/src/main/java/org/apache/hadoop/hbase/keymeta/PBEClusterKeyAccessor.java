@@ -35,7 +35,7 @@ import java.util.TreeMap;
 import static org.apache.hadoop.hbase.HConstants.CLUSTER_KEY_FILE_PREFIX;
 
 @InterfaceAudience.Private
-public class PBEClusterKeyAccessor extends PBEKeyManager {
+public class PBEClusterKeyAccessor extends PBEKeyAccessorBase {
   protected final Path clusterKeyDir;
 
   public PBEClusterKeyAccessor(Server server) throws IOException {
@@ -77,6 +77,7 @@ public class PBEClusterKeyAccessor extends PBEKeyManager {
 
     return new ArrayList<>(clusterKeys.values());
   }
+
   public PBEKeyData loadClusterKey(Path keyPath) throws IOException {
     PBEKeyProvider provider = getKeyProvider();
     return provider.unwrapKey(loadKeyMetadata(keyPath));

@@ -1293,6 +1293,11 @@ public final class HConstants {
     "hbase.crypto.pbe.master.key.name";
 
   public static final String CRYPTO_PBE_ENABLED_CONF_KEY = "hbase.crypto.pbe.enabled";
+  public static final boolean CRYPTO_PBE_DEFAULT_ENABLED = false;
+
+  public static final String CRYPTO_PBE_PER_PREFIX_ACTIVE_KEY_COUNT =
+    "hbase.crypto.pbe.per_prefix.active_count";
+  public static final int CRYPTO_PBE_PER_PREFIX_ACTIVE_KEY_DEFAULT_COUNT = 1;
 
   public static final String CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX = "hbase.crypto.pbe.prefix.";
 

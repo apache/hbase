@@ -122,4 +122,14 @@ public interface Server extends Abortable, Stoppable {
   default boolean isStopping() {
     return false;
   }
+
+  /**
+   * From the given server, determine if PBE is enabbled.
+   * @return true if PBE is enabled
+   */
+  static boolean isPBEEnabled(Server server) {
+    return server.getConfiguration()
+      .getBoolean(HConstants.CRYPTO_PBE_ENABLED_CONF_KEY, HConstants.CRYPTO_PBE_DEFAULT_ENABLED);
+  }
+
 }
