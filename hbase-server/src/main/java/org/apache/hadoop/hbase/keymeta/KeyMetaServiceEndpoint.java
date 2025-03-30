@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
@@ -31,6 +28,9 @@ import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEAdminRequest;
 import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEAdminResponse;
 import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEAdminService;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +74,7 @@ public class KeyMetaServiceEndpoint implements MasterCoprocessor {
         pbe_prefix = Base64.getDecoder().decode(request.getPbePrefix());
       }
       catch (IllegalArgumentException e) {
-        builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.FAILED);
+        builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.PBE_FAILED);
         CoprocessorRpcUtils.setControllerException(controller, new IOException(
           "Failed to decode specified prefix as Base64 string: " + request.getPbePrefix(), e));
       }
@@ -84,7 +84,7 @@ public class KeyMetaServiceEndpoint implements MasterCoprocessor {
           builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.valueOf(pbeKeyStatus.getVal()));
         } catch (IOException e) {
           CoprocessorRpcUtils.setControllerException(controller, e);
-          builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.FAILED);
+          builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.PBE_FAILED);
         }
       }
       done.run(builder.build());

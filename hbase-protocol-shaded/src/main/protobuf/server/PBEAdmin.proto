@@ -29,10 +29,10 @@ message PBEAdminRequest {
 }
 
 enum PBEKeyStatus {
-  ACTIVE = 1;
-  INACTIVE = 2;
-  FAILED = 3;
-  DISABLED = 4;
+  PBE_ACTIVE = 1;
+  PBE_INACTIVE = 2;
+  PBE_FAILED = 3;
+  PBE_DISABLED = 4;
 }
 
 message PBEAdminResponse {
