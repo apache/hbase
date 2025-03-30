@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -87,9 +88,17 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     values = new ArrayList<>();
 
     if (scanMetrics == null) {
+      initScanMetricsByRegion(scan);
       initScanMetrics(scan);
     } else {
       this.scanMetrics = scanMetrics;
+      if (scan.isScanMetricsByRegionEnabled()) {
+        this.scanMetricsByRegion = Collections.singletonList(this.scanMetrics);
+      }
+    }
+    if (this.scanMetrics != null && scan.isScanMetricsByRegionEnabled()) {
+      this.scanMetrics.setRegionName(region.getRegionInfo().getRegionNameAsString());
+      // The server name will be null in scan metrics as this is a client side region scanner
     }
     region.startRegionOperation();
   }

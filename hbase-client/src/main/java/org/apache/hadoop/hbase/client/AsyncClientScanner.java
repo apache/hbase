@@ -33,6 +33,8 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -67,7 +69,7 @@ class AsyncClientScanner {
   // AsyncScanSingleRegionRpcRetryingCaller will modify this scan object directly.
   private final Scan scan;
 
-  private final ScanMetrics scanMetrics;
+  private ScanMetrics scanMetrics;
 
   private final AdvancedScanResultConsumer consumer;
 
@@ -92,6 +94,7 @@ class AsyncClientScanner {
   private final ScanResultCache resultCache;
 
   private final Span span;
+  private List<ScanMetrics> scanMetricByRegion;
 
   private final Map<String, byte[]> requestAttributes;
 
@@ -119,8 +122,16 @@ class AsyncClientScanner {
     this.resultCache = createScanResultCache(scan);
     this.requestAttributes = requestAttributes;
     if (scan.isScanMetricsEnabled()) {
-      this.scanMetrics = new ScanMetrics();
-      consumer.onScanMetricsCreated(scanMetrics);
+      if (scan.isScanMetricsByRegionEnabled()) {
+        // When scan metrics per region is enabled we will create scan metrics while calling
+        // openScanner.
+        this.scanMetricByRegion = new ArrayList<>();
+        consumer.onScanMetricsByRegionEnabled(scanMetricByRegion);
+      }
+      else {
+        this.scanMetrics = new ScanMetrics();
+        consumer.onScanMetricsCreated(scanMetrics);
+      }
     } else {
       this.scanMetrics = null;
     }
@@ -165,6 +176,10 @@ class AsyncClientScanner {
   private CompletableFuture<OpenScannerResponse> callOpenScanner(HBaseRpcController controller,
     HRegionLocation loc, ClientService.Interface stub) {
     try (Scope ignored = span.makeCurrent()) {
+      if (this.scanMetrics != null && scan.isScanMetricsByRegionEnabled()) {
+        this.scanMetrics.setServerName(loc.getServerName());
+        this.scanMetrics.setRegionName(loc.getRegion().getRegionNameAsString());
+      }
       boolean isRegionServerRemote = isRemote(loc.getHostname());
       incRPCCallsMetrics(scanMetrics, isRegionServerRemote);
       if (openScannerTries.getAndIncrement() > 1) {
@@ -250,6 +265,10 @@ class AsyncClientScanner {
   }
 
   private void openScanner() {
+    if (scan.isScanMetricsEnabled() && scan.isScanMetricsByRegionEnabled()) {
+      this.scanMetrics = new ScanMetrics();
+      this.scanMetricByRegion.add(this.scanMetrics);
+    }
     incRegionCountMetrics(scanMetrics);
     openScannerTries.set(1);
     addListener(timelineConsistentRead(conn.getLocator(), tableName, scan, scan.getStartRow(),

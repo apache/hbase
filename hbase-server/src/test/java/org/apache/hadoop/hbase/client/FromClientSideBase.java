@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonRepeatedEnvironmentEdge;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -62,7 +64,6 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  */
 @Category({ LargeTests.class, ClientTests.class })
 @SuppressWarnings("deprecation")
-@RunWith(Parameterized.class)
 class FromClientSideBase {
   private static final Logger LOG = LoggerFactory.getLogger(FromClientSideBase.class);
   static HBaseTestingUtil TEST_UTIL;
@@ -278,6 +279,18 @@ class FromClientSideBase {
     Result result = scanner.next();
     scanner.close();
     return result;
+  }
+
+  protected Pair<ScanMetrics, List<ScanMetrics>> getScanMetrics(Table ht, Scan scan)
+    throws IOException {
+    ScanMetrics scanMetrics;
+    List<ScanMetrics> scanMetricsByRegion;
+    try (ResultScanner scanner = ht.getScanner(scan)) {
+      while ((scanner.next()) != null) {}
+      scanMetrics = scanner.getScanMetrics();
+      scanMetricsByRegion = scanner.getScanMetricsByRegion();
+    }
+    return Pair.newPair(scanMetrics, scanMetricsByRegion);
   }
 
   byte[][] makeNAscii(byte[] base, int n) {

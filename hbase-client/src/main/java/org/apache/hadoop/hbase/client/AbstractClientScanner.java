@@ -19,13 +19,27 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Helper class for custom client scanners.
  */
 @InterfaceAudience.Private
 public abstract class AbstractClientScanner implements ResultScanner {
-  protected ScanMetrics scanMetrics;
+  protected ScanMetrics scanMetrics = null;
+  protected List<ScanMetrics> scanMetricsByRegion;
+
+  /**
+   * Check and initialize list for collecting scan metrics if application wants to collect
+   * scan metrics per region
+   */
+  protected void initScanMetricsByRegion(Scan scan) {
+    // check if application wants to collect scan metrics
+    if (scan.isScanMetricsEnabled() && scan.isScanMetricsByRegionEnabled()) {
+      scanMetricsByRegion = new ArrayList<>();
+    }
+  }
 
   /**
    * Check and initialize if application wants to collect scan metrics
@@ -33,7 +47,14 @@ public abstract class AbstractClientScanner implements ResultScanner {
   protected void initScanMetrics(Scan scan) {
     // check if application wants to collect scan metrics
     if (scan.isScanMetricsEnabled()) {
-      scanMetrics = new ScanMetrics();
+      if (scanMetricsByRegion != null) {
+        scanMetrics = new ScanMetrics();
+        scanMetricsByRegion.add(scanMetrics);
+      }
+      else if (scanMetrics == null) {
+        // Only initialize once
+        this.scanMetrics = new ScanMetrics();
+      }
     }
   }
 
@@ -44,6 +65,26 @@ public abstract class AbstractClientScanner implements ResultScanner {
    */
   @Override
   public ScanMetrics getScanMetrics() {
-    return scanMetrics;
+    if (scanMetricsByRegion != null) {
+      if (scanMetricsByRegion.isEmpty()) {
+        return null;
+      }
+      else if (scanMetricsByRegion.size() == 1) {
+        return scanMetricsByRegion.get(0);
+      }
+      ScanMetrics overallScanMetrics = new ScanMetrics();
+      for (ScanMetrics otherScanMetrics : scanMetricsByRegion) {
+        overallScanMetrics.combineMetrics(otherScanMetrics);
+      }
+      return overallScanMetrics;
+    }
+    else {
+      return scanMetrics;
+    }
+  }
+
+  @Override
+  public List<ScanMetrics> getScanMetricsByRegion() {
+    return scanMetricsByRegion;
   }
 }

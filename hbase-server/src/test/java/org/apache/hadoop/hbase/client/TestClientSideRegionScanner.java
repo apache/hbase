@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.FilterBase;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.IndexOnlyLruBlockCache;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -51,6 +52,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import java.util.List;
 
 @Category({ SmallTests.class, ClientTests.class })
 public class TestClientSideRegionScanner {
@@ -176,6 +178,72 @@ public class TestClientSideRegionScanner {
       result = clientSideRegionScanner.next();
       assertNull(result);
       assertFalse(clientSideRegionScanner.hasMore);
+    }
+  }
+
+  @Test
+  public void testScanMetricsByRegion() throws IOException {
+    Scan scan = new Scan();
+    scan.setScanMetricsEnabled(true);
+    scan.setEnableScanMetricsByRegion(true);
+
+    Configuration copyConf = new Configuration(conf);
+    // Test without providing scan metric at prior and scan metrics by region enabled
+    try (ClientSideRegionScanner clientSideRegionScanner =
+      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null)) {
+      clientSideRegionScanner.next();
+      ScanMetrics scanMetrics = clientSideRegionScanner.getScanMetrics();
+      assertNotNull(scanMetrics);
+      List<ScanMetrics> scanMetricsByRegion = clientSideRegionScanner.getScanMetricsByRegion();
+      assertEquals(1, scanMetricsByRegion.size());
+      assertEquals(scanMetrics, scanMetricsByRegion.get(0));
+      assertNotNull(scanMetrics.getRegionName());
+      assertNull(scanMetrics.getServerName());
+    }
+
+    // Test without providing scan metric at prior and scan metrics by region disabled
+    scan.setEnableScanMetricsByRegion(false);
+    try (ClientSideRegionScanner clientSideRegionScanner =
+      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null)) {
+      clientSideRegionScanner.next();
+      ScanMetrics scanMetrics = clientSideRegionScanner.getScanMetrics();
+      assertNotNull(scanMetrics);
+      assertNull(clientSideRegionScanner.getScanMetricsByRegion());
+    }
+
+    // Test by providing scan metric at prior with scan metrics by region enabled
+    scan.setEnableScanMetricsByRegion(true);
+    ScanMetrics scanMetrics = new ScanMetrics();
+    try (ClientSideRegionScanner clientSideRegionScanner =
+      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, scanMetrics)) {
+      clientSideRegionScanner.next();
+      ScanMetrics scanMetricsFromScanner = clientSideRegionScanner.getScanMetrics();
+      assertEquals(scanMetrics, scanMetricsFromScanner);
+      List<ScanMetrics> scanMetricsByRegion = clientSideRegionScanner.getScanMetricsByRegion();
+      assertEquals(1, scanMetricsByRegion.size());
+      assertEquals(scanMetrics, scanMetricsByRegion.get(0));
+      assertNotNull(scanMetrics.getRegionName());
+      assertNull(scanMetrics.getServerName());
+    }
+
+    // Test by providing scan metric at prior with scan metrics by region disabled
+    scan.setEnableScanMetricsByRegion(false);
+    scanMetrics = new ScanMetrics();
+    try (ClientSideRegionScanner clientSideRegionScanner =
+      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, scanMetrics)) {
+      clientSideRegionScanner.next();
+      ScanMetrics scanMetricsFromScanner = clientSideRegionScanner.getScanMetrics();
+      assertEquals(scanMetrics, scanMetricsFromScanner);
+      assertNull(clientSideRegionScanner.getScanMetricsByRegion());
+    }
+
+    // Test with scan metrics disabled
+    scan.setScanMetricsEnabled(false);
+    try (ClientSideRegionScanner clientSideRegionScanner =
+      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null)) {
+      clientSideRegionScanner.next();
+      assertNull(clientSideRegionScanner.getScanMetrics());
+      assertNull(clientSideRegionScanner.getScanMetricsByRegion());
     }
   }
 

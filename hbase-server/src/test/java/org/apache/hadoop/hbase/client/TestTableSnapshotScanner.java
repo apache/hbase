@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -242,6 +243,72 @@ public class TestTableSnapshotScanner {
   @Test
   public void testWithOfflineHBaseMultiRegion() throws Exception {
     testScanner(UTIL, "testWithMultiRegion", 20, true);
+  }
+
+  @Test
+  public void testScanMetricsByRegionForTableSnapshotScanner() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName() + "_TABLE");
+    String snapshotName = name.getMethodName() + "_SNAPSHOT";
+    try {
+      createTableAndSnapshot(UTIL, tableName, snapshotName, 50);
+      Path restoreDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      Scan scan = new Scan().withStartRow(bbb).withStopRow(yyy); // limit the scan
+      scan.setScanMetricsEnabled(true);
+      scan.setEnableScanMetricsByRegion(true);
+      Scan scanCopy = new Scan(scan);
+
+      Configuration conf = UTIL.getConfiguration();
+
+      // Scan table snapshot and get combined scan metrics
+      TableSnapshotScanner snapshotScanner =
+        new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
+      verifyScanner(snapshotScanner, bbb, yyy);
+      ScanMetrics scanMetrics = snapshotScanner.getScanMetrics();
+      Assert.assertNull(scanMetrics.getRegionName());
+      Assert.assertNull(scanMetrics.getServerName());
+      snapshotScanner.close();
+
+      // Scan table snapshot and get per region scan metrics
+      snapshotScanner =
+        new TableSnapshotScanner(conf, restoreDir, snapshotName, scanCopy);
+      verifyScanner(snapshotScanner, bbb, yyy);
+      List<ScanMetrics> scanMetricsByRegion = snapshotScanner.getScanMetricsByRegion();
+      long bytesInResults = 0;
+      for (ScanMetrics preRegionScanMetrics : scanMetricsByRegion) {
+        Assert.assertNotNull(preRegionScanMetrics.getRegionName());
+        Assert.assertNull(preRegionScanMetrics.getServerName());
+        bytesInResults += preRegionScanMetrics.countOfBytesInResults.get();
+      }
+      // Verify the combined scan metrics is combination (sum) of all the per region scan metrics
+      Assert.assertEquals(bytesInResults, scanMetrics.countOfBytesInResults.get());
+      snapshotScanner.close();
+
+      // Scan table snapshot with scan metrics by region disabled
+      scan = new Scan().withStartRow(bbb).withStopRow(yyy); // limit the scan
+      scan.setScanMetricsEnabled(true);
+      scan.setEnableScanMetricsByRegion(false);
+      snapshotScanner =
+        new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
+      verifyScanner(snapshotScanner, bbb, yyy);
+      Assert.assertNotNull(snapshotScanner.getScanMetrics());
+      Assert.assertNull(snapshotScanner.getScanMetrics().getRegionName());
+      Assert.assertNull(snapshotScanner.getScanMetrics().getServerName());
+      Assert.assertNull(snapshotScanner.getScanMetricsByRegion());
+
+      // Scan table snapshot with scan metrics disabled
+      scan = new Scan().withStartRow(bbb).withStopRow(yyy); // limit the scan
+      scan.setScanMetricsEnabled(false);
+      scan.setEnableScanMetricsByRegion(false);
+      snapshotScanner =
+        new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
+      verifyScanner(snapshotScanner, bbb, yyy);
+      Assert.assertNull(snapshotScanner.getScanMetrics());
+      Assert.assertNull(snapshotScanner.getScanMetricsByRegion());
+    }
+    finally {
+      UTIL.getAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
+    }
   }
 
   @Test

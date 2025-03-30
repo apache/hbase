@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.region;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Result;
@@ -74,6 +75,11 @@ class RegionScannerAsResultScanner implements ResultScanner {
 
   @Override
   public ScanMetrics getScanMetrics() {
+    return null;
+  }
+
+  @Override
+  public List<ScanMetrics> getScanMetricsByRegion() {
     return null;
   }
 

@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.client.metrics;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
@@ -30,10 +32,15 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 @InterfaceAudience.Public
 @SuppressWarnings("checkstyle:VisibilityModifier") // See HBASE-27757
 public class ServerSideScanMetrics {
+  // Only for testing and debugging
+  public static boolean enableVerboseToString = false;
+
   /**
    * Hash to hold the String -&gt; Atomic Long mappings for each metric
    */
-  private final Map<String, AtomicLong> counters = new HashMap<>();
+  protected final Map<String, AtomicLong> counters = new HashMap<>();
+  private ServerName serverName;
+  private String regionName;
 
   /**
    * Create a new counter with the specified name
@@ -116,5 +123,70 @@ public class ServerSideScanMetrics {
     }
     // Build the immutable map so that people can't mess around with it.
     return builder.build();
+  }
+
+  public ServerName getServerName() {
+    return this.serverName;
+  }
+
+  public void setServerName(ServerName serverName) {
+    if (this.serverName == null) {
+      this.serverName = serverName;
+    }
+  }
+
+  public void setRegionName(String regionName) {
+    if (this.regionName == null) {
+      this.regionName = regionName;
+    }
+  }
+
+  public String getRegionName() {
+    return this.regionName;
+  }
+
+  @Override
+  public String toString() {
+    if (enableVerboseToString) {
+      return toStringUtil();
+    }
+    return super.toString();
+  }
+
+  private String toStringUtil() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("ServerName:");
+    sb.append(this.serverName);
+    sb.append(",RegionName:");
+    sb.append(this.regionName);
+    sb.append(",[");
+    boolean isFirstMetric = true;
+    for (Map.Entry<String, AtomicLong> e : this.counters.entrySet()) {
+      if (isFirstMetric) {
+        isFirstMetric = false;
+      }
+      else {
+        sb.append(",");
+      }
+      sb.append(e.getKey());
+      sb.append(":");
+      sb.append(e.getValue().get());
+    }
+    sb.append("]");
+    return sb.toString();
+  }
+
+  public void combineMetrics(ScanMetrics other) {
+    for (Map.Entry<String, AtomicLong> entry : other.counters.entrySet()) {
+      String counterName = entry.getKey();
+      AtomicLong counter = entry.getValue();
+      this.addToCounter(counterName, counter.get());
+    }
+    if (this.regionName != null && ! Objects.equals(this.regionName, other.getRegionName())) {
+      this.regionName = null;
+    }
+    if (this.serverName != null && ! Objects.equals(this.serverName, other.getServerName())) {
+      this.serverName = null;
+    }
   }
 }

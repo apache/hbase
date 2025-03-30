@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -70,7 +72,7 @@ public class TestAsyncTableScanMetrics {
 
   @FunctionalInterface
   private interface ScanWithMetrics {
-    Pair<List<Result>, ScanMetrics> scan(Scan scan) throws Exception;
+    Pair<List<Result>, Pair<ScanMetrics, List<ScanMetrics>>> scan(Scan scan) throws Exception;
   }
 
   @Parameter(0)
@@ -110,56 +112,101 @@ public class TestAsyncTableScanMetrics {
     UTIL.shutdownMiniCluster();
   }
 
-  private static Pair<List<Result>, ScanMetrics> doScanWithRawAsyncTable(Scan scan)
-    throws IOException, InterruptedException {
+  private static Pair<List<Result>, Pair<ScanMetrics, List<ScanMetrics>>>
+  doScanWithRawAsyncTable(Scan scan) throws IOException, InterruptedException {
     BufferingScanResultConsumer consumer = new BufferingScanResultConsumer();
     CONN.getTable(TABLE_NAME).scan(scan, consumer);
     List<Result> results = new ArrayList<>();
     for (Result result; (result = consumer.take()) != null;) {
       results.add(result);
     }
-    return Pair.newPair(results, consumer.getScanMetrics());
+    return Pair.newPair(results,
+      Pair.newPair(consumer.getScanMetrics(), consumer.getScanMetricsByRegion()));
   }
 
-  private static Pair<List<Result>, ScanMetrics> doScanWithAsyncTableScan(Scan scan)
-    throws Exception {
+  private static Pair<List<Result>, Pair<ScanMetrics, List<ScanMetrics>>>
+  doScanWithAsyncTableScan(Scan scan) throws Exception {
     SimpleScanResultConsumerImpl consumer = new SimpleScanResultConsumerImpl();
     CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool()).scan(scan, consumer);
-    return Pair.newPair(consumer.getAll(), consumer.getScanMetrics());
+    return Pair.newPair(consumer.getAll(),
+      Pair.newPair(consumer.getScanMetrics(), consumer.getScanMetricsByRegion()));
   }
 
-  private static Pair<List<Result>, ScanMetrics> doScanWithAsyncTableScanner(Scan scan)
-    throws IOException {
+  private static Pair<List<Result>, Pair<ScanMetrics, List<ScanMetrics>>>
+  doScanWithAsyncTableScanner(Scan scan) throws IOException {
     try (ResultScanner scanner =
       CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool()).getScanner(scan)) {
       List<Result> results = new ArrayList<>();
       for (Result result; (result = scanner.next()) != null;) {
         results.add(result);
       }
-      return Pair.newPair(results, scanner.getScanMetrics());
+      return Pair.newPair(results,
+        Pair.newPair(scanner.getScanMetrics(), scanner.getScanMetricsByRegion()));
     }
   }
 
   @Test
   public void testNoScanMetrics() throws Exception {
-    Pair<List<Result>, ScanMetrics> pair = method.scan(new Scan());
+    Pair<List<Result>, Pair<ScanMetrics, List<ScanMetrics>>> pair = method.scan(new Scan());
     assertEquals(3, pair.getFirst().size());
-    assertNull(pair.getSecond());
+    // Assert no scan metrics
+    assertNull(pair.getSecond().getFirst());
+    // Assert no per region scan metrics
+    assertNull(pair.getSecond().getSecond());
   }
 
   @Test
   public void testScanMetrics() throws Exception {
-    Pair<List<Result>, ScanMetrics> pair = method.scan(new Scan().setScanMetricsEnabled(true));
+    Scan scan = new Scan();
+    scan.setScanMetricsEnabled(true);
+    Pair<List<Result>, Pair<ScanMetrics, List<ScanMetrics>>> pair = method.scan(scan);
     List<Result> results = pair.getFirst();
     assertEquals(3, results.size());
     long bytes = results.stream().flatMap(r -> Arrays.asList(r.rawCells()).stream())
       .mapToLong(c -> PrivateCellUtil.estimatedSerializedSizeOf(c)).sum();
-    ScanMetrics scanMetrics = pair.getSecond();
+    ScanMetrics scanMetrics = pair.getSecond().getFirst();
     assertEquals(NUM_REGIONS, scanMetrics.countOfRegions.get());
     assertEquals(bytes, scanMetrics.countOfBytesInResults.get());
     assertEquals(NUM_REGIONS, scanMetrics.countOfRPCcalls.get());
     // also assert a server side metric to ensure that we have published them into the client side
     // metrics.
     assertEquals(3, scanMetrics.countOfRowsScanned.get());
+    // Test scan metrics by region are null as it is disabled
+    assertNull(pair.getSecond().getSecond());
+
+    // Test scan metric by region with multi-region scan
+    scan = new Scan();
+    scan.setScanMetricsEnabled(true);
+    scan.setEnableScanMetricsByRegion(true);
+    pair = method.scan(scan);
+    results = pair.getFirst();
+    assertEquals(3, results.size());
+    scanMetrics = pair.getSecond().getFirst();
+    List<ScanMetrics> scanMetricsByRegion = pair.getSecond().getSecond();
+    assertEquals(NUM_REGIONS, scanMetricsByRegion.size());
+    long bytesInResult = 0;
+    for (ScanMetrics perRegionScanMetrics : scanMetricsByRegion) {
+      Assert.assertNotNull(perRegionScanMetrics.getRegionName());
+      Assert.assertNotNull(perRegionScanMetrics.getServerName());
+      bytesInResult += perRegionScanMetrics.countOfBytesInResults.get();
+    }
+    assertEquals(scanMetrics.countOfBytesInResults.get(), bytesInResult);
+
+    // Test scan metrics by region with single-region scan
+    scan = new Scan();
+    scan.withStartRow(Bytes.toBytes("zzz1"), true);
+    scan.withStopRow(Bytes.toBytes("zzz1"), true);
+    scan.setScanMetricsEnabled(true);
+    scan.setEnableScanMetricsByRegion(true);
+    pair = method.scan(scan);
+    results = pair.getFirst();
+    assertEquals(1, results.size());
+    scanMetrics = pair.getSecond().getFirst();
+    scanMetricsByRegion = pair.getSecond().getSecond();
+    assertEquals(1, scanMetricsByRegion.size());
+    assertEquals(1, scanMetrics.countOfRowsScanned.get());
+    assertEquals(scanMetrics, scanMetricsByRegion.get(0));
+    assertNotNull(scanMetrics.getRegionName());
+    assertNotNull(scanMetrics.getServerName());
   }
 }

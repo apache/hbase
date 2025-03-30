@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
+import java.util.List;
 
 /**
  * The base interface for scan result consumer.
@@ -38,11 +39,22 @@ public interface ScanResultConsumerBase {
   void onComplete();
 
   /**
-   * If {@code scan.isScanMetricsEnabled()} returns true, then this method will be called prior to
-   * all other methods in this interface to give you the {@link ScanMetrics} instance for this scan
-   * operation. The {@link ScanMetrics} instance will be updated on-the-fly during the scan, you can
-   * store it somewhere to get the metrics at any time if you want.
+   * If {@code scan.isScanMetricsEnabled()} returns true and
+   * {@code scan.isScanMetricsByRegionEnabled()} returns false, then this method will be called
+   * prior to all other methods in this interface to give you the {@link ScanMetrics} instance
+   * for this scan operation. The {@link ScanMetrics} instance will be updated on-the-fly during
+   * the scan, you can store it somewhere to get the metrics at any time if you want.
    */
   default void onScanMetricsCreated(ScanMetrics scanMetrics) {
+  }
+
+  /**
+   * If {@code scan.isScanMetricsEnabled()} and {@code scan.isScanMetricsByRegionEnabled()} both
+   * return true, then this method will be called prior to calling all the methods in this
+   * interface to give you the list for storing scan metric per region for this scan operation.
+   * The list will be get populated with per region scan metrics on-the-fly during the scan, you
+   * can store the provided list somewhere to get scan metrics by region later when you want.
+   */
+  default void onScanMetricsByRegionEnabled(List<ScanMetrics> scanMetricsByRegion) {
   }
 }

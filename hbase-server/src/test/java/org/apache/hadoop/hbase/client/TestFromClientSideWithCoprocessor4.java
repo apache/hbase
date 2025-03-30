@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 /**
@@ -36,6 +37,7 @@ import org.junit.runners.Parameterized;
  * Base class was split into three so this class got split into three.
  */
 @Category({ LargeTests.class, ClientTests.class })
+@RunWith(Parameterized.class)
 public class TestFromClientSideWithCoprocessor4 extends TestFromClientSide4 {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
