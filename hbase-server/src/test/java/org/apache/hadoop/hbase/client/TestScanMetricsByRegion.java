@@ -36,6 +36,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.Assert;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
 @Category({ ClientTests.class, MediumTests.class })
 public class TestScanMetricsByRegion extends FromClientSideBase {
@@ -47,6 +49,18 @@ public class TestScanMetricsByRegion extends FromClientSideBase {
   public TableNameTestRule name = new TableNameTestRule();
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+
+  @Parameters(name = "{index}: scanner={0}")
+  public static List<Object[]> params() {
+    return Arrays.asList(new Object[] {"ForwardScanner", new Scan()},
+      new Object[] {"ReverseScanner", new Scan().setReversed(true)});
+  }
+
+  @Parameter(0)
+  public String scannerName;
+
+  @Parameter(1)
+  public Scan originalScan;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -60,7 +74,7 @@ public class TestScanMetricsByRegion extends FromClientSideBase {
   }
 
   private Scan getScan(byte[][] ROWS, boolean isSingleRegionScan) throws IOException {
-    Scan scan = new Scan();
+    Scan scan = new Scan(originalScan);
     if (isSingleRegionScan) {
       scan.withStartRow(ROWS[0], true);
       scan.withStopRow(ROWS[0], true);
@@ -152,6 +166,9 @@ public class TestScanMetricsByRegion extends FromClientSideBase {
       Assert.assertEquals(1, scanMetrics.countOfRegions.get());
       Assert.assertEquals(scanMetrics, scanMetricsByRegion.get(0));
       Assert.assertEquals(1, scanMetricsByRegion.size());
+    }
+    finally {
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 }

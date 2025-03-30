@@ -27,8 +27,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 /**
@@ -36,7 +34,6 @@ import org.junit.runners.Parameterized.Parameters;
  * policy.
  */
 @Category({ LargeTests.class, ClientTests.class })
-@RunWith(Parameterized.class)
 public class TestFromClientSideWithCoprocessor5 extends TestFromClientSide5 {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

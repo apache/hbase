@@ -64,6 +64,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  */
 @Category({ LargeTests.class, ClientTests.class })
 @SuppressWarnings("deprecation")
+@RunWith(Parameterized.class)
 class FromClientSideBase {
   private static final Logger LOG = LoggerFactory.getLogger(FromClientSideBase.class);
   static HBaseTestingUtil TEST_UTIL;
