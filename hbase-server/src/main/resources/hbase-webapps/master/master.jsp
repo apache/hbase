@@ -253,8 +253,18 @@
     <jsp:include page="taskMonitor.jsp"/>
   </section>
 
+  <section>
+    <% request.setAttribute("frags", frags); %>
+    <jsp:include page="softwareAttributes.jsp"/>
+  </section>
+
   TODO
 
 </div> <!-- /.container-fluid content -->
 
+
 <jsp:include page="footer.jsp"/>
+
+<script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
+<script src="/static/js/parser-date-iso8601.min.js" type="text/javascript"></script>
+<script src="/static/js/jqSpager.js" type="text/javascript"></script>
