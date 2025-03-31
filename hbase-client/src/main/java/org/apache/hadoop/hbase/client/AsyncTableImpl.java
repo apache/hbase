@@ -248,8 +248,7 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
         if (scan.isScanMetricsEnabled()) {
           if (scan.isScanMetricsByRegionEnabled()) {
             consumer.onScanMetricsByRegionEnabled(scanner.getScanMetricsByRegion());
-          }
-          else {
+          } else {
             consumer.onScanMetricsCreated(scanner.getScanMetrics());
           }
         }

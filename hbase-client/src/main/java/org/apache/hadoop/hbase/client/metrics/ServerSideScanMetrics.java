@@ -157,8 +157,7 @@ public class ServerSideScanMetrics {
     for (Map.Entry<String, AtomicLong> e : this.counters.entrySet()) {
       if (isFirstMetric) {
         isFirstMetric = false;
-      }
-      else {
+      } else {
         sb.append(",");
       }
       sb.append(e.getKey());
@@ -175,11 +174,13 @@ public class ServerSideScanMetrics {
       AtomicLong counter = entry.getValue();
       this.addToCounter(counterName, counter.get());
     }
-    if (this.encodedRegionName
-      != null && ! Objects.equals(this.encodedRegionName, other.getEncodedRegionName())) {
+    if (
+      this.encodedRegionName != null
+        && !Objects.equals(this.encodedRegionName, other.getEncodedRegionName())
+    ) {
       this.encodedRegionName = null;
     }
-    if (this.serverName != null && ! Objects.equals(this.serverName, other.getServerName())) {
+    if (this.serverName != null && !Objects.equals(this.serverName, other.getServerName())) {
       this.serverName = null;
     }
   }

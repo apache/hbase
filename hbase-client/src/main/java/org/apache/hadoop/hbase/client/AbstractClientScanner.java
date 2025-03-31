@@ -31,8 +31,8 @@ public abstract class AbstractClientScanner implements ResultScanner {
   protected List<ScanMetrics> scanMetricsByRegion;
 
   /**
-   * Check and initialize list for collecting scan metrics if application wants to collect
-   * scan metrics per region
+   * Check and initialize list for collecting scan metrics if application wants to collect scan
+   * metrics per region
    */
   protected void initScanMetricsByRegion(Scan scan) {
     // check if application wants to collect scan metrics
@@ -50,8 +50,7 @@ public abstract class AbstractClientScanner implements ResultScanner {
       if (scanMetricsByRegion != null) {
         scanMetrics = new ScanMetrics();
         scanMetricsByRegion.add(scanMetrics);
-      }
-      else if (scanMetrics == null) {
+      } else if (scanMetrics == null) {
         // Only initialize once
         this.scanMetrics = new ScanMetrics();
       }
@@ -68,8 +67,7 @@ public abstract class AbstractClientScanner implements ResultScanner {
     if (scanMetricsByRegion != null) {
       if (scanMetricsByRegion.isEmpty()) {
         return null;
-      }
-      else if (scanMetricsByRegion.size() == 1) {
+      } else if (scanMetricsByRegion.size() == 1) {
         return scanMetricsByRegion.get(0);
       }
       ScanMetrics overallScanMetrics = new ScanMetrics();
@@ -77,8 +75,7 @@ public abstract class AbstractClientScanner implements ResultScanner {
         overallScanMetrics.combineMetrics(otherScanMetrics);
       }
       return overallScanMetrics;
-    }
-    else {
+    } else {
       return scanMetrics;
     }
   }

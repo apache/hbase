@@ -88,8 +88,7 @@ class BufferingScanResultConsumer implements AdvancedScanResultConsumer {
     if (scanMetricsByRegion != null) {
       if (scanMetricsByRegion.isEmpty()) {
         return null;
-      }
-      else if (scanMetricsByRegion.size() == 1) {
+      } else if (scanMetricsByRegion.size() == 1) {
         return scanMetricsByRegion.get(0);
       }
       ScanMetrics overallScanMetrics = new ScanMetrics();
@@ -97,8 +96,7 @@ class BufferingScanResultConsumer implements AdvancedScanResultConsumer {
         overallScanMetrics.combineMetrics(otherScanMetrics);
       }
       return overallScanMetrics;
-    }
-    else {
+    } else {
       return scanMetrics;
     }
   }

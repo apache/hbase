@@ -216,8 +216,7 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
     if (scanMetricsByRegion != null) {
       if (scanMetricsByRegion.isEmpty()) {
         return null;
-      }
-      else if (scanMetricsByRegion.size() == 1) {
+      } else if (scanMetricsByRegion.size() == 1) {
         return scanMetricsByRegion.get(0);
       }
       ScanMetrics overallScanMetrics = new ScanMetrics();
@@ -225,8 +224,7 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
         overallScanMetrics.combineMetrics(otherScanMetrics);
       }
       return overallScanMetrics;
-    }
-    else {
+    } else {
       return scanMetrics;
     }
   }

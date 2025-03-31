@@ -269,8 +269,7 @@ public class TestTableSnapshotScanner {
       snapshotScanner.close();
 
       // Scan table snapshot and get per region scan metrics
-      snapshotScanner =
-        new TableSnapshotScanner(conf, restoreDir, snapshotName, scanCopy);
+      snapshotScanner = new TableSnapshotScanner(conf, restoreDir, snapshotName, scanCopy);
       verifyScanner(snapshotScanner, bbb, yyy);
       List<ScanMetrics> scanMetricsByRegion = snapshotScanner.getScanMetricsByRegion();
       long bytesInResults = 0;
@@ -287,8 +286,7 @@ public class TestTableSnapshotScanner {
       scan = new Scan().withStartRow(bbb).withStopRow(yyy); // limit the scan
       scan.setScanMetricsEnabled(true);
       scan.setEnableScanMetricsByRegion(false);
-      snapshotScanner =
-        new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
+      snapshotScanner = new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
       verifyScanner(snapshotScanner, bbb, yyy);
       Assert.assertNotNull(snapshotScanner.getScanMetrics());
       Assert.assertNull(snapshotScanner.getScanMetrics().getEncodedRegionName());
@@ -299,13 +297,11 @@ public class TestTableSnapshotScanner {
       scan = new Scan().withStartRow(bbb).withStopRow(yyy); // limit the scan
       scan.setScanMetricsEnabled(false);
       scan.setEnableScanMetricsByRegion(false);
-      snapshotScanner =
-        new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
+      snapshotScanner = new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
       verifyScanner(snapshotScanner, bbb, yyy);
       Assert.assertNull(snapshotScanner.getScanMetrics());
       Assert.assertNull(snapshotScanner.getScanMetricsByRegion());
-    }
-    finally {
+    } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
     }

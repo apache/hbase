@@ -75,8 +75,7 @@ class SimpleScanResultConsumerImpl implements SimpleScanResultConsumer {
     if (scanMetricsByRegion != null) {
       if (scanMetricsByRegion.isEmpty()) {
         return null;
-      }
-      else if (scanMetricsByRegion.size() == 1) {
+      } else if (scanMetricsByRegion.size() == 1) {
         return scanMetricsByRegion.get(0);
       }
       ScanMetrics overallScanMetrics = new ScanMetrics();
@@ -84,8 +83,7 @@ class SimpleScanResultConsumerImpl implements SimpleScanResultConsumer {
         overallScanMetrics.combineMetrics(otherScanMetrics);
       }
       return overallScanMetrics;
-    }
-    else {
+    } else {
       return scanMetrics;
     }
   }

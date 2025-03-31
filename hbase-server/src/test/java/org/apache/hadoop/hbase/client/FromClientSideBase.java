@@ -287,7 +287,8 @@ class FromClientSideBase {
     ScanMetrics scanMetrics;
     List<ScanMetrics> scanMetricsByRegion;
     try (ResultScanner scanner = ht.getScanner(scan)) {
-      while ((scanner.next()) != null) {}
+      while ((scanner.next()) != null) {
+      }
       scanMetrics = scanner.getScanMetrics();
       scanMetricsByRegion = scanner.getScanMetricsByRegion();
     }

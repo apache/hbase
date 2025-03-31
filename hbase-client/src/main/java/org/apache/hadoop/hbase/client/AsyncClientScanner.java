@@ -31,8 +31,8 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
-import java.util.ArrayList;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -127,8 +127,7 @@ class AsyncClientScanner {
         // openScanner.
         this.scanMetricByRegion = new ArrayList<>();
         consumer.onScanMetricsByRegionEnabled(scanMetricByRegion);
-      }
-      else {
+      } else {
         this.scanMetrics = new ScanMetrics();
         consumer.onScanMetricsCreated(scanMetrics);
       }

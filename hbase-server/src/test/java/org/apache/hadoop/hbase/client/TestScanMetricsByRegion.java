@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -25,10 +28,6 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Pair;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -52,8 +51,8 @@ public class TestScanMetricsByRegion extends FromClientSideBase {
 
   @Parameters(name = "{index}: scanner={0}")
   public static List<Object[]> params() {
-    return Arrays.asList(new Object[] {"ForwardScanner", new Scan()},
-      new Object[] {"ReverseScanner", new Scan().setReversed(true)});
+    return Arrays.asList(new Object[] { "ForwardScanner", new Scan() },
+      new Object[] { "ReverseScanner", new Scan().setReversed(true) });
   }
 
   @Parameter(0)
@@ -78,12 +77,10 @@ public class TestScanMetricsByRegion extends FromClientSideBase {
     if (isSingleRegionScan) {
       scan.withStartRow(ROWS[0], true);
       scan.withStopRow(ROWS[0], true);
-    }
-    else if (scan.isReversed()) {
+    } else if (scan.isReversed()) {
       scan.withStartRow(ROWS[1], true);
       scan.withStopRow(ROWS[0], true);
-    }
-    else {
+    } else {
       scan.withStartRow(ROWS[0], true);
       scan.withStopRow(ROWS[1], true);
     }
@@ -97,7 +94,7 @@ public class TestScanMetricsByRegion extends FromClientSideBase {
     byte[][] FAMILIES = makeNAscii(FAMILY, 2);
     byte[][] QUALIFIERS = makeN(QUALIFIER, 1);
     byte[][] VALUES = makeN(VALUE, 2);
-    byte[][] splitKeys = new byte[][] {ROWS[1]};
+    byte[][] splitKeys = new byte[][] { ROWS[1] };
     try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES, splitKeys)) {
       // Add two rows in two separate regions
       Put put1 = new Put(ROWS[0]);
@@ -166,8 +163,7 @@ public class TestScanMetricsByRegion extends FromClientSideBase {
       Assert.assertEquals(1, scanMetrics.countOfRegions.get());
       Assert.assertEquals(scanMetrics, scanMetricsByRegion.get(0));
       Assert.assertEquals(1, scanMetricsByRegion.size());
-    }
-    finally {
+    } finally {
       TEST_UTIL.deleteTable(tableName);
     }
   }
