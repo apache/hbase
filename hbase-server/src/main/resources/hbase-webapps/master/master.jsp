@@ -47,6 +47,20 @@
          import="org.apache.hadoop.hbase.client.*"
          import="org.apache.hadoop.conf.Configuration"
          import="org.apache.hadoop.hbase.util.*" %>
+
+<%
+  String filter = request.getParameter("filter");
+  String format = request.getParameter("format");
+  if (format != null && format.equals("json")) {
+    request.setAttribute("filter", filter);
+    request.setAttribute("format", "json");
+  %>
+  <jsp:include page="taskMonitor.jsp"/>
+<%
+   return;
+  }
+%>
+
 <%!
   private static ServerName getMetaLocationOrNull(HMaster master) {
     RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
@@ -229,10 +243,18 @@
       <jsp:include page="peerConfigs.jsp"/>
     </section>
   </div>
+<% } else { %>
+    <section>
+      <jsp:include page="backupMasterStatus.jsp"/>
+    </section>
+<% } %>
+
+  <section>
+    <jsp:include page="taskMonitor.jsp"/>
+  </section>
 
   TODO
 
-  <% } %>
 </div> <!-- /.container-fluid content -->
 
 <jsp:include page="footer.jsp"/>
