@@ -35,7 +35,7 @@
       <h1>Backup Master <small><%= master.getServerName().getHostname() %></small></h1>
     </div>
   </div>
-  <h4>Current Active Master: <a href="//<%= active_master.getHostname() %>:<%= activeInfoPort %>/master-status"
+  <h4>Current Active Master: <a href="//<%= active_master.getHostname() %>:<%= activeInfoPort %>/master.jsp"
                               target="_blank"><%= active_master.getHostname() %></a></h4>
   <% } else { %>
    <h2>Backup Masters</h2>
@@ -54,7 +54,7 @@
       int infoPort = master.getBackupMasterInfoPort(serverName);
     %>
     <tr>
-      <td><a href="//<%= serverName.getHostname() %>:<%= infoPort %>/master-status"
+      <td><a href="//<%= serverName.getHostname() %>:<%= infoPort %>/master.jsp"
              target="_blank"><%= serverName.getHostname() %></a>
       </td>
       <td><%= serverName.getPort() %></td>
