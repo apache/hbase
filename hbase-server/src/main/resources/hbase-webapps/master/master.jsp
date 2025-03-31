@@ -23,8 +23,6 @@
          import="org.apache.hadoop.hbase.ServerName"
          import="org.apache.hadoop.hbase.master.HMaster"
          import="org.apache.hadoop.hbase.master.RegionState"
-         import="org.apache.hadoop.hbase.master.ServerManager"
-         import="org.apache.hadoop.hbase.rsgroup.RSGroupUtil"
          import="org.apache.hadoop.hbase.master.assignment.RegionStateNode"
          import="org.apache.hadoop.hbase.client.*"
          import="org.apache.hadoop.conf.Configuration"
@@ -78,9 +76,6 @@
   title += master.getServerName().getHostname();
   pageContext.setAttribute("pageTitle", title);
 
-  boolean catalogJanitorEnabled = master.isCatalogJanitorEnabled();
-  ServerManager serverManager = master.getServerManager();
-
   ServerName metaLocation = null;
 
   if (master.isActiveMaster()) {
@@ -101,60 +96,7 @@
   </div>
 
   <div class="row">
-    <!-- Various warnings that cluster admins should be aware of -->
-    <% if(JvmVersion.isBadJvmVersion()) { %>
-    <div class="alert alert-danger" role="alert">
-      Your current JVM version <%= System.getProperty("java.version") %> is known to be
-      unstable with HBase. Please see the
-      <a href="http://hbase.apache.org/book.html#trouble.log.gc">HBase Reference Guide</a>
-      for details.
-    </div>
-    <% } %>
-  <% if(master.isInitialized() && !catalogJanitorEnabled) { %>
-  <div class="alert alert-danger" role="alert">
-    Please note that your cluster is running with the CatalogJanitor disabled. It can be
-    re-enabled from the hbase shell by running the command 'catalogjanitor_switch true'
-  </div>
-  <% } %>
-  <% if(master.isInMaintenanceMode()) { %>
-  <div class="alert alert-warning" role="alert">
-    Your Master is in maintenance mode. This is because hbase.master.maintenance_mode is
-    set to true. Under the maintenance mode, no quota or no Master coprocessor is loaded.
-  </div>
-  <% } %>
-  <% if(!master.isBalancerOn()) { %>
-  <div class="alert alert-warning" role="alert">
-    The Load Balancer is not enabled which will eventually cause performance degradation
-    in HBase as Regions will not be distributed across all RegionServers. The balancer
-    is only expected to be disabled during rolling upgrade scenarios.
-  </div>
-  <% } %>
-  <% if(!master.isSplitOrMergeEnabled(MasterSwitchType.SPLIT)) { %>
-  <div class="alert alert-warning" role="alert">
-    Region splits are disabled. This may be the result of HBCK aborting while
-    running in repair mode. Manually enable splits from the HBase shell,
-    or re-run HBCK in repair mode.
-  </div>
-  <% } %>
-  <% if(!master.isSplitOrMergeEnabled(MasterSwitchType.MERGE)) { %>
-  <div class="alert alert-warning" role="alert">
-    Region merges are disabled. This may be the result of HBCK aborting while
-    running in repair mode. Manually enable merges from the HBase shell,
-    or re-run HBCK in repair mode.
-  </div>
-  <% } %>
-  <% if(master.getAssignmentManager() != null) { %>
-    <jsp:include page="assignmentManagerStatus.jsp"/>
-  <% } %>
-  <% if (!master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null) { %>
-    <% if (RSGroupUtil.isRSGroupEnabled(master.getConfiguration()) &&
-    serverManager.getOnlineServersList().size() > 0) { %>
-      <section>
-        <h2><a name="rsgroup">RSGroup</a></h2>
-        <jsp:include page="rsGroupList.jsp"/>
-      </section>
-    <% } %>
-  <% } %>
+    <jsp:include page="warnings.jsp"/>
   </div>
   <div class="row">
     <section>
