@@ -32,9 +32,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 @InterfaceAudience.Public
 @SuppressWarnings("checkstyle:VisibilityModifier") // See HBASE-27757
 public class ServerSideScanMetrics {
-  // Only for testing and debugging
-  public static boolean enableVerboseToString = false;
-
   /**
    * Hash to hold the String -&gt; Atomic Long mappings for each metric
    */
