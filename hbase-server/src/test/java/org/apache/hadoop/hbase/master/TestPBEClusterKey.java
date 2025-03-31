@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -28,12 +27,11 @@ import org.apache.hadoop.hbase.io.crypto.MockPBEKeyProvider;
 import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import java.io.IOException;
 import java.security.Key;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -46,20 +44,24 @@ public class TestPBEClusterKey {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestPBEClusterKey.class);
 
+  private HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+
   public static final String CLUSTER_KEY_ALIAS = "cluster-key";
   public static final byte[] CLUSTER_ID = CLUSTER_KEY_ALIAS.getBytes();
 
-
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static Configuration conf = TEST_UTIL.getConfiguration();
-
-  @BeforeClass
-  public static void setUp() throws Exception {
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockPBEKeyProvider.class.getName());
-    conf.set(HConstants.CRYPTO_PBE_ENABLED_CONF_KEY, "true");
+  @Before
+  public void setUp() throws Exception {
+    TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockPBEKeyProvider.class.getName());
+    TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_PBE_ENABLED_CONF_KEY, "true");
 
     // Start the minicluster
     TEST_UTIL.startMiniCluster(1);
+    TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
@@ -78,16 +80,11 @@ public class TestPBEClusterKey {
     // Test rotation of cluster key by changing the key that the key provider provides and restart master.
     Key newCluterKey = MockPBEKeyProvider.generateSecretKey();
     pbeKeyProvider.setKey(master.getClusterId().getBytes(), newCluterKey);
-    TEST_UTIL.shutdownMiniCluster();
+    TEST_UTIL.shutdownMiniHBaseCluster();
     Thread.sleep(2000);
     TEST_UTIL.restartHBaseCluster(1);
+    TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
     master = TEST_UTIL.getHBaseCluster().getMaster();
     assertEquals(newCluterKey, master.getPBEClusterKeyCache().getLatestClusterKey().getTheKey());
   }
-
-  @AfterClass
-  public static void tearDown() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
 }
