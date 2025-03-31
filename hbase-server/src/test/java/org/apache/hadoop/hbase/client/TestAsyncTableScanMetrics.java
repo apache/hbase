@@ -113,7 +113,7 @@ public class TestAsyncTableScanMetrics {
   }
 
   private static Pair<List<Result>, Pair<ScanMetrics, List<ScanMetrics>>>
-  doScanWithRawAsyncTable(Scan scan) throws IOException, InterruptedException {
+    doScanWithRawAsyncTable(Scan scan) throws IOException, InterruptedException {
     BufferingScanResultConsumer consumer = new BufferingScanResultConsumer();
     CONN.getTable(TABLE_NAME).scan(scan, consumer);
     List<Result> results = new ArrayList<>();
@@ -125,7 +125,7 @@ public class TestAsyncTableScanMetrics {
   }
 
   private static Pair<List<Result>, Pair<ScanMetrics, List<ScanMetrics>>>
-  doScanWithAsyncTableScan(Scan scan) throws Exception {
+    doScanWithAsyncTableScan(Scan scan) throws Exception {
     SimpleScanResultConsumerImpl consumer = new SimpleScanResultConsumerImpl();
     CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool()).scan(scan, consumer);
     return Pair.newPair(consumer.getAll(),
@@ -133,7 +133,7 @@ public class TestAsyncTableScanMetrics {
   }
 
   private static Pair<List<Result>, Pair<ScanMetrics, List<ScanMetrics>>>
-  doScanWithAsyncTableScanner(Scan scan) throws IOException {
+    doScanWithAsyncTableScanner(Scan scan) throws IOException {
     try (ResultScanner scanner =
       CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool()).getScanner(scan)) {
       List<Result> results = new ArrayList<>();

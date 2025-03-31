@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
-import org.apache.yetus.audience.InterfaceAudience;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Helper class for custom client scanners.
