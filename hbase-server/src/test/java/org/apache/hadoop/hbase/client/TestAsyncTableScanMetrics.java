@@ -186,7 +186,7 @@ public class TestAsyncTableScanMetrics {
     assertEquals(NUM_REGIONS, scanMetricsByRegion.size());
     long bytesInResult = 0;
     for (ScanMetrics perRegionScanMetrics : scanMetricsByRegion) {
-      Assert.assertNotNull(perRegionScanMetrics.getRegionName());
+      Assert.assertNotNull(perRegionScanMetrics.getEncodedRegionName());
       Assert.assertNotNull(perRegionScanMetrics.getServerName());
       bytesInResult += perRegionScanMetrics.countOfBytesInResults.get();
     }
@@ -206,7 +206,7 @@ public class TestAsyncTableScanMetrics {
     assertEquals(1, scanMetricsByRegion.size());
     assertEquals(1, scanMetrics.countOfRowsScanned.get());
     assertEquals(scanMetrics, scanMetricsByRegion.get(0));
-    assertNotNull(scanMetrics.getRegionName());
+    assertNotNull(scanMetrics.getEncodedRegionName());
     assertNotNull(scanMetrics.getServerName());
   }
 }

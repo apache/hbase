@@ -178,7 +178,7 @@ class AsyncClientScanner {
     try (Scope ignored = span.makeCurrent()) {
       if (this.scanMetrics != null && scan.isScanMetricsByRegionEnabled()) {
         this.scanMetrics.setServerName(loc.getServerName());
-        this.scanMetrics.setRegionName(loc.getRegion().getRegionNameAsString());
+        this.scanMetrics.setEncodedRegionName(loc.getRegion().getEncodedName());
       }
       boolean isRegionServerRemote = isRemote(loc.getHostname());
       incRPCCallsMetrics(scanMetrics, isRegionServerRemote);

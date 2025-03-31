@@ -197,7 +197,7 @@ public class TestClientSideRegionScanner {
       List<ScanMetrics> scanMetricsByRegion = clientSideRegionScanner.getScanMetricsByRegion();
       assertEquals(1, scanMetricsByRegion.size());
       assertEquals(scanMetrics, scanMetricsByRegion.get(0));
-      assertNotNull(scanMetrics.getRegionName());
+      assertNotNull(scanMetrics.getEncodedRegionName());
       assertNull(scanMetrics.getServerName());
     }
 
@@ -222,7 +222,7 @@ public class TestClientSideRegionScanner {
       List<ScanMetrics> scanMetricsByRegion = clientSideRegionScanner.getScanMetricsByRegion();
       assertEquals(1, scanMetricsByRegion.size());
       assertEquals(scanMetrics, scanMetricsByRegion.get(0));
-      assertNotNull(scanMetrics.getRegionName());
+      assertNotNull(scanMetrics.getEncodedRegionName());
       assertNull(scanMetrics.getServerName());
     }
 

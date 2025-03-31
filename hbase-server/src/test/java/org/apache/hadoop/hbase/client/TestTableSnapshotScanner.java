@@ -264,7 +264,7 @@ public class TestTableSnapshotScanner {
         new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
       verifyScanner(snapshotScanner, bbb, yyy);
       ScanMetrics scanMetrics = snapshotScanner.getScanMetrics();
-      Assert.assertNull(scanMetrics.getRegionName());
+      Assert.assertNull(scanMetrics.getEncodedRegionName());
       Assert.assertNull(scanMetrics.getServerName());
       snapshotScanner.close();
 
@@ -275,7 +275,7 @@ public class TestTableSnapshotScanner {
       List<ScanMetrics> scanMetricsByRegion = snapshotScanner.getScanMetricsByRegion();
       long bytesInResults = 0;
       for (ScanMetrics preRegionScanMetrics : scanMetricsByRegion) {
-        Assert.assertNotNull(preRegionScanMetrics.getRegionName());
+        Assert.assertNotNull(preRegionScanMetrics.getEncodedRegionName());
         Assert.assertNull(preRegionScanMetrics.getServerName());
         bytesInResults += preRegionScanMetrics.countOfBytesInResults.get();
       }
@@ -291,7 +291,7 @@ public class TestTableSnapshotScanner {
         new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
       verifyScanner(snapshotScanner, bbb, yyy);
       Assert.assertNotNull(snapshotScanner.getScanMetrics());
-      Assert.assertNull(snapshotScanner.getScanMetrics().getRegionName());
+      Assert.assertNull(snapshotScanner.getScanMetrics().getEncodedRegionName());
       Assert.assertNull(snapshotScanner.getScanMetrics().getServerName());
       Assert.assertNull(snapshotScanner.getScanMetricsByRegion());
 

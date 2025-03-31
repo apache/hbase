@@ -125,7 +125,7 @@ public class TestScanMetricsByRegion extends FromClientSideBase {
       scanMetrics = pair.getFirst();
       scanMetricsByRegion = pair.getSecond();
       Assert.assertNull(scanMetrics.getServerName());
-      Assert.assertNull(scanMetrics.getRegionName());
+      Assert.assertNull(scanMetrics.getEncodedRegionName());
       Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
       Assert.assertEquals(2, scanMetrics.countOfRegions.get());
       Assert.assertEquals(2, scanMetrics.countOfRowsScanned.get());
@@ -139,13 +139,13 @@ public class TestScanMetricsByRegion extends FromClientSideBase {
       scanMetrics = pair.getFirst();
       scanMetricsByRegion = pair.getSecond();
       Assert.assertNull(scanMetrics.getServerName());
-      Assert.assertNull(scanMetrics.getRegionName());
+      Assert.assertNull(scanMetrics.getEncodedRegionName());
       Assert.assertEquals(2, scanMetrics.countOfRegions.get());
       Assert.assertEquals(2, scanMetrics.countOfRowsScanned.get());
       long bytesInResults = 0;
       for (ScanMetrics perRegionScanMetrics : scanMetricsByRegion) {
         Assert.assertNotNull(perRegionScanMetrics.getServerName());
-        Assert.assertNotNull(perRegionScanMetrics.getRegionName());
+        Assert.assertNotNull(perRegionScanMetrics.getEncodedRegionName());
         Assert.assertEquals(1, perRegionScanMetrics.countOfRowsScanned.get());
         Assert.assertEquals(1, perRegionScanMetrics.countOfRegions.get());
         bytesInResults += perRegionScanMetrics.countOfBytesInResults.get();
@@ -161,7 +161,7 @@ public class TestScanMetricsByRegion extends FromClientSideBase {
       scanMetrics = pair.getFirst();
       scanMetricsByRegion = pair.getSecond();
       Assert.assertNotNull(scanMetrics.getServerName());
-      Assert.assertNotNull(scanMetrics.getRegionName());
+      Assert.assertNotNull(scanMetrics.getEncodedRegionName());
       Assert.assertEquals(1, scanMetrics.countOfRowsScanned.get());
       Assert.assertEquals(1, scanMetrics.countOfRegions.get());
       Assert.assertEquals(scanMetrics, scanMetricsByRegion.get(0));

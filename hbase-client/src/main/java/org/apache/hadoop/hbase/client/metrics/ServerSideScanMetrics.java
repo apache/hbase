@@ -40,7 +40,7 @@ public class ServerSideScanMetrics {
    */
   protected final Map<String, AtomicLong> counters = new HashMap<>();
   private ServerName serverName;
-  private String regionName;
+  private String encodedRegionName;
 
   /**
    * Create a new counter with the specified name
@@ -135,30 +135,23 @@ public class ServerSideScanMetrics {
     }
   }
 
-  public void setRegionName(String regionName) {
-    if (this.regionName == null) {
-      this.regionName = regionName;
+  public void setEncodedRegionName(String encodedRegionName) {
+    if (this.encodedRegionName == null) {
+      this.encodedRegionName = encodedRegionName;
     }
   }
 
-  public String getRegionName() {
-    return this.regionName;
+  public String getEncodedRegionName() {
+    return this.encodedRegionName;
   }
 
   @Override
   public String toString() {
-    if (enableVerboseToString) {
-      return toStringUtil();
-    }
-    return super.toString();
-  }
-
-  private String toStringUtil() {
     StringBuilder sb = new StringBuilder();
     sb.append("ServerName:");
     sb.append(this.serverName);
-    sb.append(",RegionName:");
-    sb.append(this.regionName);
+    sb.append(",EncodedRegion:");
+    sb.append(this.encodedRegionName);
     sb.append(",[");
     boolean isFirstMetric = true;
     for (Map.Entry<String, AtomicLong> e : this.counters.entrySet()) {
@@ -182,8 +175,9 @@ public class ServerSideScanMetrics {
       AtomicLong counter = entry.getValue();
       this.addToCounter(counterName, counter.get());
     }
-    if (this.regionName != null && ! Objects.equals(this.regionName, other.getRegionName())) {
-      this.regionName = null;
+    if (this.encodedRegionName
+      != null && ! Objects.equals(this.encodedRegionName, other.getEncodedRegionName())) {
+      this.encodedRegionName = null;
     }
     if (this.serverName != null && ! Objects.equals(this.serverName, other.getServerName())) {
       this.serverName = null;
