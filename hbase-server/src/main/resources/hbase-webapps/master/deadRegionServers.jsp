@@ -20,14 +20,24 @@
 <%@ page contentType="text/html;charset=UTF-8"
          import="org.apache.hadoop.hbase.ServerName"
          import="java.util.*"
-         import="org.apache.hadoop.hbase.master.HMaster" %>
-<%@ page import="org.apache.hadoop.hbase.rsgroup.RSGroupUtil" %>
-<%@ page import="org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager" %>
-<%@ page import="org.apache.hadoop.hbase.master.DeadServer" %>
-<%@ page import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo" %>
+         import="org.apache.hadoop.hbase.master.HMaster"
+         import="org.apache.hadoop.hbase.rsgroup.RSGroupUtil"
+         import="org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager"
+         import="org.apache.hadoop.hbase.master.DeadServer"
+         import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo"
+         import="org.apache.hadoop.hbase.master.ServerManager" %>
 <%
-  Set<ServerName> deadServers = (Set<ServerName>) request.getAttribute("deadServers"); // TODO: intro constant!
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
+
+  ServerManager serverManager = master.getServerManager();
+
+  Set<ServerName> deadServers = null;
+
+  if (master.isActiveMaster()) {
+    if (serverManager != null) {
+      deadServers = serverManager.getDeadServers().copyServerNames();
+    }
+  }
 %>
 
 <% if (deadServers != null && deadServers.size() > 0) { %>

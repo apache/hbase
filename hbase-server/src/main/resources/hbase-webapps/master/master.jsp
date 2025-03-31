@@ -19,30 +19,12 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
          import="java.util.*"
-         import="java.net.URLEncoder"
          import="java.io.IOException"
-         import="org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil"
-         import="org.apache.hadoop.hbase.replication.ReplicationPeerConfig"
-         import="org.apache.hadoop.hbase.replication.ReplicationPeerDescription"
-         import="org.apache.hadoop.hbase.HBaseConfiguration"
-         import="org.apache.hadoop.hbase.HConstants"
-         import="org.apache.hadoop.hbase.NamespaceDescriptor"
          import="org.apache.hadoop.hbase.ServerName"
-         import="org.apache.hadoop.hbase.TableName"
-         import="org.apache.hadoop.hbase.master.assignment.AssignmentManager"
-         import="org.apache.hadoop.hbase.master.DeadServer"
          import="org.apache.hadoop.hbase.master.HMaster"
          import="org.apache.hadoop.hbase.master.RegionState"
          import="org.apache.hadoop.hbase.master.ServerManager"
-         import="org.apache.hadoop.hbase.quotas.QuotaUtil"
-         import="org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager"
-         import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo"
          import="org.apache.hadoop.hbase.rsgroup.RSGroupUtil"
-         import="org.apache.hadoop.hbase.security.access.PermissionStorage"
-         import="org.apache.hadoop.hbase.security.visibility.VisibilityConstants"
-         import="org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription"
-         import="org.apache.hadoop.hbase.tool.CanaryTool"
-         import="org.apache.hadoop.util.StringUtils"
          import="org.apache.hadoop.hbase.master.assignment.RegionStateNode"
          import="org.apache.hadoop.hbase.client.*"
          import="org.apache.hadoop.conf.Configuration"
@@ -100,15 +82,9 @@
   ServerManager serverManager = master.getServerManager();
 
   ServerName metaLocation = null;
-  List<ServerName> servers = null;
-  Set<ServerName> deadServers = null;
 
   if (master.isActiveMaster()) {
     metaLocation = getMetaLocationOrNull(master);
-    if (serverManager != null) {
-      deadServers = serverManager.getDeadServers().copyServerNames();
-      servers = serverManager.getOnlineServersList();
-    }
   }
 %>
 
@@ -185,10 +161,7 @@
       <h2><a name="regionservers">Region Servers</a></h2>
       <jsp:include page="regionServerList.jsp"/>
 
-      <% if (deadServers != null) { %>
-        <% request.setAttribute("deadServers", deadServers); %>
-        <jsp:include page="deadRegionServers.jsp"/>
-      <% } %>
+      <jsp:include page="deadRegionServers.jsp"/>
     </section>
   </div>
   <div class="row">
@@ -258,8 +231,6 @@
     <jsp:include page="softwareAttributes.jsp"/>
   </section>
 
-  TODO
-
 </div> <!-- /.container-fluid content -->
 
 
@@ -268,3 +239,4 @@
 <script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
 <script src="/static/js/parser-date-iso8601.min.js" type="text/javascript"></script>
 <script src="/static/js/jqSpager.js" type="text/javascript"></script>
+<script src="/static/js/masterStatusInit.js" type="text/javascript"></script>
