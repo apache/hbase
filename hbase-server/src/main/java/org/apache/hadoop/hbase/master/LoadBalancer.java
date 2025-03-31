@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
@@ -80,6 +81,28 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
   // Used to signal to the caller that the region(s) cannot be assigned
   // We deliberately use 'localhost' so the operation will fail fast
   ServerName BOGUS_SERVER_NAME = ServerName.valueOf("localhost,1,1");
+
+  /**
+   * Config for pluggable load balancers.
+   * @deprecated since 3.0.0, will be removed in 4.0.0. In the new implementation, as the base load
+   *             balancer will always be the rs group based one, you should just use
+   *             {@link org.apache.hadoop.hbase.HConstants#HBASE_MASTER_LOADBALANCER_CLASS} to
+   *             config the per group load balancer.
+   */
+  @Deprecated
+  String HBASE_RSGROUP_LOADBALANCER_CLASS = "hbase.rsgroup.grouploadbalancer.class";
+
+  /**
+   * Configuration to determine the time to sleep when throttling (if throttling is implemented by
+   * the underlying implementation).
+   */
+  String MOVE_THROTTLING = "hbase.master.balancer.move.throttlingMillis";
+
+  /**
+   * The default value, in milliseconds, for the hbase.master.balancer.move.throttlingMillis if
+   * throttling is implemented.
+   */
+  Duration MOVE_THROTTLING_DEFAULT = Duration.ofMillis(60 * 1000);
 
   /**
    * Set the current cluster status. This allows a LoadBalancer to map host name to a server
@@ -159,6 +182,10 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
    */
   default void
     updateBalancerLoadInfo(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+  }
+
+  default void throttle(RegionPlan plan) throws Exception {
+    // noop
   }
 
   /**
