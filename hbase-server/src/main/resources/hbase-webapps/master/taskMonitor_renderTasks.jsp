@@ -20,7 +20,8 @@
 <%@ page contentType="text/html;charset=UTF-8"
          import="java.util.*"
          import="org.apache.hadoop.hbase.monitoring.*"
-         import="org.apache.hadoop.util.StringUtils" %>
+         import="org.apache.hadoop.util.StringUtils"
+         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 
 <%!
   public static String stateCss(MonitoredTask.State state) {
@@ -36,8 +37,8 @@
 
 <%
   TaskMonitor taskMonitor = TaskMonitor.get();
-  String filter = (String) request.getAttribute("filter"); // TODO: intro constant!
-  String format = (String) request.getAttribute("format"); // TODO: intro constant!
+  String filter = (String) request.getAttribute(MasterStatusConstants.FILTER);
+  String format = (String) request.getAttribute(MasterStatusConstants.FORMAT);
   if (format == null) {
     format = "html";
   }

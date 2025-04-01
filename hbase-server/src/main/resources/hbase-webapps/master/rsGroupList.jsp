@@ -26,7 +26,8 @@
          import="org.apache.hadoop.hbase.master.HMaster"
          import="org.apache.hadoop.hbase.ServerMetrics"
          import="org.apache.hadoop.hbase.net.Address"
-         import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo" %>
+         import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo"
+         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
@@ -55,8 +56,8 @@
   </ul>
   <div class="tab-content">
 
-    <% request.setAttribute("rsGroupInfos", rsGroupInfos); %>
-    <% request.setAttribute("collectServers", collectServers); %>
+    <% request.setAttribute(MasterStatusConstants.RS_GROUP_INFOS, rsGroupInfos); %>
+    <% request.setAttribute(MasterStatusConstants.COLLECT_SERVERS, collectServers); %>
 
     <div class="tab-pane active" id="tab_rsgroup_baseStats" role="tabpanel">
       <jsp:include page="rsGroupList_baseStats.jsp"/>
