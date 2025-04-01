@@ -95,6 +95,10 @@ public class MockPBEKeyProvider extends MockAesKeyProvider implements PBEKeyProv
     this.clusterKeyAlias = alias;
   }
 
+  public String getClusterKeyAlias() {
+    return this.clusterKeyAlias;
+  }
+
   /**
    * Generate a new secret key.
    * @return the key

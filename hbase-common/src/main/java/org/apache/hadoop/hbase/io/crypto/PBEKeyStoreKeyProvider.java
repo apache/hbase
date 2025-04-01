@@ -68,17 +68,17 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
       isActive ? PBEKeyStatus.FAILED : PBEKeyStatus.DISABLED, keyMetadataStr);
   }
 
-  private String generateKeyMetadata(String aliasName, String encodedPrefix) {
-    return GsonUtil.getDefaultInstance().toJson(new HashMap<String, String>() {{
-      put(KEY_METADATA_ALIAS, aliasName);
-      put(KEY_METADATA_PREFIX, encodedPrefix);
-    }}, HashMap.class);
-  }
-
   private void checkConfig() {
     if (conf == null) {
       throw new IllegalStateException("initConfig is not called or config is null");
     }
+  }
+
+  public static String generateKeyMetadata(String aliasName, String encodedPrefix) {
+    return GsonUtil.getDefaultInstance().toJson(new HashMap<String, String>() {{
+      put(KEY_METADATA_ALIAS, aliasName);
+      put(KEY_METADATA_PREFIX, encodedPrefix);
+    }}, HashMap.class);
   }
 
   public static byte[] decodeToPrefixBytes(String pbePrefix) throws IOException {

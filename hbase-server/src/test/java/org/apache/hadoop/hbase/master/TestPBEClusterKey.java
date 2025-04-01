@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.MockPBEKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
 import org.apache.hadoop.hbase.keymeta.PBEClusterKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -33,12 +34,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import java.io.IOException;
 import java.security.Key;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 @Category({ MasterTests.class, MediumTests.class })
@@ -49,9 +52,6 @@ public class TestPBEClusterKey {
     HBaseClassTestRule.forClass(TestPBEClusterKey.class);
 
   private HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-
-  public static final String CLUSTER_KEY_ALIAS = "cluster-key";
-  public static final byte[] CLUSTER_ID = CLUSTER_KEY_ALIAS.getBytes();
 
   @Before
   public void setUp() throws Exception {
@@ -81,7 +81,7 @@ public class TestPBEClusterKey {
     return clusterKey;
   }
 
-  private void restartCluter() throws Exception {
+  private void restartCluster() throws Exception {
     TEST_UTIL.shutdownMiniHBaseCluster();
     Thread.sleep(2000);
     TEST_UTIL.restartHBaseCluster(1);
@@ -95,18 +95,19 @@ public class TestPBEClusterKey {
     assertNotNull(keyProvider);
     assertTrue(keyProvider instanceof PBEKeyProvider);
     assertTrue(keyProvider instanceof MockPBEKeyProvider);
-    PBEKeyData initialClusterKey = validateInitialState(master, (MockPBEKeyProvider) keyProvider);
+    MockPBEKeyProvider pbeKeyProvider = (MockPBEKeyProvider) keyProvider;
+    PBEKeyData initialClusterKey = validateInitialState(master, pbeKeyProvider);
 
-    restartCluter();
+    restartCluster();
     master = TEST_UTIL.getHBaseCluster().getMaster();
-    validateInitialState(master, (MockPBEKeyProvider) keyProvider);
+    validateInitialState(master, pbeKeyProvider);
 
     // Test rotation of cluster key by changing the key that the key provider provides and restart master.
     String newAlias = "new_cluster_key";
-    ((MockPBEKeyProvider) keyProvider).setCluterKeyAlias(newAlias);
+    pbeKeyProvider.setCluterKeyAlias(newAlias);
     Key newCluterKey = MockPBEKeyProvider.generateSecretKey();
-    ((MockPBEKeyProvider) keyProvider).setKey(newAlias, newCluterKey);
-    restartCluter();
+    pbeKeyProvider.setKey(newAlias, newCluterKey);
+    restartCluster();
     master = TEST_UTIL.getHBaseCluster().getMaster();
     PBEClusterKeyAccessor pbeClusterKeyAccessor = new PBEClusterKeyAccessor(master);
     assertEquals(2, pbeClusterKeyAccessor.getAllClusterKeyFiles().size());
@@ -117,5 +118,18 @@ public class TestPBEClusterKey {
       pbeClusterKeyAccessor.loadClusterKey(pbeClusterKeyAccessor.getAllClusterKeyFiles().get(1)));
     assertEquals(initialClusterKey,
       pbeClusterKeyCache.getClusterKeyByChecksum(initialClusterKey.getKeyChecksum()));
+  }
+
+  @Test
+  public void testWithInvalidClusterKey() throws Exception {
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    KeyProvider keyProvider = Encryption.getKeyProvider(master.getConfiguration());
+    MockPBEKeyProvider pbeKeyProvider = (MockPBEKeyProvider) keyProvider;
+
+    // Test startup failure when the cluster key is INACTIVE
+    PBEClusterKeyManager tmpCKM = new PBEClusterKeyManager(master);
+    tmpCKM.ensureClusterKeyInitialized();
+    pbeKeyProvider.setKeyStatus(pbeKeyProvider.getClusterKeyAlias(), PBEKeyStatus.INACTIVE);
+    assertThrows(IOException.class, tmpCKM::ensureClusterKeyInitialized);
   }
 }

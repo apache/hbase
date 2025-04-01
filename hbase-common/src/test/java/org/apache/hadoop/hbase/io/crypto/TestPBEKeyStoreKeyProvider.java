@@ -43,6 +43,7 @@ import static org.apache.hadoop.hbase.io.crypto.PBEKeyStoreKeyProvider.KEY_METAD
 import static org.apache.hadoop.hbase.io.crypto.PBEKeyStoreKeyProvider.KEY_METADATA_PREFIX;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 @Category({ MiscTests.class, SmallTests.class })
 @RunWith(Parameterized.class)
@@ -114,11 +115,42 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
 
   @Test
   public void testGetPBEKey() throws Exception {
-    for (Bytes prefix: prefix2key.keySet()) {
+    for (Bytes prefix : prefix2key.keySet()) {
       PBEKeyData keyData = pbeProvider.getPBEKey(prefix.get(), PBEKeyData.KEY_NAMESPACE_GLOBAL);
       assertPBEKeyData(keyData, PBEKeyStatus.ACTIVE, prefix2key.get(prefix).get(), prefix.get(),
         prefix2alias.get(prefix));
     }
+  }
+
+  @Test
+  public void testGetInactiveKey() throws Exception {
+    Bytes firstPrefix = prefix2key.keySet().iterator().next();
+    String encPrefix = Base64.getEncoder().encodeToString(firstPrefix.get());
+    conf.set(HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encPrefix + ".active", "false");
+    PBEKeyData keyData = pbeProvider.getPBEKey(firstPrefix.get(), PBEKeyData.KEY_NAMESPACE_GLOBAL);
+    assertNotNull(keyData);
+    assertPBEKeyData(keyData, PBEKeyStatus.INACTIVE, prefix2key.get(firstPrefix).get(),
+      firstPrefix.get(), prefix2alias.get(firstPrefix));
+  }
+
+  @Test
+  public void testGetInvalidKey() throws Exception {
+    byte[] invalidPrefixBytes = "invalid".getBytes();
+    PBEKeyData keyData = pbeProvider.getPBEKey(invalidPrefixBytes,
+      PBEKeyData.KEY_NAMESPACE_GLOBAL);
+    assertNotNull(keyData);
+    assertPBEKeyData(keyData, PBEKeyStatus.FAILED, null, invalidPrefixBytes, null);
+  }
+
+  @Test
+  public void testGetDisabledKey() throws Exception {
+    byte[] invalidPrefix = new byte[] { 1, 2, 3 };
+    String invalidPrefixEnc = PBEKeyStoreKeyProvider.encodeToPrefixStr(invalidPrefix);
+    conf.set(HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + invalidPrefixEnc + ".active", "false");
+    PBEKeyData keyData = pbeProvider.getPBEKey(invalidPrefix, PBEKeyData.KEY_NAMESPACE_GLOBAL);
+    assertNotNull(keyData);
+    assertPBEKeyData(keyData, PBEKeyStatus.DISABLED, null,
+      invalidPrefix, null);
   }
 
   @Test
@@ -128,13 +160,44 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
       MASTER_KEY_ALIAS);
   }
 
+  @Test
+  public void testUnwrapInvalidKey() throws Exception {
+    String invalidAlias = "invalidAlias";
+    byte[] invalidPrefix = new byte[] { 1, 2, 3 };
+    String invalidPrefixEnc = PBEKeyStoreKeyProvider.encodeToPrefixStr(invalidPrefix);
+    String invalidMetadata = PBEKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
+      invalidPrefixEnc);
+    PBEKeyData keyData = pbeProvider.unwrapKey(invalidMetadata);
+    assertNotNull(keyData);
+    assertPBEKeyData(keyData, PBEKeyStatus.FAILED, null, invalidPrefix,
+      invalidAlias);
+  }
+
+  @Test
+  public void testUnwrapDisabledKey() throws Exception {
+    String invalidAlias = "invalidAlias";
+    byte[] invalidPrefix = new byte[] { 1, 2, 3 };
+    String invalidPrefixEnc = PBEKeyStoreKeyProvider.encodeToPrefixStr(invalidPrefix);
+    conf.set(HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + invalidPrefixEnc + ".active", "false");
+    String invalidMetadata = PBEKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
+      invalidPrefixEnc);
+    PBEKeyData keyData = pbeProvider.unwrapKey(invalidMetadata);
+    assertNotNull(keyData);
+    assertPBEKeyData(keyData, PBEKeyStatus.DISABLED, null, invalidPrefix, invalidAlias);
+  }
+
   private void assertPBEKeyData(PBEKeyData keyData, PBEKeyStatus expKeyStatus, byte[] key,
       byte[] prefixBytes, String alias) throws Exception {
     assertNotNull(keyData);
     assertEquals(expKeyStatus, keyData.getKeyStatus());
-    byte[] keyBytes = keyData.getTheKey().getEncoded();
-    assertEquals(key.length, keyBytes.length);
-    assertEquals(new Bytes(key), keyBytes);
+    if (key == null) {
+      assertNull(keyData.getTheKey());
+    }
+    else {
+      byte[] keyBytes = keyData.getTheKey().getEncoded();
+      assertEquals(key.length, keyBytes.length);
+      assertEquals(new Bytes(key), keyBytes);
+    }
     Map keyMetadata = GsonUtil.getDefaultInstance().fromJson(keyData.getKeyMetadata(),
       HashMap.class);
     assertNotNull(keyMetadata);

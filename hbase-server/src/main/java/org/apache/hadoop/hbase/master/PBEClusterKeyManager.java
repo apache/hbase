@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
 import org.apache.hadoop.hbase.keymeta.PBEClusterKeyAccessor;
 import org.apache.yetus.audience.InterfaceAudience;
 import static org.apache.hadoop.hbase.HConstants.CLUSTER_KEY_FILE_PREFIX;
@@ -73,6 +74,10 @@ public class PBEClusterKeyManager extends PBEClusterKeyAccessor {
     PBEKeyProvider provider = getKeyProvider();
     PBEKeyData clusterKey = provider.getClusterKey(
       master.getMasterFileSystem().getClusterId().toString().getBytes());
+    if (clusterKey.getKeyStatus() != PBEKeyStatus.ACTIVE) {
+      throw new IOException("Cluster key is expected to be ACTIVE but it is: " +
+        clusterKey.getKeyStatus() + " for metadata: " + clusterKey.getKeyMetadata());
+    }
     if (clusterKey != null && clusterKey.getKeyMetadata() != null &&
         ! clusterKey.getKeyMetadata().equals(currentKeyMetadata) &&
         saveLatestClusterKey(clusterKey.getKeyMetadata())) {
