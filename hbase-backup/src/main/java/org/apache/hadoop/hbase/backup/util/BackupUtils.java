@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.backup.util;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -46,6 +48,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
+import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
@@ -54,6 +57,11 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
+import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationGroupOffset;
+import org.apache.hadoop.hbase.replication.ReplicationQueueId;
+import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -671,6 +679,14 @@ public final class BackupUtils {
     return request;
   }
 
+  public static PointInTimeRestoreRequest createPointInTimeRestoreRequest(String backupRootDir,
+    boolean check, TableName[] fromTables, TableName[] toTables, boolean isOverwrite,
+    long toDateTime) {
+    PointInTimeRestoreRequest.Builder builder = new PointInTimeRestoreRequest.Builder();
+    return builder.withBackupRootDir(backupRootDir).withCheck(check).withFromTables(fromTables)
+      .withToTables(toTables).withOverwrite(isOverwrite).withToDateTime(toDateTime).build();
+  }
+
   public static boolean validate(List<TableName> tables, BackupManifest backupManifest,
     Configuration conf) throws IOException {
     boolean isValid = true;
@@ -770,4 +786,54 @@ public final class BackupUtils {
     return BackupRestoreConstants.BACKUPID_PREFIX + recentTimestamp;
   }
 
+  /**
+   * Retrieves the replication checkpoint for Continuous Backup replication. The replication
+   * checkpoint represents the **last known safe point** up to which all WALs have been fully
+   * processed. This ensures: 1. Point-In-Time Recovery (PITR) requests only restore up to a valid
+   * checkpoint. 2. Incremental Backup includes only WALs that have been completely replicated.
+   * @param conn HBase connection instance
+   * @return The replication checkpoint timestamp (last safe point for Continuous Backup)
+   * @throws ReplicationException If there is an issue fetching replication queue data
+   */
+  public static long getReplicationCheckpointForContinuousBackup(Connection conn)
+    throws ReplicationException {
+    // Initial assumption: The replication checkpoint is the current time.
+    long replicationCheckpoint = EnvironmentEdgeManager.getDelegate().currentTime();
+    LOG.info("Starting to fetch replication checkpoint for Continuous Backup.");
+
+    ReplicationQueueStorage queueStorage =
+      ReplicationStorageFactory.getReplicationQueueStorage(conn, conn.getConfiguration());
+
+    // Retrieve all replication queue IDs for Continuous Backup Replication Peer
+    List<ReplicationQueueId> queueIds =
+      queueStorage.listAllQueueIds(CONTINUOUS_BACKUP_REPLICATION_PEER);
+    LOG.info("Found {} replication queue(s) for Continuous Backup.", queueIds.size());
+
+    for (ReplicationQueueId queueId : queueIds) {
+      LOG.debug("Processing replication queue: {}", queueId);
+
+      Map<String, ReplicationGroupOffset> offsets = queueStorage.getOffsets(queueId);
+
+      // Check if there are no replication offsets in the current queue
+      if (offsets.isEmpty()) {
+        LOG.warn("No WAL offsets found in queue: {}", queueId);
+      }
+
+      // Iterate through each WAL group in the queue
+      for (ReplicationGroupOffset replicationOffset : offsets.values()) {
+        String latestWalFile = replicationOffset.getWal();
+        long walTimestamp = AbstractFSWALProvider.getTimestamp(latestWalFile);
+
+        LOG.debug("Processing WAL file: {}, Timestamp: {}", latestWalFile, walTimestamp);
+
+        // Update replication checkpoint with the earliest WAL timestamp seen
+        replicationCheckpoint = Math.min(replicationCheckpoint, walTimestamp - 1);
+      }
+    }
+
+    // Log the final replication checkpoint determined
+    LOG.info("Final replication checkpoint (last safe point): {}", replicationCheckpoint);
+
+    return replicationCheckpoint;
+  }
 }
