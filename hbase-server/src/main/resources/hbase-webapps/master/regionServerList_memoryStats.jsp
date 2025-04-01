@@ -24,19 +24,9 @@
          import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
          import="org.apache.hadoop.hbase.RegionMetrics"
          import="org.apache.hadoop.hbase.Size"
-         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
-<%!
-  // TODO: Extract to common place!
-  private static String serverNameLink(HMaster master, ServerName serverName) {
-    int infoPort = master.getRegionServerInfoPort(serverName);
-    String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";
-    if (infoPort > 0) {
-      return "<a href=\"" + url + "\">" + serverName.getServerName() + "</a>";
-    } else {
-      return serverName.getServerName();
-    }
-  }
-%>
+         import="org.apache.hadoop.hbase.util.MasterStatusConstants"
+         import="org.apache.hadoop.hbase.util.MasterStatusUtil" %>
+
 <%
   ServerName[] serverNames = (ServerName[]) request.getAttribute(MasterStatusConstants.SERVER_NAMES);
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
@@ -82,7 +72,7 @@ for (ServerName serverName: serverNames) {
     }
 %>
 <tr>
-  <td><%= serverNameLink(master, serverName) %></td>
+  <td><%= MasterStatusUtil.serverNameLink(master, serverName) %></td>
   <td><%= usedHeapStr %></td>
   <td><%= maxHeapStr %></td>
   <td><%= memStoreSizeMBStr %></td>
