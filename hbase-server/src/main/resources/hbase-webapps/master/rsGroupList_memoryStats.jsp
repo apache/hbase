@@ -23,7 +23,8 @@
          import="org.apache.hadoop.hbase.Size"
          import="org.apache.hadoop.hbase.net.Address"
          import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo"
-         import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix" %>
+         import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
+         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 
 <%!
   // TODO: Extract to common place!
@@ -33,8 +34,8 @@
 %>
 
 <%
-  RSGroupInfo [] rsGroupInfos = (RSGroupInfo[]) request.getAttribute("rsGroupInfos"); // TODO: intro constant!
-  Map<Address, ServerMetrics> collectServers = (Map<Address, ServerMetrics>) request.getAttribute("collectServers"); // TODO: intro constant!
+  RSGroupInfo [] rsGroupInfos = (RSGroupInfo[]) request.getAttribute(MasterStatusConstants.RS_GROUP_INFOS);
+  Map<Address, ServerMetrics> collectServers = (Map<Address, ServerMetrics>) request.getAttribute(MasterStatusConstants.COLLECT_SERVERS);
 %>
 
 <table class="table table-striped">
