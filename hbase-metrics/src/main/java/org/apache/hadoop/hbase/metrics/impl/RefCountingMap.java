@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.metrics.impl;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -37,18 +38,18 @@ class RefCountingMap<K, V> {
 
   private static class Payload<V> {
     V v;
-    int refCount;
+    AtomicInteger refCount;
 
     Payload(V v) {
       this.v = v;
-      this.refCount = 1; // create with ref count = 1
+      this.refCount = new AtomicInteger(1); // create with ref count = 1
     }
   }
 
   V put(K k, Supplier<V> supplier) {
     return ((Payload<V>) map.compute(k, (k1, oldValue) -> {
       if (oldValue != null) {
-        oldValue.refCount++;
+        oldValue.refCount.incrementAndGet();
         return oldValue;
       } else {
         return new Payload(supplier.get());
@@ -67,7 +68,8 @@ class RefCountingMap<K, V> {
    * @return the value associated with the specified key or null if key is removed from map.
    */
   V remove(K k) {
-    Payload<V> p = map.computeIfPresent(k, (k1, v) -> --v.refCount <= 0 ? null : v);
+    Payload<V> p = map.computeIfPresent(k,
+      (k1, v) -> v.refCount.decrementAndGet() <= 0 ? null : v);
     return p == null ? null : p.v;
   }
 
