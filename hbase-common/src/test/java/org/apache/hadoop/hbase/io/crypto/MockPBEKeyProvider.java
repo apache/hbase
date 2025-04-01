@@ -27,6 +27,8 @@ import javax.crypto.KeyGenerator;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A simple implementation of PBEKeyProvider for testing. It generates a key on demand given a
@@ -34,15 +36,18 @@ import org.apache.hadoop.hbase.util.Bytes;
  * calling setKey.
  */
 public class MockPBEKeyProvider extends MockAesKeyProvider implements PBEKeyProvider {
+  protected static final Logger LOG = LoggerFactory.getLogger(MockPBEKeyProvider.class);
+
   public Map<String, Key> keys = new HashMap<>();
   public Map<String, PBEKeyStatus> keyStatus = new HashMap<>();
+  private String clusterKeyAlias = "default_cluster_key_alias";
 
   @Override public void initConfig(Configuration conf) {
    // NO-OP
   }
 
   @Override public PBEKeyData getClusterKey(byte[] clusterId) throws IOException {
-    return getKey(clusterId);
+    return getKey(clusterId, clusterKeyAlias);
   }
 
   @Override public PBEKeyData getPBEKey(byte[] pbe_prefix, String key_namespace)
@@ -50,8 +55,12 @@ public class MockPBEKeyProvider extends MockAesKeyProvider implements PBEKeyProv
     return getKey(pbe_prefix);
   }
 
-  @Override public PBEKeyData unwrapKey(String keyAlias) throws IOException {
-    return getKey(keyAlias.getBytes());
+  @Override public PBEKeyData unwrapKey(String keyMetadata) throws IOException {
+    String[] meta_toks = keyMetadata.split(":");
+    if (keys.containsKey(meta_toks[1])) {
+      return getKey(meta_toks[0].getBytes(), meta_toks[1]);
+    }
+    return null;
   }
 
   /**
@@ -59,6 +68,10 @@ public class MockPBEKeyProvider extends MockAesKeyProvider implements PBEKeyProv
    */
   public PBEKeyData getKey(byte[] prefix_bytes) {
     String alias = Bytes.toString(prefix_bytes);
+    return getKey(prefix_bytes, alias);
+  }
+
+  public PBEKeyData getKey(byte[] prefix_bytes, String alias) {
     Key key = keys.get(alias);
     if (key == null) {
       key = generateSecretKey();
@@ -66,15 +79,20 @@ public class MockPBEKeyProvider extends MockAesKeyProvider implements PBEKeyProv
     }
     PBEKeyStatus keyStatus = this.keyStatus.get(alias);
     return new PBEKeyData(prefix_bytes, PBEKeyData.KEY_NAMESPACE_GLOBAL, key,
-      keyStatus == null ? PBEKeyStatus.ACTIVE : keyStatus, Bytes.toString(prefix_bytes));
+      keyStatus == null ? PBEKeyStatus.ACTIVE : keyStatus,
+      Bytes.toString(prefix_bytes)+":"+alias);
   }
 
-  public void setKeyStatus(byte[] prefix_bytes, PBEKeyStatus status) {
-    keyStatus.put(Bytes.toString(prefix_bytes), status);
+  public void setKeyStatus(String alias, PBEKeyStatus status) {
+    keyStatus.put(alias, status);
   }
 
-  public void setKey(byte[] prefix_bytes, Key key) {
-    keys.put(Bytes.toString(prefix_bytes), key);
+  public void setKey(String alias, Key key) {
+    keys.put(alias, key);
+  }
+
+  public void setCluterKeyAlias(String alias) {
+    this.clusterKeyAlias = alias;
   }
 
   /**
