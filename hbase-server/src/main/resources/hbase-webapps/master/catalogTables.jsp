@@ -27,12 +27,13 @@
          import="org.apache.hadoop.hbase.security.access.PermissionStorage"
          import="org.apache.hadoop.hbase.security.visibility.VisibilityConstants"
          import="org.apache.hadoop.hbase.tool.CanaryTool"
-         import="org.apache.hadoop.hbase.client.*" %>
+         import="org.apache.hadoop.hbase.client.*"
+         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
 
-  Map<String, Integer> frags = (Map<String, Integer>) request.getAttribute("frags"); // TODO: intro constant!
+  Map<String, Integer> frags = (Map<String, Integer>) request.getAttribute(MasterStatusConstants.FRAGS);
 
   List<TableDescriptor> sysTables = master.isInitialized() ?
   master.listTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR) : null;

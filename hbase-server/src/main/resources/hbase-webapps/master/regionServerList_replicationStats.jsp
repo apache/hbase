@@ -19,11 +19,12 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
          import="org.apache.hadoop.hbase.ServerName"
-         import="org.apache.hadoop.hbase.master.HMaster" %>
-<%@ page import="org.apache.hadoop.hbase.replication.ReplicationLoadSource" %>
-<%@ page import="org.apache.hadoop.hbase.util.Pair" %>
-<%@ page import="java.util.*" %>
-<%@ page import="org.apache.hadoop.hbase.procedure2.util.StringUtils" %>
+         import="org.apache.hadoop.hbase.master.HMaster"
+         import="org.apache.hadoop.hbase.replication.ReplicationLoadSource"
+         import="org.apache.hadoop.hbase.util.Pair"
+         import="java.util.*"
+         import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
+         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 <%!
   // TODO: Extract to common place!
   private static String serverNameLink(HMaster master, ServerName serverName) {
@@ -37,7 +38,7 @@
   }
 %>
 <%
-  ServerName[] serverNames = (ServerName[]) request.getAttribute("serverNames"); // TODO: intro constant!
+  ServerName[] serverNames = (ServerName[]) request.getAttribute(MasterStatusConstants.SERVER_NAMES);
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
 %>
 

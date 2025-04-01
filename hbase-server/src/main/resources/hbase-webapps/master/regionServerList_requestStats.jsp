@@ -19,9 +19,10 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
          import="org.apache.hadoop.hbase.ServerName"
-         import="org.apache.hadoop.hbase.master.HMaster" %>
-<%@ page import="org.apache.hadoop.hbase.ServerMetrics" %>
-<%@ page import="org.apache.hadoop.hbase.RegionMetrics" %>
+         import="org.apache.hadoop.hbase.master.HMaster"
+         import="org.apache.hadoop.hbase.ServerMetrics"
+         import="org.apache.hadoop.hbase.RegionMetrics"
+         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 <%!
   // TODO: Extract to common place!
   private static String serverNameLink(HMaster master, ServerName serverName) {
@@ -35,7 +36,7 @@
   }
 %>
 <%
-  ServerName[] serverNames = (ServerName[]) request.getAttribute("serverNames"); // TODO: intro constant!
+  ServerName[] serverNames = (ServerName[]) request.getAttribute(MasterStatusConstants.SERVER_NAMES);
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
 %>
 
@@ -74,7 +75,7 @@
 <%
 } else {
 %>
-  <% request.setAttribute("serverName", serverName); %>
+  <% request.setAttribute(MasterStatusConstants.SERVER_NAME, serverName); %>
   <jsp:include page="regionServerList_emptyStat.jsp"/>
 <%
   }

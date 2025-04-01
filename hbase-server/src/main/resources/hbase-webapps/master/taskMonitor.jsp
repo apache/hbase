@@ -17,25 +17,26 @@
  * limitations under the License.
  */
 --%>
-<%@ page contentType="text/html;charset=UTF-8" %>
+<%@ page contentType="text/html;charset=UTF-8"
+         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 
 <%
-  String filter = (String) request.getAttribute("filter"); // TODO: intro constant!
+  String filter = (String) request.getAttribute(MasterStatusConstants.FILTER);
   if (filter == null) {
     filter = "general";
   }
-  String format = (String) request.getAttribute("format"); // TODO: intro constant!
+  String format = (String) request.getAttribute(MasterStatusConstants.FORMAT);
   if (format == null) {
     format = "html";
   }
-  String parent = (String) request.getAttribute("parent"); // TODO: intro constant!
+  String parent = (String) request.getAttribute(MasterStatusConstants.PARENT);
   if (parent == null) {
     parent = "";
   }
 %>
 
 <% if (format.equals("json")) { %>
-  <% request.setAttribute("filter", filter); %>
+  <% request.setAttribute(MasterStatusConstants.FILTER, filter); %>
   <jsp:include page="taskMonitor_renderTasks.jsp"/>
 <% } else { %>
   <h2><a name="tasks">Tasks</a></h2>
@@ -61,27 +62,27 @@
     <div class="tab-content">
       <div class="tab-pane" id="tab_alltasks" role="tabpanel">
         <a href="<%= parent %>?format=json&filter=all">View as JSON</a>
-        <% request.setAttribute("filter", "all"); %>
+        <% request.setAttribute(MasterStatusConstants.FILTER, "all"); %>
         <jsp:include page="taskMonitor_renderTasks.jsp"/>
       </div>
       <div class="tab-pane active" id="tab_generaltasks" role="tabpanel">
         <a href="<%= parent %>?format=json&filter=general">View as JSON</a>
-        <% request.setAttribute("filter", "general"); %>
+        <% request.setAttribute(MasterStatusConstants.FILTER, "general"); %>
         <jsp:include page="taskMonitor_renderTasks.jsp"/>
       </div>
       <div class="tab-pane" id="tab_handlertasks" role="tabpanel">
         <a href="<%= parent %>?format=json&filter=handler">View as JSON</a>
-        <% request.setAttribute("filter", "handler"); %>
+        <% request.setAttribute(MasterStatusConstants.FILTER, "handler"); %>
         <jsp:include page="taskMonitor_renderTasks.jsp"/>
       </div>
       <div class="tab-pane" id="tab_rpctasks" role="tabpanel">
         <a href="<%= parent %>?format=json&filter=rpc">View as JSON</a>
-        <% request.setAttribute("filter", "rpc"); %>
+        <% request.setAttribute(MasterStatusConstants.FILTER, "rpc"); %>
         <jsp:include page="taskMonitor_renderTasks.jsp"/>
       </div>
       <div class="tab-pane" id="tab_operationtasks" role="tabpanel">
         <a href="<%= parent %>?format=json&filter=operation">View as JSON</a>
-        <% request.setAttribute("filter", "operation"); %>
+        <% request.setAttribute(MasterStatusConstants.FILTER, "operation"); %>
         <jsp:include page="taskMonitor_renderTasks.jsp"/>
       </div>
     </div>

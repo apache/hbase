@@ -19,14 +19,15 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
          import="org.apache.hadoop.hbase.ServerName"
-         import="org.apache.hadoop.hbase.master.HMaster" %>
-<%@ page import="org.apache.hadoop.hbase.rsgroup.RSGroupUtil" %>
-<%@ page import="org.apache.hadoop.hbase.util.VersionInfo" %>
-<%@ page import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo" %>
-<%@ page import="org.apache.hadoop.hbase.net.Address" %>
-<%@ page import="java.util.*" %>
-<%@ page import="org.apache.hadoop.hbase.ServerMetrics" %>
-<%@ page import="org.apache.hadoop.util.StringUtils" %>
+         import="org.apache.hadoop.hbase.master.HMaster"
+         import="org.apache.hadoop.hbase.rsgroup.RSGroupUtil"
+         import="org.apache.hadoop.hbase.util.VersionInfo"
+         import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo"
+         import="org.apache.hadoop.hbase.net.Address"
+         import="java.util.*"
+         import="org.apache.hadoop.hbase.ServerMetrics"
+         import="org.apache.hadoop.util.StringUtils"
+         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 <%!
   // TODO: Extract to common place!
   private static String serverNameLink(HMaster master, ServerName serverName) {
@@ -40,7 +41,7 @@
   }
 %>
 <%
-  ServerName[] serverNames = (ServerName[]) request.getAttribute("serverNames"); // TODO: intro constant!
+  ServerName[] serverNames = (ServerName[]) request.getAttribute(MasterStatusConstants.SERVER_NAMES);
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
 %>
 

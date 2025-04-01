@@ -19,7 +19,8 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
          import="org.apache.hadoop.hbase.ServerName"
-         import="org.apache.hadoop.hbase.master.HMaster" %>
+         import="org.apache.hadoop.hbase.master.HMaster"
+         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 <%!
   // TODO: Extract to common place!
   private static String serverNameLink(HMaster master, ServerName serverName) {
@@ -33,7 +34,7 @@
   }
 %>
 <%
-  ServerName serverName = (ServerName) request.getAttribute("serverName"); // TODO: intro constant!
+  ServerName serverName = (ServerName) request.getAttribute(MasterStatusConstants.SERVER_NAME);
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
 %>
 <tr>

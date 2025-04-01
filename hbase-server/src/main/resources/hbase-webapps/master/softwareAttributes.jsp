@@ -22,7 +22,8 @@
          import="org.apache.hadoop.hbase.master.HMaster"
          import="org.apache.hadoop.hbase.util.JvmVersion"
          import="org.apache.hadoop.hbase.util.CommonFSUtils"
-         import="org.apache.hadoop.util.StringUtils" %>
+         import="org.apache.hadoop.util.StringUtils"
+         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 
 <%!
   public static String formatZKString(HMaster master) {
@@ -54,7 +55,7 @@
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
 
-  Map<String, Integer> frags = (Map<String, Integer>) request.getAttribute("frags"); // TODO: intro constant!
+  Map<String, Integer> frags = (Map<String, Integer>) request.getAttribute(MasterStatusConstants.FRAGS);
 %>
 
 <h2><a name="attributes">Software Attributes</a></h2>

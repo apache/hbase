@@ -24,12 +24,13 @@
          import="org.apache.hadoop.hbase.master.HMaster"
          import="org.apache.hadoop.hbase.master.RegionState"
          import="org.apache.hadoop.hbase.client.*"
-         import="org.apache.hadoop.hbase.util.MasterStatusUtil" %>
+         import="org.apache.hadoop.hbase.util.MasterStatusUtil"
+         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
 
-  Map<String, Integer> frags = (Map<String, Integer>) request.getAttribute("frags"); // TODO: intro constant!
+  Map<String, Integer> frags = (Map<String, Integer>) request.getAttribute(MasterStatusConstants.FRAGS);
 
   List<TableDescriptor> tables = new ArrayList<>();
   String errorMessage = MasterStatusUtil.getUserTables(master, tables);

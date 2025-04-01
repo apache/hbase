@@ -25,11 +25,11 @@
          import="org.apache.hadoop.hbase.util.*" %>
 
 <%
-  String filter = request.getParameter("filter");
-  String format = request.getParameter("format");
+  String filter = request.getParameter(MasterStatusConstants.FILTER);
+  String format = request.getParameter(MasterStatusConstants.FORMAT);
   if (format != null && format.equals("json")) {
-    request.setAttribute("filter", filter);
-    request.setAttribute("format", "json");
+    request.setAttribute(MasterStatusConstants.FILTER, filter);
+    request.setAttribute(MasterStatusConstants.FORMAT, "json");
   %>
   <jsp:include page="taskMonitor.jsp"/>
 <%
@@ -105,13 +105,13 @@
         <div class="tab-content">
           <div class="tab-pane active" id="tab_userTables" role="tabpanel">
             <%if (metaLocation != null) { %>
-              <% request.setAttribute("frags", frags); %>
+              <% request.setAttribute(MasterStatusConstants.FRAGS, frags); %>
               <jsp:include page="userTables.jsp"/>
             <% } %>
           </div>
           <div class="tab-pane" id="tab_catalogTables" role="tabpanel">
             <%if (metaLocation != null) { %>
-            <% request.setAttribute("frags", frags); %>
+              <% request.setAttribute(MasterStatusConstants.FRAGS, frags); %>
               <jsp:include page="catalogTables.jsp"/>
             <% } %>
           </div>
@@ -145,7 +145,7 @@
   </section>
 
   <section>
-    <% request.setAttribute("frags", frags); %>
+    <% request.setAttribute(MasterStatusConstants.FRAGS, frags); %>
     <jsp:include page="softwareAttributes.jsp"/>
   </section>
 
