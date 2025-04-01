@@ -19,12 +19,8 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
          import="java.util.*"
-         import="java.io.IOException"
          import="org.apache.hadoop.hbase.ServerName"
          import="org.apache.hadoop.hbase.master.HMaster"
-         import="org.apache.hadoop.hbase.master.RegionState"
-         import="org.apache.hadoop.hbase.master.assignment.RegionStateNode"
-         import="org.apache.hadoop.hbase.client.*"
          import="org.apache.hadoop.conf.Configuration"
          import="org.apache.hadoop.hbase.util.*" %>
 
@@ -41,31 +37,11 @@
   }
 %>
 
-<%!
-  private static ServerName getMetaLocationOrNull(HMaster master) {
-    RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
-      .getRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    if (rsn != null) {
-      return rsn.isInState(RegionState.State.OPEN) ? rsn.getRegionLocation() : null;
-    }
-    return null;
-  }
-
-  private Map<String, Integer> getFragmentationInfo(HMaster master, Configuration conf)
-    throws IOException {
-    boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
-    if (showFragmentation) {
-      return FSUtils.getTableFragmentation(master);
-    } else {
-      return null;
-    }
-  }
-%>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
 
   Configuration conf = master.getConfiguration();
-  Map<String, Integer> frags = getFragmentationInfo(master, conf);
+  Map<String, Integer> frags = MasterStatusUtil.getFragmentationInfo(master, conf);
 
   String title;
   if(master.isActiveMaster()) {
@@ -79,7 +55,7 @@
   ServerName metaLocation = null;
 
   if (master.isActiveMaster()) {
-    metaLocation = getMetaLocationOrNull(master);
+    metaLocation = MasterStatusUtil.getMetaLocationOrNull(master);
   }
 %>
 
