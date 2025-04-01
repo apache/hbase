@@ -35,6 +35,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MasterStatusUtil {
 
+  private MasterStatusUtil() {
+    // Do not instantiate.
+  }
+
   public static String getUserTables(HMaster master, List<TableDescriptor> tables) {
     if (master.isInitialized()) {
       try {

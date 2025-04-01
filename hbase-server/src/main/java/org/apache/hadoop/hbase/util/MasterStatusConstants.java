@@ -34,4 +34,7 @@ public class MasterStatusConstants {
   public static final String FORMAT = "format";
   public static final String PARENT = "parent";
 
+  private MasterStatusConstants() {
+    // Do not instantiate.
+  }
 }
