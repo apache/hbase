@@ -23,29 +23,7 @@
          import="java.util.List"
          import="org.apache.hadoop.hbase.client.TableDescriptor"
          import="org.apache.hadoop.hbase.master.HMaster"
-         import="java.util.Map"
-         import="java.io.IOException" %>
-
-<%!
-  // TODO: Extract this to common class!
-  public static String getUserTables(HMaster master, List<TableDescriptor> tables){
-    if (master.isInitialized()){
-      try {
-        Map<String, TableDescriptor> descriptorMap = master.getTableDescriptors().getAll();
-        if (descriptorMap != null) {
-          for (TableDescriptor desc : descriptorMap.values()) {
-            if (!desc.getTableName().isSystemTable()) {
-              tables.add(desc);
-            }
-          }
-        }
-      } catch (IOException e) {
-        return "Got user tables error, " + e.getMessage();
-      }
-    }
-    return null;
-  }
-%>
+         import="org.apache.hadoop.hbase.util.MasterStatusUtil" %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   pageContext.setAttribute("pageTitle", "HBase Master: " + master.getServerName());
@@ -62,7 +40,7 @@
   </div>
 
   <% List<TableDescriptor> tables = new ArrayList<TableDescriptor>();
-     String errorMessage = getUserTables(master, tables);
+     String errorMessage = MasterStatusUtil.getUserTables(master, tables);
   if (tables.size() == 0 && errorMessage != null) { %>
   <p> <%= errorMessage %> </p>
   <% }

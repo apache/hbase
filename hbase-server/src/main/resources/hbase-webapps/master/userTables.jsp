@@ -20,30 +20,11 @@
 <%@ page contentType="text/html;charset=UTF-8"
          import="java.util.*"
          import="java.net.URLEncoder"
-         import="java.io.IOException"
          import="org.apache.hadoop.hbase.TableName"
          import="org.apache.hadoop.hbase.master.HMaster"
          import="org.apache.hadoop.hbase.master.RegionState"
-         import="org.apache.hadoop.hbase.client.*" %>
-<%!
-  public static String getUserTables(HMaster master, List<TableDescriptor> tables){
-    if (master.isInitialized()){
-      try {
-        Map<String, TableDescriptor> descriptorMap = master.getTableDescriptors().getAll();
-        if (descriptorMap != null) {
-          for (TableDescriptor desc : descriptorMap.values()) {
-            if (!desc.getTableName().isSystemTable()) {
-              tables.add(desc);
-            }
-          }
-        }
-      } catch (IOException e) {
-        return "Got user tables error, " + e.getMessage();
-      }
-    }
-    return null;
-  }
-%>
+         import="org.apache.hadoop.hbase.client.*"
+         import="org.apache.hadoop.hbase.util.MasterStatusUtil" %>
 
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
@@ -51,7 +32,7 @@
   Map<String, Integer> frags = (Map<String, Integer>) request.getAttribute("frags"); // TODO: intro constant!
 
   List<TableDescriptor> tables = new ArrayList<>();
-  String errorMessage = getUserTables(master, tables);
+  String errorMessage = MasterStatusUtil.getUserTables(master, tables);
 %>
 
 <% if (tables.size() == 0 && errorMessage != null) { %>
