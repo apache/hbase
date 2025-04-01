@@ -338,12 +338,17 @@ public class HFileSystem extends FilterFileSystem {
       nf.set(dfsc, cp1);
       LOG.info("Added intercepting call to namenode#getBlockLocations so can do block reordering"
         + " using class " + lrb.getClass().getName());
-    } catch (NoSuchFieldException e) {
+    } catch (NoSuchFieldException | IllegalAccessException e) {
       LOG.warn("Can't modify the DFSClient#namenode field to add the location reorder.", e);
       return false;
-    } catch (IllegalAccessException e) {
-      LOG.warn("Can't modify the DFSClient#namenode field to add the location reorder.", e);
-      return false;
+    } catch (Exception e) {
+      // InaccessibleObjectException was added in Java 9, need this for Java 8
+      if (e.getClass().getSimpleName().equals("InaccessibleObjectException")) {
+        LOG.warn("Can't modify the DFSClient#namenode field to add the location reorder.", e);
+        return false;
+      } else {
+        throw e;
+      }
     }
 
     return true;
