@@ -25,13 +25,6 @@
          import="org.apache.hadoop.hbase.RegionMetrics"
          import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 
-<%!
-  // TODO: Extract to common place!
-  private static String rsGroupLink(String rsGroupName) {
-    return "<a href=\"rsgroup.jsp?name=" + rsGroupName + "\">" + rsGroupName + "</a>";
-  }
-%>
-
 <%
   RSGroupInfo [] rsGroupInfos = (RSGroupInfo[]) request.getAttribute(MasterStatusConstants.RS_GROUP_INFOS);
   Map<Address, ServerMetrics> collectServers = (Map<Address, ServerMetrics>) request.getAttribute(MasterStatusConstants.COLLECT_SERVERS);
@@ -68,7 +61,7 @@
       }
 %>
 <tr>
-  <td><%= rsGroupLink(rsGroupName) %></td>
+  <td><a href="rsgroup.jsp?name=<%= rsGroupName %>"><%= rsGroupName %></a></td>
   <td><%= totalCompactingCells %></td>
   <td><%= totalCompactedCells %></td>
   <td><%= remainingCells %></td>
