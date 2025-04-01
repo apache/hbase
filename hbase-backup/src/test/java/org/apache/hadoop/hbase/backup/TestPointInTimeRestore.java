@@ -193,7 +193,7 @@ public class TestPointInTimeRestore extends TestBackupBase {
 
     // Perform restore operation
     String[] args = buildPITRArgs(new TableName[] { table1 }, new TableName[] { restoredTable },
-      EnvironmentEdgeManager.currentTime());
+      EnvironmentEdgeManager.currentTime() - 5 * ONE_DAY_IN_MILLISECONDS);
 
     int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
     assertEquals("Restore should succeed", 0, ret);
