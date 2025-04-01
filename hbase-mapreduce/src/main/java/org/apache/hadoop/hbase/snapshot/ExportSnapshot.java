@@ -26,9 +26,11 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -122,6 +124,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     "snapshot.export.copy.references.threads";
   private static final int DEFAULT_COPY_MANIFEST_THREADS =
     Runtime.getRuntime().availableProcessors();
+  private static final String CONF_STORAGE_POLICY = "snapshot.export.storage.policy.family";
 
   static class Testing {
     static final String CONF_TEST_FAILURE = "test.snapshot.export.failure";
@@ -159,6 +162,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       new Option(null, "bandwidth", true, "Limit bandwidth to this value in MB/second.");
     static final Option RESET_TTL =
       new Option(null, "reset-ttl", false, "Do not copy TTL for the snapshot");
+    static final Option STORAGE_POLICY = new Option(null, "storage-policy", true,
+      "Storage policy for export snapshot output directory, with format like: f=HOT&g=ALL_SDD");
   }
 
   // Export Map-Reduce Counters, to keep track of the progress
@@ -316,6 +321,14 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         }
       }
 
+      String family = new Path(inputInfo.getHfile()).getParent().getName();
+      String familyStoragePolicy = generateFamilyStoragePolicyKey(family);
+      if (stringIsNotEmpty(context.getConfiguration().get(familyStoragePolicy))) {
+        LOG.info("Setting storage policy {} for {}",
+          context.getConfiguration().get(familyStoragePolicy), outputPath);
+        outputFs.setStoragePolicy(outputPath, context.getConfiguration().get(familyStoragePolicy));
+      }
+
       InputStream in = openSourceFile(context, inputInfo);
       int bandwidthMB = context.getConfiguration().getInt(CONF_BANDWIDTH_MB, 100);
       if (Integer.MAX_VALUE != bandwidthMB) {
@@ -426,7 +439,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     }
 
     private boolean stringIsNotEmpty(final String str) {
-      return str != null && str.length() > 0;
+      return str != null && !str.isEmpty();
     }
 
     private long copyData(final Context context, final Path inputPath, final InputStream in,
@@ -907,8 +920,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
    */
   private void runCopyJob(final Path inputRoot, final Path outputRoot, final String snapshotName,
     final Path snapshotDir, final boolean verifyChecksum, final String filesUser,
-    final String filesGroup, final int filesMode, final int mappers, final int bandwidthMB)
-    throws IOException, InterruptedException, ClassNotFoundException {
+    final String filesGroup, final int filesMode, final int mappers, final int bandwidthMB,
+    final String storagePolicy) throws IOException, InterruptedException, ClassNotFoundException {
     Configuration conf = getConf();
     if (filesGroup != null) conf.set(CONF_FILES_GROUP, filesGroup);
     if (filesUser != null) conf.set(CONF_FILES_USER, filesUser);
@@ -923,6 +936,11 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     conf.setInt(CONF_BANDWIDTH_MB, bandwidthMB);
     conf.set(CONF_SNAPSHOT_NAME, snapshotName);
     conf.set(CONF_SNAPSHOT_DIR, snapshotDir.toString());
+    if (storagePolicy != null) {
+      for (Map.Entry<String, String> entry : storagePolicyPerFamily(storagePolicy).entrySet()) {
+        conf.set(generateFamilyStoragePolicyKey(entry.getKey()), entry.getValue());
+      }
+    }
 
     String jobname = conf.get(CONF_MR_JOB_NAME, "ExportSnapshot-" + snapshotName);
     Job job = new Job(conf);
@@ -1009,6 +1027,23 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     }, conf);
   }
 
+  private Map<String, String> storagePolicyPerFamily(String storagePolicy) {
+    Map<String, String> familyStoragePolicy = new HashMap<>();
+    for (String familyConf : storagePolicy.split("&")) {
+      String[] familySplit = familyConf.split("=");
+      if (familySplit.length != 2) {
+        continue;
+      }
+      // family is key, storage policy is value
+      familyStoragePolicy.put(familySplit[0], familySplit[1]);
+    }
+    return familyStoragePolicy;
+  }
+
+  private static String generateFamilyStoragePolicyKey(String family) {
+    return CONF_STORAGE_POLICY + "." + family;
+  }
+
   private boolean verifyTarget = true;
   private boolean verifySource = true;
   private boolean verifyChecksum = true;
@@ -1023,6 +1058,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   private int filesMode = 0;
   private int mappers = 0;
   private boolean resetTtl = false;
+  private String storagePolicy = null;
 
   @Override
   protected void processOptions(CommandLine cmd) {
@@ -1045,6 +1081,9 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     verifyTarget = !cmd.hasOption(Options.NO_TARGET_VERIFY.getLongOpt());
     verifySource = !cmd.hasOption(Options.NO_SOURCE_VERIFY.getLongOpt());
     resetTtl = cmd.hasOption(Options.RESET_TTL.getLongOpt());
+    if (cmd.hasOption(Options.STORAGE_POLICY.getLongOpt())) {
+      storagePolicy = cmd.getOptionValue(Options.STORAGE_POLICY.getLongOpt());
+    }
   }
 
   /**
@@ -1213,7 +1252,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     // by the HFileArchiver, since they have no references.
     try {
       runCopyJob(inputRoot, outputRoot, snapshotName, snapshotDir, verifyChecksum, filesUser,
-        filesGroup, filesMode, mappers, bandwidthMB);
+        filesGroup, filesMode, mappers, bandwidthMB, storagePolicy);
 
       LOG.info("Finalize the Snapshot Export");
       if (!skipTmp) {
