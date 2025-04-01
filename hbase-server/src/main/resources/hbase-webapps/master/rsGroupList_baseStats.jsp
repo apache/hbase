@@ -29,13 +29,6 @@
          import="org.apache.hadoop.util.StringUtils"
          import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 
-<%!
-  // TODO: Extract to common place!
-  private static String rsGroupLink(String rsGroupName) {
-    return "<a href=\"rsgroup.jsp?name=" + rsGroupName + "\">" + rsGroupName + "</a>";
-  }
-%>
-
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   RSGroupInfo [] rsGroupInfos = (RSGroupInfo[]) request.getAttribute(MasterStatusConstants.RS_GROUP_INFOS);
@@ -87,7 +80,7 @@
             (double)numRegionsOnline / (double)onlineServers;
 %>
 <tr>
-  <td><%= rsGroupLink(rsGroupName) %></td>
+  <td><a href="rsgroup.jsp?name=<%= rsGroupName %>"><%= rsGroupName %></a></td>
   <td><%= onlineServers %></td>
   <td><%= deadServers %></td>
   <td><%= tables %></td>
