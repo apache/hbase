@@ -71,4 +71,14 @@ public class MasterStatusUtil {
     }
     return null;
   }
+
+  public static String serverNameLink(HMaster master, ServerName serverName) {
+    int infoPort = master.getRegionServerInfoPort(serverName);
+    String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";
+    if (infoPort > 0) {
+      return "<a href=\"" + url + "\">" + serverName.getServerName() + "</a>";
+    } else {
+      return serverName.getServerName();
+    }
+  }
 }
