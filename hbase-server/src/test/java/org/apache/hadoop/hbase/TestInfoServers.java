@@ -94,6 +94,7 @@ public class TestInfoServers {
     UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "master.jsp");
+    assertContainsContent(new URL("http://localhost:" + port + "/master-status"), "master.jsp");
     port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().getInfoServer()
       .getPort();
     assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "rs-status");
