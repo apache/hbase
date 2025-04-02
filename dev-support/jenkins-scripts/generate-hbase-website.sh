@@ -132,10 +132,10 @@ cd "${working_dir}"
 rm -Rf -- *.patch *.patch.zip target *.txt hbase-site
 
 # Save and print the SHA we are building
-CURRENT_HBASE_COMMIT="$(cd "${component_dir}" && git show-ref --hash --dereference --verify refs/remotes/origin/HEAD)"
+CURRENT_HBASE_COMMIT="$(cd "${component_dir}" && git rev-parse HEAD)"
 # Fail if it's empty
 if [ -z "${CURRENT_HBASE_COMMIT}" ]; then
-  echo "Got back a blank answer for the current HEAD on the remote hbase repository. failing."
+  echo "Got back a blank answer for the current HEAD. failing."
   exit 1
 fi
 echo "Current HBase commit: $CURRENT_HBASE_COMMIT"
@@ -190,6 +190,14 @@ else
   echo "Maven commands to build the site failed. check logs for details ${working_dir}/hbase-*-log-*.txt"
   exit $status
 fi
+
+# Workaround to replace MathJax CDN URI with local one in book.html
+# There is no way to influence from where the book.html Asciidoc includes the MathJax.js library.
+# https://docs.asciidoctor.org/asciidoctor/latest/stem/mathjax/
+# https://docs.asciidoctor.org/asciidoc/latest/attributes/document-attributes-ref/
+# https://github.com/asciidoctor/asciidoctor/issues/761
+echo "Replace MathJax URI"
+sed -i 's,https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/,js/,g' "${component_dir}"/target/site/book.html
 
 # Stage the site
 echo "Staging HBase site"

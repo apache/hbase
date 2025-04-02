@@ -34,6 +34,9 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2.TableInfo;
+import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
+import org.apache.hadoop.hbase.snapshot.SnapshotRegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -297,5 +300,14 @@ public class WALPlayer
     }
     Job job = createSubmittableJob(args);
     return job.waitForCompletion(true) ? 0 : 1;
+  }
+
+  private static RegionLocator getRegionLocator(TableName tableName, Configuration conf,
+    Connection conn) throws IOException {
+    if (SnapshotRegionLocator.shouldUseSnapshotRegionLocator(conf, tableName)) {
+      return SnapshotRegionLocator.create(conf, tableName);
+    }
+
+    return conn.getRegionLocator(tableName);
   }
 }

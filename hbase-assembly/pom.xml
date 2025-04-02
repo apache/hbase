@@ -32,6 +32,7 @@
   <description>Module that does project assembly and that is all that it does.</description>
   <properties>
     <license.bundles.dependencies>true</license.bundles.dependencies>
+    <final.name>hbase-${project.version}</final.name>
   </properties>
   <dependencies>
     <!-- client artifacts for downstream use -->
@@ -48,23 +49,6 @@
       <artifactId>hbase-shaded-mapreduce</artifactId>
     </dependency>
     <!-- Intra-project dependencies -->
-    <!-- We don't really add this to assembly tarball, we retain it here just to dump it into
-    cached_classpath.txt ! See HBASE-28433 for more info. -->
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-it</artifactId>
-      <type>test-jar</type>
-    </dependency>
-    <!-- Hamcrest is required by hbase-it (via junit), but as long as we're grabbing the hbase-it test-jar,
-         maven dependency resolution won't pick it up for us. -->
-    <!-- We don't really add this to assembly tarball, we retain it here just to dump it into
-    cached_classpath.txt ! See HBASE-28433 for more info. -->
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
-      <!-- Overriding the scope in depMgmt -->
-      <scope>compile</scope>
-    </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-openssl</artifactId>
@@ -75,27 +59,11 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-mapreduce</artifactId>
+      <artifactId>hbase-endpoint</artifactId>
     </dependency>
-    <!-- We don't really add this to assembly tarball, we retain it here just to dump it into
-    cached_classpath.txt ! See HBASE-28433 for more info. -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-mapreduce</artifactId>
-      <type>test-jar</type>
-    </dependency>
-    <!-- To dump tools in hbase-procedure into cached_classpath.txt. -->
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-procedure</artifactId>
-    </dependency>
-    <!-- We don't really add this to assembly tarball, we retain it here just to dump it into
-    cached_classpath.txt ! See HBASE-28433 for more info. -->
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-procedure</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -123,12 +91,6 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-external-blockcache</artifactId>
     </dependency>
-    <!-- We don't really add this to assembly tarball, we retain it here just to dump it into
-    cached_classpath.txt ! See HBASE-28433 for more info. -->
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-testing-util</artifactId>
-    </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-metrics-api</artifactId>
@@ -153,6 +115,10 @@
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpcore</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-asyncfs</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -206,11 +172,6 @@
       <groupId>jline</groupId>
       <artifactId>jline</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.sun.xml.ws</groupId>
-      <artifactId>jaxws-ri</artifactId>
-      <type>pom</type>
-    </dependency>
     <!--
       Include the log framework here.
       For other sub modules, we only declare slf4j-api as a compile dependency,
@@ -245,20 +206,30 @@
       <groupId>io.opentelemetry.javaagent</groupId>
       <artifactId>opentelemetry-javaagent</artifactId>
     </dependency>
-    <!-- We don't really add this to assembly tarball, we retain it here just to dump it into
-    cached_classpath.txt ! See HBASE-28433 for more info. -->
+    <!-- The tomcat JSP Compiler dependencies are not needed for runtime -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-juli</artifactId>
+      <version>${tomcat.version.for.exclusion}</version>
+      <scope>provided</scope>
     </dependency>
-    <!-- We don't really add this to assembly tarball, we retain it here just to dump it into
-   cached_classpath.txt ! See HBASE-28433 for more info. -->
     <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <!-- Making it compile here so that it can be downloaded during packaging. -->
-      <!-- All other modules scope it as test or inherit test scope from parent pom.  -->
-      <scope>compile</scope>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-api</artifactId>
+      <version>${tomcat.version.for.exclusion}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-util-scan</artifactId>
+      <version>${tomcat.version.for.exclusion}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-util</artifactId>
+      <version>${tomcat.version.for.exclusion}</version>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
   <build>
@@ -300,7 +271,7 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
           <!--Else will use hbase-assembly as final name.-->
-          <finalName>hbase-${project.version}</finalName>
+          <finalName>${final.name}</finalName>
           <skipAssembly>false</skipAssembly>
           <appendAssemblyId>true</appendAssemblyId>
           <tarLongFileMode>posix</tarLongFileMode>
@@ -313,45 +284,6 @@
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
-          <execution>
-            <!-- generates the file that will be used by the bin/hbase script in the dev env -->
-            <id>create-hbase-generated-classpath</id>
-            <goals>
-              <goal>build-classpath</goal>
-            </goals>
-            <phase>test</phase>
-            <configuration>
-              <outputFile>${project.parent.basedir}/target/cached_classpath.txt</outputFile>
-              <excludeArtifactIds>jline,jruby-complete,hbase-shaded-client,hbase-shaded-client-byo-hadoop,hbase-shaded-mapreduce</excludeArtifactIds>
-            </configuration>
-          </execution>
-
-          <execution>
-            <!-- generates the file that will be used by the bin/hbase zkcli script in the dev env -->
-            <id>create-hbase-generated-classpath-jline</id>
-            <goals>
-              <goal>build-classpath</goal>
-            </goals>
-            <phase>test</phase>
-            <configuration>
-              <outputFile>${project.parent.basedir}/target/cached_classpath_jline.txt</outputFile>
-              <includeArtifactIds>jline</includeArtifactIds>
-            </configuration>
-          </execution>
-
-          <execution>
-            <!-- generates the file that will be used by the bin/hbase shell script in the dev env -->
-            <id>create-hbase-generated-classpath-jruby</id>
-            <goals>
-              <goal>build-classpath</goal>
-            </goals>
-            <phase>test</phase>
-            <configuration>
-              <outputFile>${project.parent.basedir}/target/cached_classpath_jruby.txt</outputFile>
-              <includeArtifactIds>jruby-complete</includeArtifactIds>
-            </configuration>
-          </execution>
-
           <!--
            Build an aggregation of our templated NOTICE file and the NOTICE files in our dependencies.
            If MASSEMBLY-382 is fixed we could do this in the assembly
@@ -400,4 +332,84 @@
       <!-- /end building aggregation of NOTICE files -->
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>assemblyForTesting</id>
+      <activation>
+        <property>
+          <name>assemblyForTesting</name>
+        </property>
+      </activation>
+      <properties>
+        <final.name>hbase-for-testing-${project.version}</final.name>
+      </properties>
+      <dependencies>
+        <!-- Dependencies for running hbase-it -->
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-it</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-testing-util</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <!-- Change the scope of test-jar dependencies -->
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-annotations</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-procedure</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-common</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-zookeeper</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-server</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-hadoop-compat</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.hamcrest</groupId>
+          <artifactId>hamcrest-core</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.mockito</groupId>
+          <artifactId>mockito-core</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <!-- End of dependencies for running hbase-it -->
+      </dependencies>
+    </profile>
+  </profiles>
 </project>

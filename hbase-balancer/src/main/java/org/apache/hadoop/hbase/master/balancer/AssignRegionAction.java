@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.List;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 @InterfaceAudience.Private
 class AssignRegionAction extends BalanceAction {
@@ -44,6 +48,12 @@ class AssignRegionAction extends BalanceAction {
     // TODO implement this. This action is not being used by the StochasticLB for now
     // in case it uses it, we should implement this function.
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+  }
+
+  @Override
+  List<RegionPlan> toRegionPlans(BalancerClusterState cluster) {
+    return ImmutableList
+      .of(new RegionPlan(cluster.regions[getRegion()], null, cluster.servers[getServer()]));
   }
 
   @Override

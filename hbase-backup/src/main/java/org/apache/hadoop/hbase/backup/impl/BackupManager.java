@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -193,8 +192,8 @@ public class BackupManager implements Closeable {
    * @throws BackupException exception
    */
   public BackupInfo createBackupInfo(String backupId, BackupType type, List<TableName> tableList,
-    String targetRootDir, int workers, long bandwidth, boolean noChecksumVerify)
-    throws BackupException {
+    String targetRootDir, int workers, long bandwidth, boolean noChecksumVerify,
+    boolean continuousBackupEnabled) throws BackupException {
     if (targetRootDir == null) {
       throw new BackupException("Wrong backup request parameter: target backup root directory");
     }
@@ -232,6 +231,7 @@ public class BackupManager implements Closeable {
     backupInfo.setBandwidth(bandwidth);
     backupInfo.setWorkers(workers);
     backupInfo.setNoChecksumVerify(noChecksumVerify);
+    backupInfo.setContinuousBackupEnabled(continuousBackupEnabled);
     return backupInfo;
   }
 
@@ -356,8 +356,7 @@ public class BackupManager implements Closeable {
     return systemTable.readRegionServerLastLogRollResult(backupInfo.getBackupRootDir());
   }
 
-  public Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>>
-    readBulkloadRows(List<TableName> tableList) throws IOException {
+  public List<BulkLoad> readBulkloadRows(List<TableName> tableList) throws IOException {
     return systemTable.readBulkloadRows(tableList);
   }
 
@@ -421,5 +420,18 @@ public class BackupManager implements Closeable {
 
   public Connection getConnection() {
     return conn;
+  }
+
+  /**
+   * Adds a set of tables to the global continuous backup set. Only tables that do not already have
+   * continuous backup enabled will be updated.
+   * @param tables         set of tables to add to continuous backup
+   * @param startTimestamp timestamp indicating when continuous backup started for newly added
+   *                       tables
+   * @throws IOException if an error occurs while updating the backup system table
+   */
+  public void addContinuousBackupTableSet(Set<TableName> tables, long startTimestamp)
+    throws IOException {
+    systemTable.addContinuousBackupTableSet(tables, startTimestamp);
   }
 }

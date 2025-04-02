@@ -118,5 +118,6 @@ message BackupInfo {
     SNAPSHOTCOPY = 3;
     INCREMENTAL_COPY = 4;
     STORE_MANIFEST = 5;
+    SETUP_WAL_REPLICATION = 6;
   }
 }

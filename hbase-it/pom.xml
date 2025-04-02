@@ -335,19 +335,18 @@
       </properties>
     </profile>
     <profile>
-      <id>build-with-jdk11</id>
+      <id>build-with-jdk17</id>
       <activation>
-        <jdk>[1.11,)</jdk>
+        <jdk>[17,)</jdk>
       </activation>
       <properties>
-        <failsafe.profile.overrides>${hbase-surefire.jdk11.flags}</failsafe.profile.overrides>
+        <failsafe.profile.overrides>${hbase-surefire.jdk17.flags}</failsafe.profile.overrides>
       </properties>
 
       <dependencies>
         <dependency>
           <groupId>com.sun.xml.ws</groupId>
-          <artifactId>jaxws-ri</artifactId>
-          <type>pom</type>
+          <artifactId>jaxws-rt</artifactId>
         </dependency>
       </dependencies>
     </profile>

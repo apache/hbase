@@ -762,6 +762,7 @@
     <module>hbase-it</module>
     <module>hbase-examples</module>
     <module>hbase-assembly</module>
+    <module>hbase-assembly-byo-hadoop</module>
     <module>hbase-testing-util</module>
     <module>hbase-annotations</module>
     <module>hbase-rest</module>
@@ -778,6 +779,7 @@
     <module>hbase-logging</module>
     <module>hbase-compression</module>
     <module>hbase-extensions</module>
+    <module>hbase-dev-generate-classpath</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -838,7 +840,7 @@
       in the dependencyManagement section as it could still lead to different versions of netty
       modules and cause trouble if we only rely on transitive dependencies.
     -->
-    <netty4.version>4.1.112.Final</netty4.version>
+    <netty4.version>4.1.119.Final</netty4.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.15.0</audience-annotations.version>
     <javadoc.audience-annotations.version>0.15.0</javadoc.audience-annotations.version>
@@ -846,7 +848,7 @@
     <caffeine.version>2.8.1</caffeine.version>
     <commons-codec.version>1.15</commons-codec.version>
     <commons-validator.version>1.7</commons-validator.version>
-    <commons-io.version>2.14.0</commons-io.version>
+    <commons-io.version>2.18.0</commons-io.version>
     <commons-lang3.version>3.9</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
     <commons-cli.version>1.5.0</commons-cli.version>
@@ -864,7 +866,7 @@
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <tomcat.jasper.version>9.0.93</tomcat.jasper.version>
-    <jruby.version>9.4.8.0</jruby.version>
+    <jruby.version>9.4.9.0</jruby.version>
     <junit.version>4.13.2</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
     <opentelemetry.version>1.15.0</opentelemetry.version>
@@ -891,9 +893,8 @@
     <spy.version>2.12.3</spy.version>
     <bouncycastle.version>1.78</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
-    <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
-    <curator.version>4.2.0</curator.version>
+    <curator.version>5.7.1</curator.version>
     <!-- Plugin Dependencies -->
     <asciidoctor.plugin.version>2.2.2</asciidoctor.plugin.version>
     <asciidoctorj.pdf.version>2.0.6</asciidoctorj.pdf.version>
@@ -915,6 +916,7 @@
     <maven.javadoc.version>3.4.0</maven.javadoc.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
+    <maven-owasp-plugin.version>12.1.0</maven-owasp-plugin.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
     <spotbugs.version>4.7.3</spotbugs.version>
@@ -936,7 +938,11 @@
         databind] must be kept in sync with the version of jackson-jaxrs-json-provider shipped in
         hbase-thirdparty.
     -->
-    <hbase-thirdparty.version>4.1.9</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.10</hbase-thirdparty.version>
+    <!-- for.exclusion version are NOT for direct dependencies. To use the provided
+    scope to transitively exclude some transitive dependencies, we need to specify
+    some existing version to for maven. -->
+    <tomcat.version.for.exclusion>9.0.93</tomcat.version.for.exclusion>
     <!-- Coverage properties -->
     <jacoco.version>0.8.8</jacoco.version>
     <jacocoArgLine/>
@@ -1033,6 +1039,7 @@
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0.AM26</apacheds.version>
     <ldap-api.version>2.0.0</ldap-api.version>
+    <webjars-dir>${project.build.directory}/META-INF/resources/webjars</webjars-dir>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -1046,6 +1053,11 @@
           is what glassfish's jspC jar uses and that's where we get our own need for a jsp-api.
         -->
       <!-- Intra-module dependencies -->
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-annotations</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-annotations</artifactId>
@@ -1660,7 +1672,6 @@
         <groupId>net.spy</groupId>
         <artifactId>spymemcached</artifactId>
         <version>${spy.version}</version>
-        <optional>true</optional>
       </dependency>
       <dependency>
         <groupId>org.bouncycastle</groupId>
@@ -1679,21 +1690,6 @@
         <artifactId>bcpkix-jdk18on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.kerby</groupId>
-        <artifactId>kerb-core</artifactId>
-        <version>${kerby.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.kerby</groupId>
-        <artifactId>kerb-client</artifactId>
-        <version>${kerby.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.kerby</groupId>
-        <artifactId>kerb-simplekdc</artifactId>
-        <version>${kerby.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -1821,9 +1817,8 @@
       </dependency>
       <dependency>
         <groupId>com.sun.xml.ws</groupId>
-        <artifactId>jaxws-ri</artifactId>
-        <version>2.3.2</version>
-        <type>pom</type>
+        <artifactId>jaxws-rt</artifactId>
+        <version>2.3.7</version>
         <exclusions>
           <exclusion>
             <groupId>javax.activation</groupId>
@@ -2756,6 +2751,81 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>unpack</id>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>bootstrap</artifactId>
+                  <version>2.3.2</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/css/bootstrap-responsive.min.css</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>highlightjs</artifactId>
+                  <version>8.7</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/styles/github.min.css,
+                    **/highlight.min.js,</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>font-awesome</artifactId>
+                  <version>4.7.0</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/css/font-awesome.css,
+                    **/fonts/fontawesome-webfont.eot,
+                    **/fonts/fontawesome-webfont.svg,
+                    **/fonts/fontawesome-webfont.ttf,
+                    **/fonts/fontawesome-webfont.woff,
+                    **/fonts/fontawesome-webfont.woff2,</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>MathJax</artifactId>
+                  <version>2.7.0</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/MathJax.js,
+                    **/config/TeX-MML-AM_HTMLorMML.js,
+                    **/jax/output/HTML-CSS/jax.js,
+                    **/jax/output/HTML-CSS/imageFonts.js,
+                    **/jax/output/HTML-CSS/fonts/TeX/fontdata.js,
+                    **/jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/Main.js,
+                    **/jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/BasicLatin.js,
+                    **/extensions/MathMenu.js,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Main-Regular.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Main-Italic.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Math-Italic.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Size1-Regular.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Size3-Regular.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_SansSerif-Italic.woff,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Main-Regular.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Main-Italic.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Math-Italic.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Size1-Regular.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Size3-Regular.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_SansSerif-Italic.otf,</includes>
+                </artifactItem>
+              </artifactItems>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <!-- Special configuration for spotbugs just in the parent so
       the filter file location can be more general (see definition in pluginManagement) -->
       <plugin>
@@ -2809,6 +2879,8 @@
             <docVersion>${project.version}</docVersion>
             <imagesdir>images</imagesdir>
             <source-highlighter>coderay</source-highlighter>
+            <iconfont-remote>false</iconfont-remote>
+            <stylesdir>css</stylesdir>
           </attributes>
         </configuration>
         <dependencies>
@@ -2914,6 +2986,55 @@
             <configuration>
               <target name="rename file">
                 <move file="${project.reporting.outputDirectory}/book.pdf" tofile="${project.reporting.outputDirectory}/apache_hbase_reference_guide.pdf"/>
+              </target>
+            </configuration>
+          </execution>
+          <!-- Copy static CSS and JS files for the website. -->
+          <execution>
+            <id>copy-css-js-to-site</id>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <target>
+                <copy flatten="true" todir="${project.build.directory}/site/css">
+                  <fileset dir="${webjars-dir}/bootstrap/2.3.2/css">
+                    <include name="bootstrap-responsive.min.css"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/highlightjs/8.7/styles">
+                    <include name="github.min.css"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/css">
+                    <include name="font-awesome.css"/>
+                  </fileset>
+                </copy>
+                <copy flatten="true" todir="${project.build.directory}/site/js">
+                  <fileset dir="${webjars-dir}/highlightjs/8.7/">
+                    <include name="highlight.min.js"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
+                    <include name="MathJax.js"/>
+                  </fileset>
+                </copy>
+                <copy flatten="false" todir="${project.build.directory}/site/js">
+                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
+                    <include name="config/TeX-MML-AM_HTMLorMML.js"/>
+                    <include name="jax/output/HTML-CSS/jax.js"/>
+                    <include name="jax/output/HTML-CSS/imageFonts.js"/>
+                    <include name="jax/output/HTML-CSS/fonts/TeX/fontdata.js"/>
+                    <include name="jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/Main.js"/>
+                    <include name="jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/BasicLatin.js"/>
+                    <include name="extensions/MathMenu.js"/>
+                    <include name="fonts/HTML-CSS/TeX/woff/MathJax_*.woff"/>
+                    <include name="fonts/HTML-CSS/TeX/otf/MathJax_*.otf"/>
+                  </fileset>
+                </copy>
+                <copy flatten="true" todir="${project.build.directory}/site/fonts">
+                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/fonts">
+                    <include name="fontawesome-webfont.*"/>
+                  </fileset>
+                </copy>
               </target>
             </configuration>
           </execution>
@@ -3950,6 +4071,14 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>jline</groupId>
+                <artifactId>jline</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.jline</groupId>
+                <artifactId>jline</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -4157,6 +4286,14 @@
               </exclusion>
             </exclusions>
           </dependency>
+          <!--
+            We use hadoop-minikdc everywhere instead of depending on kerby is
+            because hadoop upgrade kerby version in hadoop 3.4.x and kerby 1.x
+            and 2.x are not compatible, so if we specify the version of kerby
+            in our pom will cause compile/runtime error while compiling against
+            different hadoop versions, and also cause problem for downstream
+            projects. See HBASE-29117 for more details.
+          -->
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-minikdc</artifactId>
@@ -4178,6 +4315,18 @@
               <exclusion>
                 <groupId>bouncycastle</groupId>
                 <artifactId>bcprov-jdk15</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.apache.directory.api</groupId>
+                <artifactId>api-all</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>jline</groupId>
+                <artifactId>jline</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.jline</groupId>
+                <artifactId>jline</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -4611,6 +4760,36 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>owasp-dependency-check</id>
+      <activation>
+        <jdk>[11,)</jdk>
+        <property>
+          <name>owasp-check</name>
+        </property>
+      </activation>
+      <reporting>
+        <plugins>
+          <plugin>
+            <groupId>org.owasp</groupId>
+            <artifactId>dependency-check-maven</artifactId>
+            <version>${maven-owasp-plugin.version}</version>
+            <configuration>
+              <skipProvidedScope>true</skipProvidedScope>
+              <skipRuntimeScope>true</skipRuntimeScope>
+              <skipSystemScope>true</skipSystemScope>
+            </configuration>
+            <reportSets>
+              <reportSet>
+                <reports>
+                  <report>aggregate</report>
+                </reports>
+              </reportSet>
+            </reportSets>
+          </plugin>
+        </plugins>
+      </reporting>
     </profile>
     <profile>
       <!-- Used by the website generation script on jenkins to

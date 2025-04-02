@@ -1011,6 +1011,14 @@ possible configurations would overwhelm and obscure the important.
         enough cache to hold the storefile indices.</description>
   </property>
   <property>
+    <name>hfile.block.cache.memory.size</name>
+    <value></value>
+    <description>Defines the maximum heap memory allocated for the HFile block cache,
+      specified in bytes or human-readable formats like '10m' for megabytes or '10g' for gigabytes.
+      This configuration allows setting an absolute memory size instead of a percentage of the maximum heap.
+      Takes precedence over hfile.block.cache.size if both are specified.</description>
+  </property>
+  <property>
       <name>hfile.block.index.cacheonwrite</name>
       <value>false</value>
       <description>This allows to put non-root multi-level index blocks into the block
@@ -1909,6 +1917,8 @@ possible configurations would overwhelm and obscure the important.
     <value>5000</value>
     <description>
       Number of rows in a batch operation above which a warning will be logged.
+      If hbase.client.write.buffer.maxmutations is not set, this will be used as
+      fallback for that setting.
     </description>
   </property>
   <property>

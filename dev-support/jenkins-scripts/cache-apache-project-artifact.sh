@@ -76,7 +76,7 @@ if [ -f "${target}" ] && [ -s "${target}" ] && [ -r "${target}" ] && [ "true" = 
 fi
 
 if [ -z "${working_dir}" ]; then
-  if ! working_dir="$(mktemp -d -t hbase-download-apache-artifact)" ; then
+  if ! working_dir="$(mktemp -d -t hbase-download-apache-artifact-XXXXXX)" ; then
     echo "Failed to create temporary working directory. Please specify via --working-dir" >&2
     exit 1
   fi

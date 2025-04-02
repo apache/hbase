@@ -66,7 +66,7 @@ abstract class CostFromRegionLoadFunction extends CostFunction {
   }
 
   @Override
-  protected final double cost() {
+  protected double cost() {
     return cost.cost();
   }
 

@@ -41,6 +41,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+
 @Category({ MasterTests.class, LargeTests.class })
 public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerTestBase {
 
@@ -136,7 +138,7 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
   }
 
   @Test
-  public void testNeedsBalanceForColocatedReplicas() {
+  public void testNeedsBalanceForColocatedReplicasOnHost() {
     // check for the case where there are two hosts and with one rack, and where
     // both the replicas are hosted on the same server
     List<RegionInfo> regions = randomRegions(1);
@@ -148,20 +150,50 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     // until the step above s1 holds two replicas of a region
     regions = randomRegions(1);
     map.put(s2, regions);
-    assertTrue(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
-      new BalancerClusterState(map, null, null, null)));
-    // check for the case where there are two hosts on the same rack and there are two racks
-    // and both the replicas are on the same rack
-    map.clear();
-    regions = randomRegions(1);
+    BalancerClusterState cluster =
+      new BalancerClusterState(map, null, null, new ForTestRackManagerOne());
+    loadBalancer.initCosts(cluster);
+    assertTrue(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME, cluster));
+  }
+
+  @Test
+  public void testNeedsBalanceForColocatedReplicasOnRack() {
+    // Three hosts, two racks, and two replicas for a region. This should be balanced
+    List<RegionInfo> regions = randomRegions(1);
+    ServerName s1 = ServerName.valueOf("host1", 1000, 11111);
+    ServerName s2 = ServerName.valueOf("host11", 1000, 11111);
+    Map<ServerName, List<RegionInfo>> map = new HashMap<>();
     List<RegionInfo> regionsOnS2 = new ArrayList<>(1);
     regionsOnS2.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(0), 1));
     map.put(s1, regions);
     map.put(s2, regionsOnS2);
     // add another server so that the cluster has some host on another rack
     map.put(ServerName.valueOf("host2", 1000, 11111), randomRegions(1));
-    assertFalse(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
-      new BalancerClusterState(map, null, null, new ForTestRackManagerOne())));
+    BalancerClusterState cluster =
+      new BalancerClusterState(map, null, null, new ForTestRackManagerOne());
+    loadBalancer.initCosts(cluster);
+    assertTrue(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME, cluster));
+  }
+
+  @Test
+  public void testNoNeededBalanceForColocatedReplicasTooFewRacks() {
+    // Three hosts, two racks, and three replicas for a region. This cannot be balanced
+    List<RegionInfo> regions = randomRegions(1);
+    ServerName s1 = ServerName.valueOf("host1", 1000, 11111);
+    ServerName s2 = ServerName.valueOf("host11", 1000, 11111);
+    ServerName s3 = ServerName.valueOf("host2", 1000, 11111);
+    Map<ServerName, List<RegionInfo>> map = new HashMap<>();
+    List<RegionInfo> regionsOnS2 = new ArrayList<>(1);
+    regionsOnS2.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(0), 1));
+    map.put(s1, regions);
+    map.put(s2, regionsOnS2);
+    // there are 3 replicas for region 0, but only add a second rack
+    map.put(s3, ImmutableList.of(RegionReplicaUtil.getRegionInfoForReplica(regions.get(0), 2)));
+    BalancerClusterState cluster =
+      new BalancerClusterState(map, null, null, new ForTestRackManagerOne());
+    loadBalancer.initCosts(cluster);
+    // Should be false because there aren't enough racks
+    assertFalse(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME, cluster));
   }
 
   @Test
@@ -171,7 +203,8 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     int replication = 3; // 3 replicas per region
     int numRegionsPerServer = 80; // all regions are mostly balanced
     int numTables = 10;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
   }
 
   private static class ForTestRackManagerOne extends RackManager {

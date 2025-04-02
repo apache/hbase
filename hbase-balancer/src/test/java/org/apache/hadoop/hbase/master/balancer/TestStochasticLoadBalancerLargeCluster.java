@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.time.Duration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -38,7 +39,7 @@ public class TestStochasticLoadBalancerLargeCluster extends StochasticBalancerTe
     int numRegionsPerServer = 80; // all servers except one
     int numTables = 100;
     int replication = 1;
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 6 * 60 * 1000);
+    setMaxRunTime(Duration.ofSeconds(30));
     loadBalancer.onConfigurationChange(conf);
     testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
       true, true);
