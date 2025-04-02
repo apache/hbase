@@ -107,7 +107,7 @@ public class TestInfoServers {
   @Test
   public void testInfoServersStatusPages() throws Exception {
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
-    assertContainsContent(new URL("http://localhost:" + port + "master.jsp"), "meta");
+    assertContainsContent(new URL("http://localhost:" + port + "/master.jsp"), "meta");
     port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().getInfoServer()
       .getPort();
     assertContainsContent(new URL("http://localhost:" + port + "/rs-status"), "meta");
