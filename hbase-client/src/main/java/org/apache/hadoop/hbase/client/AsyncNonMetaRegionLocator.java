@@ -234,7 +234,7 @@ class AsyncNonMetaRegionLocator {
             int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
             try {
               RegionLocations metaLocations = conn.registry.getMetaRegionLocations()
-                .get(conn.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
+                .get(conn.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
               numOfReplicas = metaLocations.size();
             } catch (Exception e) {
               LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);

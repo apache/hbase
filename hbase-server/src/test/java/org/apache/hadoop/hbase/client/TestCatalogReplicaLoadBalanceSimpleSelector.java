@@ -99,7 +99,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
         int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
         try {
           RegionLocations metaLocations = CONN.registry.getMetaRegionLocations()
-            .get(CONN.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
+            .get(CONN.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
           numOfReplicas = metaLocations.size();
         } catch (Exception e) {
           LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
@@ -126,7 +126,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
           int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
           try {
             RegionLocations metaLocations = CONN.registry.getMetaRegionLocations()
-              .get(CONN.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
+              .get(CONN.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
             numOfReplicas = metaLocations.size();
           } catch (Exception e) {
             LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
