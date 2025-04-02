@@ -201,10 +201,10 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
    * Add the mutation columns to the given Put that are derived from the keyData.
    */
   private Put addMutationColumns(Put put, PBEKeyData keyData) throws IOException {
-    PBEKeyData latestClusterKey = server.getPBEClusterKeyCache().getLatestClusterKey();
+    PBEKeyData latestSystemKey = server.getSystemKeyCache().getLatestSystemKey();
     if (keyData.getTheKey() != null) {
       byte[] dekWrappedBySTK = EncryptionUtil.wrapKey(server.getConfiguration(), null,
-        keyData.getTheKey(), latestClusterKey.getTheKey());
+        keyData.getTheKey(), latestSystemKey.getTheKey());
       put.addColumn(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES,
           Bytes.toBytes(keyData.getKeyChecksum()))
          .addColumn(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES, dekWrappedBySTK)
@@ -214,7 +214,7 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
       .setPriority(HConstants.SYSTEMTABLE_QOS)
       .addColumn(KEY_META_INFO_FAMILY, DEK_METADATA_QUAL_BYTES, keyData.getKeyMetadata().getBytes())
       .addColumn(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES,
-        Bytes.toBytes(latestClusterKey.getKeyChecksum()))
+        Bytes.toBytes(latestSystemKey.getKeyChecksum()))
       .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
         Bytes.toBytes(keyData.getRefreshTimestamp()))
       .addColumn(KEY_META_INFO_FAMILY, KEY_STATUS_QUAL_BYTES,
@@ -246,7 +246,7 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
     if (dekWrappedByStk != null) {
       long stkChecksum =
         Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES));
-      PBEKeyData clusterKey = server.getPBEClusterKeyCache().getClusterKeyByChecksum(stkChecksum);
+      PBEKeyData clusterKey = server.getSystemKeyCache().getSystemKeyByChecksum(stkChecksum);
       if (clusterKey == null) {
         LOG.error("Dropping key with metadata: {} as STK with checksum: {} is unavailable",
           dekMetadata, stkChecksum);

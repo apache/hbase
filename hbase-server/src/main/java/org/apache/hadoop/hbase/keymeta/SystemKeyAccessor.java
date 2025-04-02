@@ -32,27 +32,27 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import static org.apache.hadoop.hbase.HConstants.CLUSTER_KEY_FILE_PREFIX;
+import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
 
 @InterfaceAudience.Private
-public class PBEClusterKeyAccessor extends PBEKeyAccessorBase {
-  protected final Path clusterKeyDir;
+public class SystemKeyAccessor extends PBEKeyAccessorBase {
+  protected final Path systemKeyDir;
 
-  public PBEClusterKeyAccessor(Server server) throws IOException {
+  public SystemKeyAccessor(Server server) throws IOException {
     super(server);
-    this.clusterKeyDir = CommonFSUtils.getClusterKeyDir(server.getConfiguration());
+    this.systemKeyDir = CommonFSUtils.getSystemKeyDir(server.getConfiguration());
   }
 
-  public Path getLatestClusterKeyFile() throws IOException {
+  public Path getLatestSystemKeyFile() throws IOException {
     if (! isPBEEnabled()) {
       return null;
     }
-    List<Path> allClusterKeyFiles = getAllClusterKeyFiles();
+    List<Path> allClusterKeyFiles = getAllSystemKeyFiles();
     if (allClusterKeyFiles.isEmpty()) {
       throw new RuntimeException("No cluster key initialized yet");
     }
     int currentMaxSeqNum = extractKeySequence(allClusterKeyFiles.get(0));
-    return new Path(clusterKeyDir, CLUSTER_KEY_FILE_PREFIX + currentMaxSeqNum);
+    return new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + currentMaxSeqNum);
   }
 
   /**
@@ -63,30 +63,30 @@ public class PBEClusterKeyAccessor extends PBEKeyAccessorBase {
    * @return  a list of all available cluster key files
    * @throws IOException
    */
-  public List<Path> getAllClusterKeyFiles() throws IOException {
+  public List<Path> getAllSystemKeyFiles() throws IOException {
     if (!isPBEEnabled()) {
       return null;
     }
     FileSystem fs = server.getFileSystem();
     Map<Integer, Path> clusterKeys = new TreeMap<>(Comparator.reverseOrder());
-    for (FileStatus st : fs.globStatus(new Path(clusterKeyDir, CLUSTER_KEY_FILE_PREFIX + "*"))) {
+    for (FileStatus st : fs.globStatus(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + "*"))) {
       Path keyPath = st.getPath();
-      int seqNum = extractClusterKeySeqNum(keyPath);
+      int seqNum = extractSystemKeySeqNum(keyPath);
       clusterKeys.put(seqNum, keyPath);
     }
 
     return new ArrayList<>(clusterKeys.values());
   }
 
-  public PBEKeyData loadClusterKey(Path keyPath) throws IOException {
+  public PBEKeyData loadSystemKey(Path keyPath) throws IOException {
     PBEKeyProvider provider = getKeyProvider();
     return provider.unwrapKey(loadKeyMetadata(keyPath));
   }
 
-  public int extractClusterKeySeqNum(Path keyPath) throws IOException {
-    if (keyPath.getName().startsWith(CLUSTER_KEY_FILE_PREFIX)) {
+  public int extractSystemKeySeqNum(Path keyPath) throws IOException {
+    if (keyPath.getName().startsWith(SYSTEM_KEY_FILE_PREFIX)) {
       try {
-        return Integer.valueOf(keyPath.getName().substring(CLUSTER_KEY_FILE_PREFIX.length()));
+        return Integer.valueOf(keyPath.getName().substring(SYSTEM_KEY_FILE_PREFIX.length()));
       }
       catch (NumberFormatException e) {
         LOG.error("Invalid file name for a cluster key: {}", keyPath, e);
@@ -103,8 +103,8 @@ public class PBEClusterKeyAccessor extends PBEKeyAccessorBase {
    */
   protected int extractKeySequence(Path clusterKeyFile) throws IOException {
     int keySeq = -1;
-    if (clusterKeyFile.getName().startsWith(CLUSTER_KEY_FILE_PREFIX)) {
-      keySeq = Integer.valueOf(clusterKeyFile.getName().substring(CLUSTER_KEY_FILE_PREFIX.length()));
+    if (clusterKeyFile.getName().startsWith(SYSTEM_KEY_FILE_PREFIX)) {
+      keySeq = Integer.valueOf(clusterKeyFile.getName().substring(SYSTEM_KEY_FILE_PREFIX.length()));
     }
     return keySeq;
   }

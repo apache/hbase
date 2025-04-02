@@ -52,8 +52,8 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
-import org.apache.hadoop.hbase.keymeta.PBEClusterKeyAccessor;
-import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdminImpl;
@@ -192,7 +192,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   protected final NettyEventLoopGroupConfig eventLoopGroupConfig;
 
-  private PBEClusterKeyCache pbeClusterKeyCache;
+  private SystemKeyCache systemKeyCache;
   protected PBEKeymetaAdminImpl pbeKeymetaAdmin;
   protected PBEKeyAccessor pbeKeyAccessor;
 
@@ -425,13 +425,13 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   @Override
-  public PBEClusterKeyCache getPBEClusterKeyCache() {
-    return pbeClusterKeyCache;
+  public SystemKeyCache getSystemKeyCache() {
+    return systemKeyCache;
   }
 
-  protected void buildPBEClusterKeyCache() throws IOException {
-    if (pbeClusterKeyCache == null && Server.isPBEEnabled(this)) {
-      pbeClusterKeyCache = PBEClusterKeyCache.createCache(new PBEClusterKeyAccessor(this));
+  protected void buildSystemKeyCache() throws IOException {
+    if (systemKeyCache == null && Server.isPBEEnabled(this)) {
+      systemKeyCache = SystemKeyCache.createCache(new SystemKeyAccessor(this));
     }
   }
 

@@ -25,90 +25,90 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
-import org.apache.hadoop.hbase.keymeta.PBEClusterKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.yetus.audience.InterfaceAudience;
-import static org.apache.hadoop.hbase.HConstants.CLUSTER_KEY_FILE_PREFIX;
+import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
 
 @InterfaceAudience.Private
-public class PBEClusterKeyManager extends PBEClusterKeyAccessor {
+public class SystemKeyManager extends SystemKeyAccessor {
   private final MasterServices master;
 
-  public PBEClusterKeyManager(MasterServices master) throws IOException {
+  public SystemKeyManager(MasterServices master) throws IOException {
     super(master);
     this.master = master;
   }
 
-  public void ensureClusterKeyInitialized() throws IOException {
+  public void ensureSystemKeyInitialized() throws IOException {
     if (! isPBEEnabled()) {
       return;
     }
-    List<Path> clusterKeys = getAllClusterKeyFiles();
+    List<Path> clusterKeys = getAllSystemKeyFiles();
     if (clusterKeys.isEmpty()) {
-      LOG.info("Initializing Cluster Key for the first time");
+      LOG.info("Initializing System Key for the first time");
       // Double check for cluster key as another HMaster might have succeeded.
-      if (rotateClusterKey(null) == null && getAllClusterKeyFiles().isEmpty()) {
-        throw new RuntimeException("Failed to generate or save Cluster Key");
+      if (rotateSystemKey(null) == null && getAllSystemKeyFiles().isEmpty()) {
+        throw new RuntimeException("Failed to generate or save System Key");
       }
     }
-    else if (rotateClusterKeyIfChanged() != null) {
-      LOG.info("Cluster key has been rotated");
+    else if (rotateSystemKeyIfChanged() != null) {
+      LOG.info("System key has been rotated");
     }
     else {
-      LOG.info("Cluster key is already initialized and unchanged");
+      LOG.info("System key is already initialized and unchanged");
     }
   }
 
-  public PBEKeyData rotateClusterKeyIfChanged() throws IOException {
+  public PBEKeyData rotateSystemKeyIfChanged() throws IOException {
     if (! isPBEEnabled()) {
       return null;
     }
-    Path latestFile = getLatestClusterKeyFile();
+    Path latestFile = getLatestSystemKeyFile();
     String latestKeyMetadata = loadKeyMetadata(latestFile);
-    return rotateClusterKey(latestKeyMetadata);
+    return rotateSystemKey(latestKeyMetadata);
   }
 
-  private PBEKeyData rotateClusterKey(String currentKeyMetadata) throws IOException {
+  private PBEKeyData rotateSystemKey(String currentKeyMetadata) throws IOException {
     if (! isPBEEnabled()) {
       return null;
     }
     PBEKeyProvider provider = getKeyProvider();
-    PBEKeyData clusterKey = provider.getClusterKey(
+    PBEKeyData clusterKey = provider.getSystemKey(
       master.getMasterFileSystem().getClusterId().toString().getBytes());
     if (clusterKey.getKeyStatus() != PBEKeyStatus.ACTIVE) {
-      throw new IOException("Cluster key is expected to be ACTIVE but it is: " +
+      throw new IOException("System key is expected to be ACTIVE but it is: " +
         clusterKey.getKeyStatus() + " for metadata: " + clusterKey.getKeyMetadata());
     }
     if (clusterKey != null && clusterKey.getKeyMetadata() != null &&
         ! clusterKey.getKeyMetadata().equals(currentKeyMetadata) &&
-        saveLatestClusterKey(clusterKey.getKeyMetadata())) {
+        saveLatestSystemKey(clusterKey.getKeyMetadata())) {
       return clusterKey;
     }
     return null;
   }
 
-  private boolean saveLatestClusterKey(String keyMetadata) throws IOException {
-    List<Path> allClusterKeyFiles = getAllClusterKeyFiles();
-    int nextClusterKeySeq = (allClusterKeyFiles.isEmpty() ? -1
-      : extractKeySequence(allClusterKeyFiles.get(0))) + 1;
-    LOG.info("Trying to save a new cluster key at seq: {}", nextClusterKeySeq);
+  private boolean saveLatestSystemKey(String keyMetadata) throws IOException {
+    List<Path> allSystemKeyFiles = getAllSystemKeyFiles();
+    int nextSystemKeySeq = (allSystemKeyFiles.isEmpty() ? -1
+      : extractKeySequence(allSystemKeyFiles.get(0))) + 1;
+    LOG.info("Trying to save a new cluster key at seq: {}", nextSystemKeySeq);
     MasterFileSystem masterFS = master.getMasterFileSystem();
-    Path nextClusterKeyPath = new Path(clusterKeyDir,
-      CLUSTER_KEY_FILE_PREFIX + nextClusterKeySeq);
-    Path tempClusterKeyFile  = new Path(masterFS.getTempDir(),
-      nextClusterKeyPath.getName() + UUID.randomUUID());
+    Path nextSystemKeyPath = new Path(systemKeyDir,
+      SYSTEM_KEY_FILE_PREFIX + nextSystemKeySeq);
+    Path tempSystemKeyFile  = new Path(masterFS.getTempDir(),
+      nextSystemKeyPath.getName() + UUID.randomUUID());
     try (FSDataOutputStream fsDataOutputStream = masterFS.getFileSystem()
-      .create(tempClusterKeyFile)) {
+      .create(tempSystemKeyFile)) {
       fsDataOutputStream.writeUTF(keyMetadata);
-      boolean succeeded = masterFS.getFileSystem().rename(tempClusterKeyFile, nextClusterKeyPath);
+      boolean succeeded = masterFS.getFileSystem().rename(tempSystemKeyFile, nextSystemKeyPath);
       if (succeeded) {
-        LOG.info("Cluster key save succeeded for seq: {}", nextClusterKeySeq);
+        LOG.info("System key save succeeded for seq: {}", nextSystemKeySeq);
       } else {
-        LOG.error("Cluster key save failed for seq: {}", nextClusterKeySeq);
+        LOG.error("System key save failed for seq: {}", nextSystemKeySeq);
       }
       return succeeded;
     }
     finally {
-      masterFS.getFileSystem().delete(tempClusterKeyFile, false);
+      masterFS.getFileSystem().delete(tempSystemKeyFile, false);
     }
   }
 }

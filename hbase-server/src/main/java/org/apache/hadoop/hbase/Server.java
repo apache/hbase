@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -89,7 +89,7 @@ public interface Server extends Abortable, Stoppable {
   /**
    * @return the cache for cluster keys.
    */
-  public PBEClusterKeyCache getPBEClusterKeyCache();
+  public SystemKeyCache getSystemKeyCache();
 
   /**
    * @return the accessor for cluster keys.

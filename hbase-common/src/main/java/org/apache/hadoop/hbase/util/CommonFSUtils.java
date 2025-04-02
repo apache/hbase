@@ -297,8 +297,8 @@ public final class CommonFSUtils {
     c.set(HConstants.HBASE_DIR, root.toString());
   }
 
-  public static Path getClusterKeyDir(final Configuration c) throws IOException {
-    return new Path(getRootDir(c), HConstants.CLUSTER_KEYS_DIRECTORY);
+  public static Path getSystemKeyDir(final Configuration c) throws IOException {
+    return new Path(getRootDir(c), HConstants.SYSTEM_KEYS_DIRECTORY);
   }
 
   public static void setFsDefault(final Configuration c, final Path root) {

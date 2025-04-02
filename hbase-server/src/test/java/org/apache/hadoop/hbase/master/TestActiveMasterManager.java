@@ -33,7 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -331,7 +331,7 @@ public class TestActiveMasterManager {
       return activeMasterManager;
     }
 
-    @Override public PBEClusterKeyCache getPBEClusterKeyCache() {
+    @Override public SystemKeyCache getSystemKeyCache() {
       return null;
     }
 

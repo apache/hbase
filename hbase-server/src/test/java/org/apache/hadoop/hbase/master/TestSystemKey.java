@@ -18,24 +18,19 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.MockPBEKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
-import org.apache.hadoop.hbase.keymeta.PBEClusterKeyAccessor;
-import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBETestBase;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import java.io.IOException;
@@ -46,23 +41,23 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestPBEClusterKey extends PBETestBase {
+public class TestSystemKey extends PBETestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPBEClusterKey.class);
+    HBaseClassTestRule.forClass(TestSystemKey.class);
 
   @Test
-  public void testClusterKeyInitializationAndRotation() throws Exception {
+  public void testSystemKeyInitializationAndRotation() throws Exception {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     KeyProvider keyProvider = Encryption.getKeyProvider(master.getConfiguration());
     assertNotNull(keyProvider);
     assertTrue(keyProvider instanceof PBEKeyProvider);
     assertTrue(keyProvider instanceof MockPBEKeyProvider);
     MockPBEKeyProvider pbeKeyProvider = (MockPBEKeyProvider) keyProvider;
-    PBEKeyData initialClusterKey = validateInitialState(master, pbeKeyProvider);
+    PBEKeyData initialSystemKey = validateInitialState(master, pbeKeyProvider);
 
-    restartCluster();
+    restartSystem();
     master = TEST_UTIL.getHBaseCluster().getMaster();
     validateInitialState(master, pbeKeyProvider);
 
@@ -71,46 +66,46 @@ public class TestPBEClusterKey extends PBETestBase {
     pbeKeyProvider.setCluterKeyAlias(newAlias);
     Key newCluterKey = MockPBEKeyProvider.generateSecretKey();
     pbeKeyProvider.setKey(newAlias, newCluterKey);
-    restartCluster();
+    restartSystem();
     master = TEST_UTIL.getHBaseCluster().getMaster();
-    PBEClusterKeyAccessor pbeClusterKeyAccessor = new PBEClusterKeyAccessor(master);
-    assertEquals(2, pbeClusterKeyAccessor.getAllClusterKeyFiles().size());
-    PBEClusterKeyCache pbeClusterKeyCache = master.getPBEClusterKeyCache();
+    SystemKeyAccessor systemKeyAccessor = new SystemKeyAccessor(master);
+    assertEquals(2, systemKeyAccessor.getAllSystemKeyFiles().size());
+    SystemKeyCache systemKeyCache = master.getSystemKeyCache();
     assertEquals(0, Bytes.compareTo(newCluterKey.getEncoded(),
-      pbeClusterKeyCache.getLatestClusterKey().getTheKey().getEncoded()));
-    assertEquals(initialClusterKey,
-      pbeClusterKeyAccessor.loadClusterKey(pbeClusterKeyAccessor.getAllClusterKeyFiles().get(1)));
-    assertEquals(initialClusterKey,
-      pbeClusterKeyCache.getClusterKeyByChecksum(initialClusterKey.getKeyChecksum()));
+      systemKeyCache.getLatestSystemKey().getTheKey().getEncoded()));
+    assertEquals(initialSystemKey,
+      systemKeyAccessor.loadSystemKey(systemKeyAccessor.getAllSystemKeyFiles().get(1)));
+    assertEquals(initialSystemKey,
+      systemKeyCache.getSystemKeyByChecksum(initialSystemKey.getKeyChecksum()));
   }
 
   @Test
-  public void testWithInvalidClusterKey() throws Exception {
+  public void testWithInvalidSystemKey() throws Exception {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     KeyProvider keyProvider = Encryption.getKeyProvider(master.getConfiguration());
     MockPBEKeyProvider pbeKeyProvider = (MockPBEKeyProvider) keyProvider;
 
     // Test startup failure when the cluster key is INACTIVE
-    PBEClusterKeyManager tmpCKM = new PBEClusterKeyManager(master);
-    tmpCKM.ensureClusterKeyInitialized();
-    pbeKeyProvider.setKeyStatus(pbeKeyProvider.getClusterKeyAlias(), PBEKeyStatus.INACTIVE);
-    assertThrows(IOException.class, tmpCKM::ensureClusterKeyInitialized);
+    SystemKeyManager tmpCKM = new SystemKeyManager(master);
+    tmpCKM.ensureSystemKeyInitialized();
+    pbeKeyProvider.setKeyStatus(pbeKeyProvider.getSystemKeyAlias(), PBEKeyStatus.INACTIVE);
+    assertThrows(IOException.class, tmpCKM::ensureSystemKeyInitialized);
   }
 
   private PBEKeyData validateInitialState(HMaster master, MockPBEKeyProvider pbeKeyProvider )
     throws IOException {
-    PBEClusterKeyAccessor pbeClusterKeyAccessor = new PBEClusterKeyAccessor(master);
-    assertEquals(1, pbeClusterKeyAccessor.getAllClusterKeyFiles().size());
-    PBEClusterKeyCache pbeClusterKeyCache = master.getPBEClusterKeyCache();
-    assertNotNull(pbeClusterKeyCache);
-    PBEKeyData clusterKey = pbeClusterKeyCache.getLatestClusterKey();
-    assertEquals(pbeKeyProvider.getClusterKey(master.getClusterId().getBytes()), clusterKey);
+    SystemKeyAccessor systemKeyAccessor = new SystemKeyAccessor(master);
+    assertEquals(1, systemKeyAccessor.getAllSystemKeyFiles().size());
+    SystemKeyCache systemKeyCache = master.getSystemKeyCache();
+    assertNotNull(systemKeyCache);
+    PBEKeyData clusterKey = systemKeyCache.getLatestSystemKey();
+    assertEquals(pbeKeyProvider.getSystemKey(master.getClusterId().getBytes()), clusterKey);
     assertEquals(clusterKey,
-      pbeClusterKeyCache.getClusterKeyByChecksum(clusterKey.getKeyChecksum()));
+      systemKeyCache.getSystemKeyByChecksum(clusterKey.getKeyChecksum()));
     return clusterKey;
   }
 
-  private void restartCluster() throws Exception {
+  private void restartSystem() throws Exception {
     TEST_UTIL.shutdownMiniHBaseCluster();
     Thread.sleep(2000);
     TEST_UTIL.restartHBaseCluster(1);

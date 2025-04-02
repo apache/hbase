@@ -154,8 +154,8 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
   }
 
   @Test
-  public void testGetClusterKey() throws Exception {
-    PBEKeyData clusterKeyData = pbeProvider.getClusterKey(clusterId.getBytes());
+  public void testGetSystemKey() throws Exception {
+    PBEKeyData clusterKeyData = pbeProvider.getSystemKey(clusterId.getBytes());
     assertPBEKeyData(clusterKeyData, PBEKeyStatus.ACTIVE, masterKey, clusterId.getBytes(),
       MASTER_KEY_ALIAS);
   }

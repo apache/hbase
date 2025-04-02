@@ -120,11 +120,7 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.keymeta.PBEClusterKeyAccessor;
-import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
-import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
-import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdminImpl;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.RSMobFileCleanerChore;
@@ -1453,7 +1449,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         initializeFileSystem();
       }
 
-      buildPBEClusterKeyCache();
+      buildSystemKeyCache();
       pbeKeyAccessor = new PBEKeyAccessor(pbeKeymetaAdmin);
 
       // hack! Maps DFSClient => RegionServer for logs. HDFS made this

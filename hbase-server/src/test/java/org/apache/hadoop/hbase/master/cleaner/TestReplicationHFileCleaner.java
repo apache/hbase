@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -218,7 +218,7 @@ public class TestReplicationHFileCleaner {
       }
     }
 
-    @Override public PBEClusterKeyCache getPBEClusterKeyCache() {
+    @Override public SystemKeyCache getSystemKeyCache() {
       return null;
     }
 

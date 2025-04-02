@@ -1195,8 +1195,8 @@ public final class HConstants {
   /**
    * Directory used for storing master keys for the cluster
    */
-  public static final String CLUSTER_KEYS_DIRECTORY = ".cluster_keys";
-  public static final String CLUSTER_KEY_FILE_PREFIX = "cluster_key.";
+  public static final String SYSTEM_KEYS_DIRECTORY = ".system_keys";
+  public static final String SYSTEM_KEY_FILE_PREFIX = "system_key.";
   /**
    * The period (in milliseconds) between computing region server point in time metrics
    */

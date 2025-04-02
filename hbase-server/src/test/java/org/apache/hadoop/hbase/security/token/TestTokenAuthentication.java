@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
-import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
@@ -353,7 +353,7 @@ public class TestTokenAuthentication {
       return null;
     }
 
-    @Override public PBEClusterKeyCache getPBEClusterKeyCache() {
+    @Override public SystemKeyCache getSystemKeyCache() {
       return null;
     }
 

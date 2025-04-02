@@ -40,14 +40,14 @@ public class MockPBEKeyProvider extends MockAesKeyProvider implements PBEKeyProv
 
   public Map<String, Key> keys = new HashMap<>();
   public Map<String, PBEKeyStatus> keyStatus = new HashMap<>();
-  private String clusterKeyAlias = "default_cluster_key_alias";
+  private String systemKeyAlias = "default_system_key_alias";
 
   @Override public void initConfig(Configuration conf) {
    // NO-OP
   }
 
-  @Override public PBEKeyData getClusterKey(byte[] clusterId) throws IOException {
-    return getKey(clusterId, clusterKeyAlias);
+  @Override public PBEKeyData getSystemKey(byte[] systemId) throws IOException {
+    return getKey(systemId, systemKeyAlias);
   }
 
   @Override public PBEKeyData getPBEKey(byte[] pbe_prefix, String key_namespace)
@@ -92,11 +92,11 @@ public class MockPBEKeyProvider extends MockAesKeyProvider implements PBEKeyProv
   }
 
   public void setCluterKeyAlias(String alias) {
-    this.clusterKeyAlias = alias;
+    this.systemKeyAlias = alias;
   }
 
-  public String getClusterKeyAlias() {
-    return this.clusterKeyAlias;
+  public String getSystemKeyAlias() {
+    return this.systemKeyAlias;
   }
 
   /**

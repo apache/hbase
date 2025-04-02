@@ -122,8 +122,6 @@ import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.keymeta.PBEClusterKeyAccessor;
-import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
 import org.apache.hadoop.hbase.keymeta.PBEKeymetaMasterService;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
@@ -358,7 +356,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   // file system manager for the master FS operations
   private MasterFileSystem fileSystemManager;
   private MasterWalManager walManager;
-  private PBEClusterKeyManager pbeClusterKeyManager;
+  private SystemKeyManager systemKeyManager;
   private PBEKeymetaMasterService pbeKeymetaMasterService;
 
   // manager to manage procedure-based WAL splitting, can be null if current
@@ -997,9 +995,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.clusterId = clusterId.toString();
 
-    pbeClusterKeyManager = new PBEClusterKeyManager(this);
-    pbeClusterKeyManager.ensureClusterKeyInitialized();
-    buildPBEClusterKeyCache();
+    systemKeyManager = new SystemKeyManager(this);
+    systemKeyManager.ensureSystemKeyInitialized();
+    buildSystemKeyCache();
 
     // Precaution. Put in place the old hbck1 lock file to fence out old hbase1s running their
     // hbck1s against an hbase2 cluster; it could do damage. To skip this behavior, set

@@ -22,7 +22,7 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
   }
 
   @Override
-  public PBEKeyData getClusterKey(byte[] clusterId) {
+  public PBEKeyData getSystemKey(byte[] clusterId) {
     checkConfig();
     String masterKeyAlias = conf.get(HConstants.CRYPTO_PBE_MASTERKEY_NAME_CONF_KEY, null);
     if (masterKeyAlias == null) {
