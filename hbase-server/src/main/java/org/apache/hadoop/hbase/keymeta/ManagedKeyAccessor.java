@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
-import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 import java.security.KeyException;
@@ -26,44 +26,44 @@ import java.util.List;
 
 /**
  * This class provides unified access on top of both {@code PBEKeyDataCache} (L1) and
- * {@code PBEKeymetaTableAccessor} (L2) to access PBE keys. When the getter is called, it first
+ * {@code KeymetaTableAccessor} (L2) to access PBE keys. When the getter is called, it first
  * checks if L1 cache has the key, if not, it tries to get the key from L2.
  */
 @InterfaceAudience.Private
-public class PBEKeyAccessor extends PBEKeyAccessorBase {
-  private final PBEKeyDataCache keyDataCache;
-  private final PBEKeymetaTableAccessor keymetaAccessor;
+public class ManagedKeyAccessor extends KeyManagementBase {
+  private final ManagedKeyDataCache keyDataCache;
+  private final KeymetaTableAccessor keymetaAccessor;
 
-  public PBEKeyAccessor(PBEKeymetaTableAccessor keymetaAccessor) {
+  public ManagedKeyAccessor(KeymetaTableAccessor keymetaAccessor) {
     super(keymetaAccessor.server);
     this.keymetaAccessor = keymetaAccessor;
-    keyDataCache = new PBEKeyDataCache();
+    keyDataCache = new ManagedKeyDataCache();
   }
 
   /**
    * Get key data by key metadata.
    *
-   * @param pbe_prefix The prefix of the key
+   * @param cust_spec The custodian spec.
    * @param keyNamespace The namespace of the key
    * @param keyMetadata The metadata of the key
    * @return The key data or {@code null}
    * @throws IOException if an error occurs while retrieving the key
    */
-  public PBEKeyData getKey(byte[] pbe_prefix, String keyNamespace, String keyMetadata)
+  public ManagedKeyData getKey(byte[] cust_spec, String keyNamespace, String keyMetadata)
       throws IOException, KeyException {
     checkPBEEnabled();
     // 1. Check L1 cache.
-    PBEKeyData keyData = keyDataCache.getEntry(keyMetadata);
+    ManagedKeyData keyData = keyDataCache.getEntry(keyMetadata);
     if (keyData == null) {
       // 2. Check L2 cache.
-      keyData = keymetaAccessor.getKey(pbe_prefix, keyNamespace, keyMetadata);
+      keyData = keymetaAccessor.getKey(cust_spec, keyNamespace, keyMetadata);
       if (keyData == null) {
         // 3. Check with Key Provider.
-        PBEKeyProvider provider = getKeyProvider();
+        ManagedKeyProvider provider = getKeyProvider();
         keyData = provider.unwrapKey(keyMetadata);
         LOG.info("Got key data with status: {} and metadata: {} for prefix: {}",
           keyData.getKeyStatus(), keyData.getKeyMetadata(),
-          PBEKeyProvider.encodeToPrefixStr(pbe_prefix));
+          ManagedKeyProvider.encodeToStr(cust_spec));
         keymetaAccessor.addKey(keyData);
       }
       if (keyData != null) {
@@ -76,21 +76,21 @@ public class PBEKeyAccessor extends PBEKeyAccessorBase {
   /**
    * Get an active key for the given prefix suitable for use in encryption.
    *
-   * @param pbePrefix The prefix of the key
+   * @param cust_spec The custodian specification
    * @param keyNamespace The namespace of the key
    * @return The key data
    * @throws IOException if an error occurs while retrieving the key
    */
-  public PBEKeyData getAnActiveKey(byte[] pbePrefix, String keyNamespace)
+  public ManagedKeyData getAnActiveKey(byte[] cust_spec, String keyNamespace)
     throws IOException, KeyException {
     checkPBEEnabled();
-    PBEKeyData keyData = keyDataCache.getRandomEntryForPrefix(pbePrefix, keyNamespace);
+    ManagedKeyData keyData = keyDataCache.getRandomEntryForPrefix(cust_spec, keyNamespace);
     if (keyData == null) {
-      List<PBEKeyData> activeKeys = keymetaAccessor.getActiveKeys(pbePrefix, keyNamespace);
-      for (PBEKeyData kd: activeKeys) {
+      List<ManagedKeyData> activeKeys = keymetaAccessor.getActiveKeys(cust_spec, keyNamespace);
+      for (ManagedKeyData kd: activeKeys) {
         keyDataCache.addEntry(kd);
       }
-      keyData = keyDataCache.getRandomEntryForPrefix(pbePrefix, keyNamespace);
+      keyData = keyDataCache.getRandomEntryForPrefix(cust_spec, keyNamespace);
     }
     return keyData;
   }

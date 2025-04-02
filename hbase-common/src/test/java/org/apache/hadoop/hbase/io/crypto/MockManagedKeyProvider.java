@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.crypto;
 
 import java.io.IOException;
 import java.security.Key;
-import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,31 +30,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A simple implementation of PBEKeyProvider for testing. It generates a key on demand given a
+ * A simple implementation of ManagedKeyProvider for testing. It generates a key on demand given a
  * prefix. One can control the state of a key by calling setKeyStatus and can rotate a key by
  * calling setKey.
  */
-public class MockPBEKeyProvider extends MockAesKeyProvider implements PBEKeyProvider {
-  protected static final Logger LOG = LoggerFactory.getLogger(MockPBEKeyProvider.class);
+public class MockManagedKeyProvider extends MockAesKeyProvider implements ManagedKeyProvider {
+  protected static final Logger LOG = LoggerFactory.getLogger(MockManagedKeyProvider.class);
 
   public Map<String, Key> keys = new HashMap<>();
-  public Map<String, PBEKeyStatus> keyStatus = new HashMap<>();
+  public Map<String, ManagedKeyStatus> keyStatus = new HashMap<>();
   private String systemKeyAlias = "default_system_key_alias";
 
   @Override public void initConfig(Configuration conf) {
    // NO-OP
   }
 
-  @Override public PBEKeyData getSystemKey(byte[] systemId) throws IOException {
+  @Override public ManagedKeyData getSystemKey(byte[] systemId) throws IOException {
     return getKey(systemId, systemKeyAlias);
   }
 
-  @Override public PBEKeyData getPBEKey(byte[] pbe_prefix, String key_namespace)
+  @Override public ManagedKeyData getManagedKey(byte[] cust_spec, String key_namespace)
     throws IOException {
-    return getKey(pbe_prefix);
+    return getKey(cust_spec);
   }
 
-  @Override public PBEKeyData unwrapKey(String keyMetadata) throws IOException {
+  @Override public ManagedKeyData unwrapKey(String keyMetadata) throws IOException {
     String[] meta_toks = keyMetadata.split(":");
     if (keys.containsKey(meta_toks[1])) {
       return getKey(meta_toks[0].getBytes(), meta_toks[1]);
@@ -64,26 +63,27 @@ public class MockPBEKeyProvider extends MockAesKeyProvider implements PBEKeyProv
   }
 
   /**
-   * Lookup the key data for the given prefix from keys. If missing, initialize one using generateSecretKey().
+   * Lookup the key data for the given cust_spec from keys. If missing, initialize one using
+   * generateSecretKey().
    */
-  public PBEKeyData getKey(byte[] prefix_bytes) {
-    String alias = Bytes.toString(prefix_bytes);
-    return getKey(prefix_bytes, alias);
+  public ManagedKeyData getKey(byte[] cust_spec) {
+    String alias = Bytes.toString(cust_spec);
+    return getKey(cust_spec, alias);
   }
 
-  public PBEKeyData getKey(byte[] prefix_bytes, String alias) {
+  public ManagedKeyData getKey(byte[] cust_spec, String alias) {
     Key key = keys.get(alias);
     if (key == null) {
       key = generateSecretKey();
       keys.put(alias, key);
     }
-    PBEKeyStatus keyStatus = this.keyStatus.get(alias);
-    return new PBEKeyData(prefix_bytes, PBEKeyData.KEY_NAMESPACE_GLOBAL, key,
-      keyStatus == null ? PBEKeyStatus.ACTIVE : keyStatus,
-      Bytes.toString(prefix_bytes)+":"+alias);
+    ManagedKeyStatus keyStatus = this.keyStatus.get(alias);
+    return new ManagedKeyData(cust_spec, ManagedKeyData.KEY_NAMESPACE_GLOBAL, key,
+      keyStatus == null ? ManagedKeyStatus.ACTIVE : keyStatus,
+      Bytes.toString(cust_spec)+":"+alias);
   }
 
-  public void setKeyStatus(String alias, PBEKeyStatus status) {
+  public void setKeyStatus(String alias, ManagedKeyStatus status) {
     keyStatus.put(alias, status);
   }
 

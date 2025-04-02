@@ -38,9 +38,9 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
-import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
-import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
@@ -123,11 +123,11 @@ public class MockNoopMasterServices implements MasterServices {
     return null;
   }
 
-  @Override public PBEKeyAccessor getPBEKeyAccessor() {
+  @Override public ManagedKeyAccessor getPBEKeyAccessor() {
     return null;
   }
 
-  @Override public PBEKeymetaAdmin getPBEKeymetaAdmin() {
+  @Override public KeymetaAdmin getPBEKeymetaAdmin() {
     return null;
   }
 

@@ -23,9 +23,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
-import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
-import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -94,12 +94,12 @@ public interface Server extends Abortable, Stoppable {
   /**
    * @return the accessor for cluster keys.
    */
-  public PBEKeyAccessor getPBEKeyAccessor();
+  public ManagedKeyAccessor getPBEKeyAccessor();
 
   /**
    * @return the admin for keymeta.
    */
-  public PBEKeymetaAdmin getPBEKeymetaAdmin();
+  public KeymetaAdmin getPBEKeymetaAdmin();
 
   /** Returns Return the FileSystem object used (can return null!). */
   // TODO: Distinguish between "dataFs" and "walFs".

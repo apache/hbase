@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,8 +31,8 @@ import java.util.TreeMap;
 public class SystemKeyCache {
   private static final Logger LOG = LoggerFactory.getLogger(SystemKeyCache.class);
 
-  private final PBEKeyData latestSystemKey;
-  private final Map<Long, PBEKeyData> systemKeys;
+  private final ManagedKeyData latestSystemKey;
+  private final Map<Long, ManagedKeyData> systemKeys;
 
   /**
    * Construct the System Key cache from the specified accessor.
@@ -46,11 +46,11 @@ public class SystemKeyCache {
       LOG.warn("No system key files found, skipping cache creation");
       return null;
     }
-    PBEKeyData latestSystemKey = null;
-    Map<Long, PBEKeyData> systemKeys = new TreeMap<>();
+    ManagedKeyData latestSystemKey = null;
+    Map<Long, ManagedKeyData> systemKeys = new TreeMap<>();
     for (Path keyPath: allSystemKeyFiles) {
       LOG.info("Loading system key from: {}", keyPath);
-      PBEKeyData keyData = accessor.loadSystemKey(keyPath);
+      ManagedKeyData keyData = accessor.loadSystemKey(keyPath);
       if (latestSystemKey == null) {
         latestSystemKey = keyData;
       }
@@ -59,16 +59,16 @@ public class SystemKeyCache {
     return new SystemKeyCache(systemKeys, latestSystemKey);
   }
 
-  private SystemKeyCache(Map<Long, PBEKeyData> systemKeys, PBEKeyData latestSystemKey) {
+  private SystemKeyCache(Map<Long, ManagedKeyData> systemKeys, ManagedKeyData latestSystemKey) {
     this.systemKeys = systemKeys;
     this.latestSystemKey = latestSystemKey;
   }
 
-  public PBEKeyData getLatestSystemKey() {
+  public ManagedKeyData getLatestSystemKey() {
     return latestSystemKey;
   }
 
-  public PBEKeyData getSystemKeyByChecksum(long checksum) {
+  public ManagedKeyData getSystemKeyByChecksum(long checksum) {
     return systemKeys.get(checksum);
   }
 }

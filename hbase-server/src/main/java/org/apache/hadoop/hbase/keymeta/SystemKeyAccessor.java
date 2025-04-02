@@ -22,8 +22,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
@@ -35,7 +35,7 @@ import java.util.TreeMap;
 import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
 
 @InterfaceAudience.Private
-public class SystemKeyAccessor extends PBEKeyAccessorBase {
+public class SystemKeyAccessor extends KeyManagementBase {
   protected final Path systemKeyDir;
 
   public SystemKeyAccessor(Server server) throws IOException {
@@ -78,8 +78,8 @@ public class SystemKeyAccessor extends PBEKeyAccessorBase {
     return new ArrayList<>(clusterKeys.values());
   }
 
-  public PBEKeyData loadSystemKey(Path keyPath) throws IOException {
-    PBEKeyProvider provider = getKeyProvider();
+  public ManagedKeyData loadSystemKey(Path keyPath) throws IOException {
+    ManagedKeyProvider provider = getKeyProvider();
     return provider.unwrapKey(loadKeyMetadata(keyPath));
   }
 

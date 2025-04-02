@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -46,7 +46,7 @@ import java.util.List;
  * Accessor for PBE keymeta table.
  */
 @InterfaceAudience.Private
-public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
+public class KeymetaTableAccessor extends KeyManagementBase {
   private static final String KEY_META_INFO_FAMILY_STR = "info";
 
   public static final byte[] KEY_META_INFO_FAMILY = Bytes.toBytes(KEY_META_INFO_FAMILY_STR);
@@ -78,7 +78,7 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
   public static final String WRITE_OP_COUNT_QUAL_NAME = "write_op_count";
   public static final byte[] WRITE_OP_COUNT_QUAL_BYTES = Bytes.toBytes(WRITE_OP_COUNT_QUAL_NAME);
 
-  public PBEKeymetaTableAccessor(Server server) {
+  public KeymetaTableAccessor(Server server) {
     super(server);
   }
 
@@ -87,7 +87,7 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
    * @param keyData The key data.
    * @throws IOException when there is an underlying IOException.
    */
-  public void addKey(PBEKeyData keyData) throws IOException {
+  public void addKey(ManagedKeyData keyData) throws IOException {
     checkPBEEnabled();
     final Put putForMetadata = addMutationColumns(new Put(constructRowKeyForMetadata(keyData)),
       keyData);
@@ -98,19 +98,19 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
   }
 
   /**
-   * Get all the keys for the specified pbe_prefix and key_namespace.
+   * Get all the keys for the specified cust_spec and key_namespace.
    *
-   * @param pbe_prefix The prefix
+   * @param cust_spec The custodian specification
    * @param keyNamespace The namespace
    * @return a list of key data, one for each key, can be empty when none were found.
    * @throws IOException when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  protected List<PBEKeyData> getAllKeys(byte[] pbe_prefix, String keyNamespace)
+  protected List<ManagedKeyData> getAllKeys(byte[] cust_spec, String keyNamespace)
     throws IOException, KeyException {
     checkPBEEnabled();
     Connection connection = server.getConnection();
-    byte[] prefixForScan = Bytes.add(Bytes.toBytes(pbe_prefix.length), pbe_prefix,
+    byte[] prefixForScan = Bytes.add(Bytes.toBytes(cust_spec.length), cust_spec,
       Bytes.toBytes(keyNamespace));
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       PrefixFilter prefixFilter = new PrefixFilter(prefixForScan);
@@ -119,9 +119,9 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
       scan.addFamily(KEY_META_INFO_FAMILY);
 
       ResultScanner scanner = table.getScanner(scan);
-      List<PBEKeyData> allKeys = new ArrayList<>();
+      List<ManagedKeyData> allKeys = new ArrayList<>();
       for (Result result : scanner) {
-        PBEKeyData keyData = parseFromResult(pbe_prefix, keyNamespace, result);
+        ManagedKeyData keyData = parseFromResult(cust_spec, keyNamespace, result);
         if (keyData != null) {
           allKeys.add(keyData);
         }
@@ -131,20 +131,20 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
   }
 
   /**
-   * Get all the active keys for the specified pbe_prefix and key_namespace.
+   * Get all the active keys for the specified cust_spec and key_namespace.
    *
-   * @param pbe_prefix The prefix
+   * @param cust_spec The prefix
    * @param keyNamespace The namespace
    * @return a list of key data, one for each active key, can be empty when none were found.
    * @throws IOException when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  public List<PBEKeyData> getActiveKeys(byte[] pbe_prefix, String keyNamespace)
+  public List<ManagedKeyData> getActiveKeys(byte[] cust_spec, String keyNamespace)
     throws IOException, KeyException {
     checkPBEEnabled();
-    List<PBEKeyData> activeKeys = new ArrayList<>();
-    for (PBEKeyData keyData : getAllKeys(pbe_prefix, keyNamespace)) {
-      if (keyData.getKeyStatus() == PBEKeyStatus.ACTIVE) {
+    List<ManagedKeyData> activeKeys = new ArrayList<>();
+    for (ManagedKeyData keyData : getAllKeys(cust_spec, keyNamespace)) {
+      if (keyData.getKeyStatus() == ManagedKeyStatus.ACTIVE) {
         activeKeys.add(keyData);
       }
     }
@@ -152,43 +152,43 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
   }
 
   /**
-   * Get the specific key identified by pbe_prefix, keyNamespace and keyMetadata.
+   * Get the specific key identified by cust_spec, keyNamespace and keyMetadata.
    *
-   * @param pbe_prefix    The prefix.
+   * @param cust_spec    The prefix.
    * @param keyNamespace The namespace.
    * @param keyMetadata  The metadata.
    * @return the key or {@code null}
    * @throws IOException when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  public PBEKeyData getKey(byte[] pbe_prefix, String keyNamespace, String keyMetadata)
+  public ManagedKeyData getKey(byte[] cust_spec, String keyNamespace, String keyMetadata)
     throws IOException, KeyException {
     checkPBEEnabled();
     Connection connection = server.getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      byte[] rowKey = constructRowKeyForMetadata(pbe_prefix, keyNamespace,
-        PBEKeyData.constructMetadataHash(keyMetadata));
+      byte[] rowKey = constructRowKeyForMetadata(cust_spec, keyNamespace,
+        ManagedKeyData.constructMetadataHash(keyMetadata));
       Result result = table.get(new Get(rowKey));
-      return parseFromResult(pbe_prefix, keyNamespace, result);
+      return parseFromResult(cust_spec, keyNamespace, result);
     }
   }
 
   /**
-   * Report read or write operation count on the specific key identified by pbe_prefix, keyNamespace
+   * Report read or write operation count on the specific key identified by cust_spec, keyNamespace
    * and keyMetadata. The reported value is added to the existing operation count using the
    * Increment mutation.
-   * @param pbe_prefix    The prefix.
+   * @param cust_spec    The prefix.
    * @param keyNamespace The namespace.
    * @param keyMetadata  The metadata.
    * @throws IOException when there is an underlying IOException.
    */
-  public void reportOperation(byte[] pbe_prefix, String keyNamespace, String keyMetadata, long count,
+  public void reportOperation(byte[] cust_spec, String keyNamespace, String keyMetadata, long count,
       boolean isReadOperation) throws IOException {
     checkPBEEnabled();
     Connection connection = server.getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      byte[] rowKey = constructRowKeyForMetadata(pbe_prefix, keyNamespace,
-        PBEKeyData.constructMetadataHash(keyMetadata));
+      byte[] rowKey = constructRowKeyForMetadata(cust_spec, keyNamespace,
+        ManagedKeyData.constructMetadataHash(keyMetadata));
       Increment incr = new Increment(rowKey)
         .addColumn(KEY_META_INFO_FAMILY,
           isReadOperation ? READ_OP_COUNT_QUAL_BYTES : WRITE_OP_COUNT_QUAL_BYTES,
@@ -200,8 +200,8 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
   /**
    * Add the mutation columns to the given Put that are derived from the keyData.
    */
-  private Put addMutationColumns(Put put, PBEKeyData keyData) throws IOException {
-    PBEKeyData latestSystemKey = server.getSystemKeyCache().getLatestSystemKey();
+  private Put addMutationColumns(Put put, ManagedKeyData keyData) throws IOException {
+    ManagedKeyData latestSystemKey = server.getSystemKeyCache().getLatestSystemKey();
     if (keyData.getTheKey() != null) {
       byte[] dekWrappedBySTK = EncryptionUtil.wrapKey(server.getConfiguration(), null,
         keyData.getTheKey(), latestSystemKey.getTheKey());
@@ -222,19 +222,19 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
       ;
   }
 
-  private byte[] constructRowKeyForMetadata(PBEKeyData keyData) {
-    return constructRowKeyForMetadata(keyData.getPBEPrefix(), keyData.getKeyNamespace(),
+  private byte[] constructRowKeyForMetadata(ManagedKeyData keyData) {
+    return constructRowKeyForMetadata(keyData.getCustodianSpec(), keyData.getKeyNamespace(),
       keyData.getKeyMetadataHash());
   }
 
-  private static byte[] constructRowKeyForMetadata(byte[] pbe_prefix, String keyNamespace,
+  private static byte[] constructRowKeyForMetadata(byte[] cust_spec, String keyNamespace,
       byte[] keyMetadataHash) {
-    int prefixLength = pbe_prefix.length;
-    return Bytes.add(Bytes.toBytes(prefixLength), pbe_prefix, Bytes.toBytesBinary(keyNamespace),
+    int prefixLength = cust_spec.length;
+    return Bytes.add(Bytes.toBytes(prefixLength), cust_spec, Bytes.toBytesBinary(keyNamespace),
       keyMetadataHash);
   }
 
-  private PBEKeyData parseFromResult(byte[] pbe_prefix, String keyNamespace, Result result)
+  private ManagedKeyData parseFromResult(byte[] cust_spec, String keyNamespace, Result result)
     throws IOException, KeyException {
     if (result == null || result.isEmpty()) {
       return null;
@@ -246,7 +246,7 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
     if (dekWrappedByStk != null) {
       long stkChecksum =
         Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES));
-      PBEKeyData clusterKey = server.getSystemKeyCache().getSystemKeyByChecksum(stkChecksum);
+      ManagedKeyData clusterKey = server.getSystemKeyCache().getSystemKeyByChecksum(stkChecksum);
       if (clusterKey == null) {
         LOG.error("Dropping key with metadata: {} as STK with checksum: {} is unavailable",
           dekMetadata, stkChecksum);
@@ -255,7 +255,7 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
       dek = EncryptionUtil.unwrapKey(server.getConfiguration(), null, dekWrappedByStk,
         clusterKey.getTheKey());
     }
-    PBEKeyStatus keyStatus = PBEKeyStatus.forValue(
+    ManagedKeyStatus keyStatus = ManagedKeyStatus.forValue(
       result.getValue(KEY_META_INFO_FAMILY, KEY_STATUS_QUAL_BYTES)[0]);
     long refreshedTimestamp = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,
       REFRESHED_TIMESTAMP_QUAL_BYTES));
@@ -263,7 +263,8 @@ public class PBEKeymetaTableAccessor extends PBEKeyAccessorBase {
     long readOpCount = readOpValue != null ? Bytes.toLong(readOpValue) : 0;
     byte[] writeOpValue = result.getValue(KEY_META_INFO_FAMILY, WRITE_OP_COUNT_QUAL_BYTES);
     long writeOpCount = writeOpValue != null ? Bytes.toLong(writeOpValue) : 0;
-    PBEKeyData dekKeyData = new PBEKeyData(pbe_prefix, keyNamespace, dek, keyStatus, dekMetadata,
+    ManagedKeyData
+      dekKeyData = new ManagedKeyData(cust_spec, keyNamespace, dek, keyStatus, dekMetadata,
       refreshedTimestamp, readOpCount, writeOpCount);
     if (dek != null) {
       long dekChecksum = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,

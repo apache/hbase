@@ -20,13 +20,13 @@ package org.apache.hadoop.hbase.master;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProvider;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.MockPBEKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
-import org.apache.hadoop.hbase.keymeta.PBETestBase;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyTestBase;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -41,7 +41,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestSystemKey extends PBETestBase {
+public class TestSystemKey extends ManagedKeyTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -52,10 +52,10 @@ public class TestSystemKey extends PBETestBase {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     KeyProvider keyProvider = Encryption.getKeyProvider(master.getConfiguration());
     assertNotNull(keyProvider);
-    assertTrue(keyProvider instanceof PBEKeyProvider);
-    assertTrue(keyProvider instanceof MockPBEKeyProvider);
-    MockPBEKeyProvider pbeKeyProvider = (MockPBEKeyProvider) keyProvider;
-    PBEKeyData initialSystemKey = validateInitialState(master, pbeKeyProvider);
+    assertTrue(keyProvider instanceof ManagedKeyProvider);
+    assertTrue(keyProvider instanceof MockManagedKeyProvider);
+    MockManagedKeyProvider pbeKeyProvider = (MockManagedKeyProvider) keyProvider;
+    ManagedKeyData initialSystemKey = validateInitialState(master, pbeKeyProvider);
 
     restartSystem();
     master = TEST_UTIL.getHBaseCluster().getMaster();
@@ -64,7 +64,7 @@ public class TestSystemKey extends PBETestBase {
     // Test rotation of cluster key by changing the key that the key provider provides and restart master.
     String newAlias = "new_cluster_key";
     pbeKeyProvider.setCluterKeyAlias(newAlias);
-    Key newCluterKey = MockPBEKeyProvider.generateSecretKey();
+    Key newCluterKey = MockManagedKeyProvider.generateSecretKey();
     pbeKeyProvider.setKey(newAlias, newCluterKey);
     restartSystem();
     master = TEST_UTIL.getHBaseCluster().getMaster();
@@ -83,22 +83,22 @@ public class TestSystemKey extends PBETestBase {
   public void testWithInvalidSystemKey() throws Exception {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     KeyProvider keyProvider = Encryption.getKeyProvider(master.getConfiguration());
-    MockPBEKeyProvider pbeKeyProvider = (MockPBEKeyProvider) keyProvider;
+    MockManagedKeyProvider pbeKeyProvider = (MockManagedKeyProvider) keyProvider;
 
     // Test startup failure when the cluster key is INACTIVE
     SystemKeyManager tmpCKM = new SystemKeyManager(master);
     tmpCKM.ensureSystemKeyInitialized();
-    pbeKeyProvider.setKeyStatus(pbeKeyProvider.getSystemKeyAlias(), PBEKeyStatus.INACTIVE);
+    pbeKeyProvider.setKeyStatus(pbeKeyProvider.getSystemKeyAlias(), ManagedKeyStatus.INACTIVE);
     assertThrows(IOException.class, tmpCKM::ensureSystemKeyInitialized);
   }
 
-  private PBEKeyData validateInitialState(HMaster master, MockPBEKeyProvider pbeKeyProvider )
+  private ManagedKeyData validateInitialState(HMaster master, MockManagedKeyProvider pbeKeyProvider )
     throws IOException {
     SystemKeyAccessor systemKeyAccessor = new SystemKeyAccessor(master);
     assertEquals(1, systemKeyAccessor.getAllSystemKeyFiles().size());
     SystemKeyCache systemKeyCache = master.getSystemKeyCache();
     assertNotNull(systemKeyCache);
-    PBEKeyData clusterKey = systemKeyCache.getLatestSystemKey();
+    ManagedKeyData clusterKey = systemKeyCache.getLatestSystemKey();
     assertEquals(pbeKeyProvider.getSystemKey(master.getClusterId().getBytes()), clusterKey);
     assertEquals(clusterKey,
       systemKeyCache.getSystemKeyByChecksum(clusterKey.getKeyChecksum()));

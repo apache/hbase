@@ -22,9 +22,9 @@ import java.util.List;
 import java.util.UUID;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.yetus.audience.InterfaceAudience;
 import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
@@ -58,7 +58,7 @@ public class SystemKeyManager extends SystemKeyAccessor {
     }
   }
 
-  public PBEKeyData rotateSystemKeyIfChanged() throws IOException {
+  public ManagedKeyData rotateSystemKeyIfChanged() throws IOException {
     if (! isPBEEnabled()) {
       return null;
     }
@@ -67,14 +67,14 @@ public class SystemKeyManager extends SystemKeyAccessor {
     return rotateSystemKey(latestKeyMetadata);
   }
 
-  private PBEKeyData rotateSystemKey(String currentKeyMetadata) throws IOException {
+  private ManagedKeyData rotateSystemKey(String currentKeyMetadata) throws IOException {
     if (! isPBEEnabled()) {
       return null;
     }
-    PBEKeyProvider provider = getKeyProvider();
-    PBEKeyData clusterKey = provider.getSystemKey(
+    ManagedKeyProvider provider = getKeyProvider();
+    ManagedKeyData clusterKey = provider.getSystemKey(
       master.getMasterFileSystem().getClusterId().toString().getBytes());
-    if (clusterKey.getKeyStatus() != PBEKeyStatus.ACTIVE) {
+    if (clusterKey.getKeyStatus() != ManagedKeyStatus.ACTIVE) {
       throw new IOException("System key is expected to be ACTIVE but it is: " +
         clusterKey.getKeyStatus() + " for metadata: " + clusterKey.getKeyMetadata());
     }

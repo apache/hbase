@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @InterfaceAudience.Public
-public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKeyProvider {
+public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements ManagedKeyProvider {
   public static final String KEY_METADATA_ALIAS = "KeyAlias";
   public static final String KEY_METADATA_PREFIX = "PBE_PREFIX";
 
@@ -22,7 +22,7 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
   }
 
   @Override
-  public PBEKeyData getSystemKey(byte[] clusterId) {
+  public ManagedKeyData getSystemKey(byte[] clusterId) {
     checkConfig();
     String masterKeyAlias = conf.get(HConstants.CRYPTO_PBE_MASTERKEY_NAME_CONF_KEY, null);
     if (masterKeyAlias == null) {
@@ -34,15 +34,15 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
     }
     // Encode clusterId too for consistency with that of PBE prefixes.
     String keyMetadata = generateKeyMetadata(masterKeyAlias,
-      PBEKeyProvider.encodeToPrefixStr(clusterId));
-    return new PBEKeyData(clusterId, PBEKeyData.KEY_NAMESPACE_GLOBAL, key, PBEKeyStatus.ACTIVE,
+      ManagedKeyProvider.encodeToStr(clusterId));
+    return new ManagedKeyData(clusterId, ManagedKeyData.KEY_NAMESPACE_GLOBAL, key, ManagedKeyStatus.ACTIVE,
       keyMetadata);
   }
 
   @Override
-  public PBEKeyData getPBEKey(byte[] pbe_prefix, String key_namespace) throws IOException {
+  public ManagedKeyData getManagedKey(byte[] cust_spec, String key_namespace) throws IOException {
     checkConfig();
-    String encodedPrefix = PBEKeyProvider.encodeToPrefixStr(pbe_prefix);
+    String encodedPrefix = ManagedKeyProvider.encodeToStr(cust_spec);
     String aliasConfKey = HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encodedPrefix + "." +
       "alias";
     String keyMetadata = generateKeyMetadata(conf.get(aliasConfKey, null), encodedPrefix);
@@ -50,22 +50,22 @@ public class PBEKeyStoreKeyProvider extends KeyStoreKeyProvider implements PBEKe
   }
 
   @Override
-  public PBEKeyData unwrapKey(String keyMetadataStr) throws IOException {
+  public ManagedKeyData unwrapKey(String keyMetadataStr) throws IOException {
     Map<String, String> keyMetadata = GsonUtil.getDefaultInstance().fromJson(keyMetadataStr,
       HashMap.class);
     String encodedPrefix = keyMetadata.get(KEY_METADATA_PREFIX);
     String activeStatusConfKey = HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encodedPrefix +
       ".active";
     boolean isActive = conf.getBoolean(activeStatusConfKey, true);
-    byte[] pbe_prefix = PBEKeyProvider.decodeToPrefixBytes(encodedPrefix);
+    byte[] cust_spec = ManagedKeyProvider.decodeToBytes(encodedPrefix);
     String alias = keyMetadata.get(KEY_METADATA_ALIAS);
     Key key = alias != null ? getKey(alias) : null;
     if (key != null) {
-      return new PBEKeyData(pbe_prefix, PBEKeyData.KEY_NAMESPACE_GLOBAL, key,
-        isActive ? PBEKeyStatus.ACTIVE : PBEKeyStatus.INACTIVE, keyMetadataStr);
+      return new ManagedKeyData(cust_spec, ManagedKeyData.KEY_NAMESPACE_GLOBAL, key,
+        isActive ? ManagedKeyStatus.ACTIVE : ManagedKeyStatus.INACTIVE, keyMetadataStr);
     }
-    return new PBEKeyData(pbe_prefix, PBEKeyData.KEY_NAMESPACE_GLOBAL, null,
-      isActive ? PBEKeyStatus.FAILED : PBEKeyStatus.DISABLED, keyMetadataStr);
+    return new ManagedKeyData(cust_spec, ManagedKeyData.KEY_NAMESPACE_GLOBAL, null,
+      isActive ? ManagedKeyStatus.FAILED : ManagedKeyStatus.DISABLED, keyMetadataStr);
   }
 
   private void checkConfig() {

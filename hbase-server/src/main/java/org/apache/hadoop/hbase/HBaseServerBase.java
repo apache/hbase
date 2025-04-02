@@ -52,11 +52,11 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
-import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
-import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
-import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdminImpl;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
@@ -193,8 +193,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   protected final NettyEventLoopGroupConfig eventLoopGroupConfig;
 
   private SystemKeyCache systemKeyCache;
-  protected PBEKeymetaAdminImpl pbeKeymetaAdmin;
-  protected PBEKeyAccessor pbeKeyAccessor;
+  protected KeymetaAdminImpl keymetaAdmin;
+  protected ManagedKeyAccessor managedKeyAccessor;
 
   private void setupSignalHandlers() {
     if (!SystemUtils.IS_OS_WINDOWS) {
@@ -292,7 +292,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
       initializeFileSystem();
 
-      pbeKeymetaAdmin = new PBEKeymetaAdminImpl(this);
+      keymetaAdmin = new KeymetaAdminImpl(this);
 
       int choreServiceInitialSize =
         conf.getInt(CHORE_SERVICE_INITIAL_POOL_SIZE, DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE);
@@ -415,13 +415,13 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   @Override
-  public PBEKeymetaAdmin getPBEKeymetaAdmin() {
-    return pbeKeymetaAdmin;
+  public KeymetaAdmin getPBEKeymetaAdmin() {
+    return keymetaAdmin;
   }
 
   @Override
-  public PBEKeyAccessor getPBEKeyAccessor() {
-    return pbeKeyAccessor;
+  public ManagedKeyAccessor getPBEKeyAccessor() {
+    return managedKeyAccessor;
   }
 
   @Override

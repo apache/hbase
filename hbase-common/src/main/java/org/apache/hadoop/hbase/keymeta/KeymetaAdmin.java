@@ -17,42 +17,38 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
-import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 import java.security.KeyException;
 import java.util.List;
 
 /**
- * PBEKeymetaAdmin is an interface for administrative functions related to PBE keys.
+ * KeymetaAdmin is an interface for administrative functions related to managed keys.
  * It handles the following methods:
- *
- * <ul>
- * <li>enablePBE(): Enables PBE for a given pbe_prefix and namespace.</li>
- * </ul>
  */
 @InterfaceAudience.Public
-public interface PBEKeymetaAdmin {
+public interface KeymetaAdmin {
   /**
-   * Enables PBE for the specified key prefix and namespace.
+   * Enables key management for the specified custodian specification and namespace.
    *
-   * @param pbePrefix    The prefix for the PBE key in base64 encoded format.
-   * @param keyNamespace The namespace for the PBE key.
+   * @param custSpec    The custodian specification in base64 encoded format.
+   * @param keyNamespace The namespace for the key management.
    *
-   * @return The current status of the PBE key.
-   * @throws IOException if an error occurs while enabling PBE.
+   * @return The current status of the managed key.
+   * @throws IOException if an error occurs while enabling key management.
    */
-  PBEKeyStatus enablePBE(String pbePrefix, String keyNamespace) throws IOException;
+  ManagedKeyStatus enableManagedKeys(String custSpec, String keyNamespace) throws IOException;
 
   /**
-   * Get the status of all the keys for the specified pbe_prefix.
+   * Get the status of all the keys for the specified custodian.
    *
-   * @param pbePrefix    The prefix for the PBE key in base64 encoded format.
-   * @param keyNamespace The namespace for the PBE key.
+   * @param custSpec    The custodian specification in base64 encoded format.
+   * @param keyNamespace The namespace for the key management.
    * @return The list of status objects each identifying the key and its current status.
-   * @throws IOException if an error occurs while enabling PBE.
+   * @throws IOException if an error occurs while enabling key management.
    */
-  List<PBEKeyData> getPBEKeyStatuses(String pbePrefix, String keyNamespace)
+  List<ManagedKeyData> getManagedKeys(String custSpec, String keyNamespace)
     throws IOException, KeyException;
 }

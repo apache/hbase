@@ -16,8 +16,8 @@
 #
 
 include Java
-java_import org.apache.hadoop.hbase.io.crypto.PBEKeyData
-java_import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdminClient
+java_import org.apache.hadoop.hbase.io.crypto.ManagedKeyData
+java_import org.apache.hadoop.hbase.keymeta.KeymetaAdminClient
 
 module Hbase
   class PBEAdmin

@@ -21,15 +21,15 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos;
-import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEAdminRequest;
-import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEAdminResponse;
-import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEGetStatusResponse;
-import org.apache.hadoop.hbase.protobuf.generated.PBEAdminProtos.PBEAdminService;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.GetManagedKeysResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -49,20 +49,20 @@ import java.util.List;
  * methods:
  *
  * <ul>
- * <li>enablePBE(): Enables PBE for a given pbe_prefix and namespace.</li>
+ * <li>enablePBE(): Enables PBE for a given cust_spec and namespace.</li>
  * </ul>
  *
- * This endpoint is designed to work in conjunction with the {@link org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin}
+ * This endpoint is designed to work in conjunction with the {@link KeymetaAdmin}
  * interface, which provides the actual implementation of the key metadata operations.
  * </p>
  */
 @CoreCoprocessor @InterfaceAudience.Private
-public class PBEKeymetaServiceEndpoint implements MasterCoprocessor {
-  private static final Logger LOG = LoggerFactory.getLogger(PBEKeymetaServiceEndpoint.class);
+public class KeymetaServiceEndpoint implements MasterCoprocessor {
+  private static final Logger LOG = LoggerFactory.getLogger(KeymetaServiceEndpoint.class);
 
   private MasterServices master = null;
 
-  private final PBEAdminService pbeAdminService = new KeyMetaAdminServiceImpl();
+  private final ManagedKeysService managedKeysService = new KeyMetaAdminServiceImpl();
 
   /**
    * Starts the coprocessor by initializing the reference to the {@link org.apache.hadoop.hbase.master.MasterServices}
@@ -82,21 +82,21 @@ public class PBEKeymetaServiceEndpoint implements MasterCoprocessor {
 
   /**
    * Returns an iterable of the available coprocessor services, which includes the
-   * {@link PBEAdminService} implemented by
-   * {@link org.apache.hadoop.hbase.keymeta.PBEKeymetaServiceEndpoint.KeyMetaAdminServiceImpl}.
+   * {@link ManagedKeysService} implemented by
+   * {@link KeymetaServiceEndpoint.KeyMetaAdminServiceImpl}.
    *
    * @return An iterable of the available coprocessor services.
    */
   @Override
   public Iterable<Service> getServices() {
-    return Collections.singleton(pbeAdminService);
+    return Collections.singleton(managedKeysService);
   }
 
   /**
-   * The implementation of the {@link PBEAdminProtos.PBEAdminService}
+   * The implementation of the {@link ManagedKeysProtos.ManagedKeysService}
    * interface, which provides the actual method implementations for enabling PBE.
    */
-  private class KeyMetaAdminServiceImpl extends PBEAdminService {
+  private class KeyMetaAdminServiceImpl extends ManagedKeysService {
     /**
      * Enables PBE for a given tenant and namespace, as specified in the provided request.
      *
@@ -105,36 +105,37 @@ public class PBEKeymetaServiceEndpoint implements MasterCoprocessor {
      * @param done       The callback to be invoked with the response.
      */
     @Override
-    public void enablePBE(RpcController controller, PBEAdminRequest request,
-        RpcCallback<PBEAdminResponse> done) {
-      PBEAdminResponse.Builder builder = getResponseBuilder(controller, request);
-      if (builder.getPbePrefix() != null) {
+    public void enableManagedKeys(RpcController controller, ManagedKeysRequest request,
+        RpcCallback<ManagedKeysResponse> done) {
+      ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
+      if (builder.getCustSpec() != null) {
         try {
-          PBEKeyStatus pbeKeyStatus = master.getPBEKeymetaAdmin()
-            .enablePBE(request.getPbePrefix(), request.getKeyNamespace());
-          builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.valueOf(pbeKeyStatus.getVal()));
+          ManagedKeyStatus managedKeyStatus = master.getPBEKeymetaAdmin()
+            .enableManagedKeys(request.getCustSpec(), request.getKeyNamespace());
+          builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.valueOf(
+            managedKeyStatus.getVal()));
         } catch (IOException e) {
           CoprocessorRpcUtils.setControllerException(controller, e);
-          builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.PBE_FAILED);
+          builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.PBE_FAILED);
         }
       }
       done.run(builder.build());
     }
 
     @Override
-    public void getPBEStatuses(RpcController controller, PBEAdminRequest request,
-        RpcCallback<PBEGetStatusResponse> done) {
-      PBEGetStatusResponse.Builder responseBuilder =
-        PBEGetStatusResponse.newBuilder();
-      PBEAdminResponse.Builder builder = getResponseBuilder(controller, request);
-      if (builder.getPbePrefix() != null) {
+    public void getManagedKeys(RpcController controller, ManagedKeysRequest request,
+        RpcCallback<GetManagedKeysResponse> done) {
+      GetManagedKeysResponse.Builder responseBuilder =
+        GetManagedKeysResponse.newBuilder();
+      ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
+      if (builder.getCustSpec() != null) {
         try {
-          List<PBEKeyData> pbeKeyStatuses = master.getPBEKeymetaAdmin()
-            .getPBEKeyStatuses(request.getPbePrefix(), request.getKeyNamespace());
-          for (PBEKeyData keyData: pbeKeyStatuses) {
+          List<ManagedKeyData> managedKeyStatuses = master.getPBEKeymetaAdmin()
+            .getManagedKeys(request.getCustSpec(), request.getKeyNamespace());
+          for (ManagedKeyData keyData: managedKeyStatuses) {
             builder.setPbeStatus(
-              PBEAdminProtos.PBEKeyStatus.valueOf(keyData.getKeyStatus().getVal()));
-            builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.valueOf(
+              ManagedKeysProtos.ManagedKeyStatus.valueOf(keyData.getKeyStatus().getVal()));
+            builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.valueOf(
                       keyData.getKeyStatus().getVal()))
                    .setKeyMetadata(keyData.getKeyMetadata())
                    .setRefreshTimestamp(keyData.getRefreshTimestamp())
@@ -145,40 +146,40 @@ public class PBEKeymetaServiceEndpoint implements MasterCoprocessor {
           }
         } catch (IOException e) {
           CoprocessorRpcUtils.setControllerException(controller, e);
-          builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.PBE_FAILED);
+          builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.PBE_FAILED);
         } catch (KeyException e) {
           CoprocessorRpcUtils.setControllerException(controller, new IOException(e));
-          builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.PBE_FAILED);
+          builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.PBE_FAILED);
         }
       }
       done.run(responseBuilder.build());
     }
 
-    private byte[] convertToPBEBytes(RpcController controller, PBEAdminRequest request,
-      PBEAdminResponse.Builder builder) {
-      byte[] pbe_prefix = null;
+    private byte[] convertToPBEBytes(RpcController controller, ManagedKeysRequest request,
+      ManagedKeysResponse.Builder builder) {
+      byte[] cust_spec = null;
       try {
-        pbe_prefix = Base64.getDecoder().decode(request.getPbePrefix());
+        cust_spec = Base64.getDecoder().decode(request.getCustSpec());
       } catch (IllegalArgumentException e) {
-        builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.PBE_FAILED);
+        builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.PBE_FAILED);
         CoprocessorRpcUtils.setControllerException(controller, new IOException(
-          "Failed to decode specified prefix as Base64 string: " + request.getPbePrefix(), e));
+          "Failed to decode specified prefix as Base64 string: " + request.getCustSpec(), e));
       }
-      return pbe_prefix;
+      return cust_spec;
     }
 
-    private PBEAdminResponse.Builder getResponseBuilder(RpcController controller,
-        PBEAdminRequest request) {
-      PBEAdminResponse.Builder builder = PBEAdminResponse.newBuilder()
+    private ManagedKeysResponse.Builder getResponseBuilder(RpcController controller,
+        ManagedKeysRequest request) {
+      ManagedKeysResponse.Builder builder = ManagedKeysResponse.newBuilder()
           .setKeyNamespace(request.getKeyNamespace());
-      byte[] pbe_prefix = null;
+      byte[] cust_spec = null;
       try {
-        pbe_prefix = Base64.getDecoder().decode(request.getPbePrefix());
-        builder.setPbePrefixBytes(ByteString.copyFrom(pbe_prefix));
+        cust_spec = Base64.getDecoder().decode(request.getCustSpec());
+        builder.setCustSpecBytes(ByteString.copyFrom(cust_spec));
       } catch (IllegalArgumentException e) {
-        builder.setPbeStatus(PBEAdminProtos.PBEKeyStatus.PBE_FAILED);
+        builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.PBE_FAILED);
         CoprocessorRpcUtils.setControllerException(controller, new IOException(
-          "Failed to decode specified prefix as Base64 string: " + request.getPbePrefix(), e));
+          "Failed to decode specified prefix as Base64 string: " + request.getCustSpec(), e));
       }
       return builder;
     }

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
-import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -29,15 +29,15 @@ import java.util.HashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * In-memory cache for PBEKeyData entries, using key metadata as the cache key.
+ * In-memory cache for ManagedKeyData entries, using key metadata as the cache key.
  */
 @InterfaceAudience.Private
-public class PBEKeyDataCache {
-  private final Map<String, PBEKeyData> cache;
-  private final Map<String, Map<Bytes, List<PBEKeyData>>> prefixCache;
+public class ManagedKeyDataCache {
+  private final Map<String, ManagedKeyData> cache;
+  private final Map<String, Map<Bytes, List<ManagedKeyData>>> prefixCache;
   private final ReentrantLock lock;
 
-  public PBEKeyDataCache() {
+  public ManagedKeyDataCache() {
     this.prefixCache = new HashMap<>();
     this.cache = new HashMap<>();
     this.lock = new ReentrantLock();
@@ -46,29 +46,29 @@ public class PBEKeyDataCache {
   /**
    * Adds a new entry to the cache.
    *
-   * @param pbeKeyData the PBEKeyData entry to be added
+   * @param keyData the ManagedKeyData entry to be added
    */
-  public void addEntry(PBEKeyData pbeKeyData) {
+  public void addEntry(ManagedKeyData keyData) {
     lock.lock();
     try {
-      Bytes pbePrefix = new Bytes(pbeKeyData.getPBEPrefix());
-      String keyNamespace = pbeKeyData.getKeyNamespace();
+      Bytes custSpec = new Bytes(keyData.getCustodianSpec());
+      String keyNamespace = keyData.getKeyNamespace();
 
-      cache.put(pbeKeyData.getKeyMetadata(), pbeKeyData);
+      cache.put(keyData.getKeyMetadata(), keyData);
 
-      Map<Bytes, List<PBEKeyData>> nsCache = prefixCache.get(keyNamespace);
+      Map<Bytes, List<ManagedKeyData>> nsCache = prefixCache.get(keyNamespace);
       if (nsCache == null) {
         nsCache = new HashMap<>();
         prefixCache.put(keyNamespace, nsCache);
       }
 
-      List<PBEKeyData> keyList = nsCache.get(pbePrefix);
+      List<ManagedKeyData> keyList = nsCache.get(custSpec);
       if (keyList == null) {
         keyList = new ArrayList<>();
-        prefixCache.get(keyNamespace).put(pbePrefix, keyList);
+        prefixCache.get(keyNamespace).put(custSpec, keyList);
       }
 
-      keyList.add(pbeKeyData);
+      keyList.add(keyData);
     } finally {
       lock.unlock();
     }
@@ -78,9 +78,9 @@ public class PBEKeyDataCache {
    * Retrieves an entry from the cache based on its key metadata.
    *
    * @param keyMetadata the key metadata of the entry to be retrieved
-   * @return the corresponding PBEKeyData entry, or null if not found
+   * @return the corresponding ManagedKeyData entry, or null if not found
    */
-  public PBEKeyData getEntry(String keyMetadata) {
+  public ManagedKeyData getEntry(String keyMetadata) {
     lock.lock();
     try {
       return cache.get(keyMetadata);
@@ -93,21 +93,21 @@ public class PBEKeyDataCache {
    * Removes an entry from the cache based on its key metadata.
    *
    * @param keyMetadata the key metadata of the entry to be removed
-   * @return the removed PBEKeyData entry, or null if not found
+   * @return the removed ManagedKeyData entry, or null if not found
    */
-  public PBEKeyData removeEntry(String keyMetadata) {
+  public ManagedKeyData removeEntry(String keyMetadata) {
     lock.lock();
     try {
-      PBEKeyData removedEntry = cache.remove(keyMetadata);
+      ManagedKeyData removedEntry = cache.remove(keyMetadata);
       if (removedEntry != null) {
-        Bytes pbePrefix = new Bytes(removedEntry.getPBEPrefix());
+        Bytes custSpec = new Bytes(removedEntry.getCustodianSpec());
         String keyNamespace = removedEntry.getKeyNamespace();
-        Map<Bytes, List<PBEKeyData>> nsCache = prefixCache.get(keyNamespace);
-        List<PBEKeyData> keyList = nsCache != null ? nsCache.get(pbePrefix) : null;
+        Map<Bytes, List<ManagedKeyData>> nsCache = prefixCache.get(keyNamespace);
+        List<ManagedKeyData> keyList = nsCache != null ? nsCache.get(custSpec) : null;
         if (keyList != null) {
           keyList.remove(removedEntry);
           if (keyList.isEmpty()) {
-            prefixCache.get(keyNamespace).remove(pbePrefix);
+            prefixCache.get(keyNamespace).remove(custSpec);
           }
         }
       }
@@ -121,21 +121,21 @@ public class PBEKeyDataCache {
    * Retrieves a random entry from the cache based on its PBE prefix, key namespace, and filters out entries with
    * a status other than ACTIVE.
    *
-   * @param pbe_prefix    the PBE prefix to search for
+   * @param cust_spec    the custodian specification.
    * @param keyNamespace the key namespace to search for
-   * @return a random PBEKeyData entry with the given PBE prefix and ACTIVE status, or null if not found
+   * @return a random ManagedKeyData entry with the given PBE prefix and ACTIVE status, or null if not found
    */
-  public PBEKeyData getRandomEntryForPrefix(byte[] pbe_prefix, String keyNamespace) {
+  public ManagedKeyData getRandomEntryForPrefix(byte[] cust_spec, String keyNamespace) {
     lock.lock();
     try {
-      List<PBEKeyData> activeEntries = new ArrayList<>();
+      List<ManagedKeyData> activeEntries = new ArrayList<>();
 
-      Bytes pbePrefix = new Bytes(pbe_prefix);
-      Map<Bytes, List<PBEKeyData>> nsCache = prefixCache.get(keyNamespace);
-      List<PBEKeyData> keyList = nsCache != null ? nsCache.get(pbePrefix) : null;
+      Bytes custSpec = new Bytes(cust_spec);
+      Map<Bytes, List<ManagedKeyData>> nsCache = prefixCache.get(keyNamespace);
+      List<ManagedKeyData> keyList = nsCache != null ? nsCache.get(custSpec) : null;
       if (keyList != null) {
-        for (PBEKeyData entry : keyList) {
-          if (entry.getKeyStatus() == PBEKeyStatus.ACTIVE) {
+        for (ManagedKeyData entry : keyList) {
+          if (entry.getKeyStatus() == ManagedKeyStatus.ACTIVE) {
             activeEntries.add(entry);
           }
         }

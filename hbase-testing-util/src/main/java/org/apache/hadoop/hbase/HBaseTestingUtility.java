@@ -89,7 +89,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
-import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdminClient;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdminClient;
 import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -2945,8 +2945,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return hbaseAdmin;
   }
 
-  public PBEKeymetaAdminClient getPBEAdmin() throws IOException {
-    return new PBEKeymetaAdminClient(getConnection());
+  public KeymetaAdminClient getPBEAdmin() throws IOException {
+    return new KeymetaAdminClient(getConnection());
   }
 
   /**

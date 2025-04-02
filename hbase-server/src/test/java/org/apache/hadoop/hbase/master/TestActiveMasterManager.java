@@ -34,8 +34,8 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
-import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
-import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskGroup;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -335,11 +335,11 @@ public class TestActiveMasterManager {
       return null;
     }
 
-    @Override public PBEKeyAccessor getPBEKeyAccessor() {
+    @Override public ManagedKeyAccessor getPBEKeyAccessor() {
       return null;
     }
 
-    @Override public PBEKeymetaAdmin getPBEKeymetaAdmin() {
+    @Override public KeymetaAdmin getPBEKeymetaAdmin() {
       return null;
     }
   }

@@ -32,14 +32,14 @@ import java.util.Base64;
 /**
  * This class represents an encryption key data which includes the key itself, its status, metadata
  * and a prefix. The metadata encodes enough information on the key such that it can be used to
- * retrieve the exact same key again in the future. If the key status is {@link PBEKeyStatus#FAILED}
+ * retrieve the exact same key again in the future. If the key status is {@link ManagedKeyStatus#FAILED}
  * expect the key to be {@code null}.
  *
  * The key data is represented by the following fields:
  * <ul>
- * <li>pbe_prefix: The prefix for which this key belongs to</li>
+ * <li>cust_spec: The prefix for which this key belongs to</li>
  * <li>theKey: The key capturing the bytes and encoding</li>
- * <li>keyStatus: The status of the key (see {@link PBEKeyStatus})</li>
+ * <li>keyStatus: The status of the key (see {@link ManagedKeyStatus})</li>
  * <li>keyMetadata: Metadata that identifies the key</li>
  * </ul>
  *
@@ -50,13 +50,13 @@ import java.util.Base64;
  * for validation and identification.
  */
 @InterfaceAudience.Public
-public class PBEKeyData {
+public class ManagedKeyData {
   public static final String KEY_NAMESPACE_GLOBAL = "*";
 
-  private final byte[] pbePrefix;
+  private final byte[] custSpec;
   private final String keyNamespace;
   private final Key theKey;
-  private final PBEKeyStatus keyStatus;
+  private final ManagedKeyStatus keyStatus;
   private final String keyMetadata;
   private final long refreshTimestamp;
   private final long readOpCount;
@@ -67,33 +67,33 @@ public class PBEKeyData {
   /**
    * Constructs a new instance with the given parameters.
    *
-   * @param pbe_prefix   The PBE prefix associated with the key.
+   * @param cust_spec   The Custodian specification associated with the key.
    * @param theKey       The actual key, can be {@code null}.
    * @param keyStatus    The status of the key.
    * @param keyMetadata  The metadata associated with the key.
-   * @throws NullPointerException if any of pbe_prefix, keyStatus or keyMetadata is null.
+   * @throws NullPointerException if any of cust_spec, keyStatus or keyMetadata is null.
    */
-  public PBEKeyData(byte[] pbe_prefix, String key_namespace, Key theKey, PBEKeyStatus keyStatus,
-      String keyMetadata) {
-    this(pbe_prefix, key_namespace, theKey, keyStatus, keyMetadata,
+  public ManagedKeyData(byte[] cust_spec, String key_namespace, Key theKey, ManagedKeyStatus keyStatus,
+                        String keyMetadata) {
+    this(cust_spec, key_namespace, theKey, keyStatus, keyMetadata,
       EnvironmentEdgeManager.currentTime(), 0, 0);
   }
 
   /**
    * Constructs a new instance with the given parameters.
    *
-   * @param pbe_prefix       The PBE prefix associated with the key.
+   * @param cust_spec        The Custodian specification associated with the key.
    * @param theKey           The actual key, can be {@code null}.
    * @param keyStatus        The status of the key.
    * @param keyMetadata      The metadata associated with the key.
    * @param refreshTimestamp The timestamp when this key was last refreshed.
    * @param readOpCount      The current number of read operations for this key.
    * @param writeOpCount     The current number of write operations for this key.
-   * @throws NullPointerException if any of pbe_prefix, keyStatus or keyMetadata is null.
+   * @throws NullPointerException if any of cust_spec, keyStatus or keyMetadata is null.
    */
-  public PBEKeyData(byte[] pbe_prefix, String key_namespace, Key theKey, PBEKeyStatus keyStatus,
-      String keyMetadata, long refreshTimestamp, long readOpCount, long writeOpCount) {
-    Preconditions.checkNotNull(pbe_prefix, "pbe_prefix should not be null");
+  public ManagedKeyData(byte[] cust_spec, String key_namespace, Key theKey, ManagedKeyStatus keyStatus,
+                        String keyMetadata, long refreshTimestamp, long readOpCount, long writeOpCount) {
+    Preconditions.checkNotNull(cust_spec, "cust_spec should not be null");
     Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
     Preconditions.checkNotNull(keyStatus,  "keyStatus should not be null");
     Preconditions.checkNotNull(keyMetadata, "keyMetadata should not be null");
@@ -102,7 +102,7 @@ public class PBEKeyData {
     Preconditions.checkArgument(writeOpCount >= 0, "writeOpCount: " + writeOpCount +
       " should be >= 0");
 
-    this.pbePrefix = pbe_prefix;
+    this.custSpec = cust_spec;
     this.keyNamespace = key_namespace;
     this.theKey = theKey;
     this.keyStatus = keyStatus;
@@ -113,20 +113,20 @@ public class PBEKeyData {
   }
 
   /**
-   * Returns the PBE prefix associated with the key.
+   * Returns the Custodian specification associated with the key.
    *
-   * @return The PBE prefix as a byte array.
+   * @return The Custodian specification as a byte array.
    */
-  public byte[] getPBEPrefix() {
-    return pbePrefix;
+  public byte[] getCustodianSpec() {
+    return custSpec;
   }
 
   /**
-   * Return the PBE prefix in Base64 encoded form.
-   * @return the encoded PBE prefix.
+   * Return the Custodian specification in Base64 encoded form.
+   * @return the encoded Custodian specification.
    */
-  public String getPBEPrefixEncoded() {
-    return Base64.getEncoder().encodeToString(pbePrefix);
+  public String getCustodianSpecEncoded() {
+    return Base64.getEncoder().encodeToString(custSpec);
   }
 
 
@@ -151,9 +151,9 @@ public class PBEKeyData {
   /**
    * Returns the status of the key.
    *
-   * @return The key status as a {@code PBEKeyStatus} enum value.
+   * @return The key status as a {@code ManagedKeyStatus} enum value.
    */
-  public PBEKeyStatus getKeyStatus() {
+  public ManagedKeyStatus getKeyStatus() {
     return keyStatus;
   }
 
@@ -167,7 +167,7 @@ public class PBEKeyData {
   }
 
   @Override public String toString() {
-    return "PBEKeyData{" + "pbePrefix=" + Arrays.toString(pbePrefix) + ", keyNamespace='"
+    return "ManagedKeyData{" + "custSpecix=" + Arrays.toString(custSpec) + ", keyNamespace='"
       + keyNamespace + '\'' + ", keyStatus=" + keyStatus + ", keyMetadata='" + keyMetadata + '\''
       + ", refreshTimestamp=" + refreshTimestamp + '}';
   }
@@ -252,10 +252,10 @@ public class PBEKeyData {
 
     if (o == null || getClass() != o.getClass()) return false;
 
-    PBEKeyData that = (PBEKeyData) o;
+    ManagedKeyData that = (ManagedKeyData) o;
 
     return new EqualsBuilder()
-      .append(pbePrefix, that.pbePrefix)
+      .append(custSpec, that.custSpec)
       .append(keyNamespace, that.keyNamespace)
       .append(theKey, that.theKey)
       .append(keyStatus, that.keyStatus)
@@ -266,7 +266,7 @@ public class PBEKeyData {
   @Override
   public int hashCode() {
     return new HashCodeBuilder(17, 37)
-      .append(pbePrefix)
+      .append(custSpec)
       .append(keyNamespace)
       .append(theKey)
       .append(keyStatus)

@@ -25,7 +25,7 @@ import java.util.Map;
  * Enum of PBE key status. The status of a PBE key is used to indicate the state of the key.
  */
 @InterfaceAudience.Public
-public enum PBEKeyStatus {
+public enum ManagedKeyStatus {
   /** Represents the active status of a PBE key. */
   ACTIVE((byte) 1),
   /** Represents the inactive status of a PBE key. */
@@ -36,11 +36,11 @@ public enum PBEKeyStatus {
   DISABLED((byte) 4),
   ;
 
-  private static Map<Byte, PBEKeyStatus> lookupByVal;
+  private static Map<Byte, ManagedKeyStatus> lookupByVal;
 
   private final byte val;
 
-  private PBEKeyStatus(byte val) {
+  private ManagedKeyStatus(byte val) {
     this.val = val;
   }
 
@@ -53,14 +53,14 @@ public enum PBEKeyStatus {
   }
 
   /**
-   * Returns the PBEKeyStatus for the given numeric value.
-   * @param val The numeric value of the desired PBEKeyStatus
-   * @return The PBEKeyStatus corresponding to the given value
+   * Returns the ManagedKeyStatus for the given numeric value.
+   * @param val The numeric value of the desired ManagedKeyStatus
+   * @return The ManagedKeyStatus corresponding to the given value
    */
-  public static PBEKeyStatus forValue(byte val) {
+  public static ManagedKeyStatus forValue(byte val) {
     if (lookupByVal == null) {
-      Map<Byte, PBEKeyStatus> tbl = new HashMap<>();
-      for (PBEKeyStatus e: PBEKeyStatus.values()) {
+      Map<Byte, ManagedKeyStatus> tbl = new HashMap<>();
+      for (ManagedKeyStatus e: ManagedKeyStatus.values()) {
         tbl.put(e.getVal(), e);
       }
       lookupByVal = tbl;

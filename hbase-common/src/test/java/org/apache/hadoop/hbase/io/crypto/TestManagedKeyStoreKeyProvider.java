@@ -39,15 +39,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
-import static org.apache.hadoop.hbase.io.crypto.PBEKeyStoreKeyProvider.KEY_METADATA_ALIAS;
-import static org.apache.hadoop.hbase.io.crypto.PBEKeyStoreKeyProvider.KEY_METADATA_PREFIX;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider.KEY_METADATA_ALIAS;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider.KEY_METADATA_PREFIX;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 @Category({ MiscTests.class, SmallTests.class })
 @RunWith(Parameterized.class)
-public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
+public class TestManagedKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
 
   private static final String MASTER_KEY_ALIAS = "master-alias";
 
@@ -55,10 +55,10 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPBEKeyStoreKeyProvider.class);
+    HBaseClassTestRule.forClass(TestManagedKeyStoreKeyProvider.class);
   private int nPrefixes = 2;
 
-  private PBEKeyProvider pbeProvider;
+  private ManagedKeyProvider managedKeyProvider;
 
   private Map<Bytes, Bytes> prefix2key = new HashMap<>();
   private Map<Bytes, String> prefix2alias = new HashMap<>();
@@ -68,12 +68,12 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
   @Before
   public void setUp() throws Exception {
     super.setUp();;
-    pbeProvider = (PBEKeyProvider) provider;
-    pbeProvider.initConfig(conf);
+    managedKeyProvider = (ManagedKeyProvider) provider;
+    managedKeyProvider.initConfig(conf);
   }
 
   protected KeyProvider createProvider() {
-    return new PBEKeyStoreKeyProvider();
+    return new ManagedKeyStoreKeyProvider();
   }
 
   protected void addCustomEntries(KeyStore store, Properties passwdProps) throws Exception {
@@ -114,10 +114,10 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
   }
 
   @Test
-  public void testGetPBEKey() throws Exception {
+  public void testGetManagedKey() throws Exception {
     for (Bytes prefix : prefix2key.keySet()) {
-      PBEKeyData keyData = pbeProvider.getPBEKey(prefix.get(), PBEKeyData.KEY_NAMESPACE_GLOBAL);
-      assertPBEKeyData(keyData, PBEKeyStatus.ACTIVE, prefix2key.get(prefix).get(), prefix.get(),
+      ManagedKeyData keyData = managedKeyProvider.getManagedKey(prefix.get(), ManagedKeyData.KEY_NAMESPACE_GLOBAL);
+      assertPBEKeyData(keyData, ManagedKeyStatus.ACTIVE, prefix2key.get(prefix).get(), prefix.get(),
         prefix2alias.get(prefix));
     }
   }
@@ -127,36 +127,36 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
     Bytes firstPrefix = prefix2key.keySet().iterator().next();
     String encPrefix = Base64.getEncoder().encodeToString(firstPrefix.get());
     conf.set(HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encPrefix + ".active", "false");
-    PBEKeyData keyData = pbeProvider.getPBEKey(firstPrefix.get(), PBEKeyData.KEY_NAMESPACE_GLOBAL);
+    ManagedKeyData keyData = managedKeyProvider.getManagedKey(firstPrefix.get(), ManagedKeyData.KEY_NAMESPACE_GLOBAL);
     assertNotNull(keyData);
-    assertPBEKeyData(keyData, PBEKeyStatus.INACTIVE, prefix2key.get(firstPrefix).get(),
+    assertPBEKeyData(keyData, ManagedKeyStatus.INACTIVE, prefix2key.get(firstPrefix).get(),
       firstPrefix.get(), prefix2alias.get(firstPrefix));
   }
 
   @Test
   public void testGetInvalidKey() throws Exception {
     byte[] invalidPrefixBytes = "invalid".getBytes();
-    PBEKeyData keyData = pbeProvider.getPBEKey(invalidPrefixBytes,
-      PBEKeyData.KEY_NAMESPACE_GLOBAL);
+    ManagedKeyData keyData = managedKeyProvider.getManagedKey(invalidPrefixBytes,
+      ManagedKeyData.KEY_NAMESPACE_GLOBAL);
     assertNotNull(keyData);
-    assertPBEKeyData(keyData, PBEKeyStatus.FAILED, null, invalidPrefixBytes, null);
+    assertPBEKeyData(keyData, ManagedKeyStatus.FAILED, null, invalidPrefixBytes, null);
   }
 
   @Test
   public void testGetDisabledKey() throws Exception {
     byte[] invalidPrefix = new byte[] { 1, 2, 3 };
-    String invalidPrefixEnc = PBEKeyProvider.encodeToPrefixStr(invalidPrefix);
+    String invalidPrefixEnc = ManagedKeyProvider.encodeToStr(invalidPrefix);
     conf.set(HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + invalidPrefixEnc + ".active", "false");
-    PBEKeyData keyData = pbeProvider.getPBEKey(invalidPrefix, PBEKeyData.KEY_NAMESPACE_GLOBAL);
+    ManagedKeyData keyData = managedKeyProvider.getManagedKey(invalidPrefix, ManagedKeyData.KEY_NAMESPACE_GLOBAL);
     assertNotNull(keyData);
-    assertPBEKeyData(keyData, PBEKeyStatus.DISABLED, null,
+    assertPBEKeyData(keyData, ManagedKeyStatus.DISABLED, null,
       invalidPrefix, null);
   }
 
   @Test
   public void testGetSystemKey() throws Exception {
-    PBEKeyData clusterKeyData = pbeProvider.getSystemKey(clusterId.getBytes());
-    assertPBEKeyData(clusterKeyData, PBEKeyStatus.ACTIVE, masterKey, clusterId.getBytes(),
+    ManagedKeyData clusterKeyData = managedKeyProvider.getSystemKey(clusterId.getBytes());
+    assertPBEKeyData(clusterKeyData, ManagedKeyStatus.ACTIVE, masterKey, clusterId.getBytes(),
       MASTER_KEY_ALIAS);
   }
 
@@ -164,12 +164,12 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
   public void testUnwrapInvalidKey() throws Exception {
     String invalidAlias = "invalidAlias";
     byte[] invalidPrefix = new byte[] { 1, 2, 3 };
-    String invalidPrefixEnc = PBEKeyProvider.encodeToPrefixStr(invalidPrefix);
-    String invalidMetadata = PBEKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
+    String invalidPrefixEnc = ManagedKeyProvider.encodeToStr(invalidPrefix);
+    String invalidMetadata = ManagedKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
       invalidPrefixEnc);
-    PBEKeyData keyData = pbeProvider.unwrapKey(invalidMetadata);
+    ManagedKeyData keyData = managedKeyProvider.unwrapKey(invalidMetadata);
     assertNotNull(keyData);
-    assertPBEKeyData(keyData, PBEKeyStatus.FAILED, null, invalidPrefix,
+    assertPBEKeyData(keyData, ManagedKeyStatus.FAILED, null, invalidPrefix,
       invalidAlias);
   }
 
@@ -177,16 +177,16 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
   public void testUnwrapDisabledKey() throws Exception {
     String invalidAlias = "invalidAlias";
     byte[] invalidPrefix = new byte[] { 1, 2, 3 };
-    String invalidPrefixEnc = PBEKeyProvider.encodeToPrefixStr(invalidPrefix);
+    String invalidPrefixEnc = ManagedKeyProvider.encodeToStr(invalidPrefix);
     conf.set(HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + invalidPrefixEnc + ".active", "false");
-    String invalidMetadata = PBEKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
+    String invalidMetadata = ManagedKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
       invalidPrefixEnc);
-    PBEKeyData keyData = pbeProvider.unwrapKey(invalidMetadata);
+    ManagedKeyData keyData = managedKeyProvider.unwrapKey(invalidMetadata);
     assertNotNull(keyData);
-    assertPBEKeyData(keyData, PBEKeyStatus.DISABLED, null, invalidPrefix, invalidAlias);
+    assertPBEKeyData(keyData, ManagedKeyStatus.DISABLED, null, invalidPrefix, invalidAlias);
   }
 
-  private void assertPBEKeyData(PBEKeyData keyData, PBEKeyStatus expKeyStatus, byte[] key,
+  private void assertPBEKeyData(ManagedKeyData keyData, ManagedKeyStatus expKeyStatus, byte[] key,
       byte[] prefixBytes, String alias) throws Exception {
     assertNotNull(keyData);
     assertEquals(expKeyStatus, keyData.getKeyStatus());
@@ -201,10 +201,10 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
     Map keyMetadata = GsonUtil.getDefaultInstance().fromJson(keyData.getKeyMetadata(),
       HashMap.class);
     assertNotNull(keyMetadata);
-    assertEquals(new Bytes(prefixBytes), keyData.getPBEPrefix());
+    assertEquals(new Bytes(prefixBytes), keyData.getCustodianSpec());
     assertEquals(alias, keyMetadata.get(KEY_METADATA_ALIAS));
     assertEquals(Base64.getEncoder().encodeToString(prefixBytes),
       keyMetadata.get(KEY_METADATA_PREFIX));
-    assertEquals(keyData, pbeProvider.unwrapKey(keyData.getKeyMetadata()));
+    assertEquals(keyData, managedKeyProvider.unwrapKey(keyData.getKeyMetadata()));
   }
 }

@@ -38,9 +38,9 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
-import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
-import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
@@ -222,11 +222,11 @@ public class TestReplicationHFileCleaner {
       return null;
     }
 
-    @Override public PBEKeyAccessor getPBEKeyAccessor() {
+    @Override public ManagedKeyAccessor getPBEKeyAccessor() {
       return null;
     }
 
-    @Override public PBEKeymetaAdmin getPBEKeymetaAdmin() {
+    @Override public KeymetaAdmin getPBEKeymetaAdmin() {
       return null;
     }
 

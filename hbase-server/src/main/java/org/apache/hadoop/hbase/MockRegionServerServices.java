@@ -38,9 +38,9 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
-import org.apache.hadoop.hbase.keymeta.PBEKeyAccessor;
-import org.apache.hadoop.hbase.keymeta.PBEKeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
@@ -263,11 +263,11 @@ public class MockRegionServerServices implements RegionServerServices {
     return null;
   }
 
-  @Override public PBEKeyAccessor getPBEKeyAccessor() {
+  @Override public ManagedKeyAccessor getPBEKeyAccessor() {
     return null;
   }
 
-  @Override public PBEKeymetaAdmin getPBEKeymetaAdmin() {
+  @Override public KeymetaAdmin getPBEKeymetaAdmin() {
     return null;
   }
 

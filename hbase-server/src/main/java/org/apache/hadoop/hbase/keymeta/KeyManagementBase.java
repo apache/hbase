@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.keymeta;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProvider;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.Server;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -31,15 +31,15 @@ import java.io.IOException;
  * A base class for all keymeta accessor/manager implementations.
  */
 @InterfaceAudience.Private
-public abstract class PBEKeyAccessorBase {
-  protected static final Logger LOG = LoggerFactory.getLogger(PBEKeyAccessorBase.class);
+public abstract class KeyManagementBase {
+  protected static final Logger LOG = LoggerFactory.getLogger(KeyManagementBase.class);
 
   protected final Server server;
 
   private Boolean pbeEnabled;
   private Integer perPrefixActiveKeyCount;
 
-  public PBEKeyAccessorBase(Server server) {
+  public KeyManagementBase(Server server) {
     this.server = server;
   }
 
@@ -47,15 +47,15 @@ public abstract class PBEKeyAccessorBase {
    * A utility method for getting the PBE key provider.
    * @return the key provider
    * @throws RuntimeException if no provider is configured or if the configured provider is not an
-   * instance of PBEKeyProvider
+   * instance of ManagedKeyProvider
    */
-  protected PBEKeyProvider getKeyProvider() {
+  protected ManagedKeyProvider getKeyProvider() {
     KeyProvider provider = Encryption.getKeyProvider(server.getConfiguration());
-    if (!(provider instanceof PBEKeyProvider)) {
+    if (!(provider instanceof ManagedKeyProvider)) {
       throw new RuntimeException(
-        "KeyProvider: " + provider.getClass().getName() + " expected to be of type PBEKeyProvider");
+        "KeyProvider: " + provider.getClass().getName() + " expected to be of type ManagedKeyProvider");
     }
-    return (PBEKeyProvider) provider;
+    return (ManagedKeyProvider) provider;
   }
 
   /**
