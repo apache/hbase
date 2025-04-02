@@ -321,14 +321,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         }
       }
 
-      String family = new Path(inputInfo.getHfile()).getParent().getName();
-      String familyStoragePolicy = generateFamilyStoragePolicyKey(family);
-      if (stringIsNotEmpty(context.getConfiguration().get(familyStoragePolicy))) {
-        LOG.info("Setting storage policy {} for {}",
-          context.getConfiguration().get(familyStoragePolicy), outputPath);
-        outputFs.setStoragePolicy(outputPath, context.getConfiguration().get(familyStoragePolicy));
-      }
-
       InputStream in = openSourceFile(context, inputInfo);
       int bandwidthMB = context.getConfiguration().getInt(CONF_BANDWIDTH_MB, 100);
       if (Integer.MAX_VALUE != bandwidthMB) {
@@ -341,6 +333,13 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
         // Ensure that the output folder is there and copy the file
         createOutputPath(outputPath.getParent());
+        String family = new Path(inputInfo.getHfile()).getParent().getName();
+        String familyStoragePolicy = generateFamilyStoragePolicyKey(family);
+        if (stringIsNotEmpty(context.getConfiguration().get(familyStoragePolicy))) {
+          String key = context.getConfiguration().get(familyStoragePolicy);
+          LOG.info("Setting storage policy {} for {}", key, outputPath.getParent());
+          outputFs.setStoragePolicy(outputPath.getParent(), key);
+        }
         FSDataOutputStream out = outputFs.create(outputPath, true);
 
         long stime = EnvironmentEdgeManager.currentTime();
