@@ -488,7 +488,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       loadBalancer.initCosts(cluster);
       for (int i = 0; i != runs; ++i) {
         final double expectedCost = loadBalancer.computeCost(cluster, Double.MAX_VALUE);
-        BalanceAction action = loadBalancer.nextAction(cluster);
+        BalanceAction action = loadBalancer.nextAction(cluster).getSecond();
         cluster.doAction(action);
         loadBalancer.updateCostsAndWeightsWithAction(cluster, action);
         BalanceAction undoAction = action.undoAction();
@@ -611,6 +611,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       PrimaryRegionCountSkewCostFunction.class.getSimpleName(),
       MoveCostFunction.class.getSimpleName(), RackLocalityCostFunction.class.getSimpleName(),
       TableSkewCostFunction.class.getSimpleName(),
+      StoreFileTableSkewCostFunction.class.getSimpleName(),
       RegionReplicaHostCostFunction.class.getSimpleName(),
       RegionReplicaRackCostFunction.class.getSimpleName(),
       ReadRequestCostFunction.class.getSimpleName(), CPRequestCostFunction.class.getSimpleName(),

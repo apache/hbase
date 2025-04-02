@@ -313,28 +313,6 @@ public class HRegionFileSystem {
       familyName, new Path(familyDir, fileName), tracker);
   }
 
-  /**
-   * Returns true if the specified family has reference files
-   * @param familyName Column Family Name
-   * @return true if family contains reference files
-   */
-  public boolean hasReferences(final String familyName) throws IOException {
-    Path storeDir = getStoreDir(familyName);
-    FileStatus[] files = CommonFSUtils.listStatus(fs, storeDir);
-    if (files != null) {
-      for (FileStatus stat : files) {
-        if (stat.isDirectory()) {
-          continue;
-        }
-        if (StoreFileInfo.isReference(stat.getPath())) {
-          LOG.trace("Reference {}", stat.getPath());
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
   /** Returns the set of families present on disk n */
   public Collection<String> getFamilies() throws IOException {
     FileStatus[] fds =
@@ -684,8 +662,7 @@ public class HRegionFileSystem {
           hfileName = m.group(4);
         }
         // must create back reference here
-        HFileLink.create(conf, fs, splitDir, familyName, hri.getTable().getNameAsString(),
-          hri.getEncodedName(), linkedTable, linkedRegion, hfileName, true);
+        tracker.createHFileLink(linkedTable, linkedRegion, hfileName, true);
         Path path =
           new Path(splitDir, HFileLink.createHFileLinkName(linkedTable, linkedRegion, hfileName));
         LOG.info("Created linkFile:" + path.toString() + " for child: " + hri.getEncodedName()
@@ -1003,7 +980,7 @@ public class HRegionFileSystem {
 
     // Archive region
     Path rootDir = CommonFSUtils.getRootDir(conf);
-    HFileArchiver.archiveRegion(fs, rootDir, tableDir, regionDir);
+    HFileArchiver.archiveRegion(conf, fs, rootDir, tableDir, regionDir);
 
     // Delete empty region dir
     if (!fs.delete(regionDir, true)) {

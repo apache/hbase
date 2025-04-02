@@ -149,10 +149,11 @@ public class TestSequenceIdAccounting {
     sida.getOrCreateLowestSequenceIds(ENCODED_REGION_NAME);
     Map<byte[], Long> m = new HashMap<>();
     m.put(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
-    long sequenceid = 1;
-    sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid, true);
-    sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid++, true);
-    sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid++, true);
+    sida.update(ENCODED_REGION_NAME, META_FAMILY_SET, 1, true);
+    sida.update(ENCODED_REGION_NAME, FAMILIES, 2, true);
+    sida.update(ENCODED_REGION_NAME, FAMILIES, 3, true);
+    sida.update(ENCODED_REGION_NAME, FAMILIES, 4, true);
+    m.put(ENCODED_REGION_NAME, 1L);
     assertTrue(sida.findLower(m) == null);
     m.put(ENCODED_REGION_NAME, sida.getLowestSequenceId(ENCODED_REGION_NAME));
     assertTrue(sida.findLower(m).size() == 1);

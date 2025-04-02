@@ -261,16 +261,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.kerby</groupId>
-      <artifactId>kerb-client</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.kerby</groupId>
-      <artifactId>kerb-simplekdc</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
       <scope>test</scope>
@@ -460,6 +450,20 @@
               </resources>
             </configuration>
           </execution>
+          <execution>
+            <!-- Add the generated sources -->
+            <id>jspcSource-packageInfo-source</id>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-jamon</source>
+                <source>${project.build.directory}/generated-sources/java</source>
+              </sources>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -547,26 +551,6 @@
                 <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
                 <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" uriroot="${src.webapps}/regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
               </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <!-- Add the generated sources -->
-          <execution>
-            <id>jspcSource-packageInfo-source</id>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <phase>generate-sources</phase>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-jamon</source>
-                <source>${project.build.directory}/generated-sources/java</source>
-              </sources>
             </configuration>
           </execution>
         </executions>

@@ -188,12 +188,16 @@ public class FullTableBackupClient extends TableBackupClient {
   }
 
   private void handleNonContinuousBackup(Admin admin) throws IOException {
+    initializeBackupStartCode(backupManager);
+    performLogRoll(admin);
     performBackupSnapshots(admin);
     backupManager.addIncrementalBackupTableSet(backupInfo.getTables());
 
     // set overall backup status: complete. Here we make sure to complete the backup.
     // After this checkpoint, even if entering cancel process, will let the backup finished
     backupInfo.setState(BackupState.COMPLETE);
+
+    updateBackupMetadata();
   }
 
   private void initializeBackupStartCode(BackupManager backupManager) throws IOException {

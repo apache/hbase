@@ -24,8 +24,6 @@
   import="java.util.List"
   import="java.util.Map"
   import="java.util.function.Function"
-  import="java.util.regex.Pattern"
-  import="java.util.stream.Stream"
   import="java.util.stream.Collectors"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.TableName"
@@ -118,26 +116,26 @@
     </div>
     <div class="tabbable">
       <% if (rsGroupServers != null && rsGroupServers.size() > 0) { %>
-        <ul class="nav nav-pills">
-          <li class="active">
-            <a href="#tab_baseStats" data-toggle="tab">Base Stats</a>
+        <ul class="nav nav-pills" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" href="#tab_baseStats" data-bs-toggle="tab" role="tab">Base Stats</a>
           </li>
-          <li class="">
-            <a href="#tab_memoryStats" data-toggle="tab">Memory</a>
+          <li class="nav-item">
+            <a class="nav-link" href="#tab_memoryStats" data-bs-toggle="tab" role="tab">Memory</a>
           </li>
-          <li class="">
-            <a href="#tab_requestStats" data-toggle="tab">Requests</a>
+          <li class="nav-item">
+            <a class="nav-link" href="#tab_requestStats" data-bs-toggle="tab" role="tab">Requests</a>
           </li>
-          <li class="">
-            <a href="#tab_storeStats" data-toggle="tab">Storefiles</a>
+          <li class="nav-item">
+            <a class="nav-link" href="#tab_storeStats" data-bs-toggle="tab" role="tab">Storefiles</a>
           </li>
-          <li class="">
-            <a href="#tab_compactStats" data-toggle="tab">Compactions</a>
+          <li class="nav-item">
+            <a class="nav-link" href="#tab_compactStats" data-bs-toggle="tab" role="tab">Compactions</a>
           </li>
         </ul>
 
-      <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-        <div class="tab-pane active" id="tab_baseStats">
+      <div class="tab-content">
+        <div class="tab-pane active" id="tab_baseStats" role="tabpanel">
           <table class="table table-striped">
             <tr>
               <th>ServerName</th>
@@ -169,7 +167,7 @@
                      totalRequestsPerSecond += sl.getRequestCountPerSecond();
                      lastContact = (System.currentTimeMillis() - sl.getReportTimestamp())/1000;
                    }
-                   long startcode = serverName.getStartcode();
+                   long startcode = serverName.getStartCode();
                    int infoPort = master.getRegionServerInfoPort(serverName);
                    String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";%>
                    <tr>
@@ -204,7 +202,7 @@
             </tr>
           </table>
         </div>
-        <div class="tab-pane" id="tab_memoryStats">
+        <div class="tab-pane" id="tab_memoryStats" role="tabpanel">
           <table class="table table-striped">
             <tr>
               <th>ServerName</th>
@@ -258,7 +256,7 @@
                } %>
           </table>
         </div>
-        <div class="tab-pane" id="tab_requestStats">
+        <div class="tab-pane" id="tab_requestStats" role="tabpanel">
           <table class="table table-striped">
             <tr>
                 <th>ServerName</th>
@@ -296,7 +294,7 @@
               } %>
           </table>
         </div>
-        <div class="tab-pane" id="tab_storeStats">
+        <div class="tab-pane" id="tab_storeStats" role="tabpanel">
           <table class="table table-striped">
             <tr>
                 <th>ServerName</th>
@@ -372,7 +370,7 @@
               } %>
           </table>
         </div>
-        <div class="tab-pane" id="tab_compactStats">
+        <div class="tab-pane" id="tab_compactStats" role="tabpanel">
           <table class="table table-striped">
             <tr>
               <th>ServerName</th>

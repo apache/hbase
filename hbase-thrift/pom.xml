@@ -109,11 +109,6 @@
       <artifactId>tomcat-jasper</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.kerby</groupId>
-      <artifactId>kerb-simplekdc</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>jcl-over-slf4j</artifactId>
       <scope>test</scope>
@@ -193,6 +188,29 @@
         <configuration>
           <skipAssembly>true</skipAssembly>
         </configuration>
+      </plugin>
+      <!-- Copy the static web resources (JS, CSS, images, etc.) from hbase-server sources -->
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-static-resources</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>generate-resources</phase>
+            <configuration>
+              <outputDirectory>${project.build.outputDirectory}/hbase-webapps/static</outputDirectory>
+              <outputDirectory>${project.build.directory}/hbase-webapps/static</outputDirectory>
+              <overwrite>true</overwrite>
+              <resources>
+                <resource>
+                  <directory>../hbase-server/src/main/resources/hbase-webapps/static</directory>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

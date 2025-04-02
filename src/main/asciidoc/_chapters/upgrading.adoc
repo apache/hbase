@@ -601,7 +601,7 @@ The HBase shell command relies on a bundled JRuby instance. This bundled JRuby b
 
 The HBase shell command now ignores the '--return-values' flag that was present in early HBase 1.4 releases. Instead the shell always behaves as though that flag were passed. If you wish to avoid having expression results printed in the console you should alter your IRB configuration as noted in the section <<irbrc>>.
 
-[[upgrade2.0.coprocessors]]
+[[upgrade2.0.coprocessors-changes]]
 .Coprocessor APIs have changed in HBase 2.0+
 
 All Coprocessor APIs have been refactored to improve supportability around binary API compatibility for future versions of HBase. If you or applications you rely on have custom HBase coprocessors, you should read link:https://issues.apache.org/jira/browse/HBASE-18169[the release notes for HBASE-18169] for details of changes you will need to make prior to upgrading to HBase 2.0+.
@@ -618,9 +618,7 @@ For example, if you had a BaseRegionObserver in HBase 1.2 then at a minimum you 
 ...
 ----
 
-////
-This would be a good place to link to a coprocessor migration guide
-////
+For more information, see <<upgrade2.0.coprocessors,Upgrading Coprocessors to 2.0>>.
 
 [[upgrade2.0.hfile3.only]]
 .HBase 2.0+ can no longer write HFile v2 files.

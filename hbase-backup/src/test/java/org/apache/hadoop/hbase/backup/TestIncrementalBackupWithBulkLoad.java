@@ -23,12 +23,12 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.backup.impl.BulkLoad;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -158,10 +158,8 @@ public class TestIncrementalBackupWithBulkLoad extends TestIncrementalBackupWith
 
     backupIdFull = client.backupTables(request);
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
-      Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>,
-        List<byte[]>> pair = table.readBulkloadRows(tables);
-      assertTrue("map still has " + pair.getSecond().size() + " entries",
-        pair.getSecond().isEmpty());
+      List<BulkLoad> bulkLoads = table.readBulkloadRows(tables);
+      assertTrue("bulkloads still has " + bulkLoads.size() + " entries", bulkLoads.isEmpty());
     }
     assertTrue(checkSucceeded(backupIdFull));
 

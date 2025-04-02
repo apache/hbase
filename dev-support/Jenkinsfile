@@ -21,7 +21,7 @@ pipeline {
     }
   }
   triggers {
-    pollSCM('@daily')
+    pollSCM(getCronParams(env.BRANCH_NAME))
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '20'))
@@ -825,9 +825,9 @@ pipeline {
                           set -e
                           declare -i status=0
                           if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                            echo '(/) {color:green}+1 jdk17 hadoop ${HADOOP_THREE_VERSION} backward compatibility checks{color}' > "${OUTPUT_DIR}/commentfile"
+                            echo "(/) {color:green}+1 jdk17 hadoop ${HADOOP_THREE_VERSION} backward compatibility checks{color}" > "${OUTPUT_DIR}/commentfile"
                           else
-                            echo '(x) {color:red}-1 jdk17 hadoop ${HADOOP_THREE_VERSION} backward compatibility checks{color}' > "${OUTPUT_DIR}/commentfile"
+                            echo "(x) {color:red}-1 jdk17 hadoop ${HADOOP_THREE_VERSION} backward compatibility checks{color}" > "${OUTPUT_DIR}/commentfile"
                             status=1
                           fi
                           echo "-- For more information [see jdk17 report|${BUILD_URL}JDK17_20Nightly_20Build_20Report_20_28Hadoop3_29/]" >> "${OUTPUT_DIR}/commentfile"
@@ -906,7 +906,7 @@ pipeline {
         stage ('packaging and integration') {
           agent {
             node {
-              label 'hbase-large'
+              label 'hbase'
             }
           }
           environment {
@@ -1233,5 +1233,17 @@ String getJavaHomeForYetusGeneralCheck(String branchName) {
     return "/usr/lib/jvm/java-11";
   } else {
     return "/usr/lib/jvm/java-17"
+  }
+}
+@NonCPS
+String getCronParams(String branchName) {
+  if (branchName == 'master') {
+    return 'H H 1-31/3 * *'
+  } else if (branchName == 'branch-3') {
+    return 'H H 1-31/3 * *'
+  } else if (branchName == 'branch-2') {
+    return 'H H 2-31/3 * *'
+  } else {
+    return 'H H 3-31/3 * *'
   }
 }

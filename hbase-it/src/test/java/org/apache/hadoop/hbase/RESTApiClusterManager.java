@@ -264,6 +264,16 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
     hBaseClusterManager.resume(service, hostname, port);
   }
 
+  @Override
+  public boolean isSuspended(ServiceType service, String hostname, int port) throws IOException {
+    return hBaseClusterManager.isSuspended(service, hostname, port);
+  }
+
+  @Override
+  public boolean isResumed(ServiceType service, String hostname, int port) throws IOException {
+    return hBaseClusterManager.isResumed(service, hostname, port);
+  }
+
   // Convenience method to execute command against role on hostname. Only graceful commands are
   // supported since cluster management APIs don't tend to let you SIGKILL things.
   private void performClusterManagerCommand(ServiceType role, String hostname,

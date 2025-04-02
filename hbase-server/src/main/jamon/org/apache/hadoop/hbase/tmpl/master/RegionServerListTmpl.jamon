@@ -48,31 +48,43 @@ Arrays.sort(serverNames);
 </%java>
 
 <div class="tabbable">
-    <ul class="nav nav-pills">
-        <li class="active"><a href="#tab_baseStats" data-toggle="tab">Base Stats</a></li>
-        <li class=""><a href="#tab_memoryStats" data-toggle="tab">Memory</a></li>
-        <li class=""><a href="#tab_requestStats" data-toggle="tab">Requests</a></li>
-        <li class=""><a href="#tab_storeStats" data-toggle="tab">Storefiles</a></li>
-        <li class=""><a href="#tab_compactStats" data-toggle="tab">Compactions</a></li>
-        <li class=""><a href="#tab_replicationStats" data-toggle="tab">Replications</a></li>
+    <ul class="nav nav-pills" role="tablist">
+        <li class="nav-item">
+          <a class="nav-link active" href="#tab_baseStats" data-bs-toggle="tab" role="tab">Base Stats</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#tab_memoryStats" data-bs-toggle="tab" role="tab">Memory</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#tab_requestStats" data-bs-toggle="tab" role="tab">Requests</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#tab_storeStats" data-bs-toggle="tab" role="tab">Storefiles</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#tab_compactStats" data-bs-toggle="tab" role="tab">Compactions</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#tab_replicationStats" data-bs-toggle="tab" role="tab">Replications</a>
+        </li>
     </ul>
-    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-        <div class="tab-pane active" id="tab_baseStats">
+    <div class="tab-content">
+        <div class="tab-pane active" id="tab_baseStats" role="tabpanel">
             <& baseStats; serverNames = serverNames; &>
         </div>
-        <div class="tab-pane" id="tab_memoryStats">
+        <div class="tab-pane" id="tab_memoryStats" role="tabpanel">
             <& memoryStats; serverNames = serverNames; &>
         </div>
-        <div class="tab-pane" id="tab_requestStats">
+        <div class="tab-pane" id="tab_requestStats" role="tabpanel">
             <& requestStats; serverNames = serverNames; &>
         </div>
-        <div class="tab-pane" id="tab_storeStats">
+        <div class="tab-pane" id="tab_storeStats" role="tabpanel">
             <& storeStats; serverNames = serverNames; &>
         </div>
-        <div class="tab-pane" id="tab_compactStats">
+        <div class="tab-pane" id="tab_compactStats" role="tabpanel">
             <& compactionStats; serverNames = serverNames; &>
         </div>
-        <div class="tab-pane" id="tab_replicationStats">
+        <div class="tab-pane" id="tab_replicationStats" role="tabpanel">
             <& replicationStats; serverNames = serverNames; &>
         </div>
     </div>
@@ -89,11 +101,11 @@ Arrays.sort(serverNames);
 <tr>
     <th>ServerName</th>
     <th>State</th>
-    <th>Start time</th>
+    <th class="cls_dateTime">Start time</th>
     <th>Last contact</th>
     <th>Version</th>
-    <th>Requests Per Second</th>
-    <th>Num. Regions</th>
+    <th class="cls_separator">Requests Per Second</th>
+    <th class="cls_separator">Num. Regions</th>
     <%if !master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null %>
       <%if RSGroupUtil.isRSGroupEnabled(master.getConfiguration()) %>
         <th style="vertical-align: middle;" rowspan="2">RSGroup</th>
@@ -187,9 +199,9 @@ Arrays.sort(serverNames);
 <thead>
 <tr>
     <th>ServerName</th>
-    <th>Used Heap</th>
-    <th>Max Heap</th>
-    <th>Memstore Size</th>
+    <th class="cls_filesize">Used Heap</th>
+    <th class="cls_filesize">Max Heap</th>
+    <th class="cls_filesize">Memstore Size</th>
 
 </tr>
 </thead>
@@ -249,10 +261,10 @@ for (ServerName serverName: serverNames) {
 <thead>
 <tr>
     <th>ServerName</th>
-    <th>Request Per Second</th>
-    <th>Read Request Count</th>
-    <th>Filtered Read Request Count</th>
-    <th>Write Request Count</th>
+    <th class="cls_separator">Request Per Second</th>
+    <th class="cls_separator">Read Request Count</th>
+    <th class="cls_separator">Filtered Read Request Count</th>
+    <th class="cls_separator">Write Request Count</th>
 </tr>
 </thead>
 <tbody>
@@ -298,12 +310,12 @@ if (sl != null) {
 <thead>
 <tr>
     <th>ServerName</th>
-    <th>Num. Stores</th>
-    <th>Num. Storefiles</th>
-    <th>Storefile Size Uncompressed</th>
-    <th>Storefile Size</th>
-    <th>Index Size</th>
-    <th>Bloom Size</th>
+    <th class="cls_separator">Num. Stores</th>
+    <th class="cls_separator">Num. Storefiles</th>
+    <th class="cls_filesize">Storefile Size Uncompressed</th>
+    <th class="cls_filesize">Storefile Size</th>
+    <th class="cls_filesize">Index Size</th>
+    <th class="cls_filesize">Bloom Size</th>
 </tr>
 </thead>
 <tbody>
@@ -378,9 +390,9 @@ for (ServerName serverName: serverNames) {
 <thead>
 <tr>
     <th>ServerName</th>
-    <th>Num. Compacting Cells</th>
-    <th>Num. Compacted Cells</th>
-    <th>Remaining Cells</th>
+    <th class="cls_separator">Num. Compacting Cells</th>
+    <th class="cls_separator">Num. Compacted Cells</th>
+    <th class="cls_separator">Remaining Cells</th>
     <th>Compaction Progress</th>
 </tr>
 </thead>
@@ -443,7 +455,7 @@ if  (totalCompactingCells > 0) {
         String active = "active";
         for (String peer : peers){
         </%java>
-            <li class=<% active %>><a href="#tab_<% peer %>" data-toggle="tab">Peer <% peer %></a> </li>
+            <li class=<% active %>><a href="#tab_<% peer %>" data-bs-toggle="tab">Peer <% peer %></a> </li>
         <%java>
         active = "";
         }

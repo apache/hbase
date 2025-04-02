@@ -267,10 +267,10 @@ _-q <name>_::
 
 [source]
 ----
-$ hbase backup create full hdfs://host5:8020/data/backup -t SALES2,SALES3 -w 3
+$ hbase backup create full hdfs://host5:9000/data/backup -t SALES2,SALES3 -w 3
 ----
 
-This command creates a full backup image of two tables, SALES2 and SALES3, in the HDFS instance who NameNode is host5:8020
+This command creates a full backup image of two tables, SALES2 and SALES3, in the HDFS instance who NameNode is host5:9000
 in the path _/data/backup_. The _-w_ option specifies that no more than three parallel works complete the operation.
 
 // hbase backup restore

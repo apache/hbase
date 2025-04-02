@@ -62,7 +62,7 @@ _hbase-site.xml_::
   You can also view the entire effective configuration for your cluster (defaults and overrides) in
   the [label]#HBase Configuration# tab of the HBase Web UI.
 
-_log4j2.xml_::
+_log4j2.properties_::
   Configuration file for HBase logging via `log4j2`.
 
 _regionservers_::
@@ -354,6 +354,7 @@ link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in new
 |Hadoop-3.3.[0-1] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
 |Hadoop-3.3.[2-4] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
 |Hadoop-3.3.5+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.4.0+ | icon:check-circle[role="green"] (2.5.11+) | icon:check-circle[role="green"] (2.6.2+)
 |===
 
 .Hadoop version support matrix for EOM 2.3+ release lines
@@ -452,6 +453,7 @@ expressly advises downstream users to avoid running on top of this release. For 
 the link:https://s.apache.org/hadoop-3.1.0-announcement[release announcement for Hadoop 3.1.0].
 ====
 
+[[note_replace_hadoop]]
 .Replace the Hadoop Bundled With HBase!
 [NOTE]
 ====
@@ -463,6 +465,33 @@ cluster to avoid version mismatch issues. Make sure you replace the jars under H
 whole cluster. Hadoop version mismatch issues have various manifestations. Check for mismatch if
 HBase appears hung.
 ====
+
+[[binary_release_hadoop_version]]
+==== Hadoop 3 Support for the HBase Binary Releases and Maven Artifacts ====
+
+For HBase 2.5.1 and earlier, the official HBase binary releases and Maven artifacts were built with Hadoop 2.x.
+
+Starting with HBase 2.5.2, HBase provides binary releases and Maven artifacts built with both Hadoop 2.x and Hadoop 3.x.
+The Hadoop 2 artifacts do not have any version suffix, the Hadoop 3 artifacts add the `-hadoop-3` suffix to the version.
+i.e. `hbase-2.5.2-bin.tar.gz.asc` is the Binary release built with Hadoop2, and `hbase-2.5.2-hadoop3-bin.tar.gz` is the
+release built with Hadoop 3.
+
+[[default_hadoop_version_policy]]
+==== Hadoop 3 version policy ====
+
+Each HBase release has a default Hadoop 3 version. This is used when the Hadoop 3 version is not specified during build,
+and for building the official binary releases and artifacts. Generally when a new minor version is released
+(i.e. 2.5.0) the default version is set to the latest supported Hadoop 3 version at the start of the release
+process.
+
+Up to HBase 2.5.10 and 2.6.1 even if HBase added support for newer Hadoop 3 releases in a patch release,
+the default Hadoop 3 version (and the one used in the official binary releases) was not updated.
+This simplified upgrading, but meant that HBase releases often included old unfixed CVEs both from Hadoop and Hadoop's
+dependencies, even when newer Hadoop releases with fixes were available.
+
+Starting with HBase 2.5.11 and 2.6.2, the default Hadoop 3 version is always set to the latest supported Hadoop 3 version,
+and is also used for the `-hadoop3` binary releases and artifacts. This will drastically reduce the number of known CVEs
+shipped in the HBase binary releases, and make sure that all fixes and improvements in Hadoop are included.
 
 [[dfs.datanode.max.transfer.threads]]
 ==== `dfs.datanode.max.transfer.threads` (((dfs.datanode.max.transfer.threads)))
@@ -544,7 +573,7 @@ to _false_. For example:
 <configuration>
   <property>
     <name>hbase.rootdir</name>
-    <value>hdfs://namenode.example.org:8020/hbase</value>
+    <value>hdfs://namenode.example.org:9000/hbase</value>
   </property>
   <property>
     <name>hbase.cluster.distributed</name>
@@ -621,7 +650,7 @@ overridden in the _hbase-site.xml_. See "<<config.files,Configuration Files>>" f
 <configuration>
   <property>
     <name>hbase.rootdir</name>
-    <value>hdfs://namenode.example.org:8020/hbase</value>
+    <value>hdfs://namenode.example.org:9000/hbase</value>
   </property>
   <property>
     <name>hbase.cluster.distributed</name>
@@ -678,6 +707,27 @@ c. if only a small set of HDFS client configurations, add them to _hbase-site.xm
 An example of such an HDFS client configuration is `dfs.replication`.
 If for example, you want to run with a replication factor of 5, HBase will create files with the
 default of 3 unless you do the above to make the configuration available to HBase.
+
+[[byo-hadoop-assembly]]
+=== Choosing between the Classic Package and the BYO Hadoop Package
+
+Starting with HBase 3.0, HBase includes two binary packages. The classic package
+includes both the HBase and Hadoop components, while the Hadoop-less "Bring Your Own Hadoop"
+package omits the Hadoop components, and uses the files from an existing Hadoop installation.
+The classic binary package filename is named `hbase-<version>-bin.tar.gz` i.e.
+_hbase-3.0.0-bin.tar.gz_ , while the Hadoop-less package is
+`hbase-byo-hadoop-<version>-bin.tar.gz` i.e. _hbase-byo-hadoop-3.0.0-bin.tar.gz_.
+
+If the cluster nodes already have Hadoop installed, you can use the Hadoop-less package.
+In this case you need to make sure that the `HADOOP_HOME` environment variable is set and
+points to the Hadoop installation.
+The easiest way to ensure this is to set it in _hbase-env.sh_. You still need to make sure that
+the Hadoop configuration files are present on the HBase classpath, as described above.
+
+.Advantages of the BYO Hadoop package
+* There is no need to replace the Hadoop libraries, as noted <<note_replace_hadoop,above>>.
+* It is easier to upgrade Hadoop and HBase independently (as long as compatible versions are used).
+* Both the package and installed size are about 100 MB smaller.
 
 [[confirm]]
 == Running and Confirming Your Installation
@@ -758,9 +808,9 @@ read by HBase daemons on startup.
 Changes here will require a cluster restart for HBase to notice the change.
 
 [[log4j]]
-=== _log4j2.xml_
+=== _log4j2.properties_
 
-Since version 3.0.0, HBase has upgraded to Log4j2, so the configuration file name and format has changed. Read more in link:https://logging.apache.org/log4j/2.x/index.html[Apache Log4j2].
+Since version 2.5.0, HBase has upgraded to Log4j2, so the configuration file name and format has changed. Read more in link:https://logging.apache.org/log4j/2.x/index.html[Apache Log4j2].
 
 Edit this file to change rate at which HBase files are rolled and to change the level at which
 HBase logs messages.
@@ -945,7 +995,7 @@ _hbase-env.sh_ -- found in the HBase _conf_ directory might look like.
   </property>
   <property>
     <name>hbase.rootdir</name>
-    <value>hdfs://example0:8020/hbase</value>
+    <value>hdfs://example0:9000/hbase</value>
     <description>The directory shared by RegionServers.
     </description>
   </property>
