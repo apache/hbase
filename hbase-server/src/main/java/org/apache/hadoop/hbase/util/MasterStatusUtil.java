@@ -33,7 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Utility used by the web UI JSP pages.
  */
 @InterfaceAudience.Private
-public class MasterStatusUtil {
+public final class MasterStatusUtil {
 
   private MasterStatusUtil() {
     // Do not instantiate.
