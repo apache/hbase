@@ -53,19 +53,20 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 /**
  * A tool to replay WAL files as a M/R job. The WAL can be replayed for a set of tables or all
  * tables, and a time range can be provided (in milliseconds). The WAL is filtered to the passed set
- * of tables and the output can optionally be mapped to another set of tables. WAL replay can also
- * replay bulkload operation from WAL files
+ * of tables and the output can optionally be mapped to another set of tables. WALPlayerWithBulkload
+ * can also replay bulkload operation from WAL files. This is needed for HBASE-28957 Point-in-Time
+ * Recovery feature.
  */
 @InterfaceAudience.Public
-public class WALReplay extends
-  WALReplayBase<MutationOrBulkLoad,
+public class WALPlayerWithBulkload extends
+  WALPlayerBase<MutationOrBulkLoad,
     Mapper<WALKey, WALEdit, ImmutableBytesWritable, MutationOrBulkLoad>,
     OutputFormat<ImmutableBytesWritable, MutationOrBulkLoad>> {
-  private static final Logger LOG = LoggerFactory.getLogger(WALReplay.class);
-  final static String NAME = "WALReplay";
+  private static final Logger LOG = LoggerFactory.getLogger(WALPlayerWithBulkload.class);
+  final static String NAME = "WALPlayerWithBulkload";
 
-  protected WALReplay(final Configuration c) {
-    super(c, WALMapper.class, MultiTableOutputFormatWalReplay.class);
+  protected WALPlayerWithBulkload(final Configuration c) {
+    super(c, WALMapper.class, MultiTableOutputFormatWalPlayerWithBulkload.class);
   }
 
   /**
@@ -289,7 +290,7 @@ public class WALReplay extends
     System.err.println(" E.g. 1234567890120 or 2009-02-13T23:32:30.12");
     System.err.println("Other options:");
     System.err.println(" -D" + JOB_NAME_CONF_KEY + "=jobName");
-    System.err.println(" Use the specified mapreduce job name for the walReplay");
+    System.err.println(" Use the specified mapreduce job name for the walPlayerWithBulkload");
     System.err.println(" -Dwal.input.separator=' '");
     System.err.println(" Change WAL filename separator (WAL dir names use default ','.)");
     System.err.println("For performance also consider the following options:\n"
@@ -302,7 +303,7 @@ public class WALReplay extends
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
-    int ret = ToolRunner.run(new WALReplay(HBaseConfiguration.create()), args);
+    int ret = ToolRunner.run(new WALPlayerWithBulkload(HBaseConfiguration.create()), args);
     System.exit(ret);
   }
 

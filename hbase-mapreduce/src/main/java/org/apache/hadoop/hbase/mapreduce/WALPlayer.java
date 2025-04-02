@@ -34,9 +34,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2.TableInfo;
-import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
-import org.apache.hadoop.hbase.snapshot.SnapshotRegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -59,7 +56,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 public class WALPlayer
-  extends WALReplayBase<Mutation, Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation>,
+  extends WALPlayerBase<Mutation, Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation>,
     OutputFormat<ImmutableBytesWritable, Mutation>> {
   private static final Logger LOG = LoggerFactory.getLogger(WALPlayer.class);
   final static String NAME = "WALPlayer";
@@ -300,14 +297,5 @@ public class WALPlayer
     }
     Job job = createSubmittableJob(args);
     return job.waitForCompletion(true) ? 0 : 1;
-  }
-
-  private static RegionLocator getRegionLocator(TableName tableName, Configuration conf,
-    Connection conn) throws IOException {
-    if (SnapshotRegionLocator.shouldUseSnapshotRegionLocator(conf, tableName)) {
-      return SnapshotRegionLocator.create(conf, tableName);
-    }
-
-    return conn.getRegionLocator(tableName);
   }
 }

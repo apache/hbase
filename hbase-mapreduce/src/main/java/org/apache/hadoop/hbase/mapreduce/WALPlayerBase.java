@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
+import org.apache.hadoop.hbase.snapshot.SnapshotRegionLocator;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -47,10 +48,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Public
-public class WALReplayBase<V, T extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, V>,
+public class WALPlayerBase<V, T extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, V>,
   U extends OutputFormat<ImmutableBytesWritable, V>> extends Configured implements Tool {
 
-  private static final Logger LOG = LoggerFactory.getLogger(WALReplayBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WALPlayerBase.class);
   final static String WAL_DIR = "WALs";
   final static String BULKLOAD_FILES = "bulk-load-files";
   public final static String BULK_OUTPUT_CONF_KEY = "wal.bulk.output";
@@ -62,14 +63,14 @@ public class WALReplayBase<V, T extends Mapper<WALKey, WALEdit, ImmutableBytesWr
   private Class<? extends OutputFormat> outputFormatClass;
 
   // Class<? extends Mapper> cls
-  protected WALReplayBase(final Configuration c, Class<? extends Mapper> mapper,
+  protected WALPlayerBase(final Configuration c, Class<? extends Mapper> mapper,
     Class<? extends OutputFormat> outputFormat) {
     super(c);
     this.mapperClass = mapper;
     this.outputFormatClass = outputFormat;
   }
 
-  public WALReplayBase(Class<? extends Mapper> mapper, Class<? extends OutputFormat> outputFormat) {
+  public WALPlayerBase(Class<? extends Mapper> mapper, Class<? extends OutputFormat> outputFormat) {
     this.mapperClass = mapper;
     this.outputFormatClass = outputFormat;
   }
@@ -155,7 +156,7 @@ public class WALReplayBase<V, T extends Mapper<WALKey, WALEdit, ImmutableBytesWr
           new ArrayList<HFileOutputFormat2.TableInfo>();
         for (TableName tableName : tableNames) {
           Table table = conn.getTable(tableName);
-          RegionLocator regionLocator = conn.getRegionLocator(tableName);
+          RegionLocator regionLocator = getRegionLocator(tableName, conf, conn);
           tableInfoList.add(new HFileOutputFormat2.TableInfo(table.getDescriptor(), regionLocator));
         }
         MultiTableHFileOutputFormat.configureIncrementalLoad(job, tableInfoList);
@@ -190,5 +191,14 @@ public class WALReplayBase<V, T extends Mapper<WALKey, WALEdit, ImmutableBytesWr
 
   public int run(String[] args) throws Exception {
     return 0;
+  }
+
+  private static RegionLocator getRegionLocator(TableName tableName, Configuration conf,
+    Connection conn) throws IOException {
+    if (SnapshotRegionLocator.shouldUseSnapshotRegionLocator(conf, tableName)) {
+      return SnapshotRegionLocator.create(conf, tableName);
+    }
+
+    return conn.getRegionLocator(tableName);
   }
 }

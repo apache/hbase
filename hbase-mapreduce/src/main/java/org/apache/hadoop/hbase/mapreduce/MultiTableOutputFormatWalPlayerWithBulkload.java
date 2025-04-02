@@ -49,10 +49,10 @@ import org.slf4j.LoggerFactory;
 
 /**
  * <p>
- * Hadoop output format for WALReplay that writes to one or more HBase tables or does Bulkload
- * operation. The key is taken to be the table name while the output value <em>must</em> be either a
- * {@link Put} or a {@link Delete} instance or a list of {@link BulkLoadHFiles}. All tables must
- * already exist, and all Puts and Deletes must reference only valid column families.
+ * Hadoop output format for WALPlayerWithBulkload that writes to one or more HBase tables or does
+ * Bulkload operation. The key is taken to be the table name while the output value <em>must</em> be
+ * either a {@link Put} or a {@link Delete} instance or a list of {@link BulkLoadHFiles}. All tables
+ * must already exist, and all Puts and Deletes must reference only valid column families.
  * </p>
  * <p>
  * Write-ahead logging (WAL) for Puts can be disabled by setting {@link #WAL_PROPERTY} to
@@ -62,7 +62,7 @@ import org.slf4j.LoggerFactory;
  * </p>
  */
 @InterfaceAudience.Public
-public class MultiTableOutputFormatWalReplay
+public class MultiTableOutputFormatWalPlayerWithBulkload
   extends OutputFormat<ImmutableBytesWritable, MutationOrBulkLoad> {
   /** Set this to {@link #WAL_OFF} to turn off write-ahead logging (WAL) */
   public static final String WAL_PROPERTY = "hbase.mapreduce.multitableoutputformat.wal";

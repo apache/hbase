@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_BULKLOAD_ENABLE_KEY;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
-import static org.apache.hadoop.hbase.mapreduce.WALReplay.BULKLOAD_FILES;
-import static org.apache.hadoop.hbase.mapreduce.WALReplay.WAL_DIR;
+import static org.apache.hadoop.hbase.mapreduce.WALPlayerWithBulkload.BULKLOAD_FILES;
+import static org.apache.hadoop.hbase.mapreduce.WALPlayerWithBulkload.WAL_DIR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -68,14 +68,14 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 /**
- * Basic test for the WALReplay M/R tool to test restore of bulkload operation
+ * Basic test for the WALPlayerWithBulkload M/R tool to test restore of bulkload operation
  */
 @Category({ MapReduceTests.class, LargeTests.class })
-public class TestWALReplay {
+public class TestWALPlayerWithBulkload {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALReplay.class);
-  private static final Logger LOG = LoggerFactory.getLogger(TestWALReplay.class);
+    HBaseClassTestRule.forClass(TestWALPlayerWithBulkload.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWALPlayerWithBulkload.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final TableName TABLENAME = TableName.valueOf("table");
   private final byte[] FAMILY = Bytes.toBytes("family");
@@ -226,7 +226,7 @@ public class TestWALReplay {
    * Test to validate restore of bulkload operation
    */
   @Test
-  public void testWALReplay() throws Exception {
+  public void testWALPlayerWithBulkload() throws Exception {
 
     Table t1 = createTableWithSomeRows();
     String walDir = getWalDir();
@@ -249,9 +249,9 @@ public class TestWALReplay {
 
     TEST_UTIL.truncateTable(t1.getName());
 
-    // Use WALReplay to restore hfile
-    WALReplay walReplay = new WALReplay(conf);
-    ToolRunner.run(conf, walReplay,
+    // Use WALPlayerWithBulkload to restore hfile
+    WALPlayerWithBulkload walPlayerWithBulkload = new WALPlayerWithBulkload(conf);
+    ToolRunner.run(conf, walPlayerWithBulkload,
       new String[] { backupPath.toString(), TABLENAME.getNameAsString() });
 
     // Verify restored table
