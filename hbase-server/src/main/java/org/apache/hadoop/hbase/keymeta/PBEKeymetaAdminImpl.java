@@ -21,7 +21,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyStoreKeyProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +42,7 @@ public class PBEKeymetaAdminImpl extends PBEKeymetaTableAccessor implements PBEK
   public PBEKeyStatus enablePBE(String pbePrefix, String keyNamespace) throws IOException {
     checkPBEEnabled();
     LOG.info("Trying to enable PBE on key: {} under namespace: {}", pbePrefix, keyNamespace);
-    byte[] pbe_prefix = PBEKeyStoreKeyProvider.decodeToPrefixBytes(pbePrefix);
+    byte[] pbe_prefix = PBEKeyProvider.decodeToPrefixBytes(pbePrefix);
     PBEKeyProvider provider = getKeyProvider();
     int perPrefixActiveKeyConfCount = getPerPrefixActiveKeyConfCount();
     Set<PBEKeyData> retrievedKeys = new HashSet<>(perPrefixActiveKeyConfCount);
@@ -75,7 +74,7 @@ public class PBEKeymetaAdminImpl extends PBEKeymetaTableAccessor implements PBEK
     checkPBEEnabled();
     LOG.info("Getting key statuses for PBE on key: {} under namespace: {}", pbePrefix,
       keyNamespace);
-    byte[] pbe_prefix = PBEKeyStoreKeyProvider.decodeToPrefixBytes(pbePrefix);
+    byte[] pbe_prefix = PBEKeyProvider.decodeToPrefixBytes(pbePrefix);
     return super.getAllKeys(pbe_prefix, keyNamespace);
   }
 }

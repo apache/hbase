@@ -19,14 +19,13 @@ package org.apache.hadoop.hbase.keymeta;
 
 import org.apache.hadoop.hbase.io.crypto.PBEKeyData;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.PBEKeyStoreKeyProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 import java.security.KeyException;
 import java.util.List;
 
 /**
- * This class provides a unified access on top of both {@code PBEKeyDataCache} (L1) and
+ * This class provides unified access on top of both {@code PBEKeyDataCache} (L1) and
  * {@code PBEKeymetaTableAccessor} (L2) to access PBE keys. When the getter is called, it first
  * checks if L1 cache has the key, if not, it tries to get the key from L2.
  */
@@ -64,7 +63,7 @@ public class PBEKeyAccessor extends PBEKeyAccessorBase {
         keyData = provider.unwrapKey(keyMetadata);
         LOG.info("Got key data with status: {} and metadata: {} for prefix: {}",
           keyData.getKeyStatus(), keyData.getKeyMetadata(),
-          PBEKeyStoreKeyProvider.encodeToPrefixStr(pbe_prefix));
+          PBEKeyProvider.encodeToPrefixStr(pbe_prefix));
         keymetaAccessor.addKey(keyData);
       }
       if (keyData != null) {

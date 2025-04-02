@@ -145,7 +145,7 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
   @Test
   public void testGetDisabledKey() throws Exception {
     byte[] invalidPrefix = new byte[] { 1, 2, 3 };
-    String invalidPrefixEnc = PBEKeyStoreKeyProvider.encodeToPrefixStr(invalidPrefix);
+    String invalidPrefixEnc = PBEKeyProvider.encodeToPrefixStr(invalidPrefix);
     conf.set(HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + invalidPrefixEnc + ".active", "false");
     PBEKeyData keyData = pbeProvider.getPBEKey(invalidPrefix, PBEKeyData.KEY_NAMESPACE_GLOBAL);
     assertNotNull(keyData);
@@ -164,7 +164,7 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
   public void testUnwrapInvalidKey() throws Exception {
     String invalidAlias = "invalidAlias";
     byte[] invalidPrefix = new byte[] { 1, 2, 3 };
-    String invalidPrefixEnc = PBEKeyStoreKeyProvider.encodeToPrefixStr(invalidPrefix);
+    String invalidPrefixEnc = PBEKeyProvider.encodeToPrefixStr(invalidPrefix);
     String invalidMetadata = PBEKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
       invalidPrefixEnc);
     PBEKeyData keyData = pbeProvider.unwrapKey(invalidMetadata);
@@ -177,7 +177,7 @@ public class TestPBEKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
   public void testUnwrapDisabledKey() throws Exception {
     String invalidAlias = "invalidAlias";
     byte[] invalidPrefix = new byte[] { 1, 2, 3 };
-    String invalidPrefixEnc = PBEKeyStoreKeyProvider.encodeToPrefixStr(invalidPrefix);
+    String invalidPrefixEnc = PBEKeyProvider.encodeToPrefixStr(invalidPrefix);
     conf.set(HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + invalidPrefixEnc + ".active", "false");
     String invalidMetadata = PBEKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
       invalidPrefixEnc);

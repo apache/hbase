@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.io.crypto.MockPBEKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.PBEKeyStatus;
 import org.apache.hadoop.hbase.keymeta.PBEClusterKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.PBEClusterKeyCache;
+import org.apache.hadoop.hbase.keymeta.PBETestBase;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -45,48 +46,11 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestPBEClusterKey {
+public class TestPBEClusterKey extends PBETestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestPBEClusterKey.class);
-
-  private HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-
-  @Before
-  public void setUp() throws Exception {
-    TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockPBEKeyProvider.class.getName());
-    TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_PBE_ENABLED_CONF_KEY, "true");
-
-    // Start the minicluster
-    TEST_UTIL.startMiniCluster(1);
-    TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  private PBEKeyData validateInitialState(HMaster master, MockPBEKeyProvider pbeKeyProvider )
-      throws IOException {
-    PBEClusterKeyAccessor pbeClusterKeyAccessor = new PBEClusterKeyAccessor(master);
-    assertEquals(1, pbeClusterKeyAccessor.getAllClusterKeyFiles().size());
-    PBEClusterKeyCache pbeClusterKeyCache = master.getPBEClusterKeyCache();
-    assertNotNull(pbeClusterKeyCache);
-    PBEKeyData clusterKey = pbeClusterKeyCache.getLatestClusterKey();
-    assertEquals(pbeKeyProvider.getClusterKey(master.getClusterId().getBytes()), clusterKey);
-    assertEquals(clusterKey,
-      pbeClusterKeyCache.getClusterKeyByChecksum(clusterKey.getKeyChecksum()));
-    return clusterKey;
-  }
-
-  private void restartCluster() throws Exception {
-    TEST_UTIL.shutdownMiniHBaseCluster();
-    Thread.sleep(2000);
-    TEST_UTIL.restartHBaseCluster(1);
-    TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
-  }
 
   @Test
   public void testClusterKeyInitializationAndRotation() throws Exception {
@@ -131,5 +95,25 @@ public class TestPBEClusterKey {
     tmpCKM.ensureClusterKeyInitialized();
     pbeKeyProvider.setKeyStatus(pbeKeyProvider.getClusterKeyAlias(), PBEKeyStatus.INACTIVE);
     assertThrows(IOException.class, tmpCKM::ensureClusterKeyInitialized);
+  }
+
+  private PBEKeyData validateInitialState(HMaster master, MockPBEKeyProvider pbeKeyProvider )
+    throws IOException {
+    PBEClusterKeyAccessor pbeClusterKeyAccessor = new PBEClusterKeyAccessor(master);
+    assertEquals(1, pbeClusterKeyAccessor.getAllClusterKeyFiles().size());
+    PBEClusterKeyCache pbeClusterKeyCache = master.getPBEClusterKeyCache();
+    assertNotNull(pbeClusterKeyCache);
+    PBEKeyData clusterKey = pbeClusterKeyCache.getLatestClusterKey();
+    assertEquals(pbeKeyProvider.getClusterKey(master.getClusterId().getBytes()), clusterKey);
+    assertEquals(clusterKey,
+      pbeClusterKeyCache.getClusterKeyByChecksum(clusterKey.getKeyChecksum()));
+    return clusterKey;
+  }
+
+  private void restartCluster() throws Exception {
+    TEST_UTIL.shutdownMiniHBaseCluster();
+    Thread.sleep(2000);
+    TEST_UTIL.restartHBaseCluster(1);
+    TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
   }
 }

@@ -37,7 +37,7 @@ public interface PBEKeymetaAdmin {
   /**
    * Enables PBE for the specified key prefix and namespace.
    *
-   * @param pbePrefix    The prefix for the PBE key.
+   * @param pbePrefix    The prefix for the PBE key in base64 encoded format.
    * @param keyNamespace The namespace for the PBE key.
    *
    * @return The current status of the PBE key.
@@ -48,7 +48,7 @@ public interface PBEKeymetaAdmin {
   /**
    * Get the status of all the keys for the specified pbe_prefix.
    *
-   * @param pbePrefix    The prefix for the PBE key.
+   * @param pbePrefix    The prefix for the PBE key in base64 encoded format.
    * @param keyNamespace The namespace for the PBE key.
    * @return The list of status objects each identifying the key and its current status.
    * @throws IOException if an error occurs while enabling PBE.

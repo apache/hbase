@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.crypto;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
+import java.util.Base64;
 
 /**
  * Interface for PBE-based key providers. Defines methods for generating and managing
@@ -30,6 +31,21 @@ import java.io.IOException;
  */
 @InterfaceAudience.Public
 public interface PBEKeyProvider extends KeyProvider {
+  static byte[] decodeToPrefixBytes(String pbePrefix) throws IOException {
+    byte[] pbe_prefix;
+    try {
+      pbe_prefix = Base64.getDecoder().decode(pbePrefix);
+    }
+    catch (IllegalArgumentException e) {
+      throw new IOException("Failed to decode specified prefix as Base64 string: " + pbePrefix, e);
+    }
+    return pbe_prefix;
+  }
+
+  static String encodeToPrefixStr(byte[] pbe_prefix) {
+    return Base64.getEncoder().encodeToString(pbe_prefix);
+  }
+
   /**
    * Initialize the provider with the given configuration.
    *
