@@ -23,7 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Constants used by the web UI JSP pages.
  */
 @InterfaceAudience.Private
-public class MasterStatusConstants {
+public final class MasterStatusConstants {
 
   public static final String FRAGS = "frags";
   public static final String SERVER_NAMES = "serverNames";
