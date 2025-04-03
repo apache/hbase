@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.QueryMetrics;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLoadStats;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -659,6 +660,7 @@ public final class ProtobufUtil {
     if (proto.hasLoadColumnFamiliesOnDemand()) {
       get.setLoadColumnFamiliesOnDemand(proto.getLoadColumnFamiliesOnDemand());
     }
+    get.setQueryMetricsEnabled(proto.getQueryMetricsEnabled());
     return get;
   }
 
@@ -1096,6 +1098,7 @@ public final class ProtobufUtil {
     if (scan.isNeedCursorResult()) {
       scanBuilder.setNeedCursorResult(true);
     }
+    scanBuilder.setQueryMetricsEnabled(scan.isQueryMetricsEnabled());
     return scanBuilder.build();
   }
 
@@ -1200,6 +1203,7 @@ public final class ProtobufUtil {
     if (proto.getNeedCursorResult()) {
       scan.setNeedCursorResult(true);
     }
+    scan.setQueryMetricsEnabled(proto.getQueryMetricsEnabled());
     return scan;
   }
 
@@ -1279,6 +1283,7 @@ public final class ProtobufUtil {
     if (loadColumnFamiliesOnDemand != null) {
       builder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand);
     }
+    builder.setQueryMetricsEnabled(get.isQueryMetricsEnabled());
     return builder.build();
   }
 
@@ -1434,6 +1439,10 @@ public final class ProtobufUtil {
     builder.setStale(result.isStale());
     builder.setPartial(result.mayHaveMoreCellsInRow());
 
+    if (result.getMetrics() != null) {
+      builder.setMetrics(toQueryMetrics(result.getMetrics()));
+    }
+
     return builder.build();
   }
 
@@ -1463,6 +1472,9 @@ public final class ProtobufUtil {
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
     builder.setAssociatedCellCount(size);
     builder.setStale(result.isStale());
+    if (result.getMetrics() != null) {
+      builder.setMetrics(toQueryMetrics(result.getMetrics()));
+    }
     return builder.build();
   }
 
@@ -1503,7 +1515,11 @@ public final class ProtobufUtil {
     for (CellProtos.Cell c : values) {
       cells.add(toCell(builder, c, decodeTags));
     }
-    return Result.create(cells, null, proto.getStale(), proto.getPartial());
+    Result r = Result.create(cells, null, proto.getStale(), proto.getPartial());
+    if (proto.hasMetrics()) {
+      r.setMetrics(toQueryMetrics(proto.getMetrics()));
+    }
+    return r;
   }
 
   /**
@@ -1548,9 +1564,15 @@ public final class ProtobufUtil {
       }
     }
 
-    return (cells == null || cells.isEmpty())
+    Result r = (cells == null || cells.isEmpty())
       ? (proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT)
       : Result.create(cells, null, proto.getStale());
+
+    if (proto.hasMetrics()) {
+      r.setMetrics(toQueryMetrics(proto.getMetrics()));
+    }
+
+    return r;
   }
 
   /**
@@ -3821,6 +3843,15 @@ public final class ProtobufUtil {
       .setStatus(task.getStatus())
       .setState(ClusterStatusProtos.ServerTask.State.valueOf(task.getState().name()))
       .setStartTime(task.getStartTime()).setCompletionTime(task.getCompletionTime()).build();
+  }
+
+  public static ClientProtos.QueryMetrics toQueryMetrics(QueryMetrics metrics) {
+    return ClientProtos.QueryMetrics.newBuilder()
+      .setBlockBytesScanned(metrics.getBlockBytesScanned()).build();
+  }
+
+  public static QueryMetrics toQueryMetrics(ClientProtos.QueryMetrics metrics) {
+    return new QueryMetrics(metrics.getBlockBytesScanned());
   }
 
   /**
