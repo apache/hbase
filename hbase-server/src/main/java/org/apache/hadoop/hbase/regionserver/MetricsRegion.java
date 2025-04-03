@@ -50,12 +50,12 @@ public class MetricsRegion {
     source.updateDelete();
   }
 
-  public void updateGet() {
-    source.updateGet();
+  public void updateGet(final long t) {
+    source.updateGet(t);
   }
 
-  public void updateScan() {
-    source.updateScan();
+  public void updateScanTime(final long t) {
+    source.updateScanTime(t);
   }
 
   public void updateFilteredRecords() {
