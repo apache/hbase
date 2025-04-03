@@ -115,4 +115,8 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
 
   /** Returns the scan metrics, or {@code null} if we do not enable metrics. */
   ScanMetrics getScanMetrics();
+
+  default List<ScanMetrics> getScanMetricsByRegion() {
+    throw new UnsupportedOperationException("Scan Metrics by region is not supported");
+  }
 }
