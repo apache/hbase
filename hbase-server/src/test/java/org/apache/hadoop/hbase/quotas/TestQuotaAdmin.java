@@ -773,6 +773,14 @@ public class TestQuotaAdmin {
         assertTrue(rpcQuota.hasWriteCapacityUnit());
         t = rpcQuota.getWriteCapacityUnit();
         break;
+      case ATOMIC_READ_SIZE:
+        assertTrue(rpcQuota.hasAtomicReadSize());
+        t = rpcQuota.getAtomicReadSize();
+        break;
+      case ATOMIC_REQUEST_NUMBER:
+        assertTrue(rpcQuota.hasAtomicReqNum());
+        t = rpcQuota.getAtomicReqNum();
+        break;
       default:
     }
 

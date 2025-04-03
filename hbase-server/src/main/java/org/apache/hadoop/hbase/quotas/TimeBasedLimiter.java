@@ -42,6 +42,9 @@ public class TimeBasedLimiter implements QuotaLimiter {
   private RateLimiter reqCapacityUnitLimiter = null;
   private RateLimiter writeCapacityUnitLimiter = null;
   private RateLimiter readCapacityUnitLimiter = null;
+  private RateLimiter atomicReqLimiter = null;
+  private RateLimiter atomicReadSizeLimiter = null;
+  private RateLimiter atomicWriteSizeLimiter = null;
 
   private TimeBasedLimiter() {
     if (
@@ -60,6 +63,9 @@ public class TimeBasedLimiter implements QuotaLimiter {
       reqCapacityUnitLimiter = new FixedIntervalRateLimiter(refillInterval);
       writeCapacityUnitLimiter = new FixedIntervalRateLimiter(refillInterval);
       readCapacityUnitLimiter = new FixedIntervalRateLimiter(refillInterval);
+      atomicReqLimiter = new FixedIntervalRateLimiter(refillInterval);
+      atomicReadSizeLimiter = new FixedIntervalRateLimiter(refillInterval);
+      atomicWriteSizeLimiter = new FixedIntervalRateLimiter(refillInterval);
     } else {
       reqsLimiter = new AverageIntervalRateLimiter();
       reqSizeLimiter = new AverageIntervalRateLimiter();
@@ -70,6 +76,9 @@ public class TimeBasedLimiter implements QuotaLimiter {
       reqCapacityUnitLimiter = new AverageIntervalRateLimiter();
       writeCapacityUnitLimiter = new AverageIntervalRateLimiter();
       readCapacityUnitLimiter = new AverageIntervalRateLimiter();
+      atomicReqLimiter = new AverageIntervalRateLimiter();
+      atomicReadSizeLimiter = new AverageIntervalRateLimiter();
+      atomicWriteSizeLimiter = new AverageIntervalRateLimiter();
     }
   }
 
@@ -120,6 +129,22 @@ public class TimeBasedLimiter implements QuotaLimiter {
       setFromTimedQuota(limiter.readCapacityUnitLimiter, throttle.getReadCapacityUnit());
       isBypass = false;
     }
+
+    if (throttle.hasAtomicReqNum()) {
+      setFromTimedQuota(limiter.atomicReqLimiter, throttle.getAtomicReqNum());
+      isBypass = false;
+    }
+
+    if (throttle.hasAtomicReadSize()) {
+      setFromTimedQuota(limiter.atomicReadSizeLimiter, throttle.getAtomicReadSize());
+      isBypass = false;
+    }
+
+    if (throttle.hasAtomicWriteSize()) {
+      setFromTimedQuota(limiter.atomicWriteSizeLimiter, throttle.getAtomicWriteSize());
+      isBypass = false;
+    }
+
     return isBypass ? NoopQuotaLimiter.get() : limiter;
   }
 
@@ -133,6 +158,9 @@ public class TimeBasedLimiter implements QuotaLimiter {
     reqCapacityUnitLimiter.update(other.reqCapacityUnitLimiter);
     writeCapacityUnitLimiter.update(other.writeCapacityUnitLimiter);
     readCapacityUnitLimiter.update(other.readCapacityUnitLimiter);
+    atomicReqLimiter.update(other.atomicReqLimiter);
+    atomicReadSizeLimiter.update(other.atomicReadSizeLimiter);
+    atomicWriteSizeLimiter.update(other.atomicWriteSizeLimiter);
   }
 
   private static void setFromTimedQuota(final RateLimiter limiter, final TimedQuota timedQuota) {
@@ -141,8 +169,8 @@ public class TimeBasedLimiter implements QuotaLimiter {
 
   @Override
   public void checkQuota(long writeReqs, long estimateWriteSize, long readReqs,
-    long estimateReadSize, long estimateWriteCapacityUnit, long estimateReadCapacityUnit)
-    throws RpcThrottlingException {
+    long estimateReadSize, long estimateWriteCapacityUnit, long estimateReadCapacityUnit,
+    boolean isAtomic) throws RpcThrottlingException {
     long waitInterval = reqsLimiter.getWaitIntervalMs(writeReqs + readReqs);
     if (waitInterval > 0) {
       RpcThrottlingException.throwNumRequestsExceeded(waitInterval);
@@ -155,6 +183,12 @@ public class TimeBasedLimiter implements QuotaLimiter {
       .getWaitIntervalMs(estimateWriteCapacityUnit + estimateReadCapacityUnit);
     if (waitInterval > 0) {
       RpcThrottlingException.throwRequestCapacityUnitExceeded(waitInterval);
+    }
+    if (isAtomic) {
+      waitInterval = atomicReqLimiter.getWaitIntervalMs(writeReqs + readReqs);
+      if (waitInterval > 0) {
+        RpcThrottlingException.throwAtomicRequestNumberExceeded(waitInterval);
+      }
     }
 
     if (estimateWriteSize > 0) {
@@ -169,6 +203,12 @@ public class TimeBasedLimiter implements QuotaLimiter {
       waitInterval = writeCapacityUnitLimiter.getWaitIntervalMs(estimateWriteCapacityUnit);
       if (waitInterval > 0) {
         RpcThrottlingException.throwWriteCapacityUnitExceeded(waitInterval);
+      }
+      if (isAtomic) {
+        waitInterval = atomicWriteSizeLimiter.getWaitIntervalMs(writeReqs);
+        if (waitInterval > 0) {
+          RpcThrottlingException.throwAtomicWriteSizeExceeded(waitInterval);
+        }
       }
     }
 
@@ -185,12 +225,18 @@ public class TimeBasedLimiter implements QuotaLimiter {
       if (waitInterval > 0) {
         RpcThrottlingException.throwReadCapacityUnitExceeded(waitInterval);
       }
+      if (isAtomic) {
+        waitInterval = atomicReadSizeLimiter.getWaitIntervalMs(writeReqs + readReqs);
+        if (waitInterval > 0) {
+          RpcThrottlingException.throwAtomicReadSizeExceeded(waitInterval);
+        }
+      }
     }
   }
 
   @Override
   public void grabQuota(long writeReqs, long writeSize, long readReqs, long readSize,
-    long writeCapacityUnit, long readCapacityUnit) {
+    long writeCapacityUnit, long readCapacityUnit, boolean isAtomic) {
     assert writeSize != 0 || readSize != 0;
 
     reqsLimiter.consume(writeReqs + readReqs);
@@ -212,22 +258,37 @@ public class TimeBasedLimiter implements QuotaLimiter {
       reqCapacityUnitLimiter.consume(readCapacityUnit);
       readCapacityUnitLimiter.consume(readCapacityUnit);
     }
+    if (isAtomic) {
+      atomicReqLimiter.consume(writeReqs + readReqs);
+      if (readSize > 0) {
+        atomicReadSizeLimiter.consume(readSize);
+      }
+      if (writeSize > 0) {
+        atomicWriteSizeLimiter.consume(writeSize);
+      }
+    }
   }
 
   @Override
-  public void consumeWrite(final long size, long capacityUnit) {
+  public void consumeWrite(final long size, long capacityUnit, boolean isAtomic) {
     reqSizeLimiter.consume(size);
     writeSizeLimiter.consume(size);
     reqCapacityUnitLimiter.consume(capacityUnit);
     writeCapacityUnitLimiter.consume(capacityUnit);
+    if (isAtomic) {
+      atomicWriteSizeLimiter.consume(size);
+    }
   }
 
   @Override
-  public void consumeRead(final long size, long capacityUnit) {
+  public void consumeRead(final long size, long capacityUnit, boolean isAtomic) {
     reqSizeLimiter.consume(size);
     readSizeLimiter.consume(size);
     reqCapacityUnitLimiter.consume(capacityUnit);
     readCapacityUnitLimiter.consume(capacityUnit);
+    if (isAtomic) {
+      atomicReadSizeLimiter.consume(size);
+    }
   }
 
   @Override
@@ -306,6 +367,15 @@ public class TimeBasedLimiter implements QuotaLimiter {
     }
     if (!readCapacityUnitLimiter.isBypass()) {
       builder.append(" readCapacityUnit=" + readCapacityUnitLimiter);
+    }
+    if (!atomicReqLimiter.isBypass()) {
+      builder.append(" atomicReqLimiter=" + atomicReqLimiter);
+    }
+    if (!atomicReadSizeLimiter.isBypass()) {
+      builder.append(" atomicReadSizeLimiter=" + atomicReadSizeLimiter);
+    }
+    if (!atomicWriteSizeLimiter.isBypass()) {
+      builder.append(" atomicWriteSizeLimiter=" + atomicWriteSizeLimiter);
     }
     builder.append(')');
     return builder.toString();

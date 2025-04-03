@@ -34,24 +34,24 @@ class NoopQuotaLimiter implements QuotaLimiter {
 
   @Override
   public void checkQuota(long writeReqs, long estimateWriteSize, long readReqs,
-    long estimateReadSize, long estimateWriteCapacityUnit, long estimateReadCapacityUnit)
-    throws RpcThrottlingException {
+    long estimateReadSize, long estimateWriteCapacityUnit, long estimateReadCapacityUnit,
+    boolean isAtomic) throws RpcThrottlingException {
     // no-op
   }
 
   @Override
   public void grabQuota(long writeReqs, long writeSize, long readReqs, long readSize,
-    long writeCapacityUnit, long readCapacityUnit) {
+    long writeCapacityUnit, long readCapacityUnit, boolean isAtomic) {
     // no-op
   }
 
   @Override
-  public void consumeWrite(final long size, long capacityUnit) {
+  public void consumeWrite(final long size, long capacityUnit, boolean isAtomic) {
     // no-op
   }
 
   @Override
-  public void consumeRead(final long size, long capacityUnit) {
+  public void consumeRead(final long size, long capacityUnit, boolean isAtomic) {
     // no-op
   }
 

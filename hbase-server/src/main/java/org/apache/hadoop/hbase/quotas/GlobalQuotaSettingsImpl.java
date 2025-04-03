@@ -159,6 +159,21 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
           hasThrottle = true;
         }
         break;
+      case ATOMIC_READ_SIZE:
+        if (throttleBuilder.hasAtomicReadSize()) {
+          hasThrottle = true;
+        }
+        break;
+      case ATOMIC_REQUEST_NUMBER:
+        if (throttleBuilder.hasAtomicReqNum()) {
+          hasThrottle = true;
+        }
+        break;
+      case ATOMIC_WRITE_SIZE:
+        if (throttleBuilder.hasAtomicWriteSize()) {
+          hasThrottle = true;
+        }
+        break;
       default:
     }
     return hasThrottle;
@@ -212,6 +227,15 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
             case WRITE_CAPACITY_UNIT:
               throttleBuilder.clearWriteCapacityUnit();
               break;
+            case ATOMIC_READ_SIZE:
+              throttleBuilder.clearAtomicReadSize();
+              break;
+            case ATOMIC_REQUEST_NUMBER:
+              throttleBuilder.clearAtomicReqNum();
+              break;
+            case ATOMIC_WRITE_SIZE:
+              throttleBuilder.clearAtomicWriteSize();
+              break;
             default:
           }
           boolean hasThrottle = false;
@@ -261,6 +285,15 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
             break;
           case WRITE_CAPACITY_UNIT:
             throttleBuilder.setWriteCapacityUnit(otherProto.getTimedQuota());
+            break;
+          case ATOMIC_READ_SIZE:
+            throttleBuilder.setAtomicReadSize(otherProto.getTimedQuota());
+            break;
+          case ATOMIC_REQUEST_NUMBER:
+            throttleBuilder.setAtomicReqNum(otherProto.getTimedQuota());
+            break;
+          case ATOMIC_WRITE_SIZE:
+            throttleBuilder.setAtomicWriteSize(otherProto.getTimedQuota());
             break;
           default:
         }
@@ -341,11 +374,14 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
             case REQUEST_NUMBER:
             case WRITE_NUMBER:
             case READ_NUMBER:
+            case ATOMIC_REQUEST_NUMBER:
               builder.append(String.format("%dreq", timedQuota.getSoftLimit()));
               break;
             case REQUEST_SIZE:
             case WRITE_SIZE:
             case READ_SIZE:
+            case ATOMIC_READ_SIZE:
+            case ATOMIC_WRITE_SIZE:
               builder.append(sizeToString(timedQuota.getSoftLimit()));
               break;
             case REQUEST_CAPACITY_UNIT:
