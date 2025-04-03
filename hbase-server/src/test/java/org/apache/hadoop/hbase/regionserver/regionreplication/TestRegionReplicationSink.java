@@ -316,6 +316,74 @@ public class TestRegionReplicationSink {
     assertEquals(0, sink.pendingSize());
   }
 
+  /**
+   * This test is for HBASE-29230, when all replicas are failed, resource should be released
+   * completely.
+   */
+  @Test
+  public void testAllReplicaFailed() {
+    MutableInt next = new MutableInt(0);
+    List<CompletableFuture<Void>> futures =
+      Stream.generate(() -> new CompletableFuture<Void>()).limit(5).collect(Collectors.toList());
+    when(conn.replicate(any(), anyList(), anyInt(), anyLong(), anyLong()))
+      .then(i -> futures.get(next.getAndIncrement()));
+
+    ServerCall<?> rpcCall1 = mock(ServerCall.class);
+    WALKeyImpl key1 = mock(WALKeyImpl.class);
+    when(key1.estimatedSerializedSizeOf()).thenReturn(100L);
+    when(key1.getSequenceId()).thenReturn(1L);
+    WALEdit edit1 = mock(WALEdit.class);
+    when(edit1.estimatedSerializedSizeOf()).thenReturn(1000L);
+    when(manager.increase(anyLong())).thenReturn(true);
+    sink.add(key1, edit1, rpcCall1);
+    verify(rpcCall1, times(1)).retainByWAL();
+
+    ServerCall<?> rpcCall2 = mock(ServerCall.class);
+    WALKeyImpl key2 = mock(WALKeyImpl.class);
+    when(key2.estimatedSerializedSizeOf()).thenReturn(100L);
+    when(key2.getSequenceId()).thenReturn(2L);
+    WALEdit edit2 = mock(WALEdit.class);
+    when(edit2.estimatedSerializedSizeOf()).thenReturn(1000L);
+    when(manager.increase(anyLong())).thenReturn(true);
+    sink.add(key2, edit2, rpcCall2);
+    verify(rpcCall2, times(1)).retainByWAL();
+
+    // fail all replicas for edit1, so edit2 could not send.
+    futures.get(0).completeExceptionally(new IOException("inject error"));
+    futures.get(1).completeExceptionally(new IOException("inject error"));
+
+    // we should only call replicate for edit1
+    verify(conn, times(2)).replicate(any(), anyList(), anyInt(), anyLong(), anyLong());
+
+    // flush
+    ServerCall<?> rpcCall3 = mock(ServerCall.class);
+    WALKeyImpl key3 = mock(WALKeyImpl.class);
+    when(key3.estimatedSerializedSizeOf()).thenReturn(200L);
+    when(key3.getSequenceId()).thenReturn(4L);
+    Map<byte[], List<Path>> committedFiles = td.getColumnFamilyNames().stream()
+      .collect(Collectors.toMap(Function.identity(), k -> Collections.emptyList(), (u, v) -> {
+        throw new IllegalStateException();
+      }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
+    FlushDescriptor fd =
+      ProtobufUtil.toFlushDescriptor(FlushAction.START_FLUSH, primary, 3L, committedFiles);
+    WALEdit edit3 = WALEdit.createFlushWALEdit(primary, fd);
+    sink.add(key3, edit3, rpcCall3);
+    verify(rpcCall3, times(1)).retainByWAL();
+
+    // the flush marker should have cleared the failedReplicas, so we will send the edit to 2
+    // replicas again
+    verify(conn, times(4)).replicate(any(), anyList(), anyInt(), anyLong(), anyLong());
+    futures.get(2).complete(null);
+    futures.get(3).complete(null);
+
+    // all ServerCall should be released and pendingSize should be 0
+    verify(rpcCall1, times(1)).releaseByWAL();
+    verify(rpcCall2, times(1)).releaseByWAL();
+    verify(rpcCall3, times(1)).releaseByWAL();
+    assertEquals(0, sink.pendingSize());
+
+  }
+
   @Test
   public void testSizeCapacity() {
     MutableInt next = new MutableInt(0);

@@ -254,6 +254,13 @@ public class RegionReplicationSink {
   }
 
   private void send() {
+    // We should check if there are normal replicas first
+    int toSendReplicaCount = regionReplication - 1 - failedReplicas.size();
+    if (toSendReplicaCount <= 0) {
+      LOG.warn("All replicas {} are failed, exit send....", failedReplicas);
+      return;
+    }
+
     List<SinkEntry> toSend = new ArrayList<>();
     long totalSize = 0L;
     boolean hasMetaEdit = false;
@@ -269,10 +276,7 @@ public class RegionReplicationSink {
         break;
       }
     }
-    int toSendReplicaCount = regionReplication - 1 - failedReplicas.size();
-    if (toSendReplicaCount <= 0) {
-      return;
-    }
+
     long rpcTimeoutNsToUse;
     long operationTimeoutNsToUse;
     if (!hasMetaEdit) {
