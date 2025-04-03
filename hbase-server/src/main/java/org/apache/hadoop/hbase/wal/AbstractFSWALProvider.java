@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import static org.apache.hadoop.hbase.ServerName.SERVERNAME_SEPARATOR;
+
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -25,6 +29,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -36,6 +41,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
@@ -243,6 +249,15 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
 
   // should be package private; more visible for use in AbstractFSWAL
   public static final String WAL_FILE_NAME_DELIMITER = ".";
+
+  /**
+   * Pattern used to parse server name from WAL file name see
+   * {@link #getServerNameFromWALFileName(Path)}
+   */
+  public static final Pattern SERVERNAME_IN_FILE_PATTERN = Pattern
+    .compile("[^" + SERVERNAME_SEPARATOR + "]+" + SERVERNAME_SEPARATOR + Addressing.VALID_PORT_REGEX
+      + SERVERNAME_SEPARATOR + Addressing.VALID_PORT_REGEX + "[^" + WAL_FILE_NAME_DELIMITER + "]+");
+
   /** The hbase:meta region's WAL filename extension */
   public static final String META_WAL_PROVIDER_ID = ".meta";
   static final String DEFAULT_PROVIDER_ID = "default";
@@ -404,6 +419,38 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     return serverName;
   }
 
+  /**
+   * This function returns region server name from a log file name which is in one of the following
+   * formats:
+   * <ul>
+   * <li>hdfs://&lt;name node&gt;/hbase/oldWALs/hostname%2C22101%2C1487767381290.1487785392316</li>
+   * </ul>
+   * @return null if the passed in logFile isn't a valid WAL file path
+   */
+  public static ServerName getServerNameFromWALFileName(Path logFile) {
+    String fileName = logFile.getName();
+    // We were passed the directory and not a file in it.
+    ServerName serverName = null;
+    try {
+      fileName = URLDecoder.decode(fileName, HConstants.UTF8_ENCODING);
+      Matcher matcher = SERVERNAME_IN_FILE_PATTERN.matcher(fileName);
+      if (!matcher.find()) {
+        throw new IllegalArgumentException("Cannot parse a server name form filename=" + fileName);
+      }
+      String strServerName = matcher.group(0);
+      serverName = ServerName.parseServerName(strServerName);
+    } catch (IllegalArgumentException | IllegalStateException | UnsupportedEncodingException ex) {
+      serverName = null;
+      LOG.warn("Cannot parse a server name from path={}", logFile, ex);
+    }
+    if (serverName != null && serverName.getStartCode() < 0) {
+      LOG.warn("Invalid log file path={}, start code {} is less than 0", logFile,
+        serverName.getStartCode());
+      serverName = null;
+    }
+    return serverName;
+  }
+
   public static boolean isMetaFile(Path p) {
     return isMetaFile(p.getName());
   }
@@ -448,10 +495,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @throws IOException exception
    */
   public static Path findArchivedLog(Path path, Configuration conf) throws IOException {
-    // If the path contains oldWALs keyword then exit early.
-    if (path.toString().contains(HConstants.HREGION_OLDLOGDIR_NAME)) {
-      return null;
-    }
     Path walRootDir = CommonFSUtils.getWALRootDir(conf);
     FileSystem fs = path.getFileSystem(conf);
     // Try finding the log in old dir
@@ -463,6 +506,11 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
 
     ServerName serverName = getServerNameFromWALDirectoryName(path);
+    if (serverName == null) {
+      // try to parse server name from wal file name.
+      LOG.warn("Parse server name from wal directory failed, try to parse from wal filename");
+      serverName = getServerNameFromWALFileName(path);
+    }
     if (serverName == null) {
       LOG.warn("Can not extract server name from path {}, "
         + "give up searching the separated old log dir", path);
