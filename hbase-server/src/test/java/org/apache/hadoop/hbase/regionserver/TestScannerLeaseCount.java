@@ -182,8 +182,8 @@ public class TestScannerLeaseCount {
     }
 
     @Override
-    public OperationQuota checkBatchQuota(Region region, int numWrites, int numReads)
-      throws IOException, RpcThrottlingException {
+    public OperationQuota checkBatchQuota(Region region, int numWrites, int numReads,
+      boolean isAtomic) throws IOException, RpcThrottlingException {
       if (SHOULD_THROW) {
         throw EX;
       }
