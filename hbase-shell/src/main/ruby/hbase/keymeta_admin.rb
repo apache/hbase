@@ -20,10 +20,10 @@ java_import org.apache.hadoop.hbase.io.crypto.ManagedKeyData
 java_import org.apache.hadoop.hbase.keymeta.KeymetaAdminClient
 
 module Hbase
-  class PBEAdmin
+  class KeymetaAdmin
     def initialize(connection)
       @connection = connection
-      @admin = PBEKeymetaAdminClient.new(connection)
+      @admin = KeymetaAdminClient.new(connection)
       @hb_admin = @connection.getAdmin
     end
 
@@ -31,22 +31,22 @@ module Hbase
       @admin.close
     end
 
-    def pbe_enable(pbe_prefix)
-      prefix, namespace = extract_prefix_info(pbe_prefix)
-      @admin.enablePBE(prefix, namespace)
+    def enable_key_management(key_info)
+      cust, namespace = extract_cust_info(key_info)
+      @admin.enableManagedKeys(cust, namespace)
     end
 
-    def show_pbe_status(pbe_prefix)
-      prefix, namespace = extract_prefix_info(pbe_prefix)
-      @admin.getPBEKeyStatuses(prefix, namespace)
+    def get_key_statuses(key_info)
+      cust, namespace = extract_cust_info(key_info)
+      @admin.getManagedKeys(cust, namespace)
     end
 
-    def extract_prefix_info(pbe_prefix)
-      prefixInfo = pbe_prefix.split(':')
-      raise(ArgumentError, 'Invalid prefix:namespace format') unless (prefixInfo.length == 1 ||
-        prefixInfo.length == 2)
-      return prefixInfo[0], prefixInfo.length > 1 ? prefixInfo[1] :
-        PBEKeyData::KEY_NAMESPACE_GLOBAL
+    def extract_cust_info(key_info)
+      custInfo = key_info.split(':')
+      raise(ArgumentError, 'Invalid cust:namespace format') unless (custInfo.length == 1 ||
+        custInfo.length == 2)
+      return custInfo[0], custInfo.length > 1 ? custInfo[1] :
+        ManagedKeyData::KEY_NAMESPACE_GLOBAL
     end
   end
 end

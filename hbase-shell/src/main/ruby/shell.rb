@@ -150,8 +150,8 @@ module Shell
       @rsgroup_admin ||= hbase.rsgroup_admin
     end
 
-    def hbase_pbe_admin
-      @pbe_admin ||= hbase.pbe_admin
+    def hbase_keymeta_admin
+      @keymeta_admin ||= hbase.keymeta_admin
     end
 
     ##
@@ -620,13 +620,13 @@ Shell.load_command_group(
 )
 
 Shell.load_command_group(
-  'pbe',
-  full_name: 'PBE',
-  comment: "NOTE: The PBE KeyMeta Coprocessor Endpoint must be enabled on the Master else commands fail with:
-  UnknownProtocolException: No registered Master Coprocessor Endpoint found for PBEAdminService",
+  'keymeta',
+  full_name: 'Keymeta',
+  comment: "NOTE: The KeyMeta Coprocessor Endpoint must be enabled on the Master else commands fail with:
+  UnknownProtocolException: No registered Master Coprocessor Endpoint found for ManagedKeysService",
   commands: %w[
-    pbe_enable
-    pbe_get_statuses
+    enable_key_management
+    show_key_status
   ]
 )
 

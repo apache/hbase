@@ -17,21 +17,21 @@
 
 module Shell
   module Commands
-    class PbeGetStatuses < Command
+    class ShowKeyStatus < Command
       def help
         <<-EOF
-Get key statuses for a given prefix:namespace (prefix in Base64 format).
+Show key statuses for a given cust:namespace (cust in Base64 format).
 If no namespace is specified, the global namespace (*) is used.
 EOF
       end
 
-      def command(pbe_prefix)
+      def command(key_info)
         formatter.header(['ENCODED-KEY', 'NAMESPACE', 'STATUS', 'METADATA', 'METADATA-HASH',
           'REFRESH-TIMESTAMP', 'READ-OP-COUNT', 'WRITE-OP-COUNT'])
-        statuses = pbe_admin.show_pbe_status(pbe_prefix)
+        statuses = keymeta_admin.get_key_statuses(key_info)
         statuses.each { |status|
           formatter.row([
-            status.getPBEPrefixEncoded(),
+            status.getKeyCustodianEncoded(),
             status.getKeyNamespace(),
             status.getKeyStatus().toString(),
             status.getKeyMetadata(),

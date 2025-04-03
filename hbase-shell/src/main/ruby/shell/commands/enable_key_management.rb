@@ -17,18 +17,18 @@
 
 module Shell
   module Commands
-    class PbeEnable < Command
+    class EnableKeyManagement < Command
       def help
         <<-EOF
-Enable PBE for a given prefix:namespace (prefix in Base64 format).
+Enable key management for a given cust:namespace (cust in Base64 format).
 If no namespace is specified, the global namespace (*) is used.
 EOF
       end
 
-      def command(pbe_prefix)
+      def command(key_info)
         formatter.header(['KEY', 'STATUS'])
-        status = pbe_admin.pbe_enable(pbe_prefix)
-        formatter.row([pbe_prefix, status.toString()])
+        status = keymeta_admin.enable_key_management(key_info)
+        formatter.row([key_info, status.toString()])
       end
     end
   end

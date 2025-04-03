@@ -105,8 +105,8 @@ module Shell
         @shell.hbase_rsgroup_admin
       end
 
-      def pbe_admin
-        @shell.hbase_pbe_admin
+      def keymeta_admin
+        @shell.hbase_keymeta_admin
       end
 
       #----------------------------------------------------------------------

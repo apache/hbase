@@ -31,7 +31,7 @@ public class KeymetaAdminClient implements KeymetaAdmin {
       ManagedKeysResponse response = stub.enableManagedKeys(null,
         ManagedKeysRequest.newBuilder().setKeyCust(keyCust).setKeyNamespace(keyNamespace).build());
       LOG.info("Got response: " + response);
-      return ManagedKeyStatus.forValue((byte) response.getPbeStatus().getNumber());
+      return ManagedKeyStatus.forValue((byte) response.getKeyStatus().getNumber());
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }
@@ -48,7 +48,7 @@ public class KeymetaAdminClient implements KeymetaAdmin {
         keyStatuses.add(new ManagedKeyData(
           status.getKeyCustBytes().toByteArray(),
           status.getKeyNamespace(), null,
-          ManagedKeyStatus.forValue((byte) status.getPbeStatus().getNumber()),
+          ManagedKeyStatus.forValue((byte) status.getKeyStatus().getNumber()),
           status.getKeyMetadata(),
           status.getRefreshTimestamp(), status.getReadOpCount(), status.getWriteOpCount()));
       }

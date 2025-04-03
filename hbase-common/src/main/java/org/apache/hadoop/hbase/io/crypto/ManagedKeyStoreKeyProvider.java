@@ -12,7 +12,7 @@ import java.util.Map;
 @InterfaceAudience.Public
 public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements ManagedKeyProvider {
   public static final String KEY_METADATA_ALIAS = "KeyAlias";
-  public static final String KEY_METADATA_CUST = "KEY_CUST";
+  public static final String KEY_METADATA_CUST = "KeyCustodian";
 
   private Configuration conf;
 
@@ -42,10 +42,10 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   @Override
   public ManagedKeyData getManagedKey(byte[] key_cust, String key_namespace) throws IOException {
     checkConfig();
-    String encodedPrefix = ManagedKeyProvider.encodeToStr(key_cust);
-    String aliasConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedPrefix + "." +
+    String encodedCust = ManagedKeyProvider.encodeToStr(key_cust);
+    String aliasConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + "." +
       "alias";
-    String keyMetadata = generateKeyMetadata(conf.get(aliasConfKey, null), encodedPrefix);
+    String keyMetadata = generateKeyMetadata(conf.get(aliasConfKey, null), encodedCust);
     return unwrapKey(keyMetadata);
   }
 
@@ -53,11 +53,11 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   public ManagedKeyData unwrapKey(String keyMetadataStr) throws IOException {
     Map<String, String> keyMetadata = GsonUtil.getDefaultInstance().fromJson(keyMetadataStr,
       HashMap.class);
-    String encodedPrefix = keyMetadata.get(KEY_METADATA_CUST);
-    String activeStatusConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedPrefix +
+    String encodedCust = keyMetadata.get(KEY_METADATA_CUST);
+    String activeStatusConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust +
       ".active";
     boolean isActive = conf.getBoolean(activeStatusConfKey, true);
-    byte[] key_cust = ManagedKeyProvider.decodeToBytes(encodedPrefix);
+    byte[] key_cust = ManagedKeyProvider.decodeToBytes(encodedCust);
     String alias = keyMetadata.get(KEY_METADATA_ALIAS);
     Key key = alias != null ? getKey(alias) : null;
     if (key != null) {
@@ -74,10 +74,10 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
     }
   }
 
-  public static String generateKeyMetadata(String aliasName, String encodedPrefix) {
+  public static String generateKeyMetadata(String aliasName, String encodedCust) {
     return GsonUtil.getDefaultInstance().toJson(new HashMap<String, String>() {{
       put(KEY_METADATA_ALIAS, aliasName);
-      put(KEY_METADATA_CUST, encodedPrefix);
+      put(KEY_METADATA_CUST, encodedCust);
     }}, HashMap.class);
   }
 
