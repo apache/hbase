@@ -43,7 +43,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Accessor for PBE keymeta table.
+ * Accessor for keymeta table as part of key management.
  */
 @InterfaceAudience.Private
 public class KeymetaTableAccessor extends KeyManagementBase {
@@ -88,7 +88,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    * @throws IOException when there is an underlying IOException.
    */
   public void addKey(ManagedKeyData keyData) throws IOException {
-    checkPBEEnabled();
+    assertKeyManagementEnabled();
     final Put putForMetadata = addMutationColumns(new Put(constructRowKeyForMetadata(keyData)),
       keyData);
     Connection connection = server.getConnection();
@@ -108,7 +108,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    */
   protected List<ManagedKeyData> getAllKeys(byte[] key_cust, String keyNamespace)
     throws IOException, KeyException {
-    checkPBEEnabled();
+    assertKeyManagementEnabled();
     Connection connection = server.getConnection();
     byte[] prefixForScan = Bytes.add(Bytes.toBytes(key_cust.length), key_cust,
       Bytes.toBytes(keyNamespace));
@@ -141,7 +141,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    */
   public List<ManagedKeyData> getActiveKeys(byte[] key_cust, String keyNamespace)
     throws IOException, KeyException {
-    checkPBEEnabled();
+    assertKeyManagementEnabled();
     List<ManagedKeyData> activeKeys = new ArrayList<>();
     for (ManagedKeyData keyData : getAllKeys(key_cust, keyNamespace)) {
       if (keyData.getKeyStatus() == ManagedKeyStatus.ACTIVE) {
@@ -163,7 +163,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    */
   public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, String keyMetadata)
     throws IOException, KeyException {
-    checkPBEEnabled();
+    assertKeyManagementEnabled();
     Connection connection = server.getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       byte[] rowKey = constructRowKeyForMetadata(key_cust, keyNamespace,
@@ -184,7 +184,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    */
   public void reportOperation(byte[] key_cust, String keyNamespace, String keyMetadata, long count,
       boolean isReadOperation) throws IOException {
-    checkPBEEnabled();
+    assertKeyManagementEnabled();
     Connection connection = server.getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       byte[] rowKey = constructRowKeyForMetadata(key_cust, keyNamespace,

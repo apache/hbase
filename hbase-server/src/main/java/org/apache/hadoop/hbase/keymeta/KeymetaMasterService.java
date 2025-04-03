@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -27,11 +28,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 @InterfaceAudience.Private
-public class KeymetaMasterService {
+public class KeymetaMasterService extends KeyManagementBase {
   private static final Logger LOG = LoggerFactory.getLogger(KeymetaMasterService.class);
 
   private final MasterServices master;
-  Boolean pbeEnabled;
 
   private static final TableDescriptorBuilder TABLE_DESCRIPTOR_BUILDER = TableDescriptorBuilder
     .newBuilder(KeymetaTableAccessor.KEY_META_TABLE_NAME).setRegionReplication(1)
@@ -43,25 +43,18 @@ public class KeymetaMasterService {
       .build());
 
   public KeymetaMasterService(MasterServices masterServices) {
-    this.master = masterServices;
+    super(masterServices);
+    master = masterServices;
   }
 
   public void init() throws IOException {
-    if (!isPBEEnabled()) {
+    if (!isKeyManagementEnabled()) {
       return;
     }
     if (!master.getTableDescriptors().exists(KeymetaTableAccessor.KEY_META_TABLE_NAME)) {
       LOG.info("{} table not found. Creating.",
         KeymetaTableAccessor.KEY_META_TABLE_NAME.getNameWithNamespaceInclAsString());
-      this.master.createSystemTable(TABLE_DESCRIPTOR_BUILDER.build());
+      master.createSystemTable(TABLE_DESCRIPTOR_BUILDER.build());
     }
-  }
-
-  private boolean isPBEEnabled() {
-    if (pbeEnabled == null) {
-      pbeEnabled = master.getConfiguration().getBoolean(HConstants.CRYPTO_PBE_ENABLED_CONF_KEY,
-        false);
-    }
-    return pbeEnabled;
   }
 }

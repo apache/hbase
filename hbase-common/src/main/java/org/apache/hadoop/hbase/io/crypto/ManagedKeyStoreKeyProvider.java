@@ -12,7 +12,7 @@ import java.util.Map;
 @InterfaceAudience.Public
 public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements ManagedKeyProvider {
   public static final String KEY_METADATA_ALIAS = "KeyAlias";
-  public static final String KEY_METADATA_PREFIX = "PBE_PREFIX";
+  public static final String KEY_METADATA_CUST = "KEY_CUST";
 
   private Configuration conf;
 
@@ -24,7 +24,7 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   @Override
   public ManagedKeyData getSystemKey(byte[] clusterId) {
     checkConfig();
-    String masterKeyAlias = conf.get(HConstants.CRYPTO_PBE_MASTERKEY_NAME_CONF_KEY, null);
+    String masterKeyAlias = conf.get(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, null);
     if (masterKeyAlias == null) {
       throw new RuntimeException("No alias configured for master key");
     }
@@ -32,7 +32,7 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
     if (key == null) {
       throw new RuntimeException("Unable to find cluster key with alias: " + masterKeyAlias);
     }
-    // Encode clusterId too for consistency with that of PBE prefixes.
+    // Encode clusterId too for consistency with that of key custodian.
     String keyMetadata = generateKeyMetadata(masterKeyAlias,
       ManagedKeyProvider.encodeToStr(clusterId));
     return new ManagedKeyData(clusterId, ManagedKeyData.KEY_NAMESPACE_GLOBAL, key, ManagedKeyStatus.ACTIVE,
@@ -43,7 +43,7 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   public ManagedKeyData getManagedKey(byte[] key_cust, String key_namespace) throws IOException {
     checkConfig();
     String encodedPrefix = ManagedKeyProvider.encodeToStr(key_cust);
-    String aliasConfKey = HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encodedPrefix + "." +
+    String aliasConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedPrefix + "." +
       "alias";
     String keyMetadata = generateKeyMetadata(conf.get(aliasConfKey, null), encodedPrefix);
     return unwrapKey(keyMetadata);
@@ -53,8 +53,8 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   public ManagedKeyData unwrapKey(String keyMetadataStr) throws IOException {
     Map<String, String> keyMetadata = GsonUtil.getDefaultInstance().fromJson(keyMetadataStr,
       HashMap.class);
-    String encodedPrefix = keyMetadata.get(KEY_METADATA_PREFIX);
-    String activeStatusConfKey = HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encodedPrefix +
+    String encodedPrefix = keyMetadata.get(KEY_METADATA_CUST);
+    String activeStatusConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedPrefix +
       ".active";
     boolean isActive = conf.getBoolean(activeStatusConfKey, true);
     byte[] key_cust = ManagedKeyProvider.decodeToBytes(encodedPrefix);
@@ -77,7 +77,7 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   public static String generateKeyMetadata(String aliasName, String encodedPrefix) {
     return GsonUtil.getDefaultInstance().toJson(new HashMap<String, String>() {{
       put(KEY_METADATA_ALIAS, aliasName);
-      put(KEY_METADATA_PREFIX, encodedPrefix);
+      put(KEY_METADATA_CUST, encodedPrefix);
     }}, HashMap.class);
   }
 

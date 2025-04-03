@@ -30,10 +30,10 @@ message ManagedKeysRequest {
 }
 
 enum ManagedKeyStatus {
-  PBE_ACTIVE = 1;
-  PBE_INACTIVE = 2;
-  PBE_FAILED = 3;
-  PBE_DISABLED = 4;
+  KEY_ACTIVE = 1;
+  KEY_INACTIVE = 2;
+  KEY_FAILED = 3;
+  KEY_DISABLED = 4;
 }
 
 message ManagedKeysResponse {

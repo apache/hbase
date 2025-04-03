@@ -263,11 +263,11 @@ public class MockRegionServerServices implements RegionServerServices {
     return null;
   }
 
-  @Override public ManagedKeyAccessor getPBEKeyAccessor() {
+  @Override public ManagedKeyAccessor getManagedKeyAccessor() {
     return null;
   }
 
-  @Override public KeymetaAdmin getPBEKeymetaAdmin() {
+  @Override public KeymetaAdmin getKeymetaAdmin() {
     return null;
   }
 

@@ -415,12 +415,12 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   @Override
-  public KeymetaAdmin getPBEKeymetaAdmin() {
+  public KeymetaAdmin getKeymetaAdmin() {
     return keymetaAdmin;
   }
 
   @Override
-  public ManagedKeyAccessor getPBEKeyAccessor() {
+  public ManagedKeyAccessor getManagedKeyAccessor() {
     return managedKeyAccessor;
   }
 
@@ -430,7 +430,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   protected void buildSystemKeyCache() throws IOException {
-    if (systemKeyCache == null && Server.isPBEEnabled(this)) {
+    if (systemKeyCache == null && Server.isKeyManagementEnabled(this)) {
       systemKeyCache = SystemKeyCache.createCache(new SystemKeyAccessor(this));
     }
   }

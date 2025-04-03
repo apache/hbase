@@ -1289,18 +1289,6 @@ public final class HConstants {
   /** Configuration key for the name of the master key for the cluster, a string */
   public static final String CRYPTO_MASTERKEY_NAME_CONF_KEY = "hbase.crypto.master.key.name";
 
-  public static final String CRYPTO_PBE_MASTERKEY_NAME_CONF_KEY =
-    "hbase.crypto.pbe.master.key.name";
-
-  public static final String CRYPTO_PBE_ENABLED_CONF_KEY = "hbase.crypto.pbe.enabled";
-  public static final boolean CRYPTO_PBE_DEFAULT_ENABLED = false;
-
-  public static final String CRYPTO_PBE_PER_PREFIX_ACTIVE_KEY_COUNT =
-    "hbase.crypto.pbe.per_prefix.active_count";
-  public static final int CRYPTO_PBE_PER_PREFIX_ACTIVE_KEY_DEFAULT_COUNT = 1;
-
-  public static final String CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX = "hbase.crypto.pbe.prefix.";
-
   /** Configuration key for the name of the alternate master key for the cluster, a string */
   public static final String CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY =
     "hbase.crypto.master.alternate.key.name";
@@ -1320,6 +1308,19 @@ public final class HConstants {
 
   /** Configuration key for enabling WAL encryption, a boolean */
   public static final String ENABLE_WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
+
+  public static final String CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY =
+    "hbase.crypto.managed_key_store.system.key.name";
+  public static final String CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX =
+    "hbase.crypto.managed_key_store.cust.";
+
+  public static final String CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY =
+    "hbase.crypto.managed_keys.enabled";
+  public static final boolean CRYPTO_MANAGED_KEYS_DEFAULT_ENABLED = false;
+
+  public static final String CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_COUNT =
+    "hbase.crypto.managed_keys.per_cust.active_count";
+  public static final int CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_DEFAULT_COUNT = 1;
 
   /** Configuration key for setting RPC codec class name */
   public static final String RPC_CODEC_CONF_KEY = "hbase.client.rpc.codec";

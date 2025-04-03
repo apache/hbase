@@ -39,7 +39,7 @@ public class SystemKeyManager extends SystemKeyAccessor {
   }
 
   public void ensureSystemKeyInitialized() throws IOException {
-    if (! isPBEEnabled()) {
+    if (! isKeyManagementEnabled()) {
       return;
     }
     List<Path> clusterKeys = getAllSystemKeyFiles();
@@ -59,7 +59,7 @@ public class SystemKeyManager extends SystemKeyAccessor {
   }
 
   public ManagedKeyData rotateSystemKeyIfChanged() throws IOException {
-    if (! isPBEEnabled()) {
+    if (! isKeyManagementEnabled()) {
       return null;
     }
     Path latestFile = getLatestSystemKeyFile();
@@ -68,7 +68,7 @@ public class SystemKeyManager extends SystemKeyAccessor {
   }
 
   private ManagedKeyData rotateSystemKey(String currentKeyMetadata) throws IOException {
-    if (! isPBEEnabled()) {
+    if (! isKeyManagementEnabled()) {
       return null;
     }
     ManagedKeyProvider provider = getKeyProvider();

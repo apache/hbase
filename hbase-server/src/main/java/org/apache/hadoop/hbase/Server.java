@@ -94,12 +94,12 @@ public interface Server extends Abortable, Stoppable {
   /**
    * @return the accessor for cluster keys.
    */
-  public ManagedKeyAccessor getPBEKeyAccessor();
+  public ManagedKeyAccessor getManagedKeyAccessor();
 
   /**
    * @return the admin for keymeta.
    */
-  public KeymetaAdmin getPBEKeymetaAdmin();
+  public KeymetaAdmin getKeymetaAdmin();
 
   /** Returns Return the FileSystem object used (can return null!). */
   // TODO: Distinguish between "dataFs" and "walFs".
@@ -124,12 +124,13 @@ public interface Server extends Abortable, Stoppable {
   }
 
   /**
-   * From the given server, determine if PBE is enabbled.
-   * @return true if PBE is enabled
+   * From the given server, determine if key management is enabbled.
+   * @return true if key management is enabled
    */
-  static boolean isPBEEnabled(Server server) {
+  static boolean isKeyManagementEnabled(Server server) {
     return server.getConfiguration()
-      .getBoolean(HConstants.CRYPTO_PBE_ENABLED_CONF_KEY, HConstants.CRYPTO_PBE_DEFAULT_ENABLED);
+      .getBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY,
+        HConstants.CRYPTO_MANAGED_KEYS_DEFAULT_ENABLED);
   }
 
 }

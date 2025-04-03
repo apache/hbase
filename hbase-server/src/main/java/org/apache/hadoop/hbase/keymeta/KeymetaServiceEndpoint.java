@@ -44,13 +44,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * This class implements a coprocessor service endpoint for the Phoenix Query Server's
- * PBE (Prefix Based Encryption) key metadata operations. It handles the following
- * methods:
- *
- * <ul>
- * <li>enablePBE(): Enables PBE for a given key_cust and namespace.</li>
- * </ul>
+ * This class implements a coprocessor service endpoint for the key management metadata operations.
+ * It handles the following methods:
  *
  * This endpoint is designed to work in conjunction with the {@link KeymetaAdmin}
  * interface, which provides the actual implementation of the key metadata operations.
@@ -94,11 +89,13 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
 
   /**
    * The implementation of the {@link ManagedKeysProtos.ManagedKeysService}
-   * interface, which provides the actual method implementations for enabling PBE.
+   * interface, which provides the actual method implementations for enabling key management.
    */
   private class KeyMetaAdminServiceImpl extends ManagedKeysService {
+
     /**
-     * Enables PBE for a given tenant and namespace, as specified in the provided request.
+     * Enables key management for a given tenant and namespace, as specified in the provided
+     * request.
      *
      * @param controller The RPC controller.
      * @param request    The request containing the tenant and table specifications.
@@ -110,13 +107,13 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
       if (builder.getKeyCust() != null) {
         try {
-          ManagedKeyStatus managedKeyStatus = master.getPBEKeymetaAdmin()
+          ManagedKeyStatus managedKeyStatus = master.getKeymetaAdmin()
             .enableManagedKeys(request.getKeyCust(), request.getKeyNamespace());
           builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.valueOf(
             managedKeyStatus.getVal()));
         } catch (IOException e) {
           CoprocessorRpcUtils.setControllerException(controller, e);
-          builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.PBE_FAILED);
+          builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED);
         }
       }
       done.run(builder.build());
@@ -130,7 +127,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
       if (builder.getKeyCust() != null) {
         try {
-          List<ManagedKeyData> managedKeyStatuses = master.getPBEKeymetaAdmin()
+          List<ManagedKeyData> managedKeyStatuses = master.getKeymetaAdmin()
             .getManagedKeys(request.getKeyCust(), request.getKeyNamespace());
           for (ManagedKeyData keyData: managedKeyStatuses) {
             builder.setPbeStatus(
@@ -146,22 +143,22 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
           }
         } catch (IOException e) {
           CoprocessorRpcUtils.setControllerException(controller, e);
-          builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.PBE_FAILED);
+          builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED);
         } catch (KeyException e) {
           CoprocessorRpcUtils.setControllerException(controller, new IOException(e));
-          builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.PBE_FAILED);
+          builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED);
         }
       }
       done.run(responseBuilder.build());
     }
 
-    private byte[] convertToPBEBytes(RpcController controller, ManagedKeysRequest request,
+    private byte[] convertToKeyCustBytes(RpcController controller, ManagedKeysRequest request,
       ManagedKeysResponse.Builder builder) {
       byte[] key_cust = null;
       try {
         key_cust = Base64.getDecoder().decode(request.getKeyCust());
       } catch (IllegalArgumentException e) {
-        builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.PBE_FAILED);
+        builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED);
         CoprocessorRpcUtils.setControllerException(controller, new IOException(
           "Failed to decode specified prefix as Base64 string: " + request.getKeyCust(), e));
       }
@@ -177,7 +174,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
         key_cust = Base64.getDecoder().decode(request.getKeyCust());
         builder.setKeyCustBytes(ByteString.copyFrom(key_cust));
       } catch (IllegalArgumentException e) {
-        builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.PBE_FAILED);
+        builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED);
         CoprocessorRpcUtils.setControllerException(controller, new IOException(
           "Failed to decode specified prefix as Base64 string: " + request.getKeyCust(), e));
       }

@@ -44,7 +44,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
   }
 
   public Path getLatestSystemKeyFile() throws IOException {
-    if (! isPBEEnabled()) {
+    if (! isKeyManagementEnabled()) {
       return null;
     }
     List<Path> allClusterKeyFiles = getAllSystemKeyFiles();
@@ -57,19 +57,20 @@ public class SystemKeyAccessor extends KeyManagementBase {
 
   /**
    * Return all available cluster key files and return them in the order of latest to oldest.
-   * If no cluster key files are available, then return an empty list. If PBE is not enabled,
-   * then return null.
+   * If no cluster key files are available, then return an empty list. If key management is not
+   * enabled, then return null.
    *
    * @return  a list of all available cluster key files
    * @throws IOException
    */
   public List<Path> getAllSystemKeyFiles() throws IOException {
-    if (!isPBEEnabled()) {
+    if (!isKeyManagementEnabled()) {
       return null;
     }
     FileSystem fs = server.getFileSystem();
     Map<Integer, Path> clusterKeys = new TreeMap<>(Comparator.reverseOrder());
-    for (FileStatus st : fs.globStatus(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + "*"))) {
+    for (FileStatus st : fs.globStatus(new Path(systemKeyDir,
+      SYSTEM_KEY_FILE_PREFIX + "*"))) {
       Path keyPath = st.getPath();
       int seqNum = extractSystemKeySeqNum(keyPath);
       clusterKeys.put(seqNum, keyPath);

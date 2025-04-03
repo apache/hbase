@@ -118,12 +118,13 @@ public class ManagedKeyDataCache {
   }
 
   /**
-   * Retrieves a random entry from the cache based on its PBE prefix, key namespace, and filters out entries with
-   * a status other than ACTIVE.
+   * Retrieves a random entry from the cache based on its key custodian, key namespace, and filters
+   * out entries with a status other than ACTIVE.
    *
    * @param key_cust     The key custodian.
    * @param keyNamespace the key namespace to search for
-   * @return a random ManagedKeyData entry with the given PBE prefix and ACTIVE status, or null if not found
+   * @return a random ManagedKeyData entry with the given custodian and ACTIVE status, or null if
+   *   not found
    */
   public ManagedKeyData getRandomEntryForPrefix(byte[] key_cust, String keyNamespace) {
     lock.lock();

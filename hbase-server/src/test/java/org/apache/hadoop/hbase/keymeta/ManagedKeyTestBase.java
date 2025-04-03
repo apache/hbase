@@ -12,7 +12,7 @@ public class ManagedKeyTestBase {
   @Before
   public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.class.getName());
-    TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_PBE_ENABLED_CONF_KEY, "true");
+    TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
 
     // Start the minicluster
     TEST_UTIL.startMiniCluster(1);

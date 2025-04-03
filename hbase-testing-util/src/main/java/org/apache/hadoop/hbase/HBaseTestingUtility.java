@@ -2945,7 +2945,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return hbaseAdmin;
   }
 
-  public KeymetaAdminClient getPBEAdmin() throws IOException {
+  public KeymetaAdminClient getKeymetaAdmin() throws IOException {
     return new KeymetaAdminClient(getConnection());
   }
 

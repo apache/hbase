@@ -25,8 +25,8 @@ import java.security.KeyException;
 import java.util.List;
 
 /**
- * This class provides unified access on top of both {@code PBEKeyDataCache} (L1) and
- * {@code KeymetaTableAccessor} (L2) to access PBE keys. When the getter is called, it first
+ * This class provides unified access on top of both {@code ManagedKeyDataCache} (L1) and
+ * {@code KeymetaTableAccessor} (L2) to access managed keys. When the getter is called, it first
  * checks if L1 cache has the key, if not, it tries to get the key from L2.
  */
 @InterfaceAudience.Private
@@ -51,7 +51,7 @@ public class ManagedKeyAccessor extends KeyManagementBase {
    */
   public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, String keyMetadata)
       throws IOException, KeyException {
-    checkPBEEnabled();
+    assertKeyManagementEnabled();
     // 1. Check L1 cache.
     ManagedKeyData keyData = keyDataCache.getEntry(keyMetadata);
     if (keyData == null) {
@@ -83,7 +83,7 @@ public class ManagedKeyAccessor extends KeyManagementBase {
    */
   public ManagedKeyData getAnActiveKey(byte[] key_cust, String keyNamespace)
     throws IOException, KeyException {
-    checkPBEEnabled();
+    assertKeyManagementEnabled();
     ManagedKeyData keyData = keyDataCache.getRandomEntryForPrefix(key_cust, keyNamespace);
     if (keyData == null) {
       List<ManagedKeyData> activeKeys = keymetaAccessor.getActiveKeys(key_cust, keyNamespace);

@@ -22,17 +22,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Enum of PBE key status. The status of a PBE key is used to indicate the state of the key.
+ * Enum of Managed key status. It is used to indicate the status of managed custodian keys.
  */
 @InterfaceAudience.Public
 public enum ManagedKeyStatus {
-  /** Represents the active status of a PBE key. */
+  /** Represents the active status of a managed key. */
   ACTIVE((byte) 1),
-  /** Represents the inactive status of a PBE key. */
+  /** Represents the inactive status of a managed key. */
   INACTIVE((byte) 2),
-  /** Represents the retrieval failure status of a PBE key. */
+  /** Represents the retrieval failure status of a managed key. */
   FAILED((byte) 3),
-  /** Represents the disabled status of a PBE key. */
+  /** Represents the disabled status of a managed key. */
   DISABLED((byte) 4),
   ;
 
@@ -45,7 +45,7 @@ public enum ManagedKeyStatus {
   }
 
   /**
-   * Returns the numeric value of the PBE key status.
+   * Returns the numeric value of the managed key status.
    * @return byte value
    */
   public byte getVal() {

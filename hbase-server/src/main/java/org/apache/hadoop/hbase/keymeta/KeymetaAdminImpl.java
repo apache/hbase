@@ -40,8 +40,9 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
   @Override
   public ManagedKeyStatus enableManagedKeys(String keyCust, String keyNamespace) throws IOException {
-    checkPBEEnabled();
-    LOG.info("Trying to enable PBE on key: {} under namespace: {}", keyCust, keyNamespace);
+    assertKeyManagementEnabled();
+    LOG.info("Trying to enable key management on custodian: {} under namespace: {}", keyCust,
+      keyNamespace);
     byte[] key_cust = ManagedKeyProvider.decodeToBytes(keyCust);
     ManagedKeyProvider provider = getKeyProvider();
     int perPrefixActiveKeyConfCount = getPerPrefixActiveKeyConfCount();
@@ -50,16 +51,17 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     for (int i = 0; i < perPrefixActiveKeyConfCount; ++i) {
       pbeKey = provider.getManagedKey(key_cust, keyNamespace);
       if (pbeKey == null) {
-        throw new IOException("Invalid null PBE key received from key provider");
+        throw new IOException("Invalid null managed key received from key provider");
       }
       if (retrievedKeys.contains(pbeKey)) {
         // This typically means, the key provider is not capable of producing multiple active keys.
-        LOG.info("enablePBE: configured key count per prefix: " + perPrefixActiveKeyConfCount +
-          " but received only: " + retrievedKeys.size() + " unique keys.");
+        LOG.info("enableManagedKeys: configured key count per prefix: " +
+          perPrefixActiveKeyConfCount + " but received only: " + retrievedKeys.size() +
+          " unique keys.");
         break;
       }
       retrievedKeys.add(pbeKey);
-      LOG.info("enablePBE: got key data with status: {} and metadata: {} for prefix: {}",
+      LOG.info("enableManagedKeys: got key data with status: {} and metadata: {} for custodian: {}",
         pbeKey.getKeyStatus(), pbeKey.getKeyMetadata(), keyCust);
       addKey(pbeKey);
     }
@@ -71,8 +73,8 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   @Override
   public List<ManagedKeyData> getManagedKeys(String keyCust, String keyNamespace)
     throws IOException, KeyException {
-    checkPBEEnabled();
-    LOG.info("Getting key statuses for PBE on key: {} under namespace: {}", keyCust,
+    assertKeyManagementEnabled();
+    LOG.info("Getting key statuses for custodian: {} under namespace: {}", keyCust,
       keyNamespace);
     byte[] key_cust = ManagedKeyProvider.decodeToBytes(keyCust);
     return super.getAllKeys(key_cust, keyNamespace);
