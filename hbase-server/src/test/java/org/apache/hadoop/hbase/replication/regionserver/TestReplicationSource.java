@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.META_WAL_PROVIDER_ID;
+import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.SEPARATE_OLDLOGDIR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -309,10 +310,26 @@ public class TestReplicationSource {
    */
   @Test
   public void testServerShutdownRecoveredQueue() throws Exception {
+    // Test "hbase.separate.oldlogdir.by.regionserver" = disabled
+    testServerShutdownRecovered(false);
+  }
+
+  /**
+   * Tests that recovered queues are preserved on a regionserver shutdown with
+   * "hbase.separate.oldlogdir.by.regionserver" enabled. See HBASE-29216
+   */
+  @Test
+  public void testServerShutdownRecoveredQueueWithSeparateOldDir() throws Exception {
+    // Test "hbase.separate.oldlogdir.by.regionserver" = enabled
+    testServerShutdownRecovered(true);
+  }
+
+  private void testServerShutdownRecovered(boolean separateOldWalDir) throws Exception {
     try {
       // Ensure single-threaded WAL
       conf.set("hbase.wal.provider", "defaultProvider");
       conf.setInt("replication.sleep.before.failover", 2000);
+      conf.setBoolean(SEPARATE_OLDLOGDIR, separateOldWalDir);
       // Introduces a delay in regionserver shutdown to give the race condition a chance to kick in.
       conf.set(HConstants.REGION_SERVER_IMPL, ShutdownDelayRegionServer.class.getName());
       MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster(2);
@@ -376,6 +393,9 @@ public class TestReplicationSource {
         (Waiter.Predicate<Exception>) () -> managerC.getOldSources().size() == 0);
     } finally {
       conf.set(HConstants.REGION_SERVER_IMPL, HRegionServer.class.getName());
+      conf.setBoolean(SEPARATE_OLDLOGDIR, false);
+      TEST_UTIL.shutdownMiniCluster();
+      TEST_UTIL_PEER.shutdownMiniCluster();
     }
   }
 
