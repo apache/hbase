@@ -50,4 +50,13 @@ public enum ThrottleType {
 
   /** Throttling based on the read data capacity unit */
   READ_CAPACITY_UNIT,
+
+  /** Throttling based on the IO footprint of an atomic request */
+  ATOMIC_READ_SIZE,
+
+  /** Throttling based on the number of atomic requests per time-unit */
+  ATOMIC_REQUEST_NUMBER,
+
+  /** Throttling based on the size of atomic write requests */
+  ATOMIC_WRITE_SIZE,
 }
