@@ -1268,6 +1268,14 @@ public class HStore
       allowedOnPath = ".*/(HStore|TestHStore).java")
   void replaceStoreFiles(Collection<HStoreFile> compactedFiles, Collection<HStoreFile> result,
     boolean writeCompactionMarker) throws IOException {
+    // These may be null when the RS is shutting down. The space quota Chores will fix the Region
+    // sizes later so it's not super-critical if we miss these.
+    RegionServerServices rsServices = region.getRegionServerServices();
+    if (rsServices != null && rsServices.getRegionServerSpaceQuotaManager() != null) {
+      updateSpaceQuotaAfterFileReplacement(
+        rsServices.getRegionServerSpaceQuotaManager().getRegionSizeStore(), getRegionInfo(),
+        compactedFiles, result);
+    }
     storeEngine.replaceStoreFiles(compactedFiles, result, () -> {
       if (writeCompactionMarker) {
         writeCompactionWalRecord(compactedFiles, result);
@@ -1277,14 +1285,6 @@ public class HStore
         filesCompacting.removeAll(compactedFiles);
       }
     });
-    // These may be null when the RS is shutting down. The space quota Chores will fix the Region
-    // sizes later so it's not super-critical if we miss these.
-    RegionServerServices rsServices = region.getRegionServerServices();
-    if (rsServices != null && rsServices.getRegionServerSpaceQuotaManager() != null) {
-      updateSpaceQuotaAfterFileReplacement(
-        rsServices.getRegionServerSpaceQuotaManager().getRegionSizeStore(), getRegionInfo(),
-        compactedFiles, result);
-    }
   }
 
   /**
