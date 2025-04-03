@@ -218,6 +218,10 @@ public class QuotaCache implements Stoppable {
     refreshChore.triggerNow();
   }
 
+  void forceSynchronousCacheRefresh() {
+    refreshChore.chore();
+  }
+
   long getLastUpdate() {
     return refreshChore.lastUpdate;
   }

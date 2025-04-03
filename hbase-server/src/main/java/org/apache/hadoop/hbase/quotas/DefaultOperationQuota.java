@@ -62,6 +62,7 @@ public class DefaultOperationQuota implements OperationQuota {
   private boolean useResultSizeBytes;
   private long blockSizeBytes;
   private long maxScanEstimate;
+  private boolean isAtomic = false;
 
   public DefaultOperationQuota(final Configuration conf, final int blockSizeBytes,
     final QuotaLimiter... limiters) {
@@ -92,9 +93,10 @@ public class DefaultOperationQuota implements OperationQuota {
   }
 
   @Override
-  public void checkBatchQuota(int numWrites, int numReads) throws RpcThrottlingException {
+  public void checkBatchQuota(int numWrites, int numReads, boolean isAtomic)
+    throws RpcThrottlingException {
     updateEstimateConsumeBatchQuota(numWrites, numReads);
-    checkQuota(numWrites, numReads);
+    checkQuota(numWrites, numReads, isAtomic);
   }
 
   @Override
@@ -102,10 +104,15 @@ public class DefaultOperationQuota implements OperationQuota {
     long maxBlockBytesScanned, long prevBlockBytesScannedDifference) throws RpcThrottlingException {
     updateEstimateConsumeScanQuota(scanRequest, maxScannerResultSize, maxBlockBytesScanned,
       prevBlockBytesScannedDifference);
-    checkQuota(0, 1);
+    checkQuota(0, 1, false);
   }
 
-  private void checkQuota(long numWrites, long numReads) throws RpcThrottlingException {
+  private void checkQuota(long numWrites, long numReads, boolean isAtomic)
+    throws RpcThrottlingException {
+    if (isAtomic) {
+      // Remember this flag for later use in close()
+      this.isAtomic = true;
+    }
     readAvailable = Long.MAX_VALUE;
     for (final QuotaLimiter limiter : limiters) {
       if (limiter.isBypass()) {
@@ -121,13 +128,13 @@ public class DefaultOperationQuota implements OperationQuota {
       limiter.checkQuota(Math.min(maxWritesToEstimate, numWrites),
         Math.min(maxWriteSizeToEstimate, writeConsumed), Math.min(maxReadsToEstimate, numReads),
         Math.min(maxReadSizeToEstimate, readConsumed), writeCapacityUnitConsumed,
-        readCapacityUnitConsumed);
+        readCapacityUnitConsumed, isAtomic);
       readAvailable = Math.min(readAvailable, limiter.getReadAvailable());
     }
 
     for (final QuotaLimiter limiter : limiters) {
       limiter.grabQuota(numWrites, writeConsumed, numReads, readConsumed, writeCapacityUnitConsumed,
-        readCapacityUnitConsumed);
+        readCapacityUnitConsumed, isAtomic);
     }
   }
 
@@ -154,10 +161,10 @@ public class DefaultOperationQuota implements OperationQuota {
 
     for (final QuotaLimiter limiter : limiters) {
       if (writeDiff != 0) {
-        limiter.consumeWrite(writeDiff, writeCapacityUnitDiff);
+        limiter.consumeWrite(writeDiff, writeCapacityUnitDiff, isAtomic);
       }
       if (readDiff != 0) {
-        limiter.consumeRead(readDiff, readCapacityUnitDiff);
+        limiter.consumeRead(readDiff, readCapacityUnitDiff, isAtomic);
       }
     }
   }

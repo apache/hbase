@@ -2468,6 +2468,12 @@ public final class ProtobufUtil {
         return ThrottleType.READ_CAPACITY_UNIT;
       case WRITE_CAPACITY_UNIT:
         return ThrottleType.WRITE_CAPACITY_UNIT;
+      case ATOMIC_READ_SIZE:
+        return ThrottleType.ATOMIC_READ_SIZE;
+      case ATOMIC_REQUEST_NUMBER:
+        return ThrottleType.ATOMIC_REQUEST_NUMBER;
+      case ATOMIC_WRITE_SIZE:
+        return ThrottleType.ATOMIC_WRITE_SIZE;
       default:
         throw new RuntimeException("Invalid ThrottleType " + proto);
     }
@@ -2497,6 +2503,12 @@ public final class ProtobufUtil {
         return QuotaProtos.ThrottleType.READ_CAPACITY_UNIT;
       case WRITE_CAPACITY_UNIT:
         return QuotaProtos.ThrottleType.WRITE_CAPACITY_UNIT;
+      case ATOMIC_READ_SIZE:
+        return QuotaProtos.ThrottleType.ATOMIC_READ_SIZE;
+      case ATOMIC_REQUEST_NUMBER:
+        return QuotaProtos.ThrottleType.ATOMIC_REQUEST_NUMBER;
+      case ATOMIC_WRITE_SIZE:
+        return QuotaProtos.ThrottleType.ATOMIC_WRITE_SIZE;
       default:
         throw new RuntimeException("Invalid ThrottleType " + type);
     }
