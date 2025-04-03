@@ -70,6 +70,7 @@ public final class CheckAndMutate implements Row {
     private byte[] value;
     private Filter filter;
     private TimeRange timeRange;
+    private boolean checkNonExists;
 
     private Builder(byte[] row) {
       this.row = Preconditions.checkNotNull(row, "row is null");
@@ -94,6 +95,21 @@ public final class CheckAndMutate implements Row {
      */
     public Builder ifEquals(byte[] family, byte[] qualifier, byte[] value) {
       return ifMatches(family, qualifier, CompareOperator.EQUAL, value);
+    }
+
+    /**
+     * Check for match, or non exist.
+     * @param family    family to check
+     * @param qualifier qualifier to check
+     * @param compareOp comparison operator to use
+     * @param value     the expected value
+     * @return the CheckAndMutate object
+     */
+    public Builder ifMatchesOrNonExists(byte[] family, byte[] qualifier, CompareOperator compareOp,
+      byte[] value) {
+      ifMatches(family, qualifier, compareOp, value);
+      this.checkNonExists = true;
+      return this;
     }
 
     /**
@@ -156,7 +172,8 @@ public final class CheckAndMutate implements Row {
       if (filter != null) {
         return new CheckAndMutate(row, filter, timeRange, put);
       } else {
-        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, put);
+        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, checkNonExists,
+          put);
       }
     }
 
@@ -170,7 +187,8 @@ public final class CheckAndMutate implements Row {
       if (filter != null) {
         return new CheckAndMutate(row, filter, timeRange, delete);
       } else {
-        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, delete);
+        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, checkNonExists,
+          delete);
       }
     }
 
@@ -184,7 +202,8 @@ public final class CheckAndMutate implements Row {
       if (filter != null) {
         return new CheckAndMutate(row, filter, timeRange, increment);
       } else {
-        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, increment);
+        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, checkNonExists,
+          increment);
       }
     }
 
@@ -198,7 +217,8 @@ public final class CheckAndMutate implements Row {
       if (filter != null) {
         return new CheckAndMutate(row, filter, timeRange, append);
       } else {
-        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, append);
+        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, checkNonExists,
+          append);
       }
     }
 
@@ -212,7 +232,8 @@ public final class CheckAndMutate implements Row {
       if (filter != null) {
         return new CheckAndMutate(row, filter, timeRange, mutations);
       } else {
-        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, mutations);
+        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, checkNonExists,
+          mutations);
       }
     }
   }
@@ -233,10 +254,11 @@ public final class CheckAndMutate implements Row {
   private final byte[] value;
   private final Filter filter;
   private final TimeRange timeRange;
+  private final boolean checkNonExists;
   private final Row action;
 
   private CheckAndMutate(byte[] row, byte[] family, byte[] qualifier, final CompareOperator op,
-    byte[] value, TimeRange timeRange, Row action) {
+    byte[] value, TimeRange timeRange, boolean checkNonExists, Row action) {
     this.row = row;
     this.family = family;
     this.qualifier = qualifier;
@@ -244,6 +266,7 @@ public final class CheckAndMutate implements Row {
     this.value = value;
     this.filter = null;
     this.timeRange = timeRange != null ? timeRange : TimeRange.allTime();
+    this.checkNonExists = checkNonExists;
     this.action = action;
   }
 
@@ -255,6 +278,7 @@ public final class CheckAndMutate implements Row {
     this.value = null;
     this.filter = filter;
     this.timeRange = timeRange != null ? timeRange : TimeRange.allTime();
+    this.checkNonExists = false;
     this.action = action;
   }
 
@@ -297,6 +321,11 @@ public final class CheckAndMutate implements Row {
   /** Returns the time range to check */
   public TimeRange getTimeRange() {
     return timeRange;
+  }
+
+  /** Returns whether check non-exists or not */
+  public boolean isCheckNonExists() {
+    return checkNonExists;
   }
 
   /** Returns the action done if check succeeds */

@@ -3607,9 +3607,17 @@ public final class ProtobufUtil {
     if (filter != null) {
       builder.ifMatches(filter);
     } else {
-      builder.ifMatches(condition.getFamily().toByteArray(), condition.getQualifier().toByteArray(),
-        CompareOperator.valueOf(condition.getCompareType().name()),
-        ProtobufUtil.toComparator(condition.getComparator()).getValue());
+      if (condition.getCheckNonExists()) {
+        builder.ifMatchesOrNonExists(condition.getFamily().toByteArray(),
+          condition.getQualifier().toByteArray(),
+          CompareOperator.valueOf(condition.getCompareType().name()),
+          ProtobufUtil.toComparator(condition.getComparator()).getValue());
+      } else {
+        builder.ifMatches(condition.getFamily().toByteArray(),
+          condition.getQualifier().toByteArray(),
+          CompareOperator.valueOf(condition.getCompareType().name()),
+          ProtobufUtil.toComparator(condition.getComparator()).getValue());
+      }
     }
     TimeRange timeRange = condition.hasTimeRange()
       ? ProtobufUtil.toTimeRange(condition.getTimeRange())
@@ -3644,9 +3652,17 @@ public final class ProtobufUtil {
     if (filter != null) {
       builder.ifMatches(filter);
     } else {
-      builder.ifMatches(condition.getFamily().toByteArray(), condition.getQualifier().toByteArray(),
-        CompareOperator.valueOf(condition.getCompareType().name()),
-        ProtobufUtil.toComparator(condition.getComparator()).getValue());
+      if (condition.getCheckNonExists()) {
+        builder.ifMatchesOrNonExists(condition.getFamily().toByteArray(),
+          condition.getQualifier().toByteArray(),
+          CompareOperator.valueOf(condition.getCompareType().name()),
+          ProtobufUtil.toComparator(condition.getComparator()).getValue());
+      } else {
+        builder.ifMatches(condition.getFamily().toByteArray(),
+          condition.getQualifier().toByteArray(),
+          CompareOperator.valueOf(condition.getCompareType().name()),
+          ProtobufUtil.toComparator(condition.getComparator()).getValue());
+      }
     }
     TimeRange timeRange = condition.hasTimeRange()
       ? ProtobufUtil.toTimeRange(condition.getTimeRange())
@@ -3678,7 +3694,7 @@ public final class ProtobufUtil {
 
   public static ClientProtos.Condition toCondition(final byte[] row, final byte[] family,
     final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
-    final TimeRange timeRange) throws IOException {
+    final TimeRange timeRange, final boolean checkNonExists) throws IOException {
 
     ClientProtos.Condition.Builder builder =
       ClientProtos.Condition.newBuilder().setRow(UnsafeByteOperations.unsafeWrap(row));
@@ -3693,18 +3709,19 @@ public final class ProtobufUtil {
         .setCompareType(HBaseProtos.CompareType.valueOf(op.name()));
     }
 
-    return builder.setTimeRange(ProtobufUtil.toTimeRange(timeRange)).build();
+    return builder.setTimeRange(ProtobufUtil.toTimeRange(timeRange))
+      .setCheckNonExists(checkNonExists).build();
   }
 
   public static ClientProtos.Condition toCondition(final byte[] row, final Filter filter,
     final TimeRange timeRange) throws IOException {
-    return toCondition(row, null, null, null, null, filter, timeRange);
+    return toCondition(row, null, null, null, null, filter, timeRange, false);
   }
 
   public static ClientProtos.Condition toCondition(final byte[] row, final byte[] family,
     final byte[] qualifier, final CompareOperator op, final byte[] value, final TimeRange timeRange)
     throws IOException {
-    return toCondition(row, family, qualifier, op, value, null, timeRange);
+    return toCondition(row, family, qualifier, op, value, null, timeRange, false);
   }
 
   public static List<LogEntry> toBalancerDecisionResponse(HBaseProtos.LogEntry logEntry) {
