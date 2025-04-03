@@ -524,44 +524,6 @@
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
-          <execution>
-            <!-- Copy static CSS and JS files for the UI. -->
-            <id>copy-css-js-to-ui</id>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <phase>process-resources</phase>
-            <configuration>
-              <target>
-                <copy flatten="true" todir="${project.build.directory}/hbase-webapps/static/css">
-                  <fileset dir="${webjars-dir}/bootstrap/${bootstrap.version}/css">
-                    <include name="bootstrap.min.css"/>
-                  </fileset>
-                </copy>
-                <copy flatten="true" todir="${project.build.directory}/hbase-webapps/static/js">
-                  <fileset dir="${webjars-dir}/bootstrap/${bootstrap.version}/js">
-                    <include name="bootstrap.min.js"/>
-                  </fileset>
-                  <fileset dir="${webjars-dir}/jquery/${jquery.version}">
-                    <include name="jquery.min.js"/>
-                  </fileset>
-                  <fileset dir="${webjars-dir}/tablesorter/${tablesorter.version}/js">
-                    <include name="jquery.tablesorter.min.js"/>
-                    <include name="parsers/parser-date-iso8601.min.js"/>
-                  </fileset>
-                  <fileset dir="${webjars-dir}/vega/${vega.version}/">
-                    <include name="vega.min.js"/>
-                  </fileset>
-                  <fileset dir="${webjars-dir}/vega-embed/${vega-embed.version}/">
-                    <include name="vega-embed.min.js"/>
-                  </fileset>
-                  <fileset dir="${webjars-dir}/vega-lite/${vega-lite.version}/">
-                    <include name="vega-lite.min.js"/>
-                  </fileset>
-                </copy>
-              </target>
-            </configuration>
-          </execution>
           <!-- Generate web app sources -->
           <execution>
             <id>generate</id>
@@ -790,7 +752,9 @@
       <build>
         <plugins>
           <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-dependency-plugin</artifactId>
+            <version>${maven.dependency.version}</version>
             <executions>
               <execution>
                 <id>create-mrapp-generated-classpath</id>
@@ -807,7 +771,7 @@
                 </configuration>
               </execution>
               <execution>
-                <id>unpack-ui-resources</id>
+                <id>unpack-ui-resources-js</id>
                 <goals>
                   <goal>unpack</goal>
                 </goals>
@@ -820,8 +784,10 @@
                       <version>${bootstrap.version}</version>
                       <type>jar</type>
                       <overWrite>true</overWrite>
-                      <includes>**/css/bootstrap.min.css,
-                        **/js/bootstrap.min.js</includes>
+                      <includes>**/js/bootstrap.min.js</includes>
+                      <fileMappers>
+                        <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                      </fileMappers>
                     </artifactItem>
                     <artifactItem>
                       <groupId>org.webjars</groupId>
@@ -830,6 +796,9 @@
                       <type>jar</type>
                       <overWrite>true</overWrite>
                       <includes>**/jquery.min.js</includes>
+                      <fileMappers>
+                        <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                      </fileMappers>
                     </artifactItem>
                     <artifactItem>
                       <groupId>org.webjars</groupId>
@@ -839,6 +808,9 @@
                       <overWrite>true</overWrite>
                       <includes>**/jquery.tablesorter.min.js,
                         **/parsers/parser-date-iso8601.min.js</includes>
+                      <fileMappers>
+                        <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                      </fileMappers>
                     </artifactItem>
                     <artifactItem>
                       <groupId>org.webjars</groupId>
@@ -847,6 +819,9 @@
                       <type>jar</type>
                       <overWrite>true</overWrite>
                       <includes>**/vega.min.js</includes>
+                      <fileMappers>
+                        <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                      </fileMappers>
                     </artifactItem>
                     <artifactItem>
                       <groupId>org.webjars</groupId>
@@ -855,6 +830,9 @@
                       <type>jar</type>
                       <overWrite>true</overWrite>
                       <includes>**/vega-embed.min.js</includes>
+                      <fileMappers>
+                        <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                      </fileMappers>
                     </artifactItem>
                     <artifactItem>
                       <groupId>org.webjars</groupId>
@@ -863,9 +841,35 @@
                       <type>jar</type>
                       <overWrite>true</overWrite>
                       <includes>**/vega-lite.min.js</includes>
+                      <fileMappers>
+                        <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                      </fileMappers>
                     </artifactItem>
                   </artifactItems>
-                  <outputDirectory>${project.build.directory}</outputDirectory>
+                  <outputDirectory>${project.build.directory}/hbase-webapps/static/js</outputDirectory>
+                </configuration>
+              </execution>
+              <execution>
+                <id>unpack-ui-resources-css</id>
+                <goals>
+                  <goal>unpack</goal>
+                </goals>
+                <phase>process-resources</phase>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>org.webjars</groupId>
+                      <artifactId>bootstrap</artifactId>
+                      <version>${bootstrap.version}</version>
+                      <type>jar</type>
+                      <overWrite>true</overWrite>
+                      <includes>**/css/bootstrap.min.css</includes>
+                      <fileMappers>
+                        <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
+                      </fileMappers>
+                    </artifactItem>
+                  </artifactItems>
+                  <outputDirectory>${project.build.directory}/hbase-webapps/static/css</outputDirectory>
                 </configuration>
               </execution>
             </executions>
