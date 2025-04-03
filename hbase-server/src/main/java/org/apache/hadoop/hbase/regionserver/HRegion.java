@@ -7530,26 +7530,28 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         });
       }
     } finally {
-      if (wal != null && !storeFiles.isEmpty()) {
-        // Write a bulk load event for hfiles that are loaded
-        try {
-          WALProtos.BulkLoadDescriptor loadDescriptor =
-            ProtobufUtil.toBulkLoadDescriptor(this.getRegionInfo().getTable(),
-              UnsafeByteOperations.unsafeWrap(this.getRegionInfo().getEncodedNameAsBytes()),
-              storeFiles, storeFilesSizes, seqId, clusterIds, replicate);
-          WALUtil.writeBulkLoadMarkerAndSync(this.wal, this.getReplicationScope(), getRegionInfo(),
-            loadDescriptor, mvcc, regionReplicationSink.orElse(null));
-        } catch (IOException ioe) {
-          if (this.rsServices != null) {
-            // Have to abort region server because some hfiles has been loaded but we can't write
-            // the event into WAL
-            isSuccessful = false;
-            this.rsServices.abort("Failed to write bulk load event into WAL.", ioe);
+      try {
+        if (wal != null && !storeFiles.isEmpty()) {
+          // Write a bulk load event for hfiles that are loaded
+          try {
+            WALProtos.BulkLoadDescriptor loadDescriptor =
+              ProtobufUtil.toBulkLoadDescriptor(this.getRegionInfo().getTable(),
+                UnsafeByteOperations.unsafeWrap(this.getRegionInfo().getEncodedNameAsBytes()),
+                storeFiles, storeFilesSizes, seqId, clusterIds, replicate);
+            WALUtil.writeBulkLoadMarkerAndSync(this.wal, this.getReplicationScope(),
+              getRegionInfo(), loadDescriptor, mvcc, regionReplicationSink.orElse(null));
+          } catch (IOException ioe) {
+            if (this.rsServices != null) {
+              // Have to abort region server because some hfiles has been loaded but we can't write
+              // the event into WAL
+              isSuccessful = false;
+              this.rsServices.abort("Failed to write bulk load event into WAL.", ioe);
+            }
           }
         }
+      } finally {
+        closeBulkRegionOperation();
       }
-
-      closeBulkRegionOperation();
     }
     return isSuccessful ? storeFiles : null;
   }
