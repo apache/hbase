@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.compress;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -25,5 +26,8 @@ public interface ByteBuffDecompressionCodec {
   Class<? extends ByteBuffDecompressor> getByteBuffDecompressorType();
 
   ByteBuffDecompressor createByteBuffDecompressor();
+
+  Compression.HFileDecompressionContext
+    getDecompressionContextFromConfiguration(Configuration conf);
 
 }
