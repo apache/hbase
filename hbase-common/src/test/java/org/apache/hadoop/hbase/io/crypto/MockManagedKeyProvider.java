@@ -49,9 +49,9 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
     return getKey(systemId, systemKeyAlias);
   }
 
-  @Override public ManagedKeyData getManagedKey(byte[] cust_spec, String key_namespace)
+  @Override public ManagedKeyData getManagedKey(byte[] key_cust, String key_namespace)
     throws IOException {
-    return getKey(cust_spec);
+    return getKey(key_cust);
   }
 
   @Override public ManagedKeyData unwrapKey(String keyMetadata) throws IOException {
@@ -63,24 +63,24 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
   }
 
   /**
-   * Lookup the key data for the given cust_spec from keys. If missing, initialize one using
+   * Lookup the key data for the given key_cust from keys. If missing, initialize one using
    * generateSecretKey().
    */
-  public ManagedKeyData getKey(byte[] cust_spec) {
-    String alias = Bytes.toString(cust_spec);
-    return getKey(cust_spec, alias);
+  public ManagedKeyData getKey(byte[] key_cust) {
+    String alias = Bytes.toString(key_cust);
+    return getKey(key_cust, alias);
   }
 
-  public ManagedKeyData getKey(byte[] cust_spec, String alias) {
+  public ManagedKeyData getKey(byte[] key_cust, String alias) {
     Key key = keys.get(alias);
     if (key == null) {
       key = generateSecretKey();
       keys.put(alias, key);
     }
     ManagedKeyStatus keyStatus = this.keyStatus.get(alias);
-    return new ManagedKeyData(cust_spec, ManagedKeyData.KEY_NAMESPACE_GLOBAL, key,
+    return new ManagedKeyData(key_cust, ManagedKeyData.KEY_NAMESPACE_GLOBAL, key,
       keyStatus == null ? ManagedKeyStatus.ACTIVE : keyStatus,
-      Bytes.toString(cust_spec)+":"+alias);
+      Bytes.toString(key_cust)+":"+alias);
   }
 
   public void setKeyStatus(String alias, ManagedKeyStatus status) {

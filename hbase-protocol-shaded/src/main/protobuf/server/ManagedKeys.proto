@@ -25,7 +25,7 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 message ManagedKeysRequest {
-  required string cust_spec = 1;
+  required string key_cust = 1;
   required string key_namespace = 2;
 }
 
@@ -37,7 +37,7 @@ enum ManagedKeyStatus {
 }
 
 message ManagedKeysResponse {
-  required string cust_spec = 1;
+  required string key_cust = 1;
   required string key_namespace = 2;
   required ManagedKeyStatus pbe_status = 3;
   optional string key_metadata = 4;

@@ -37,7 +37,7 @@ import java.util.Base64;
  *
  * The key data is represented by the following fields:
  * <ul>
- * <li>cust_spec: The prefix for which this key belongs to</li>
+ * <li>key_cust: The prefix for which this key belongs to</li>
  * <li>theKey: The key capturing the bytes and encoding</li>
  * <li>keyStatus: The status of the key (see {@link ManagedKeyStatus})</li>
  * <li>keyMetadata: Metadata that identifies the key</li>
@@ -53,7 +53,7 @@ import java.util.Base64;
 public class ManagedKeyData {
   public static final String KEY_NAMESPACE_GLOBAL = "*";
 
-  private final byte[] custSpec;
+  private final byte[] keyCust;
   private final String keyNamespace;
   private final Key theKey;
   private final ManagedKeyStatus keyStatus;
@@ -67,33 +67,33 @@ public class ManagedKeyData {
   /**
    * Constructs a new instance with the given parameters.
    *
-   * @param cust_spec   The Custodian specification associated with the key.
+   * @param key_cust     The key custodian.
    * @param theKey       The actual key, can be {@code null}.
    * @param keyStatus    The status of the key.
    * @param keyMetadata  The metadata associated with the key.
-   * @throws NullPointerException if any of cust_spec, keyStatus or keyMetadata is null.
+   * @throws NullPointerException if any of key_cust, keyStatus or keyMetadata is null.
    */
-  public ManagedKeyData(byte[] cust_spec, String key_namespace, Key theKey, ManagedKeyStatus keyStatus,
+  public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyStatus keyStatus,
                         String keyMetadata) {
-    this(cust_spec, key_namespace, theKey, keyStatus, keyMetadata,
+    this(key_cust, key_namespace, theKey, keyStatus, keyMetadata,
       EnvironmentEdgeManager.currentTime(), 0, 0);
   }
 
   /**
    * Constructs a new instance with the given parameters.
    *
-   * @param cust_spec        The Custodian specification associated with the key.
+   * @param key_cust         The key custodian.
    * @param theKey           The actual key, can be {@code null}.
    * @param keyStatus        The status of the key.
    * @param keyMetadata      The metadata associated with the key.
    * @param refreshTimestamp The timestamp when this key was last refreshed.
    * @param readOpCount      The current number of read operations for this key.
    * @param writeOpCount     The current number of write operations for this key.
-   * @throws NullPointerException if any of cust_spec, keyStatus or keyMetadata is null.
+   * @throws NullPointerException if any of key_cust, keyStatus or keyMetadata is null.
    */
-  public ManagedKeyData(byte[] cust_spec, String key_namespace, Key theKey, ManagedKeyStatus keyStatus,
+  public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyStatus keyStatus,
                         String keyMetadata, long refreshTimestamp, long readOpCount, long writeOpCount) {
-    Preconditions.checkNotNull(cust_spec, "cust_spec should not be null");
+    Preconditions.checkNotNull(key_cust, "key_cust should not be null");
     Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
     Preconditions.checkNotNull(keyStatus,  "keyStatus should not be null");
     Preconditions.checkNotNull(keyMetadata, "keyMetadata should not be null");
@@ -102,7 +102,7 @@ public class ManagedKeyData {
     Preconditions.checkArgument(writeOpCount >= 0, "writeOpCount: " + writeOpCount +
       " should be >= 0");
 
-    this.custSpec = cust_spec;
+    this.keyCust = key_cust;
     this.keyNamespace = key_namespace;
     this.theKey = theKey;
     this.keyStatus = keyStatus;
@@ -113,20 +113,20 @@ public class ManagedKeyData {
   }
 
   /**
-   * Returns the Custodian specification associated with the key.
+   * Returns the custodian associated with the key.
    *
-   * @return The Custodian specification as a byte array.
+   * @return The key custodian as a byte array.
    */
-  public byte[] getCustodianSpec() {
-    return custSpec;
+  public byte[] getKeyCustodian() {
+    return keyCust;
   }
 
   /**
-   * Return the Custodian specification in Base64 encoded form.
-   * @return the encoded Custodian specification.
+   * Return the key Custodian in Base64 encoded form.
+   * @return the encoded key custodian
    */
-  public String getCustodianSpecEncoded() {
-    return Base64.getEncoder().encodeToString(custSpec);
+  public String getKeyCustodianEncoded() {
+    return Base64.getEncoder().encodeToString(keyCust);
   }
 
 
@@ -167,7 +167,7 @@ public class ManagedKeyData {
   }
 
   @Override public String toString() {
-    return "ManagedKeyData{" + "custSpecix=" + Arrays.toString(custSpec) + ", keyNamespace='"
+    return "ManagedKeyData{" + "custSpecix=" + Arrays.toString(keyCust) + ", keyNamespace='"
       + keyNamespace + '\'' + ", keyStatus=" + keyStatus + ", keyMetadata='" + keyMetadata + '\''
       + ", refreshTimestamp=" + refreshTimestamp + '}';
   }
@@ -255,7 +255,7 @@ public class ManagedKeyData {
     ManagedKeyData that = (ManagedKeyData) o;
 
     return new EqualsBuilder()
-      .append(custSpec, that.custSpec)
+      .append(keyCust, that.keyCust)
       .append(keyNamespace, that.keyNamespace)
       .append(theKey, that.theKey)
       .append(keyStatus, that.keyStatus)
@@ -266,7 +266,7 @@ public class ManagedKeyData {
   @Override
   public int hashCode() {
     return new HashCodeBuilder(17, 37)
-      .append(custSpec)
+      .append(keyCust)
       .append(keyNamespace)
       .append(theKey)
       .append(keyStatus)

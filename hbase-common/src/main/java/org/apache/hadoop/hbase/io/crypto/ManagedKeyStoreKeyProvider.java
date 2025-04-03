@@ -40,9 +40,9 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   }
 
   @Override
-  public ManagedKeyData getManagedKey(byte[] cust_spec, String key_namespace) throws IOException {
+  public ManagedKeyData getManagedKey(byte[] key_cust, String key_namespace) throws IOException {
     checkConfig();
-    String encodedPrefix = ManagedKeyProvider.encodeToStr(cust_spec);
+    String encodedPrefix = ManagedKeyProvider.encodeToStr(key_cust);
     String aliasConfKey = HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encodedPrefix + "." +
       "alias";
     String keyMetadata = generateKeyMetadata(conf.get(aliasConfKey, null), encodedPrefix);
@@ -57,14 +57,14 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
     String activeStatusConfKey = HConstants.CRYPTO_PBE_PREFIX_CONF_KEY_PREFIX + encodedPrefix +
       ".active";
     boolean isActive = conf.getBoolean(activeStatusConfKey, true);
-    byte[] cust_spec = ManagedKeyProvider.decodeToBytes(encodedPrefix);
+    byte[] key_cust = ManagedKeyProvider.decodeToBytes(encodedPrefix);
     String alias = keyMetadata.get(KEY_METADATA_ALIAS);
     Key key = alias != null ? getKey(alias) : null;
     if (key != null) {
-      return new ManagedKeyData(cust_spec, ManagedKeyData.KEY_NAMESPACE_GLOBAL, key,
+      return new ManagedKeyData(key_cust, ManagedKeyData.KEY_NAMESPACE_GLOBAL, key,
         isActive ? ManagedKeyStatus.ACTIVE : ManagedKeyStatus.INACTIVE, keyMetadataStr);
     }
-    return new ManagedKeyData(cust_spec, ManagedKeyData.KEY_NAMESPACE_GLOBAL, null,
+    return new ManagedKeyData(key_cust, ManagedKeyData.KEY_NAMESPACE_GLOBAL, null,
       isActive ? ManagedKeyStatus.FAILED : ManagedKeyStatus.DISABLED, keyMetadataStr);
   }
 

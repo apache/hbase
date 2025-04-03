@@ -26,10 +26,10 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   @Override
-  public ManagedKeyStatus enableManagedKeys(String custSpec, String keyNamespace) throws IOException {
+  public ManagedKeyStatus enableManagedKeys(String keyCust, String keyNamespace) throws IOException {
     try {
       ManagedKeysResponse response = stub.enableManagedKeys(null,
-        ManagedKeysRequest.newBuilder().setCustSpec(custSpec).setKeyNamespace(keyNamespace).build());
+        ManagedKeysRequest.newBuilder().setKeyCust(keyCust).setKeyNamespace(keyNamespace).build());
       LOG.info("Got response: " + response);
       return ManagedKeyStatus.forValue((byte) response.getPbeStatus().getNumber());
     } catch (ServiceException e) {
@@ -38,15 +38,15 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   @Override
-  public List<ManagedKeyData> getManagedKeys(String custSpec, String keyNamespace)
+  public List<ManagedKeyData> getManagedKeys(String keyCust, String keyNamespace)
     throws IOException, KeyException {
     List<ManagedKeyData> keyStatuses = new ArrayList<>();
     try {
       ManagedKeysProtos.GetManagedKeysResponse statusResponse = stub.getManagedKeys(null,
-        ManagedKeysRequest.newBuilder().setCustSpec(custSpec).setKeyNamespace(keyNamespace).build());
+        ManagedKeysRequest.newBuilder().setKeyCust(keyCust).setKeyNamespace(keyNamespace).build());
       for (ManagedKeysResponse status: statusResponse.getStatusList()) {
         keyStatuses.add(new ManagedKeyData(
-          status.getCustSpecBytes().toByteArray(),
+          status.getKeyCustBytes().toByteArray(),
           status.getKeyNamespace(), null,
           ManagedKeyStatus.forValue((byte) status.getPbeStatus().getNumber()),
           status.getKeyMetadata(),

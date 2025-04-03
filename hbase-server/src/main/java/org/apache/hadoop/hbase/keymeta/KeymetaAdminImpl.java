@@ -39,16 +39,16 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   }
 
   @Override
-  public ManagedKeyStatus enableManagedKeys(String custSpec, String keyNamespace) throws IOException {
+  public ManagedKeyStatus enableManagedKeys(String keyCust, String keyNamespace) throws IOException {
     checkPBEEnabled();
-    LOG.info("Trying to enable PBE on key: {} under namespace: {}", custSpec, keyNamespace);
-    byte[] cust_spec = ManagedKeyProvider.decodeToBytes(custSpec);
+    LOG.info("Trying to enable PBE on key: {} under namespace: {}", keyCust, keyNamespace);
+    byte[] key_cust = ManagedKeyProvider.decodeToBytes(keyCust);
     ManagedKeyProvider provider = getKeyProvider();
     int perPrefixActiveKeyConfCount = getPerPrefixActiveKeyConfCount();
     Set<ManagedKeyData> retrievedKeys = new HashSet<>(perPrefixActiveKeyConfCount);
     ManagedKeyData pbeKey = null;
     for (int i = 0; i < perPrefixActiveKeyConfCount; ++i) {
-      pbeKey = provider.getManagedKey(cust_spec, keyNamespace);
+      pbeKey = provider.getManagedKey(key_cust, keyNamespace);
       if (pbeKey == null) {
         throw new IOException("Invalid null PBE key received from key provider");
       }
@@ -60,7 +60,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       }
       retrievedKeys.add(pbeKey);
       LOG.info("enablePBE: got key data with status: {} and metadata: {} for prefix: {}",
-        pbeKey.getKeyStatus(), pbeKey.getKeyMetadata(), custSpec);
+        pbeKey.getKeyStatus(), pbeKey.getKeyMetadata(), keyCust);
       addKey(pbeKey);
     }
     // pbeKey can't be null at this point as perPrefixActiveKeyConfCount will always be > 0,
@@ -69,12 +69,12 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   }
 
   @Override
-  public List<ManagedKeyData> getManagedKeys(String custSpec, String keyNamespace)
+  public List<ManagedKeyData> getManagedKeys(String keyCust, String keyNamespace)
     throws IOException, KeyException {
     checkPBEEnabled();
-    LOG.info("Getting key statuses for PBE on key: {} under namespace: {}", custSpec,
+    LOG.info("Getting key statuses for PBE on key: {} under namespace: {}", keyCust,
       keyNamespace);
-    byte[] cust_spec = ManagedKeyProvider.decodeToBytes(custSpec);
-    return super.getAllKeys(cust_spec, keyNamespace);
+    byte[] key_cust = ManagedKeyProvider.decodeToBytes(keyCust);
+    return super.getAllKeys(key_cust, keyNamespace);
   }
 }

@@ -43,27 +43,27 @@ public class ManagedKeyAccessor extends KeyManagementBase {
   /**
    * Get key data by key metadata.
    *
-   * @param cust_spec The custodian spec.
+   * @param key_cust     The key custodian.
    * @param keyNamespace The namespace of the key
    * @param keyMetadata The metadata of the key
    * @return The key data or {@code null}
    * @throws IOException if an error occurs while retrieving the key
    */
-  public ManagedKeyData getKey(byte[] cust_spec, String keyNamespace, String keyMetadata)
+  public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, String keyMetadata)
       throws IOException, KeyException {
     checkPBEEnabled();
     // 1. Check L1 cache.
     ManagedKeyData keyData = keyDataCache.getEntry(keyMetadata);
     if (keyData == null) {
       // 2. Check L2 cache.
-      keyData = keymetaAccessor.getKey(cust_spec, keyNamespace, keyMetadata);
+      keyData = keymetaAccessor.getKey(key_cust, keyNamespace, keyMetadata);
       if (keyData == null) {
         // 3. Check with Key Provider.
         ManagedKeyProvider provider = getKeyProvider();
         keyData = provider.unwrapKey(keyMetadata);
         LOG.info("Got key data with status: {} and metadata: {} for prefix: {}",
           keyData.getKeyStatus(), keyData.getKeyMetadata(),
-          ManagedKeyProvider.encodeToStr(cust_spec));
+          ManagedKeyProvider.encodeToStr(key_cust));
         keymetaAccessor.addKey(keyData);
       }
       if (keyData != null) {
@@ -76,21 +76,21 @@ public class ManagedKeyAccessor extends KeyManagementBase {
   /**
    * Get an active key for the given prefix suitable for use in encryption.
    *
-   * @param cust_spec The custodian specification
+   * @param key_cust     The key custodian.
    * @param keyNamespace The namespace of the key
    * @return The key data
    * @throws IOException if an error occurs while retrieving the key
    */
-  public ManagedKeyData getAnActiveKey(byte[] cust_spec, String keyNamespace)
+  public ManagedKeyData getAnActiveKey(byte[] key_cust, String keyNamespace)
     throws IOException, KeyException {
     checkPBEEnabled();
-    ManagedKeyData keyData = keyDataCache.getRandomEntryForPrefix(cust_spec, keyNamespace);
+    ManagedKeyData keyData = keyDataCache.getRandomEntryForPrefix(key_cust, keyNamespace);
     if (keyData == null) {
-      List<ManagedKeyData> activeKeys = keymetaAccessor.getActiveKeys(cust_spec, keyNamespace);
+      List<ManagedKeyData> activeKeys = keymetaAccessor.getActiveKeys(key_cust, keyNamespace);
       for (ManagedKeyData kd: activeKeys) {
         keyDataCache.addEntry(kd);
       }
-      keyData = keyDataCache.getRandomEntryForPrefix(cust_spec, keyNamespace);
+      keyData = keyDataCache.getRandomEntryForPrefix(key_cust, keyNamespace);
     }
     return keyData;
   }

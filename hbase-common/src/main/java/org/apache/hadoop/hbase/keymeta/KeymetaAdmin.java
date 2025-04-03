@@ -31,24 +31,24 @@ import java.util.List;
 @InterfaceAudience.Public
 public interface KeymetaAdmin {
   /**
-   * Enables key management for the specified custodian specification and namespace.
+   * Enables key management for the specified custodian and namespace.
    *
-   * @param custSpec    The custodian specification in base64 encoded format.
+   * @param keyCust      The key custodian in base64 encoded format.
    * @param keyNamespace The namespace for the key management.
    *
    * @return The current status of the managed key.
    * @throws IOException if an error occurs while enabling key management.
    */
-  ManagedKeyStatus enableManagedKeys(String custSpec, String keyNamespace) throws IOException;
+  ManagedKeyStatus enableManagedKeys(String keyCust, String keyNamespace) throws IOException;
 
   /**
    * Get the status of all the keys for the specified custodian.
    *
-   * @param custSpec    The custodian specification in base64 encoded format.
+   * @param keyCust      The key custodian in base64 encoded format.
    * @param keyNamespace The namespace for the key management.
    * @return The list of status objects each identifying the key and its current status.
    * @throws IOException if an error occurs while enabling key management.
    */
-  List<ManagedKeyData> getManagedKeys(String custSpec, String keyNamespace)
+  List<ManagedKeyData> getManagedKeys(String keyCust, String keyNamespace)
     throws IOException, KeyException;
 }

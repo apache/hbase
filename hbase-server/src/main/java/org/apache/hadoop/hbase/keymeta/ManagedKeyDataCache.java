@@ -51,7 +51,7 @@ public class ManagedKeyDataCache {
   public void addEntry(ManagedKeyData keyData) {
     lock.lock();
     try {
-      Bytes custSpec = new Bytes(keyData.getCustodianSpec());
+      Bytes keyCust = new Bytes(keyData.getKeyCustodian());
       String keyNamespace = keyData.getKeyNamespace();
 
       cache.put(keyData.getKeyMetadata(), keyData);
@@ -62,10 +62,10 @@ public class ManagedKeyDataCache {
         prefixCache.put(keyNamespace, nsCache);
       }
 
-      List<ManagedKeyData> keyList = nsCache.get(custSpec);
+      List<ManagedKeyData> keyList = nsCache.get(keyCust);
       if (keyList == null) {
         keyList = new ArrayList<>();
-        prefixCache.get(keyNamespace).put(custSpec, keyList);
+        prefixCache.get(keyNamespace).put(keyCust, keyList);
       }
 
       keyList.add(keyData);
@@ -100,14 +100,14 @@ public class ManagedKeyDataCache {
     try {
       ManagedKeyData removedEntry = cache.remove(keyMetadata);
       if (removedEntry != null) {
-        Bytes custSpec = new Bytes(removedEntry.getCustodianSpec());
+        Bytes keyCust = new Bytes(removedEntry.getKeyCustodian());
         String keyNamespace = removedEntry.getKeyNamespace();
         Map<Bytes, List<ManagedKeyData>> nsCache = prefixCache.get(keyNamespace);
-        List<ManagedKeyData> keyList = nsCache != null ? nsCache.get(custSpec) : null;
+        List<ManagedKeyData> keyList = nsCache != null ? nsCache.get(keyCust) : null;
         if (keyList != null) {
           keyList.remove(removedEntry);
           if (keyList.isEmpty()) {
-            prefixCache.get(keyNamespace).remove(custSpec);
+            prefixCache.get(keyNamespace).remove(keyCust);
           }
         }
       }
@@ -121,18 +121,18 @@ public class ManagedKeyDataCache {
    * Retrieves a random entry from the cache based on its PBE prefix, key namespace, and filters out entries with
    * a status other than ACTIVE.
    *
-   * @param cust_spec    the custodian specification.
+   * @param key_cust     The key custodian.
    * @param keyNamespace the key namespace to search for
    * @return a random ManagedKeyData entry with the given PBE prefix and ACTIVE status, or null if not found
    */
-  public ManagedKeyData getRandomEntryForPrefix(byte[] cust_spec, String keyNamespace) {
+  public ManagedKeyData getRandomEntryForPrefix(byte[] key_cust, String keyNamespace) {
     lock.lock();
     try {
       List<ManagedKeyData> activeEntries = new ArrayList<>();
 
-      Bytes custSpec = new Bytes(cust_spec);
+      Bytes keyCust = new Bytes(key_cust);
       Map<Bytes, List<ManagedKeyData>> nsCache = prefixCache.get(keyNamespace);
-      List<ManagedKeyData> keyList = nsCache != null ? nsCache.get(custSpec) : null;
+      List<ManagedKeyData> keyList = nsCache != null ? nsCache.get(keyCust) : null;
       if (keyList != null) {
         for (ManagedKeyData entry : keyList) {
           if (entry.getKeyStatus() == ManagedKeyStatus.ACTIVE) {

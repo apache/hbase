@@ -98,19 +98,19 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   /**
-   * Get all the keys for the specified cust_spec and key_namespace.
+   * Get all the keys for the specified key_cust and key_namespace.
    *
-   * @param cust_spec The custodian specification
+   * @param key_cust     The key custodian.
    * @param keyNamespace The namespace
    * @return a list of key data, one for each key, can be empty when none were found.
    * @throws IOException when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  protected List<ManagedKeyData> getAllKeys(byte[] cust_spec, String keyNamespace)
+  protected List<ManagedKeyData> getAllKeys(byte[] key_cust, String keyNamespace)
     throws IOException, KeyException {
     checkPBEEnabled();
     Connection connection = server.getConnection();
-    byte[] prefixForScan = Bytes.add(Bytes.toBytes(cust_spec.length), cust_spec,
+    byte[] prefixForScan = Bytes.add(Bytes.toBytes(key_cust.length), key_cust,
       Bytes.toBytes(keyNamespace));
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       PrefixFilter prefixFilter = new PrefixFilter(prefixForScan);
@@ -121,7 +121,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       ResultScanner scanner = table.getScanner(scan);
       List<ManagedKeyData> allKeys = new ArrayList<>();
       for (Result result : scanner) {
-        ManagedKeyData keyData = parseFromResult(cust_spec, keyNamespace, result);
+        ManagedKeyData keyData = parseFromResult(key_cust, keyNamespace, result);
         if (keyData != null) {
           allKeys.add(keyData);
         }
@@ -131,19 +131,19 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   /**
-   * Get all the active keys for the specified cust_spec and key_namespace.
+   * Get all the active keys for the specified key_cust and key_namespace.
    *
-   * @param cust_spec The prefix
+   * @param key_cust The prefix
    * @param keyNamespace The namespace
    * @return a list of key data, one for each active key, can be empty when none were found.
    * @throws IOException when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  public List<ManagedKeyData> getActiveKeys(byte[] cust_spec, String keyNamespace)
+  public List<ManagedKeyData> getActiveKeys(byte[] key_cust, String keyNamespace)
     throws IOException, KeyException {
     checkPBEEnabled();
     List<ManagedKeyData> activeKeys = new ArrayList<>();
-    for (ManagedKeyData keyData : getAllKeys(cust_spec, keyNamespace)) {
+    for (ManagedKeyData keyData : getAllKeys(key_cust, keyNamespace)) {
       if (keyData.getKeyStatus() == ManagedKeyStatus.ACTIVE) {
         activeKeys.add(keyData);
       }
@@ -152,42 +152,42 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   /**
-   * Get the specific key identified by cust_spec, keyNamespace and keyMetadata.
+   * Get the specific key identified by key_cust, keyNamespace and keyMetadata.
    *
-   * @param cust_spec    The prefix.
+   * @param key_cust    The prefix.
    * @param keyNamespace The namespace.
    * @param keyMetadata  The metadata.
    * @return the key or {@code null}
    * @throws IOException when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  public ManagedKeyData getKey(byte[] cust_spec, String keyNamespace, String keyMetadata)
+  public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, String keyMetadata)
     throws IOException, KeyException {
     checkPBEEnabled();
     Connection connection = server.getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      byte[] rowKey = constructRowKeyForMetadata(cust_spec, keyNamespace,
+      byte[] rowKey = constructRowKeyForMetadata(key_cust, keyNamespace,
         ManagedKeyData.constructMetadataHash(keyMetadata));
       Result result = table.get(new Get(rowKey));
-      return parseFromResult(cust_spec, keyNamespace, result);
+      return parseFromResult(key_cust, keyNamespace, result);
     }
   }
 
   /**
-   * Report read or write operation count on the specific key identified by cust_spec, keyNamespace
+   * Report read or write operation count on the specific key identified by key_cust, keyNamespace
    * and keyMetadata. The reported value is added to the existing operation count using the
    * Increment mutation.
-   * @param cust_spec    The prefix.
+   * @param key_cust    The prefix.
    * @param keyNamespace The namespace.
    * @param keyMetadata  The metadata.
    * @throws IOException when there is an underlying IOException.
    */
-  public void reportOperation(byte[] cust_spec, String keyNamespace, String keyMetadata, long count,
+  public void reportOperation(byte[] key_cust, String keyNamespace, String keyMetadata, long count,
       boolean isReadOperation) throws IOException {
     checkPBEEnabled();
     Connection connection = server.getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      byte[] rowKey = constructRowKeyForMetadata(cust_spec, keyNamespace,
+      byte[] rowKey = constructRowKeyForMetadata(key_cust, keyNamespace,
         ManagedKeyData.constructMetadataHash(keyMetadata));
       Increment incr = new Increment(rowKey)
         .addColumn(KEY_META_INFO_FAMILY,
@@ -223,18 +223,18 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   private byte[] constructRowKeyForMetadata(ManagedKeyData keyData) {
-    return constructRowKeyForMetadata(keyData.getCustodianSpec(), keyData.getKeyNamespace(),
+    return constructRowKeyForMetadata(keyData.getKeyCustodian(), keyData.getKeyNamespace(),
       keyData.getKeyMetadataHash());
   }
 
-  private static byte[] constructRowKeyForMetadata(byte[] cust_spec, String keyNamespace,
+  private static byte[] constructRowKeyForMetadata(byte[] key_cust, String keyNamespace,
       byte[] keyMetadataHash) {
-    int prefixLength = cust_spec.length;
-    return Bytes.add(Bytes.toBytes(prefixLength), cust_spec, Bytes.toBytesBinary(keyNamespace),
+    int prefixLength = key_cust.length;
+    return Bytes.add(Bytes.toBytes(prefixLength), key_cust, Bytes.toBytesBinary(keyNamespace),
       keyMetadataHash);
   }
 
-  private ManagedKeyData parseFromResult(byte[] cust_spec, String keyNamespace, Result result)
+  private ManagedKeyData parseFromResult(byte[] key_cust, String keyNamespace, Result result)
     throws IOException, KeyException {
     if (result == null || result.isEmpty()) {
       return null;
@@ -264,7 +264,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     byte[] writeOpValue = result.getValue(KEY_META_INFO_FAMILY, WRITE_OP_COUNT_QUAL_BYTES);
     long writeOpCount = writeOpValue != null ? Bytes.toLong(writeOpValue) : 0;
     ManagedKeyData
-      dekKeyData = new ManagedKeyData(cust_spec, keyNamespace, dek, keyStatus, dekMetadata,
+      dekKeyData = new ManagedKeyData(key_cust, keyNamespace, dek, keyStatus, dekMetadata,
       refreshedTimestamp, readOpCount, writeOpCount);
     if (dek != null) {
       long dekChecksum = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,

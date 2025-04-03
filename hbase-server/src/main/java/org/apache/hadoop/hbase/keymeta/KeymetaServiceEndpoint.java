@@ -49,7 +49,7 @@ import java.util.List;
  * methods:
  *
  * <ul>
- * <li>enablePBE(): Enables PBE for a given cust_spec and namespace.</li>
+ * <li>enablePBE(): Enables PBE for a given key_cust and namespace.</li>
  * </ul>
  *
  * This endpoint is designed to work in conjunction with the {@link KeymetaAdmin}
@@ -108,10 +108,10 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     public void enableManagedKeys(RpcController controller, ManagedKeysRequest request,
         RpcCallback<ManagedKeysResponse> done) {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
-      if (builder.getCustSpec() != null) {
+      if (builder.getKeyCust() != null) {
         try {
           ManagedKeyStatus managedKeyStatus = master.getPBEKeymetaAdmin()
-            .enableManagedKeys(request.getCustSpec(), request.getKeyNamespace());
+            .enableManagedKeys(request.getKeyCust(), request.getKeyNamespace());
           builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.valueOf(
             managedKeyStatus.getVal()));
         } catch (IOException e) {
@@ -128,10 +128,10 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       GetManagedKeysResponse.Builder responseBuilder =
         GetManagedKeysResponse.newBuilder();
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
-      if (builder.getCustSpec() != null) {
+      if (builder.getKeyCust() != null) {
         try {
           List<ManagedKeyData> managedKeyStatuses = master.getPBEKeymetaAdmin()
-            .getManagedKeys(request.getCustSpec(), request.getKeyNamespace());
+            .getManagedKeys(request.getKeyCust(), request.getKeyNamespace());
           for (ManagedKeyData keyData: managedKeyStatuses) {
             builder.setPbeStatus(
               ManagedKeysProtos.ManagedKeyStatus.valueOf(keyData.getKeyStatus().getVal()));
@@ -157,29 +157,29 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
 
     private byte[] convertToPBEBytes(RpcController controller, ManagedKeysRequest request,
       ManagedKeysResponse.Builder builder) {
-      byte[] cust_spec = null;
+      byte[] key_cust = null;
       try {
-        cust_spec = Base64.getDecoder().decode(request.getCustSpec());
+        key_cust = Base64.getDecoder().decode(request.getKeyCust());
       } catch (IllegalArgumentException e) {
         builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.PBE_FAILED);
         CoprocessorRpcUtils.setControllerException(controller, new IOException(
-          "Failed to decode specified prefix as Base64 string: " + request.getCustSpec(), e));
+          "Failed to decode specified prefix as Base64 string: " + request.getKeyCust(), e));
       }
-      return cust_spec;
+      return key_cust;
     }
 
     private ManagedKeysResponse.Builder getResponseBuilder(RpcController controller,
         ManagedKeysRequest request) {
       ManagedKeysResponse.Builder builder = ManagedKeysResponse.newBuilder()
           .setKeyNamespace(request.getKeyNamespace());
-      byte[] cust_spec = null;
+      byte[] key_cust = null;
       try {
-        cust_spec = Base64.getDecoder().decode(request.getCustSpec());
-        builder.setCustSpecBytes(ByteString.copyFrom(cust_spec));
+        key_cust = Base64.getDecoder().decode(request.getKeyCust());
+        builder.setKeyCustBytes(ByteString.copyFrom(key_cust));
       } catch (IllegalArgumentException e) {
         builder.setPbeStatus(ManagedKeysProtos.ManagedKeyStatus.PBE_FAILED);
         CoprocessorRpcUtils.setControllerException(controller, new IOException(
-          "Failed to decode specified prefix as Base64 string: " + request.getCustSpec(), e));
+          "Failed to decode specified prefix as Base64 string: " + request.getKeyCust(), e));
       }
       return builder;
     }
