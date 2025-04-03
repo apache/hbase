@@ -914,6 +914,7 @@
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.gpg.version>3.0.1</maven.gpg.version>
     <maven.javadoc.version>3.4.0</maven.javadoc.version>
+    <maven.dependency.version>3.8.1</maven.dependency.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
     <maven-owasp-plugin.version>12.1.0</maven-owasp-plugin.version>
