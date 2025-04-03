@@ -187,6 +187,13 @@ public class HStore
   // TODO: ideally, this should be part of storeFileManager, as we keep passing this to it.
   private final List<HStoreFile> filesCompacting = Lists.newArrayList();
 
+  // Compaction LongAdders
+  final LongAdder compactionsFinishedCount = new LongAdder();
+  final LongAdder compactionsFailedCount = new LongAdder();
+  final LongAdder compactionNumFilesCompacted = new LongAdder();
+  final LongAdder compactionNumBytesCompacted = new LongAdder();
+  final LongAdder compactionsQueuedCount = new LongAdder();
+
   // All access must be synchronized.
   private final Set<ChangedReadersObserver> changedReaderObservers =
     Collections.newSetFromMap(new ConcurrentHashMap<ChangedReadersObserver, Boolean>());
@@ -1606,7 +1613,8 @@ public class HStore
   }
 
   private void finishCompactionRequest(CompactionRequestImpl cr) {
-    this.region.reportCompactionRequestEnd(cr.isMajor(), cr.getFiles().size(), cr.getSize());
+    this.region.reportCompactionRequestEnd(cr.isMajor());
+    reportCompactionRequestEnd(cr.getFiles().size(), cr.getSize());
     if (cr.isOffPeak()) {
       offPeakCompactionTracker.set(false);
       cr.setOffPeak(false);
@@ -2080,6 +2088,22 @@ public class HStore
 
   @Override
   public boolean needsCompaction() {
+    // For some system compacting, we set selectNow to false, and the files do not
+    // be selected until compaction runs, so we should limit the compaction count here
+    // to avoid the length of queue grows too big.
+    int filesNotCompacting =
+      this.storeEngine.storeFileManager.getStorefileCount() - filesCompacting.size();
+    int maxFilesToCompact = this.storeEngine.getCompactionPolicy().getConf().getMaxFilesToCompact();
+    int maxCompactionsShouldBeQueued = filesNotCompacting / maxFilesToCompact;
+    maxCompactionsShouldBeQueued += filesNotCompacting % maxFilesToCompact == 0 ? 0 : 1;
+    if (this.compactionsQueuedCount.sum() >= maxCompactionsShouldBeQueued) {
+      LOG.debug(
+        "this store has too many compactions in queue, filesNotCompacting:{}, "
+          + "compactionsQueuedCount:{}, maxCompactionsNeedQueued:{}",
+        filesNotCompacting, this.compactionsQueuedCount.sum(), maxCompactionsShouldBeQueued);
+      return false;
+    }
+
     List<HStoreFile> filesCompactingClone = null;
     synchronized (filesCompacting) {
       filesCompactingClone = Lists.newArrayList(filesCompacting);
@@ -2488,5 +2512,48 @@ public class HStore
   @Override
   public long getBloomFilterEligibleRequestsCount() {
     return storeEngine.getBloomFilterMetrics().getEligibleRequestsCount();
+  }
+
+  public void incrementCompactionsQueuedCount() {
+    compactionsQueuedCount.increment();
+  }
+
+  public void decrementCompactionsQueuedCount() {
+    compactionsQueuedCount.decrement();
+  }
+
+  @Override
+  public long getCompactionsFinishedCount() {
+    return this.compactionsFinishedCount.sum();
+  }
+
+  @Override
+  public long getCompactionsFailedCount() {
+    return this.compactionsFailedCount.sum();
+  }
+
+  @Override
+  public long getCompactionsNumFiles() {
+    return this.compactionNumFilesCompacted.sum();
+  }
+
+  @Override
+  public long getCompactionsNumBytes() {
+    return this.compactionNumBytesCompacted.sum();
+  }
+
+  @Override
+  public long getCompactionsQueuedCount() {
+    return this.compactionsQueuedCount.sum();
+  }
+
+  public void reportCompactionRequestFailure() {
+    compactionsFailedCount.increment();
+  }
+
+  public void reportCompactionRequestEnd(int numFiles, long filesSizeCompacted) {
+    compactionsFinishedCount.increment();
+    compactionNumFilesCompacted.add(numFiles);
+    compactionNumBytesCompacted.add(filesSizeCompacted);
   }
 }
