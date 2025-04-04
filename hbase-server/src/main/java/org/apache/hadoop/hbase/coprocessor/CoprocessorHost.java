@@ -72,6 +72,8 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   public static final String SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR =
     "hbase.skip.load.duplicate.table.coprocessor";
   public static final boolean DEFAULT_SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR = false;
+  public static final String SECURITY_COPROCESSOR_CONF_KEY="hbase.security.coprocessor";
+  public static final String DEFAULT_SECURITY_COPROCESSOR_CONF_NAME = "org.apache.hadoop.hbase.security.access.AccessController";
 
   private static final Logger LOG = LoggerFactory.getLogger(CoprocessorHost.class);
   protected Abortable abortable;
