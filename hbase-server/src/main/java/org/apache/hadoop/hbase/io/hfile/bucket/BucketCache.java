@@ -2296,11 +2296,10 @@ public class BucketCache implements BlockCache, HeapSize {
         ReentrantReadWriteLock lock = offsetLock.getLock(entry.getOffset());
         lock.readLock().lock();
         locks.add(lock);
-        if (backingMap.containsKey(entry) && entry.getBlockType() == BlockType.DATA) {
+        if (backingMap.containsKey(entry) && entry.getBlockType().isData()) {
           count.increment();
         }
       });
-      int metaCount = totalBlockCount - dataBlockCount;
       // BucketCache would only have data blocks
       if (dataBlockCount == count.getValue()) {
         LOG.debug("File {} has now been fully cached.", fileName);
@@ -2320,18 +2319,13 @@ public class BucketCache implements BlockCache, HeapSize {
             + "and try the verification again.", fileName);
           Thread.sleep(100);
           notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
-        } else if (
-          (getAllCacheKeysForFile(fileName.getName(), 0, Long.MAX_VALUE).size() - metaCount)
-              == dataBlockCount
-        ) {
-          LOG.debug("We counted {} data blocks, expected was {}, there was no more pending in "
-            + "the cache write queue but we now found that total cached blocks for file {} "
-            + "is equal to data block count.", count, dataBlockCount, fileName.getName());
-          fileCacheCompleted(fileName, size);
         } else {
-          LOG.info("We found only {} data blocks cached from a total of {} for file {}, "
-            + "but no blocks pending caching. Maybe cache is full or evictions "
-            + "happened concurrently to cache prefetch.", count, dataBlockCount, fileName);
+          LOG.info(
+            "The total block count was {}. We found only {} data blocks cached from "
+              + "a total of {} data blocks for file {}, "
+              + "but no blocks pending caching. Maybe cache is full or evictions "
+              + "happened concurrently to cache prefetch.",
+            totalBlockCount, count, dataBlockCount, fileName);
         }
       }
     } catch (InterruptedException e) {
