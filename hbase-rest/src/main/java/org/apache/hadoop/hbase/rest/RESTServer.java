@@ -296,8 +296,9 @@ public class RESTServer implements Constants {
     // In Jetty 12, ambiguous path separators, suspicious path characters, and ambiguous empty
     // segments are considered violations of the URI specification and hence are not allowed.
     // Refer to https://github.com/jetty/jetty.project/issues/11890#issuecomment-2156449534
-    // We must set a URI compliance to allow for this violation so that client
-    // requests are not automatically rejected. We have tests which rely on this behavior.
+    // We must set a URI compliance to allow for this violation so that client requests are not
+    // automatically rejected. Our rest endpoints rely on this behavior to handle encoded uri paths.
+    // Optionally, we can decide to not set this compliance rules, but may break existing clients.
     if (conf.getBoolean(HTTP_SET_URI_COMPLIANCE, HTTP_SET_URI_COMPLIANCE_DEFAULT)) {
       setUriComplianceRules(httpConfig);
     }
