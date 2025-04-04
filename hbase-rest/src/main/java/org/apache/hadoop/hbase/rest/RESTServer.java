@@ -108,6 +108,9 @@ public class RESTServer implements Constants {
   static final String REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY =
     "hbase.rest-csrf.browser-useragents-regex";
 
+  static final String HTTP_SET_URI_COMPLIANCE = "hbase.rest.http.set.uri.compliance";
+  static final boolean HTTP_SET_URI_COMPLIANCE_DEFAULT = true;
+
   // HACK, making this static for AuthFilter to get at our configuration. Necessary for unit tests.
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value = { "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD", "MS_CANNOT_BE_FINAL" },
@@ -289,7 +292,15 @@ public class RESTServer implements Constants {
     httpConfig.setResponseHeaderSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
     httpConfig.setSendServerVersion(false);
     httpConfig.setSendDateHeader(false);
-    setUriComplianceRules(httpConfig);
+
+    // In Jetty 12, ambiguous path separators, suspicious path characters, and ambiguous empty
+    // segments are considered violations of the URI specification and hence are not allowed.
+    // Refer to https://github.com/jetty/jetty.project/issues/11890#issuecomment-2156449534
+    // We must set a URI compliance to allow for this violation so that client
+    // requests are not automatically rejected. We have tests which rely on this behavior.
+    if (conf.getBoolean(HTTP_SET_URI_COMPLIANCE, HTTP_SET_URI_COMPLIANCE_DEFAULT)) {
+      setUriComplianceRules(httpConfig);
+    }
 
     ServerConnector serverConnector;
     boolean isSecure = false;
@@ -405,11 +416,6 @@ public class RESTServer implements Constants {
   }
 
   private static void setUriComplianceRules(HttpConfiguration httpConfig) {
-    // In Jetty 12, ambiguous path separators, suspicious path characters, and ambiguous empty
-    // segments are considered violations of the URI specification and hence are not allowed.
-    // Refer to https://github.com/jetty/jetty.project/issues/11890#issuecomment-2156449534
-    // We must set a URI compliance to allow for this violation so that client
-    // requests are not automatically rejected. We have tests which rely on this behavior.
     // TODO Discuss Should we set below to UriCompliance.LEGACY instead of cherry-picking?
     Set<UriCompliance.Violation> complianceViolationSet = new HashSet<>();
     complianceViolationSet.add(UriCompliance.Violation.AMBIGUOUS_PATH_SEPARATOR);
