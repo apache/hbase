@@ -4987,4 +4987,14 @@
       </build>
     </profile>
   </profiles>
+  <!-- TODO Remove below block, added just for testing -->
+  <repositories>
+    <repository>
+      <id>apache.snapshots</id>
+      <url>https://repository.apache.org/content/repositories/snapshots</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
 </project>
