@@ -266,8 +266,8 @@ public final class LogLevel {
 
       HttpURLConnection connection = connect(url);
 
-      // We implement the validateResponse method inside hbase to handle for HTML response.
-      // as with Jetty 12: getResponseMessage returns "Precondition Failed" vs
+      // We now use the validateResponse method of hbase to handle for HTML response,
+      // as with Jetty 12: getResponseMessage() returns "Precondition Failed" vs
       // "Modification of logger protected.org.apache.hadoop.hbase.http.log.TestLogLevel is
       // disallowed in configuration" in Jetty 9
       LogLevelExceptionUtils.validateResponse(connection, 200);
