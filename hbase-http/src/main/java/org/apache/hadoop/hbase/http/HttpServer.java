@@ -80,7 +80,6 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.webapp.WebAppContext;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Handler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ExceptionUtil;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConfiguration;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConnectionFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.RequestLog;
@@ -92,6 +91,7 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SymlinkAllowedResour
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ErrorHandler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.gzip.GzipHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ExceptionUtil;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
@@ -801,8 +801,8 @@ public class HttpServer implements FilterContainer {
       ServletContextHandler logContext = new ServletContextHandler(parent, "/logs");
       logContext.addServlet(AdminAuthorizedServlet.class, "/*");
       // We are doing this as otherwise jetty 12 is not handling /dir0/dir1/../dir2
-      String logDirCanonical = Paths.get(logDir).toFile().getCanonicalPath();
-      logContext.setResourceBase(logDirCanonical);
+      // See https://github.com/jetty/jetty.project/issues/12958
+      logContext.setBaseResourceAsPath(Path.of(logDir).toRealPath());
       logContext.setDisplayName("logs");
       configureAliasChecks(logContext,
         conf.getBoolean(ServerConfigurationKeys.HBASE_JETTY_LOGS_SERVE_ALIASES,
@@ -1259,7 +1259,7 @@ public class HttpServer implements FilterContainer {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
         throw ex;
       } catch (Exception ex) {
-        LOG.info("HttpServer.start() threw a MultiException", ex);
+        LOG.info("HttpServer.start() threw a Exception", ex);
         throw ex;
       }
       // Make sure there is no handler failures.
@@ -1372,7 +1372,8 @@ public class HttpServer implements FilterContainer {
 
   }
 
-  private ExceptionUtil.MultiException addMultiException(ExceptionUtil.MultiException exception, Exception e) {
+  private ExceptionUtil.MultiException addMultiException(ExceptionUtil.MultiException exception,
+    Exception e) {
     if (exception == null) {
       exception = new ExceptionUtil.MultiException();
     }
