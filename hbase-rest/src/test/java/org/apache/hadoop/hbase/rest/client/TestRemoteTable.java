@@ -361,7 +361,8 @@ public class TestRemoteTable {
   public void testDelete() throws IOException {
     // Requires UriCompliance.Violation.SUSPICIOUS_PATH_CHARACTERS for put,
     // otherwise fails with "400: Suspicious Path Character"
-    // This example is considered suspicious by the Jetty 12 due to reasons same as shown in testGet()
+    // This example is considered suspicious by the Jetty 12 due to reasons same as shown in
+    // testGet()
 
     // Also, requires UriCompliance.Violation.AMBIGUOUS_EMPTY_SEGMENT
     // Otherwise fails with "400: Ambiguous URI empty segment"
@@ -515,7 +516,8 @@ public class TestRemoteTable {
   public void testCheckAndDelete() throws IOException {
     // Requires UriCompliance.Violation.SUSPICIOUS_PATH_CHARACTERS
     // Otherwise fails with "400: Suspicious Path Character"
-    // This example is considered suspicious by the Jetty 12 due to reasons same as shown in testGet()
+    // This example is considered suspicious by the Jetty 12 due to reasons same as shown in
+    // testGet()
     Get get = new Get(ROW_1);
     Result result = remoteTable.get(get);
     byte[] value1 = result.getValue(COLUMN_1, QUALIFIER_1);
