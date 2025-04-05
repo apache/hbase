@@ -1454,7 +1454,7 @@ public class ProcedureExecutor<TEnvironment> {
     }
     do {
       // Try to acquire the execution
-      if (!procStack.acquire()) {
+      if (!procStack.acquire(proc)) {
         if (procStack.setRollback()) {
           // we have the 'rollback-lock' we can start rollingback
           switch (executeRollback(rootProcId, procStack)) {
@@ -1513,7 +1513,7 @@ public class ProcedureExecutor<TEnvironment> {
         default:
           throw new UnsupportedOperationException();
       }
-      procStack.release();
+      procStack.release(proc);
 
       if (proc.isSuccess()) {
         // update metrics on finishing the procedure
