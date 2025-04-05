@@ -63,18 +63,19 @@ public class LogLevelExceptionUtils {
 
       try (InputStream es = conn.getErrorStream()) {
         if (es != null) {
-          final String errorAsHtml =
-            new BufferedReader(new InputStreamReader(es, StandardCharsets.UTF_8)).lines()
-              .collect(Collectors.joining("\n"));
+          try (InputStreamReader isr = new InputStreamReader(es, StandardCharsets.UTF_8);
+            BufferedReader reader = new BufferedReader(isr)) {
+            final String errorAsHtml = reader.lines().collect(Collectors.joining("\n"));
 
-          final String status = extractValue(errorAsHtml, "<th>STATUS:</th><td>(\\d+)</td>");
-          final String message = extractValue(errorAsHtml, "<th>MESSAGE:</th><td>([^<]+)</td>");
-          final String uri = extractValue(errorAsHtml, "<th>URI:</th><td>([^<]+)</td>");
-          final String exception = extractValue(errorAsHtml, "<title>([^<]+)</title>");
+            final String status = extractValue(errorAsHtml, "<th>STATUS:</th><td>(\\d+)</td>");
+            final String message = extractValue(errorAsHtml, "<th>MESSAGE:</th><td>([^<]+)</td>");
+            final String uri = extractValue(errorAsHtml, "<th>URI:</th><td>([^<]+)</td>");
+            final String exception = extractValue(errorAsHtml, "<title>([^<]+)</title>");
 
-          toThrow = new IOException(
-            String.format("HTTP status [%s], message [%s], URL [%s], exception [%s]", status,
-              message, uri, exception));
+            toThrow = new IOException(
+              String.format("HTTP status [%s], message [%s], URL [%s], exception [%s]", status,
+                message, uri, exception));
+          }
         }
       } catch (Exception ex) {
         toThrow =
