@@ -96,7 +96,8 @@ allowed_expr+="|^PropertyList-1.0.dtd$"
 # Shaded jetty resources
 allowed_expr+="|^about.html$"
 allowed_expr+="|^jetty-dir.css$"
-
+# Required by jetty 12 on ee8
+allowed_expr="(|^javax/$)"
 
 if [ -n "${allow_hadoop}" ]; then
   #   * classes in packages that start with org.apache.hadoop, which by
