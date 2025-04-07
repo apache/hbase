@@ -108,9 +108,6 @@ public class RESTServer implements Constants {
   static final String REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY =
     "hbase.rest-csrf.browser-useragents-regex";
 
-  static final String HTTP_SET_URI_COMPLIANCE = "hbase.rest.http.set.uri.compliance";
-  static final boolean HTTP_SET_URI_COMPLIANCE_DEFAULT = true;
-
   // HACK, making this static for AuthFilter to get at our configuration. Necessary for unit tests.
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value = { "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD", "MS_CANNOT_BE_FINAL" },
@@ -298,10 +295,7 @@ public class RESTServer implements Constants {
     // Refer to https://github.com/jetty/jetty.project/issues/11890#issuecomment-2156449534
     // We must set a URI compliance to allow for this violation so that client requests are not
     // automatically rejected. Our rest endpoints rely on this behavior to handle encoded uri paths.
-    // Optionally, we can decide to not set this compliance rules, but may break existing clients.
-    if (conf.getBoolean(HTTP_SET_URI_COMPLIANCE, HTTP_SET_URI_COMPLIANCE_DEFAULT)) {
-      setUriComplianceRules(httpConfig);
-    }
+    setUriComplianceRules(httpConfig);
 
     ServerConnector serverConnector;
     boolean isSecure = false;
@@ -417,7 +411,6 @@ public class RESTServer implements Constants {
   }
 
   private static void setUriComplianceRules(HttpConfiguration httpConfig) {
-    // TODO Discuss Should we set below to UriCompliance.LEGACY instead of cherry-picking?
     Set<UriCompliance.Violation> complianceViolationSet = new HashSet<>();
     complianceViolationSet.add(UriCompliance.Violation.AMBIGUOUS_PATH_SEPARATOR);
     complianceViolationSet.add(UriCompliance.Violation.SUSPICIOUS_PATH_CHARACTERS);
