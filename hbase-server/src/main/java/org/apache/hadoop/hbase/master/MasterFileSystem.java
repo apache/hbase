@@ -158,6 +158,8 @@ public class MasterFileSystem {
     if (isSecurityEnabled) {
       fs.setPermission(new Path(rootdir, HConstants.VERSION_FILE_NAME), secureRootFilePerms);
       fs.setPermission(new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME), secureRootFilePerms);
+      fs.setPermission(new Path(rootdir, HConstants.ACTIVE_CLUSTER_ID_FILE_NAME),
+        secureRootFilePerms);
     }
     FsPermission currentRootPerms = fs.getFileStatus(this.rootdir).getPermission();
     if (
@@ -261,11 +263,9 @@ public class MasterFileSystem {
         HConstants.HBASE_DIR, rd, iae);
       throw iae;
     }
-    // Make sure cluster ID exists
-    if (!FSUtils.checkClusterIdExists(fs, rd, threadWakeFrequency)) {
-      FSUtils.setClusterId(fs, rd, new ClusterId(), threadWakeFrequency);
-    }
-    clusterId = FSUtils.getClusterId(fs, rd);
+    // Make sure cluster ID in hbase.id file exists
+    ensureHbaseClusterIdFileExists(threadWakeFrequency);
+    negotiateActiveClusterIdFile(threadWakeFrequency);
   }
 
   /**
@@ -381,5 +381,59 @@ public class MasterFileSystem {
 
   public void logFileSystemState(Logger log) throws IOException {
     CommonFSUtils.logFileSystemState(fs, rootdir, log);
+  }
+
+  private void ensureHbaseClusterIdFileExists(long wait) throws IOException {
+    LOG.info("HBase cluster ID file");
+    if (!FSUtils.checkClusterIdExists(fs, rootdir, HConstants.CLUSTER_ID_FILE_NAME, wait)) {
+      FSUtils.setClusterId(fs, rootdir, HConstants.CLUSTER_ID_FILE_NAME, new ClusterId(), wait);
+    }
+    clusterId = FSUtils.getClusterId(fs, rootdir);
+  }
+
+  private void negotiateActiveClusterIdFile(long wait) throws IOException {
+    LOG.info("Active cluster ID file");
+    boolean isReadOnlyModeEnabled = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    boolean activeClusterIdFileExists = FSUtils.checkClusterIdExists(
+      fs, rootdir, HConstants.ACTIVE_CLUSTER_ID_FILE_NAME, wait);
+
+    if (!isReadOnlyModeEnabled) {
+      // create active_cluster.id file if it does not exist
+      if (!activeClusterIdFileExists) {
+        FSUtils.setClusterId(
+          fs, rootdir, HConstants.ACTIVE_CLUSTER_ID_FILE_NAME, getClusterId(), wait);
+        LOG.info("Active Cluster id file created, cluster ID : {}", getClusterId());
+      } else {
+        // validate the cluster id
+        ClusterId cid = FSUtils.getClusterId(fs, rootdir);
+        if (cid.equals(getClusterId())) {
+          //change this to debug
+          LOG.info("Active cluster is being restarted, ID {}", cid);
+        } else {
+          //change this to debug
+          LOG.info("rootdir {}", rootdir);
+          throw new IOException("Can not start active cluster, please check the value of "
+            + "configuration hbase.global.readonly.enabled in hbase-site.xml,"
+            + "Cluster ID" + getClusterId() + ": Active Cluster ID" + cid);
+        }
+      }
+    } else {
+      if (activeClusterIdFileExists) {
+        ClusterId cid = FSUtils.getClusterId(fs, rootdir);
+        if (!cid.equals(getClusterId())) {
+          //change this to debug
+          LOG.info("Replica cluster is being started, ID {}", cid);
+        } else {
+          LOG.info("rootdir {}", rootdir);
+          throw new IOException("Can not start replica cluster in active mode,"
+            + "Cluster ID" + getClusterId() + ": Read Replica Cluster ID" + cid);
+        }
+      } else {
+        LOG.info("rootdir {}", rootdir);
+        throw new IOException("Read Replica Cluster must have associated Active Cluster. "
+          + "active_cluster.id file does not exist in $HBASE_ROOT.");
+      }
+    }
   }
 }
