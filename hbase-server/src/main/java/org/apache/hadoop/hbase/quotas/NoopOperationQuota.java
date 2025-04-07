@@ -43,7 +43,8 @@ class NoopOperationQuota implements OperationQuota {
   }
 
   @Override
-  public void checkBatchQuota(int numWrites, int numReads) throws RpcThrottlingException {
+  public void checkBatchQuota(int numWrites, int numReads, boolean isAtomic)
+    throws RpcThrottlingException {
     // no-op
   }
 

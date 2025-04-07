@@ -93,11 +93,14 @@ public class ThrottleSettings extends QuotaSettings {
           case REQUEST_NUMBER:
           case WRITE_NUMBER:
           case READ_NUMBER:
+          case ATOMIC_REQUEST_NUMBER:
             builder.append(String.format("%dreq", timedQuota.getSoftLimit()));
             break;
           case REQUEST_SIZE:
           case WRITE_SIZE:
           case READ_SIZE:
+          case ATOMIC_READ_SIZE:
+          case ATOMIC_WRITE_SIZE:
             builder.append(sizeToString(timedQuota.getSoftLimit()));
             break;
           case REQUEST_CAPACITY_UNIT:

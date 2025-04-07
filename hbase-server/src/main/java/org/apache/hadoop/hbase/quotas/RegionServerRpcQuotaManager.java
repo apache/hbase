@@ -186,11 +186,11 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager {
     final OperationQuota.OperationType type) throws IOException, RpcThrottlingException {
     switch (type) {
       case GET:
-        return this.checkBatchQuota(region, 0, 1);
+        return this.checkBatchQuota(region, 0, 1, false);
       case MUTATE:
-        return this.checkBatchQuota(region, 1, 0);
+        return this.checkBatchQuota(region, 1, 0, false);
       case CHECK_AND_MUTATE:
-        return this.checkBatchQuota(region, 1, 1);
+        return this.checkBatchQuota(region, 1, 1, true);
     }
     throw new RuntimeException("Invalid operation type: " + type);
   }
@@ -201,6 +201,7 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager {
     throws IOException, RpcThrottlingException {
     int numWrites = 0;
     int numReads = 0;
+    boolean isAtomic = false;
     for (final ClientProtos.Action action : actions) {
       if (action.hasMutation()) {
         numWrites++;
@@ -208,12 +209,16 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager {
           QuotaUtil.getQuotaOperationType(action, hasCondition);
         if (operationType == OperationQuota.OperationType.CHECK_AND_MUTATE) {
           numReads++;
+          // If any mutations in this batch are atomic, we will count the entire batch as atomic.
+          // This is a conservative approach, but it is the best that we can do without knowing
+          // the block bytes scanned of each individual action.
+          isAtomic = true;
         }
       } else if (action.hasGet()) {
         numReads++;
       }
     }
-    return checkBatchQuota(region, numWrites, numReads);
+    return checkBatchQuota(region, numWrites, numReads, isAtomic);
   }
 
   /**
@@ -227,7 +232,7 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager {
    */
   @Override
   public OperationQuota checkBatchQuota(final Region region, final int numWrites,
-    final int numReads) throws IOException, RpcThrottlingException {
+    final int numReads, boolean isAtomic) throws IOException, RpcThrottlingException {
     Optional<User> user = RpcServer.getRequestUser();
     UserGroupInformation ugi;
     if (user.isPresent()) {
@@ -240,7 +245,7 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager {
 
     OperationQuota quota = getQuota(ugi, table, region.getMinBlockSizeBytes());
     try {
-      quota.checkBatchQuota(numWrites, numReads);
+      quota.checkBatchQuota(numWrites, numReads, isAtomic);
     } catch (RpcThrottlingException e) {
       LOG.debug("Throttling exception for user=" + ugi.getUserName() + " table=" + table
         + " numWrites=" + numWrites + " numReads=" + numReads + ": " + e.getMessage());
