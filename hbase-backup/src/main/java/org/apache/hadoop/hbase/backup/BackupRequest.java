@@ -35,6 +35,11 @@ public final class BackupRequest {
       request = new BackupRequest();
     }
 
+    public Builder withFailOnInvalidAncestry(boolean failOnInvalidAncestry) {
+      request.failOnInvalidAncestry = failOnInvalidAncestry;
+      return this;
+    }
+
     public Builder withBackupType(BackupType type) {
       request.setBackupType(type);
       return this;
@@ -89,8 +94,13 @@ public final class BackupRequest {
   private boolean noChecksumVerify = false;
   private String backupSetName;
   private String yarnPoolName;
+  private boolean failOnInvalidAncestry = false;
 
   private BackupRequest() {
+  }
+
+  public boolean getFailOnInvalidAncestry() {
+    return failOnInvalidAncestry;
   }
 
   private BackupRequest setBackupType(BackupType type) {

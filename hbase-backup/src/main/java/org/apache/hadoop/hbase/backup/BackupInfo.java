@@ -170,6 +170,8 @@ public class BackupInfo implements Comparable<BackupInfo> {
    */
   private boolean noChecksumVerify;
 
+  private boolean isInvalidAncestry = false;
+
   public BackupInfo() {
     backupTableInfoMap = new HashMap<>();
   }
@@ -201,6 +203,14 @@ public class BackupInfo implements Comparable<BackupInfo> {
 
   public void setBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;
+  }
+
+  public void setInvalidAncestry(boolean invalidAncestry) {
+    isInvalidAncestry = invalidAncestry;
+  }
+
+  public boolean isInvalidAncestry() {
+    return isInvalidAncestry;
   }
 
   public void setNoChecksumVerify(boolean noChecksumVerify) {
@@ -423,6 +433,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     builder.setBackupType(BackupProtos.BackupType.valueOf(getType().name()));
     builder.setWorkersNumber(workers);
     builder.setBandwidth(bandwidth);
+    builder.setIsInvalidAncestry(isInvalidAncestry);
     return builder.build();
   }
 
@@ -518,6 +529,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     context.setType(BackupType.valueOf(proto.getBackupType().name()));
     context.setWorkers(proto.getWorkersNumber());
     context.setBandwidth(proto.getBandwidth());
+    context.setInvalidAncestry(proto.getIsInvalidAncestry());
     return context;
   }
 
