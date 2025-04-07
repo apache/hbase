@@ -65,42 +65,22 @@ public class TestReadOnlyController {
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, ReadOnlyController.class.getName());
     // Add the ReadOnlyController coprocessor to for master to interrupt any write operation
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, ReadOnlyController.class.getName());
-    try{
-      // Start the test cluster
-      TEST_UTIL.startMiniCluster(2);
-      // Get connection to the HBase
-      connection = ConnectionFactory.createConnection(conf);
-      // Create a test table
-      TestTable = TEST_UTIL.createTable(TEST_TABLE, TEST_FAMILY);
-    } catch (Exception e) {
-      // Do cleanup
-      // Delete the created table
-      TEST_UTIL.deleteTable(TEST_TABLE);
-      // Cleanup for Connection and HBase cluster
-      connection.close();
-      TEST_UTIL.shutdownMiniCluster();
-      throw new RuntimeException(e);
-    }
+    // Start the test cluster
+    TEST_UTIL.startMiniCluster(2);
+    // Get connection to the HBase
+    connection = ConnectionFactory.createConnection(conf);
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
-    // Delete the created table
-    TEST_UTIL.deleteTable(TEST_TABLE);
-    // Cleanup for Connection and HBase cluster
-    connection.close();
+    if (connection != null) {
+      connection.close();
+    }
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
-  public void testPut() throws IOException {
-    final byte[] row1 = Bytes.toBytes("row1");
-    final byte[] value = Bytes.toBytes("abcd");
-    // Put a row in the table which should throw and exception
-    Put put = new Put(row1);
-    put.addColumn(TEST_FAMILY, null, value);
-    TestTable.put(put);
-    // This should throw IOException
-    exception.expect(IOException.class);
+  @Test(expected = IOException.class)
+  public void testCreateTable() throws IOException {
+    TEST_UTIL.createTable(TEST_TABLE, TEST_FAMILY);
   }
 }

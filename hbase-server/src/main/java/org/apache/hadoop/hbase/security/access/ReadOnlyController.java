@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
@@ -84,6 +85,9 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
     WALEdit edit) throws IOException {
+    if (edit.isMetaEdit() || edit.isEmpty()) {
+      return;
+    }
     internalReadOnlyGuard();
   }
 
@@ -95,7 +99,13 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
-    internalReadOnlyGuard();
+    for (int i = 0; i < miniBatchOp.size(); i++) {
+      WALEdit edit = miniBatchOp.getWalEdit(i);
+      if (edit == null || edit.isMetaEdit() || edit.isEmpty()) {
+        continue;
+      }
+      internalReadOnlyGuard();
+    }
   }
 
   @Override
