@@ -26,12 +26,14 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import java.util.Set;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -39,6 +41,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestBackupDeleteWithContinuousBackupAndPITR extends TestBackupBase {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestBackupDeleteWithContinuousBackupAndPITR.class);
+
   private BackupSystemTable backupSystemTable;
   private String backupId1;
   private String backupId2;
