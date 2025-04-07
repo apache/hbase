@@ -745,7 +745,6 @@ public final class BackupCommands {
       List<TableName> dependentTables = new ArrayList<>();
 
       try (final BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
-        List<BackupInfo> backupHistory = backupSystemTable.getBackupInfos(BackupState.COMPLETE);
         BackupInfo targetBackup = backupSystemTable.readBackupInfo(backupId);
 
         if (targetBackup == null) {
@@ -793,6 +792,7 @@ public final class BackupCommands {
           }
 
           // Check if another valid full backup exists for this table
+          List<BackupInfo> backupHistory = backupSystemTable.getBackupInfos(BackupState.COMPLETE);
           long finalPitrMaxStartTime = pitrMaxStartTime;
           boolean hasAnotherValidBackup = backupHistory.stream()
             .anyMatch(backup -> !backup.getBackupId().equals(backupId) && isValidPITRBackup(backup,

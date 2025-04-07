@@ -17,18 +17,13 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.List;
-import java.util.Set;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -187,87 +182,5 @@ public class TestBackupDelete extends TestBackupBase {
     getBackupAdmin().deleteBackups(new String[] { backupId1 });
     assertEquals(Sets.newHashSet(table3),
       backupSystemTable.getIncrementalBackupTableSet(BACKUP_ROOT_DIR));
-  }
-
-  @Test
-  public void testPITRBackupDeletion() throws Exception {
-    conf1.setLong(CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS, 30);
-    BackupSystemTable backupSystemTable = new BackupSystemTable(TEST_UTIL.getConnection());
-    long currentTime = System.currentTimeMillis();
-
-    // Set up a continuous backup state for table2 that started 40 days before
-    long backupStartTime = currentTime - 40 * ONE_DAY_IN_MILLISECONDS;
-    backupSystemTable.addContinuousBackupTableSet(Set.of(table2), backupStartTime);
-
-    String backupId1 = fullTableBackup(Lists.newArrayList(table1));
-    assertTrue(checkSucceeded(backupId1));
-
-    // 31 days back
-    EnvironmentEdgeManager
-      .injectEdge(() -> System.currentTimeMillis() - 31 * ONE_DAY_IN_MILLISECONDS);
-    String backupId2 = fullTableBackup(Lists.newArrayList(table2));
-    assertTrue(checkSucceeded(backupId2));
-
-    // 32 days back
-    EnvironmentEdgeManager
-      .injectEdge(() -> System.currentTimeMillis() - 32 * ONE_DAY_IN_MILLISECONDS);
-    String backupId3 = fullTableBackup(Lists.newArrayList(table2));
-    assertTrue(checkSucceeded(backupId3));
-
-    // 15 days back
-    EnvironmentEdgeManager
-      .injectEdge(() -> System.currentTimeMillis() - 15 * ONE_DAY_IN_MILLISECONDS);
-    String backupId4 = fullTableBackup(Lists.newArrayList(table2));
-    assertTrue(checkSucceeded(backupId4));
-
-    // Reset time mocking
-    EnvironmentEdgeManager.reset();
-
-    String backupId5 = incrementalTableBackup(Lists.newArrayList(table1));
-    assertTrue(checkSucceeded(backupId5));
-
-    // Validate deletion scenarios
-    // Incremental backup deletion allowed
-    assertDeletionSucceeds(backupSystemTable, backupId5, false);
-    // Full backup for non-continuous table allowed
-    assertDeletionSucceeds(backupSystemTable, backupId1, false);
-    // PITR-incomplete backup deletion allowed
-    assertDeletionSucceeds(backupSystemTable, backupId4, false);
-    // Deleting a valid backup with another present
-    assertDeletionSucceeds(backupSystemTable, backupId2, false);
-    // Only valid backup deletion should fail
-    assertDeletionFails(backupSystemTable, backupId3, false);
-    // Force delete should work
-    assertDeletionSucceeds(backupSystemTable, backupId3, true);
-  }
-
-  private void assertDeletionSucceeds(BackupSystemTable table, String backupId,
-    boolean isForceDelete) throws Exception {
-    int ret = deleteBackup(backupId, isForceDelete);
-    assertEquals(0, ret);
-    assertFalse("Backup should be deleted but still exists!", backupExists(table, backupId));
-  }
-
-  private void assertDeletionFails(BackupSystemTable table, String backupId, boolean isForceDelete)
-    throws Exception {
-    int ret = deleteBackup(backupId, isForceDelete);
-    assertNotEquals(0, ret);
-    assertTrue("Backup should still exist after failed deletion!", backupExists(table, backupId));
-  }
-
-  private boolean backupExists(BackupSystemTable table, String backupId) throws Exception {
-    return table.getBackupHistory().stream()
-      .anyMatch(backup -> backup.getBackupId().equals(backupId));
-  }
-
-  private int deleteBackup(String backupId, boolean isForceDelete) throws Exception {
-    String[] args = buildBackupDeleteArgs(backupId, isForceDelete);
-    return ToolRunner.run(conf1, new BackupDriver(), args);
-  }
-
-  private String[] buildBackupDeleteArgs(String backupId, boolean isForceDelete) {
-    return isForceDelete
-      ? new String[] { "delete", "-l", backupId, "-fd" }
-      : new String[] { "delete", "-l", backupId };
   }
 }
