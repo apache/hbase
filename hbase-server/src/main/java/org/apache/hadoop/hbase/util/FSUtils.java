@@ -515,11 +515,12 @@ public final class FSUtils {
    * @return <code>true</code> if the file exists, otherwise <code>false</code>
    * @throws IOException if checking the FileSystem fails
    */
-  public static boolean checkClusterIdExists(FileSystem fs, Path rootdir, long wait)
+  public static boolean checkClusterIdExists(FileSystem fs, Path rootdir, final String file,
+    long wait)
     throws IOException {
     while (true) {
       try {
-        Path filePath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
+        Path filePath = new Path(rootdir, file);
         return fs.exists(filePath);
       } catch (IOException ioe) {
         if (wait > 0L) {
@@ -593,7 +594,7 @@ public final class FSUtils {
     // then delete the moved-aside file.
     Path movedAsideName = new Path(p + "." + EnvironmentEdgeManager.currentTime());
     if (!fs.rename(p, movedAsideName)) throw new IOException("Failed rename of " + p);
-    setClusterId(fs, rootdir, cid, 100);
+    setClusterId(fs, rootdir, HConstants.CLUSTER_ID_FILE_NAME, cid, 100);
     if (!fs.delete(movedAsideName, false)) {
       throw new IOException("Failed delete of " + movedAsideName);
     }
@@ -611,11 +612,11 @@ public final class FSUtils {
    * @throws IOException if writing to the FileSystem fails and no wait value
    */
   public static void setClusterId(final FileSystem fs, final Path rootdir,
-    final ClusterId clusterId, final long wait) throws IOException {
+    final String file, final ClusterId clusterId, final long wait) throws IOException {
 
-    final Path idFile = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
+    final Path idFile = new Path(rootdir, file);
     final Path tempDir = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY);
-    final Path tempIdFile = new Path(tempDir, HConstants.CLUSTER_ID_FILE_NAME);
+    final Path tempIdFile = new Path(tempDir, file);
 
     LOG.debug("Create cluster ID file [{}] with ID: {}", idFile, clusterId);
 
