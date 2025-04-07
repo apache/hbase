@@ -18,15 +18,24 @@
 package org.apache.hadoop.hbase.backup;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
+import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.impl.FullTableBackupClient;
+import org.apache.hadoop.hbase.backup.impl.IncrementalBackupsDisallowedException;
 import org.apache.hadoop.hbase.backup.impl.IncrementalTableBackupClient;
 import org.apache.hadoop.hbase.backup.impl.TableBackupClient;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public final class BackupClientFactory {
+  private static final Logger LOG = LoggerFactory.getLogger(BackupClientFactory.class);
+
   private BackupClientFactory() {
   }
 
@@ -49,8 +58,45 @@ public final class BackupClientFactory {
     BackupType type = request.getBackupType();
     if (type == BackupType.FULL) {
       return new FullTableBackupClient(conn, backupId, request);
-    } else {
-      return new IncrementalTableBackupClient(conn, backupId, request);
     }
+
+    String latestFullBackup = getLatestFullBackupId(conn, request);
+
+    try (BackupAdmin admin = new BackupAdminImpl(conn)) {
+      boolean disallowFurtherIncrementals =
+        admin.getBackupInfo(latestFullBackup).isDisallowFurtherIncrementals();
+
+      if (!disallowFurtherIncrementals) {
+        return new IncrementalTableBackupClient(conn, backupId, request);
+      }
+
+      if (request.getFailOnDisallowedIncrementals()) {
+        throw new IncrementalBackupsDisallowedException(request);
+      }
+
+      LOG.info("Incremental backups disallowed for backupId {}, creating a full backup",
+        latestFullBackup);
+      return new FullTableBackupClient(conn, backupId, request);
+    }
+  }
+
+  private static String getLatestFullBackupId(Connection conn, BackupRequest request)
+    throws IOException {
+    try (BackupManager backupManager = new BackupManager(conn, conn.getConfiguration())) {
+      // Sorted in desc order by time
+      List<BackupInfo> backups = backupManager.getBackupHistory(true);
+
+      for (BackupInfo info : backups) {
+        if (
+          info.getType() == BackupType.FULL
+            && Objects.equals(info.getBackupRootDir(), request.getTargetRootDir())
+        ) {
+          return info.getBackupId();
+        }
+      }
+    }
+    throw new RuntimeException(
+      "Could not find a valid full backup for incremental request for tables"
+        + request.getTableList());
   }
 }

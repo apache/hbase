@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupHFileCleaner;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
+import org.apache.hadoop.hbase.backup.BackupMasterObserver;
 import org.apache.hadoop.hbase.backup.BackupObserver;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
@@ -131,6 +132,10 @@ public class BackupManager implements Closeable {
           + " Added master procedure manager: {}. Added master observer: {}",
         cleanerClass, masterProcedureClass, BackupHFileCleaner.class.getName(), observerClass);
     }
+
+    String observers = conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      (observers == null ? "" : observers + ",") + BackupMasterObserver.class.getName());
   }
 
   /**

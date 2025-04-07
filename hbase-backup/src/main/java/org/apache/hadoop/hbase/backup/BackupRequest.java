@@ -35,6 +35,11 @@ public final class BackupRequest {
       request = new BackupRequest();
     }
 
+    public Builder withFailOnDisallowedIncrementals(boolean failOnDisallowedIncrementals) {
+      request.failOnDisallowedIncrementals = failOnDisallowedIncrementals;
+      return this;
+    }
+
     public Builder withBackupType(BackupType type) {
       request.setBackupType(type);
       return this;
@@ -89,8 +94,13 @@ public final class BackupRequest {
   private boolean noChecksumVerify = false;
   private String backupSetName;
   private String yarnPoolName;
+  private boolean failOnDisallowedIncrementals = false;
 
   private BackupRequest() {
+  }
+
+  public boolean getFailOnDisallowedIncrementals() {
+    return failOnDisallowedIncrementals;
   }
 
   private BackupRequest setBackupType(BackupType type) {
