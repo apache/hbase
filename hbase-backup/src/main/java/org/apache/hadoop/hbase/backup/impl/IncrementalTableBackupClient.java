@@ -227,6 +227,9 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       result = player.run(args);
     } catch (Exception e) {
       LOG.error("Failed to run MapReduceHFileSplitterJob", e);
+      // Delete the bulkload directory if we fail to run the HFile splitter job for any reason
+      // as it might be re-tried
+      deleteBulkLoadDirectory();
       throw new IOException(e);
     }
 
