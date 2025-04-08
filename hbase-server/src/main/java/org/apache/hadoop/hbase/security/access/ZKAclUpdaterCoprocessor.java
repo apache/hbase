@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -171,6 +172,20 @@ public class ZKAclUpdaterCoprocessor
   @Override
   public Optional<MasterObserver> getMasterObserver() {
     return Optional.of(this);
+  }
+
+  @Override
+  public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
+    /**
+     * We should try to create the ACL table if it does not exist, since if we are using say Ranger
+     * as security coprocessor, it will not create the table for us.
+     */
+    try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
+      if (!admin.tableExists(PermissionStorage.ACL_TABLE_NAME)) {
+        AccessController.createACLTable(admin);
+      }
+    }
   }
 
   @Override

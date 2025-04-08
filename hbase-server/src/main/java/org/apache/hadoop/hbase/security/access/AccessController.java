@@ -969,7 +969,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   /**
    * Create the ACL table
    */
-  private static void createACLTable(Admin admin) throws IOException {
+  static void createACLTable(Admin admin) throws IOException {
     /** Table descriptor for ACL table */
     ColumnFamilyDescriptor cfd =
       ColumnFamilyDescriptorBuilder.newBuilder(PermissionStorage.ACL_LIST_FAMILY).setMaxVersions(1)
