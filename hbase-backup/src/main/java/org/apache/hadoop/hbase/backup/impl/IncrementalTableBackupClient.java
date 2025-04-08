@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -59,7 +60,9 @@ import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
@@ -172,25 +175,22 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
 
     for (MergeSplitBulkloadInfo bulkloadInfo : toBulkload.values()) {
-      mergeSplitBulkloads(bulkloadInfo);
-      incrementalCopyBulkloadHFiles(tgtFs, bulkloadInfo.getSrcTable());
+      mergeSplitAndCopyBulkloadedHFiles(bulkloadInfo.getActiveFiles(),
+        bulkloadInfo.getArchiveFiles(), bulkloadInfo.getSrcTable(), tgtFs);
     }
 
     return bulkLoads;
   }
 
-  private void mergeSplitBulkloads(MergeSplitBulkloadInfo bulkload) throws IOException {
+  private void mergeSplitAndCopyBulkloadedHFiles(List<String> activeFiles,
+    List<String> archiveFiles, TableName tn, FileSystem tgtFs) throws IOException {
     int attempt = 1;
-    List<String> activeFiles = bulkload.getActiveFiles();
-    List<String> archiveFiles = bulkload.getArchiveFiles();
-    TableName tn = bulkload.getSrcTable();
-
     while (!activeFiles.isEmpty()) {
       LOG.info("MergeSplit {} active bulk loaded files. Attempt={}", activeFiles.size(), attempt++);
       // Active file can be archived during copy operation,
       // we need to handle this properly
       try {
-        mergeSplitBulkloads(activeFiles, tn);
+        mergeSplitAndCopyBulkloadedHFiles(activeFiles, tn, tgtFs);
         break;
       } catch (IOException e) {
         int numActiveFiles = activeFiles.size();
@@ -204,11 +204,12 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
 
     if (!archiveFiles.isEmpty()) {
-      mergeSplitBulkloads(archiveFiles, tn);
+      mergeSplitAndCopyBulkloadedHFiles(archiveFiles, tn, tgtFs);
     }
   }
 
-  private void mergeSplitBulkloads(List<String> files, TableName tn) throws IOException {
+  private void mergeSplitAndCopyBulkloadedHFiles(List<String> files, TableName tn, FileSystem tgtFs)
+    throws IOException {
     MapReduceHFileSplitterJob player = new MapReduceHFileSplitterJob();
     conf.set(MapReduceHFileSplitterJob.BULK_OUTPUT_CONF_KEY,
       getBulkOutputDirForTable(tn).toString());
@@ -233,6 +234,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       throw new IOException(
         "Failed to run MapReduceHFileSplitterJob with invalid result: " + result);
     }
+
+    incrementalCopyBulkloadHFiles(tgtFs, tn);
   }
 
   private void updateFileLists(List<String> activeFiles, List<String> archiveFiles)

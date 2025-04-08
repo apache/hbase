@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -58,6 +57,7 @@ import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.After;
 import org.junit.Assert;
@@ -68,7 +68,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -101,11 +100,14 @@ public class TestIncrementalBackup extends TestBackupBase {
   public void ensurePreviousBackupTestsAreCleanedUp() throws Exception {
     TEST_UTIL.flush(table1);
     TEST_UTIL.flush(table2);
-    TEST_UTIL.flush(table1_restore);
 
     TEST_UTIL.truncateTable(table1).close();
     TEST_UTIL.truncateTable(table2).close();
-    TEST_UTIL.truncateTable(table1_restore).close();
+
+    if (TEST_UTIL.getAdmin().tableExists(table1_restore)) {
+      TEST_UTIL.flush(table1_restore);
+      TEST_UTIL.truncateTable(table1_restore).close();
+    }
 
     TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().forEach(rst -> {
       try {
@@ -427,6 +429,73 @@ public class TestIncrementalBackup extends TestBackupBase {
 
   }
 
+  @Test
+  public void TestIncBackupRestoreHandlesArchivedFiles() throws Exception {
+    byte[] fam2 = Bytes.toBytes("f2");
+    TableDescriptor newTable1Desc = TableDescriptorBuilder.newBuilder(table1Desc)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam2).build()).build();
+    TEST_UTIL.getAdmin().modifyTable(newTable1Desc);
+    try (Connection conn = ConnectionFactory.createConnection(conf1);
+      BackupAdminImpl admin = new BackupAdminImpl(conn)) {
+      String backupTargetDir = TEST_UTIL.getDataTestDir("backupTarget").toString();
+      BACKUP_ROOT_DIR = new File(backupTargetDir).toURI().toString();
+
+      List<TableName> tables = Lists.newArrayList(table1);
+
+      insertIntoTable(conn, table1, famName, 3, 100);
+      String fullBackupId = takeFullBackup(tables, admin, true);
+      assertTrue(checkSucceeded(fullBackupId));
+
+      insertIntoTable(conn, table1, famName, 4, 100);
+
+      HRegion regionToBulkload = TEST_UTIL.getHBaseCluster().getRegions(table1).get(0);
+      String regionName = regionToBulkload.getRegionInfo().getEncodedName();
+      // Requires a mult-fam bulkload to ensure we're appropriately handling
+      // multi-file bulkloads
+      Path regionDir = doBulkload(table1, regionName, famName, fam2);
+
+      // archive the files in the region directory
+      Path archiveDir =
+        HFileArchiveUtil.getStoreArchivePath(conf1, table1, regionName, Bytes.toString(famName));
+      TEST_UTIL.getTestFileSystem().mkdirs(archiveDir);
+      RemoteIterator<LocatedFileStatus> iter =
+        TEST_UTIL.getTestFileSystem().listFiles(regionDir, true);
+      List<Path> paths = new ArrayList<>();
+      while (iter.hasNext()) {
+        Path path = iter.next().getPath();
+        if (path.toString().contains("_SeqId_")) {
+          paths.add(path);
+        }
+      }
+      assertTrue(paths.size() > 1);
+      Path path = paths.get(0);
+      String name = path.toString();
+      int startIdx = name.lastIndexOf(Path.SEPARATOR);
+      String filename = name.substring(startIdx + 1);
+      Path archiveFile = new Path(archiveDir, filename);
+      // archive 1 of the files
+      boolean success = TEST_UTIL.getTestFileSystem().rename(path, archiveFile);
+      assertTrue(success);
+      assertTrue(TEST_UTIL.getTestFileSystem().exists(archiveFile));
+      assertFalse(TEST_UTIL.getTestFileSystem().exists(path));
+
+      BackupRequest request =
+        createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, true);
+      String incrementalBackupId = admin.backupTables(request);
+      assertTrue(checkSucceeded(incrementalBackupId));
+
+      TableName[] fromTable = new TableName[] { table1 };
+      TableName[] toTable = new TableName[] { table1_restore };
+
+      admin.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, incrementalBackupId, false,
+        fromTable, toTable, true));
+
+      int actualRowCount = TEST_UTIL.countRows(table1_restore);
+      int expectedRowCount = TEST_UTIL.countRows(table1);
+      assertEquals(expectedRowCount, actualRowCount);
+    }
+  }
+
   private void checkThrowsCFMismatch(IOException ex, List<TableName> tables) {
     Throwable cause = Throwables.getRootCause(ex);
     assertEquals(cause.getClass(), ColumnFamilyMismatchException.class);
@@ -448,12 +517,13 @@ public class TestIncrementalBackup extends TestBackupBase {
     return backupId;
   }
 
-  private static void doBulkload(TableName tn, String regionName, byte[]... fams)
+  private static Path doBulkload(TableName tn, String regionName, byte[]... fams)
     throws IOException {
     Path regionDir = createHFiles(tn, regionName, fams);
     Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer> results =
       BulkLoadHFiles.create(conf1).bulkLoad(tn, regionDir);
     assertFalse(results.isEmpty());
+    return regionDir;
   }
 
   private static Path createHFiles(TableName tn, String regionName, byte[]... fams)
