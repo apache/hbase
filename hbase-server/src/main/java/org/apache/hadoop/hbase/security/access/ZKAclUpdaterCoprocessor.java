@@ -1,5 +1,3 @@
-
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,7 +18,6 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -35,11 +32,8 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
-
 import org.apache.hadoop.hbase.client.Put;
-
 import org.apache.hadoop.hbase.client.Table;
-
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
@@ -50,10 +44,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-
 import org.apache.hadoop.hbase.master.MasterServices;
-
-
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -61,13 +52,14 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 
 @CoreCoprocessor
 @InterfaceAudience.Private
-public class ZKAclUpdaterCoprocessor implements  MasterCoprocessor, RegionCoprocessor, MasterObserver, RegionObserver{
+public class ZKAclUpdaterCoprocessor
+  implements MasterCoprocessor, RegionCoprocessor, MasterObserver, RegionObserver {
 
   private static final Logger LOG = LoggerFactory.getLogger(ZKAclUpdaterCoprocessor.class);
 
@@ -90,7 +82,8 @@ public class ZKAclUpdaterCoprocessor implements  MasterCoprocessor, RegionCoproc
   private void initialize(RegionCoprocessorEnvironment e) throws IOException {
     final Region region = e.getRegion();
     Configuration conf = e.getConfiguration();
-    Map<byte[], ListMultimap<String, UserPermission>> tables = org.apache.hadoop.hbase.security.access.PermissionStorage.loadAll(region);
+    Map<byte[], ListMultimap<String, UserPermission>> tables =
+      org.apache.hadoop.hbase.security.access.PermissionStorage.loadAll(region);
     // For each table, write out the table's permissions to the respective
     // znode for that table.
     for (Entry<byte[], ListMultimap<String, UserPermission>> t : tables.entrySet()) {
@@ -133,14 +126,14 @@ public class ZKAclUpdaterCoprocessor implements  MasterCoprocessor, RegionCoproc
         zkPermissionWatcher.writeToZookeeper(entry, serialized);
       }
     } catch (IOException ex) {
-      LOG.error("Failed updating permissions mirror for '" + (currentEntry == null ?
-        "null" :
-        Bytes.toString(currentEntry)) + "'", ex);
+      LOG.error("Failed updating permissions mirror for '"
+        + (currentEntry == null ? "null" : Bytes.toString(currentEntry)) + "'", ex);
     }
   }
 
   /* ---- MasterObserver implementation ---- */
-  @Override public void start(CoprocessorEnvironment env) throws IOException {
+  @Override
+  public void start(CoprocessorEnvironment env) throws IOException {
     CompoundConfiguration conf = new CompoundConfiguration();
     conf.add(env.getConfiguration());
 
@@ -165,9 +158,9 @@ public class ZKAclUpdaterCoprocessor implements  MasterCoprocessor, RegionCoproc
     Preconditions.checkState(zkPermissionWatcher != null, "ZKPermissionWatcher is null");
   }
 
-  @Override public void stop(CoprocessorEnvironment env) {
+  @Override
+  public void stop(CoprocessorEnvironment env) {
   }
-
 
   /*********************************** Observer/Service Getters ***********************************/
   @Override
@@ -192,6 +185,7 @@ public class ZKAclUpdaterCoprocessor implements  MasterCoprocessor, RegionCoproc
       aclRegion = true;
       try {
         initialize(env);
+
       } catch (IOException ex) {
         // if we can't obtain permissions, it's better to fail
         // than perform checks incorrectly
@@ -201,16 +195,16 @@ public class ZKAclUpdaterCoprocessor implements  MasterCoprocessor, RegionCoproc
   }
 
   @Override
-  public void postPut(final ObserverContext<? extends RegionCoprocessorEnvironment> c, final Put put,
-    final WALEdit edit, final Durability durability) {
+  public void postPut(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Put put, final WALEdit edit, final Durability durability) {
     if (aclRegion) {
       updateACL(c.getEnvironment(), put.getFamilyCellMap());
     }
   }
 
   @Override
-  public void postDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> c, final Delete delete,
-    final WALEdit edit, final Durability durability) throws IOException {
+  public void postDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
     if (aclRegion) {
       updateACL(c.getEnvironment(), delete.getFamilyCellMap());
     }
@@ -221,9 +215,10 @@ public class ZKAclUpdaterCoprocessor implements  MasterCoprocessor, RegionCoproc
     final TableName tableName) throws IOException {
     zkPermissionWatcher.deleteTableACLNode(tableName);
   }
+
   @Override
   public void postDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final String namespace) throws IOException {
+    final String namespace) throws IOException {
     zkPermissionWatcher.deleteNamespaceACLNode(namespace);
   }
 

@@ -30,7 +30,6 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
@@ -129,7 +128,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
@@ -649,7 +647,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         accessChecker = rsServices.getAccessChecker();
       }
     }
-
 
     Preconditions.checkState(accessChecker != null, "AccessChecker is null");
 
@@ -1191,7 +1188,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       aclRegion = true;
     }
     initialized = true;
-    }
+  }
 
   @Override
   public void preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
@@ -2526,5 +2523,3 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
 }
-
-
