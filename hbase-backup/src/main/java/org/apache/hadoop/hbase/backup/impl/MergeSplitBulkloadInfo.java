@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class MergeSplitBulkloadInfo {
+class MergeSplitBulkloadInfo {
   private final List<String> activeFiles = new ArrayList<>();
   private final List<String> archiveFiles = new ArrayList<>();
 

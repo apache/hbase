@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -60,9 +59,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
@@ -172,7 +169,6 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         LOG.debug("copying archive {} to {}", archive, tgt);
         bulkloadInfo.addArchivedFiles(archive.toString());
       }
-      toBulkload.put(srcTable, bulkloadInfo);
     }
 
     for (MergeSplitBulkloadInfo bulkloadInfo : toBulkload.values()) {
