@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import org.agrona.collections.MutableLong;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -764,7 +765,8 @@ public final class BackupCommands {
         long pitrWindowDays = getConf().getLong(CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS,
           DEFAULT_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS);
         long currentTime = EnvironmentEdgeManager.getDelegate().currentTime();
-        long pitrMaxStartTime = currentTime - TimeUnit.DAYS.toMillis(pitrWindowDays);
+        final MutableLong pitrMaxStartTime =
+          new MutableLong(currentTime - TimeUnit.DAYS.toMillis(pitrWindowDays));
 
         // For all tables, determine the earliest (minimum) continuous backup start time.
         // This represents the actual earliest point-in-time recovery (PITR) timestamp
@@ -778,7 +780,7 @@ public final class BackupCommands {
         // The PITR max start time should be the maximum of the calculated minimum continuous backup
         // start time and the default PITR max start time (based on the configured window).
         // This ensures that PITR does not extend beyond what is practically possible.
-        pitrMaxStartTime = Math.max(minContinuousBackupStartTime, pitrMaxStartTime);
+        pitrMaxStartTime.set(Math.max(minContinuousBackupStartTime, pitrMaxStartTime.longValue()));
 
         for (TableName table : targetBackup.getTableNames()) {
           // This backup is not necessary for this table since it doesn't have PITR enabled
@@ -786,17 +788,17 @@ public final class BackupCommands {
             continue;
           }
           if (
-            !isValidPITRBackup(targetBackup, table, continuousBackupStartTimes, pitrMaxStartTime)
+            !isValidPITRBackup(targetBackup, table, continuousBackupStartTimes,
+              pitrMaxStartTime.longValue())
           ) {
             continue; // This backup is not crucial for PITR of this table
           }
 
           // Check if another valid full backup exists for this table
           List<BackupInfo> backupHistory = backupSystemTable.getBackupInfos(BackupState.COMPLETE);
-          final long finalPitrMaxStartTime = pitrMaxStartTime;
           boolean hasAnotherValidBackup = backupHistory.stream()
             .anyMatch(backup -> !backup.getBackupId().equals(backupId) && isValidPITRBackup(backup,
-              table, continuousBackupStartTimes, finalPitrMaxStartTime));
+              table, continuousBackupStartTimes, pitrMaxStartTime.longValue()));
 
           if (!hasAnotherValidBackup) {
             dependentTables.add(table);
