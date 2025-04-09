@@ -34,7 +34,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
  * Utility methods for reading, and building the ZooKeeper configuration. The order and priority for
  * reading the config are as follows:
  * <ol>
- * <li>Property with "hbase.zookeeper.property." prefix from HBase XML.</li>
+ * <li>Property with "hbase.zookeeper.property." prefix from HBase XML is added with "zookeeper."
+ * prefix</li>
  * <li>other zookeeper related properties in HBASE XML</li>
  * </ol>
  */
@@ -42,6 +43,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 public final class ZKConfig {
 
   private static final String VARIABLE_START = "${";
+  private static final String ZOOKEEPER_JAVA_PROPERTY_PREFIX = "zookeeper.";
 
   private ZKConfig() {
   }
@@ -57,8 +59,8 @@ public final class ZKConfig {
   }
 
   /**
-   * Directly map all the hbase.zookeeper.property.KEY properties. Synchronize on conf so no loading
-   * of configs while we iterate
+   * Map all hbase.zookeeper.property.KEY properties to zookeeper.property.KEY. Synchronize on conf
+   * so no loading of configs while we iterate
    */
   private static Properties extractZKPropsFromHBaseConfig(final Configuration conf) {
     Properties zkProperties = new Properties();
@@ -73,7 +75,7 @@ public final class ZKConfig {
           if (value.contains(VARIABLE_START)) {
             value = conf.get(key);
           }
-          zkProperties.setProperty(zkKey, value);
+          zkProperties.setProperty(ZOOKEEPER_JAVA_PROPERTY_PREFIX + zkKey, value);
         }
       }
     }
