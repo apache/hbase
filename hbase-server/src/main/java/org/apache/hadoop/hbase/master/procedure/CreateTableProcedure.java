@@ -21,15 +21,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -40,8 +37,6 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
-import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerValidationUtils;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
@@ -295,24 +290,6 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
       setFailure("master-create-table", new IllegalArgumentException(
         "Region Replication cannot exceed " + MAX_REGION_REPLICATION + "."));
       return false;
-    }
-
-    ColumnFamilyDescriptor[] columnFamilyDescriptors = tableDescriptor.getColumnFamilies();
-    for (ColumnFamilyDescriptor cfDesc : columnFamilyDescriptors) {
-      Configuration conf = new CompoundConfiguration().addStringMap(cfDesc.getConfiguration())
-        .addBytesMap(cfDesc.getValues());
-      String className = conf.get(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
-      if (className != null) {
-        try {
-          if (!CompactionPolicy.class.isAssignableFrom(Class.forName(className))) {
-            throw new DoNotRetryIOException("The class " + className + " is not assignable to "
-              + CompactionPolicy.class.getName());
-          }
-        } catch (Exception e) {
-          setFailure("master-create-table", e);
-          return false;
-        }
-      }
     }
 
     if (!tableName.isSystemTable()) {
