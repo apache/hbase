@@ -793,7 +793,7 @@ public final class BackupCommands {
 
           // Check if another valid full backup exists for this table
           List<BackupInfo> backupHistory = backupSystemTable.getBackupInfos(BackupState.COMPLETE);
-          long finalPitrMaxStartTime = pitrMaxStartTime;
+          final long finalPitrMaxStartTime = pitrMaxStartTime;
           boolean hasAnotherValidBackup = backupHistory.stream()
             .anyMatch(backup -> !backup.getBackupId().equals(backupId) && isValidPITRBackup(backup,
               table, continuousBackupStartTimes, finalPitrMaxStartTime));
