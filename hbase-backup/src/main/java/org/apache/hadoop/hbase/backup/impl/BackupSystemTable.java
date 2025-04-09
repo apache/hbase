@@ -168,6 +168,12 @@ public final class BackupSystemTable implements Closeable {
 
   private final static String INCR_BACKUP_SET = "incrbackupset:";
   private final static String CONTINUOUS_BACKUP_SET = "continuousbackupset";
+  /**
+   * Row key identifier for storing the last replicated WAL timestamp in the backup system table for
+   * continuous backup.
+   */
+  private static final String CONTINUOUS_BACKUP_REPLICATION_TIMESTAMP_ROW =
+    "continuous_backup_last_replicated";
   private final static String TABLE_RS_LOG_MAP_PREFIX = "trslm:";
   private final static String RS_LOG_TS_PREFIX = "rslogts:";
 
@@ -1078,6 +1084,86 @@ public final class BackupSystemTable implements Closeable {
       Delete delete = createDeleteForContinuousBackupTableSet(toRemove);
       table.delete(delete);
     }
+  }
+
+  /**
+   * Updates the latest replicated WAL timestamp for a region server in the backup system table.
+   * This is used to track the replication checkpoint for continuous backup and PITR (Point-in-Time
+   * Restore).
+   * @param serverName the server for which the latest WAL timestamp is being recorded
+   * @param timestamp  the timestamp (in milliseconds) of the last WAL entry replicated
+   * @throws IOException if an error occurs while writing to the backup system table
+   */
+  public void updateBackupCheckpointTimestamp(ServerName serverName, long timestamp)
+    throws IOException {
+
+    HBaseProtos.ServerName.Builder serverProto =
+      HBaseProtos.ServerName.newBuilder().setHostName(serverName.getHostname())
+        .setPort(serverName.getPort()).setStartCode(serverName.getStartCode());
+
+    try (Table table = connection.getTable(tableName)) {
+      Put put = createPutForBackupCheckpoint(serverProto.build().toByteArray(), timestamp);
+      if (!put.isEmpty()) {
+        table.put(put);
+      }
+    }
+  }
+
+  /**
+   * Retrieves the latest replicated WAL timestamps for all region servers from the backup system
+   * table. This is used to track the replication checkpoint state for continuous backup and PITR
+   * (Point-in-Time Restore).
+   * @return a map where the key is {@link ServerName} and the value is the latest replicated WAL
+   *         timestamp in milliseconds
+   * @throws IOException if an error occurs while reading from the backup system table
+   */
+  public Map<ServerName, Long> getBackupCheckpointTimestamps() throws IOException {
+    LOG.trace("Fetching latest backup checkpoint timestamps for all region servers.");
+
+    Map<ServerName, Long> checkpointMap = new HashMap<>();
+
+    byte[] rowKey = rowkey(CONTINUOUS_BACKUP_REPLICATION_TIMESTAMP_ROW);
+    Get get = new Get(rowKey);
+    get.addFamily(BackupSystemTable.META_FAMILY);
+
+    try (Table table = connection.getTable(tableName)) {
+      Result result = table.get(get);
+
+      if (result.isEmpty()) {
+        LOG.debug("No checkpoint timestamps found in backup system table.");
+        return checkpointMap;
+      }
+
+      List<Cell> cells = result.listCells();
+      for (Cell cell : cells) {
+        try {
+          HBaseProtos.ServerName protoServer =
+            HBaseProtos.ServerName.parseFrom(CellUtil.cloneQualifier(cell));
+          ServerName serverName = ServerName.valueOf(protoServer.getHostName(),
+            protoServer.getPort(), protoServer.getStartCode());
+
+          long timestamp = Bytes.toLong(CellUtil.cloneValue(cell));
+          checkpointMap.put(serverName, timestamp);
+        } catch (IllegalArgumentException e) {
+          LOG.warn("Failed to parse server name or timestamp from cell: {}", cell, e);
+        }
+      }
+    }
+
+    return checkpointMap;
+  }
+
+  /**
+   * Constructs a {@link Put} operation to update the last replicated WAL timestamp for a given
+   * server in the backup system table.
+   * @param serverNameBytes the serialized server name as bytes
+   * @param timestamp       the WAL entry timestamp to store
+   * @return a {@link Put} object ready to be written to the system table
+   */
+  private Put createPutForBackupCheckpoint(byte[] serverNameBytes, long timestamp) {
+    Put put = new Put(rowkey(CONTINUOUS_BACKUP_REPLICATION_TIMESTAMP_ROW));
+    put.addColumn(BackupSystemTable.META_FAMILY, serverNameBytes, Bytes.toBytes(timestamp));
+    return put;
   }
 
   /**
