@@ -50,11 +50,11 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBa
   public static final String DEFAULT_COMPACTION_POLICY_CLASS_KEY =
     ConfigKey.CLASS("hbase.hstore.defaultengine.compactionpolicy.class", CompactionPolicy.class);
 
-  private static final Class<? extends DefaultStoreFlusher> DEFAULT_STORE_FLUSHER_CLASS =
+  public static final Class<? extends DefaultStoreFlusher> DEFAULT_STORE_FLUSHER_CLASS =
     DefaultStoreFlusher.class;
-  private static final Class<? extends DefaultCompactor> DEFAULT_COMPACTOR_CLASS =
+  public static final Class<? extends DefaultCompactor> DEFAULT_COMPACTOR_CLASS =
     DefaultCompactor.class;
-  private static final Class<? extends RatioBasedCompactionPolicy> DEFAULT_COMPACTION_POLICY_CLASS =
+  public static final Class<? extends RatioBasedCompactionPolicy> DEFAULT_COMPACTION_POLICY_CLASS =
     ExploringCompactionPolicy.class;
 
   @Override
