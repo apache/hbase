@@ -28,8 +28,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
@@ -81,7 +83,7 @@ public class TestAtomicReadQuota {
 
   @Test
   public void testIncrementCountedAgainstReadCapacity() throws Exception {
-    setupQuota();
+    setupGenericQuota();
 
     Increment inc = new Increment(Bytes.toBytes(UUID.randomUUID().toString()));
     inc.addColumn(FAMILY, QUALIFIER, 1);
@@ -90,7 +92,7 @@ public class TestAtomicReadQuota {
 
   @Test
   public void testConditionalRowMutationsCountedAgainstReadCapacity() throws Exception {
-    setupQuota();
+    setupGenericQuota();
 
     byte[] row = Bytes.toBytes(UUID.randomUUID().toString());
     Increment inc = new Increment(row);
@@ -106,7 +108,7 @@ public class TestAtomicReadQuota {
 
   @Test
   public void testNonConditionalRowMutationsOmittedFromReadCapacity() throws Exception {
-    setupQuota();
+    setupGenericQuota();
 
     byte[] row = Bytes.toBytes(UUID.randomUUID().toString());
     Put put = new Put(row);
@@ -123,22 +125,118 @@ public class TestAtomicReadQuota {
 
   @Test
   public void testNonAtomicPutOmittedFromReadCapacity() throws Exception {
-    setupQuota();
-
-    byte[] row = Bytes.toBytes(UUID.randomUUID().toString());
-    Put put = new Put(row);
-    put.addColumn(FAMILY, Bytes.toBytes("doot"), Bytes.toBytes("v"));
-    try (Table table = getTable()) {
-      for (int i = 0; i < 100; i++) {
-        table.put(put);
-      }
-    }
+    setupGenericQuota();
+    runNonAtomicPuts();
   }
 
   @Test
   public void testNonAtomicMultiPutOmittedFromReadCapacity() throws Exception {
-    setupQuota();
+    setupGenericQuota();
+    runNonAtomicPuts();
+  }
 
+  @Test
+  public void testCheckAndMutateCountedAgainstReadCapacity() throws Exception {
+    setupGenericQuota();
+
+    byte[] row = Bytes.toBytes(UUID.randomUUID().toString());
+    byte[] value = Bytes.toBytes("v");
+    Put put = new Put(row);
+    put.addColumn(FAMILY, Bytes.toBytes("doot"), value);
+    CheckAndMutate checkAndMutate =
+      CheckAndMutate.newBuilder(row).ifEquals(FAMILY, QUALIFIER, value).build(put);
+
+    testThrottle(table -> table.checkAndMutate(checkAndMutate));
+  }
+
+  @Test
+  public void testAtomicBatchCountedAgainstReadCapacity() throws Exception {
+    setupGenericQuota();
+
+    byte[] row = Bytes.toBytes(UUID.randomUUID().toString());
+    Increment inc = new Increment(row);
+    inc.addColumn(FAMILY, Bytes.toBytes("doot"), 1);
+
+    List<Increment> incs = new ArrayList<>(2);
+    incs.add(inc);
+    incs.add(inc);
+
+    testThrottle(table -> {
+      List<Result> results = new ArrayList<>(incs.size());
+      for (Increment increment : incs) {
+        results.add(table.increment(increment));
+      }
+      return results;
+    });
+  }
+
+  @Test
+  public void testAtomicBatchCountedAgainstAtomicOnlyReqNum() throws Exception {
+    setupAtomicOnlyReqNumQuota();
+
+    byte[] row = Bytes.toBytes(UUID.randomUUID().toString());
+    Increment inc = new Increment(row);
+    inc.addColumn(FAMILY, Bytes.toBytes("doot"), 1);
+
+    List<Increment> incs = new ArrayList<>(2);
+    incs.add(inc);
+    incs.add(inc);
+
+    testThrottle(table -> {
+      List<Result> results = new ArrayList<>(incs.size());
+      for (Increment increment : incs) {
+        results.add(table.increment(increment));
+      }
+      return results;
+    });
+  }
+
+  @Test
+  public void testAtomicBatchCountedAgainstAtomicOnlyReadSize() throws Exception {
+    setupAtomicOnlyReadSizeQuota();
+
+    byte[] row = Bytes.toBytes(UUID.randomUUID().toString());
+    Increment inc = new Increment(row);
+    inc.addColumn(FAMILY, Bytes.toBytes("doot"), 1);
+
+    List<Increment> incs = new ArrayList<>(2);
+    incs.add(inc);
+    incs.add(inc);
+
+    testThrottle(table -> {
+      List<Result> results = new ArrayList<>(incs.size());
+      for (Increment increment : incs) {
+        results.add(table.increment(increment));
+      }
+      return results;
+    });
+  }
+
+  @Test
+  public void testNonAtomicWritesIgnoredByAtomicOnlyReqNum() throws Exception {
+    setupAtomicOnlyReqNumQuota();
+    runNonAtomicPuts();
+  }
+
+  @Test
+  public void testNonAtomicWritesIgnoredByAtomicOnlyReadSize() throws Exception {
+    setupAtomicOnlyReadSizeQuota();
+    runNonAtomicPuts();
+  }
+
+  @Test
+  public void testNonAtomicReadsIgnoredByAtomicOnlyReqNum() throws Exception {
+    setupAtomicOnlyReqNumQuota();
+    runNonAtomicReads();
+  }
+
+  @Test
+  public void testNonAtomicReadsIgnoredByAtomicOnlyReadSize() throws Exception {
+    setupAtomicOnlyReadSizeQuota();
+    runNonAtomicReads();
+  }
+
+  private void runNonAtomicPuts() throws Exception {
     Put put1 = new Put(Bytes.toBytes(UUID.randomUUID().toString()));
     put1.addColumn(FAMILY, Bytes.toBytes("doot"), Bytes.toBytes("v"));
     Put put2 = new Put(Bytes.toBytes(UUID.randomUUID().toString()));
@@ -158,43 +256,34 @@ public class TestAtomicReadQuota {
     }
   }
 
-  @Test
-  public void testCheckAndMutateCountedAgainstReadCapacity() throws Exception {
-    setupQuota();
-
-    byte[] row = Bytes.toBytes(UUID.randomUUID().toString());
-    byte[] value = Bytes.toBytes("v");
-    Put put = new Put(row);
-    put.addColumn(FAMILY, Bytes.toBytes("doot"), value);
-    CheckAndMutate checkAndMutate =
-      CheckAndMutate.newBuilder(row).ifEquals(FAMILY, QUALIFIER, value).build(put);
-
-    testThrottle(table -> table.checkAndMutate(checkAndMutate));
+  private void runNonAtomicReads() throws Exception {
+    try (Table table = getTable()) {
+      byte[] row = Bytes.toBytes(UUID.randomUUID().toString());
+      Get get = new Get(row);
+      table.get(get);
+    }
   }
 
-  @Test
-  public void testAtomicBatchCountedAgainstReadCapacity() throws Exception {
-    setupQuota();
-
-    byte[] row = Bytes.toBytes(UUID.randomUUID().toString());
-    Increment inc = new Increment(row);
-    inc.addColumn(FAMILY, Bytes.toBytes("doot"), 1);
-
-    List<Increment> incs = new ArrayList<>(2);
-    incs.add(inc);
-    incs.add(inc);
-
-    testThrottle(table -> {
-      Object[] results = new Object[incs.size()];
-      table.batch(incs, results);
-      return results;
-    });
-  }
-
-  private void setupQuota() throws Exception {
+  private void setupGenericQuota() throws Exception {
     try (Admin admin = TEST_UTIL.getAdmin()) {
       admin.setQuota(QuotaSettingsFactory.throttleUser(User.getCurrent().getShortName(),
         ThrottleType.READ_NUMBER, 1, TimeUnit.MINUTES));
+    }
+    ThrottleQuotaTestUtil.triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
+  }
+
+  private void setupAtomicOnlyReqNumQuota() throws Exception {
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      admin.setQuota(QuotaSettingsFactory.throttleUser(User.getCurrent().getShortName(),
+        ThrottleType.ATOMIC_REQUEST_NUMBER, 1, TimeUnit.MINUTES));
+    }
+    ThrottleQuotaTestUtil.triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
+  }
+
+  private void setupAtomicOnlyReadSizeQuota() throws Exception {
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      admin.setQuota(QuotaSettingsFactory.throttleUser(User.getCurrent().getShortName(),
+        ThrottleType.ATOMIC_READ_SIZE, 1, TimeUnit.MINUTES));
     }
     ThrottleQuotaTestUtil.triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
   }
