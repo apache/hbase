@@ -124,7 +124,7 @@ public class TestBackupBase {
       // some often being no-ops. the goal is to help ensure atomicity
       // of that tests that implement TestBackupBase
       try (BackupAdmin backupAdmin = getBackupAdmin()) {
-        backupManager.finishBackupSession();
+        backupManager.finishBackupSession(backupId);
         backupAdmin.listBackupSets().forEach(backupSet -> {
           try {
             backupAdmin.deleteBackupSet(backupSet.getName());
