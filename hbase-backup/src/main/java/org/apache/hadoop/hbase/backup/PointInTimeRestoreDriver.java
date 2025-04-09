@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -74,7 +73,7 @@ public class PointInTimeRestoreDriver extends AbstractRestoreDriver {
     try (final Connection conn = ConnectionFactory.createConnection(conf);
       BackupAdmin client = new BackupAdminImpl(conn)) {
       // Get the replication checkpoint (last known safe point for Continuous Backup)
-      long replicationCheckpoint = BackupUtils.getReplicationCheckpointForContinuousBackup(conn);
+      long replicationCheckpoint = BackupUtils.getReplicationCheckpoint(conn);
       long endTime = replicationCheckpoint;
 
       if (cmd.hasOption(OPTION_TO_DATETIME)) {
@@ -103,9 +102,6 @@ public class PointInTimeRestoreDriver extends AbstractRestoreDriver {
 
       client.pointInTimeRestore(BackupUtils.createPointInTimeRestoreRequest(backupRootDir, check,
         fromTables, toTables, isOverwrite, endTime));
-    } catch (ReplicationException e) {
-      LOG.error("Error while retrieving the replication checkpoint for Continuous Backup.", e);
-      return -5;
     } catch (Exception e) {
       LOG.error("Error while running restore backup", e);
       return -5;

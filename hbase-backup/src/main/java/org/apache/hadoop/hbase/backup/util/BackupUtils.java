@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.backup.util;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -26,10 +28,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
@@ -52,6 +56,7 @@ import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
+import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -787,53 +792,265 @@ public final class BackupUtils {
   }
 
   /**
-   * Retrieves the replication checkpoint for Continuous Backup replication. The replication
-   * checkpoint represents the **last known safe point** up to which all WALs have been fully
-   * processed. This ensures: 1. Point-In-Time Recovery (PITR) requests only restore up to a valid
-   * checkpoint. 2. Incremental Backup includes only WALs that have been completely replicated.
-   * @param conn HBase connection instance
-   * @return The replication checkpoint timestamp (last safe point for Continuous Backup)
-   * @throws ReplicationException If there is an issue fetching replication queue data
+   * Returns the replication checkpoint for Continuous Backup. If replication markers are enabled,
+   * it uses the marker-based method for accurate checkpointing. If disabled or if marker-based
+   * retrieval fails, it falls back to using WAL file timestamps.
+   * @param conn HBase connection
+   * @return Safe checkpoint timestamp
+   * @throws IOException in case of HBase access issues
    */
-  public static long getReplicationCheckpointForContinuousBackup(Connection conn)
-    throws ReplicationException {
+  public static long getSafeReplicationCheckpointForContinuousBackup(Connection conn)
+    throws IOException {
+
+    Configuration conf = conn.getConfiguration();
+    boolean replicationMarkerEnabled =
+      conf.getBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
+
+    if (replicationMarkerEnabled) {
+      try {
+        long markerCheckpoint = getCheckpointFromMarkers(conn);
+        LOG.info("Using replication marker-based checkpoint: {}", markerCheckpoint);
+        return markerCheckpoint;
+      } catch (IOException e) {
+        LOG.warn("Failed to fetch marker-based checkpoint. Falling back to WAL-based method.", e);
+      }
+    } else {
+      LOG.warn(
+        """
+            Replication Marker Chore is currently disabled. This chore provides more accurate replication checkpointing.
+            To enable it, add the following to your configuration:
+              hbase.regionserver.replication.marker.enabled=true
+            After enabling it, wait for:
+              hbase.regionserver.replication.marker.chore.duration
+            before retrying, to allow the markers to propagate.
+            Proceeding with fallback to WAL-based checkpoint.
+            """);
+    }
+
+    long fallbackCheckpoint = getCheckpointFromWALs(conn);
+    LOG.info("Using WAL-based checkpoint: {}", fallbackCheckpoint);
+    return fallbackCheckpoint;
+  }
+
+  private static long getCheckpointFromMarkers(Connection conn) throws IOException {
     // Initial assumption: The replication checkpoint is the current time.
     long replicationCheckpoint = EnvironmentEdgeManager.getDelegate().currentTime();
-    LOG.info("Starting to fetch replication checkpoint for Continuous Backup.");
+    LOG.info("Starting to fetch replication checkpoint using replication markers.");
 
-    ReplicationQueueStorage queueStorage =
-      ReplicationStorageFactory.getReplicationQueueStorage(conn, conn.getConfiguration());
+    try (BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
+      Map<ServerName, Long> serverNameLongMap = backupSystemTable.getBackupCheckpointTimestamps();
 
-    // Retrieve all replication queue IDs for Continuous Backup Replication Peer
-    List<ReplicationQueueId> queueIds =
-      queueStorage.listAllQueueIds(CONTINUOUS_BACKUP_REPLICATION_PEER);
-    LOG.info("Found {} replication queue(s) for Continuous Backup.", queueIds.size());
-
-    for (ReplicationQueueId queueId : queueIds) {
-      LOG.debug("Processing replication queue: {}", queueId);
-
-      Map<String, ReplicationGroupOffset> offsets = queueStorage.getOffsets(queueId);
-
-      // Check if there are no replication offsets in the current queue
-      if (offsets.isEmpty()) {
-        LOG.warn("No WAL offsets found in queue: {}", queueId);
+      if (serverNameLongMap.isEmpty()) {
+        LOG.warn("No replication checkpoints found in system table.");
+        return replicationCheckpoint;
       }
 
-      // Iterate through each WAL group in the queue
-      for (ReplicationGroupOffset replicationOffset : offsets.values()) {
-        String latestWalFile = replicationOffset.getWal();
-        long walTimestamp = AbstractFSWALProvider.getTimestamp(latestWalFile);
+      ReplicationQueueStorage queueStorage =
+        ReplicationStorageFactory.getReplicationQueueStorage(conn, conn.getConfiguration());
+      List<ReplicationQueueId> queueIds =
+        queueStorage.listAllQueueIds(CONTINUOUS_BACKUP_REPLICATION_PEER);
 
-        LOG.debug("Processing WAL file: {}, Timestamp: {}", latestWalFile, walTimestamp);
+      Set<ServerName> activeReplicators = new HashSet<>();
+      for (ReplicationQueueId queueId : queueIds) {
+        activeReplicators.add(queueId.getServerName());
+      }
 
-        // Update replication checkpoint with the earliest WAL timestamp seen
-        replicationCheckpoint = Math.min(replicationCheckpoint, walTimestamp - 1);
+      LOG.info("Found {} active replicators.", activeReplicators.size());
+
+      boolean found = false;
+      for (Map.Entry<ServerName, Long> entry : serverNameLongMap.entrySet()) {
+        if (activeReplicators.contains(entry.getKey())) {
+          replicationCheckpoint = Math.min(replicationCheckpoint, entry.getValue());
+          found = true;
+        }
+      }
+
+      if (!found) {
+        LOG.warn("No valid checkpoints found among active region servers.");
+      }
+    } catch (ReplicationException e) {
+      throw new IOException("Error reading replication queue storage", e);
+    }
+
+    return replicationCheckpoint;
+  }
+
+  private static long getCheckpointFromWALs(Connection conn) throws IOException {
+    long replicationCheckpoint = EnvironmentEdgeManager.getDelegate().currentTime();
+    LOG.info("Starting to fetch replication checkpoint from WALs.");
+
+    try {
+      ReplicationQueueStorage queueStorage =
+        ReplicationStorageFactory.getReplicationQueueStorage(conn, conn.getConfiguration());
+
+      List<ReplicationQueueId> queueIds =
+        queueStorage.listAllQueueIds(CONTINUOUS_BACKUP_REPLICATION_PEER);
+
+      for (ReplicationQueueId queueId : queueIds) {
+        Map<String, ReplicationGroupOffset> offsets = queueStorage.getOffsets(queueId);
+        for (ReplicationGroupOffset offset : offsets.values()) {
+          String wal = offset.getWal();
+          long ts = AbstractFSWALProvider.getTimestamp(wal);
+          replicationCheckpoint = Math.min(replicationCheckpoint, ts - 1);
+        }
+      }
+
+      return replicationCheckpoint;
+    } catch (ReplicationException e) {
+      throw new IOException("Error fetching checkpoint from WALs", e);
+    }
+  }
+
+  /**
+   * Calculates the replication checkpoint timestamp used for continuous backup.
+   * <p>
+   * A replication checkpoint is the earliest timestamp across all region servers such that every
+   * WAL entry before that point is known to be replicated to the target system. This is essential
+   * for features like Point-in-Time Restore (PITR) and incremental backups, where we want to
+   * confidently restore data to a consistent state without missing updates.
+   * <p>
+   * The checkpoint is calculated using a combination of:
+   * <ul>
+   * <li>The start timestamps of WAL files currently being replicated for each server.</li>
+   * <li>The latest successfully replicated timestamp recorded by the replication marker chore.</li>
+   * </ul>
+   * <p>
+   * We combine these two sources to handle the following challenges:
+   * <ul>
+   * <li><b>Stale WAL start times:</b> If replication traffic is low or WALs are long-lived, the
+   * replication offset may point to the same WAL for a long time, resulting in stale timestamps
+   * that underestimate progress. This could delay PITR unnecessarily.</li>
+   * <li><b>Limitations of marker-only tracking:</b> The replication marker chore stores the last
+   * successfully replicated timestamp per region server in a system table. However, this data may
+   * become stale if the server goes offline or region ownership changes. For example, if a region
+   * initially belonged to rs1 and was later moved to rs4 due to re-balancing, rs1’s marker would
+   * persist even though it no longer holds any regions. Relying solely on these stale markers could
+   * lead to incorrect or outdated checkpoints.</li>
+   * </ul>
+   * <p>
+   * To handle these limitations, the method:
+   * <ol>
+   * <li>Verifies that the continuous backup peer exists to ensure replication is enabled.</li>
+   * <li>Retrieves WAL replication queue information for the peer, collecting WAL start times per
+   * region server. This gives us a lower bound for replication progress.</li>
+   * <li>Reads the marker chore's replicated timestamps from the backup system table.</li>
+   * <li>For servers found in both sources, if the marker timestamp is more recent than the WAL's
+   * start timestamp, we use the marker (since replication has progressed beyond the WAL).</li>
+   * <li>We discard marker entries for region servers that are not present in WAL queues, assuming
+   * those servers are no longer relevant (e.g., decommissioned or reassigned).</li>
+   * <li>The checkpoint is the minimum of all chosen timestamps — i.e., the slowest replicating
+   * region server.</li>
+   * <li>Finally, we persist the updated marker information to include any newly participating
+   * region servers.</li>
+   * </ol>
+   * <p>
+   * Note: If the replication marker chore is disabled, we fall back to using only the WAL start
+   * times. This ensures correctness but may lead to conservative checkpoint estimates during idle
+   * periods.
+   * @param conn the HBase connection
+   * @return the calculated replication checkpoint timestamp
+   * @throws IOException if reading replication queues or updating the backup system table fails
+   */
+  public static long getReplicationCheckpoint(Connection conn) throws IOException {
+    Configuration conf = conn.getConfiguration();
+    long checkpoint = EnvironmentEdgeManager.getDelegate().currentTime();
+
+    // Step 1: Ensure the continuous backup replication peer exists
+    if (!continuousBackupReplicationPeerExists(conn.getAdmin())) {
+      String msg = "Replication peer '" + CONTINUOUS_BACKUP_REPLICATION_PEER
+        + "' not found. Continuous backup not enabled.";
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
+
+    // Step 2: Get all replication queues for the continuous backup peer
+    ReplicationQueueStorage queueStorage =
+      ReplicationStorageFactory.getReplicationQueueStorage(conn, conf);
+
+    List<ReplicationQueueId> queueIds;
+    try {
+      queueIds = queueStorage.listAllQueueIds(CONTINUOUS_BACKUP_REPLICATION_PEER);
+    } catch (ReplicationException e) {
+      String msg = "Failed to retrieve replication queue IDs for peer '"
+        + CONTINUOUS_BACKUP_REPLICATION_PEER + "'";
+      LOG.error(msg, e);
+      throw new IOException(msg, e);
+    }
+
+    if (queueIds.isEmpty()) {
+      String msg = "Replication peer '" + CONTINUOUS_BACKUP_REPLICATION_PEER + "' has no queues. "
+        + "This may indicate that continuous backup replication is not initialized correctly.";
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
+
+    // Step 3: Build a map of ServerName -> WAL start timestamp (lowest seen per server)
+    Map<ServerName, Long> serverToCheckpoint = new HashMap<>();
+    for (ReplicationQueueId queueId : queueIds) {
+      Map<String, ReplicationGroupOffset> offsets;
+      try {
+        offsets = queueStorage.getOffsets(queueId);
+      } catch (ReplicationException e) {
+        String msg = "Failed to fetch WAL offsets for replication queue: " + queueId;
+        LOG.error(msg, e);
+        throw new IOException(msg, e);
+      }
+
+      for (ReplicationGroupOffset offset : offsets.values()) {
+        String walFile = offset.getWal();
+        long ts = AbstractFSWALProvider.getTimestamp(walFile); // WAL creation time
+        ServerName server = queueId.getServerName();
+        // Store the minimum timestamp per server (ts - 1 to avoid edge boundary issues)
+        serverToCheckpoint.merge(server, ts - 1, Math::min);
       }
     }
 
-    // Log the final replication checkpoint determined
-    LOG.info("Final replication checkpoint (last safe point): {}", replicationCheckpoint);
+    // Step 4: If replication markers are enabled, overlay fresher timestamps from backup system
+    // table
+    boolean replicationMarkerEnabled =
+      conf.getBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
+    if (replicationMarkerEnabled) {
+      try (BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
+        Map<ServerName, Long> markerTimestamps = backupSystemTable.getBackupCheckpointTimestamps();
 
-    return replicationCheckpoint;
+        for (Map.Entry<ServerName, Long> entry : markerTimestamps.entrySet()) {
+          ServerName server = entry.getKey();
+          long markerTs = entry.getValue();
+
+          // If marker timestamp is newer, override
+          if (serverToCheckpoint.containsKey(server)) {
+            long current = serverToCheckpoint.get(server);
+            if (markerTs > current) {
+              serverToCheckpoint.put(server, markerTs);
+            }
+          } else {
+            // This server is no longer active (e.g., RS moved or removed); skip
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Skipping replication marker timestamp for invalid server: {}", server);
+            }
+          }
+        }
+
+        // Step 5: Persist current server timestamps into backup system table
+        for (Map.Entry<ServerName, Long> entry : serverToCheckpoint.entrySet()) {
+          backupSystemTable.updateBackupCheckpointTimestamp(entry.getKey(), entry.getValue());
+        }
+      }
+    } else {
+      LOG.warn(
+        "Replication marker chore is disabled. Using WAL-based timestamps only for checkpoint calculation.");
+    }
+
+    // Step 6: Calculate final checkpoint as minimum timestamp across all active servers
+    for (long ts : serverToCheckpoint.values()) {
+      checkpoint = Math.min(checkpoint, ts);
+    }
+
+    return checkpoint;
+  }
+
+  private static boolean continuousBackupReplicationPeerExists(Admin admin) throws IOException {
+    return admin.listReplicationPeers().stream()
+      .anyMatch(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER));
   }
 }
