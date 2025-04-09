@@ -17,12 +17,19 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.ACCEPT_FACTOR_CONFIG_NAME;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BACKING_MAP_PERSISTENCE_CHUNK_SIZE;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BLOCK_ORPHAN_GRACE_PERIOD;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_MIN_FACTOR;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_SINGLE_FACTOR;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.MEMORY_FACTOR_CONFIG_NAME;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.MIN_FACTOR_CONFIG_NAME;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.MULTI_FACTOR_CONFIG_NAME;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.QUEUE_ADDITION_WAIT_TIME;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.SINGLE_FACTOR_CONFIG_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -472,14 +479,13 @@ public class TestBucketCache {
   @Test
   public void testGetPartitionSize() throws IOException {
     // Test default values
-    validateGetPartitionSize(cache, BucketCache.DEFAULT_SINGLE_FACTOR,
-      BucketCache.DEFAULT_MIN_FACTOR);
+    validateGetPartitionSize(cache, DEFAULT_SINGLE_FACTOR, DEFAULT_MIN_FACTOR);
 
     Configuration conf = HBaseConfiguration.create();
     conf.setFloat(MIN_FACTOR_CONFIG_NAME, 0.5f);
-    conf.setFloat(BucketCache.SINGLE_FACTOR_CONFIG_NAME, 0.1f);
-    conf.setFloat(BucketCache.MULTI_FACTOR_CONFIG_NAME, 0.7f);
-    conf.setFloat(BucketCache.MEMORY_FACTOR_CONFIG_NAME, 0.2f);
+    conf.setFloat(SINGLE_FACTOR_CONFIG_NAME, 0.1f);
+    conf.setFloat(MULTI_FACTOR_CONFIG_NAME, 0.7f);
+    conf.setFloat(MEMORY_FACTOR_CONFIG_NAME, 0.2f);
 
     BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
       constructedBlockSizes, writeThreads, writerQLen, null, 100, conf);
@@ -493,13 +499,12 @@ public class TestBucketCache {
   @Test
   public void testCacheSizeCapacity() throws IOException {
     // Test cache capacity (capacity / blockSize) < Integer.MAX_VALUE
-    validateGetPartitionSize(cache, BucketCache.DEFAULT_SINGLE_FACTOR,
-      BucketCache.DEFAULT_MIN_FACTOR);
+    validateGetPartitionSize(cache, DEFAULT_SINGLE_FACTOR, DEFAULT_MIN_FACTOR);
     Configuration conf = HBaseConfiguration.create();
     conf.setFloat(BucketCache.MIN_FACTOR_CONFIG_NAME, 0.5f);
-    conf.setFloat(BucketCache.SINGLE_FACTOR_CONFIG_NAME, 0.1f);
-    conf.setFloat(BucketCache.MULTI_FACTOR_CONFIG_NAME, 0.7f);
-    conf.setFloat(BucketCache.MEMORY_FACTOR_CONFIG_NAME, 0.2f);
+    conf.setFloat(SINGLE_FACTOR_CONFIG_NAME, 0.1f);
+    conf.setFloat(MULTI_FACTOR_CONFIG_NAME, 0.7f);
+    conf.setFloat(MEMORY_FACTOR_CONFIG_NAME, 0.2f);
     try {
       new BucketCache(ioEngineName, Long.MAX_VALUE, 1, constructedBlockSizes, writeThreads,
         writerQLen, null, 100, conf);
@@ -515,9 +520,9 @@ public class TestBucketCache {
     conf.setFloat(ACCEPT_FACTOR_CONFIG_NAME, 0.9f);
     conf.setFloat(MIN_FACTOR_CONFIG_NAME, 0.5f);
     conf.setFloat(EXTRA_FREE_FACTOR_CONFIG_NAME, 0.5f);
-    conf.setFloat(BucketCache.SINGLE_FACTOR_CONFIG_NAME, 0.1f);
-    conf.setFloat(BucketCache.MULTI_FACTOR_CONFIG_NAME, 0.7f);
-    conf.setFloat(BucketCache.MEMORY_FACTOR_CONFIG_NAME, 0.2f);
+    conf.setFloat(SINGLE_FACTOR_CONFIG_NAME, 0.1f);
+    conf.setFloat(MULTI_FACTOR_CONFIG_NAME, 0.7f);
+    conf.setFloat(MEMORY_FACTOR_CONFIG_NAME, 0.2f);
 
     BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
       constructedBlockSizes, writeThreads, writerQLen, null, 100, conf);
@@ -528,12 +533,12 @@ public class TestBucketCache {
     assertEquals(MIN_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f, cache.getMinFactor(), 0);
     assertEquals(EXTRA_FREE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f,
       cache.getExtraFreeFactor(), 0);
-    assertEquals(BucketCache.SINGLE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.1f,
-      cache.getSingleFactor(), 0);
-    assertEquals(BucketCache.MULTI_FACTOR_CONFIG_NAME + " failed to propagate.", 0.7f,
-      cache.getMultiFactor(), 0);
-    assertEquals(BucketCache.MEMORY_FACTOR_CONFIG_NAME + " failed to propagate.", 0.2f,
-      cache.getMemoryFactor(), 0);
+    assertEquals(SINGLE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.1f, cache.getSingleFactor(),
+      0);
+    assertEquals(MULTI_FACTOR_CONFIG_NAME + " failed to propagate.", 0.7f, cache.getMultiFactor(),
+      0);
+    assertEquals(MEMORY_FACTOR_CONFIG_NAME + " failed to propagate.", 0.2f, cache.getMemoryFactor(),
+      0);
   }
 
   @Test
@@ -575,9 +580,9 @@ public class TestBucketCache {
     // be negative, configs don't add to 1.0
     boolean[] expectedOutcomes = { true, false, false, false };
     Map<String,
-      float[]> configMappings = ImmutableMap.of(BucketCache.SINGLE_FACTOR_CONFIG_NAME,
-        singleFactorConfigValues, BucketCache.MULTI_FACTOR_CONFIG_NAME, multiFactorConfigValues,
-        BucketCache.MEMORY_FACTOR_CONFIG_NAME, memoryFactorConfigValues);
+      float[]> configMappings = ImmutableMap.of(SINGLE_FACTOR_CONFIG_NAME, singleFactorConfigValues,
+        MULTI_FACTOR_CONFIG_NAME, multiFactorConfigValues, MEMORY_FACTOR_CONFIG_NAME,
+        memoryFactorConfigValues);
     Configuration conf = HBaseConfiguration.create();
     checkConfigValues(conf, configMappings, expectedOutcomes);
   }
@@ -913,6 +918,51 @@ public class TestBucketCache {
       }
       assertEquals(0, bucketCache.getAllocator().getUsedSize());
       assertEquals(0, bucketCache.backingMap.size());
+    } finally {
+      if (bucketCache != null) {
+        bucketCache.shutdown();
+      }
+      HBASE_TESTING_UTILITY.cleanupTestDir();
+    }
+  }
+
+  @Test
+  public void testOnConfigurationChange() throws Exception {
+    BucketCache bucketCache = null;
+    try {
+      final Path dataTestDir = createAndGetTestDir();
+
+      String ioEngineName = "file:" + dataTestDir + "/bucketNoRecycler.cache";
+
+      Configuration config = HBASE_TESTING_UTILITY.getConfiguration();
+
+      bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        constructedBlockSizes, 1, 1, null, DEFAULT_ERROR_TOLERATION_DURATION, config);
+
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+
+      config.setFloat(ACCEPT_FACTOR_CONFIG_NAME, 0.9f);
+      config.setFloat(MIN_FACTOR_CONFIG_NAME, 0.8f);
+      config.setFloat(EXTRA_FREE_FACTOR_CONFIG_NAME, 0.15f);
+      config.setFloat(SINGLE_FACTOR_CONFIG_NAME, 0.2f);
+      config.setFloat(MULTI_FACTOR_CONFIG_NAME, 0.6f);
+      config.setFloat(MEMORY_FACTOR_CONFIG_NAME, 0.2f);
+      config.setLong(QUEUE_ADDITION_WAIT_TIME, 100);
+      config.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, 500);
+      config.setLong(BACKING_MAP_PERSISTENCE_CHUNK_SIZE, 1000);
+
+      bucketCache.refreshConfiguration(config);
+
+      assertEquals(0.9f, bucketCache.getAcceptableFactor(), 0.01);
+      assertEquals(0.8f, bucketCache.getMinFactor(), 0.01);
+      assertEquals(0.15f, bucketCache.getExtraFreeFactor(), 0.01);
+      assertEquals(0.2f, bucketCache.getSingleFactor(), 0.01);
+      assertEquals(0.6f, bucketCache.getMultiFactor(), 0.01);
+      assertEquals(0.2f, bucketCache.getMemoryFactor(), 0.01);
+      assertEquals(100L, bucketCache.getQueueAdditionWaitTime());
+      assertEquals(500L, bucketCache.getBucketcachePersistInterval());
+      assertEquals(1000L, bucketCache.getPersistenceChunkSize());
+
     } finally {
       if (bucketCache != null) {
         bucketCache.shutdown();

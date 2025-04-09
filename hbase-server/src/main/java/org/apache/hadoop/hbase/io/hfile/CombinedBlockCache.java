@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -468,6 +469,12 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     l1Cache.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
     l2Cache.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
 
+  }
+
+  @Override
+  public void refreshConfiguration(Configuration config) {
+    l1Cache.refreshConfiguration(config);
+    l2Cache.refreshConfiguration(config);
   }
 
   @Override

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -278,5 +279,15 @@ public interface BlockCache extends Iterable<CachedBlock> {
    */
   default boolean waitForCacheInitialization(long timeout) {
     return true;
+  }
+
+  /**
+   * Allows for BlockCache implementations to provide a mean to refresh their configurations. Since
+   * HBASE-28517, CacheConfig implements ConfigurationObserver and registers itself for
+   * notifications of dynamic configuration changes. The default is a noop.
+   * @param config the new configuration to be updated.
+   */
+  default void refreshConfiguration(Configuration config) {
+    // noop
   }
 }

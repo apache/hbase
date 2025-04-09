@@ -479,5 +479,6 @@ public class CacheConfig implements ConfigurationObserver {
         + "hbase.rs.cacheblocksonwrite is changed to {}, "
         + "hbase.rs.evictblocksonclose is changed to {}",
       cacheDataOnRead, cacheDataOnWrite, evictOnClose);
+    blockCache.refreshConfiguration(conf);
   }
 }
