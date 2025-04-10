@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * cache.
  */
 @InterfaceAudience.Private
-public interface BlockCache extends Iterable<CachedBlock>, ConfigurationObserver  {
+public interface BlockCache extends Iterable<CachedBlock>, ConfigurationObserver {
   /**
    * Add block to cache.
    * @param cacheKey The block's cache key.
