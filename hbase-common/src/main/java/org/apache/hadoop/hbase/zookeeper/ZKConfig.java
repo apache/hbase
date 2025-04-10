@@ -59,7 +59,7 @@ public final class ZKConfig {
   }
 
   /**
-   * Map all hbase.zookeeper.property.KEY properties to zookeeper.property.KEY. Synchronize on conf
+   * Map all hbase.zookeeper.property.KEY properties to zookeeper.KEY. Synchronize on conf
    * so no loading of configs while we iterate
    */
   private static Properties extractZKPropsFromHBaseConfig(final Configuration conf) {
