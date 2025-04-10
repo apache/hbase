@@ -28,12 +28,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
@@ -789,116 +787,6 @@ public final class BackupUtils {
       }
     }
     return BackupRestoreConstants.BACKUPID_PREFIX + recentTimestamp;
-  }
-
-  /**
-   * Returns the replication checkpoint for Continuous Backup. If replication markers are enabled,
-   * it uses the marker-based method for accurate checkpointing. If disabled or if marker-based
-   * retrieval fails, it falls back to using WAL file timestamps.
-   * @param conn HBase connection
-   * @return Safe checkpoint timestamp
-   * @throws IOException in case of HBase access issues
-   */
-  public static long getSafeReplicationCheckpointForContinuousBackup(Connection conn)
-    throws IOException {
-
-    Configuration conf = conn.getConfiguration();
-    boolean replicationMarkerEnabled =
-      conf.getBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
-
-    if (replicationMarkerEnabled) {
-      try {
-        long markerCheckpoint = getCheckpointFromMarkers(conn);
-        LOG.info("Using replication marker-based checkpoint: {}", markerCheckpoint);
-        return markerCheckpoint;
-      } catch (IOException e) {
-        LOG.warn("Failed to fetch marker-based checkpoint. Falling back to WAL-based method.", e);
-      }
-    } else {
-      LOG.warn(
-        """
-            Replication Marker Chore is currently disabled. This chore provides more accurate replication checkpointing.
-            To enable it, add the following to your configuration:
-              hbase.regionserver.replication.marker.enabled=true
-            After enabling it, wait for:
-              hbase.regionserver.replication.marker.chore.duration
-            before retrying, to allow the markers to propagate.
-            Proceeding with fallback to WAL-based checkpoint.
-            """);
-    }
-
-    long fallbackCheckpoint = getCheckpointFromWALs(conn);
-    LOG.info("Using WAL-based checkpoint: {}", fallbackCheckpoint);
-    return fallbackCheckpoint;
-  }
-
-  private static long getCheckpointFromMarkers(Connection conn) throws IOException {
-    // Initial assumption: The replication checkpoint is the current time.
-    long replicationCheckpoint = EnvironmentEdgeManager.getDelegate().currentTime();
-    LOG.info("Starting to fetch replication checkpoint using replication markers.");
-
-    try (BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
-      Map<ServerName, Long> serverNameLongMap = backupSystemTable.getBackupCheckpointTimestamps();
-
-      if (serverNameLongMap.isEmpty()) {
-        LOG.warn("No replication checkpoints found in system table.");
-        return replicationCheckpoint;
-      }
-
-      ReplicationQueueStorage queueStorage =
-        ReplicationStorageFactory.getReplicationQueueStorage(conn, conn.getConfiguration());
-      List<ReplicationQueueId> queueIds =
-        queueStorage.listAllQueueIds(CONTINUOUS_BACKUP_REPLICATION_PEER);
-
-      Set<ServerName> activeReplicators = new HashSet<>();
-      for (ReplicationQueueId queueId : queueIds) {
-        activeReplicators.add(queueId.getServerName());
-      }
-
-      LOG.info("Found {} active replicators.", activeReplicators.size());
-
-      boolean found = false;
-      for (Map.Entry<ServerName, Long> entry : serverNameLongMap.entrySet()) {
-        if (activeReplicators.contains(entry.getKey())) {
-          replicationCheckpoint = Math.min(replicationCheckpoint, entry.getValue());
-          found = true;
-        }
-      }
-
-      if (!found) {
-        LOG.warn("No valid checkpoints found among active region servers.");
-      }
-    } catch (ReplicationException e) {
-      throw new IOException("Error reading replication queue storage", e);
-    }
-
-    return replicationCheckpoint;
-  }
-
-  private static long getCheckpointFromWALs(Connection conn) throws IOException {
-    long replicationCheckpoint = EnvironmentEdgeManager.getDelegate().currentTime();
-    LOG.info("Starting to fetch replication checkpoint from WALs.");
-
-    try {
-      ReplicationQueueStorage queueStorage =
-        ReplicationStorageFactory.getReplicationQueueStorage(conn, conn.getConfiguration());
-
-      List<ReplicationQueueId> queueIds =
-        queueStorage.listAllQueueIds(CONTINUOUS_BACKUP_REPLICATION_PEER);
-
-      for (ReplicationQueueId queueId : queueIds) {
-        Map<String, ReplicationGroupOffset> offsets = queueStorage.getOffsets(queueId);
-        for (ReplicationGroupOffset offset : offsets.values()) {
-          String wal = offset.getWal();
-          long ts = AbstractFSWALProvider.getTimestamp(wal);
-          replicationCheckpoint = Math.min(replicationCheckpoint, ts - 1);
-        }
-      }
-
-      return replicationCheckpoint;
-    } catch (ReplicationException e) {
-      throw new IOException("Error fetching checkpoint from WALs", e);
-    }
   }
 
   /**
