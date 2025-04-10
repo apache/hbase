@@ -39,6 +39,9 @@ import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
  * <li>other zookeeper related properties in HBASE XML</li>
  * </ol>
  */
+/**
+ *
+ */
 @InterfaceAudience.Private
 public final class ZKConfig {
 
@@ -58,11 +61,26 @@ public final class ZKConfig {
     return makeZKPropsFromHbaseConfig(conf);
   }
 
+  private static Properties extractZKClientPropsFromHBaseConfig(final Configuration conf) {
+    return extractZKPropsFromHBaseConfig(conf, ZOOKEEPER_JAVA_PROPERTY_PREFIX);
+  }
+
+  // This is only used for the in-process ZK Quorums used mainly for testing, not for
+  // deployments with an external Zookeeper.
+  private static Properties extractZKServerPropsFromHBaseConfig(final Configuration conf) {
+    return extractZKPropsFromHBaseConfig(conf, "");
+  }
+
   /**
-   * Map all hbase.zookeeper.property.KEY properties to zookeeper.KEY. Synchronize on conf
-   * so no loading of configs while we iterate
+   * Map all hbase.zookeeper.property.KEY properties to targetPrefix.KEY. Synchronize on conf so no
+   * loading of configs while we iterate This is rather messy, as we use the same prefix for both
+   * ZKClientConfig and for the HQuorum properties. ZKClientConfig props all have the zookeeper.
+   * prefix, while the HQuorum server props don't, and ZK automagically sets a system property
+   * adding a zookeeper. prefix to the non HQuorum properties, so we need to add the "zookeeper."
+   * prefix for ZKClientConfig but not for the HQuorum props.
    */
-  private static Properties extractZKPropsFromHBaseConfig(final Configuration conf) {
+  private static Properties extractZKPropsFromHBaseConfig(final Configuration conf,
+    final String targetPrefix) {
     Properties zkProperties = new Properties();
 
     synchronized (conf) {
@@ -75,7 +93,7 @@ public final class ZKConfig {
           if (value.contains(VARIABLE_START)) {
             value = conf.get(key);
           }
-          zkProperties.setProperty(ZOOKEEPER_JAVA_PROPERTY_PREFIX + zkKey, value);
+          zkProperties.setProperty(targetPrefix + zkKey, value);
         }
       }
     }
@@ -90,7 +108,7 @@ public final class ZKConfig {
    * @return Properties holding mappings representing ZooKeeper config file.
    */
   private static Properties makeZKPropsFromHbaseConfig(Configuration conf) {
-    Properties zkProperties = extractZKPropsFromHBaseConfig(conf);
+    Properties zkProperties = extractZKServerPropsFromHBaseConfig(conf);
 
     // If clientPort is not set, assign the default.
     if (zkProperties.getProperty(HConstants.CLIENT_PORT_STR) == null) {
@@ -327,7 +345,7 @@ public final class ZKConfig {
   }
 
   public static ZKClientConfig getZKClientConfig(Configuration conf) {
-    Properties zkProperties = extractZKPropsFromHBaseConfig(conf);
+    Properties zkProperties = extractZKClientPropsFromHBaseConfig(conf);
     ZKClientConfig zkClientConfig = new ZKClientConfig();
     zkProperties.forEach((k, v) -> zkClientConfig.setProperty(k.toString(), v.toString()));
     return zkClientConfig;
