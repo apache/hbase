@@ -18,24 +18,25 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -47,77 +48,25 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+
 /**
  * A tool to replay WAL files as a M/R job. The WAL can be replayed for a set of tables or all
  * tables, and a time range can be provided (in milliseconds). The WAL is filtered to the passed set
- * of tables and the output can optionally be mapped to another set of tables. WAL replay can also
- * generate HFiles for later bulk importing, in that case the WAL is replayed for a single table
- * only.
+ * of tables and the output can optionally be mapped to another set of tables. WALPlayerWithBulkload
+ * can also replay bulkload operation from WAL files. This is needed for HBASE-28957 Point-in-Time
+ * Recovery feature.
  */
 @InterfaceAudience.Public
-public class WALPlayer
-  extends WALPlayerBase<Mutation, Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation>,
-    OutputFormat<ImmutableBytesWritable, Mutation>> {
-  private static final Logger LOG = LoggerFactory.getLogger(WALPlayer.class);
-  final static String NAME = "WALPlayer";
-  public final static String INPUT_FILES_SEPARATOR_KEY = "wal.input.separator";
-  public final static String IGNORE_MISSING_FILES = "wal.input.ignore.missing.files";
-  public final static String MULTI_TABLES_SUPPORT = "wal.multi.tables.support";
-  protected static final String tableSeparator = ";";
+public class WALPlayerWithBulkload extends
+  WALPlayerBase<MutationOrBulkLoad,
+    Mapper<WALKey, WALEdit, ImmutableBytesWritable, MutationOrBulkLoad>,
+    OutputFormat<ImmutableBytesWritable, MutationOrBulkLoad>> {
+  private static final Logger LOG = LoggerFactory.getLogger(WALPlayerWithBulkload.class);
+  final static String NAME = "WALPlayerWithBulkload";
 
-  public WALPlayer() {
-    super(WALMapper.class, MultiTableOutputFormat.class);
-  }
-
-  protected WALPlayer(final Configuration c) {
-    super(c, WALMapper.class, MultiTableOutputFormat.class);
-  }
-
-  /**
-   * A mapper that just writes out KeyValues. This one can be used together with
-   * {@link CellSortReducer}
-   */
-  static class WALKeyValueMapper extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, Cell> {
-    private Set<String> tableSet = new HashSet<String>();
-    private boolean multiTableSupport = false;
-
-    @Override
-    public void map(WALKey key, WALEdit value, Context context) throws IOException {
-      try {
-        // skip all other tables
-        TableName table = key.getTableName();
-        if (tableSet.contains(table.getNameAsString())) {
-          for (Cell cell : value.getCells()) {
-            if (WALEdit.isMetaEditFamily(cell)) {
-              continue;
-            }
-
-            // Set sequenceId from WALKey, since it is not included by WALCellCodec. The sequenceId
-            // on WALKey is the same value that was on the cells in the WALEdit. This enables
-            // CellSortReducer to use sequenceId to disambiguate duplicate cell timestamps.
-            // See HBASE-27649
-            PrivateCellUtil.setSequenceId(cell, key.getSequenceId());
-
-            byte[] outKey = multiTableSupport
-              ? Bytes.add(table.getName(), Bytes.toBytes(tableSeparator), CellUtil.cloneRow(cell))
-              : CellUtil.cloneRow(cell);
-            context.write(new ImmutableBytesWritable(outKey),
-              new MapReduceExtendedCell(PrivateCellUtil.ensureExtendedCell(cell)));
-          }
-        }
-      } catch (InterruptedException e) {
-        LOG.error("Interrupted while emitting Cell", e);
-        Thread.currentThread().interrupt();
-      }
-    }
-
-    @Override
-    public void setup(Context context) throws IOException {
-      Configuration conf = context.getConfiguration();
-      String[] tables = conf.getStrings(TABLES_KEY);
-      this.multiTableSupport = conf.getBoolean(MULTI_TABLES_SUPPORT, false);
-      Collections.addAll(tableSet, tables);
-    }
+  protected WALPlayerWithBulkload(final Configuration c) {
+    super(c, WALMapper.class, MultiTableOutputFormatWalPlayerWithBulkload.class);
   }
 
   /**
@@ -135,10 +84,10 @@ public class WALPlayer
   }
 
   /**
-   * A mapper that writes out {@link Mutation} to be directly applied to a running HBase instance.
+   * A mapper that writes out {@link Mutation} or list of bulkload files to be directly applied to a
+   * running HBase instance.
    */
-  protected static class WALMapper
-    extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation> {
+  protected static class WALMapper extends WALMapperBase<MutationOrBulkLoad> {
     private Map<TableName, TableName> tables = new TreeMap<>();
 
     @Override
@@ -154,10 +103,59 @@ public class WALPlayer
           ExtendedCell lastCell = null;
           for (ExtendedCell cell : WALEditInternalHelper.getExtendedCells(value)) {
             context.getCounter(Counter.CELLS_READ).increment(1);
+
+            // Handle BulkLoad WAL entries
+            if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
+              String namespace = key.getTableName().getNamespaceAsString();
+              String tableName = key.getTableName().getQualifierAsString();
+              LOG.debug("Processing bulk load for namespace: {}, table: {}", namespace, tableName);
+
+              List<String> bulkloadFiles = handleBulkLoadCell(cell);
+              LOG.info("Found {} bulk load files for table: {}", bulkloadFiles.size(), tableName);
+
+              // Prefix each file path with namespace and table name to construct the full paths
+              List<String> bulkloadFilesWithFullPath = new ArrayList<>();
+              for (String filePath : bulkloadFiles) {
+                String fullPath = new Path(namespace, new Path(tableName, filePath)).toString();
+                bulkloadFilesWithFullPath.add(fullPath);
+              }
+              LOG.debug("Bulk load files with full paths: {}", bulkloadFilesWithFullPath.size());
+
+              // Retrieve configuration and set up file systems for backup and staging locations
+              Configuration conf = context.getConfiguration();
+              Path backupLocation = new Path(conf.get(BULKLOAD_BACKUP_LOCATION));
+              FileSystem rootFs = CommonFSUtils.getRootDirFileSystem(conf); // HDFS filesystem
+              Path hbaseStagingDir =
+                new Path(CommonFSUtils.getRootDir(conf), HConstants.BULKLOAD_STAGING_DIR_NAME);
+              FileSystem backupFs = FileSystem.get(backupLocation.toUri(), conf);
+              List<String> stagingPaths = new ArrayList<>();
+
+              try {
+                for (String file : bulkloadFilesWithFullPath) {
+                  // Full file path from backupLocation
+                  Path fullBackupFilePath = new Path(backupLocation, file);
+                  // Staging path on HDFS
+                  Path stagingPath = new Path(hbaseStagingDir, file);
+
+                  LOG.info("Copying file from backup location: {} to HDFS staging: {}",
+                    fullBackupFilePath, stagingPath);
+                  // Copy the file from backupLocation to HDFS
+                  FileUtil.copy(backupFs, fullBackupFilePath, rootFs, stagingPath, false, conf);
+
+                  stagingPaths.add(stagingPath.toString());
+                }
+              } catch (IOException e) {
+                LOG.error("Error copying files for bulk load: {}", e.getMessage(), e);
+                throw new IOException("Failed to copy files for bulk load.", e);
+              }
+              context.write(tableOut, MutationOrBulkLoad.fromBulkLoadFiles(stagingPaths));
+            }
+
             // Filtering WAL meta marker entries.
             if (WALEdit.isMetaEditFamily(cell)) {
               continue;
             }
+
             // Allow a subclass filter out this cell.
             if (filter(context, cell)) {
               // A WALEdit may contain multiple operations (HBASE-3584) and/or
@@ -170,11 +168,11 @@ public class WALPlayer
               ) {
                 // row or type changed, write out aggregate KVs.
                 if (put != null) {
-                  context.write(tableOut, put);
+                  context.write(tableOut, MutationOrBulkLoad.fromMutation(put));
                   context.getCounter(Counter.PUTS).increment(1);
                 }
                 if (del != null) {
-                  context.write(tableOut, del);
+                  context.write(tableOut, MutationOrBulkLoad.fromMutation(del));
                   context.getCounter(Counter.DELETES).increment(1);
                 }
                 if (CellUtil.isDelete(cell)) {
@@ -194,12 +192,12 @@ public class WALPlayer
           }
           // write residual KVs
           if (put != null) {
-            context.write(tableOut, put);
+            context.write(tableOut, MutationOrBulkLoad.fromMutation(put));
             context.getCounter(Counter.PUTS).increment(1);
           }
           if (del != null) {
+            context.write(tableOut, MutationOrBulkLoad.fromMutation(del));
             context.getCounter(Counter.DELETES).increment(1);
-            context.write(tableOut, del);
           }
         }
       } catch (InterruptedException e) {
@@ -212,34 +210,57 @@ public class WALPlayer
       return true;
     }
 
+    private List<String> handleBulkLoadCell(Cell cell) throws IOException {
+      List<String> resultFiles = new ArrayList<>();
+      LOG.debug("Bulk load detected in cell. Processing...");
+
+      WALProtos.BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
+      if (bld == null) {
+        LOG.warn("BulkLoadDescriptor is null for cell: {}", cell);
+        return resultFiles;
+      }
+      LOG.debug("BulkLoadDescriptor " + bld.toString());
+      if (!bld.getReplicate()) {
+        LOG.warn("Replication is disabled for bulk load cell: {}", cell);
+      }
+
+      String regionName = bld.getEncodedRegionName().toStringUtf8();
+      List<WALProtos.StoreDescriptor> storesList = bld.getStoresList();
+      if (storesList == null) {
+        LOG.warn("Store descriptor list is null for region: {}", regionName);
+        return resultFiles;
+      }
+
+      for (WALProtos.StoreDescriptor storeDescriptor : storesList) {
+        String columnFamilyName = storeDescriptor.getFamilyName().toStringUtf8();
+        LOG.debug("Processing column family: {}", columnFamilyName);
+
+        List<String> storeFileList = storeDescriptor.getStoreFileList();
+        if (storeFileList == null) {
+          LOG.warn("Store file list is null for column family: {}", columnFamilyName);
+          continue;
+        }
+
+        for (String storeFile : storeFileList) {
+          String hFilePath = getHFilePath(regionName, columnFamilyName, storeFile);
+          LOG.debug("Adding HFile path to bulk load file paths: {}", hFilePath);
+          resultFiles.add(hFilePath);
+        }
+      }
+      return resultFiles;
+    }
+
+    private String getHFilePath(String regionName, String columnFamilyName, String storeFileName) {
+      return new Path(regionName, new Path(columnFamilyName, storeFileName)).toString();
+    }
+
     @Override
     protected void
-      cleanup(Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation>.Context context)
+      cleanup(Mapper<WALKey, WALEdit, ImmutableBytesWritable, MutationOrBulkLoad>.Context context)
         throws IOException, InterruptedException {
       super.cleanup(context);
     }
 
-    @SuppressWarnings("checkstyle:EmptyBlock")
-    @Override
-    public void setup(Context context) throws IOException {
-      String[] tableMap = context.getConfiguration().getStrings(TABLE_MAP_KEY);
-      String[] tablesToUse = context.getConfiguration().getStrings(TABLES_KEY);
-      if (tableMap == null) {
-        tableMap = tablesToUse;
-      }
-      if (tablesToUse == null) {
-        // Then user wants all tables.
-      } else if (tablesToUse.length != tableMap.length) {
-        // this can only happen when WALMapper is used directly by a class other than WALPlayer
-        throw new IOException("Incorrect table mapping specified .");
-      }
-      int i = 0;
-      if (tablesToUse != null) {
-        for (String table : tablesToUse) {
-          tables.put(TableName.valueOf(table), TableName.valueOf(tableMap[i++]));
-        }
-      }
-    }
   }
 
   /**
@@ -260,9 +281,6 @@ public class WALPlayer
       .println("                  <tableMappings>, a comma separated list of target " + "tables.");
     System.err
       .println("                  If specified, each table in <tables> must have a " + "mapping.");
-    System.err.println("To generate HFiles to bulk load instead of loading HBase directly, pass:");
-    System.err.println(" -D" + BULK_OUTPUT_CONF_KEY + "=/path/for/output");
-    System.err.println(" Only one table can be specified, and no mapping allowed!");
     System.err.println("To specify a time range, pass:");
     System.err.println(" -D" + WALInputFormat.START_TIME_KEY + "=[date|ms]");
     System.err.println(" -D" + WALInputFormat.END_TIME_KEY + "=[date|ms]");
@@ -272,7 +290,7 @@ public class WALPlayer
     System.err.println(" E.g. 1234567890120 or 2009-02-13T23:32:30.12");
     System.err.println("Other options:");
     System.err.println(" -D" + JOB_NAME_CONF_KEY + "=jobName");
-    System.err.println(" Use the specified mapreduce job name for the wal player");
+    System.err.println(" Use the specified mapreduce job name for the walPlayerWithBulkload");
     System.err.println(" -Dwal.input.separator=' '");
     System.err.println(" Change WAL filename separator (WAL dir names use default ','.)");
     System.err.println("For performance also consider the following options:\n"
@@ -285,7 +303,7 @@ public class WALPlayer
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
-    int ret = ToolRunner.run(new WALPlayer(HBaseConfiguration.create()), args);
+    int ret = ToolRunner.run(new WALPlayerWithBulkload(HBaseConfiguration.create()), args);
     System.exit(ret);
   }
 
