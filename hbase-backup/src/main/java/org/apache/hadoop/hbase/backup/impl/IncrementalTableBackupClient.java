@@ -366,6 +366,9 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     List<String> incrBackupFileList = backupInfo.getIncrBackupFileList();
     // Get list of tables in incremental backup set
     Set<TableName> tableSet = backupManager.getIncrementalBackupTableSet();
+    if (backupInfo.isContinuousBackupEnabled()) {
+      tableSet = backupManager.getContinuousBackupTableSet().keySet();
+    }
     // filter missing files out (they have been copied by previous backups)
     incrBackupFileList = filterMissingFiles(incrBackupFileList);
     List<String> tableList = new ArrayList<String>();
@@ -378,7 +381,6 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       }
     }
     walToHFiles(incrBackupFileList, tableList);
-
   }
 
   protected boolean tableExists(TableName table, Connection conn) throws IOException {
