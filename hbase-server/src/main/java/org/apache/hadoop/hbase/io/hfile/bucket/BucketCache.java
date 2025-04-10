@@ -2179,7 +2179,7 @@ public class BucketCache implements BlockCache, HeapSize {
       backingMap.entrySet().stream().forEach(entry -> {
         if (
           entry.getKey().getHfileName().equals(fileName.getName())
-            && entry.getKey().getBlockType().equals(BlockType.DATA)
+            && entry.getKey().getBlockType().isData()
         ) {
           long offsetToLock = entry.getValue().offset();
           LOG.debug("found block {} in the backing map. Acquiring read lock for offset {}",
@@ -2197,7 +2197,6 @@ public class BucketCache implements BlockCache, HeapSize {
           }
         }
       });
-      int metaCount = totalBlockCount - dataBlockCount;
       // BucketCache would only have data blocks
       if (dataBlockCount == count.getValue()) {
         LOG.debug("File {} has now been fully cached.", fileName);
@@ -2217,17 +2216,14 @@ public class BucketCache implements BlockCache, HeapSize {
             + "and try the verification again.", fileName.getName());
           Thread.sleep(100);
           notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
-        } else
-          if ((getAllCacheKeysForFile(fileName.getName()).size() - metaCount) == dataBlockCount) {
-            LOG.debug("We counted {} data blocks, expected was {}, there was no more pending in "
-              + "the cache write queue but we now found that total cached blocks for file {} "
-              + "is equal to data block count.", count, dataBlockCount, fileName.getName());
-            fileCacheCompleted(fileName, size);
-          } else {
-            LOG.info("We found only {} data blocks cached from a total of {} for file {}, "
+        } else {
+          LOG.info(
+            "The total block count was {}. We found only {} data blocks cached from "
+              + "a total of {} data blocks for file {}, "
               + "but no blocks pending caching. Maybe cache is full or evictions "
-              + "happened concurrently to cache prefetch.", count, dataBlockCount, fileName);
-          }
+              + "happened concurrently to cache prefetch.",
+            totalBlockCount, count, dataBlockCount, fileName);
+        }
       }
     } catch (InterruptedException e) {
       throw new RuntimeException(e);

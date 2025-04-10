@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.ACCEPT_FACTOR_CONFIG_NAME;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BLOCK_ORPHAN_GRACE_PERIOD;
-import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.MIN_FACTOR_CONFIG_NAME;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.QUEUE_ADDITION_WAIT_TIME;
@@ -913,7 +912,31 @@ public class TestBucketCache {
     try {
       Path filePath =
         new Path(HBASE_TESTING_UTILITY.getDataTestDir(), "testNotifyFileCachingCompletedSuccess");
-      bucketCache = testNotifyFileCachingCompletedForTenBlocks(filePath, 10);
+      bucketCache = testNotifyFileCachingCompletedForTenBlocks(filePath, 10, false);
+      if (bucketCache.getStats().getFailedInserts() > 0) {
+        LOG.info("There were {} fail inserts, "
+          + "will assert if total blocks in backingMap equals (10 - failInserts) "
+          + "and file isn't listed as fully cached.", bucketCache.getStats().getFailedInserts());
+        assertEquals(10 - bucketCache.getStats().getFailedInserts(), bucketCache.backingMap.size());
+        assertFalse(bucketCache.fullyCachedFiles.containsKey(filePath.getName()));
+      } else {
+        assertTrue(bucketCache.fullyCachedFiles.containsKey(filePath.getName()));
+      }
+    } finally {
+      if (bucketCache != null) {
+        bucketCache.shutdown();
+      }
+      HBASE_TESTING_UTILITY.cleanupTestDir();
+    }
+  }
+
+  @Test
+  public void testNotifyFileCachingCompletedForEncodedDataSuccess() throws Exception {
+    BucketCache bucketCache = null;
+    try {
+      Path filePath = new Path(HBASE_TESTING_UTILITY.getDataTestDir(),
+        "testNotifyFileCachingCompletedForEncodedDataSuccess");
+      bucketCache = testNotifyFileCachingCompletedForTenBlocks(filePath, 10, true);
       if (bucketCache.getStats().getFailedInserts() > 0) {
         LOG.info("There were {} fail inserts, "
           + "will assert if total blocks in backingMap equals (10 - failInserts) "
@@ -939,7 +962,7 @@ public class TestBucketCache {
         "testNotifyFileCachingCompletedNotAllCached");
       // Deliberately passing more blocks than we have created to test that
       // notifyFileCachingCompleted will not consider the file fully cached
-      bucketCache = testNotifyFileCachingCompletedForTenBlocks(filePath, 12);
+      bucketCache = testNotifyFileCachingCompletedForTenBlocks(filePath, 12, false);
       assertFalse(bucketCache.fullyCachedFiles.containsKey(filePath.getName()));
     } finally {
       if (bucketCache != null) {
@@ -950,7 +973,7 @@ public class TestBucketCache {
   }
 
   private BucketCache testNotifyFileCachingCompletedForTenBlocks(Path filePath,
-    int totalBlocksToCheck) throws Exception {
+    int totalBlocksToCheck, boolean encoded) throws Exception {
     final Path dataTestDir = createAndGetTestDir();
     String ioEngineName = "file:" + dataTestDir + "/bucketNoRecycler.cache";
     BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
@@ -958,7 +981,7 @@ public class TestBucketCache {
     long usedByteSize = bucketCache.getAllocator().getUsedSize();
     assertEquals(0, usedByteSize);
     HFileBlockPair[] hfileBlockPairs =
-      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 10, filePath);
+      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 10, filePath, encoded);
     // Add blocks
     for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
       bucketCache.cacheBlock(hfileBlockPair.getBlockName(), hfileBlockPair.getBlock(), false, true);
