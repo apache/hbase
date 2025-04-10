@@ -472,9 +472,9 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
-  public void refreshConfiguration(Configuration config) {
-    l1Cache.refreshConfiguration(config);
-    l2Cache.refreshConfiguration(config);
+  public void onConfigurationChange(Configuration config) {
+    l1Cache.onConfigurationChange(config);
+    l2Cache.onConfigurationChange(config);
   }
 
   @Override

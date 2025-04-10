@@ -951,7 +951,7 @@ public class TestBucketCache {
       config.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, 500);
       config.setLong(BACKING_MAP_PERSISTENCE_CHUNK_SIZE, 1000);
 
-      bucketCache.refreshConfiguration(config);
+      bucketCache.onConfigurationChange(config);
 
       assertEquals(0.9f, bucketCache.getAcceptableFactor(), 0.01);
       assertEquals(0.8f, bucketCache.getMinFactor(), 0.01);

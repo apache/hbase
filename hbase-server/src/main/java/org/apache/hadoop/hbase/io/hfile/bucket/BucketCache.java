@@ -345,7 +345,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     // these sets the dynamic configs
-    this.refreshConfiguration(conf);
+    this.onConfigurationChange(conf);
 
     LOG.info("Instantiating BucketCache with acceptableFactor: " + acceptableFactor
       + ", minFactor: " + minFactor + ", extraFreeFactor: " + extraFreeFactor + ", singleFactor: "
@@ -901,7 +901,7 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public void refreshConfiguration(Configuration config) {
+  public void onConfigurationChange(Configuration config) {
     this.acceptableFactor = conf.getFloat(ACCEPT_FACTOR_CONFIG_NAME, DEFAULT_ACCEPT_FACTOR);
     this.minFactor = conf.getFloat(MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR);
     this.extraFreeFactor = conf.getFloat(EXTRA_FREE_FACTOR_CONFIG_NAME, DEFAULT_EXTRA_FREE_FACTOR);
