@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -32,7 +33,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -138,7 +138,7 @@ public class TestBackupDelete extends TestBackupBase {
       assertTrue(ret == 0);
     } catch (Exception e) {
       LOG.error("failed", e);
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
     String output = baos.toString();
     LOG.info(baos.toString());
@@ -154,7 +154,7 @@ public class TestBackupDelete extends TestBackupBase {
       assertTrue(ret == 0);
     } catch (Exception e) {
       LOG.error("failed", e);
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
     output = baos.toString();
     LOG.info(baos.toString());
