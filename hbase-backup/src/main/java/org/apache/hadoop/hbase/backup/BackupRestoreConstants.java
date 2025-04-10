@@ -104,6 +104,11 @@ public interface BackupRestoreConstants {
   String OPTION_ENABLE_CONTINUOUS_BACKUP_DESC =
     "Flag indicating that the full backup is part of a continuous backup process.";
 
+  String OPTION_FORCE_DELETE = "fd";
+  String LONG_OPTION_FORCE_DELETE = "force-delete";
+  String OPTION_FORCE_DELETE_DESC =
+    "Flag to forcefully delete the backup, even if it may be required for Point-in-Time Restore";
+
   String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
   String BACKUP_CONFIG_STRING = BackupRestoreConstants.BACKUP_ENABLE_KEY + "=true\n"
@@ -137,6 +142,9 @@ public interface BackupRestoreConstants {
     "org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint";
 
   String CONF_CONTINUOUS_BACKUP_WAL_DIR = "hbase.backup.continuous.wal.dir";
+
+  String CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS = "hbase.backup.continuous.pitr.window.days";
+  long DEFAULT_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS = 30;
 
   enum BackupCommand {
     CREATE,
