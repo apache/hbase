@@ -125,6 +125,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -238,11 +239,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
     "hbase.hregion.scan.loadColumnFamiliesOnDemand";
 
-  public static final String HBASE_MAX_CELL_SIZE_KEY = "hbase.server.keyvalue.maxsize";
+  public static final String HBASE_MAX_CELL_SIZE_KEY =
+    ConfigKey.LONG("hbase.server.keyvalue.maxsize");
   public static final int DEFAULT_MAX_CELL_SIZE = 10485760;
 
   public static final String HBASE_REGIONSERVER_MINIBATCH_SIZE =
-    "hbase.regionserver.minibatch.size";
+    ConfigKey.INT("hbase.regionserver.minibatch.size");
   public static final int DEFAULT_HBASE_REGIONSERVER_MINIBATCH_SIZE = 20000;
 
   public static final String WAL_HSYNC_CONF_KEY = "hbase.wal.hsync";
@@ -1538,7 +1540,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final boolean DEFAULT_FAIR_REENTRANT_CLOSE_LOCK = true;
   /** Conf key for the periodic flush interval */
   public static final String MEMSTORE_PERIODIC_FLUSH_INTERVAL =
-    "hbase.regionserver.optionalcacheflushinterval";
+    ConfigKey.INT("hbase.regionserver.optionalcacheflushinterval");
   /** Default interval for the memstore flush */
   public static final int DEFAULT_CACHE_FLUSH_INTERVAL = 3600000;
   /** Default interval for System tables memstore flush */

@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.backup.FailedArchiveException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.ReadOnlyConfiguration;
@@ -129,10 +130,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDes
 @InterfaceAudience.Private
 public class HStore
   implements Store, HeapSize, StoreConfigInformation, PropagatingConfigurationObserver {
-  public static final String MEMSTORE_CLASS_NAME = "hbase.regionserver.memstore.class";
+  public static final String MEMSTORE_CLASS_NAME =
+    ConfigKey.CLASS("hbase.regionserver.memstore.class", MemStore.class);
   public static final String COMPACTCHECKER_INTERVAL_MULTIPLIER_KEY =
-    "hbase.server.compactchecker.interval.multiplier";
-  public static final String BLOCKING_STOREFILES_KEY = "hbase.hstore.blockingStoreFiles";
+    ConfigKey.INT("hbase.server.compactchecker.interval.multiplier");
+  public static final String BLOCKING_STOREFILES_KEY =
+    ConfigKey.INT("hbase.hstore.blockingStoreFiles");
   public static final String BLOCK_STORAGE_POLICY_KEY = "hbase.hstore.block.storage.policy";
   // "NONE" is not a valid storage policy and means we defer the policy to HDFS
   public static final String DEFAULT_BLOCK_STORAGE_POLICY = "NONE";

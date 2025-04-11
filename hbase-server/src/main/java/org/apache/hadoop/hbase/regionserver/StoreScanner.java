@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.ipc.RpcCall;
@@ -127,7 +128,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * timeout checks.
    */
   public static final String HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK =
-    "hbase.cells.scanned.per.heartbeat.check";
+    ConfigKey.LONG("hbase.cells.scanned.per.heartbeat.check");
 
   /**
    * Default value of {@link #HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK}.
@@ -140,7 +141,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * block size for this store. If configured with a value <0, for all scans with ReadType DEFAULT,
    * we will open scanner with stream mode itself.
    */
-  public static final String STORESCANNER_PREAD_MAX_BYTES = "hbase.storescanner.pread.max.bytes";
+  public static final String STORESCANNER_PREAD_MAX_BYTES =
+    ConfigKey.LONG("hbase.storescanner.pread.max.bytes");
 
   private final Scan.ReadType readType;
 
