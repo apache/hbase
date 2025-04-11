@@ -27,8 +27,11 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
+import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.MultiRowRangeFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
@@ -311,24 +314,40 @@ public class RowCounter extends AbstractHBaseTool {
 
   /**
    * Sets filter {@link FilterBase} to the {@link Scan} instance. If provided rowRangeList contains
-   * more than one element, method sets filter which is instance of {@link MultiRowRangeFilter}.
-   * Otherwise, method sets filter which is instance of {@link FirstKeyOnlyFilter}. If rowRangeList
-   * contains exactly one element, startRow and stopRow are set to the scan.
+   * more than one element, method sets filter which is instance of {@link MultiRowRangeFilter}. If
+   * rowRangeList contains exactly one element, startRow and stopRow are set to the scan. Also,
+   * method may apply {@link FirstKeyOnlyFilter} an {@link KeyOnlyFilter} for better performance.
    */
   private static void setScanFilter(Scan scan, List<MultiRowRangeFilter.RowRange> rowRangeList,
     boolean countDeleteMarkers) {
-    final int size = rowRangeList == null ? 0 : rowRangeList.size();
-    // all cells will be needed if --countDeleteMarkers flag is set, hence, skipping filter
-    if (size <= 1 && !countDeleteMarkers) {
-      scan.setFilter(new FirstKeyOnlyFilter());
+    List<Filter> filters = new ArrayList<>();
+
+    // Apply filters for better performance.
+    if (!countDeleteMarkers) {
+      // We only need one cell per row, unless --countDeleteMarkers flag is set.
+      filters.add(new FirstKeyOnlyFilter());
+
+      // We're not interested in values. Use KeyOnlyFilter.
+      // NOTE: Logically, KeyOnlyFilter should be okay for --countDeleteMarkers, because it should
+      // only empty the values, but currently, having a filter changes the behavior of a raw scan.
+      // So we don't use it. See {@link UserScanQueryMatcher#mergeFilterResponse} for more details.
+      filters.add(new KeyOnlyFilter());
     }
+
+    // Depending on the number of ranges, set start/stop row or apply MultiRowRangeFilter.
+    final int size = rowRangeList == null ? 0 : rowRangeList.size();
     if (size == 1) {
       MultiRowRangeFilter.RowRange range = rowRangeList.get(0);
       scan.setStartRow(range.getStartRow()); // inclusive
       scan.setStopRow(range.getStopRow()); // exclusive
     } else if (size > 1) {
-      scan.setFilter(new MultiRowRangeFilter(rowRangeList));
+      filters.add(new MultiRowRangeFilter(rowRangeList));
     }
+
+    if (filters.isEmpty()) {
+      return;
+    }
+    scan.setFilter(filters.size() == 1 ? filters.get(0) : new FilterList(filters));
   }
 
   @Override
