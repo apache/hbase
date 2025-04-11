@@ -85,10 +85,10 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
   public ExtendedCell getKey() {
     if (current.keyBuffer.hasArray()) {
       return new KeyValue.KeyOnlyKeyValue(current.keyBuffer.array(),
-        current.keyBuffer.arrayOffset() + current.keyBuffer.position(), current.keyLength);
+        current.keyBuffer.arrayOffset() + current.keyOffset, current.keyLength);
     } else {
       final byte[] key = new byte[current.keyLength];
-      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyBuffer.position(), 0,
+      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyOffset, 0,
         current.keyLength);
       return new KeyValue.KeyOnlyKeyValue(key, 0, current.keyLength);
     }
@@ -255,9 +255,8 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
     currentBuffer.skip(Bytes.SIZEOF_LONG);
     // key part
     currentBuffer.asSubByteBuffer(currentBuffer.position(), current.keyLength, tmpPair);
-    ByteBuffer key = tmpPair.getFirst().duplicate();
-    key.position(tmpPair.getSecond()).limit(tmpPair.getSecond() + current.keyLength);
-    current.keyBuffer = key;
+    current.keyBuffer = tmpPair.getFirst();
+    current.keyOffset = tmpPair.getSecond();
     currentBuffer.skip(current.keyLength);
     // value part
     current.valueOffset = currentBuffer.position();
@@ -271,7 +270,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
       current.memstoreTS = 0;
     }
     current.nextKvOffset = currentBuffer.position();
-    current.currentKey.setKey(current.keyBuffer, tmpPair.getSecond(), current.keyLength);
+    current.currentKey.setKey(current.keyBuffer, current.keyOffset, current.keyLength);
   }
 
   protected void decodeTags() {
@@ -289,6 +288,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
 
     protected ByteBuff currentBuffer;
     protected int startOffset = -1;
+    protected int keyOffset = -1;
     protected int valueOffset = -1;
     protected int keyLength;
     protected int valueLength;
@@ -298,7 +298,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
     protected ByteBuffer keyBuffer = null;
     protected long memstoreTS;
     protected int nextKvOffset;
-    // buffer backed keyonlyKV
+    // buffer backed keyonlyKV, reset and re-used as necessary to avoid allocations
     private ByteBufferKeyOnlyKeyValue currentKey = new ByteBufferKeyOnlyKeyValue();
 
     protected boolean isValid() {
@@ -307,7 +307,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
 
     protected void invalidate() {
       valueOffset = -1;
-      currentKey = new ByteBufferKeyOnlyKeyValue();
+      currentKey.clear();
       currentBuffer = null;
     }
 
@@ -321,6 +321,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
         nextState.currentKey.getRowPosition() - Bytes.SIZEOF_SHORT, nextState.keyLength);
 
       startOffset = nextState.startOffset;
+      keyOffset = nextState.keyOffset;
       valueOffset = nextState.valueOffset;
       keyLength = nextState.keyLength;
       valueLength = nextState.valueLength;
