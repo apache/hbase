@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
@@ -119,7 +120,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
    * The name of the configuration parameter that specifies the class of a store engine that is used
    * to manage and compact HBase store files.
    */
-  public static final String STORE_ENGINE_CLASS_KEY = "hbase.hstore.engine.class";
+  public static final String STORE_ENGINE_CLASS_KEY =
+    ConfigKey.CLASS("hbase.hstore.engine.class", StoreEngine.class);
 
   private static final Class<? extends StoreEngine<?, ?, ?, ?>> DEFAULT_STORE_ENGINE_CLASS =
     DefaultStoreEngine.class;
