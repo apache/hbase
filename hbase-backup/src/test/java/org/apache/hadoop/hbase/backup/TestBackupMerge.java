@@ -64,7 +64,7 @@ public class TestBackupMerge extends TestBackupBase {
     BackupAdminImpl client = new BackupAdminImpl(conn);
 
     BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
-    String backupIdFull = client.backupTables(request);
+    String backupIdFull = client.backupTables(request).getBackupId();
 
     assertTrue(checkSucceeded(backupIdFull));
 
@@ -85,7 +85,7 @@ public class TestBackupMerge extends TestBackupBase {
     // #3 - incremental backup for multiple tables
     tables = Lists.newArrayList(table1, table2);
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-    String backupIdIncMultiple = client.backupTables(request);
+    String backupIdIncMultiple = client.backupTables(request).getBackupId();
 
     assertTrue(checkSucceeded(backupIdIncMultiple));
 
@@ -97,7 +97,7 @@ public class TestBackupMerge extends TestBackupBase {
 
     // #3 - incremental backup for multiple tables
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-    String backupIdIncMultiple2 = client.backupTables(request);
+    String backupIdIncMultiple2 = client.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(backupIdIncMultiple2));
 
     try (BackupAdmin bAdmin = new BackupAdminImpl(conn)) {
@@ -139,15 +139,15 @@ public class TestBackupMerge extends TestBackupBase {
       List<TableName> tables = Lists.newArrayList(table1, table2);
 
       BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR, true);
-      String backupIdFull = client.backupTables(request);
+      String backupIdFull = client.backupTables(request).getBackupId();
       assertTrue(checkSucceeded(backupIdFull));
 
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, true);
-      String backupIdIncMultiple = client.backupTables(request);
+      String backupIdIncMultiple = client.backupTables(request).getBackupId();
       assertTrue(checkSucceeded(backupIdIncMultiple));
 
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, true);
-      String backupIdIncMultiple2 = client.backupTables(request);
+      String backupIdIncMultiple2 = client.backupTables(request).getBackupId();
       assertTrue(checkSucceeded(backupIdIncMultiple2));
 
       try (BackupAdmin bAdmin = new BackupAdminImpl(conn)) {

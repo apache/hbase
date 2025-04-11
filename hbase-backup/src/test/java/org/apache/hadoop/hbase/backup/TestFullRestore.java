@@ -56,7 +56,7 @@ public class TestFullRestore extends TestBackupBase {
     LOG.info("test full restore on a single table empty table");
 
     List<TableName> tables = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     LOG.info("backup complete");
@@ -92,7 +92,7 @@ public class TestFullRestore extends TestBackupBase {
     TEST_UTIL.compact(tableName, true);
 
     List<TableName> tables = Lists.newArrayList(tableName);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     LOG.info("backup complete");
@@ -114,7 +114,7 @@ public class TestFullRestore extends TestBackupBase {
     LOG.info("test full restore on a single table empty table: command-line");
 
     List<TableName> tables = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     LOG.info("backup complete");
     assertTrue(checkSucceeded(backupId));
     // restore <backup_root_path> <backup_id> <tables> [tableMapping]
@@ -135,7 +135,7 @@ public class TestFullRestore extends TestBackupBase {
     LOG.info("test full restore on a single table: command-line, check only");
 
     List<TableName> tables = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     LOG.info("backup complete");
     assertTrue(checkSucceeded(backupId));
     // restore <backup_root_path> <backup_id> <tables> [tableMapping]
@@ -157,7 +157,7 @@ public class TestFullRestore extends TestBackupBase {
   public void testFullRestoreMultiple() throws Exception {
     LOG.info("create full backup image on multiple tables");
     List<TableName> tables = Lists.newArrayList(table2, table3);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     TableName[] restore_tableset = new TableName[] { table2, table3 };
@@ -181,7 +181,7 @@ public class TestFullRestore extends TestBackupBase {
   public void testFullRestoreMultipleCommand() throws Exception {
     LOG.info("create full backup image on multiple tables: command-line");
     List<TableName> tables = Lists.newArrayList(table2, table3);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     TableName[] restore_tableset = new TableName[] { table2, table3 };
@@ -210,7 +210,7 @@ public class TestFullRestore extends TestBackupBase {
   public void testFullRestoreSingleOverwrite() throws Exception {
     LOG.info("test full restore on a single table empty table");
     List<TableName> tables = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     LOG.info("backup complete");
@@ -229,7 +229,7 @@ public class TestFullRestore extends TestBackupBase {
   public void testFullRestoreSingleOverwriteCommand() throws Exception {
     LOG.info("test full restore on a single table empty table: command-line");
     List<TableName> tables = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     assertTrue(checkSucceeded(backupId));
     LOG.info("backup complete");
     TableName[] tableset = new TableName[] { table1 };
@@ -254,7 +254,7 @@ public class TestFullRestore extends TestBackupBase {
     LOG.info("create full backup image on multiple tables");
 
     List<TableName> tables = Lists.newArrayList(table2, table3);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     TableName[] restore_tableset = new TableName[] { table2, table3 };
@@ -272,7 +272,7 @@ public class TestFullRestore extends TestBackupBase {
     LOG.info("create full backup image on multiple tables: command-line");
 
     List<TableName> tables = Lists.newArrayList(table2, table3);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     TableName[] restore_tableset = new TableName[] { table2, table3 };
@@ -297,7 +297,7 @@ public class TestFullRestore extends TestBackupBase {
   public void testFullRestoreSingleDNE() throws Exception {
     LOG.info("test restore fails on a single table that does not exist");
     List<TableName> tables = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     LOG.info("backup complete");
@@ -317,7 +317,7 @@ public class TestFullRestore extends TestBackupBase {
   public void testFullRestoreSingleDNECommand() throws Exception {
     LOG.info("test restore fails on a single table that does not exist: command-line");
     List<TableName> tables = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     LOG.info("backup complete");
@@ -340,7 +340,7 @@ public class TestFullRestore extends TestBackupBase {
     LOG.info("test restore fails on multiple tables that do not exist");
 
     List<TableName> tables = Lists.newArrayList(table2, table3);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     TableName[] restore_tableset =
@@ -360,7 +360,7 @@ public class TestFullRestore extends TestBackupBase {
     LOG.info("test restore fails on multiple tables that do not exist: command-line");
 
     List<TableName> tables = Lists.newArrayList(table2, table3);
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     TableName[] restore_tableset =

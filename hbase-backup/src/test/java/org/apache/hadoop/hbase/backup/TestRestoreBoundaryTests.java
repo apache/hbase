@@ -47,7 +47,7 @@ public class TestRestoreBoundaryTests extends TestBackupBase {
   @Test
   public void testFullRestoreSingleEmpty() throws Exception {
     LOG.info("test full restore on a single table empty table");
-    String backupId = fullTableBackup(toList(table1.getNameAsString()));
+    String backupId = fullTableBackup(toList(table1.getNameAsString())).getBackupId();
     LOG.info("backup complete");
     TableName[] tableset = new TableName[] { table1 };
     TableName[] tablemap = new TableName[] { table1_restore };
@@ -67,7 +67,7 @@ public class TestRestoreBoundaryTests extends TestBackupBase {
     LOG.info("create full backup image on multiple tables");
 
     List<TableName> tables = toList(table2.getNameAsString(), table3.getNameAsString());
-    String backupId = fullTableBackup(tables);
+    String backupId = fullTableBackup(tables).getBackupId();
     TableName[] restore_tableset = new TableName[] { table2, table3 };
     TableName[] tablemap = new TableName[] { table2_restore, table3_restore };
     getBackupAdmin().restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false,

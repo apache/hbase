@@ -69,7 +69,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     BackupAdminImpl client = new BackupAdminImpl(conn);
 
     BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
-    String backupIdFull = client.backupTables(request);
+    String backupIdFull = client.backupTables(request).getBackupId();
 
     assertTrue(checkSucceeded(backupIdFull));
 
@@ -96,7 +96,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     // #3 - incremental backup for table1
     tables = Lists.newArrayList(table1);
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-    String backupIdIncMultiple = client.backupTables(request);
+    String backupIdIncMultiple = client.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(backupIdIncMultiple));
     // #4 bulk load again
     LOG.debug("bulk loading into " + testName);
@@ -109,7 +109,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     // #5 - incremental backup for table1
     tables = Lists.newArrayList(table1);
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-    String backupIdIncMultiple1 = client.backupTables(request);
+    String backupIdIncMultiple1 = client.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(backupIdIncMultiple1));
     // Delete all data in table1
     TEST_UTIL.deleteTableData(table1);
@@ -124,7 +124,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     Assert.assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH * 2 + actual + actual1);
     request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
 
-    backupIdFull = client.backupTables(request);
+    backupIdFull = client.backupTables(request).getBackupId();
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
       List<BulkLoad> bulkLoads = table.readBulkloadRows(tables);
       assertTrue("bulkloads still has " + bulkLoads.size() + " entries", bulkLoads.isEmpty());

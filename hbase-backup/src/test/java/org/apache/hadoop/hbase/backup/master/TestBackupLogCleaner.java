@@ -40,11 +40,14 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.Lists;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 @Category(LargeTests.class)
 public class TestBackupLogCleaner extends TestBackupBase {
@@ -81,13 +84,21 @@ public class TestBackupLogCleaner extends TestBackupBase {
       assertEquals(walFilesBeforeBackup, deletable);
 
       // Create a FULL backup B1 in backupRoot R1, containing all tables
-      String backupIdB1 = backupTables(BackupType.FULL, tableSetFull, backupRoot1.toString());
+      String backupIdB1 =
+        backupTables(BackupType.FULL, tableSetFull, backupRoot1.toString()).getBackupId();
       assertTrue(checkSucceeded(backupIdB1));
 
       // As part of a backup, WALs are rolled, so we expect a new WAL file
       Set<FileStatus> walFilesAfterB1 =
         mergeAsSet(walFilesBeforeBackup, getListOfWALFiles(TEST_UTIL.getConfiguration()));
       assertTrue(walFilesBeforeBackup.size() < walFilesAfterB1.size());
+
+      String backupIdFull = fullTableBackup(tableSetFull).getBackupId();
+      assertTrue(checkSucceeded(backupIdFull));
+      // Check one more time
+      deletable = cleaner.getDeletableFiles(walFilesAfterB1);
+      // We can delete wal files because they were saved into backup system table table
+      assertTrue(Iterables.size(deletable) == walFilesAfterB1.size());
 
       // Currently, we only have backup B1, so we can delete any WAL preceding B1
       deletable = cleaner.getDeletableFiles(walFilesAfterB1);
@@ -117,7 +128,8 @@ public class TestBackupLogCleaner extends TestBackupBase {
       // Note that incremental tables always include all tables already included in the backup root,
       // i.e. the backup will contain all tables (1, 2, 3, 4), ignoring what we specify here.
       LOG.debug("Creating B2");
-      String backupIdB2 = backupTables(BackupType.INCREMENTAL, tableSet14, backupRoot1.toString());
+      String backupIdB2 =
+        backupTables(BackupType.INCREMENTAL, tableSet14, backupRoot1.toString()).getBackupId();
       assertTrue(checkSucceeded(backupIdB2));
 
       // As part of a backup, WALs are rolled, so we expect a new WAL file
@@ -128,12 +140,17 @@ public class TestBackupLogCleaner extends TestBackupBase {
       // At this point, we have backups in root R1: B1 and B2.
       // We only consider the most recent backup (B2) to determine which WALs can be deleted:
       // all WALs preceding B2
+      List<TableName> tableSetIncList = Lists.newArrayList(table1, table2, table3);
+      String backupIdIncMultiple =
+        backupTables(BackupType.INCREMENTAL, tableSetIncList, BACKUP_ROOT_DIR).getBackupId();
+      assertTrue(checkSucceeded(backupIdIncMultiple));
       deletable = cleaner.getDeletableFiles(walFilesAfterB2);
       assertEquals(toSet(walFilesAfterB1), toSet(deletable));
 
       // Create a FULL backup B3 in backupRoot R2, containing tables 1 & 4
       LOG.debug("Creating B3");
-      String backupIdB3 = backupTables(BackupType.FULL, tableSetFull, backupRoot2.toString());
+      String backupIdB3 =
+        backupTables(BackupType.FULL, tableSetFull, backupRoot2.toString()).getBackupId();
       assertTrue(checkSucceeded(backupIdB3));
 
       // As part of a backup, WALs are rolled, so we expect a new WAL file
@@ -153,7 +170,8 @@ public class TestBackupLogCleaner extends TestBackupBase {
 
       // Create a FULL backup B4 in backupRoot R1, with a subset of tables
       LOG.debug("Creating B4");
-      String backupIdB4 = backupTables(BackupType.FULL, tableSet14, backupRoot1.toString());
+      String backupIdB4 =
+        backupTables(BackupType.FULL, tableSet14, backupRoot1.toString()).getBackupId();
       assertTrue(checkSucceeded(backupIdB4));
 
       // As part of a backup, WALs are rolled, so we expect a new WAL file
@@ -174,7 +192,8 @@ public class TestBackupLogCleaner extends TestBackupBase {
       assertEquals(toSet(walFilesAfterB1), toSet(deletable));
 
       // Create a FULL backup B5 in backupRoot R1, for tables 2 & 3
-      String backupIdB5 = backupTables(BackupType.FULL, tableSet23, backupRoot1.toString());
+      String backupIdB5 =
+        backupTables(BackupType.FULL, tableSet23, backupRoot1.toString()).getBackupId();
       assertTrue(checkSucceeded(backupIdB5));
 
       // As part of a backup, WALs are rolled, so we expect a new WAL file
