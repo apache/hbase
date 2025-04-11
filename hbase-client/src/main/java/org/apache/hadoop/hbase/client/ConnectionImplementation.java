@@ -377,7 +377,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
             int numOfReplicas = 1;
             try {
               RegionLocations metaLocations = this.registry.getMetaRegionLocations()
-                .get(connectionConfig.getReadRpcTimeout(), TimeUnit.MILLISECONDS);
+                .get(connectionConfig.getMetaReadRpcTimeout(), TimeUnit.MILLISECONDS);
               numOfReplicas = metaLocations.size();
             } catch (Exception e) {
               LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
