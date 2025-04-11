@@ -25,6 +25,7 @@ import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -590,6 +591,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     Optional<RpcCall> rpcCall =
       matcher.isUserScan() ? RpcServer.getCurrentCall() : Optional.empty();
+    // re-useable closure to avoid allocations
+    IntConsumer recordBlockSize = blockSize -> {
+      if (rpcCall.isPresent()) {
+        rpcCall.get().incrementBlockBytesScanned(blockSize);
+      }
+      scannerContext.incrementBlockProgress(blockSize);
+    };
 
     int count = 0;
     long totalBytesRead = 0;
@@ -631,12 +639,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           scannerContext.returnImmediately();
         }
 
-        heap.recordBlockSize(blockSize -> {
-          if (rpcCall.isPresent()) {
-            rpcCall.get().incrementBlockBytesScanned(blockSize);
-          }
-          scannerContext.incrementBlockProgress(blockSize);
-        });
+        heap.recordBlockSize(recordBlockSize);
 
         prevCell = cell;
         scannerContext.setLastPeekedCell(cell);
