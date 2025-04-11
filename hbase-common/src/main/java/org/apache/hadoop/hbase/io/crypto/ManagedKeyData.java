@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.crypto;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -51,7 +52,17 @@ import java.util.Base64;
  */
 @InterfaceAudience.Public
 public class ManagedKeyData {
-  public static final String KEY_NAMESPACE_GLOBAL = "*";
+  /**
+   * Special value to be used for custodian or namespace to indicate that it is global, meaning it
+   * is not associated with a specific custodian or namespace.
+   */
+  public static final String KEY_SPACE_GLOBAL = "*";
+
+  /**
+   * Encoded form of global custodian.
+   */
+  public static final String KEY_GLOBAL_CUSTODIAN =
+    ManagedKeyProvider.encodeToStr(KEY_SPACE_GLOBAL.getBytes());
 
   private final byte[] keyCust;
   private final String keyNamespace;
@@ -112,6 +123,12 @@ public class ManagedKeyData {
     this.writeOpCount = writeOpCount;
   }
 
+  @VisibleForTesting
+  public ManagedKeyData cloneWithoutKey() {
+    return new ManagedKeyData(keyCust, keyNamespace, null, keyStatus, keyMetadata,
+      refreshTimestamp, readOpCount, writeOpCount);
+  }
+
   /**
    * Returns the custodian associated with the key.
    *
@@ -167,7 +184,7 @@ public class ManagedKeyData {
   }
 
   @Override public String toString() {
-    return "ManagedKeyData{" + "custSpecix=" + Arrays.toString(keyCust) + ", keyNamespace='"
+    return "ManagedKeyData{" + "keyCustodian=" + Arrays.toString(keyCust) + ", keyNamespace='"
       + keyNamespace + '\'' + ", keyStatus=" + keyStatus + ", keyMetadata='" + keyMetadata + '\''
       + ", refreshTimestamp=" + refreshTimestamp + '}';
   }

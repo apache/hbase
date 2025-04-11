@@ -26,9 +26,10 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   @Override
-  public ManagedKeyStatus enableManagedKeys(String keyCust, String keyNamespace) throws IOException {
+  public ManagedKeyStatus enableKeyManagement(String keyCust, String keyNamespace)
+      throws IOException {
     try {
-      ManagedKeysResponse response = stub.enableManagedKeys(null,
+      ManagedKeysResponse response = stub.enableKeyManagement(null,
         ManagedKeysRequest.newBuilder().setKeyCust(keyCust).setKeyNamespace(keyNamespace).build());
       LOG.info("Got response: " + response);
       return ManagedKeyStatus.forValue((byte) response.getKeyStatus().getNumber());

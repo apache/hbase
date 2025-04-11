@@ -102,13 +102,13 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
      * @param done       The callback to be invoked with the response.
      */
     @Override
-    public void enableManagedKeys(RpcController controller, ManagedKeysRequest request,
+    public void enableKeyManagement(RpcController controller, ManagedKeysRequest request,
         RpcCallback<ManagedKeysResponse> done) {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
       if (builder.getKeyCust() != null) {
         try {
           ManagedKeyStatus managedKeyStatus = master.getKeymetaAdmin()
-            .enableManagedKeys(request.getKeyCust(), request.getKeyNamespace());
+            .enableKeyManagement(request.getKeyCust(), request.getKeyNamespace());
           builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.valueOf(
             managedKeyStatus.getVal()));
         } catch (IOException e) {

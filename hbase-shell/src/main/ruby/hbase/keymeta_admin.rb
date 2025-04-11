@@ -33,7 +33,7 @@ module Hbase
 
     def enable_key_management(key_info)
       cust, namespace = extract_cust_info(key_info)
-      @admin.enableManagedKeys(cust, namespace)
+      @admin.enableKeyManagement(cust, namespace)
     end
 
     def get_key_statuses(key_info)
@@ -46,7 +46,7 @@ module Hbase
       raise(ArgumentError, 'Invalid cust:namespace format') unless (custInfo.length == 1 ||
         custInfo.length == 2)
       return custInfo[0], custInfo.length > 1 ? custInfo[1] :
-        ManagedKeyData::KEY_NAMESPACE_GLOBAL
+        ManagedKeyData::KEY_SPACE_GLOBAL
     end
   end
 end

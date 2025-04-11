@@ -39,7 +39,8 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   }
 
   @Override
-  public ManagedKeyStatus enableManagedKeys(String keyCust, String keyNamespace) throws IOException {
+  public ManagedKeyStatus enableKeyManagement(String keyCust, String keyNamespace)
+      throws IOException {
     assertKeyManagementEnabled();
     LOG.info("Trying to enable key management on custodian: {} under namespace: {}", keyCust,
       keyNamespace);

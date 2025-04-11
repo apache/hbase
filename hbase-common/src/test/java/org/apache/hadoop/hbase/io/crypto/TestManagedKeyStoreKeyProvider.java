@@ -116,7 +116,7 @@ public class TestManagedKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
   @Test
   public void testGetManagedKey() throws Exception {
     for (Bytes prefix : prefix2key.keySet()) {
-      ManagedKeyData keyData = managedKeyProvider.getManagedKey(prefix.get(), ManagedKeyData.KEY_NAMESPACE_GLOBAL);
+      ManagedKeyData keyData = managedKeyProvider.getManagedKey(prefix.get(), ManagedKeyData.KEY_SPACE_GLOBAL);
       assertKeyData(keyData, ManagedKeyStatus.ACTIVE, prefix2key.get(prefix).get(), prefix.get(),
         prefix2alias.get(prefix));
     }
@@ -127,7 +127,7 @@ public class TestManagedKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
     Bytes firstPrefix = prefix2key.keySet().iterator().next();
     String encPrefix = Base64.getEncoder().encodeToString(firstPrefix.get());
     conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encPrefix + ".active", "false");
-    ManagedKeyData keyData = managedKeyProvider.getManagedKey(firstPrefix.get(), ManagedKeyData.KEY_NAMESPACE_GLOBAL);
+    ManagedKeyData keyData = managedKeyProvider.getManagedKey(firstPrefix.get(), ManagedKeyData.KEY_SPACE_GLOBAL);
     assertNotNull(keyData);
     assertKeyData(keyData, ManagedKeyStatus.INACTIVE, prefix2key.get(firstPrefix).get(),
       firstPrefix.get(), prefix2alias.get(firstPrefix));
@@ -137,7 +137,7 @@ public class TestManagedKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
   public void testGetInvalidKey() throws Exception {
     byte[] invalidPrefixBytes = "invalid".getBytes();
     ManagedKeyData keyData = managedKeyProvider.getManagedKey(invalidPrefixBytes,
-      ManagedKeyData.KEY_NAMESPACE_GLOBAL);
+      ManagedKeyData.KEY_SPACE_GLOBAL);
     assertNotNull(keyData);
     assertKeyData(keyData, ManagedKeyStatus.FAILED, null, invalidPrefixBytes, null);
   }
@@ -147,7 +147,7 @@ public class TestManagedKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
     byte[] invalidPrefix = new byte[] { 1, 2, 3 };
     String invalidPrefixEnc = ManagedKeyProvider.encodeToStr(invalidPrefix);
     conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + invalidPrefixEnc + ".active", "false");
-    ManagedKeyData keyData = managedKeyProvider.getManagedKey(invalidPrefix, ManagedKeyData.KEY_NAMESPACE_GLOBAL);
+    ManagedKeyData keyData = managedKeyProvider.getManagedKey(invalidPrefix, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertNotNull(keyData);
     assertKeyData(keyData, ManagedKeyStatus.DISABLED, null,
       invalidPrefix, null);

@@ -71,18 +71,6 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
     return getKey(key_cust, alias);
   }
 
-  public ManagedKeyData getKey(byte[] key_cust, String alias) {
-    Key key = keys.get(alias);
-    if (key == null) {
-      key = generateSecretKey();
-      keys.put(alias, key);
-    }
-    ManagedKeyStatus keyStatus = this.keyStatus.get(alias);
-    return new ManagedKeyData(key_cust, ManagedKeyData.KEY_NAMESPACE_GLOBAL, key,
-      keyStatus == null ? ManagedKeyStatus.ACTIVE : keyStatus,
-      Bytes.toString(key_cust)+":"+alias);
-  }
-
   public void setKeyStatus(String alias, ManagedKeyStatus status) {
     keyStatus.put(alias, status);
   }
@@ -112,5 +100,20 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
     }
     keyGen.init(256);
     return keyGen.generateKey();
+  }
+
+  private ManagedKeyData getKey(byte[] key_cust, String alias) {
+    ManagedKeyStatus keyStatus = this.keyStatus.get(alias);
+    Key key = null;
+    if (keyStatus != ManagedKeyStatus.FAILED && keyStatus != ManagedKeyStatus.DISABLED) {
+      key = keys.get(alias);
+      if (key == null) {
+        key = generateSecretKey();
+        keys.put(alias, key);
+      }
+    }
+    return new ManagedKeyData(key_cust, ManagedKeyData.KEY_SPACE_GLOBAL, key,
+      keyStatus == null ? ManagedKeyStatus.ACTIVE : keyStatus,
+      Bytes.toString(key_cust)+":"+alias);
   }
 }
