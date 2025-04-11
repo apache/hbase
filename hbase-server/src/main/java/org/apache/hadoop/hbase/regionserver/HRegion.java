@@ -8002,11 +8002,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private List<Cell> getInternal(Get get, boolean withCoprocessor, long nonceGroup, long nonce)
     throws IOException {
     List<Cell> results = new ArrayList<>();
+    long before = EnvironmentEdgeManager.currentTime();
 
     // pre-get CP hook
     if (withCoprocessor && (coprocessorHost != null)) {
       if (coprocessorHost.preGet(get, results)) {
-        metricsUpdateForGet();
+        metricsUpdateForGet(before);
         return results;
       }
     }
@@ -8030,14 +8031,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       coprocessorHost.postGet(get, results);
     }
 
-    metricsUpdateForGet();
+    metricsUpdateForGet(before);
 
     return results;
   }
 
-  void metricsUpdateForGet() {
+  void metricsUpdateForGet(long before) {
     if (this.metricsRegion != null) {
-      this.metricsRegion.updateGet();
+      this.metricsRegion.updateGet(EnvironmentEdgeManager.currentTime() - before);
     }
     if (this.rsServices != null && this.rsServices.getMetrics() != null) {
       rsServices.getMetrics().updateReadQueryMeter(this, 1);
