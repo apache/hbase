@@ -296,4 +296,15 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
     }
     return ClassSize.align(FIXED_OVERHEAD);
   }
+
+  /**
+   * Completely clears the state of this cell. Useful if you want to reuse this object to avoid
+   * allocations.
+   */
+  public void clear() {
+    this.buf = null;
+    this.offset = 0;
+    this.length = 0;
+    this.rowLen = 0;
+  }
 }
