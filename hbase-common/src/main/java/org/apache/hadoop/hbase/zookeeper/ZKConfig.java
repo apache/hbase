@@ -58,7 +58,7 @@ public final class ZKConfig {
    * @return Properties holding mappings representing ZooKeeper config file.
    */
   public static Properties makeZKProps(Configuration conf) {
-    return makeZKPropsFromHbaseConfig(conf);
+    return makeZKServerPropsFromHBaseConfig(conf);
   }
 
   private static Properties extractZKClientPropsFromHBaseConfig(final Configuration conf) {
@@ -102,12 +102,13 @@ public final class ZKConfig {
   }
 
   /**
-   * Make a Properties object holding ZooKeeper config. Parses the corresponding config options from
-   * the HBase XML configs and generates the appropriate ZooKeeper properties.
+   * Make a Properties object holding ZooKeeper config for the optional in-process ZK Quorum
+   * servers. Parses the corresponding config options from the HBase XML configs and generates the
+   * appropriate ZooKeeper properties.
    * @param conf Configuration to read from.
    * @return Properties holding mappings representing ZooKeeper config file.
    */
-  private static Properties makeZKPropsFromHbaseConfig(Configuration conf) {
+  private static Properties makeZKServerPropsFromHBaseConfig(Configuration conf) {
     Properties zkProperties = extractZKServerPropsFromHBaseConfig(conf);
 
     // If clientPort is not set, assign the default.
