@@ -1032,12 +1032,24 @@ public class MetaTableAccessor {
   /**
    * Returns the daughter regions by reading the corresponding columns of the catalog table Result.
    * @param data a Result object from the catalog table scan
-   * @return pair of RegionInfo or PairOfSameType(null, null) if region is not a split parent
+   * @return list of daughter regions and empty list if region is not a split parent
    */
-  public static PairOfSameType<RegionInfo> getDaughterRegions(Result data) {
-    RegionInfo splitA = getRegionInfo(data, HConstants.SPLITA_QUALIFIER);
-    RegionInfo splitB = getRegionInfo(data, HConstants.SPLITB_QUALIFIER);
-    return new PairOfSameType<>(splitA, splitB);
+  public static List<RegionInfo> getDaughterRegions(Result data) {
+    List<RegionInfo> daughterRegions = new ArrayList<>();
+    NavigableMap<byte[], byte[]> infoFamilyMap = data.getFamilyMap(getCatalogFamily());
+    if(infoFamilyMap != null) {
+      for (byte[] qualifier : infoFamilyMap.keySet()) {
+        String qualifierStr = Bytes.toString(qualifier);
+        System.out.println("Getting qualifier String as " + qualifierStr);
+        LOG.info("Getting qualifier String as " + qualifierStr);
+        if (qualifierStr.startsWith(HConstants.MULTIPLE_REGIONS_QUALIFIER_PREFIX_STR)) {
+          RegionInfo daughterRegionInfo = getRegionInfo(data, qualifier);
+          // TODO - Decide what to do with null daughterRegionInfo, which is not a valid scenario
+          daughterRegions.add(daughterRegionInfo);
+        }
+      }
+    }
+    return daughterRegions;
   }
 
   /**
@@ -1340,19 +1352,15 @@ public class MetaTableAccessor {
   /**
    * Adds split daughters to the Put
    */
-  private static Put addDaughtersToPut(Put put, RegionInfo splitA, RegionInfo splitB)
+  private static Put addDaughtersToPut(Put put, List<RegionInfo> splits)
     throws IOException {
-    if (splitA != null) {
-      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
-        .setFamily(HConstants.CATALOG_FAMILY).setQualifier(HConstants.SPLITA_QUALIFIER)
-        .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put)
-        .setValue(RegionInfo.toByteArray(splitA)).build());
-    }
-    if (splitB != null) {
-      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
-        .setFamily(HConstants.CATALOG_FAMILY).setQualifier(HConstants.SPLITB_QUALIFIER)
-        .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put)
-        .setValue(RegionInfo.toByteArray(splitB)).build());
+    for(RegionInfo split : splits) {
+      if(split != null) {
+        put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
+          .setFamily(HConstants.CATALOG_FAMILY).setQualifier(Bytes.toBytes(HConstants.MULTIPLE_REGIONS_QUALIFIER_PREFIX_STR + split.getEncodedName()))
+          .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put)
+          .setValue(RegionInfo.toByteArray(split)).build());
+      }
     }
     return put;
   }
@@ -1462,10 +1470,10 @@ public class MetaTableAccessor {
     RegionInfo splitA, RegionInfo splitB) throws IOException {
     try (Table meta = getMetaHTable(connection)) {
       Put put = makePutFromRegionInfo(regionInfo);
-      addDaughtersToPut(put, splitA, splitB);
+      addDaughtersToPut(put, Collections.unmodifiableList(Arrays.asList(splitA, splitB)));
       meta.put(put);
       debugLogMutation(put);
-      LOG.debug("Added region {}", regionInfo.getRegionNameAsString());
+      LOG.info("Added region {}", regionInfo.getRegionNameAsString());
     }
   }
 
@@ -1620,7 +1628,7 @@ public class MetaTableAccessor {
       // Put for parent
       Put putParent = makePutFromRegionInfo(
         RegionInfoBuilder.newBuilder(parent).setOffline(true).setSplit(true).build(), time);
-      addDaughtersToPut(putParent, splitA, splitB);
+      addDaughtersToPut(putParent, Collections.unmodifiableList(Arrays.asList(splitA, splitB)));
 
       // Puts for daughters
       Put putA = makePutFromRegionInfo(splitA, time);
