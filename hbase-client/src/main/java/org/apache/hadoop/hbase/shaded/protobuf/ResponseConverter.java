@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
+import org.apache.hadoop.hbase.client.QueryMetrics;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.SingleResponse;
@@ -417,6 +418,7 @@ public final class ResponseConverter {
     int noOfResults =
       cellScanner != null ? response.getCellsPerResultCount() : response.getResultsCount();
     Result[] results = new Result[noOfResults];
+    List<ClientProtos.QueryMetrics> queryMetrics = response.getQueryMetricsList();
     for (int i = 0; i < noOfResults; i++) {
       if (cellScanner != null) {
         // Cells are out in cellblocks. Group them up again as Results. How many to read at a
@@ -452,6 +454,12 @@ public final class ResponseConverter {
       } else {
         // Result is pure pb.
         results[i] = ProtobufUtil.toResult(response.getResults(i));
+      }
+
+      // Populate result metrics if they exist
+      if (queryMetrics.size() > i) {
+        QueryMetrics metrics = ProtobufUtil.toQueryMetrics(queryMetrics.get(i));
+        results[i].setMetrics(metrics);
       }
     }
     return results;
