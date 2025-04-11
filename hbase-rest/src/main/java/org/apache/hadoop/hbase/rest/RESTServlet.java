@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import static org.apache.hadoop.hbase.util.JvmPauseMonitor.PAUSE_MONITOR_ENABLE_DEFAULT;
+import static org.apache.hadoop.hbase.util.JvmPauseMonitor.PAUSE_MONITOR_ENABLE_KEY;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
@@ -95,6 +98,11 @@ public class RESTServlet implements Constants {
   RESTServlet(final Configuration conf, final UserProvider userProvider) throws IOException {
     this.realUser = userProvider.getCurrent().getUGI();
     this.conf = conf;
+
+    // disable the pause monitor in connection because we will create a pause
+    // monitor that reports metric to JvmPauseMonitorSource
+    this.conf.setBoolean(PAUSE_MONITOR_ENABLE_KEY, PAUSE_MONITOR_ENABLE_DEFAULT);
+
     registerCustomFilter(conf);
 
     int cleanInterval = conf.getInt(CLEANUP_INTERVAL, 10 * 1000);
@@ -106,7 +114,7 @@ public class RESTServlet implements Constants {
 
     metrics = new MetricsREST();
 
-    pauseMonitor = new JvmPauseMonitor(conf, metrics.getSource());
+    pauseMonitor = JvmPauseMonitor.getInstance(conf, metrics.getSource());
     pauseMonitor.start();
   }
 
