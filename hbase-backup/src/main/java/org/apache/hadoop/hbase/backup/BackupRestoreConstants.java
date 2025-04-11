@@ -120,7 +120,13 @@ public interface BackupRestoreConstants {
 
   String CONF_STAGING_ROOT = "snapshot.export.staging.root";
 
-  String BACKUPID_PREFIX = "backup_";
+  String BACKUPID_PREFIX = "backup";
+
+  String UNDERSCORE = "_";
+
+  static String getBackupPrefix() {
+    return BackupRestoreConstants.BACKUPID_PREFIX + BackupRestoreConstants.UNDERSCORE;
+  }
 
   enum BackupCommand {
     CREATE,
