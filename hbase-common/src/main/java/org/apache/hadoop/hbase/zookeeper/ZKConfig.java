@@ -39,9 +39,6 @@ import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
  * <li>other zookeeper related properties in HBASE XML</li>
  * </ol>
  */
-/**
- *
- */
 @InterfaceAudience.Private
 public final class ZKConfig {
 
