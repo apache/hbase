@@ -277,6 +277,29 @@ public final class BackupSystemTable implements Closeable {
     // do nothing
   }
 
+  public void invalidateTableAncestry(TableName toInvalidate) throws IOException {
+    List<BackupInfo> fullTableBackups = getCompletedFullBackups();
+    List<Put> invalidatePuts = new ArrayList<>(fullTableBackups.size());
+
+    for (BackupInfo backupInfo : fullTableBackups) {
+      // to minimize the amount of mutations against the backup system table, we only
+      // need to update full backups that have currently have a valid ancestry line
+      if (
+        backupInfo.getTables().contains(toInvalidate) && backupInfo.getType() == BackupType.FULL
+          && !backupInfo.isInvalidAncestry()
+      ) {
+        backupInfo.setInvalidAncestry(true);
+        invalidatePuts.add(createPutForBackupInfo(backupInfo));
+        LOG.info("Invalidating ancestry for backup {} due to table {}", backupInfo.getBackupId(),
+          toInvalidate);
+      }
+    }
+
+    try (BufferedMutator mutator = connection.getBufferedMutator(tableName)) {
+      mutator.mutate(invalidatePuts);
+    }
+  }
+
   /**
    * Updates status (state) of a backup session in backup system table table
    * @param info backup info
@@ -839,6 +862,24 @@ public final class BackupSystemTable implements Closeable {
       }
       return list;
     }
+  }
+
+  private List<BackupInfo> getCompletedFullBackups() throws IOException {
+    Scan scan = createScanForBackupHistory();
+    List<BackupInfo> backups = new ArrayList<>();
+
+    try (Table table = connection.getTable(tableName)) {
+      ResultScanner scanner = table.getScanner(scan);
+      Result res;
+      while ((res = scanner.next()) != null) {
+        res.advance();
+        BackupInfo context = cellToBackupInfo(res.current());
+        if (context.getState() == BackupState.COMPLETE && context.getType() == BackupType.FULL) {
+          backups.add(context);
+        }
+      }
+    }
+    return backups;
   }
 
   /**
