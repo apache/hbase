@@ -1277,6 +1277,12 @@ public class TestHStore {
       .setValue(value).setSequenceId(sequenceId).build();
   }
 
+  private ExtendedCell createDeleteCell(byte[] row, byte[] qualifier, long ts, long sequenceId) {
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
+      .setFamily(family).setQualifier(qualifier).setTimestamp(ts).setType(Cell.Type.DeleteColumn)
+      .setSequenceId(sequenceId).build();
+  }
+
   @Test
   public void testFlushBeforeCompletingScanWoFilter() throws IOException, InterruptedException {
     final AtomicBoolean timeToGoNextRow = new AtomicBoolean(false);
@@ -1417,6 +1423,74 @@ public class TestHStore {
         byte[] actualValue = CellUtil.cloneValue(c);
         assertTrue("expected:" + Bytes.toStringBinary(value2) + ", actual:"
           + Bytes.toStringBinary(actualValue), Bytes.equals(actualValue, value2));
+      }
+    }
+  }
+
+  @Test
+  public void testFlushBeforeCompletingScanWithDeleteCell() throws IOException {
+    final Configuration conf = HBaseConfiguration.create();
+
+    byte[] r1 = Bytes.toBytes("row1");
+    byte[] r2 = Bytes.toBytes("row2");
+
+    byte[] value1 = Bytes.toBytes("value1");
+    byte[] value2 = Bytes.toBytes("value2");
+
+    final MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
+    final long ts = EnvironmentEdgeManager.currentTime();
+    final long seqId = 100;
+
+    init(name.getMethodName(), conf, TableDescriptorBuilder.newBuilder(TableName.valueOf(table)),
+      ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(1).build(),
+      new MyStoreHook() {
+        @Override
+        long getSmallestReadPoint(HStore store) {
+          return seqId + 3;
+        }
+      });
+
+    store.add(createCell(r1, qf1, ts + 1, seqId + 1, value2), memStoreSizing);
+    store.add(createCell(r1, qf2, ts + 1, seqId + 1, value2), memStoreSizing);
+    store.add(createCell(r1, qf3, ts + 1, seqId + 1, value2), memStoreSizing);
+
+    store.add(createDeleteCell(r1, qf1, ts + 2, seqId + 2), memStoreSizing);
+    store.add(createDeleteCell(r1, qf2, ts + 2, seqId + 2), memStoreSizing);
+    store.add(createDeleteCell(r1, qf3, ts + 2, seqId + 2), memStoreSizing);
+
+    store.add(createCell(r2, qf1, ts + 3, seqId + 3, value1), memStoreSizing);
+    store.add(createCell(r2, qf2, ts + 3, seqId + 3, value1), memStoreSizing);
+    store.add(createCell(r2, qf3, ts + 3, seqId + 3, value1), memStoreSizing);
+
+    Scan scan = new Scan().withStartRow(r1);
+
+    try (final InternalScanner scanner =
+      new StoreScanner(store, store.getScanInfo(), scan, null, seqId + 3, new StoreScannerHook() {
+        int count = 0;
+
+        @Override
+        public void postMatcherMatch() {
+          if (count == 5) {
+            try {
+              flushStore(store, id++);
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          }
+          count++;
+        }
+      })) {
+      List<Cell> cellResult = new ArrayList<>();
+
+      scanner.next(cellResult);
+      assertEquals(0, cellResult.size());
+
+      cellResult.clear();
+
+      scanner.next(cellResult);
+      assertEquals(3, cellResult.size());
+      for (Cell cell : cellResult) {
+        assertArrayEquals(r2, CellUtil.cloneRow(cell));
       }
     }
   }
