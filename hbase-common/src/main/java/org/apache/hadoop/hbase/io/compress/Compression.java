@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.io.compress;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.Closeable;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,6 +28,7 @@ import java.io.OutputStream;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
@@ -548,9 +551,34 @@ public final class Compression {
       }
     }
 
+    /**
+     * Get an object that holds settings used by ByteBuffDecompressor. It's expensive to pull these
+     * from a Configuration object every time we decompress a block, so pull them here when, for
+     * example, opening an HFile, and reuse the returned HFileDecompressionContext as much as
+     * possible. The concrete class of this object will be one that is specific to the codec
+     * implementation in use. You don't need to inspect it yourself, just pass it along to
+     * {@link ByteBuffDecompressor#reinit(HFileDecompressionContext)}.
+     */
+    @Nullable
+    public HFileDecompressionContext
+      getHFileDecompressionContextForConfiguration(Configuration conf) {
+      if (supportsByteBuffDecompression()) {
+        return ((ByteBuffDecompressionCodec) getCodec(conf))
+          .getDecompressionContextFromConfiguration(conf);
+      } else {
+        return null;
+      }
+    }
+
     public String getName() {
       return compressName;
     }
+  }
+
+  /**
+   * See {@link Algorithm#getHFileDecompressionContextForConfiguration(Configuration)}.
+   */
+  public static abstract class HFileDecompressionContext implements Closeable, HeapSize {
   }
 
   public static Algorithm getCompressionAlgorithmByName(String compressName) {
