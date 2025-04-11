@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -54,7 +55,9 @@ public class TestReopenTableRegionsProcedureBatchBackoff {
 
   private static TableName TABLE_NAME = TableName.valueOf("BatchBackoff");
   private static final int BACKOFF_MILLIS_PER_RS = 3_000;
-  private static final int REOPEN_BATCH_SIZE = 1;
+  private static final int REOPEN_BATCH_SIZE_MAX = 8;
+  private static final int NUM_REGIONS = 10;
+  private static final int NUM_BATCHES = 4; // 1 + 2 + 4 + 8 > 10
 
   private static byte[] CF = Bytes.toBytes("cf");
 
@@ -63,7 +66,7 @@ public class TestReopenTableRegionsProcedureBatchBackoff {
     Configuration conf = UTIL.getConfiguration();
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
     UTIL.startMiniCluster(1);
-    UTIL.createMultiRegionTable(TABLE_NAME, CF, 10);
+    UTIL.createMultiRegionTable(TABLE_NAME, CF, NUM_REGIONS);
   }
 
   @AfterClass
@@ -76,15 +79,16 @@ public class TestReopenTableRegionsProcedureBatchBackoff {
     ProcedureExecutor<MasterProcedureEnv> procExec =
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     List<RegionInfo> regions = UTIL.getAdmin().getRegions(TABLE_NAME);
-    assertTrue(10 <= regions.size());
+    assertTrue(NUM_REGIONS <= regions.size());
     ReopenTableRegionsProcedure proc =
-      new ReopenTableRegionsProcedure(TABLE_NAME, BACKOFF_MILLIS_PER_RS, REOPEN_BATCH_SIZE);
+      new ReopenTableRegionsProcedure(TABLE_NAME, BACKOFF_MILLIS_PER_RS, REOPEN_BATCH_SIZE_MAX);
     procExec.submitProcedure(proc);
     Instant startedAt = Instant.now();
     ProcedureSyncWait.waitForProcedureToComplete(procExec, proc, 60_000);
     Instant stoppedAt = Instant.now();
     assertTrue(Duration.between(startedAt, stoppedAt).toMillis()
-        > (long) regions.size() * BACKOFF_MILLIS_PER_RS);
+        > (NUM_BATCHES - 1) * BACKOFF_MILLIS_PER_RS);
+    assertEquals(NUM_BATCHES, proc.getBatchesProcessed());
   }
 
   @Test
@@ -92,12 +96,13 @@ public class TestReopenTableRegionsProcedureBatchBackoff {
     ProcedureExecutor<MasterProcedureEnv> procExec =
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     List<RegionInfo> regions = UTIL.getAdmin().getRegions(TABLE_NAME);
-    assertTrue(10 <= regions.size());
+    assertTrue(NUM_REGIONS <= regions.size());
     int noBackoffMillis = 0;
     ReopenTableRegionsProcedure proc =
-      new ReopenTableRegionsProcedure(TABLE_NAME, noBackoffMillis, REOPEN_BATCH_SIZE);
+      new ReopenTableRegionsProcedure(TABLE_NAME, noBackoffMillis, REOPEN_BATCH_SIZE_MAX);
     procExec.submitProcedure(proc);
     ProcedureSyncWait.waitForProcedureToComplete(procExec, proc,
       (long) regions.size() * BACKOFF_MILLIS_PER_RS);
+    assertEquals(NUM_BATCHES, proc.getBatchesProcessed());
   }
 }
