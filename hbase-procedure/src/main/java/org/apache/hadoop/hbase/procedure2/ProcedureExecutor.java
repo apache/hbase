@@ -1768,6 +1768,7 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   private void yieldProcedure(Procedure<TEnvironment> proc) {
+    proc.afterExec(getEnvironment());
     releaseLock(proc, false);
     scheduler.yield(proc);
   }
@@ -1822,6 +1823,7 @@ public class ProcedureExecutor<TEnvironment> {
       reExecute = false;
       procedure.resetPersistence();
       try {
+        procedure.beforeExec(getEnvironment());
         subprocs = procedure.doExecute(getEnvironment());
         if (subprocs != null && subprocs.length == 0) {
           subprocs = null;
@@ -1907,6 +1909,7 @@ public class ProcedureExecutor<TEnvironment> {
           updateStoreOnExec(procStack, procedure, subprocs);
         }
       }
+      procedure.afterExec(getEnvironment());
 
       // if the store is not running we are aborting
       if (!store.isRunning()) {
