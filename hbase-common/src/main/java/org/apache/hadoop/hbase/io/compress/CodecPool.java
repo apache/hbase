@@ -164,11 +164,9 @@ public class CodecPool {
     Decompressor decompressor = borrow(DECOMPRESSOR_POOL, codec.getDecompressorType());
     if (decompressor == null) {
       decompressor = codec.createDecompressor();
-      LOG.info("Got brand-new Decompressor [" + codec.getDefaultExtension() + "]");
+      LOG.debug("Got brand-new Decompressor [{}]", decompressor.getClass().getName());
     } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Got recycled Decompressor");
-      }
+      LOG.debug("Got recycled Decompressor [{}]", decompressor.getClass().getName());
     }
     if (decompressor != null && !decompressor.getClass().isAnnotationPresent(DoNotPool.class)) {
       updateLeaseCount(decompressorCounts, decompressor, 1);
@@ -181,11 +179,9 @@ public class CodecPool {
       borrow(BYTE_BUFF_DECOMPRESSOR_POOL, codec.getByteBuffDecompressorType());
     if (decompressor == null) {
       decompressor = codec.createByteBuffDecompressor();
-      LOG.info("Got brand-new ByteBuffDecompressor " + decompressor.getClass().getName());
+      LOG.debug("Got brand-new ByteBuffDecompressor [{}]", decompressor.getClass().getName());
     } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Got recycled ByteBuffDecompressor");
-      }
+      LOG.debug("Got recycled ByteBuffDecompressor [{}]", decompressor.getClass().getName());
     }
     return decompressor;
   }
