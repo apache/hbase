@@ -147,14 +147,13 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
         case SNAPSHOT_WRITE_SNAPSHOT_INFO:
           TableState tableState =
             env.getMasterServices().getTableStateManager().getTableState(snapshotTable);
-          if (tableState.isDisabled()) {
-            // Set the snapshot type to DISABLED as the table is in DISABLED state
-            snapshot = snapshot.toBuilder().setType(Type.DISABLED).build();
-          }
-          SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, workingDirFS);
           if (tableState.isEnabled()) {
+            SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, workingDirFS);
             setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_ONLINE_REGIONS);
           } else if (tableState.isDisabled()) {
+            // Set the snapshot type to DISABLED as the table is in DISABLED state
+            snapshot = snapshot.toBuilder().setType(Type.DISABLED).build();
+            SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, workingDirFS);
             setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_CLOSED_REGIONS);
           }
           return Flow.HAS_MORE_STATE;
