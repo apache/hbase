@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -41,6 +42,9 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -313,6 +317,61 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
       new CreateTableProcedure(procExec.getEnvironment(), tdesc, regions02));
     Procedure<?> result02 = procExec.getResult(procId02);
     assertTrue(result02.isSuccess());
+    assertTrue(UTIL.getAdmin().tableExists(tableName));
+  }
+
+  @Test
+  public void testCreateTableWithInvalidCompactionPolicy()
+    throws ClassNotFoundException, IOException {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    String invalidCompactionPolicyClassName = TestCreateTableProcedure.class.getName();
+    assertFalse(
+      CompactionPolicy.class.isAssignableFrom(Class.forName(invalidCompactionPolicyClassName)));
+    ColumnFamilyDescriptor cfDescriptorWithInvalidCompactionPolicy =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1"))
+        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+          invalidCompactionPolicyClassName)
+        .build();
+    TableDescriptor tableDescriptorWithInvalidCompactionPolicy = TableDescriptorBuilder
+      .newBuilder(tableName).setColumnFamily(cfDescriptorWithInvalidCompactionPolicy).build();
+    RegionInfo[] regions01 =
+      ModifyRegionUtils.createRegionInfos(tableDescriptorWithInvalidCompactionPolicy, null);
+    // we would get exception because of invalid compaction policy
+    final long procId01 = ProcedureTestingUtility.submitAndWait(procExec, new CreateTableProcedure(
+      procExec.getEnvironment(), tableDescriptorWithInvalidCompactionPolicy, regions01));
+    assertTrue(procExec.getResult(procId01).hasException());
+    assertFalse(UTIL.getAdmin().tableExists(tableName));
+
+    cfDescriptorWithInvalidCompactionPolicy =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build();
+    // set invalid compaction policy at table level
+    tableDescriptorWithInvalidCompactionPolicy = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(cfDescriptorWithInvalidCompactionPolicy)
+      .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+        invalidCompactionPolicyClassName)
+      .build();
+    RegionInfo[] regions02 =
+      ModifyRegionUtils.createRegionInfos(tableDescriptorWithInvalidCompactionPolicy, null);
+    // we would still get exception because of invalid compaction policy at table level
+    final long procId02 = ProcedureTestingUtility.submitAndWait(procExec, new CreateTableProcedure(
+      procExec.getEnvironment(), tableDescriptorWithInvalidCompactionPolicy, regions02));
+    assertTrue(procExec.getResult(procId02).hasException());
+    assertFalse(UTIL.getAdmin().tableExists(tableName));
+
+    String exploringCompactionPolicy = ExploringCompactionPolicy.class.getName();
+    assertTrue(CompactionPolicy.class.isAssignableFrom(Class.forName(exploringCompactionPolicy)));
+    ColumnFamilyDescriptor cfDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1"))
+        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY, exploringCompactionPolicy)
+        .build();
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(cfDescriptor).build();
+    RegionInfo[] regions03 = ModifyRegionUtils.createRegionInfos(tableDescriptor, null);
+    final long procId03 = ProcedureTestingUtility.submitAndWait(procExec,
+      new CreateTableProcedure(procExec.getEnvironment(), tableDescriptor, regions03));
+    assertTrue(procExec.getResult(procId03).isSuccess());
     assertTrue(UTIL.getAdmin().tableExists(tableName));
   }
 }

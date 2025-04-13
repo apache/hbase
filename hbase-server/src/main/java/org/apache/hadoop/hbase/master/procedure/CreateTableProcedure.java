@@ -22,15 +22,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -289,6 +292,18 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
     if (regionReplicationCount > MAX_REGION_REPLICATION) {
       setFailure("master-create-table", new IllegalArgumentException(
         "Region Replication cannot exceed " + MAX_REGION_REPLICATION + "."));
+      return false;
+    }
+
+    // throw exception if invalid configuration is specified
+    try {
+      ConfigKey.validate(new CompoundConfiguration().addBytesMap(tableDescriptor.getValues()));
+      for (ColumnFamilyDescriptor cfDesc : tableDescriptor.getColumnFamilies()) {
+        ConfigKey.validate(new CompoundConfiguration().addStringMap(cfDesc.getConfiguration())
+          .addBytesMap(cfDesc.getValues()));
+      }
+    } catch (Exception e) {
+      setFailure("master-create-table", e);
       return false;
     }
 
