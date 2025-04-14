@@ -39,6 +39,7 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     doTestEnable(adminClient);
   }
 
+  // TODO: Need to add test cases for multiple key spaces.
   private void doTestEnable(KeymetaAdmin adminClient) throws IOException, KeyException {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MockManagedKeyProvider managedKeyProvider = (MockManagedKeyProvider)
@@ -58,12 +59,12 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
       managedKeys.get(0).cloneWithoutKey());
 
     String nonExistentCust = "nonExistentCust";
-    managedKeyProvider.setKeyStatus(nonExistentCust, ManagedKeyStatus.FAILED);
+    managedKeyProvider.setMockedKeyStatus(nonExistentCust, ManagedKeyStatus.FAILED);
     assertEquals(ManagedKeyStatus.FAILED, adminClient.enableKeyManagement(
       ManagedKeyProvider.encodeToStr(nonExistentCust.getBytes()), ManagedKeyData.KEY_SPACE_GLOBAL));
 
     String disabledCust = "disabledCust";
-    managedKeyProvider.setKeyStatus(disabledCust, ManagedKeyStatus.DISABLED);
+    managedKeyProvider.setMockedKeyStatus(disabledCust, ManagedKeyStatus.DISABLED);
     assertEquals(ManagedKeyStatus.DISABLED, adminClient.enableKeyManagement(
       ManagedKeyProvider.encodeToStr(disabledCust.getBytes()), ManagedKeyData.KEY_SPACE_GLOBAL));
   }

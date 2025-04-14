@@ -78,6 +78,6 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     LOG.info("Getting key statuses for custodian: {} under namespace: {}", keyCust,
       keyNamespace);
     byte[] key_cust = ManagedKeyProvider.decodeToBytes(keyCust);
-    return super.getAllKeys(key_cust, keyNamespace);
+    return getAllKeys(key_cust, keyNamespace);
   }
 }

@@ -65,7 +65,7 @@ public class TestSystemKey extends ManagedKeyTestBase {
     String newAlias = "new_cluster_key";
     pbeKeyProvider.setCluterKeyAlias(newAlias);
     Key newCluterKey = MockManagedKeyProvider.generateSecretKey();
-    pbeKeyProvider.setKey(newAlias, newCluterKey);
+    pbeKeyProvider.setMockedKey(newAlias, newCluterKey);
     restartSystem();
     master = TEST_UTIL.getHBaseCluster().getMaster();
     SystemKeyAccessor systemKeyAccessor = new SystemKeyAccessor(master);
@@ -88,7 +88,7 @@ public class TestSystemKey extends ManagedKeyTestBase {
     // Test startup failure when the cluster key is INACTIVE
     SystemKeyManager tmpCKM = new SystemKeyManager(master);
     tmpCKM.ensureSystemKeyInitialized();
-    pbeKeyProvider.setKeyStatus(pbeKeyProvider.getSystemKeyAlias(), ManagedKeyStatus.INACTIVE);
+    pbeKeyProvider.setMockedKeyStatus(pbeKeyProvider.getSystemKeyAlias(), ManagedKeyStatus.INACTIVE);
     assertThrows(IOException.class, tmpCKM::ensureSystemKeyInitialized);
   }
 

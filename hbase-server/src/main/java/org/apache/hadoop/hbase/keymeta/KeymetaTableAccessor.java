@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.Server;
@@ -106,7 +107,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    * @throws IOException when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  protected List<ManagedKeyData> getAllKeys(byte[] key_cust, String keyNamespace)
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public List<ManagedKeyData> getAllKeys(byte[] key_cust, String keyNamespace)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
     Connection connection = server.getConnection();

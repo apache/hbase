@@ -69,18 +69,28 @@ public interface ManagedKeyProvider extends KeyProvider {
    */
   ManagedKeyData unwrapKey(String keyMetaData) throws IOException;
 
-  static byte[] decodeToBytes(String keyCust) throws IOException {
+  /**
+   * Decode the given key custodian which is encoded as Base64 string.
+   * @param encodedKeyCust The encoded key custodian
+   * @return the decoded key custodian
+   * @throws IOException
+   */
+  static byte[] decodeToBytes(String encodedKeyCust) throws IOException {
     byte[] key_cust;
     try {
-      key_cust = Base64.getDecoder().decode(keyCust);
+      key_cust = Base64.getDecoder().decode(encodedKeyCust);
     }
     catch (IllegalArgumentException e) {
-      throw new IOException("Failed to decode specified key custodian as Base64 string: " +
-        keyCust, e);
+      throw new IOException("Failed to decode specified key custodian as Base64 string: " + encodedKeyCust, e);
     }
     return key_cust;
   }
 
+  /**
+   * Encode the given key custodian as Base64 string.
+   * @param key_cust The key custodian
+   * @return the encoded key custodian as Base64 string
+   */
   static String encodeToStr(byte[] key_cust) {
     return Base64.getEncoder().encodeToString(key_cust);
   }
