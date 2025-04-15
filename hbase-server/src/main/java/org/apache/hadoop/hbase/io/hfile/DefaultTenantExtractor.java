@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -43,14 +42,17 @@ public class DefaultTenantExtractor implements TenantExtractor {
       return HConstants.EMPTY_BYTE_ARRAY;
     }
     
-    byte[] rowKey = CellUtil.cloneRow(cell);
-    if (rowKey.length < prefixOffset + prefixLength) {
+    // Get row length and ensure it's sufficient
+    int rowLength = cell.getRowLength();
+    if (rowLength < prefixOffset + prefixLength) {
       throw new IllegalArgumentException("Row key too short for configured prefix parameters. " +
-          "Row key length: " + rowKey.length + ", required: " + (prefixOffset + prefixLength));
+          "Row key length: " + rowLength + ", required: " + (prefixOffset + prefixLength));
     }
     
     byte[] prefix = new byte[prefixLength];
-    System.arraycopy(rowKey, prefixOffset, prefix, 0, prefixLength);
+    // Copy directly from the cell's row bytes
+    System.arraycopy(cell.getRowArray(), cell.getRowOffset() + prefixOffset, 
+                    prefix, 0, prefixLength);
     return prefix;
   }
   
@@ -64,11 +66,26 @@ public class DefaultTenantExtractor implements TenantExtractor {
       return false;
     }
     
-    // Extract tenant prefixes and compare them
-    byte[] prevPrefix = extractTenantPrefix(previousCell);
-    byte[] currPrefix = extractTenantPrefix(currentCell);
+    // Get row lengths and ensure they're sufficient for comparison
+    int prevRowLength = previousCell.getRowLength();
+    int currRowLength = currentCell.getRowLength();
     
-    return !Bytes.equals(prevPrefix, currPrefix);
+    if (prevRowLength < prefixOffset + prefixLength || 
+        currRowLength < prefixOffset + prefixLength) {
+      // Same behavior as extractTenantPrefix - throw exception if row is too short
+      if (prevRowLength < prefixOffset + prefixLength) {
+        throw new IllegalArgumentException("Previous row key too short for configured prefix parameters. " +
+            "Row key length: " + prevRowLength + ", required: " + (prefixOffset + prefixLength));
+      } else {
+        throw new IllegalArgumentException("Current row key too short for configured prefix parameters. " +
+            "Row key length: " + currRowLength + ", required: " + (prefixOffset + prefixLength));
+      }
+    }
+    
+    // Compare the tenant prefix bytes directly without allocating intermediate arrays
+    return !Bytes.equals(
+        previousCell.getRowArray(), previousCell.getRowOffset() + prefixOffset, prefixLength,
+        currentCell.getRowArray(), currentCell.getRowOffset() + prefixOffset, prefixLength);
   }
   
   /**
