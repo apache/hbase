@@ -17,6 +17,45 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+/**
+ * CHANGES REQUIRED IN HFileContext.java:
+ * 1. Remove tenant-specific fields:
+ *    - private int pbePrefixLength;
+ *    - private int prefixOffset;
+ *    - private boolean isMultiTenant;
+ * 
+ * 2. Remove tenant-specific getter methods:
+ *    - getPbePrefixLength()
+ *    - getPrefixOffset()
+ *    - isMultiTenant()
+ * 
+ * 3. Remove tenant-specific parameters in constructors:
+ *    a. Copy constructor should not copy tenant fields
+ *    b. Remove constructor with multi-tenant parameters: HFileContext(..., pbePrefixLength, prefixOffset, isMultiTenant)
+ * 
+ * 4. Update toString() to remove tenant-specific fields
+ * 
+ * CHANGES REQUIRED IN HFileContextBuilder.java:
+ * 1. Remove tenant-specific fields:
+ *    - private int pbePrefixLength = 0;
+ *    - private int prefixOffset = 0;
+ *    - private boolean isMultiTenant = false;
+ * 
+ * 2. Remove tenant-specific builder methods:
+ *    - withPbePrefixLength(int pbePrefixLength)
+ *    - withPrefixOffset(int prefixOffset)
+ *    - withMultiTenant(boolean isMultiTenant)
+ * 
+ * 3. Simplify build() method by removing the check for isMultiTenant
+ * 4. Remove buildWithMultiTenant() method entirely
+ * 
+ * REASON FOR CHANGES:
+ * Tenant configuration should be completely separate from file format concerns.
+ * HFileContext should only handle format-specific details, while tenant configuration
+ * is managed by TenantExtractorFactory using cluster configuration and table properties.
+ * The HFile version (v4) inherently implies multi-tenant support without needing additional flags.
+ */
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -24,6 +63,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -60,6 +100,27 @@ import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.MAX
 @InterfaceAudience.Private
 public class MultiTenantHFileWriter implements HFile.Writer {
   private static final Logger LOG = LoggerFactory.getLogger(MultiTenantHFileWriter.class);
+  
+  // Tenant identification configuration at cluster level
+  public static final String TENANT_PREFIX_EXTRACTOR_CLASS = "hbase.multi.tenant.prefix.extractor.class";
+  public static final String TENANT_PREFIX_LENGTH = "hbase.multi.tenant.prefix.length";
+  public static final String TENANT_PREFIX_OFFSET = "hbase.multi.tenant.prefix.offset";
+  
+  // Tenant identification configuration at table level (higher precedence)
+  public static final String TABLE_TENANT_PREFIX_LENGTH = "TENANT_PREFIX_LENGTH";
+  public static final String TABLE_TENANT_PREFIX_OFFSET = "TENANT_PREFIX_OFFSET";
+  
+  // Default values
+  private static final int DEFAULT_PREFIX_LENGTH = 4;
+  private static final int DEFAULT_PREFIX_OFFSET = 0;
+  
+  /**
+   * Class that manages tenant configuration with proper precedence:
+   * 1. Table level settings have highest precedence
+   * 2. Cluster level settings are used as fallback
+   * 3. Default values are used if neither is specified
+   */
+  // TenantConfiguration class removed - use TenantExtractorFactory instead
   
   private final TenantExtractor tenantExtractor;
   private final FileSystem fs;
@@ -128,6 +189,33 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     
     // Initialize components
     initialize();
+  }
+  
+  /**
+   * Factory method to create a MultiTenantHFileWriter with configuration from both table and cluster levels.
+   * 
+   * @param fs Filesystem to write to
+   * @param path Path for the HFile
+   * @param conf Configuration settings that include cluster-level tenant configuration
+   * @param cacheConf Cache configuration
+   * @param tableProperties Table properties that may include table-level tenant configuration
+   * @param fileContext HFile context
+   * @return A configured MultiTenantHFileWriter
+   */
+  public static MultiTenantHFileWriter create(
+      FileSystem fs,
+      Path path,
+      Configuration conf,
+      CacheConfig cacheConf,
+      Map<String, String> tableProperties,
+      HFileContext fileContext) throws IOException {
+    
+    // Create tenant extractor using configuration and table properties
+    // without relying on HFileContext for tenant-specific configuration
+    TenantExtractor tenantExtractor = TenantExtractorFactory.createTenantExtractor(conf, tableProperties);
+    
+    // HFile version 4 inherently implies multi-tenant
+    return new MultiTenantHFileWriter(fs, path, conf, cacheConf, tenantExtractor, fileContext);
   }
   
   private void initialize() throws IOException {
@@ -514,4 +602,77 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       return this.totalUncompressedBytes;
     }
   }
+  
+  /*
+   * Tenant Identification Configuration Hierarchy
+   * --------------------------------------------
+   * 
+   * The tenant configuration follows this precedence order:
+   * 
+   * 1. Table Level Configuration (highest precedence)
+   *    - Property: TENANT_PREFIX_LENGTH 
+   *      Table-specific tenant prefix length
+   *    - Property: TENANT_PREFIX_OFFSET
+   *      Byte offset for tenant prefix extraction (default: 0)
+   * 
+   * 2. Cluster Level Configuration (used as fallback)
+   *    - Property: hbase.multi.tenant.prefix.extractor.class
+   *      Defines the implementation class for TenantExtractor
+   *    - Property: hbase.multi.tenant.prefix.length
+   *      Default prefix length if using fixed-length prefixes
+   *    - Property: hbase.multi.tenant.prefix.offset
+   *      Default prefix offset if using fixed-length prefixes
+   * 
+   * 3. Default Values (used if neither above is specified)
+   *    - Default prefix length: 4 bytes
+   *    - Default prefix offset: 0 bytes
+   * 
+   * When creating a MultiTenantHFileWriter, the system will:
+   * 1. First check table properties for tenant configuration
+   * 2. If not found, use cluster-wide configuration from hbase-site.xml
+   * 3. If neither is specified, fall back to default values
+   * 
+   * Important notes:
+   * - HFile version 4 inherently implies multi-tenancy 
+   * - Tenant configuration is obtained only from cluster configuration and table properties
+   * - HFileContext does not contain any tenant-specific configuration
+   * - The TenantExtractor is created directly from the configuration parameters
+   * 
+   * This design ensures:
+   * - Tables can override the cluster-wide tenant configuration
+   * - Each table can have its own tenant prefix configuration
+   * - Tenant configuration is separate from the low-level file format concerns
+   * - Sensible defaults are used if no explicit configuration is provided
+   * 
+   * SUMMARY OF CHANGES NEEDED:
+   * --------------------------
+   * 
+   * 1. In HFileContext.java:
+   *    - Remove fields: pbePrefixLength, prefixOffset, isMultiTenant
+   *    - Remove methods: getPbePrefixLength(), getPrefixOffset(), isMultiTenant()
+   *    - Remove constructor with tenant parameters
+   *    - Update copy constructor and toString() to remove tenant fields
+   * 
+   * 2. In HFileContextBuilder.java:
+   *    - Remove fields: pbePrefixLength, prefixOffset, isMultiTenant
+   *    - Remove methods: withPbePrefixLength(), withPrefixOffset(), withMultiTenant()
+   *    - Remove buildWithMultiTenant() method
+   *    - Simplify build() method to not check isMultiTenant
+   * 
+   * 3. In TenantExtractorFactory.java:
+   *    - Remove method that takes HFileContext
+   *    - Focus only on method that takes Configuration and table properties
+   * 
+   * 4. In MultiTenantHFileWriter.java:
+   *    - Use TenantExtractorFactory directly
+   *    - Remove TenantConfiguration class
+   *    - Remove any dependency on HFileContext for tenant configuration
+   * 
+   * 5. In HFile.java:
+   *    - Update MultiTenantWriterFactory to get tenant configuration from 
+   *      TenantExtractorFactory, not from HFileContext
+   * 
+   * These changes ensure a clean separation between file format concerns (handled by 
+   * HFileContext) and tenant configuration (handled by TenantExtractorFactory).
+   */
 }

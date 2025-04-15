@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.commons.io.IOUtils;
@@ -345,6 +346,7 @@ public final class HFile {
       if ((path != null ? 1 : 0) + (ostream != null ? 1 : 0) != 1) {
         throw new AssertionError("Please specify exactly one of filesystem/path or path");
       }
+      
       if (path != null) {
         ostream = HFileWriterImpl.createOutputStream(conf, fs, path, favoredNodes);
         try {
@@ -355,9 +357,34 @@ public final class HFile {
         }
       }
       
-      // For now, we'll return the standard HFileWriterImpl
-      // The integration with MultiTenantHFileWriter will be done separately
-      return new HFileWriterImpl(conf, cacheConf, path, ostream, super.fileContext);
+      // Extract table properties for tenant configuration
+      Map<String, String> tableProperties = null;
+      if (super.fileContext != null && super.fileContext.getTableName() != null) {
+        try {
+          // Get table from name - this could be adapted to your specific way 
+          // of retrieving table properties
+          String tableName = Bytes.toString(super.fileContext.getTableName());
+          // Here you would normally retrieve the table descriptor and get its properties
+          tableProperties = getTableProperties(tableName);
+        } catch (Exception e) {
+          LOG.warn("Failed to get table properties for tenant configuration", e);
+        }
+      }
+      
+      // Create the writer using the factory method, which gets tenant configuration
+      // from TenantExtractorFactory, not from HFileContext
+      return MultiTenantHFileWriter.create(fs, path, conf, cacheConf, tableProperties, super.fileContext);
+    }
+    
+    /**
+     * Get table properties from the table name.
+     * This is a placeholder implementation - in a real system, this would get properties
+     * from the table descriptor.
+     */
+    private Map<String, String> getTableProperties(String tableName) {
+      // In a real implementation, this would retrieve properties from the table descriptor
+      // For now, we'll return null which will fall back to cluster-level settings
+      return null;
     }
   }
 

@@ -70,4 +70,20 @@ public class DefaultTenantExtractor implements TenantExtractor {
     
     return !Bytes.equals(prevPrefix, currPrefix);
   }
+  
+  /**
+   * Get the tenant prefix length.
+   * @return The configured tenant prefix length
+   */
+  public int getPrefixLength() {
+    return prefixLength;
+  }
+  
+  /**
+   * Get the tenant prefix offset.
+   * @return The configured tenant prefix offset
+   */
+  public int getPrefixOffset() {
+    return prefixOffset;
+  }
 } 

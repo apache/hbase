@@ -17,50 +17,63 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.util.Map;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Factory for creating TenantExtractor instances based on the HFile context.
+ * Factory for creating TenantExtractor instances based on configuration.
+ * Tenant configuration is obtained from cluster configuration and table properties,
+ * not from HFileContext.
  */
 @InterfaceAudience.Private
 public class TenantExtractorFactory {
   private static final Logger LOG = LoggerFactory.getLogger(TenantExtractorFactory.class);
   
+  // Default values
+  private static final int DEFAULT_PREFIX_LENGTH = 4;
+  private static final int DEFAULT_PREFIX_OFFSET = 0;
+  
   /**
-   * Create a tenant extractor based on HFile context.
-   * @param context HFile context containing tenant configuration
-   * @return A configured TenantExtractor or null if multi-tenant features are not enabled
+   * Create a tenant extractor based on configuration.
+   * This applies configuration with proper precedence:
+   * 1. Table level settings have highest precedence
+   * 2. Cluster level settings are used as fallback
+   * 3. Default values are used if neither is specified
+   * 
+   * @param conf HBase configuration for cluster defaults
+   * @param tableProperties Table properties for table-specific settings
+   * @return A configured TenantExtractor
    */
-  public static TenantExtractor createTenantExtractor(HFileContext context) {
-    if (context == null) {
-      return null;
-    }
+  public static TenantExtractor createTenantExtractor(
+      Configuration conf, Map<String, String> tableProperties) {
     
-    // Check if the multi-tenant feature is enabled
-    if (!context.isMultiTenant()) {
-      return null;
-    }
+    // First try table level settings (highest precedence)
+    String tablePrefixLengthStr = tableProperties != null ? 
+        tableProperties.get(MultiTenantHFileWriter.TABLE_TENANT_PREFIX_LENGTH) : null;
+    String tablePrefixOffsetStr = tableProperties != null ? 
+        tableProperties.get(MultiTenantHFileWriter.TABLE_TENANT_PREFIX_OFFSET) : null;
     
-    // Get prefix configuration from the context
-    int prefixLength = context.getPbePrefixLength();
-    int prefixOffset = context.getPrefixOffset();
+    // If not found at table level, try cluster level settings
+    int clusterPrefixLength = conf.getInt(
+        MultiTenantHFileWriter.TENANT_PREFIX_LENGTH, DEFAULT_PREFIX_LENGTH);
+    int clusterPrefixOffset = conf.getInt(
+        MultiTenantHFileWriter.TENANT_PREFIX_OFFSET, DEFAULT_PREFIX_OFFSET);
+    
+    // Use table settings if available, otherwise use cluster settings
+    int prefixLength = tablePrefixLengthStr != null ? 
+        Integer.parseInt(tablePrefixLengthStr) : clusterPrefixLength;
+    int prefixOffset = tablePrefixOffsetStr != null ? 
+        Integer.parseInt(tablePrefixOffsetStr) : clusterPrefixOffset;
+    
+    LOG.info("Tenant configuration initialized: prefixLength={}, prefixOffset={}, " +
+        "from table properties: {}", prefixLength, prefixOffset, 
+        (tablePrefixLengthStr != null || tablePrefixOffsetStr != null));
     
     // Create and return a DefaultTenantExtractor with the configured parameters
-    if (prefixLength > 0) {
-      DefaultTenantExtractor extractor = new DefaultTenantExtractor(prefixLength, prefixOffset);
-      
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Created DefaultTenantExtractor with prefixLength={}, prefixOffset={}", 
-            prefixLength, prefixOffset);
-      }
-      
-      return extractor;
-    }
-    
-    // If prefix length is not positive, multi-tenant features won't work properly
-    LOG.warn("Multi-tenant HFile feature enabled but invalid prefix length: {}", prefixLength);
-    return null;
+    return new DefaultTenantExtractor(prefixLength, prefixOffset);
   }
 } 
