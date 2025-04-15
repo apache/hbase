@@ -137,12 +137,15 @@ public final class HFile {
   /**
    * Maximum supported HFile format version
    */
-  public static final int MAX_FORMAT_VERSION = 3;
+  public static final int MAX_FORMAT_VERSION = 4;
 
   /**
    * Minimum HFile format version with support for persisting cell tags
    */
   public static final int MIN_FORMAT_VERSION_WITH_TAGS = 3;
+
+  /** Version for HFiles that support multi-tenant workloads */
+  public static final int MIN_FORMAT_VERSION_WITH_MULTI_TENANT = 4;
 
   /** Default compression name: none. */
   public final static String DEFAULT_COMPRESSION = DEFAULT_COMPRESSION_ALGORITHM.getName();
@@ -330,6 +333,35 @@ public final class HFile {
   }
 
   /**
+   * Creates a specialized writer factory for multi-tenant HFiles format version 4
+   */
+  private static final class MultiTenantWriterFactory extends WriterFactory {
+    MultiTenantWriterFactory(Configuration conf, CacheConfig cacheConf) {
+      super(conf, cacheConf);
+    }
+    
+    @Override
+    public Writer create() throws IOException {
+      if ((path != null ? 1 : 0) + (ostream != null ? 1 : 0) != 1) {
+        throw new AssertionError("Please specify exactly one of filesystem/path or path");
+      }
+      if (path != null) {
+        ostream = HFileWriterImpl.createOutputStream(conf, fs, path, favoredNodes);
+        try {
+          ostream.setDropBehind(shouldDropBehind && cacheConf.shouldDropBehindCompaction());
+        } catch (UnsupportedOperationException uoe) {
+          LOG.trace("Unable to set drop behind on {}", path, uoe);
+          LOG.debug("Unable to set drop behind on {}", path.getName());
+        }
+      }
+      
+      // For now, we'll return the standard HFileWriterImpl
+      // The integration with MultiTenantHFileWriter will be done separately
+      return new HFileWriterImpl(conf, cacheConf, path, ostream, super.fileContext);
+    }
+  }
+
+  /**
    * Returns the factory to be used to create {@link HFile} writers
    */
   public static final WriterFactory getWriterFactory(Configuration conf, CacheConfig cacheConf) {
@@ -342,6 +374,8 @@ public final class HFile {
           + "in hbase-site.xml)");
       case 3:
         return new HFile.WriterFactory(conf, cacheConf);
+      case 4:
+        return new MultiTenantWriterFactory(conf, cacheConf);
       default:
         throw new IllegalArgumentException(
           "Cannot create writer for HFile " + "format version " + version);

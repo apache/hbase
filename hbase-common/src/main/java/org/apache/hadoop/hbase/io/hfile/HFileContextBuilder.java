@@ -61,6 +61,9 @@ public class HFileContextBuilder {
   private byte[] columnFamily = null;
   private byte[] tableName = null;
   private CellComparator cellComparator;
+  private int pbePrefixLength = 0;
+  private int prefixOffset = 0;
+  private boolean isMultiTenant = false;
 
   public HFileContextBuilder() {
   }
@@ -85,6 +88,9 @@ public class HFileContextBuilder {
     this.tableName = hfc.getTableName();
     this.cellComparator = hfc.getCellComparator();
     this.indexBlockEncoding = hfc.getIndexBlockEncoding();
+    this.pbePrefixLength = hfc.getPbePrefixLength();
+    this.prefixOffset = hfc.getPrefixOffset();
+    this.isMultiTenant = hfc.isMultiTenant();
   }
 
   public HFileContextBuilder withHBaseCheckSum(boolean useHBaseCheckSum) {
@@ -167,9 +173,43 @@ public class HFileContextBuilder {
     return this;
   }
 
+  public HFileContextBuilder withPbePrefixLength(int pbePrefixLength) {
+    this.pbePrefixLength = pbePrefixLength;
+    return this;
+  }
+
+  public HFileContextBuilder withPrefixOffset(int prefixOffset) {
+    this.prefixOffset = prefixOffset;
+    return this;
+  }
+
+  public HFileContextBuilder withMultiTenant(boolean isMultiTenant) {
+    this.isMultiTenant = isMultiTenant;
+    return this;
+  }
+
+  /**
+   * Build method with the original HFileContext constructor
+   * for backward compatibility
+   */
   public HFileContext build() {
+    // If multi-tenant is enabled, use the build method with multi-tenant parameters
+    if (isMultiTenant) {
+      return buildWithMultiTenant();
+    }
+    
     return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
       compressTags, checkSumType, bytesPerChecksum, blockSize, encoding, cryptoContext,
       fileCreateTime, hfileName, columnFamily, tableName, cellComparator, indexBlockEncoding);
+  }
+
+  /**
+   * Build method with multi-tenant parameters
+   */
+  private HFileContext buildWithMultiTenant() {
+    return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
+      compressTags, checkSumType, bytesPerChecksum, blockSize, encoding, cryptoContext,
+      fileCreateTime, hfileName, columnFamily, tableName, cellComparator, indexBlockEncoding,
+      pbePrefixLength, prefixOffset, isMultiTenant);
   }
 }

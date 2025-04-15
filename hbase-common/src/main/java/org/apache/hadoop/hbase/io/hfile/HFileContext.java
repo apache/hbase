@@ -67,6 +67,9 @@ public class HFileContext implements HeapSize, Cloneable {
   private byte[] columnFamily;
   private byte[] tableName;
   private CellComparator cellComparator;
+  private int pbePrefixLength;
+  private int prefixOffset;
+  private boolean isMultiTenant;
 
   // Empty constructor. Go with setters
   public HFileContext() {
@@ -92,13 +95,34 @@ public class HFileContext implements HeapSize, Cloneable {
     this.tableName = context.tableName;
     this.cellComparator = context.cellComparator;
     this.indexBlockEncoding = context.indexBlockEncoding;
+    this.pbePrefixLength = context.pbePrefixLength;
+    this.prefixOffset = context.prefixOffset;
+    this.isMultiTenant = context.isMultiTenant;
   }
 
+  /**
+   * Constructor with original parameters (for backward compatibility)
+   */
   HFileContext(boolean useHBaseChecksum, boolean includesMvcc, boolean includesTags,
     Compression.Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
     int bytesPerChecksum, int blockSize, DataBlockEncoding encoding,
     Encryption.Context cryptoContext, long fileCreateTime, String hfileName, byte[] columnFamily,
     byte[] tableName, CellComparator cellComparator, IndexBlockEncoding indexBlockEncoding) {
+    this(useHBaseChecksum, includesMvcc, includesTags, compressAlgo, compressTags, checksumType,
+        bytesPerChecksum, blockSize, encoding, cryptoContext, fileCreateTime, hfileName, 
+        columnFamily, tableName, cellComparator, indexBlockEncoding, 
+        0, 0, false);
+  }
+
+  /**
+   * Constructor with multi-tenant support
+   */
+  HFileContext(boolean useHBaseChecksum, boolean includesMvcc, boolean includesTags,
+    Compression.Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
+    int bytesPerChecksum, int blockSize, DataBlockEncoding encoding,
+    Encryption.Context cryptoContext, long fileCreateTime, String hfileName, byte[] columnFamily,
+    byte[] tableName, CellComparator cellComparator, IndexBlockEncoding indexBlockEncoding,
+    int pbePrefixLength, int prefixOffset, boolean isMultiTenant) {
     this.usesHBaseChecksum = useHBaseChecksum;
     this.includesMvcc = includesMvcc;
     this.includesTags = includesTags;
@@ -124,6 +148,9 @@ public class HFileContext implements HeapSize, Cloneable {
       : this.tableName != null
         ? InnerStoreCellComparator.getInnerStoreCellComparator(this.tableName)
       : InnerStoreCellComparator.INNER_STORE_COMPARATOR;
+    this.pbePrefixLength = pbePrefixLength;
+    this.prefixOffset = prefixOffset;
+    this.isMultiTenant = isMultiTenant;
   }
 
   /** Returns true when on-disk blocks are compressed, and/or encrypted; false otherwise. */
@@ -221,6 +248,18 @@ public class HFileContext implements HeapSize, Cloneable {
     return this.cellComparator;
   }
 
+  public int getPbePrefixLength() {
+    return this.pbePrefixLength;
+  }
+
+  public int getPrefixOffset() {
+    return this.prefixOffset;
+  }
+
+  public boolean isMultiTenant() {
+    return this.isMultiTenant;
+  }
+
   /**
    * HeapSize implementation. NOTE : The heap size should be altered when new state variable are
    * added.
@@ -291,6 +330,12 @@ public class HFileContext implements HeapSize, Cloneable {
     }
     sb.append(", cellComparator=");
     sb.append(this.cellComparator);
+    sb.append(", pbePrefixLength=");
+    sb.append(this.pbePrefixLength);
+    sb.append(", prefixOffset=");
+    sb.append(this.prefixOffset);
+    sb.append(", isMultiTenant=");
+    sb.append(this.isMultiTenant);
     sb.append("]");
     return sb.toString();
   }
