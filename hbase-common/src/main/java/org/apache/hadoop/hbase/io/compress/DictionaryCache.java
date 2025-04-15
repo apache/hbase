@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.io.compress;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -31,6 +30,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 
 /**
  * A utility class for managing compressor/decompressor dictionary loading and caching of load
@@ -45,8 +48,7 @@ public final class DictionaryCache {
   public static final String RESOURCE_SCHEME = "resource://";
 
   private static final Logger LOG = LoggerFactory.getLogger(DictionaryCache.class);
-  private static final Cache<String, byte[]> BYTE_ARRAY_CACHE =
-    Caffeine.newBuilder().maximumSize(100).expireAfterAccess(10, TimeUnit.MINUTES).build();
+  private static volatile LoadingCache<String, byte[]> CACHE;
 
   private DictionaryCache() {
   }
@@ -62,22 +64,35 @@ public final class DictionaryCache {
       return null;
     }
 
-    // Get or load the dictionary for the given path
-    return BYTE_ARRAY_CACHE.get(path, s -> {
-      final int maxSize = conf.getInt(DICTIONARY_MAX_SIZE_KEY, DEFAULT_DICTIONARY_MAX_SIZE);
-      byte[] bytes;
-      try {
-        if (path.startsWith(RESOURCE_SCHEME)) {
-          bytes = loadFromResource(conf, path, maxSize);
-        } else {
-          bytes = loadFromHadoopFs(conf, path, maxSize);
+    // Create the dictionary loading cache if we haven't already
+    if (CACHE == null) {
+      synchronized (DictionaryCache.class) {
+        if (CACHE == null) {
+          final int maxSize = conf.getInt(DICTIONARY_MAX_SIZE_KEY, DEFAULT_DICTIONARY_MAX_SIZE);
+          CACHE = CacheBuilder.newBuilder().maximumSize(100).expireAfterAccess(10, TimeUnit.MINUTES)
+            .build(new CacheLoader<String, byte[]>() {
+              @Override
+              public byte[] load(String s) throws Exception {
+                byte[] bytes;
+                if (path.startsWith(RESOURCE_SCHEME)) {
+                  bytes = loadFromResource(conf, path, maxSize);
+                } else {
+                  bytes = loadFromHadoopFs(conf, path, maxSize);
+                }
+                LOG.info("Loaded dictionary from {} (size {})", s, bytes.length);
+                return bytes;
+              }
+            });
         }
-      } catch (IOException e) {
-        throw new RuntimeException(e);
       }
-      LOG.info("Loaded dictionary from {} (size {})", s, bytes.length);
-      return bytes;
-    });
+    }
+
+    // Get or load the dictionary for the given path
+    try {
+      return CACHE.get(path);
+    } catch (ExecutionException e) {
+      throw new RuntimeException("Unable to load dictionary at " + path, e);
+    }
   }
 
   // Visible for testing
@@ -86,7 +101,7 @@ public final class DictionaryCache {
     if (!s.startsWith(RESOURCE_SCHEME)) {
       throw new IOException("Path does not start with " + RESOURCE_SCHEME);
     }
-    final String path = s.substring(RESOURCE_SCHEME.length());
+    final String path = s.substring(RESOURCE_SCHEME.length(), s.length());
     LOG.info("Loading resource {}", path);
     final InputStream in = DictionaryCache.class.getClassLoader().getResourceAsStream(path);
     if (in == null) {
@@ -140,7 +155,10 @@ public final class DictionaryCache {
 
   // Visible for testing
   public static boolean contains(String dictionaryPath) {
-    return BYTE_ARRAY_CACHE.asMap().containsKey(dictionaryPath);
+    if (CACHE != null) {
+      return CACHE.asMap().containsKey(dictionaryPath);
+    }
+    return false;
   }
 
 }

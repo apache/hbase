@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.compress;
 
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Comparator;
 import java.util.NavigableSet;
@@ -36,6 +34,10 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 
 /**
  * A global compressor/decompressor pool used to save and reuse (possibly native)
@@ -56,7 +58,12 @@ public class CodecPool {
     NavigableSet<ByteBuffDecompressor>> BYTE_BUFF_DECOMPRESSOR_POOL = new ConcurrentHashMap<>();
 
   private static <T> LoadingCache<Class<T>, AtomicInteger> createCache() {
-    return Caffeine.newBuilder().build(key -> new AtomicInteger());
+    return CacheBuilder.newBuilder().build(new CacheLoader<>() {
+      @Override
+      public AtomicInteger load(Class<T> key) throws Exception {
+        return new AtomicInteger();
+      }
+    });
   }
 
   /**
@@ -108,26 +115,19 @@ public class CodecPool {
   /**
    * Copied from hadoop-common without significant modification.
    */
-  @SuppressWarnings("unchecked")
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-      value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
-      justification = "LoadingCache will compute value if absent")
   private static <T> int getLeaseCount(LoadingCache<Class<T>, AtomicInteger> usageCounts,
     Class<? extends T> codecClass) {
-    return usageCounts.get((Class<T>) codecClass).get();
+    return usageCounts.getUnchecked((Class<T>) codecClass).get();
   }
 
   /**
    * Copied from hadoop-common without significant modification.
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-      value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
-      justification = "LoadingCache will compute value if absent")
   private static <T> void updateLeaseCount(LoadingCache<Class<T>, AtomicInteger> usageCounts,
     T codec, int delta) {
     if (codec != null && usageCounts != null) {
       Class<T> codecClass = ReflectionUtils.getClass(codec);
-      usageCounts.get(codecClass).addAndGet(delta);
+      usageCounts.getUnchecked(codecClass).addAndGet(delta);
     }
   }
 

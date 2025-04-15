@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.compress.zstd;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.luben.zstd.Zstd;
 import com.github.luben.zstd.ZstdDictDecompress;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -27,6 +25,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -45,6 +44,9 @@ import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+
 /**
  * Hadoop ZStandard codec implemented with zstd-jni.
  * <p>
@@ -59,7 +61,7 @@ public class ZstdCodec implements Configurable, CompressionCodec, ByteBuffDecomp
   public static final String ZSTD_DICTIONARY_KEY = "hbase.io.compress.zstd.dictionary";
 
   private static final Cache<String, Pair<ZstdDictDecompress, Integer>> DECOMPRESS_DICT_CACHE =
-    Caffeine.newBuilder().maximumSize(100).expireAfterAccess(10, TimeUnit.MINUTES).build();
+    CacheBuilder.newBuilder().maximumSize(100).expireAfterAccess(10, TimeUnit.MINUTES).build();
 
   private Configuration conf;
   private int bufferSize;
@@ -177,11 +179,15 @@ public class ZstdCodec implements Configurable, CompressionCodec, ByteBuffDecomp
       return null;
     }
 
-    return DECOMPRESS_DICT_CACHE.get(path, (s) -> {
-      byte[] dictBytes = DictionaryCache.getDictionary(conf, path);
-      int dictId = getDictionaryId(dictBytes);
-      return new Pair<>(new ZstdDictDecompress(dictBytes), dictId);
-    });
+    try {
+      return DECOMPRESS_DICT_CACHE.get(path, () -> {
+        byte[] dictBytes = DictionaryCache.getDictionary(conf, path);
+        int dictId = getDictionaryId(dictBytes);
+        return new Pair<>(new ZstdDictDecompress(dictBytes), dictId);
+      });
+    } catch (ExecutionException e) {
+      throw new RuntimeException("Unable to load ZSTD dictionary", e);
+    }
   }
 
   // Zstandard dictionaries begin with a 32-bit magic number, 0xEC30A437 in little-endian
