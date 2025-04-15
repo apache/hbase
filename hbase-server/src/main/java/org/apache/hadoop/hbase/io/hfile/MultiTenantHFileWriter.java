@@ -291,9 +291,9 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     int avgValueLength = entryCount == 0 ? 0 : (int) (totalValueLength / entryCount);
     fileInfo.append(HFileInfo.AVG_VALUE_LEN, Bytes.toBytes(avgValueLength), false);
 
-    // Biggest cell info
-    if (keyOfBiggestCell != null) {
-      fileInfo.append(HFileInfo.KEY_OF_BIGGEST_CELL, keyOfBiggestCell, false);
+    // Biggest cell info (key removed for tenant isolation)
+    // Only store length which doesn't expose key information
+    if (lenOfBiggestCell > 0) {
       fileInfo.append(HFileInfo.LEN_OF_BIGGEST_CELL, Bytes.toBytes(lenOfBiggestCell), false);
     }
 
