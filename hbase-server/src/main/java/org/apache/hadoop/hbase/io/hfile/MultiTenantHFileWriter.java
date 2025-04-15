@@ -21,6 +21,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -37,6 +38,11 @@ import org.apache.hadoop.io.Writable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 
 import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.MAX_BLOCK_SIZE_UNCOMPRESSED;
 
@@ -637,4 +643,88 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    * - Tenant configuration is separate from the low-level file format concerns
    * - Sensible defaults are used if no explicit configuration is provided
    */
+
+  /**
+   * Creates a specialized writer factory for multi-tenant HFiles format version 4
+   */
+  public static class WriterFactory extends HFile.WriterFactory {
+    // Maintain our own copy of the file context
+    private HFileContext writerFileContext;
+    
+    public WriterFactory(Configuration conf, CacheConfig cacheConf) {
+      super(conf, cacheConf);
+    }
+    
+    @Override
+    public HFile.WriterFactory withFileContext(HFileContext fileContext) {
+      this.writerFileContext = fileContext;
+      return super.withFileContext(fileContext);
+    }
+    
+    @Override
+    public HFile.Writer create() throws IOException {
+      if ((path != null ? 1 : 0) + (ostream != null ? 1 : 0) != 1) {
+        throw new AssertionError("Please specify exactly one of filesystem/path or path");
+      }
+      
+      if (path != null) {
+        ostream = HFileWriterImpl.createOutputStream(conf, fs, path, favoredNodes);
+        try {
+          ostream.setDropBehind(shouldDropBehind && cacheConf.shouldDropBehindCompaction());
+        } catch (UnsupportedOperationException uoe) {
+          LOG.trace("Unable to set drop behind on {}", path, uoe);
+          LOG.debug("Unable to set drop behind on {}", path.getName());
+        }
+      }
+      
+      // Extract table properties for tenant configuration from table descriptor
+      Map<String, String> tableProperties = new java.util.HashMap<>();
+      
+      // Get the table descriptor if available
+      TableDescriptor tableDesc = getTableDescriptor(writerFileContext);
+      if (tableDesc != null) {
+        // Extract relevant properties for multi-tenant configuration
+        // More properties can be added here as needed
+        for (Entry<Bytes, Bytes> entry : tableDesc.getValues().entrySet()) {
+          String key = Bytes.toString(entry.getKey().get());
+          tableProperties.put(key, Bytes.toString(entry.getValue().get()));
+        }
+        LOG.debug("Creating MultiTenantHFileWriter with table properties from descriptor for table: {}", 
+                  tableDesc.getTableName());
+      } else {
+        LOG.debug("Creating MultiTenantHFileWriter with default properties (no table descriptor available)");
+      }
+      
+      // Create the writer using the factory method
+      return MultiTenantHFileWriter.create(fs, path, conf, cacheConf, tableProperties, writerFileContext);
+    }
+    
+    /**
+     * Get the table descriptor from the HFile context if available
+     * @param fileContext The HFile context potentially containing a table name
+     * @return The table descriptor or null if not available
+     */
+    private TableDescriptor getTableDescriptor(HFileContext fileContext) {
+      try {
+        // If file context or table name is not available, return null
+        if (fileContext == null || fileContext.getTableName() == null) {
+          LOG.debug("Table name not available in HFileContext");
+          return null;
+        }
+        
+        // Get the table descriptor from the Admin API
+        TableName tableName = TableName.valueOf(fileContext.getTableName());
+        try (Connection conn = ConnectionFactory.createConnection(conf);
+             Admin admin = conn.getAdmin()) {
+          return admin.getDescriptor(tableName);
+        } catch (Exception e) {
+          LOG.warn("Failed to get table descriptor using Admin API for {}", tableName, e);
+          return null;
+        }
+      } catch (Exception e) {
+        LOG.warn("Error getting table descriptor", e);
+        return null;
+      }
+    }
+  }
 }
