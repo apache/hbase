@@ -224,18 +224,6 @@ public class TableDescriptorBuilder {
 
   public static final boolean DEFAULT_REGION_MEMSTORE_REPLICATION = true;
 
-  public static final String PBE_PREFIX_LENGTH = "PBE_PREFIX_LENGTH";
-  private static final Bytes PBE_PREFIX_LENGTH_KEY = new Bytes(Bytes.toBytes(PBE_PREFIX_LENGTH));
-  public static final int PBE_PREFIX_LENGTH_DEFAULT = 0;
-
-  public static final String PBE_PREFIX_OFFSET = "PBE_PREFIX_OFFSET";
-  private static final Bytes PBE_PREFIX_OFFSET_KEY = new Bytes(Bytes.toBytes(PBE_PREFIX_OFFSET));
-  public static final int PBE_PREFIX_OFFSET_DEFAULT = 0;
-
-  public static final String IS_MULTITENANT = "IS_MULTITENANT";
-  private static final Bytes IS_MULTITENANT_KEY = new Bytes(Bytes.toBytes(IS_MULTITENANT));
-  public static final boolean IS_MULTITENANT_DEFAULT = false;
-
   private final static Map<String, String> DEFAULT_VALUES = new HashMap<>();
   private final static Set<Bytes> RESERVED_KEYWORDS = new HashSet<>();
 
@@ -248,9 +236,6 @@ public class TableDescriptorBuilder {
     DEFAULT_VALUES.put(PRIORITY, String.valueOf(DEFAULT_PRIORITY));
     // Setting ERASURE_CODING_POLICY to NULL so that it is not considered as metadata
     DEFAULT_VALUES.put(ERASURE_CODING_POLICY, String.valueOf(DEFAULT_ERASURE_CODING_POLICY));
-    DEFAULT_VALUES.put(PBE_PREFIX_LENGTH, String.valueOf(PBE_PREFIX_LENGTH_DEFAULT));
-    DEFAULT_VALUES.put(PBE_PREFIX_OFFSET, String.valueOf(PBE_PREFIX_OFFSET_DEFAULT));
-    DEFAULT_VALUES.put(IS_MULTITENANT, String.valueOf(IS_MULTITENANT_DEFAULT));
     DEFAULT_VALUES.keySet().stream().map(s -> new Bytes(Bytes.toBytes(s)))
       .forEach(RESERVED_KEYWORDS::add);
     RESERVED_KEYWORDS.add(IS_META_KEY);
@@ -573,21 +558,6 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder setRegionServerGroup(String group) {
     desc.setValue(RSGROUP_KEY, group);
-    return this;
-  }
-
-  public TableDescriptorBuilder setPbePrefixLength(int pbePrefixLength) {
-    desc.setPbePrefixLength(pbePrefixLength);
-    return this;
-  }
-
-  public TableDescriptorBuilder setPbePrefixOffset(int pbePrefixOffset) {
-    desc.setPbePrefixOffset(pbePrefixOffset);
-    return this;
-  }
-
-  public TableDescriptorBuilder setMultiTenant(boolean isMultiTenant) {
-    desc.setMultiTenant(isMultiTenant);
     return this;
   }
 
@@ -1539,30 +1509,6 @@ public class TableDescriptorBuilder {
       } else {
         return Optional.empty();
       }
-    }
-
-    public ModifyableTableDescriptor setPbePrefixLength(int pbePrefixLength) {
-      return setValue(PBE_PREFIX_LENGTH_KEY, String.valueOf(pbePrefixLength));
-    }
-
-    public int getPbePrefixLength() {
-      return getOrDefault(PBE_PREFIX_LENGTH_KEY, Integer::parseInt, PBE_PREFIX_LENGTH_DEFAULT);
-    }
-
-    public ModifyableTableDescriptor setPbePrefixOffset(int pbePrefixOffset) {
-      return setValue(PBE_PREFIX_OFFSET_KEY, String.valueOf(pbePrefixOffset));
-    }
-
-    public int getPbePrefixOffset() {
-      return getOrDefault(PBE_PREFIX_OFFSET_KEY, Integer::parseInt, PBE_PREFIX_OFFSET_DEFAULT);
-    }
-
-    public ModifyableTableDescriptor setMultiTenant(boolean isMultiTenant) {
-      return setValue(IS_MULTITENANT_KEY, String.valueOf(isMultiTenant));
-    }
-
-    public boolean isMultiTenant() {
-      return getOrDefault(IS_MULTITENANT_KEY, Boolean::parseBoolean, IS_MULTITENANT_DEFAULT);
     }
   }
 
